@@ -172,7 +172,7 @@ Reset prunes commits
   2 changesets pruned
   $ hg log -r 66ee28d0328c
   abort: hidden revision '66ee28d0328c'!
-  (use --hidden to access hidden revisions)
+  (use --hidden to access hidden revisions; pruned)
   [255]
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
@@ -183,7 +183,7 @@ a new hash for them
   $ hg reset -C 7f3a02b3e388
   $ hg log -r 7f3a02b3e388
   abort: hidden revision '7f3a02b3e388'!
-  (use --hidden to access hidden revisions)
+  (use --hidden to access hidden revisions; pruned)
   [255]
   $ hg log -G -T '{rev} {bookmarks}\n'
   @  4 foo

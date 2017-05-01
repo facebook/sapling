@@ -91,7 +91,7 @@ Create obsoleted commit
 Make obsoleted commit non-extinct by committing on top of it
   $ hg --hidden up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  working directory parent is obsolete!
+  working directory parent is obsolete! (361e89f06232)
   $ mkcommit ontopofobsoleted
   1 new unstable changesets
 
