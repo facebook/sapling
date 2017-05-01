@@ -26,7 +26,6 @@ from . import (
     revsetlang,
     similar,
     util,
-    vfs as vfsmod,
 )
 
 if pycompat.osname == 'nt':
@@ -332,27 +331,6 @@ def filteredhash(repo, maxrev):
             s.update('%d;' % rev)
         key = s.digest()
     return key
-
-def _deprecated(old, new, func):
-    msg = ('class at mercurial.scmutil.%s moved to mercurial.vfs.%s'
-           % (old, new))
-    def wrapper(*args, **kwargs):
-        util.nouideprecwarn(msg, '4.2')
-        return func(*args, **kwargs)
-    return wrapper
-
-# compatibility layer since all 'vfs' code moved to 'mercurial.vfs'
-#
-# This is hard to instal deprecation warning to this since we do not have
-# access to a 'ui' object.
-opener = _deprecated('opener', 'vfs', vfsmod.vfs)
-vfs = _deprecated('vfs', 'vfs', vfsmod.vfs)
-filteropener = _deprecated('filteropener', 'filtervfs', vfsmod.filtervfs)
-filtervfs = _deprecated('filtervfs', 'filtervfs', vfsmod.filtervfs)
-abstractvfs = _deprecated('abstractvfs', 'abstractvfs', vfsmod.abstractvfs)
-readonlyvfs = _deprecated('readonlyvfs', 'readonlyvfs', vfsmod.readonlyvfs)
-auditvfs = _deprecated('auditvfs', 'auditvfs', vfsmod.auditvfs)
-checkambigatclosing = vfsmod.checkambigatclosing
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     '''yield every hg repository under path, always recursively.
