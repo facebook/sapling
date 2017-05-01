@@ -69,6 +69,7 @@ class _demandmod(object):
     Specify 1 as 'level' argument at construction, to import module
     relatively.
     """
+
     def __init__(self, name, globals, locals, level):
         if '.' in name:
             head, rest = name.split('.', 1)
@@ -79,6 +80,7 @@ class _demandmod(object):
         object.__setattr__(self, r"_data",
                            (head, globals, locals, after, level, set()))
         object.__setattr__(self, r"_module", None)
+
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
@@ -144,13 +146,16 @@ class _demandmod(object):
         if self._module:
             return "<proxied module '%s'>" % self._data[0]
         return "<unloaded module '%s'>" % self._data[0]
+
     def __call__(self, *args, **kwargs):
         raise TypeError("%s object is not callable" % repr(self))
+
     def __getattribute__(self, attr):
         if attr in ('_data', '_extend', '_load', '_module', '_addref'):
             return object.__getattribute__(self, attr)
         self._load()
         return getattr(self._module, attr)
+
     def __setattr__(self, attr, val):
         self._load()
         setattr(self._module, attr, val)
