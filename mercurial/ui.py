@@ -60,7 +60,7 @@ username =
 # (see 'hg help extensions' for more info)
 #
 # churn =
-# pager =""",
+""",
 
     'cloned':
 """# example repository config (see 'hg help config' for more info)
@@ -109,7 +109,7 @@ default = %s
 #
 # blackbox =
 # churn =
-# pager =""",
+""",
 }
 
 
