@@ -1361,6 +1361,27 @@ Supported arguments:
     the executable name of the tool.
     (default: None)
 
+``pager``
+---------
+
+Setting used to control when to paginate and with what external tool. See
+:hg:`help pager` for details.
+
+``pager``
+    Define the external tool used as pager.
+
+    If no pager is set, Mercurial uses the environment variable $PAGER.
+    If neither pager.pager, nor $PAGER is set, a default pager will be
+    used, typically `less` on Unix and `more` on Windows. Example::
+
+      [pager]
+      pager = less -FRX
+
+``ignore``
+    List of commands to disable the pager for. Example::
+
+      [pager]
+      ignore = version, help, update
 
 ``patch``
 ---------
