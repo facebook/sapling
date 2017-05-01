@@ -492,7 +492,7 @@ py3pats = [
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
     ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
-    ('python 3', r'.*(hgext|mercurial).*(?<!pycompat)\.py', '',
+    ('python 3', r'.*(hgext|mercurial)/(?!pycompat).*\.py', '',
             pyfilters, py3pats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
     ('c', r'.*\.[ch]$', '', cfilters, cpats),
