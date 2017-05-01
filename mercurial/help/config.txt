@@ -1860,11 +1860,9 @@ User interface controls.
     By default, the first bundle advertised by the server is used.
 
 ``color``
-    String: when to use to colorize output. possible value are auto, always,
-    never, or debug (default: auto). 'auto' will use color whenever it seems
-    possible. See :hg:`help color` for details.
-
-    (in addition a boolean can be used in place always/never)
+    When to colorize output. Possible value are Boolean, "always", "auto",
+    "never", or "debug". (default: "auto"). "auto" will use color
+    whenever it seems possible. See :hg:`help color` for details.
 
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the
