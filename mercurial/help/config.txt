@@ -1367,6 +1367,9 @@ Supported arguments:
 Setting used to control when to paginate and with what external tool. See
 :hg:`help pager` for details.
 
+``enable``
+  Control the pagination of command output (default: True).
+
 ``pager``
     Define the external tool used as pager.
 
