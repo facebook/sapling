@@ -52,6 +52,7 @@ samplehgrcs = {
 username =
 
 # uncomment to disable color in command output
+# (see 'hg help color' for details)
 # color = never
 
 [extensions]
@@ -98,6 +99,7 @@ default = %s
 
 [ui]
 # uncomment to disable color in command output
+# (see 'hg help color' for details)
 # color = never
 
 [extensions]
