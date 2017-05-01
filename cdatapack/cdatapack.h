@@ -90,6 +90,11 @@ typedef struct _delta_chain_link_t {
   const uint8_t *node;
   const uint8_t *deltabase_node;
 
+  data_offset_t compressed_sz;
+  const uint8_t *compressed_buf;
+
+  /* delta is (lazily) uncompressed from compressed_buf
+   * allocated by uncompressdeltachainlink, and freed by caller */
   data_offset_t delta_sz;
   const uint8_t *delta;
 
@@ -164,5 +169,7 @@ typedef struct _get_delta_chain_link_result_t {
 extern const get_delta_chain_link_result_t getdeltachainlink(
     const datapack_handle_t *handle,
     const uint8_t *ptr, delta_chain_link_t *link);
+// caller is responsible for freeing link->delta.
+extern bool uncompressdeltachainlink(delta_chain_link_t *link);
 
 #endif //CDATAPACK_CDATAPACK_H

@@ -463,26 +463,14 @@ const get_delta_chain_link_result_t getdeltachainlink(
   ptr += NODE_SZ;
 
   data_offset_t compressed_sz = ntohll(*((uint64_t *) ptr)) - sizeof(uint32_t);
+  link->compressed_sz = compressed_sz;
   ptr += sizeof(data_offset_t);
 
-  link->delta_sz = load_le32(ptr);
+  link->delta_sz = load_le32(ptr); /* LZ4 header */
   ptr += sizeof(uint32_t);
+  link->compressed_buf = ptr; /* compressed_* exclude lz4 header */
 
-  uint8_t *decompress_output = malloc((size_t) link->delta_sz);
-  if (decompress_output == NULL) {
-    return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OOM, NULL };
-  }
-
-  int32_t outbytes = LZ4_decompress_fast(
-      (const char *) ptr,
-      (char *) decompress_output,
-      (int32_t) link->delta_sz);
-  if (link->delta_sz != 0 && outbytes != compressed_sz) {
-    return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_CORRUPT,
-                                             NULL };
-  }
-  link->delta = decompress_output;
-
+  link->delta = NULL; /* call uncompressdeltachainlink to decompress it */
   ptr += compressed_sz;
 
   if (handle->version == 1) {
@@ -497,6 +485,33 @@ const get_delta_chain_link_result_t getdeltachainlink(
   }
 
   return COMPOUND_LITERAL(get_delta_chain_link_result_t) { GET_DELTA_CHAIN_LINK_OK, ptr };
+}
+
+bool uncompressdeltachainlink(delta_chain_link_t *link) {
+  if (link->delta != NULL) {
+    // previously decompressed
+    return true;
+  }
+
+  uint8_t *decompress_output = malloc((size_t) link->delta_sz);
+  if (decompress_output == NULL) {
+    // oom
+    return false;
+  }
+
+  int32_t outbytes = LZ4_decompress_safe(
+      (const char *) link->compressed_buf,
+      (char *) decompress_output,
+      (int) link->compressed_sz,
+      (int32_t) link->delta_sz);
+  if (outbytes != (int32_t) link->delta_sz) {
+    // size mismatch
+    free(decompress_output);
+    return false;
+  }
+
+  link->delta = decompress_output;
+  return true;
 }
 
 delta_chain_t getdeltachain(
@@ -535,6 +550,9 @@ delta_chain_t getdeltachain(
     get_delta_chain_link_result_t next;
 
     next = getdeltachainlink(handle, ptr, link);
+    if (!uncompressdeltachainlink(link)) {
+      next.code = GET_DELTA_CHAIN_CORRUPT;
+    }
 
     switch (next.code) {
       case GET_DELTA_CHAIN_LINK_OK:
