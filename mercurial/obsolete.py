@@ -1273,7 +1273,9 @@ cachefuncs = {}
 def cachefor(name):
     """Decorator to register a function as computing the cache for a set"""
     def decorator(func):
-        assert name not in cachefuncs
+        if name in cachefuncs:
+            msg = "duplicated registration for volatileset '%s' (existing: %r)"
+            raise error.ProgrammingError(msg % (name, cachefuncs[name]))
         cachefuncs[name] = func
         return func
     return decorator
