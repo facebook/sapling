@@ -51,14 +51,14 @@ def hfsignoreclean(s):
 # the process environment
 _nativeenviron = (not pycompat.ispy3 or os.supports_bytes_environ)
 if not pycompat.ispy3:
-    environ = os.environ
+    environ = os.environ  # re-exports
 elif _nativeenviron:
-    environ = os.environb
+    environ = os.environb  # re-exports
 else:
     # preferred encoding isn't known yet; use utf-8 to avoid unicode error
     # and recreate it once encoding is settled
     environ = dict((k.encode(u'utf-8'), v.encode(u'utf-8'))
-                   for k, v in os.environ.items())
+                   for k, v in os.environ.items())  # re-exports
 
 def _getpreferredencoding():
     '''
@@ -218,7 +218,7 @@ if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
     # dict to be exported to other modules
     environ = dict((tolocal(k.encode(u'utf-8')), tolocal(v.encode(u'utf-8')))
-                   for k, v in os.environ.items())
+                   for k, v in os.environ.items())  # re-exports
 
 # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
 wide = (environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"

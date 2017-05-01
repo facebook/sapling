@@ -13,18 +13,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >             r.revision(r.node(x))
    don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
-  mercurial/encoding.py:54:
-   >     environ = os.environ
-   use encoding.environ instead (py3)
-  mercurial/encoding.py:56:
-   >     environ = os.environb
-   use encoding.environ instead (py3)
-  mercurial/encoding.py:61:
-   >                    for k, v in os.environ.items())
-   use encoding.environ instead (py3)
-  mercurial/encoding.py:221:
-   >                    for k, v in os.environ.items())
-   use encoding.environ instead (py3)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)

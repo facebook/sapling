@@ -474,7 +474,7 @@ allfilespats = [
 
 py3pats = [
   [
-    (r'os\.environ', "use encoding.environ instead (py3)"),
+    (r'os\.environ', "use encoding.environ instead (py3)", r'#.*re-exports'),
     (r'os\.name', "use pycompat.osname instead (py3)"),
     (r'os\.getcwd', "use pycompat.getcwd instead (py3)"),
     (r'os\.sep', "use pycompat.ossep instead (py3)"),
