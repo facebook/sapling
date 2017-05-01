@@ -52,6 +52,30 @@ By default diff and log are paged, but id is not:
   $ hg id
   46106edeeb38 tip
 
+We can control the pager from the config
+
+  $ hg log --limit 1 --config 'pager.enable=False'
+  changeset:   10:46106edeeb38
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify a 10
+  
+  $ hg log --limit 1 --config 'pager.enable=0'
+  changeset:   10:46106edeeb38
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify a 10
+  
+  $ hg log --limit 1 --config 'pager.enable=1'
+  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'tag:         tip\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 10\n'
+  paged! '\n'
+
 We can enable the pager on id:
 
 BROKEN: should be paged
