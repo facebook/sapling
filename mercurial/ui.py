@@ -55,6 +55,11 @@ username =
 # (see 'hg help color' for details)
 # color = never
 
+[pager]
+# uncomment to disable command output pagination
+# (see 'hg help pager' for details)
+# enable = never
+
 [extensions]
 # uncomment these lines to enable some popular extensions
 # (see 'hg help extensions' for more info)
@@ -102,6 +107,11 @@ default = %s
 # uncomment to disable color in command output
 # (see 'hg help color' for details)
 # color = never
+
+[pager]
+# uncomment to disable command output pagination
+# (see 'hg help pager' for details)
+# enable = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
