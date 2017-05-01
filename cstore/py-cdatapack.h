@@ -11,6 +11,7 @@
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
 
+#include <arpa/inet.h>
 #include <Python.h>
 
 extern "C" {
@@ -465,6 +466,100 @@ cleanup:
   return result;
 }
 
+static PyObject *cdatapack_getmeta(py_cdatapack *self, PyObject *args) {
+  /* sync these with remotefilelog.constants */
+  const char METAKEYFLAG = 'f';
+  const char METAKEYSIZE = 's';
+
+  const char *node;
+  Py_ssize_t node_sz;
+
+  if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
+    return NULL;
+  }
+  if (node_sz != NODE_SZ) {
+    PyErr_Format(PyExc_ValueError, "node must be %d bytes long", NODE_SZ);
+    return NULL;
+  }
+
+  pack_index_entry_t index_entry;
+
+  if (find(self->handle, (const uint8_t *) node, &index_entry) == false) {
+    PyErr_SetObject(PyExc_KeyError, &args[0]);
+    return NULL;
+  }
+
+  delta_chain_link_t link;
+
+  get_delta_chain_link_result_t next = getdeltachainlink(
+      self->handle,
+      ((uint8_t *) self->handle->data_mmap) + index_entry.data_offset,
+      &link);
+
+  if (next.code != GET_DELTA_CHAIN_LINK_OK) {
+    PyErr_SetObject(PyExc_KeyError, &args[0]);
+    return NULL;
+  }
+
+  PyObject *pymeta = PyDict_New();
+  if (pymeta == NULL) {
+    return PyErr_NoMemory();
+  }
+
+  if (link.meta == NULL || link.meta_sz == 0) {
+    // no metadata, usually means it's version 0
+    return pymeta;
+  }
+
+  const char *p = (const char *)link.meta;
+  const char *end = p + link.meta_sz;
+  while (p < end) {
+    const uint16_t entry_size = ntohs(*((uint16_t *) p));
+    if (entry_size + p > end || entry_size < 1) {
+      goto err_cleanup;
+    }
+
+    p += sizeof(entry_size);
+
+    PyObject *pyv = NULL;
+    const char key[2] = {*p, 0};
+    switch (key[0]) {
+      case METAKEYFLAG:
+      case METAKEYSIZE:
+        { /* an integer field */
+          long v = 0;
+          for (const char *vp = p + 1; vp < p + entry_size; ++vp) {
+            v = v * 10 + (*vp - '0');
+          }
+          pyv = PyInt_FromLong(v);
+        }
+        break;
+      default:
+        { /* treat value as a string field */
+          pyv = PyString_FromStringAndSize(p + 1, entry_size - 1);
+        }
+    }
+    if (pyv == NULL) {
+      goto err_cleanup;
+    }
+    if (PyDict_SetItemString(pymeta, key, pyv) == -1) {
+      Py_XDECREF(pyv);
+      goto err_cleanup;
+    }
+    p += entry_size;
+  }
+  if (p != end) {
+    goto err_cleanup;
+  }
+
+  return pymeta;
+
+err_cleanup:
+  PyErr_Format(PyExc_ValueError, "corrupted datapack metadata");
+  Py_XDECREF(pymeta);
+  return NULL;
+}
+
 // ====  cdatapack ctype declaration ====
 
 static PyMethodDef cdatapack_methods[] = {
@@ -480,6 +575,8 @@ static PyMethodDef cdatapack_methods[] = {
         METH_VARARGS,
         "Finds a node and returns a list of (filename, node, filename, delta "
             "base node, delta) tuples if found."},
+    {"getmeta", (PyCFunction)cdatapack_getmeta, METH_VARARGS,
+      "Return a metadata dictionary for given node"},
     {NULL, NULL}
 };
 

@@ -152,16 +152,15 @@ class datapacktestsbase(object):
                 self.assertEquals(entry[4], expectedcontent)
 
     def testPackMetadata(self):
-        # TODO: fix cdatapack to support getmeta
-        if self.datapackreader is fastdatapack:
-            return
         revisions = []
         for i in range(10):
             filename = '%s.txt' % i
             content = ' \n' * i
             node = self.getHash(content)
             meta = {constants.METAKEYFLAG: i % 4,
-                    constants.METAKEYSIZE: len(content)}
+                    constants.METAKEYSIZE: len(content),
+                    'Z': 'random_string',
+                    '_': '\0' * i}
             revisions.append((filename, node, nullid, content, meta))
         pack = self.createPack(revisions, version=1)
         for name, node, x, content, origmeta in revisions:

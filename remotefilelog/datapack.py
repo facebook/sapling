@@ -308,8 +308,7 @@ class fastdatapack(basepack.basepack):
                            % (name, hex(node)))
 
     def getmeta(self, name, node):
-        # FIXME: implement this
-        return {}
+        return self.datapack.getmeta(node)
 
     def getdeltachain(self, name, node):
         result = self.datapack.getdeltachain(node)
