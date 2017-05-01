@@ -1367,9 +1367,6 @@ Supported arguments:
 Setting used to control when to paginate and with what external tool. See
 :hg:`help pager` for details.
 
-``enable``
-  Control the pagination of command output (default: True).
-
 ``pager``
     Define the external tool used as pager.
 
@@ -1962,6 +1959,10 @@ User interface controls.
 ``origbackuppath``
     The path to a directory used to store generated .orig files. If the path is
     not a directory, one will be created.
+
+``paginate``
+  Control the pagination of command output (default: True). See :hg:`help pager`
+  for details.
 
 ``patch``
     An optional external tool that ``hg import`` and some extensions

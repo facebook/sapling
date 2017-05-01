@@ -29,7 +29,7 @@ you can use --pager=<value>:
 
 To globally turn off all attempts to use a pager, set::
 
-  [pager]
-  enable = false
+  [ui]
+  paginate = never
 
 which will prevent the pager from running.

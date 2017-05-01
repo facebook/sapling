@@ -55,10 +55,9 @@ username =
 # (see 'hg help color' for details)
 # color = never
 
-[pager]
 # uncomment to disable command output pagination
 # (see 'hg help pager' for details)
-# enable = never
+# paginate = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
@@ -108,10 +107,9 @@ default = %s
 # (see 'hg help color' for details)
 # color = never
 
-[pager]
 # uncomment to disable command output pagination
 # (see 'hg help pager' for details)
-# enable = never
+# paginate = never
 
 [extensions]
 # uncomment these lines to enable some popular extensions
@@ -858,7 +856,8 @@ class ui(object):
         if (self._disablepager
             or self.pageractive
             or command in self.configlist('pager', 'ignore')
-            or not self.configbool('pager', 'enable', True)
+            or not self.configbool('ui', 'paginate',
+                                   self.configbool('pager', 'enable', True))
             or not self.configbool('pager', 'attend-' + command, True)
             # TODO: if we want to allow HGPLAINEXCEPT=pager,
             # formatted() will need some adjustment.
