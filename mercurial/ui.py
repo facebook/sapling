@@ -59,6 +59,7 @@ username =
 # uncomment these lines to enable some popular extensions
 # (see 'hg help extensions' for more info)
 #
+# churn =
 # pager =""",
 
     'cloned':
@@ -107,6 +108,7 @@ default = %s
 # (see 'hg help extensions' for more info)
 #
 # blackbox =
+# churn =
 # pager =""",
 }
 
