@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import copy
+import errno
 import os
 import silenttestrunner
 import tempfile
@@ -266,6 +267,32 @@ class testlock(unittest.TestCase):
         self.assertRaises(error.LockInheritanceContractViolation, tryinherit)
 
         lock.release()
+
+    def testfrequentlockunlock(self):
+        """This tests whether lock acquisition fails as expected, even if
+        (1) lock can't be acquired (makelock fails by EEXIST), and
+        (2) locker info can't be read in (readlock fails by ENOENT) while
+        retrying 5 times.
+        """
+
+        d = tempfile.mkdtemp(dir=os.getcwd())
+        state = teststate(self, d)
+
+        def emulatefrequentlock(*args):
+            raise OSError(errno.EEXIST, "File exists")
+        def emulatefrequentunlock(*args):
+            raise OSError(errno.ENOENT, "No such file or directory")
+
+        state.vfs.makelock = emulatefrequentlock
+        state.vfs.readlock = emulatefrequentunlock
+
+        try:
+            state.makelock(timeout=0)
+            self.fail("unexpected lock acquisition")
+        except error.LockHeld as why:
+            self.assertTrue(why.errno == errno.ETIMEDOUT)
+            self.assertTrue(why.locker == "")
+            state.assertlockexists(False)
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

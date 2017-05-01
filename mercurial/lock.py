@@ -151,6 +151,12 @@ class lock(object):
                     raise error.LockUnavailable(why.errno, why.strerror,
                                                 why.filename, self.desc)
 
+        if not self.held:
+            # use empty locker to mean "busy for frequent lock/unlock
+            # by many processes"
+            raise error.LockHeld(errno.EAGAIN,
+                                 self.vfs.join(self.f), self.desc, "")
+
     def _readlock(self):
         """read lock and return its value
 
