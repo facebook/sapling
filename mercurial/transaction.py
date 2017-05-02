@@ -137,6 +137,10 @@ class transaction(object):
             releasefn = lambda tr, success: None
         self.releasefn = releasefn
 
+        # A dict dedicated to precisely tracking the changes introduced in the
+        # transaction.
+        self.changes = {}
+
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
         self.file = opener.open(self.journal, "w")
