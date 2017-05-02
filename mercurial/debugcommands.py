@@ -2130,6 +2130,13 @@ def debugtemplate(ui, repo, tmpl, **opts):
             displayer.show(repo[r], **props)
         displayer.close()
 
+@command('debugupdatecaches', [])
+def debugupdatecaches(ui, repo, *pats, **opts):
+    """warm all known caches in the repository"""
+    with repo.wlock():
+        with repo.lock():
+            repo.updatecaches()
+
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
     ('', 'run', False, _('performs an upgrade')),
