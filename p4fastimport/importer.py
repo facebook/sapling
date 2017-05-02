@@ -64,7 +64,6 @@ class ChangeManifestImporter(object):
         cp1 = self._repo['tip'].node()
         cp2 = nullid
         p1 = self._repo[cp1]
-        p2 = self._repo[cp2]
         mp1 = p1.manifestnode()
         mp2 = nullid
         mf = p1.manifest().copy()
