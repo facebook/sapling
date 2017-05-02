@@ -1,9 +1,14 @@
+from __future__ import absolute_import
+
 import struct
-from mercurial import util
+from mercurial import (
+    error,
+    util,
+)
 from mercurial.node import nullid, hex
 from mercurial.i18n import _
 from . import basepack, constants, shallowutil
-from lz4wrapper import lz4compress, lz4decompress
+from .lz4wrapper import lz4compress, lz4decompress
 try:
     import cstore
     cstore.datapack
@@ -115,11 +120,6 @@ class datapack(basepack.basepack):
         offset += 4
 
         meta = shallowutil.parsepackmeta(rawentry[offset:offset + metalen])
-
-        # normalize: convert keys to int
-        for key in [constants.METAKEYFLAG, constants.METAKEYSIZE]:
-            if key in meta:
-                meta[key] = int(meta[key])
 
         return meta
 
@@ -367,10 +367,12 @@ class mutabledatapack(basepack.mutablebasepack):
                    <metadata-list len: 4 byte unsigned int> [1]
                    <metadata-list>                          [1]
         metadata-list = [<metadata-item>, ...]
-        metadata-item = <metadata-item len: 2 byte unsigned>
-                        <metadata-key: 1 byte> <metadata-value>
+        metadata-item = <metadata-key: 1 byte>
+                        <metadata-value len: 2 byte unsigned>
+                        <metadata-value>
 
-        metadata-key could be METAKEYFLAG or METAKEYSIZE.
+        metadata-key could be METAKEYFLAG or METAKEYSIZE or other single byte
+        value in the future.
 
     .dataidx
         The index file consists of two parts, the fanout and the index.
@@ -433,17 +435,6 @@ class mutabledatapack(basepack.mutablebasepack):
         # TODO: allow configurable compression
         delta = lz4compress(delta)
 
-        # normalize metadata - convert to strings
-        meta = dict((k, str(v)) for k, v in (metadata or {}).iteritems())
-
-        # drop unnecessary "flag" field to save space
-        if meta.get(constants.METAKEYFLAG, None) == '0':
-            del meta[constants.METAKEYFLAG]
-
-        # sanity check: v0 does not support flag
-        if self.VERSION == 0 and constants.METAKEYFLAG in meta:
-                raise RuntimeError('version 0 pack cannot store flags')
-
         rawdata = ''.join((
             struct.pack('!H', len(name)), # unsigned 2 byte int
             name,
@@ -453,11 +444,15 @@ class mutabledatapack(basepack.mutablebasepack):
             delta,
         ))
 
-        # v1 support metadata
         if self.VERSION == 1:
-            rawmeta = shallowutil.buildpackmeta(meta)
+            # v1 support metadata
+            rawmeta = shallowutil.buildpackmeta(metadata)
             rawdata += struct.pack('!I', len(rawmeta)) # unsigned 4 byte
             rawdata += rawmeta
+        else:
+            # v0 cannot store metadata, raise if metadata contains flag
+            if metadata and metadata.get(constants.METAKEYFLAG, 0) != 0:
+                raise error.ProgrammingError('v0 pack cannot store flags')
 
         offset = self.packfp.tell()
 

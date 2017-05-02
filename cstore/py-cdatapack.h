@@ -513,30 +513,33 @@ static PyObject *cdatapack_getmeta(py_cdatapack *self, PyObject *args) {
 
   const char *p = (const char *)link.meta;
   const char *end = p + link.meta_sz;
-  while (p < end) {
+
+  while (p + 3 <= end) { /* 3: ensure 1-byte key, 2-byte size exist */
+    const char key[2] = {*p, 0};
+    p += 1;
+
     const uint16_t entry_size = ntohs(*((uint16_t *) p));
-    if (entry_size + p > end || entry_size < 1) {
+    p += sizeof(entry_size); /* 2-byte size */
+
+    if (entry_size + p > end) {
       goto err_cleanup;
     }
 
-    p += sizeof(entry_size);
-
     PyObject *pyv = NULL;
-    const char key[2] = {*p, 0};
     switch (key[0]) {
       case METAKEYFLAG:
       case METAKEYSIZE:
         { /* an integer field */
-          long v = 0;
-          for (const char *vp = p + 1; vp < p + entry_size; ++vp) {
-            v = v * 10 + (*vp - '0');
+          unsigned long long v = 0;
+          for (const char *vp = p; vp < p + entry_size; ++vp) {
+            v = (v << 8) | *((uint8_t *) vp);
           }
-          pyv = PyInt_FromLong(v);
+          pyv = PyLong_FromUnsignedLongLong(v);
         }
         break;
       default:
         { /* treat value as a string field */
-          pyv = PyString_FromStringAndSize(p + 1, entry_size - 1);
+          pyv = PyString_FromStringAndSize(p, entry_size);
         }
     }
     if (pyv == NULL) {

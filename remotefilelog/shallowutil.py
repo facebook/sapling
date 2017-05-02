@@ -93,29 +93,38 @@ def parsemeta(text):
         text = text[s + 2:]
     return meta or {}, text
 
-def parsepackmeta(metabuf):
+def _parsepackmeta(metabuf):
     """parse datapack meta, bytes (<metadata-list>) -> dict
+
+    The dict contains raw content - both keys and values are strings.
+    Upper-level business may want to convert some of them to other types like
+    integers, on their own.
 
     raise ValueError if the data is corrupted
     """
     metadict = {}
     offset = 0
     buflen = len(metabuf)
-    while buflen - offset >= 2:
+    while buflen - offset >= 3:
+        key = metabuf[offset]
+        offset += 1
         metalen = struct.unpack_from('!H', metabuf, offset)[0]
         offset += 2
-        key = metabuf[offset]
         if offset + metalen > buflen:
             raise ValueError('corrupted metadata: incomplete buffer')
-        value = metabuf[offset + 1:offset + metalen]
+        value = metabuf[offset:offset + metalen]
         metadict[key] = value
         offset += metalen
     if offset != buflen:
         raise ValueError('corrupted metadata: redundant data')
     return metadict
 
-def buildpackmeta(metadict):
-    """reverse of parsepackmeta, dict -> bytes (<metadata-list>)
+def _buildpackmeta(metadict):
+    """reverse of _parsepackmeta, dict -> bytes (<metadata-list>)
+
+    The dict contains raw content - both keys and values are strings.
+    Upper-level business may want to serialize some of other types (like
+    integers) to strings before calling this function.
 
     raise ProgrammingError when metadata key is illegal, or ValueError if
     length limit is exceeded
@@ -123,15 +132,69 @@ def buildpackmeta(metadict):
     metabuf = ''
     for k, v in sorted((metadict or {}).iteritems()):
         if len(k) != 1:
-            raise error.ProgrammingError('illegal metadata key: %s' % k)
+            raise error.ProgrammingError('packmeta: illegal key: %s' % k)
         if len(v) > 0xfffe:
             raise ValueError('metadata value is too long: 0x%x > 0xfffe'
                              % len(v))
-        metabuf += struct.pack('!H', len(v) + 1) + k
+        metabuf += k
+        metabuf += struct.pack('!H', len(v))
         metabuf += v
     # len(metabuf) is guaranteed representable in 4 bytes, because there are
     # only 256 keys, and for each value, len(value) <= 0xfffe.
     return metabuf
+
+_metaitemtypes = {
+    constants.METAKEYFLAG: int,
+    constants.METAKEYSIZE: int,
+}
+
+def buildpackmeta(metadict):
+    """like _buildpackmeta, but typechecks metadict and normalize it.
+
+    This means, METAKEYSIZE and METAKEYSIZE should have integers as values,
+    and METAKEYFLAG will be dropped if its value is 0.
+    """
+    newmeta = {}
+    for k, v in (metadict or {}).iteritems():
+        expectedtype = _metaitemtypes.get(k, bytes)
+        if not isinstance(v, expectedtype):
+            raise error.ProgrammingError('packmeta: wrong type of key %s' % k)
+        # normalize int to binary buffer
+        if expectedtype is int:
+            # optimization: remove flag if it's 0 to save space
+            if k == constants.METAKEYFLAG and v == 0:
+                continue
+            v = int2bin(v)
+        newmeta[k] = v
+    return _buildpackmeta(newmeta)
+
+def parsepackmeta(metabuf):
+    """like _parsepackmeta, but convert fields to desired types automatically.
+
+    This means, METAKEYFLAG and METAKEYSIZE fields will be converted to
+    integers.
+    """
+    metadict = _parsepackmeta(metabuf)
+    for k, v in metadict.iteritems():
+        if k in _metaitemtypes and _metaitemtypes[k] is int:
+            metadict[k] = bin2int(v)
+    return metadict
+
+def int2bin(n):
+    """convert a non-negative integer to raw binary buffer"""
+    buf = bytearray()
+    while n > 0:
+        buf.insert(0, n & 0xff)
+        n >>= 8
+    return bytes(buf)
+
+def bin2int(buf):
+    """the reverse of int2bin, convert a binary buffer to an integer"""
+    x = 0
+    for b in bytearray(buf):
+        x <<= 8
+        x |= b
+    return x
 
 def parsesizeflags(raw):
     """given a remotefilelog blob, return (headersize, rawtextsize, flags)

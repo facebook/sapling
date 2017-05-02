@@ -153,11 +153,11 @@ class datapacktestsbase(object):
 
     def testPackMetadata(self):
         revisions = []
-        for i in range(10):
+        for i in range(100):
             filename = '%s.txt' % i
-            content = ' \n' * i
+            content = 'put-something-here \n' * i
             node = self.getHash(content)
-            meta = {constants.METAKEYFLAG: i % 4,
+            meta = {constants.METAKEYFLAG: i ** 4,
                     constants.METAKEYSIZE: len(content),
                     'Z': 'random_string',
                     '_': '\0' * i}

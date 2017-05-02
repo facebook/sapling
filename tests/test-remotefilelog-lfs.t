@@ -155,8 +155,8 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/03d03e3ee6aa092af682e13e7d20910467661171.dataidx
-  $TESTTMP/hgcache/master/packs/03d03e3ee6aa092af682e13e7d20910467661171.datapack
+  $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.dataidx
+  $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.datapack
   $TESTTMP/hgcache/master/packs/b00dd932d142d1e3f1b446503cfae02dc3012216.histidx
   $TESTTMP/hgcache/master/packs/b00dd932d142d1e3f1b446503cfae02dc3012216.histpack
   $TESTTMP/hgcache/repos
@@ -373,8 +373,8 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/49a26713c786637b8887b5910e2a5607fa39e3bc.dataidx
-  $TESTTMP/hgcache/master/packs/49a26713c786637b8887b5910e2a5607fa39e3bc.datapack
+  $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.dataidx
+  $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.datapack
   $TESTTMP/hgcache/master/packs/7e90f8dd34eda5d9a328b431ac711ecebcd4127e.histidx
   $TESTTMP/hgcache/master/packs/7e90f8dd34eda5d9a328b431ac711ecebcd4127e.histpack
   $TESTTMP/hgcache/repos
