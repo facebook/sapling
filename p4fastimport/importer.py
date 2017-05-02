@@ -63,11 +63,13 @@ class ChangeManifestImporter(object):
         clog = self._repo.changelog
         cp1 = self._repo['tip'].node()
         cp2 = nullid
+        p1 = self._repo[cp1]
         p2 = self._repo[cp2]
+        mp1 = p1.manifestnode()
+        mp2 = nullid
+        mf = p1.manifest().copy()
         for i, change in enumerate(self._importset.changelists):
             # invalidate caches so that the lookup works
-            p1 = self._repo[cp1]
-            mf = p1.manifest().copy()
             self._ui.progress(_('importing change'), pos=i, item=change,
                     unit='changes', total=len(self._importset.changelists))
 
@@ -101,14 +103,12 @@ class ChangeManifestImporter(object):
                 fileinfo[depotname]['baserev'] += 1
 
             linkrev = self._importset.linkrev(change.cl)
+            oldmp1 = mp1
             mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
-                                      linkrev,
-                                      p1.manifestnode(),
-                                      p2.manifestnode())
+                                      linkrev, mp1, mp2)
             self._ui.debug('changelist %d: writing manifest. '
                 'node: %s p1: %s p2: %s linkrev: %d\n' % (
-                change.cl, short(mp1), short(p1.manifestnode()),
-                short(p2.manifestnode()), linkrev))
+                change.cl, short(mp1), short(oldmp1), short(mp2), linkrev))
 
             desc = change.parsed['desc']
             if desc == '':
