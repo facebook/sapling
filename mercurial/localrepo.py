@@ -385,11 +385,6 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces()
 
-    @property
-    def opener(self):
-        self.ui.deprecwarn("use 'repo.vfs' instead of 'repo.opener'", '4.2')
-        return self.vfs
-
     def close(self):
         self._writecaches()
 
