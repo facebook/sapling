@@ -28,13 +28,14 @@ python_unittest(
 )
 
 for build_target, suffix in get_daemon_versions():
-    # The :all rule is a convenience to ensure that both the CLI and the daemon
-    # are built.
+    # The :all rule is a convenience to ensure that the CLI, daemon, and Thrift
+    # Python client for the Hg extension are built.
     buck_genrule(
       name = 'all%s' % suffix,
       srcs = [
         ':cli',
         build_target.replace('@/', '//'),
+        '//eden/fs/service:thrift-EdenService-pyremote',
       ],
       out = 'eden%s-stamp' % suffix,
       cmd = 'touch $OUT',
