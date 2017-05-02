@@ -19,7 +19,6 @@
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"

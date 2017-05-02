@@ -19,7 +19,6 @@
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/EdenMounts.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -38,6 +37,7 @@ using folly::StringKeyedUnorderedMap;
 using folly::StringPiece;
 using folly::Unit;
 using facebook::eden::overlay::UserStatusDirective;
+using std::string;
 
 namespace {
 /**
@@ -97,175 +97,6 @@ std::string HgStatus::toString() const {
 }
 
 namespace {
-/**
- * All entries added to the manifest must be under the `prefix`.
- */
-template <typename RelativePathType>
-void updateManifestWithDirectives(
-    RelativePathPiece prefix,
-    const std::unordered_map<RelativePathType, overlay::UserStatusDirective>*
-        unaccountedUserDirectives,
-    std::unordered_map<RelativePath, StatusCode>* manifest) {
-  // We should make sure that every entry in userDirectives_ is accounted for in
-  // the HgStatus that we return.
-  for (auto& pair : *unaccountedUserDirectives) {
-    if (!prefix.isParentDirOf(RelativePathPiece(pair.first))) {
-      continue;
-    }
-
-    switch (pair.second) {
-      case overlay::UserStatusDirective::Add:
-        // The file was marked for addition, but no longer exists in the working
-        // copy. The user should either restore the file or run `hg forget`.
-        manifest->emplace(RelativePath(pair.first), StatusCode::MISSING);
-        break;
-      case overlay::UserStatusDirective::Remove:
-        // The file was marked for removal, but it still exists in the working
-        // copy without any modifications. Although it may seem strange, it
-        // should still show up as REMOVED in `hg status` even though it is
-        // still on disk.
-        //
-        // Note that even if the file matches an ignore pattern, we currently
-        // report it just as REMOVED.  This matches mercurial's current
-        // behavior, but in the future it would probably be nicer to add a code
-        // for REMOVED+IGNORED.
-        manifest->emplace(RelativePath(pair.first), StatusCode::REMOVED);
-        break;
-    }
-  }
-}
-
-void processRemovedFile(
-    RelativePath pathToEntry,
-    std::unordered_map<RelativePath, StatusCode>* manifest,
-    const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
-        userDirectives,
-    std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
-        copyOfUserDirectives) {
-  auto result = userDirectives->find(pathToEntry);
-  if (result != userDirectives->end()) {
-    auto statusCode = result->second;
-    switch (statusCode) {
-      case overlay::UserStatusDirective::Add:
-        // TODO(mbolin): Is there any weird sequence of modifications with
-        // adding/removed files matched by .hgignore that could lead to this
-        // state?
-        throw std::runtime_error(folly::sformat(
-            "Invariant violation: The user has marked {} for addition, "
-            "but it already exists in the manifest "
-            "(and is currently removed from disk).",
-            pathToEntry.stringPiece()));
-      case overlay::UserStatusDirective::Remove:
-        manifest->emplace(pathToEntry, StatusCode::REMOVED);
-        break;
-    }
-    copyOfUserDirectives->erase(pathToEntry);
-  } else {
-    // The file is not present on disk, but the user never ran `hg rm`.
-    manifest->emplace(pathToEntry, StatusCode::MISSING);
-  }
-}
-
-// Short-term helper class until we implement gitignore
-// handling more efficiently.
-class IgnoreChecker {
- public:
-  explicit IgnoreChecker(EdenMount* mountPoint) : mountPoint_(mountPoint) {}
-
-  bool isIgnored(RelativePathPiece path) {
-    // If a path's parent directory is ignored, it is ignored
-    // (as long as it hasn't been explicitly added to the dirstate, which
-    // we already check before calling IgnoreChecker).
-    //
-    // Note that this is a potentially expensive recursion.
-    // We could memoize the results for directories.  (Although eventually we
-    // should just store this data directly in the Inode objects.)
-    if (path.stringPiece().empty()) {
-      return false;
-    }
-    if (isIgnored(path.dirname())) {
-      return true;
-    }
-
-    StringPiece piece = path.stringPiece();
-    auto idx = piece.rfind('/');
-    auto fileType = GitIgnore::TYPE_FILE;
-    while (true) {
-      StringPiece dirName;
-      StringPiece childName;
-      if (idx == StringPiece::npos) {
-        dirName = StringPiece();
-        childName = piece;
-      } else {
-        dirName = StringPiece(piece.begin(), idx);
-        childName = StringPiece(piece.begin() + idx + 1, piece.end());
-      }
-
-      VLOG(5) << "Check ignored: \"" << childName << "\" in \"" << dirName
-              << "\"";
-      const GitIgnore* ignore = getIgnoreData(dirName);
-      auto matchResult = ignore->match(
-          RelativePathPiece(childName, detail::SkipPathSanityCheck()),
-          fileType);
-      if (matchResult == GitIgnore::INCLUDE) {
-        // Explicitly included.  We don't need to check parent directories.
-        return false;
-      } else if (matchResult == GitIgnore::EXCLUDE) {
-        return true;
-      }
-
-      if (idx == StringPiece::npos) {
-        // We checked everything up to the root.  The path is not ignored.
-        return false;
-      }
-      idx = dirName.rfind('/');
-      fileType = GitIgnore::TYPE_DIR;
-    }
-  }
-
- private:
-  const GitIgnore* getIgnoreData(StringPiece directory) {
-    auto it = ignoreCache_.find(directory);
-    if (it != ignoreCache_.end()) {
-      return &(it->second);
-    }
-
-    GitIgnore ignore;
-    loadIgnoreFile(directory, &ignore);
-    auto ret = ignoreCache_.emplace(directory, std::move(ignore));
-    return &(ret.first->second);
-  }
-
-  void loadIgnoreFile(StringPiece directory, GitIgnore* ignore) {
-    // Ugh.  This is rather inefficient.
-    auto ignorePath =
-        RelativePath(directory) + PathComponentPiece(".gitignore");
-    VLOG(4) << "Loading ignore file at \"" << ignorePath << "\"";
-    FileInodePtr ignoreInode;
-    try {
-      ignoreInode = mountPoint_->getFileInodeBlocking(ignorePath);
-    } catch (const std::system_error& ex) {
-      if (ex.code().category() != std::system_category() ||
-          (ex.code().value() != ENOENT && ex.code().value() != ENOTDIR)) {
-        throw;
-      }
-    }
-
-    if (!ignoreInode) {
-      // No gitignore file to load.
-      return;
-    }
-
-    auto data = ignoreInode->getOrLoadData();
-    auto materializeFuture = data->ensureDataLoaded();
-    // TODO: Use a future callback rather than blocking here
-    materializeFuture.get();
-    ignore->loadFile(data->readAll());
-  }
-
-  EdenMount* const mountPoint_{nullptr};
-  folly::StringKeyedUnorderedMap<GitIgnore> ignoreCache_;
-};
 
 class ThriftStatusCallback : public InodeDiffCallback {
  public:
@@ -416,188 +247,6 @@ ThriftHgStatus Dirstate::getStatus(bool listIgnored) const {
   return callback.extractStatus();
 }
 
-std::unique_ptr<HgStatus> Dirstate::getStatusForExistingDirectory(
-    RelativePathPiece directory) const {
-  std::unordered_set<RelativePathPiece> toIgnore;
-  if (directory.empty()) {
-    toIgnore.insert(RelativePathPiece(".hg"));
-    toIgnore.insert(RelativePathPiece{kDotEdenName});
-  }
-
-  // Find the modified directories in the overlay and compare them with what is
-  // in the root tree.
-  auto modifiedDirectories =
-      getModifiedDirectories(mount_, directory, &toIgnore);
-  std::unordered_map<RelativePath, StatusCode> manifest;
-  if (modifiedDirectories.empty()) {
-    auto userDirectives = userDirectives_.rlock();
-    updateManifestWithDirectives(directory, &*userDirectives, &manifest);
-    return std::make_unique<HgStatus>(std::move(manifest));
-  }
-
-  auto userDirectives = userDirectives_.rlock();
-  std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>
-      copyOfUserDirectives(userDirectives->begin(), userDirectives->end());
-
-  // TODO: This code is somewhat inefficient.
-  // We ideally should restructure this so that we can compute diff and ignore
-  // data in a single pass through the tree.  (We shouldn't have separate walks
-  // in getModifiedDirectoriesForMount(), then the for loop below, plus
-  // additional computation to look up ignore data.)
-  //
-  // Doing this all at once would also make it possible to completely skip
-  // ignored directories that have no tracked files inside of them.  Currently
-  // we can't do this.  getModifiedDirectoriesForMount() has to descend into
-  // ignored directories because it doesn't know if userDirectives_ contains
-  // entries for files in these directories or not.
-  IgnoreChecker ignoreChecker(mount_);
-
-  auto rootTree = mount_->getRootTree();
-  for (auto& directory : modifiedDirectories) {
-    // Get the directory as a TreeInode.
-    auto treeInode = mount_->getTreeInodeBlocking(directory);
-    DCHECK(treeInode.get() != nullptr) << "Failed to get a TreeInode for "
-                                       << directory;
-
-    // Get the directory as a Tree.
-    auto tree = getTreeForDirectory(
-        directory, rootTree.get(), mount_->getObjectStore());
-    DirectoryDelta delta;
-    std::vector<TreeEntry> emptyEntries;
-    // Note that if tree is NULL, then the directory must be new in the working
-    // copy because there is no corresponding Tree in the manifest. Defining
-    // treeEntries in this way avoids a heap allocation when tree is NULL.
-    const auto* treeEntries = tree ? &tree->getTreeEntries() : &emptyEntries;
-    computeDelta(treeEntries, *treeInode, delta);
-
-    for (auto& removedDirectory : delta.removedDirectories) {
-      // Must find the Tree that corresponds to removedDirectory and add
-      // everything under it as REMOVED or MISSING in the manifest, as
-      // appropriate.
-      auto entry = tree->getEntryPtr(removedDirectory);
-      auto subdirectory = directory + removedDirectory;
-      DCHECK(entry != nullptr) << "Failed to find TreeEntry for "
-                               << subdirectory;
-      DCHECK(entry->getType() == TreeEntryType::TREE)
-          << "Removed directory " << subdirectory
-          << " did not correspond to a Tree.";
-      auto removedTree = mount_->getObjectStore()->getTree(entry->getHash());
-      addDeletedEntries(
-          removedTree.get(),
-          subdirectory,
-          &manifest,
-          &*userDirectives,
-          &copyOfUserDirectives);
-    }
-
-    // Files in delta.added fall into one of three categories:
-    // 1. ADDED
-    // 2. NOT_TRACKED
-    // 3. IGNORED
-    for (auto& addedPath : delta.added) {
-      auto pathToEntry = directory + addedPath;
-      auto result = userDirectives->find(pathToEntry);
-      if (result != userDirectives->end()) {
-        auto statusCode = result->second;
-        switch (statusCode) {
-          case overlay::UserStatusDirective::Add:
-            manifest.emplace(pathToEntry, StatusCode::ADDED);
-            break;
-          case overlay::UserStatusDirective::Remove:
-            // TODO(mbolin): Is there any weird sequence of modifications with
-            // adding/removed files matched by .hgignore that could lead to this
-            // state?
-            throw std::runtime_error(folly::sformat(
-                "Invariant violation: The user has marked {} for removal, "
-                "but it does not exist in the manifest.",
-                pathToEntry.stringPiece()));
-        }
-        copyOfUserDirectives.erase(pathToEntry);
-      } else if (ignoreChecker.isIgnored(pathToEntry)) {
-        manifest.emplace(pathToEntry, StatusCode::IGNORED);
-      } else {
-        manifest.emplace(pathToEntry, StatusCode::NOT_TRACKED);
-      }
-    }
-
-    // Files in delta.modified fall into one of two categories:
-    // 1. MODIFIED
-    // 2. REMOVED
-    //
-    // Technically, a file might be both REMOVED and IGNORED if the user asked
-    // us to remove the file from source control tracking, but it still exists
-    // in the file system, and it matches an ignore pattern.  Unfortunately
-    // mercurial doesn't really represent the state properly in this case, and
-    // just lists the file REMOVED, and not IGNORED.  (This does result in some
-    // bugs: "hg clean --all" won't actually delete the file in this case.)
-    //
-    // Eventually it might be nice if we represent this state properly in our
-    // thrift API.  For now though the mercurial code can't make use of it
-    // properly though.
-    for (auto& modifiedPath : delta.modified) {
-      auto pathToEntry = directory + modifiedPath;
-      auto result = userDirectives->find(pathToEntry);
-      if (result != userDirectives->end()) {
-        auto statusCode = result->second;
-        switch (statusCode) {
-          case overlay::UserStatusDirective::Add:
-            // TODO(mbolin): Is there any weird sequence of modifications with
-            // adding/removed files matched by .hgignore that could lead to this
-            // state?
-            throw std::runtime_error(folly::sformat(
-                "Invariant violation: The user has marked {} for addition, "
-                "but it already exists in the manifest.",
-                pathToEntry.stringPiece()));
-          case overlay::UserStatusDirective::Remove:
-            manifest.emplace(pathToEntry, StatusCode::REMOVED);
-            break;
-        }
-        copyOfUserDirectives.erase(pathToEntry);
-      } else {
-        manifest.emplace(pathToEntry, StatusCode::MODIFIED);
-      }
-    }
-
-    // Files in delta.removed fall into one of two categories:
-    // 1. REMOVED
-    // 2. MISSING
-    for (auto& removedPath : delta.removed) {
-      auto pathToEntry = directory + removedPath;
-      processRemovedFile(
-          pathToEntry, &manifest, &*userDirectives, &copyOfUserDirectives);
-    }
-  }
-
-  updateManifestWithDirectives(directory, &copyOfUserDirectives, &manifest);
-
-  return std::make_unique<HgStatus>(std::move(manifest));
-}
-
-void Dirstate::addDeletedEntries(
-    const Tree* tree,
-    RelativePathPiece pathToTree,
-    std::unordered_map<RelativePath, StatusCode>* manifest,
-    const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
-        userDirectives,
-    std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
-        copyOfUserDirectives) const {
-  for (auto& entry : tree->getTreeEntries()) {
-    auto pathToEntry = pathToTree + entry.getName();
-    if (entry.getType() == TreeEntryType::BLOB) {
-      processRemovedFile(
-          pathToEntry, manifest, userDirectives, copyOfUserDirectives);
-    } else {
-      auto subtree = mount_->getObjectStore()->getTree(entry.getHash());
-      addDeletedEntries(
-          subtree.get(),
-          pathToEntry,
-          manifest,
-          userDirectives,
-          copyOfUserDirectives);
-    }
-  }
-}
-
 /**
  * Assumes that treeEntry and treeInode correspond to the same path. Returns
  * true if both the mode_t and file contents match for treeEntry and treeInode.
@@ -637,168 +286,91 @@ inline bool isFile(mode_t mode) {
   return S_ISREG(mode) || S_ISLNK(mode);
 }
 
-void Dirstate::computeDelta(
-    const std::vector<TreeEntry>* treeEntries,
-    TreeInode& current,
-    DirectoryDelta& delta) const {
-  auto dir = current.getContents().rlock();
-  auto& entries = dir->entries;
-
-  auto baseIterator = treeEntries->begin();
-  auto overlayIterator = entries.begin();
-  auto baseEnd = treeEntries->end();
-  auto overlayEnd = entries.end();
-  if (baseIterator == baseEnd && overlayIterator == overlayEnd) {
-    return;
-  }
-
-  while (true) {
-    if (baseIterator == baseEnd) {
-      // Each remaining entry in overlayIterator should be added to delta.added
-      // (unless it is a directory).
-      while (overlayIterator != overlayEnd) {
-        auto mode = overlayIterator->second.get()->mode;
-        if (isFile(mode)) {
-          delta.added.push_back(overlayIterator->first);
-        }
-        ++overlayIterator;
-      }
-      break;
-    } else if (overlayIterator == overlayEnd) {
-      // Each remaining entry in baseIterator should be added to delta.removed
-      // (unless it is a directory).
-      while (baseIterator != baseEnd) {
-        const auto& base = *baseIterator;
-        auto mode = base.getMode();
-        if (isFile(mode)) {
-          delta.removed.push_back(base.getName());
-        } else {
-          delta.removedDirectories.push_back(base.getName());
-        }
-        ++baseIterator;
-      }
-      break;
-    }
-
-    const auto& base = *baseIterator;
-    auto overlayName = overlayIterator->first;
-    auto cmp = base.getName().stringPiece().compare(overlayName.stringPiece());
-    if (cmp == 0) {
-      // There are entries in the base commit and the overlay with the same
-      // name. All four of the following are possible:
-      // 1. Both entries correspond to files.
-      // 2. Both entries correspond to directories.
-      // 3. The entry was a file in the base commit but is now a directory.
-      // 4. The entry was a directory in the base commit but is now a file.
-      auto isFileInBase = isFile((*baseIterator).getMode());
-      auto isFileInOverlay = isFile(overlayIterator->second.get()->mode);
-
-      if (isFileInBase && isFileInOverlay) {
-        if (!hasMatchingAttributes(
-                &base,
-                overlayIterator->second.get(),
-                mount_->getObjectStore(),
-                current,
-                *dir)) {
-          delta.modified.push_back(base.getName());
-        }
-      } else if (isFileInBase) {
-        // It was a file in the base, but now is a directory in the overlay.
-        // Hg should consider this file to be missing/removed.
-        delta.removed.push_back(base.getName());
-      } else if (isFileInOverlay) {
-        // It was a directory in the base, but now is a file in the overlay.
-        // Hg should consider this file to be added/untracked while the
-        // directory's contents should be considered removed.
-        delta.added.push_back(base.getName());
-        delta.removedDirectories.push_back(base.getName());
-      }
-
-      baseIterator++;
-      overlayIterator++;
-    } else if (cmp < 0) {
-      auto mode = base.getMode();
-      if (isFile(mode)) {
-        delta.removed.push_back(base.getName());
-      } else {
-        delta.removedDirectories.push_back(base.getName());
-      }
-      baseIterator++;
-    } else {
-      auto mode = overlayIterator->second.get()->mode;
-      if (isFile(mode)) {
-        delta.added.push_back(overlayName);
-      }
-      overlayIterator++;
-    }
-  }
-  return;
-}
-
 namespace {
-enum AddAction {
-  Add,
-  Erase,
+class AddAllDiffCallback : public InodeDiffCallback {
+ public:
+  explicit AddAllDiffCallback(RelativePathPiece path) : path_{path} {}
+
+  void ignoredFile(RelativePathPiece path) override {
+    // If an user explicitly asks to add an ignored path, add it.
+    // Do not add ignored files inside an added directory, though.
+    if (path == path_) {
+      data_.wlock()->addedPaths.emplace(path);
+    }
+  }
+  void untrackedFile(RelativePathPiece path) override {
+    // Ignore everything that is not a child of path_.
+    // TODO: Once we add a function to diff just specific subtree we can
+    // remove this check.
+    if (path_ == path || path_.isParentDirOf(path)) {
+      data_.wlock()->addedPaths.emplace(path);
+    }
+  }
+  void removedFile(
+      RelativePathPiece /* path */,
+      const TreeEntry& /* sourceControlEntry */) override {}
+  void modifiedFile(
+      RelativePathPiece /* path */,
+      const TreeEntry& /* sourceControlEntry */) override {}
+  void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
+      override {
+    auto errorMsg = folly::sformat("{}: {}", path, folly::exceptionStr(ew));
+    data_.wlock()->errors.emplace_back(path.copy(), errorMsg);
+  }
+
+  void extractResults(
+      std::unordered_set<RelativePath>* paths,
+      std::vector<DirstateAddRemoveError>* errors) {
+    auto data = data_.rlock();
+    paths->insert(data->addedPaths.begin(), data->addedPaths.end());
+    errors->insert(errors->end(), data->errors.begin(), data->errors.end());
+  }
+
+ private:
+  /**
+   * The input path that we are processing for addAll().
+   * We only store a RelativePathPiece since we know that the input paths
+   * remain valid until addAll() completes, so we don't need to make a copy.
+   */
+  RelativePath path_;
+
+  struct Data {
+    std::vector<DirstateAddRemoveError> errors;
+    std::unordered_set<RelativePath> addedPaths;
+  };
+  folly::Synchronized<Data> data_;
 };
 
-void addDirstateAddRemoveError(
+void dirstateAddError(
+    std::vector<DirstateAddRemoveError>* errorsToReport,
     RelativePathPiece path,
-    StringPiece formatError,
-    std::vector<DirstateAddRemoveError>* errorsToReport) {
-  errorsToReport->push_back(DirstateAddRemoveError{
-      path.copy(), folly::sformat(formatError, path.stringPiece())});
+    StringPiece message) {
+  errorsToReport->emplace_back(
+      path.copy(), folly::to<string>(path, ": ", message));
 }
 
-void assignAddAction(
+void dirstateRemoveError(
+    std::vector<DirstateAddRemoveError>* errorsToReport,
     RelativePathPiece path,
-    StatusCode code,
-    std::unordered_map<RelativePath, AddAction>& actions) {
-  if (code == StatusCode::NOT_TRACKED) {
-    actions[path.copy()] = AddAction::Add;
-  } else if (code == StatusCode::REMOVED) {
-    actions[path.copy()] = AddAction::Erase;
+    StringPiece message,
+    bool removeMessage = true) {
+  StringPiece prefix;
+  if (removeMessage) {
+    prefix = "not removing ";
   }
-  // TODO(mbolin): Should we do anything for the other statuses? Do we
-  // need to complain or anything like that?
+  errorsToReport->emplace_back(
+      path.copy(), folly::to<string>(prefix, path, ": ", message));
 }
-
-enum WorkingCopyStatus { File, Directory, DoesNotExist, MagicPath };
 
 static bool isMagicPath(RelativePathPiece path) {
   // If any component of the path name is .eden, then this path is a magic
   // path that we won't allow to be checked in or show up in the dirstate.
-  for (auto p : path.paths()) {
-    if (p.basename().stringPiece() == kDotEdenName) {
+  for (auto c : path.components()) {
+    if (c.stringPiece() == kDotEdenName) {
       return true;
     }
   }
   return false;
-}
-
-WorkingCopyStatus getPathStatus(
-    RelativePathPiece path,
-    const EdenMount* mount) {
-  try {
-    // If any component of the path name is .eden, then this path is a magic
-    // path that we won't allow to be checked in or show up in the dirstate.
-    if (isMagicPath(path)) {
-      return WorkingCopyStatus::MagicPath;
-    }
-
-    // Use getInodeBlocking() as a test of whether the path exists.
-    auto inodeBase = mount->getInodeBlocking(path);
-    if (inodeBase.asFilePtrOrNull() != nullptr) {
-      return WorkingCopyStatus::File;
-    } else {
-      return WorkingCopyStatus::Directory;
-    }
-  } catch (const std::system_error& e) {
-    if (e.code().value() != ENOENT) {
-      throw;
-    } else {
-      return WorkingCopyStatus::DoesNotExist;
-    }
-  }
 }
 }
 
@@ -807,53 +379,60 @@ void Dirstate::addAll(
     std::vector<DirstateAddRemoveError>* errorsToReport) {
   // Find all of the untracked files and then update userDirectives, as
   // appropriate.
-  std::unordered_map<RelativePath, AddAction> actions;
+  std::unordered_set<RelativePath> pathsToAdd;
   for (auto& path : paths) {
-    auto pathStatus = getPathStatus(path, mount_);
-    if (pathStatus == WorkingCopyStatus::File) {
-      // Admittedly, this getStatusForExistingDirectory() call will also
-      // traverse subdirectories of path.dirname(), so it will do some extra
-      // work. Similarly, if paths contains a list of files in the same
-      // directory, getStatusForExistingDirectory() will be called once per
-      // file instead of once for all files in that directory. If this turns
-      // out to be a bottleneck, then we can do some extra bookkeeping to
-      // reduce lookups.
-      auto status = getStatusForExistingDirectory(path.dirname());
-      auto code = status->statusForPath(path);
-      assignAddAction(path, code, actions);
-    } else if (pathStatus == WorkingCopyStatus::Directory) {
-      auto status = getStatusForExistingDirectory(path);
-      for (auto& pair : *status->list()) {
-        // Only attempt to process the entry if it corresponds to a file in the
-        // working copy.
-        auto entryStatus = getPathStatus(pair.first, mount_);
-        if (entryStatus == WorkingCopyStatus::File) {
-          assignAddAction(pair.first, pair.second, actions);
-        }
-      }
-    } else if (pathStatus == WorkingCopyStatus::DoesNotExist) {
-      addDirstateAddRemoveError(
-          path, "{}: No such file or directory", errorsToReport);
-    } else if (pathStatus == WorkingCopyStatus::MagicPath) {
-      addDirstateAddRemoveError(
-          path, "{}: cannot be part of a commit", errorsToReport);
-    } else {
-      throw std::runtime_error("Unhandled enum value");
+    if (isMagicPath(path)) {
+      dirstateAddError(errorsToReport, path, "cannot be part of a commit");
     }
+
+    // Make sure this path actually exists.
+    if (!getInodeBaseOrNull(path)) {
+      dirstateAddError(errorsToReport, path, "No such file or directory");
+    }
+
+    AddAllDiffCallback callback{path};
+    // TODO: Implement a function in EdenMount to diff only a specific subtree.
+    // Currently we are diffing much more than we need to.
+    //
+    // This mostly involves just looking up the correct TreeInode and Tree to
+    // diff, along with the GitIgnoreStack to that location in the tree.
+    mount_->diff(&callback, true).get();
+
+    callback.extractResults(&pathsToAdd, errorsToReport);
   }
 
   // Apply all of the updates to userDirectives in one go.
-  if (!actions.empty()) {
+  {
+    // Add the untracked files we found under these paths
     auto userDirectives = userDirectives_.wlock();
-    for (auto& pair : actions) {
-      auto action = pair.second;
-      switch (action) {
-        case AddAction::Add:
-          (*userDirectives)[pair.first] = overlay::UserStatusDirective::Add;
-          break;
-        case AddAction::Erase:
-          userDirectives->erase(pair.first);
-          break;
+    for (auto& path : pathsToAdd) {
+      // Try to insert this path into userDirectives_.  If it is already
+      // present as a Remove entry, just delete the Remove entry.
+      auto ret =
+          userDirectives->emplace(path, overlay::UserStatusDirective::Add);
+      if (!ret.second) {
+        if (ret.first->second == overlay::UserStatusDirective::Remove) {
+          userDirectives->erase(ret.first);
+        }
+      }
+    }
+
+    // Also look for files that were previously marked Remove but still exist.
+    auto iter = userDirectives->begin();
+    while (iter != userDirectives->end()) {
+      auto current = iter;
+      ++iter;
+
+      if (current->second != overlay::UserStatusDirective::Remove) {
+        continue;
+      }
+      for (auto& path : paths) {
+        if (path == current->first || path.isParentDirOf(current->first)) {
+          auto inode = getInodeBaseOrNull(current->first);
+          if (inode != nullptr && inode.asFilePtrOrNull() != nullptr) {
+            userDirectives->erase(current);
+          }
+        }
       }
     }
     persistence_.save(*userDirectives);
@@ -896,10 +475,8 @@ ShouldBeDeleted shouldFileBeDeletedByHgRemove(
               treeEntry, entry.second.get(), objectStore, *treeInode, *dir)) {
         return ShouldBeDeleted::YES;
       } else {
-        addDirstateAddRemoveError(
-            file,
-            "not removing {}: file is modified (use -f to force removal)",
-            errorsToReport);
+        dirstateRemoveError(
+            errorsToReport, file, "file is modified (use -f to force removal)");
         return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED;
       }
     }
@@ -941,8 +518,8 @@ void Dirstate::removeAll(
   auto objectStore = mount_->getObjectStore();
   for (auto& path : paths) {
     if (isMagicPath(path)) {
-      addDirstateAddRemoveError(
-          path, "{}: cannot be part of a commit", errorsToReport);
+      dirstateRemoveError(
+          errorsToReport, path, "cannot be part of a commit", false);
       continue;
     }
 
@@ -1011,8 +588,8 @@ void Dirstate::removeAll(
             continue;
           }
         }
-        addDirstateAddRemoveError(
-            path, "{}: No such file or directory", errorsToReport);
+        dirstateRemoveError(
+            errorsToReport, path, "No such file or directory", false);
       }
     }
   }
@@ -1112,8 +689,7 @@ void Dirstate::remove(
       // corresponding TreeEntry in the manifest and compare it to its Entry in
       // the Overlay, if it exists.
       if (entry == nullptr) {
-        addDirstateAddRemoveError(
-            path, "not removing {}: file is untracked", errorsToReport);
+        dirstateRemoveError(errorsToReport, path, "file is untracked");
         return;
       }
 
@@ -1152,11 +728,10 @@ void Dirstate::remove(
           break;
         case overlay::UserStatusDirective::Add:
           if (inode != nullptr) {
-            addDirstateAddRemoveError(
+            dirstateRemoveError(
+                errorsToReport,
                 path,
-                "not removing {}: file has been marked for add "
-                "(use 'hg forget' to undo add)",
-                errorsToReport);
+                "file has been marked for add (use 'hg forget' to undo add)");
             return;
           } else {
             userDirectives->erase(path.copy());

@@ -79,6 +79,9 @@ class HgStatus {
 std::ostream& operator<<(std::ostream& os, const HgStatus& status);
 
 struct DirstateAddRemoveError {
+  DirstateAddRemoveError(RelativePathPiece p, folly::StringPiece s)
+      : path{p}, errorMessage{s.str()} {}
+
   RelativePath path;
   std::string errorMessage;
 };
@@ -177,43 +180,12 @@ class Dirstate {
 
  private:
   /**
-   * A version of getStatus() that explores only a specific directory, but
-   * comes with the critical limitation that it will throw ENOENT or ENOTDIR
-   * if the specified directory doesn't exist (or if it refers to a file).
-   */
-  std::unique_ptr<HgStatus> getStatusForExistingDirectory(
-      RelativePathPiece directory) const;
-
-  /**
    * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
    */
   void remove(
       RelativePathPiece path,
       bool force,
       std::vector<DirstateAddRemoveError>* errorsToReport);
-
-  /**
-   * Compares the TreeEntries from a Tree in the base commit with those in the
-   * current TreeInode. Differences are recorded in the provided delta.
-   */
-  void computeDelta(
-      const std::vector<TreeEntry>* originalTreeEntries,
-      TreeInode& current,
-      DirectoryDelta& delta) const;
-
-  /**
-   * Recursively performs a depth-first traversal of the specified Tree, adding
-   * all of the files under it as either REMOVED or MISSING to
-   * copyOfUserDirectives, as appropriate.
-   */
-  void addDeletedEntries(
-      const Tree* tree,
-      RelativePathPiece pathToTree,
-      std::unordered_map<RelativePath, StatusCode>* manifest,
-      const std::unordered_map<RelativePath, overlay::UserStatusDirective>*
-          userDirectives,
-      std::unordered_map<RelativePathPiece, overlay::UserStatusDirective>*
-          copyOfUserDirectives) const;
 
   /**
    * Note that EdenMount::getInodeBlocking() throws if path does not
