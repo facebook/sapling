@@ -1724,8 +1724,7 @@ class chunkbuffer(object):
     iterator over chunks of arbitrary size."""
 
     def __init__(self, in_iter):
-        """in_iter is the iterator that's iterating over the input chunks.
-        targetsize is how big a buffer to try to maintain."""
+        """in_iter is the iterator that's iterating over the input chunks."""
         def splitbig(chunks):
             for chunk in chunks:
                 if len(chunk) > 2**20:
