@@ -193,7 +193,14 @@ def _modesetup(ui):
         return 'debug'
 
     auto = (config == 'auto')
-    always = not auto and util.parsebool(config)
+    always = False
+    if not auto and util.parsebool(config):
+        # we want the config to behave like a boolean, "on" is actually auto
+        if ui.configsource('ui', 'color') == '--color':
+            always = True
+        else:
+            auto = True
+
     if not always and not auto:
         return None
 

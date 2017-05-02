@@ -5,15 +5,15 @@ in red, while the status command shows modified files in magenta. Many
 other commands have analogous colors. It is possible to customize
 these colors.
 
-To enable color (default) use::
+To enable color (default) whenever possible use::
 
   [ui]
-  color = auto
+  color = yes
 
 To disable color use::
 
   [ui]
-  color = never
+  color = no
 
 See :hg:`help config.ui.color` for details.
 

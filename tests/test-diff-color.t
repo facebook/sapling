@@ -3,6 +3,7 @@ Setup
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > color = always
+  > formatted = always
   > [color]
   > mode = ansi
   > EOF
@@ -45,6 +46,38 @@ default context
    a
   \x1b[0;31m-b\x1b[0m (esc)
   \x1b[0;32m+dd\x1b[0m (esc)
+   a
+   a
+   c
+
+(check that 'ui.color=yes' match '--color=auto')
+
+  $ hg diff --nodates --config ui.formatted=no
+  diff -r cf9f4ba66af2 a
+  --- a/a
+  +++ b/a
+  @@ -2,7 +2,7 @@
+   c
+   a
+   a
+  -b
+  +dd
+   a
+   a
+   c
+
+(check that 'ui.color=no' disable color)
+
+  $ hg diff --nodates --config ui.formatted=yes --config ui.color=no
+  diff -r cf9f4ba66af2 a
+  --- a/a
+  +++ b/a
+  @@ -2,7 +2,7 @@
+   c
+   a
+   a
+  -b
+  +dd
    a
    a
    c

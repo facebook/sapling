@@ -142,6 +142,7 @@ even though stdout is no longer a tty.
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > color = yes
+  > formatted = yes
   > [color]
   > mode = ansi
   > EOF
