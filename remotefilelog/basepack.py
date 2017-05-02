@@ -190,10 +190,11 @@ class basepack(versionmixin):
 
     def freememory(self):
         """Unmap and remap the memory to free it up after known expensive
-        operations."""
+        operations. Return True if self._data nad self._index were reloaded.
+        """
         if self._index:
             if self._pagedin < self.MAXPAGEDIN:
-                return
+                return False
 
             self._index.close()
             self._data.close()
@@ -204,6 +205,7 @@ class basepack(versionmixin):
         self._data = mmap.mmap(self.datafp.fileno(), 0,
                                access=mmap.ACCESS_READ)
         self._pagedin = 0
+        return True
 
     def getmissing(self, keys):
         raise NotImplemented()

@@ -282,7 +282,8 @@ class datapack(basepack.basepack):
 
             # If we've read a lot of data from the mmap, free some memory.
             self._pagedin += offset - oldoffset
-            self.freememory()
+            if self.freememory():
+                data = self._data
 
 class fastdatapack(basepack.basepack):
     INDEXSUFFIX = INDEXSUFFIX
