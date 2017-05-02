@@ -488,8 +488,8 @@ const get_delta_chain_link_result_t getdeltachainlink(
 }
 
 bool uncompressdeltachainlink(delta_chain_link_t *link) {
-  if (link->delta != NULL) {
-    // previously decompressed
+  if (link->delta != NULL || link->delta_sz == 0) {
+    // previously decompressed or no content to decompress
     return true;
   }
 

@@ -71,11 +71,10 @@ class datapacktestsbase(object):
         path = packer.close()
         return self.datapackreader(path)
 
-    def testAddSingle(self):
+    def _testAddSingle(self, content):
         """Test putting a simple blob into a pack and reading it out.
         """
         filename = "foo"
-        content = "abcdef"
         node = self.getHash(content)
 
         revisions = [(filename, node, nullid, content)]
@@ -85,6 +84,12 @@ class datapacktestsbase(object):
 
         chain = pack.getdeltachain(filename, node)
         self.assertEquals(content, chain[0][4])
+
+    def testAddSingle(self):
+        self._testAddSingle('')
+
+    def testAddSingleEmpty(self):
+        self._testAddSingle('abcdef')
 
     def testAddMultiple(self):
         """Test putting multiple unrelated blobs into a pack and reading them
