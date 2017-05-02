@@ -291,10 +291,10 @@ class FileImporter(object):
         flat = FlatfileImporter(self.storepath)
         local_revs = rcs.revisions | flat.revisions
 
-        revs = []
+        revs = set()
         for c in self._importset.changelists:
             if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
-                revs.append(c)
+                revs.add(c)
 
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
