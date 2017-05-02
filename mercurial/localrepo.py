@@ -386,11 +386,6 @@ class localrepository(object):
         self.names = namespaces.namespaces()
 
     @property
-    def wopener(self):
-        self.ui.deprecwarn("use 'repo.wvfs' instead of 'repo.wopener'", '4.2')
-        return self.wvfs
-
-    @property
     def opener(self):
         self.ui.deprecwarn("use 'repo.vfs' instead of 'repo.opener'", '4.2')
         return self.vfs
