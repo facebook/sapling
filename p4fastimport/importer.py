@@ -116,6 +116,7 @@ class ChangeManifestImporter(object):
 
             shortdesc = desc.splitlines()[0]
             username = change.parsed['user']
+            username = self.usermap.get(username, username)
             self._ui.debug('changelist %d: writing changelog: %s\n' % (
                 change.cl, shortdesc))
             cp1 = clog.add(
