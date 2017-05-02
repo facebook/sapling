@@ -1794,7 +1794,6 @@ class localrepository(object):
                 # if minimal phase was 0 we don't need to retract anything
                 phases.retractboundary(self, tr, targetphase, [n])
             tr.close()
-            branchmap.updatecache(self.filtered('served'))
             return n
         finally:
             if tr:
