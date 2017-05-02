@@ -12,7 +12,7 @@ Build-Depends:
  unzip,
  zip
 Standards-Version: 3.9.4
-X-Python-Version: >= 2.6
+X-Python-Version: >= 2.7
 
 Package: mercurial
 Depends:

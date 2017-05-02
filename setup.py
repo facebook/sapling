@@ -5,8 +5,8 @@
 # 'python setup.py --help' for more options
 
 import sys, platform
-if sys.version_info < (2, 6, 0, 'final'):
-    raise SystemExit("Mercurial requires Python 2.6 or later.")
+if sys.version_info < (2, 7, 0, 'final'):
+    raise SystemExit('Mercurial requires Python 2.7 or later.')
 
 if sys.version_info[0] >= 3:
     printf = eval('print')
