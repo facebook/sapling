@@ -28,8 +28,8 @@ _packageprefs = {
     # policy: (versioned package, pure package)
     b'c': (r'cext', None),
     b'allow': (r'cext', r'pure'),
-    b'cffi': (None, r'pure'),  # TODO: (r'cffi', None)
-    b'cffi-allow': (None, r'pure'),  # TODO: (r'cffi', r'pure')
+    b'cffi': (r'cffi', None),
+    b'cffi-allow': (r'cffi', r'pure'),
     b'py': (None, r'pure'),
 }
 
