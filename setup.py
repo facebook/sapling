@@ -353,15 +353,15 @@ class hgbuildpy(build_py):
             self.distribution.ext_modules = []
         elif self.distribution.cffi:
             from mercurial.cffi import (
-                bdiff,
-                mpatch,
+                bdiffbuild,
+                mpatchbuild,
             )
-            exts = [mpatch.ffi.distutils_extension(),
-                    bdiff.ffi.distutils_extension()]
+            exts = [mpatchbuild.ffi.distutils_extension(),
+                    bdiffbuild.ffi.distutils_extension()]
             # cffi modules go here
             if sys.platform == 'darwin':
-                from mercurial.cffi import osutil
-                exts.append(osutil.ffi.distutils_extension())
+                from mercurial.cffi import osutilbuild
+                exts.append(osutilbuild.ffi.distutils_extension())
             self.distribution.ext_modules = exts
         else:
             h = os.path.join(get_python_inc(), 'Python.h')
