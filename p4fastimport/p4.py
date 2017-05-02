@@ -2,8 +2,10 @@
 from __future__ import absolute_import
 
 import collections
+import contextlib
 import json
 import marshal
+import time
 
 from .util import runworker
 from mercurial import (
@@ -47,6 +49,17 @@ def config(key):
         _config = parse_info()
     return _config[key]
 
+@contextlib.contextmanager
+def retries(num=3, sleeps=0.3):
+    for _try in range(1, num + 1):
+        try:
+            yield
+            return
+        except Exception:
+            if _try == num:
+                raise
+            time.sleep(sleeps)
+
 def parse_changes(client, startcl=None, endcl=None):
     "Read changes affecting the path"
     cmd = 'p4 --client %s -ztag -G changes -s submitted //%s/...%s' % (
@@ -83,9 +96,10 @@ def parse_where(client, depotname):
     cmd = 'p4 --client %s -G where %s' % (
             util.shellquote(client),
             util.shellquote(depotname))
-    stdout = util.popen(cmd, mode='rb')
     try:
-        return marshal.load(stdout)
+        with retries(num=3, sleeps=0.3):
+            stdout = util.popen(cmd, mode='rb')
+            return marshal.load(stdout)
     except Exception:
         raise P4Exception(stdout)
 
@@ -98,17 +112,19 @@ def get_file(path, rev=None, clnum=None):
         r = '@%d' % clnum
 
     cmd = 'p4 print -q %s%s' % (util.shellquote(path), r)
-    stdout = util.popen(cmd, mode='rb')
-    content = stdout.read()
-    return content
+    with retries(num=5, sleeps=0.3):
+        stdout = util.popen(cmd, mode='rb')
+        content = stdout.read()
+        return content
 
 def parse_cl(clnum):
     """Returns a description of a change given by the clnum. CLnum can be an
     original CL before renaming"""
     cmd = 'p4 -ztag -G describe -O %d' % clnum
-    stdout = util.popen(cmd, mode='rb')
     try:
-        return marshal.load(stdout)
+        with retries(num=3, sleeps=0.3):
+            stdout = util.popen(cmd, mode='rb')
+            return marshal.load(stdout)
     except Exception:
         raise P4Exception(stdout)
 
@@ -124,9 +140,10 @@ def parse_usermap():
 
 def parse_client(client):
     cmd = 'p4 -G client -o %s' % util.shellquote(client)
-    stdout = util.popen(cmd, mode='rb')
     try:
-        clientspec = marshal.load(stdout)
+        with retries(num=3, sleeps=0.3):
+            stdout = util.popen(cmd, mode='rb')
+            clientspec = marshal.load(stdout)
     except Exception:
         raise P4Exception(stdout)
 
