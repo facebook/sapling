@@ -1093,6 +1093,10 @@ class localrepository(object):
                                **pycompat.strkwargs(hookargs))
             reporef()._afterlock(hook)
         tr.addfinalize('txnclose-hook', txnclosehook)
+        def warmscache(tr2):
+            repo = reporef()
+            repo.updatecaches(tr2)
+        tr.addpostclose('warms-cache', warmscache)
         def txnaborthook(tr2):
             """To be run if transaction is aborted
             """
@@ -1226,6 +1230,17 @@ class localrepository(object):
         # invalidated.
         self.destroyed()
         return 0
+
+    @unfilteredmethod
+    def updatecaches(self, tr):
+        """warm appropriate caches after a transaction closed"""
+        if tr.hookargs.get('source') == 'strip':
+            # During strip, many caches are invalid but
+            # later call to `destroyed` will refresh them.
+            return
+
+        if tr.changes['revs']:
+            branchmap.updatecache(self.filtered('served'))
 
     def invalidatecaches(self):
 
