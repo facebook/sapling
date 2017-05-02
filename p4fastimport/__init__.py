@@ -179,7 +179,9 @@ def run_import(ui, repo, client, changelists, **opts):
     ui.note(_('loading list of files.\n'))
     filelist = set()
     for fileinfo in p4.parse_filelist(client, startcl=startcl, endcl=endcl):
-        if fileinfo['action'] in p4.SUPPORTED_ACTIONS:
+        if fileinfo['action'] in p4.ACTION_ARCHIVE:
+            pass
+        elif fileinfo['action'] in p4.SUPPORTED_ACTIONS:
             filelist.add(fileinfo['depotFile'])
         else:
             ui.warn(_('unknown action %s: %s\n') % (fileinfo['action'],

@@ -150,6 +150,8 @@ def parse_fstat(clnum, client, filter=None):
         result = []
         for d in loaditer(stdout):
             if d.get('depotFile') and (filter is None or filter(d)):
+                if d['headAction'] in ACTION_ARCHIVE:
+                    continue
                 result.append({
                     'depotFile': d['depotFile'],
                     'action': d['headAction'],
@@ -232,6 +234,7 @@ class P4Filelog(object):
 ACTION_EDIT = ['edit', 'integrate']
 ACTION_ADD = ['add', 'branch', 'move/add']
 ACTION_DELETE = ['delete', 'move/delete']
+ACTION_ARCHIVE = ['archive']
 SUPPORTED_ACTIONS = ACTION_EDIT + ACTION_ADD + ACTION_DELETE
 
 class P4Changelist(object):
@@ -299,7 +302,7 @@ class P4Changelist(object):
         ---------------------
         add        | add, branch, move/add
         modified   | edit, integrate
-        removed    | delete, move/delte
+        removed    | delete, move/delte, archive
         """
         a, m, r = [], [], []
         for fname, info in self.parsed['files'].iteritems():
@@ -307,7 +310,7 @@ class P4Changelist(object):
                 m.append(fname)
             elif info['action'] in ACTION_ADD:
                 a.append(fname)
-            elif info['action'] in ACTION_DELETE:
+            elif info['action'] in ACTION_DELETE + ACTION_ARCHIVE:
                 r.append(fname)
             else:
                 assert False
