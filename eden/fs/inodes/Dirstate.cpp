@@ -19,15 +19,11 @@
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/model/Blob.h"
-#include "eden/fs/model/git/GitIgnore.h"
-#include "eden/fs/model/git/GitIgnorePattern.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ObjectStores.h"
 
@@ -38,36 +34,6 @@ using folly::StringPiece;
 using folly::Unit;
 using facebook::eden::overlay::UserStatusDirective;
 using std::string;
-
-namespace {
-/**
- * When comparing two file entries for equality from a source control
- * perspective, exclude these bits when comparing their mode_t values.
- * Specifically, we ignore the "group" and "others" permissions,
- * as well as setuid, setgid, and the restricted deletion flag.
- */
-constexpr mode_t kIgnoredModeBits =
-    (S_IRWXG | S_IRWXO | S_ISUID | S_ISGID | S_ISVTX);
-
-/**
- * Represents file (non-directory) changes in a directory. This reflects:
- * - New file in directory.
- * - File removed from directory (possibly replaced with directory of same
- *   name).
- * - Subdirectory removed form directory (possibly replaced with file of same
- *   name).
- *
- * However, it does not reflect:
- * - New subdirectory in directory.
- */
-struct DirectoryDelta {
-  // The contents of each vector is sorted by compare().
-  std::vector<facebook::eden::PathComponent> added;
-  std::vector<facebook::eden::PathComponent> removed;
-  std::vector<facebook::eden::PathComponent> modified;
-  std::vector<facebook::eden::PathComponent> removedDirectories;
-};
-}
 
 namespace facebook {
 namespace eden {
@@ -247,46 +213,23 @@ ThriftHgStatus Dirstate::getStatus(bool listIgnored) const {
   return callback.extractStatus();
 }
 
+namespace {
+
 /**
  * Assumes that treeEntry and treeInode correspond to the same path. Returns
  * true if both the mode_t and file contents match for treeEntry and treeInode.
  */
-bool hasMatchingAttributes(
-    const TreeEntry* treeEntry,
-    const TreeInode::Entry* inodeEntry,
-    ObjectStore* objectStore,
-    TreeInode& parent, // Has rlock
-    const TreeInode::Dir& dir) {
-  // As far as comparing mode bits is concerned, we ignore the "group" and
-  // "other" permissions.
-  if (((treeEntry->getMode() ^ inodeEntry->mode) & ~kIgnoredModeBits) != 0) {
+bool hasMatchingAttributes(const TreeEntry* treeEntry, const InodePtr& inode) {
+  // The dirstate only tracks regular files and symlinks, not directories.
+  // If this inode is not currently a file or symlink, it must be different.
+  auto fileInode = inode.asFilePtrOrNull();
+  if (!fileInode) {
     return false;
   }
 
-  // TODO(t12183419): Once the file size is available in the TreeEntry,
-  // compare file sizes before fetching SHA-1s.
-
-  if (inodeEntry->isMaterialized()) {
-    // If the the inode is materialized, then we cannot trust the Hash on the
-    // TreeInode::Entry, so we must compare with the contents in the overlay.
-    auto fileInode = dynamic_cast<FileInode*>(inodeEntry->inode);
-    auto overlaySHA1 = fileInode->getSHA1().get();
-    auto blobSHA1 = objectStore->getSha1ForBlob(treeEntry->getHash());
-    return overlaySHA1 == blobSHA1;
-  } else {
-    return inodeEntry->getHash() == treeEntry->getHash();
-  }
+  return fileInode->isSameAs(treeEntry->getHash(), treeEntry->getMode()).get();
 }
 
-/**
- * @return true if `mode` corresponds to a file (regular or symlink) as opposed
- *   to a directory.
- */
-inline bool isFile(mode_t mode) {
-  return S_ISREG(mode) || S_ISLNK(mode);
-}
-
-namespace {
 class AddAllDiffCallback : public InodeDiffCallback {
  public:
   explicit AddAllDiffCallback(RelativePathPiece path) : path_{path} {}
@@ -440,56 +383,6 @@ void Dirstate::addAll(
 }
 
 namespace {
-enum ShouldBeDeleted {
-  YES,
-  NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED,
-  NO_BECAUSE_THE_FILE_WAS_MODIFIED,
-};
-}
-
-/**
- * We need to delete the file from the working copy if either of the following
- * hold (note that it is a precondition that the file exists):
- * 1. The file is not materialized in the overlay, so it is unmodified.
- * 2. The file is in the overlay, but matches what is in the manifest.
- */
-ShouldBeDeleted shouldFileBeDeletedByHgRemove(
-    RelativePathPiece file,
-    TreeInodePtr treeInode,
-    const TreeEntry* treeEntry,
-    ObjectStore* objectStore,
-    std::vector<DirstateAddRemoveError>* errorsToReport) {
-  if (treeInode == nullptr) {
-    // The parent directory for the file is not in the overlay, so the file must
-    // not have been modified. As such, `hg remove` should result in deleting
-    // the file.
-    return ShouldBeDeleted::YES;
-  }
-
-  auto name = file.basename();
-  auto dir = treeInode->getContents().rlock();
-  auto& entries = dir->entries;
-  for (auto& entry : entries) {
-    if (entry.first == name) {
-      if (hasMatchingAttributes(
-              treeEntry, entry.second.get(), objectStore, *treeInode, *dir)) {
-        return ShouldBeDeleted::YES;
-      } else {
-        dirstateRemoveError(
-            errorsToReport, file, "file is modified (use -f to force removal)");
-        return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED;
-      }
-    }
-  }
-
-  // If we have reached this point, then the file has already been removed. Note
-  // that this line of code should be unreachable given the preconditions of
-  // this function, but there could be a race condition where the file is
-  // deleted after this function is entered and before we reach this line of
-  // code, so we return false here just to be safe.
-  return ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED;
-}
-
 void collectAllPathsUnderTree(
     const Tree* directory,
     RelativePathPiece directoryName,
@@ -504,6 +397,7 @@ void collectAllPathsUnderTree(
       collectAllPathsUnderTree(tree.get(), entryPath, objectStore, collection);
     }
   }
+}
 }
 
 void Dirstate::removeAll(
@@ -694,29 +588,14 @@ void Dirstate::remove(
       }
 
       if (inode != nullptr) {
-        if (force) {
+        if (force || hasMatchingAttributes(entry.get(), inode)) {
           shouldDelete = true;
         } else {
-          auto shouldBeDeleted = shouldFileBeDeletedByHgRemove(
+          dirstateRemoveError(
+              errorsToReport,
               path,
-              parent,
-              entry.get(),
-              mount_->getObjectStore(),
-              errorsToReport);
-          switch (shouldBeDeleted) {
-            case ShouldBeDeleted::YES:
-              shouldDelete = true;
-              break;
-            case ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_ALREADY_DELETED:
-              // We still need to update userDirectives to mark the file as
-              // removed in this case.
-              break;
-            case ShouldBeDeleted::NO_BECAUSE_THE_FILE_WAS_MODIFIED:
-              // If the file was modified, then it should not even be marked as
-              // removed. An error should have been added to errorsToReport, so
-              // we just abort the entire method at this point.
-              return;
-          }
+              "file is modified (use -f to force removal)");
+          return;
         }
       }
       (*userDirectives)[path.copy()] = overlay::UserStatusDirective::Remove;

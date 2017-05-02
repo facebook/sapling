@@ -7,16 +7,17 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "FileInode.h"
+#include "eden/fs/inodes/FileInode.h"
 
-#include "EdenMount.h"
-#include "FileData.h"
-#include "FileHandle.h"
-#include "InodeError.h"
-#include "Overlay.h"
-#include "TreeInode.h"
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileData.h"
+#include "eden/fs/inodes/FileHandle.h"
+#include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/XAttr.h"
 
@@ -160,27 +161,47 @@ AbsolutePath FileInode::getLocalPath() const {
   return getMount()->getOverlay()->getFilePath(getNodeId());
 }
 
-bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
+std::pair<bool, shared_ptr<FileData>> FileInode::isSameAsFast(
+    const Hash& blobID,
+    mode_t mode) {
   // When comparing mode bits, we only care about the
   // file type and owner permissions.
   auto relevantModeBits = [](mode_t m) { return (m & (S_IFMT | S_IRWXU)); };
 
-  shared_ptr<FileData> data;
-  {
-    auto state = state_.wlock();
-    if (relevantModeBits(state->mode) != relevantModeBits(mode)) {
-      return false;
-    }
-
-    if (state->hash.hasValue()) {
-      // This file is not materialized, so we can just compare hashes
-      return state->hash.value() == blob.getHash();
-    }
-
-    data = getOrLoadData(state);
+  auto state = state_.wlock();
+  if (relevantModeBits(state->mode) != relevantModeBits(mode)) {
+    return std::make_pair(false, nullptr);
   }
 
-  return data->getSha1() == Hash::sha1(&blob.getContents());
+  if (state->hash.hasValue()) {
+    // This file is not materialized, so we can just compare hashes
+    return std::make_pair(state->hash.value() == blobID, nullptr);
+  }
+
+  return std::make_pair(false, getOrLoadData(state));
+}
+
+bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
+  auto result = isSameAsFast(blob.getHash(), mode);
+  if (!result.second) {
+    return result.first;
+  }
+
+  return result.second->getSha1() == Hash::sha1(&blob.getContents());
+}
+
+folly::Future<bool> FileInode::isSameAs(const Hash& blobID, mode_t mode) {
+  auto result = isSameAsFast(blobID, mode);
+  if (!result.second) {
+    return makeFuture(result.first);
+  }
+
+  return getMount()
+      ->getObjectStore()
+      ->getBlobMetadata(blobID)
+      .then([self = inodePtrFromThis()](const BlobMetadata& metadata) {
+        return self->getOrLoadData()->getSha1() == metadata.sha1;
+      });
 }
 
 mode_t FileInode::getMode() const {

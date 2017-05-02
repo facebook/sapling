@@ -16,10 +16,6 @@
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace {
-class DirectoryDelta;
-}
-
 namespace facebook {
 namespace eden {
 

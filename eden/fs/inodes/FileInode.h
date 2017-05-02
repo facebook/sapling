@@ -82,6 +82,7 @@ class FileInode : public InodeBase {
    * perform a simple hash check if the file is not materialized.
    */
   bool isSameAs(const Blob& blob, mode_t mode);
+  folly::Future<bool> isSameAs(const Hash& blobID, mode_t mode);
 
   /**
    * Get the file mode_t value.
@@ -154,8 +155,21 @@ class FileInode : public InodeBase {
    */
   void materializeInParent();
 
-  /// Called as part of shutting down an open handle.
+  /**
+   * Called as part of shutting down an open handle.
+   */
   void fileHandleDidClose();
+
+  /**
+   * Helper function for isSameAs().
+   *
+   * This does the initial portion of the check which never requires a Future.
+   * Returns (bool, nullptr) if the check completes immediately, or
+   * (false, data) if the contents need to be checked against the FileData.
+   */
+  std::pair<bool, std::shared_ptr<FileData>> isSameAsFast(
+      const Hash& blobID,
+      mode_t mode);
 
   folly::Synchronized<State> state_;
 
