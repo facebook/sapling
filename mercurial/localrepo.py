@@ -1232,14 +1232,20 @@ class localrepository(object):
         return 0
 
     @unfilteredmethod
-    def updatecaches(self, tr):
-        """warm appropriate caches after a transaction closed"""
-        if tr.hookargs.get('source') == 'strip':
+    def updatecaches(self, tr=None):
+        """warm appropriate caches
+
+        If this function is called after a transaction closed. The transaction
+        will be available in the 'tr' argument. This can be used to selectively
+        update caches relevant to the changes in that transaction.
+        """
+        if tr is not None and tr.hookargs.get('source') == 'strip':
             # During strip, many caches are invalid but
             # later call to `destroyed` will refresh them.
             return
 
-        if tr.changes['revs']:
+        if tr is None or tr.changes['revs']:
+            # updating the unfiltered branchmap should refresh all the others,
             branchmap.updatecache(self.filtered('served'))
 
     def invalidatecaches(self):
@@ -1830,10 +1836,8 @@ class localrepository(object):
         self._phasecache.filterunknown(self)
         self._phasecache.write()
 
-        # update the 'served' branch cache to help read only server process
-        # Thanks to branchcache collaboration this is done from the nearest
-        # filtered subset and it is expected to be fast.
-        branchmap.updatecache(self.filtered('served'))
+        # refresh all repository caches
+        self.updatecaches()
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
