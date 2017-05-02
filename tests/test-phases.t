@@ -181,6 +181,7 @@ head shadowed by the remote secret head.
 check that branch cache with "served" filter are properly computed and stored
 
   $ ls ../push-dest/.hg/cache/branch2*
+  ../push-dest/.hg/cache/branch2-base
   ../push-dest/.hg/cache/branch2-served
   $ cat ../push-dest/.hg/cache/branch2-served
   6d6770faffce199f1fddd1cf87f6f026138cf061 6 465891ffab3c47a3c23792f7dc84156e19a90722
@@ -191,6 +192,7 @@ check that branch cache with "served" filter are properly computed and stored
   5:2713879da13d6eea1ff22b442a5a87cb31a7ce6a secret
   3:b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e draft
   $ ls ../push-dest/.hg/cache/branch2*
+  ../push-dest/.hg/cache/branch2-base
   ../push-dest/.hg/cache/branch2-served
   ../push-dest/.hg/cache/branch2-visible
   $ cat ../push-dest/.hg/cache/branch2-served

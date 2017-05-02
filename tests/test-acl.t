@@ -147,7 +147,6 @@ Extension disabled for lack of acl.sources
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -213,7 +212,6 @@ No [acl.allow]/[acl.deny]
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -289,7 +287,6 @@ Empty [acl.allow]
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -354,7 +351,6 @@ fred is allowed inside foo/
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -424,7 +420,6 @@ Empty [acl.deny]
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -491,7 +486,6 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -563,7 +557,6 @@ fred is allowed inside foo/, but not foo/Bar/
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -632,7 +625,6 @@ fred is allowed inside foo/, but not foo/Bar/
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -703,7 +695,6 @@ barney is allowed everywhere
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -786,7 +777,6 @@ wilma can change files with a .txt extension
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -864,7 +854,6 @@ file specified by acl.config does not exist
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -937,7 +926,6 @@ betty is allowed inside foo/ by a acl.config file
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1021,7 +1009,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1107,7 +1094,6 @@ fred is always allowed
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1189,7 +1175,6 @@ no one is allowed inside foo/Bar/
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1265,7 +1250,6 @@ OS-level groups
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1348,7 +1332,6 @@ OS-level groups
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:

@@ -20,7 +20,6 @@ from .node import (
 )
 
 from . import (
-    branchmap,
     dagutil,
     discovery,
     error,
@@ -404,12 +403,6 @@ class cg1unpacker(object):
                     phases.retractboundary(repo, tr, targetphase, added)
 
                 if changesets > 0:
-                    if srctype != 'strip':
-                        # During strip, branchcache is invalid but
-                        # coming call to `destroyed` will repair it.
-                        # In other case we can safely update cache on
-                        # disk.
-                        branchmap.updatecache(repo.filtered('served'))
 
                     def runhooks():
                         # These hooks run when the lock releases, not when the
