@@ -1,7 +1,6 @@
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > color = always
-  > formatted = yes
   > [color]
   > mode = ansi
   > EOF

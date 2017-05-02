@@ -1885,8 +1885,8 @@ User interface controls.
 
 ``color``
     When to colorize output. Possible value are Boolean ("yes" or "no"), or
-    "debug". (default: "yes"). "yes" will use color whenever it seems possible.
-    See :hg:`help color` for details.
+    "debug", or "always". (default: "yes"). "yes" will use color whenever it
+    seems possible. See :hg:`help color` for details.
 
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the
