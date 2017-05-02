@@ -826,10 +826,6 @@ class localrepository(object):
             return 'store'
         return None
 
-    def join(self, f, *insidef):
-        self.ui.deprecwarn("use 'repo.vfs.join' instead of 'repo.join'", '4.2')
-        return self.vfs.join(os.path.join(f, *insidef))
-
     def wjoin(self, f, *insidef):
         return self.vfs.reljoin(self.root, f, *insidef)
 
