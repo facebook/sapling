@@ -865,11 +865,6 @@ class localrepository(object):
     def pathto(self, f, cwd=None):
         return self.dirstate.pathto(f, cwd)
 
-    def _link(self, f):
-        self.ui.deprecwarn("use 'repo.wvfs.islink' instead of 'repo._link'",
-                           '4.2')
-        return self.wvfs.islink(f)
-
     def _loadfilter(self, filter):
         if filter not in self.filterpats:
             l = []
