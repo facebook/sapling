@@ -17,7 +17,6 @@
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -622,9 +621,8 @@ void Dirstate::remove(
   }
 
   if (shouldDelete) {
-    auto dispatcher = mount_->getDispatcher();
     try {
-      dispatcher->unlink(parent->getNodeId(), path.basename()).get();
+      parent->unlink(path.basename()).get();
     } catch (const std::system_error& e) {
       // If the file has already been deleted, then mission accomplished.
       if (e.code().value() != ENOENT) {

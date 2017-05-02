@@ -301,18 +301,6 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
   return inodeMap_->lookupTreeInode(parent).then(
       [ this, childName = PathComponent{name} ](const TreeInodePtr& inode) {
         inode->unlink(childName);
-
-        // TODO: we need to move invalidation into the Inode implementation
-        // so that we can ensure that it happens regardless of whether a
-        // change is made via FUSE or thrift.  This is present here for
-        // now as an example of how to use the invalidation API and
-        // because we must invalidate when scmRemove is used.
-        if (!fusell::RequestData::isFuseRequest()) {
-          auto chan = getChannelPtr();
-          if (chan) {
-            chan->invalidateEntry(inode->getNodeId(), childName);
-          }
-        }
       });
 }
 

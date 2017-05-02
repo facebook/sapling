@@ -985,6 +985,17 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   int errnoValue = tryRemoveChild<InodePtrType>(renameLock, name, nullptr);
   if (errnoValue == 0) {
     // We successfuly removed the child.
+
+    // If this unlink() was not triggered by a request from FUSE,
+    // we need to tell FUSE to invalidate its cache for this entry.
+    if (!fusell::RequestData::isFuseRequest()) {
+      auto* fuseChannel = getMount()->getFuseChannel();
+      if (fuseChannel) {
+        fuseChannel->invalidateEntry(getNodeId(), name);
+      }
+    }
+
+    // Record the change in the journal
     getMount()->getJournal().wlock()->addDelta(
         std::make_unique<JournalDelta>(JournalDelta{targetName}));
 
