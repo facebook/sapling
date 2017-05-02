@@ -85,6 +85,9 @@ Simple import
   2 changelists to import.
   loading list of files.
   3 files to import.
+  reading filelog * (glob)
+  reading filelog * (glob)
+  reading filelog * (glob)
   importing repository.
   writing filelog: * (glob)
   writing filelog: * (glob)

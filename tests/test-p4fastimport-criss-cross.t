@@ -107,6 +107,7 @@ Import
   3 changelists to import.
   loading list of files.
   1 files to import.
+  reading filelog * (glob)
   importing repository.
   writing filelog: b8e02f643373, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
   writing filelog: 059c099e8c05, p1 b8e02f643373, linkrev 1, 2 bytes, src: *, path: Main/a (glob)

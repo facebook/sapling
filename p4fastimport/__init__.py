@@ -195,10 +195,11 @@ def p4fastimport(ui, repo, client, **opts):
             filelist, basepath)
     p4filelogs = []
     for i, f in enumerate(importset.filelogs()):
-        ui.progress(_('loading filelog'), i, item=f, unit="filelog",
+        ui.debug('reading filelog %s\n' % f.depotfile)
+        ui.progress(_('reading filelog'), i, unit=_('filelogs'),
                 total=len(filelist))
         p4filelogs.append(f)
-    ui.progress(_('loading filelog'), None)
+    ui.progress(_('reading filelog'), None)
 
     # runlist is used to topologically order files which were branched (Perforce
     # uses per-file branching, not per-repo branching).  If we do copytracing a

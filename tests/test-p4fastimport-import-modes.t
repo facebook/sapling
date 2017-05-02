@@ -83,6 +83,9 @@ Simple import
   2 changelists to import.
   loading list of files.
   3 files to import.
+  reading filelog * (glob)
+  reading filelog * (glob)
+  reading filelog * (glob)
   importing repository.
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
   writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)

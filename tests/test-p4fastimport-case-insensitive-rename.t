@@ -81,6 +81,9 @@ import
   3 changelists to import.
   loading list of files.
   3 files to import.
+  reading filelog * (glob)
+  reading filelog * (glob)
+  reading filelog * (glob)
   importing repository.
   case conflict: //depot/Main/A and //depot/Main/a
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/A (glob)
