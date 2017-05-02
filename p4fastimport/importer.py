@@ -38,7 +38,8 @@ class ImportSet(object):
         return caseconflict(self.filelist)
 
     def filelogs(self):
-        for filelog in p4.parse_filelogs(self.changelists, self.filelist):
+        for filelog in p4.parse_filelogs(self.repo.ui, self.client,
+                                         self.changelists, self.filelist):
             yield filelog
 
 class ChangeManifestImporter(object):

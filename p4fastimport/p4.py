@@ -1,7 +1,11 @@
 # (c) 2017-present Facebook Inc.
+from __future__ import absolute_import
+
 import collections
+import json
 import marshal
 
+from .util import runworker
 from mercurial import (
     util,
 )
@@ -136,32 +140,45 @@ def parse_client(client):
             views[sview] = cview
     return views
 
-def parse_fstat(clnum, filter=None):
+def parse_fstat(clnum, client, filter=None):
     cmd = 'p4 -G fstat -e %d -T ' \
-        '"depotFile,headAction,headType,headRev" "//..."' % clnum
+          '"depotFile,headAction,headType,headRev" "//%s/..."' % (
+            clnum,
+            util.shellquote(client))
     stdout = util.popen(cmd, mode='rb')
     try:
+        result = []
         for d in loaditer(stdout):
             if d.get('depotFile') and (filter is None or filter(d)):
-                yield {
+                result.append({
                     'depotFile': d['depotFile'],
                     'action': d['headAction'],
                     'type': d['headType'],
-                    'rev': d['headRev'],
-                }
+                })
+        return result
     except Exception:
         raise P4Exception(stdout)
 
-_filelogs = collections.defaultdict(dict)
-def parse_filelogs(changelists, filelist):
+def parse_filelog(filelist, client, changelists):
+    for cl in changelists:
+        fstats = parse_fstat(cl.cl, client,
+                             lambda f: f['depotFile'] in filelist)
+        for fstat in fstats:
+            yield cl.cl, json.dumps(fstat)
+
+def parse_filelogs(ui, client, changelists, filelist):
     # we can probably optimize this by using fstat only in the case-inensitive
     # case and only for conflicts.
-    global _filelogs
-    for cl in changelists:
-        fstats = parse_fstat(cl.cl, lambda f: f['depotFile'] in filelist)
-        for fstat in fstats:
-            _filelogs[fstat['depotFile']][cl.cl] = fstat
-    for p4filename, filelog in _filelogs.iteritems():
+    filelogs = collections.defaultdict(dict)
+    worker = runworker(ui, parse_filelog, (filelist, client), changelists)
+    for cl, jfstat in worker:
+            fstat = json.loads(jfstat)
+            depotfile = fstat['depotFile'].encode('ascii')
+            filelogs[depotfile][cl] = {
+                'action': fstat['action'].encode('ascii'),
+                'type': fstat['type'].encode('ascii'),
+            }
+    for p4filename, filelog in filelogs.iteritems():
         yield P4Filelog(p4filename, filelog)
 
 class P4Filelog(object):

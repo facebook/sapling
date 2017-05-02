@@ -26,8 +26,8 @@ import sqlite3
 from . import (
     p4,
     importer,
-    util,
 )
+from .util import runworker, lastcl, decodefileflags
 
 from mercurial.i18n import _
 from mercurial.node import short, hex
@@ -37,7 +37,6 @@ from mercurial import (
     extensions,
     scmutil,
     verify,
-    worker,
 )
 
 def reposetup(ui, repo):
@@ -129,22 +128,6 @@ def create(tr, ui, repo, importset, filelogs):
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-def runworker(ui, fn, wargs, items):
-    # 0.4 is the cost per argument. So if we have at least 100 files
-    # on a 4 core machine than our linear cost outweights the
-    # drawback of spwaning. We are overwritign this if we force a
-    # worker to run with a ridiculous high number.
-    weight = 0.0  # disable worker
-    if ui.config('p4fastimport', 'useworker', None) == 'force':
-        weight = 100000.0  # force worker
-    elif ui.configbool('p4fastimport', 'useworker', False):
-        weight = 0.04  # normal weight
-
-    # Fix duplicated messages before
-    # https://www.mercurial-scm.org/repo/hg-committed/rev/9d3d56aa1a9f
-    ui.flush()
-    return worker.worker(ui, weight, fn, wargs, items)
-
 @command(
     'p4fastimport',
     [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
@@ -164,7 +147,7 @@ def p4fastimport(ui, repo, client, **opts):
     if len(repo) > 0 and startcl is None:
         latestctx = list(repo.set("last(extra(p4changelist))"))
         if latestctx:
-            startcl = util.lastcl(latestctx[0])
+            startcl = lastcl(latestctx[0])
             ui.note(_('incremental import from changelist: %d, node: %s\n') %
                     (startcl, short(latestctx[0].node())))
 
@@ -248,7 +231,7 @@ def run_import(ui, repo, client, changelists, **opts):
                     # TODO: Find a better way to handle this.
                     fileinfo[data['depotname']] = {
                         'localname': data['localname'].encode('utf-8'),
-                        'flags': util.decodefileflags(data['fileflags']),
+                        'flags': decodefileflags(data['fileflags']),
                         'baserev': data['oldtiprev'],
                     }
                     largefiles.extend(data['largefiles'])
