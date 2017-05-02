@@ -170,6 +170,16 @@ def fromlocalfunc(modulename, localmods):
         return False
     return fromlocal
 
+def populateextmods(localmods):
+    """Populate C extension modules based on pure modules"""
+    newlocalmods = set(localmods)
+    for n in localmods:
+        if n.startswith('mercurial.pure.'):
+            m = n[len('mercurial.pure.'):]
+            newlocalmods.add('mercurial.cext.' + m)
+            newlocalmods.add('mercurial.cffi._' + m)
+    return newlocalmods
+
 def list_stdlib_modules():
     """List the modules present in the stdlib.
 
@@ -701,7 +711,7 @@ def main(argv):
     for source_path in argv[1:]:
         modname = dotted_name_of_path(source_path)
         localmodpaths[modname] = source_path
-    localmods = set(localmodpaths)
+    localmods = populateextmods(localmodpaths)
     for localmodname, source_path in sorted(localmodpaths.items()):
         for src, modname, name, line in sources(source_path, localmodname):
             try:
