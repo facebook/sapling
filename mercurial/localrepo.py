@@ -865,10 +865,6 @@ class localrepository(object):
     def pathto(self, f, cwd=None):
         return self.dirstate.pathto(f, cwd)
 
-    def wfile(self, f, mode='r'):
-        self.ui.deprecwarn("use 'repo.wvfs' instead of 'repo.wfile'", '4.2')
-        return self.wvfs(f, mode)
-
     def _link(self, f):
         self.ui.deprecwarn("use 'repo.wvfs.islink' instead of 'repo._link'",
                            '4.2')
