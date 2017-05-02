@@ -21,6 +21,10 @@ from . import (
     util,
 )
 
+patches = mpatch.patches
+patchedsize = mpatch.patchedsize
+textdiff = bdiff.bdiff
+
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
     lines = [l + '\n' for l in text.split('\n')]
@@ -478,7 +482,3 @@ def trivialdiffheader(length):
 
 def replacediffheader(oldlen, newlen):
     return struct.pack(">lll", 0, oldlen, newlen)
-
-patches = mpatch.patches
-patchedsize = mpatch.patchedsize
-textdiff = bdiff.bdiff
