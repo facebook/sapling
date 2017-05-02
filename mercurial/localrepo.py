@@ -1072,6 +1072,7 @@ class localrepository(object):
                                      self.store.createmode,
                                      validator=validate,
                                      releasefn=releasefn)
+        tr.changes['revs'] = set()
 
         tr.hookargs['txnid'] = txnid
         # note: writing the fncache only during finalize mean that the file is

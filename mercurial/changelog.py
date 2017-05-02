@@ -535,3 +535,14 @@ class changelog(revlog.revlog):
         just to access this is costly."""
         extra = self.read(rev)[5]
         return encoding.tolocal(extra.get("branch")), 'close' in extra
+
+    def _addrevision(self, node, rawtext, transaction, *args, **kwargs):
+        # overlay over the standard revlog._addrevision to track the new
+        # revision on the transaction.
+        rev = len(self)
+        node = super(changelog, self)._addrevision(node, rawtext, transaction,
+                                                   *args, **kwargs)
+        revs = transaction.changes.get('revs')
+        if revs is not None:
+            revs.add(rev)
+        return node
