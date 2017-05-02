@@ -225,7 +225,7 @@ def run_import(ui, repo, client, changelists, **opts):
                 wargs = (tr, ui, repo, importset)
                 for i, serialized in runworker(ui, create, wargs, filelogs):
                     data = json.loads(serialized)
-                    ui.progress(_('importing'), count,
+                    ui.progress(_('importing filelogs'), count,
                             item=data['depotname'], unit='file',
                             total=len(p4filelogs))
                     # Json converts to UTF8 and int keys to strings, so we
@@ -238,7 +238,7 @@ def run_import(ui, repo, client, changelists, **opts):
                     }
                     largefiles.extend(data['largefiles'])
                     count += i
-                ui.progress(_('importing'), None)
+                ui.progress(_('importing filelogs'), None)
 
             # 4. Generate manifest and changelog based on the filelogs
             # we imported
