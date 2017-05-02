@@ -148,14 +148,14 @@ def runworker(ui, fn, wargs, items):
 @command(
     'p4fastimport',
     [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
-     ('B', 'bookmark', '', _('bookmark to set'), _('NAME'))],
-    _('[-P PATH] [-B NAME] [CLIENT]'),
+     ('B', 'bookmark', '', _('bookmark to set'), _('NAME')),
+     ('', 'limit', '',
+         _('number of changelists to import at a time'), _('N'))],
+    _('[-P PATH] [-B NAME] [--limit N] [CLIENT]'),
     inferrepo=True)
 def p4fastimport(ui, repo, client, **opts):
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
-
-    basepath = opts.get('path')
 
     if opts.get('bookmark'):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
@@ -176,14 +176,26 @@ def p4fastimport(ui, repo, client, **opts):
     #   server under foo/* locally under x/*.
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
-    changelists = list(p4.parse_changes(client, startcl=startcl))
+    changelists = sorted(p4.parse_changes(client, startcl=startcl))
     ui.note(_('%d changelists to import.\n') % len(changelists))
+
+    limit = len(changelists)
+    if opts.get('limit'):
+        limit = int(opts.get('limit'))
+    run_import(ui, repo, client, changelists[0:limit], **opts)
+
+def run_import(ui, repo, client, changelists, **opts):
+    if len(changelists) == 0:
+        return
+
+    basepath = opts.get('path')
+    startcl, endcl = changelists[0].cl, changelists[-1].cl
 
     # 2. Get a list of files that we will have to import from the depot with
     # it's full path in the depot.
     ui.note(_('loading list of files.\n'))
     filelist = set()
-    for fileinfo in p4.parse_filelist(client, startcl=startcl):
+    for fileinfo in p4.parse_filelist(client, startcl=startcl, endcl=endcl):
         if fileinfo['action'] in p4.SUPPORTED_ACTIONS:
             filelist.add(fileinfo['depotFile'])
         else:
