@@ -83,12 +83,12 @@ def blocknonpushrebase(ui, repo, **kwargs):
         raise error.Abort("this repository requires that you push using "
                          "'hg push --to'")
 
-def _peerorrepo(orig, ui, path, create=False):
+def _peerorrepo(orig, ui, path, create=False, **kwargs):
     # Force hooks to use a bundle repo
     bundlepath = encoding.environ.get("HG_HOOK_BUNDLEPATH")
     if bundlepath:
-        return orig(ui, bundlepath, create=create)
-    return orig(ui, path, create)
+        return orig(ui, bundlepath, create=create, **kwargs)
+    return orig(ui, path, create, **kwargs)
 
 def unbundle(orig, repo, cg, heads, source, url):
     # Preload the manifests that the client says we'll need. This happens
