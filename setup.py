@@ -582,6 +582,7 @@ cmdclass = {'build': hgbuild,
 
 packages = ['mercurial',
             'mercurial.cext',
+            'mercurial.cffi',
             'mercurial.hgweb',
             'mercurial.httpclient',
             'mercurial.pure',

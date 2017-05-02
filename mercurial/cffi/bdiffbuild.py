@@ -4,7 +4,7 @@ import cffi
 import os
 
 ffi = cffi.FFI()
-ffi.set_source("_bdiff_cffi",
+ffi.set_source("mercurial.cffi._bdiff",
     open(os.path.join(os.path.join(os.path.dirname(__file__), '..'),
         'bdiff.c')).read(), include_dirs=['mercurial'])
 ffi.cdef("""

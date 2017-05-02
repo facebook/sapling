@@ -96,7 +96,7 @@ def fixws(text, allws):
 
 if modulepolicy not in policynocffi:
     try:
-        from _bdiff_cffi import ffi, lib
+        from ..cffi._bdiff import ffi, lib
     except ImportError:
         if modulepolicy == 'cffi': # strict cffi import
             raise

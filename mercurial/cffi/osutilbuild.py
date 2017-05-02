@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import cffi
 
 ffi = cffi.FFI()
-ffi.set_source("_osutil_cffi", """
+ffi.set_source("mercurial.cffi._osutil", """
 #include <sys/attr.h>
 #include <sys/vnode.h>
 #include <unistd.h>

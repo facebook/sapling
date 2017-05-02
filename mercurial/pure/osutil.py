@@ -71,7 +71,7 @@ def listdirpure(path, stat=False, skip=None):
 ffi = None
 if modulepolicy not in policynocffi and pycompat.sysplatform == 'darwin':
     try:
-        from _osutil_cffi import ffi, lib
+        from ..cffi._osutil import ffi, lib
     except ImportError:
         if modulepolicy == 'cffi': # strict cffi import
             raise

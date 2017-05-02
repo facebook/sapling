@@ -6,7 +6,7 @@ import os
 ffi = cffi.FFI()
 mpatch_c = os.path.join(os.path.join(os.path.dirname(__file__), '..',
                                      'mpatch.c'))
-ffi.set_source("_mpatch_cffi", open(mpatch_c).read(),
+ffi.set_source("mercurial.cffi._mpatch", open(mpatch_c).read(),
                include_dirs=["mercurial"])
 ffi.cdef("""
 

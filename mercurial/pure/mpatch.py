@@ -130,7 +130,7 @@ def patchedsize(orig, delta):
 
 if modulepolicy not in policynocffi:
     try:
-        from _mpatch_cffi import ffi, lib
+        from ..cffi._mpatch import ffi, lib
     except ImportError:
         if modulepolicy == 'cffi': # strict cffi import
             raise
