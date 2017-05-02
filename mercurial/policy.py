@@ -33,8 +33,8 @@ except ImportError:
 #
 # The canonical way to do this is to test platform.python_implementation().
 # But we don't import platform and don't bloat for it here.
-if '__pypy__' in sys.builtin_module_names:
-    policy = 'cffi'
+if r'__pypy__' in sys.builtin_module_names:
+    policy = b'cffi'
 
 # Our C extensions aren't yet compatible with Python 3. So use pure Python
 # on Python 3 for now.
@@ -43,7 +43,7 @@ if sys.version_info[0] >= 3:
 
 # Environment variable can always force settings.
 if sys.version_info[0] >= 3:
-    if 'HGMODULEPOLICY' in os.environ:
-        policy = os.environ['HGMODULEPOLICY'].encode('utf-8')
+    if r'HGMODULEPOLICY' in os.environ:
+        policy = os.environ[r'HGMODULEPOLICY'].encode(r'utf-8')
 else:
-    policy = os.environ.get('HGMODULEPOLICY', policy)
+    policy = os.environ.get(r'HGMODULEPOLICY', policy)
