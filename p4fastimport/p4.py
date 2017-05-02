@@ -141,8 +141,9 @@ def parse_client(client):
     return views
 
 def parse_fstat(clnum, client, filter=None):
-    cmd = 'p4 -G fstat -e %d -T ' \
+    cmd = 'p4 --client %s -G fstat -e %d -T ' \
           '"depotFile,headAction,headType,headRev" "//%s/..."' % (
+            util.shellquote(client),
             clnum,
             util.shellquote(client))
     stdout = util.popen(cmd, mode='rb')
