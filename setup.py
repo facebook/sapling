@@ -1,5 +1,7 @@
+from distutils.cmd import Command
 from distutils.core import setup, Extension
 import distutils
+import fnmatch
 from glob import glob
 
 import os, sys
@@ -346,6 +348,57 @@ for module in availablepymodules:
     if module.split('.')[-1] in components:
         py_modules.append(module)
 
+# Extra clean command cleaning up non-Python extensions
+class CleanExtCommand(Command):
+    description = 'remove extra build files'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        root = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(root)
+
+        # removed counter (ext: count)
+        removed = {}
+
+        def removepath(path):
+            try:
+                os.unlink(path)
+            except OSError: # ENOENT
+                pass
+            else:
+                ext = path.split('.')[-1]
+                removed.setdefault(ext, 0)
+                removed[ext] += 1
+
+        # remove *.o not belonging to Python extensions, and .py[cdo], .so files
+        for pat in ['*.o', '*.py[cdo]', '*.so']:
+            for path in self._rglob(pat):
+                removepath(path)
+
+        # remove .c generated from Cython .pyx
+        for path in self._rglob('*.pyx'):
+            cpath = '%s.c' % path[:-4]
+            removepath(cpath)
+
+        # print short summary
+        if removed:
+            summary = 'removed %s files' % (
+                ', '.join('%s .%s' % (count, ext)
+                          for ext, count in sorted(removed.iteritems())))
+            self.announce(summary, level=distutils.log.INFO)
+
+    def _rglob(self, patten):
+        # recursive glob
+        for dirname, dirs, files in os.walk('.'):
+            for name in fnmatch.filter(files, patten):
+                yield os.path.join(dirname, name)
+
 setup(
     name='fbhgext',
     version='1.0',
@@ -362,4 +415,7 @@ setup(
     py_modules=py_modules,
     ext_modules = ext_modules,
     libraries=libraries,
+    cmdclass={
+        'clean_ext': CleanExtCommand,
+    }
 )
