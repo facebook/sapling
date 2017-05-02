@@ -997,7 +997,7 @@ class manifestfactory(object):
                     transaction.treehistpack = historypack.mutablehistorypack(
                             self.ui,
                             packpath)
-                    def postclose(tr):
+                    def finalize(tr):
                         tr.treedatapack.close()
                         tr.treehistpack.close()
                         treemanifestcache.getinstance(origself.opener,
@@ -1006,7 +1006,7 @@ class manifestfactory(object):
                     def abort(tr):
                         tr.treedatapack.abort()
                         tr.treehistpack.abort()
-                    transaction.addpostclose('treepack', postclose)
+                    transaction.addfinalize('treepack', finalize)
                     transaction.addabort('treepack', abort)
 
                 dpack = treemanifest.InterceptedMutableDataPack(
