@@ -178,6 +178,7 @@ Commit with several checks
   committing manifest
   committing changelog
   overwriting a expanding keywords
+  updating the branch cache
   committed changeset 1:ef63ca68695bc9495032c6fda1350c71e6d256e9
   running hook commit.test: cp a hooktest
   $ hg status
@@ -650,6 +651,7 @@ Commit and show expansion in original and copy
   committing manifest
   committing changelog
   overwriting c expanding keywords
+  updating the branch cache
   committed changeset 2:25736cf2f5cbe41f6be4e6784ef6ecf9f3bbcc7d
   $ cat a c
   expand $Id: a,v ef63ca68695b 1970/01/01 00:00:00 user $
@@ -823,6 +825,7 @@ Commit with multi-line message and custom expansion
   committing manifest
   committing changelog
   overwriting a expanding keywords
+  updating the branch cache
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
   $ rm log
 
@@ -866,6 +869,7 @@ remove with status checks
   committing files:
   committing manifest
   committing changelog
+  updating the branch cache
   committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
   $ hg status
   ? c
@@ -941,6 +945,7 @@ Imported patch should not be rejected
   committing manifest
   committing changelog
   overwriting a expanding keywords
+  updating the branch cache
   committed changeset 2:85e279d709ffc28c9fdd1b868570985fc3d87082
   $ hg export -o ../rejecttest.diff tip
   $ cd ../Test
@@ -985,6 +990,7 @@ kwexpand x/a should abort
   committing manifest
   committing changelog
   overwriting x/a expanding keywords
+  updating the branch cache
   committed changeset 3:b4560182a3f9a358179fd2d835c15e9da379c1e4
   $ cat a
   expand $Id: x/a b4560182a3f9 Thu, 01 Jan 1970 00:00:03 +0000 user $

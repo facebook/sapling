@@ -177,6 +177,7 @@ Graft out of order, skipping a merge and a duplicate
   b
   committing manifest
   committing changelog
+  updating the branch cache
   grafting 5:97f8bfe72746 "5"
     searching for copies back to rev 1
     unmatched files in other (from topological common ancestor):
@@ -190,6 +191,7 @@ Graft out of order, skipping a merge and a duplicate
   e
   committing manifest
   committing changelog
+  updating the branch cache
   $ HGEDITOR=cat hg graft 4 3 --log --debug
   scanning for duplicate grafts
   grafting 4:9c233e8e184d "4"

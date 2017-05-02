@@ -51,6 +51,7 @@ test updating a symlink
   a
   committing manifest
   committing changelog
+  updating the branch cache
   now at: updatelink
   $ readlink.py a
   a -> c

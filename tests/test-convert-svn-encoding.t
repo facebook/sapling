@@ -53,6 +53,7 @@ Convert while testing all possible outputs
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@1
   converting: 0/6 revisions (0.00%)
   committing changelog
+  updating the branch cache
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)
@@ -67,6 +68,7 @@ Convert while testing all possible outputs
   getting files: \xc3\xa9 2/2 files (100.00%) (esc)
   committing manifest
   committing changelog
+  updating the branch cache
   3 copy files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@3
   converting: 2/6 revisions (33.33%)
@@ -93,6 +95,7 @@ Convert while testing all possible outputs
    \xc3\xb9/e\xcc\x81: copy \xc3\xa0/e\xcc\x81:a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
   committing manifest
   committing changelog
+  updating the branch cache
   2 remove files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@4
   converting: 3/6 revisions (50.00%)
@@ -109,18 +112,21 @@ Convert while testing all possible outputs
   committing files:
   committing manifest
   committing changelog
+  updating the branch cache
   1 branch to branch?
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
   converting: 4/6 revisions (66.67%)
   reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
   scanning paths: /branches/branch\xc3\xa9 0/1 paths (0.00%) (esc)
   committing changelog
+  updating the branch cache
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   converting: 5/6 revisions (83.33%)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   scanning paths: /branches/branch\xc3\xa9e 0/1 paths (0.00%) (esc)
   committing changelog
+  updating the branch cache
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
   reparent to file://*/svn-repo (glob)
@@ -130,6 +136,7 @@ Convert while testing all possible outputs
   .hgtags
   committing manifest
   committing changelog
+  updating the branch cache
   run hg sink post-conversion action
   $ cd A-hg
   $ hg up

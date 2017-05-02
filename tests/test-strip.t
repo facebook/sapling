@@ -841,6 +841,7 @@ check strip behavior
   bundle2-output-bundle: "HG20", (1 params) 1 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg (glob)
+  updating the branch cache
   invalid branchheads cache (served): tip differs
   truncating cache/rbc-revs-v1 to 24
   $ hg log -G

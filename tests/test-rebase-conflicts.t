@@ -268,6 +268,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   rebased as 2a7f09cac94c
   rebase merging completed
   rebase status stored
+  updating the branch cache
   update back to initial working directory parent
   resolving manifests
    branchmerge: False, force: False, partial: False
@@ -303,6 +304,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   added 2 changesets with 2 changes to 1 files
   bundle2-input-part: total payload size 1686
   bundle2-input-bundle: 0 parts total
+  updating the branch cache
   invalid branchheads cache (served): tip differs
   history modification detected - truncating revision branch cache to revision 9
   rebase completed

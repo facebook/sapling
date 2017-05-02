@@ -1246,6 +1246,7 @@ class localrepository(object):
 
         if tr is None or tr.changes['revs']:
             # updating the unfiltered branchmap should refresh all the others,
+            self.ui.debug('updating the branch cache\n')
             branchmap.updatecache(self.filtered('served'))
 
     def invalidatecaches(self):

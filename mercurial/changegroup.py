@@ -409,7 +409,6 @@ class cg1unpacker(object):
                         # coming call to `destroyed` will repair it.
                         # In other case we can safely update cache on
                         # disk.
-                        repo.ui.debug('updating the branch cache\n')
                         branchmap.updatecache(repo.filtered('served'))
 
                     def runhooks():
