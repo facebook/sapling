@@ -172,4 +172,30 @@ Prove the repo is valid using the Python 2 `hg`:
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     commit performed in Python 3
   
-
+  $ hg log -Tjson
+  [
+   {
+    "rev": 1,
+    "node": "e1e9167203d450ca2f558af628955b5f5afd4489",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [0, 0],
+    "desc": "message",
+    "bookmarks": [],
+    "tags": ["tip"],
+    "parents": ["71c96e924262969ff0d8d3d695b0f75412ccc3d8"]
+   },
+   {
+    "rev": 0,
+    "node": "71c96e924262969ff0d8d3d695b0f75412ccc3d8",
+    "branch": "default",
+    "phase": "draft",
+    "user": "test",
+    "date": [0, 0],
+    "desc": "commit performed in Python 3",
+    "bookmarks": [],
+    "tags": [],
+    "parents": ["0000000000000000000000000000000000000000"]
+   }
+  ]
