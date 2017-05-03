@@ -438,6 +438,33 @@ def _needsrebundling(head, bundlerepo):
     return not (len(bundleheads) == 1 and
                 bundlerepo[bundleheads[0]].node() == head)
 
+def _generateoutputcgpart(head, bundlerepo, bundleroots, bundlefile):
+    '''generates bundle that will be send to the user
+
+    returns tuple with raw bundle string and bundle type
+    '''
+    if not _needsrebundling(head, bundlerepo):
+        with util.posixfile(bundlefile, "rb") as f:
+            unbundler = exchange.readbundle(bundlerepo.ui, f, bundlefile)
+            if isinstance(unbundler, changegroup.cg1unpacker):
+                return (unbundler._stream.read(), '01')
+            elif isinstance(unbundler, bundle2.unbundle20):
+                for part in unbundler.iterparts():
+                    if part.type == 'changegroup':
+                        version = part.params.get('version', '01')
+                        return (part.read(), version)
+                else:
+                    raise error.Abort(
+                        'unexpected bundle without changegroup part, ' +
+                        'head: %s' % hex(head),
+                        hint='report to administrator')
+            else:
+                raise error.Abort('unknown bundle type')
+    else:
+        outputbundleraw = _rebundle(bundlerepo, bundleroots,
+                                    head, version='02')
+        return (outputbundleraw, '02')
+
 def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     heads = heads or []
     # newheads are parents of roots of scratch bundles that were requested
@@ -450,11 +477,9 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     try:
         for head in heads:
             if head not in repo.changelog.nodemap:
-                if head in nodestobundle:
-                    bundlerepo, bundleroots = nodestobundle[head]
-                else:
-                    bundlefile = downloadbundle(repo, head)
-                    bundlepath = "bundle:%s+%s" % (repo.root, bundlefile)
+                if head not in nodestobundle:
+                    newbundlefile = downloadbundle(repo, head)
+                    bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
                     bundlerepo = repository(repo.ui, bundlepath)
 
                     allbundlerepos.append(bundlerepo)
@@ -466,26 +491,11 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                     for rev in bundlerevs:
                         node = cl.node(rev)
                         newphases[hex(node)] = str(phases.draft)
-                        nodestobundle[node] = (bundlerepo, bundleroots)
+                        nodestobundle[node] = (bundlerepo, bundleroots,
+                                               newbundlefile)
 
-                if not _needsrebundling(head, bundlerepo):
-                    with util.posixfile(bundlefile, "rb") as f:
-                        unbundler = exchange.readbundle(repo.ui, f, bundlefile)
-                        if isinstance(unbundler, changegroup.cg1unpacker):
-                            scratchbundles.append((unbundler._stream.read(),
-                                                   '01'))
-                        elif isinstance(unbundler, bundle2.unbundle20):
-                            for part in unbundler.iterparts():
-                                if part.type == 'changegroup':
-                                    version = part.params.get('version', '01')
-                                    scratchbundles.append(
-                                        (part.read(), version))
-                        else:
-                            raise error.Abort('unknown bundle type')
-                else:
-                    outputbundleraw = _rebundle(bundlerepo, bundleroots,
-                                                head, version='02')
-                    scratchbundles.append((outputbundleraw, '02'))
+                scratchbundles.append(
+                    _generateoutputcgpart(head, *nodestobundle[head]))
                 newheads.extend(bundleroots)
                 scratchheads.append(head)
     finally:
