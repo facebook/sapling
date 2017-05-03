@@ -93,8 +93,7 @@ class historypack(basepack.basepack):
         missing = []
         for name, node in keys:
             try:
-                section = self._findsection(name)
-                self._findnode(section, node)
+                self._findnode(name, node)
             except KeyError:
                 missing.append((name, node))
 
@@ -163,30 +162,11 @@ class historypack(basepack.basepack):
         raise RuntimeError("cannot add to historypack (%s:%s)" %
                            (filename, hex(node)))
 
-    def _findnode(self, section, node):
-        name, offset, size, nodeindexoffset, nodeindexsize = section
-        data = self._data
-        o = offset
-        while o < offset + size:
-            entry = struct.unpack(PACKFORMAT,
-                                  data[o:o + PACKENTRYLENGTH])
-            o += PACKENTRYLENGTH
-
-            if entry[0] == node:
-                copyfrom = None
-                copyfromlen = entry[ANC_COPYFROM]
-                if copyfromlen != 0:
-                    copyfrom = data[o:o + copyfromlen]
-
-                # If we've read a lot of data from the mmap, free some memory.
-                self._pagedin += o - offset
-                self.freememory()
-                return (entry[ANC_P1NODE],
-                        entry[ANC_P2NODE],
-                        entry[ANC_LINKNODE],
-                        copyfrom)
-
-            o += entry[ANC_COPYFROM]
+    def _findnode(self, name, node):
+        ancestors = self._getancestors(name, node)
+        for ancnode, p1node, p2node, linknode, copyfrom in ancestors:
+            if ancnode == node:
+                return (ancnode, p1node, p2node, linknode, copyfrom)
 
         raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
 
