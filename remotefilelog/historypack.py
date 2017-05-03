@@ -169,10 +169,21 @@ class historypack(basepack.basepack):
                            (filename, hex(node)))
 
     def _findnode(self, name, node):
-        ancestors = self._getancestors(name, node)
-        for ancnode, p1node, p2node, linknode, copyfrom in ancestors:
-            if ancnode == node:
-                return (ancnode, p1node, p2node, linknode, copyfrom)
+        if self.VERSION == 0:
+            ancestors = self._getancestors(name, node)
+            for ancnode, p1node, p2node, linknode, copyfrom in ancestors:
+                if ancnode == node:
+                    return (ancnode, p1node, p2node, linknode, copyfrom)
+        else:
+            section = self._findsection(name)
+            nodeindexoffset, nodeindexsize = section[3:]
+            entry = self._bisect(node, nodeindexoffset,
+                                 nodeindexoffset + nodeindexsize,
+                                 NODEINDEXENTRYLENGTH)
+            if entry is not None:
+                node, offset = struct.unpack(NODEINDEXFORMAT, entry)
+                entry, copyfrom = self._readentry(offset)
+                return entry + (copyfrom,)
 
         raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
 
