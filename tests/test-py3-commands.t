@@ -159,3 +159,17 @@ Prove the repo is valid using the Python 2 `hg`:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit performed in Python 3
   
+
+  $ hg log -G
+  @  changeset:   1:e1e9167203d4
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     message
+  |
+  o  changeset:   0:71c96e924262
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commit performed in Python 3
+  
+
