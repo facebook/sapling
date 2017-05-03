@@ -52,7 +52,7 @@ def _expandsets(kindpats, ctx, listsubrepos):
     return fset, other
 
 def _expandsubinclude(kindpats, root):
-    '''Returns the list of subinclude matchers and the kindpats without the
+    '''Returns the list of subinclude matcher args and the kindpats without the
     subincludes in it.'''
     relmatchers = []
     other = []
@@ -64,12 +64,12 @@ def _expandsubinclude(kindpats, root):
             path = pathutil.join(sourceroot, pat)
 
             newroot = pathutil.dirname(path)
-            relmatcher = match(newroot, '', [], ['include:%s' % path])
+            matcherargs = (newroot, '', [], ['include:%s' % path])
 
             prefix = pathutil.canonpath(root, root, newroot)
             if prefix:
                 prefix += '/'
-            relmatchers.append((prefix, relmatcher))
+            relmatchers.append((prefix, matcherargs))
         else:
             other.append((kind, pat, source))
 
@@ -584,10 +584,17 @@ def _buildmatch(ctx, kindpats, globsuffix, listsubrepos, root):
 
     subincludes, kindpats = _expandsubinclude(kindpats, root)
     if subincludes:
+        submatchers = {}
         def matchsubinclude(f):
-            for prefix, mf in subincludes:
-                if f.startswith(prefix) and mf(f[len(prefix):]):
-                    return True
+            for prefix, matcherargs in subincludes:
+                if f.startswith(prefix):
+                    mf = submatchers.get(prefix)
+                    if mf is None:
+                        mf = match(*matcherargs)
+                        submatchers[prefix] = mf
+
+                    if mf(f[len(prefix):]):
+                        return True
             return False
         matchfuncs.append(matchsubinclude)
 
