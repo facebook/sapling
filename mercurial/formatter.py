@@ -114,6 +114,7 @@ from .node import (
 
 from . import (
     error,
+    pycompat,
     templatefilters,
     templatekw,
     templater,
@@ -178,6 +179,7 @@ class baseformatter(object):
         pass
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
+        data = pycompat.byteskwargs(data)
         self._item.update(data)
     def write(self, fields, deftext, *fielddata, **opts):
         '''do default text output while assigning data to item'''
