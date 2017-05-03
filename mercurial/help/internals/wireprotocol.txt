@@ -632,6 +632,9 @@ There is no trailing newline.
 branches
 --------
 
+(Legacy command used for discovery in old clients. Clients with ``getbundle``
+use the ``known`` and ``heads`` commands instead.)
+
 Obtain ancestor changesets of specific nodes back to a branch point.
 
 Despite the name, this command has nothing to do with Mercurial named branches.
