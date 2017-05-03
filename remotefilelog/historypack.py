@@ -21,7 +21,7 @@ NODEINDEXENTRYLENGTH = struct.calcsize(NODEINDEXFORMAT)
 PACKFORMAT = "!20s20s20s20sH"
 PACKENTRYLENGTH = 82
 
-OFFSETSIZE = 4
+ENTRYCOUNTSIZE = 4
 
 INDEXSUFFIX = '.histidx'
 PACKSUFFIX = '.histpack'
@@ -131,7 +131,8 @@ class historypack(basepack.basepack):
     def _getancestors(self, name, node, known=None):
         if known is None:
             known = set()
-        filename, offset, size = self._findsection(name)
+        section = self._findsection(name)
+        filename, offset, size, nodeindexoffset, nodeindexsize = section
         pending = set((node,))
         data = self._data[offset:offset + size]
         o = 0
@@ -163,7 +164,7 @@ class historypack(basepack.basepack):
                            (filename, hex(node)))
 
     def _findnode(self, section, node):
-        name, offset, size = section
+        name, offset, size, nodeindexoffset, nodeindexsize = section
         data = self._data
         o = offset
         while o < offset + size:
@@ -261,12 +262,14 @@ class historypack(basepack.basepack):
             raise KeyError("found file name %s when looking for %s" %
                            (actualname, name))
 
-        struct.unpack('!I', self._data[offset:offset +
-                                       OFFSETSIZE])[0]
-        offset += OFFSETSIZE
+        # Skip entry list size
+        offset += ENTRYCOUNTSIZE
 
-        return (name, offset, size - constants.FILENAMESIZE - filenamelength
-                              - OFFSETSIZE)
+        nodelistoffset = offset
+        nodelistsize = (size - constants.FILENAMESIZE - filenamelength -
+                        ENTRYCOUNTSIZE)
+        return (name, nodelistoffset, nodelistsize,
+                nodeindexoffset, nodeindexsize)
 
     def markledger(self, ledger):
         for filename, node in self:
@@ -300,8 +303,8 @@ class historypack(basepack.basepack):
             offset += filenamelen
 
             revcount = struct.unpack('!I', data[offset:offset +
-                                                OFFSETSIZE])[0]
-            offset += OFFSETSIZE
+                                                ENTRYCOUNTSIZE])[0]
+            offset += ENTRYCOUNTSIZE
 
             for i in xrange(revcount):
                 entry = struct.unpack(PACKFORMAT, data[offset:offset +
