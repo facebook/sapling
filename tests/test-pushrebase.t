@@ -386,7 +386,7 @@ With evolution enabled, should set obsolescence markers
   > rebase =
   > 
   > [experimental]
-  > evolution = all
+  > evolution = createmarkers
   > EOF
 
   $ cd ../client

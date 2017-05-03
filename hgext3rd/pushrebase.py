@@ -130,6 +130,25 @@ def getrebasepart(repo, peer, outgoing, onto, newhead):
 
     cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
 
+    # Explicitly notify the server what obsmarker versions the client supports
+    # so the client could receive marker from the server.
+    #
+    # The core mercurial logic will do the right thing (enable obsmarker
+    # capabilities in the pushback bundle) if obsmarker exchange is enabled
+    # client-side.
+    #
+    # But we want the marker without enabling marker exchange, and our server
+    # could reply a marker without exchange or even obsstore enabled. So we
+    # bypass the "standard" way of capabilities check by sending the supported
+    # versions directly in our own part. Note: do not enable "exchange" because
+    # it has an unwanted side effect: pushing markers from client to server.
+    #
+    # "createmarkers" is all we need to be able to write a new marker.
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        obsmarkerversions = '\0'.join(str(v) for v in obsolete.formats)
+    else:
+        obsmarkerversions = ''
+
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
     return bundle2.bundlepart(
@@ -137,6 +156,10 @@ def getrebasepart(repo, peer, outgoing, onto, newhead):
         mandatoryparams={
             'onto': onto,
             'newhead': repr(newhead),
+        }.items(),
+        advisoryparams={
+            # advisory: (old) server could ignore this without error
+            'obsmarkerversions': obsmarkerversions,
         }.items(),
         data = cg)
 
@@ -525,13 +548,20 @@ def _addpushbackchangegroup(repo, reply, outgoing):
     if version != '01':
         cgpart.addparam('version', version)
 
-def _addpushbackobsolete(repo, reply, markers, markerdate):
+def _addpushbackobsolete(repo, reply, markers, markerdate,
+                         clientobsmarkerversions):
     '''adds obsmarkers to reply'''
-    # if the client talks about obsmarkers, send them, regardless of if
-    # obsstore is enabled server-side or not.
-    v = obsolete.commonversion(bundle2.obsmarkersversion(reply.capabilities))
-    if v is None:
+    # experimental config: pushrebase.pushback.obsmarkers
+    # if set to True, the server will not push back obsmarkers.
+    if not repo.ui.configbool('pushrebase', 'pushback.obsmarkers', True):
         return
+
+    # _buildobsolete has hard-coded obsolete._fm1version raw markers, so client
+    # needs to support it, and the reply needs to have the correct capabilities
+    if obsolete._fm1version not in clientobsmarkerversions:
+        return
+    reply.capabilities['obsmarkers'] = ['V1']
+
     flag = 0
     parents = None
     try:
@@ -542,7 +572,8 @@ def _addpushbackobsolete(repo, reply, markers, markerdate):
     except ValueError as exc:
         repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
 
-def _addpushbackparts(op, replacements, markers, markerdate):
+def _addpushbackparts(op, replacements, markers, markerdate,
+                      clientobsmarkerversions):
     '''adds pushback to reply if supported by the client'''
     if (op.records[commonheadsparttype]
         and op.reply
@@ -556,7 +587,8 @@ def _addpushbackparts(op, replacements, markers, markerdate):
             op.repo.ui.warn(_("%s new changeset%s from the server will be "
                               "downloaded\n") % (len(outgoing.missing), plural))
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
-            _addpushbackobsolete(op.repo, op.reply, markers, markerdate)
+            _addpushbackobsolete(op.repo, op.reply, markers, markerdate,
+                                 clientobsmarkerversions)
 
 def resolveonto(repo, ontoarg):
     try:
@@ -568,7 +600,7 @@ def resolveonto(repo, ontoarg):
     # onto is None means don't do rebasing
     return None
 
-@bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
+@bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'obsmarkerversions'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
@@ -576,6 +608,8 @@ def bundle2rebase(op, part):
 
     bundlefile = None
     bundle = None
+    clientobsmarkerversions = [
+        int(v) for v in params.get('obsmarkerversions', '').split('\0') if v]
     markers = []
     markerdate = util.makedate()
 
@@ -743,7 +777,8 @@ def bundle2rebase(op, part):
     tr.addpostclose('serverrebase-cg-hooks',
                     lambda tr: op.repo._afterlock(runhooks))
 
-    _addpushbackparts(op, replacements, markers, markerdate)
+    _addpushbackparts(op, replacements, markers, markerdate,
+                      clientobsmarkerversions)
 
     for k in replacements.keys():
         replacements[hex(k)] = hex(replacements[k])
