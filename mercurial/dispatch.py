@@ -479,7 +479,8 @@ class cmdalias(object):
         return aliasargs(self.fn, args)
 
     def __getattr__(self, name):
-        adefaults = {'norepo': True, 'optionalrepo': False, 'inferrepo': False}
+        adefaults = {r'norepo': True,
+                     r'optionalrepo': False, r'inferrepo': False}
         if name not in adefaults:
             raise AttributeError(name)
         if self.badalias or util.safehasattr(self, 'shell'):
