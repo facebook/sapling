@@ -186,7 +186,6 @@ Graft out of order, skipping a merge and a duplicate
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
    e: remote is newer -> g
   getting e
-   b: remote unchanged -> k
   committing files:
   e
   committing manifest
@@ -203,7 +202,6 @@ Graft out of order, skipping a merge and a duplicate
    preserving e for resolve of e
    d: remote is newer -> g
   getting d
-   b: remote unchanged -> k
    e: versions differ -> m (premerge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
   merging e

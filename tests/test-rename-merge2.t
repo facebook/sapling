@@ -89,7 +89,6 @@ $4 = expected result
    preserving a for resolve of b
    preserving rev for resolve of rev
   starting 4 threads for background file closing (?)
-   a: remote unchanged -> k
    b: remote copied from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging a and b to b
@@ -652,7 +651,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving b for resolve of b
    preserving rev for resolve of rev
   starting 4 threads for background file closing (?)
-   a: remote unchanged -> k
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b

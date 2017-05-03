@@ -38,7 +38,6 @@ https://bz.mercurial-scm.org/672
   removing 1
    1a: remote created -> g
   getting 1a
-   2: remote unchanged -> k
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
