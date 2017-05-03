@@ -1496,6 +1496,7 @@ class changeset_templater(changeset_printer):
         props['index'] = next(self._counter)
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
+        props = pycompat.strkwargs(props)
 
         # write header
         if self._parts['header']:
