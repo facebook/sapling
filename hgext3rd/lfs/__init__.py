@@ -75,6 +75,7 @@ def wrapfilelog(filelog):
     wrapfunction = extensions.wrapfunction
 
     wrapfunction(filelog, 'addrevision', wrapper.filelogaddrevision)
+    wrapfunction(filelog, 'renamed', wrapper.filelogrenamed)
     wrapfunction(filelog, 'size', wrapper.filelogsize)
 
 def extsetup(ui):

@@ -8,7 +8,7 @@ from mercurial import (
     util as hgutil,
 )
 from mercurial.i18n import _
-from mercurial.node import nullid
+from mercurial.node import bin, nullid
 
 from . import (
     blobstore,
@@ -138,6 +138,18 @@ def filelogaddrevision(orig, self, text, transaction, link, p1, p2,
 
     return orig(self, text, transaction, link, p1, p2, cachedelta=cachedelta,
                 node=node, flags=flags, **kwds)
+
+def filelogrenamed(orig, self, node):
+    if _islfs(self, node):
+        rawtext = self.revision(node, raw=True)
+        if not rawtext:
+            return False
+        metadata = pointer.deserialize(rawtext)
+        if 'x-hg-copy' in metadata and 'x-hg-copyrev' in metadata:
+            return metadata['x-hg-copy'], bin(metadata['x-hg-copyrev'])
+        else:
+            return False
+    return orig(self, node)
 
 def filelogsize(orig, self, rev):
     if _islfs(self, rev=rev):
