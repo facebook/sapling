@@ -18,8 +18,9 @@ cpp_library(
     '@/folly:subprocess',
   ],
   external_deps = [
-    ('boost', None, 'boost_filesystem'),
+    'gflags',
     'glog',
+    ('boost', None, 'boost_filesystem'),
   ]
 )
 

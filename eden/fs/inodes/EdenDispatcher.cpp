@@ -11,6 +11,7 @@
 
 #include <dirent.h>
 #include <folly/Format.h>
+#include <gflags/gflags.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>

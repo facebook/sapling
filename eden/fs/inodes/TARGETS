@@ -25,6 +25,7 @@ cpp_library(
     '@/folly:folly',
   ],
   external_deps = [
+    'gflags',
     ('boost', 'any'),
     ('boost', 'any', 'boost_filesystem'),
   ],
