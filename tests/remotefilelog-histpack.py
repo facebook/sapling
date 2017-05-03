@@ -53,7 +53,8 @@ class histpacktests(unittest.TestCase):
                           self.getFakeHash(), None)]
 
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(mercurial.ui.ui(), packdir)
+        packer = mutablehistorypack(mercurial.ui.ui(), packdir,
+                                    version=1)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
             packer.add(filename, node, p1, p2, linknode, copyfrom)
@@ -231,7 +232,7 @@ class histpacktests(unittest.TestCase):
         path = pack.path + '.histpack'
         with open(path) as f:
             raw = f.read()
-        raw = struct.pack('!B', 1) + raw[1:]
+        raw = struct.pack('!B', 255) + raw[1:]
         os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
         with open(path, 'w+') as f:
             f.write(raw)
