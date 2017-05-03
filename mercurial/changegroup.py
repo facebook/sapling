@@ -502,16 +502,9 @@ class headerlessfixup(object):
 class cg1packer(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     version = '01'
-    def __init__(self, repo, bundlecaps=None):
+    def __init__(self, repo):
         """Given a source repo, construct a bundler.
-
-        bundlecaps is optional and can be used to specify the set of
-        capabilities which can be used to build the bundle.
         """
-        # Set of capabilities we can use to build the bundle.
-        if bundlecaps is None:
-            bundlecaps = set()
-        self._bundlecaps = bundlecaps
         # experimental config: bundle.reorder
         reorder = repo.ui.config('bundle', 'reorder', 'auto')
         if reorder == 'auto':
@@ -815,8 +808,8 @@ class cg2packer(cg1packer):
     version = '02'
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
-    def __init__(self, repo, bundlecaps=None):
-        super(cg2packer, self).__init__(repo, bundlecaps)
+    def __init__(self, repo):
+        super(cg2packer, self).__init__(repo)
         if self._reorder is None:
             # Since generaldelta is directly supported by cg2, reordering
             # generally doesn't help, so we disable it by default (treating
@@ -910,9 +903,9 @@ def safeversion(repo):
     assert versions
     return min(versions)
 
-def getbundler(version, repo, bundlecaps=None):
+def getbundler(version, repo):
     assert version in supportedoutgoingversions(repo)
-    return _packermap[version][0](repo, bundlecaps)
+    return _packermap[version][0](repo)
 
 def getunbundler(version, fh, alg, extras=None):
     return _packermap[version][1](fh, alg, extras=extras)
@@ -963,30 +956,27 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
-def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
-                           version='01'):
+def getlocalchangegroupraw(repo, source, outgoing, version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
     precomputed sets in outgoing. Returns a raw changegroup generator."""
     if not outgoing.missing:
         return None
-    bundler = getbundler(version, repo, bundlecaps)
+    bundler = getbundler(version, repo)
     return getsubsetraw(repo, outgoing, bundler, source)
 
-def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
-                        version='01'):
+def getlocalchangegroup(repo, source, outgoing, version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
     precomputed sets in outgoing."""
     if not outgoing.missing:
         return None
-    bundler = getbundler(version, repo, bundlecaps)
+    bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
-def getchangegroup(repo, source, outgoing, bundlecaps=None,
-                   version='01'):
+def getchangegroup(repo, source, outgoing, version='01'):
     """Like changegroupsubset, but returns the set difference between the
     ancestors of heads and the ancestors common.
 
@@ -995,8 +985,7 @@ def getchangegroup(repo, source, outgoing, bundlecaps=None,
     The nodes in common might not all be known locally due to the way the
     current discovery protocol works.
     """
-    return getlocalchangegroup(repo, source, outgoing, bundlecaps=bundlecaps,
-                               version=version)
+    return getlocalchangegroup(repo, source, outgoing, version=version)
 
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)

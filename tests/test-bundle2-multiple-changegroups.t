@@ -13,13 +13,11 @@ Create an extension to test bundle2 with multiple changegroups
   >     # in 'heads' as intermediate heads for the first changegroup.
   >     intermediates = [repo[r].p1().node() for r in heads]
   >     outgoing = discovery.outgoing(repo, common, intermediates)
-  >     cg = changegroup.getchangegroup(repo, source, outgoing,
-  >                                     bundlecaps=bundlecaps)
+  >     cg = changegroup.getchangegroup(repo, source, outgoing)
   >     bundler.newpart('output', data='changegroup1')
   >     bundler.newpart('changegroup', data=cg.getchunks())
   >     outgoing = discovery.outgoing(repo, common + intermediates, heads)
-  >     cg = changegroup.getchangegroup(repo, source, outgoing,
-  >                                     bundlecaps=bundlecaps)
+  >     cg = changegroup.getchangegroup(repo, source, outgoing)
   >     bundler.newpart('output', data='changegroup2')
   >     bundler.newpart('changegroup', data=cg.getchunks())
   > 

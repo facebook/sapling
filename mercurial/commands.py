@@ -1346,8 +1346,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         base = ['null']
     else:
         base = scmutil.revrange(repo, opts.get('base'))
-    # TODO: get desired bundlecaps from command line.
-    bundlecaps = None
     if cgversion not in changegroup.supportedoutgoingversions(repo):
         raise error.Abort(_("repository does not support bundle version %s") %
                           cgversion)
@@ -1360,7 +1358,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         heads = revs and map(repo.lookup, revs) or None
         outgoing = discovery.outgoing(repo, common, heads)
         cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
-                                        bundlecaps=bundlecaps,
                                         version=cgversion)
         outgoing = None
     else:
@@ -1374,7 +1371,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 force=opts.get('force'),
                                                 portable=True)
         cg = changegroup.getlocalchangegroup(repo, 'bundle', outgoing,
-                                                bundlecaps, version=cgversion)
+                                             version=cgversion)
     if not cg:
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
