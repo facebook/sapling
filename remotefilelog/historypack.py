@@ -133,18 +133,14 @@ class historypack(basepack.basepack):
         section = self._findsection(name)
         filename, offset, size, nodeindexoffset, nodeindexsize = section
         pending = set((node,))
-        data = self._data[offset:offset + size]
         o = 0
-        while o < len(data):
+        while o < size:
             if not pending:
                 break
-            entry = struct.unpack(PACKFORMAT, data[o:o + PACKENTRYLENGTH])
+            entry, copyfrom = self._readentry(offset + o)
             o += PACKENTRYLENGTH
-            copyfrom = None
-            copyfromlen = entry[ANC_COPYFROM]
-            if copyfromlen != 0:
-                copyfrom = data[o:o + copyfromlen]
-                o += copyfromlen
+            if copyfrom:
+                o += len(copyfrom)
 
             ancnode = entry[ANC_NODE]
             if ancnode in pending:
@@ -157,6 +153,16 @@ class historypack(basepack.basepack):
                     pending.add(p2node)
 
                 yield (ancnode, p1node, p2node, entry[ANC_LINKNODE], copyfrom)
+
+    def _readentry(self, offset):
+        data = self._data
+        entry = struct.unpack(PACKFORMAT, data[offset:offset + PACKENTRYLENGTH])
+        copyfrom = None
+        copyfromlen = entry[ANC_COPYFROM]
+        if copyfromlen != 0:
+            offset += PACKENTRYLENGTH
+            copyfrom = data[offset:offset + copyfromlen]
+        return entry, copyfrom
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypack (%s:%s)" %
