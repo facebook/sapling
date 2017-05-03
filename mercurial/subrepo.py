@@ -1878,9 +1878,9 @@ class gitsubrepo(abstractsubrepo):
         deleted, unknown, ignored, clean = [], [], [], []
 
         command = ['status', '--porcelain', '-z']
-        if opts.get('unknown'):
+        if opts.get(r'unknown'):
             command += ['--untracked-files=all']
-        if opts.get('ignored'):
+        if opts.get(r'ignored'):
             command += ['--ignored']
         out = self._gitcommand(command)
 
@@ -1908,7 +1908,7 @@ class gitsubrepo(abstractsubrepo):
             elif st == '!!':
                 ignored.append(filename1)
 
-        if opts.get('clean'):
+        if opts.get(r'clean'):
             out = self._gitcommand(['ls-files'])
             for f in out.split('\n'):
                 if not f in changedfiles:
@@ -1921,7 +1921,7 @@ class gitsubrepo(abstractsubrepo):
     def diff(self, ui, diffopts, node2, match, prefix, **opts):
         node1 = self._state[1]
         cmd = ['diff', '--no-renames']
-        if opts['stat']:
+        if opts[r'stat']:
             cmd.append('--stat')
         else:
             # for Git, this also implies '-p'
@@ -1964,7 +1964,7 @@ class gitsubrepo(abstractsubrepo):
     @annotatesubrepoerror
     def revert(self, substate, *pats, **opts):
         self.ui.status(_('reverting subrepo %s\n') % substate[0])
-        if not opts.get('no_backup'):
+        if not opts.get(r'no_backup'):
             status = self.status(None)
             names = status.modified
             for name in names:
@@ -1973,7 +1973,7 @@ class gitsubrepo(abstractsubrepo):
                         (name, bakname))
                 self.wvfs.rename(name, bakname)
 
-        if not opts.get('dry_run'):
+        if not opts.get(r'dry_run'):
             self.get(substate, overwrite=True)
         return []
 

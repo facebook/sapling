@@ -105,9 +105,9 @@ def restorematchandpatsfn():
             scmutil.matchandpats)
 
 def addlargefiles(ui, repo, isaddremove, matcher, **opts):
-    large = opts.get('large')
+    large = opts.get(r'large')
     lfsize = lfutil.getminsize(
-        ui, lfutil.islfilesrepo(repo), opts.get('lfsize'))
+        ui, lfutil.islfilesrepo(repo), opts.get(r'lfsize'))
 
     lfmatcher = None
     if lfutil.islfilesrepo(repo):
@@ -258,7 +258,7 @@ def overrideadd(orig, ui, repo, *pats, **opts):
 
 def cmdutiladd(orig, ui, repo, matcher, prefix, explicitonly, **opts):
     # The --normal flag short circuits this override
-    if opts.get('normal'):
+    if opts.get(r'normal'):
         return orig(ui, repo, matcher, prefix, explicitonly, **opts)
 
     ladded, lbad = addlargefiles(ui, repo, False, matcher, **opts)
