@@ -120,12 +120,9 @@ class historypack(basepack.basepack):
         return results
 
     def getnodeinfo(self, name, node):
-        ancestors = self._getancestors(name, node)
-        for ancnode, p1, p2, linknode, copyfrom in ancestors:
-            if ancnode == node:
-                return (p1, p2, linknode, copyfrom)
-
-        raise KeyError((name, node))
+        # Drop the node from the tuple before returning, since the result should
+        # just be (p1, p2, linknode, copyfrom)
+        return self._findnode(name, node)[1:]
 
     def _getancestors(self, name, node, known=None):
         if known is None:
@@ -183,7 +180,9 @@ class historypack(basepack.basepack):
             if entry is not None:
                 node, offset = struct.unpack(NODEINDEXFORMAT, entry)
                 entry, copyfrom = self._readentry(offset)
-                return entry + (copyfrom,)
+                # Drop the copyfromlen from the end of entry, and replace it
+                # with the copyfrom string.
+                return entry[:4] + (copyfrom,)
 
         raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
 
