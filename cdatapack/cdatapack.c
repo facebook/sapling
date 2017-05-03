@@ -248,9 +248,14 @@ datapack_handle_t *open_datapack(
     handle->status = DATAPACK_HANDLE_OOM;
     goto error_cleanup;
   }
+  size_t index_offset = 0;
+  if (handle->version == 1) {
+    index_offset = 8;
+  }
   handle->index_table = (disk_index_entry_t *)
       (((const char *) handle->index_mmap) +
        sizeof(disk_index_header_t) +
+       index_offset +
        (sizeof(index_offset_t) * fanout_count));
   disk_index_entry_t *index_end = (disk_index_entry_t *)
       (((const char *) handle->index_mmap) + handle->index_file_sz);

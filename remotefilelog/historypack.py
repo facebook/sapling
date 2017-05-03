@@ -185,12 +185,14 @@ class historypack(basepack.basepack):
         fanout = self._fanouttable
 
         start = fanout[fanoutkey] + params.indexstart
+        indexend = self._indexend
+
         for i in xrange(fanoutkey + 1, params.fanoutcount):
             end = fanout[i] + params.indexstart
             if end != start:
                 break
         else:
-            end = self.indexsize
+            end = indexend
 
         # Bisect between start and end to find node
         startnode = self._index[start:start + NODELENGTH]

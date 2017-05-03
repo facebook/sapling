@@ -173,9 +173,9 @@ class basepack(versionmixin):
         self._checkversion(version)
 
         if 0b10000000 & config:
-            self.params = indexparams(LARGEFANOUTPREFIX)
+            self.params = indexparams(LARGEFANOUTPREFIX, version)
         else:
-            self.params = indexparams(SMALLFANOUTPREFIX)
+            self.params = indexparams(SMALLFANOUTPREFIX, version)
 
     @util.propertycache
     def _fanouttable(self):
@@ -187,6 +187,15 @@ class basepack(versionmixin):
             fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
             fanouttable.append(fanoutentry)
         return fanouttable
+
+    @util.propertycache
+    def _indexend(self):
+        if self.VERSION == 0:
+            return self.indexsize
+        else:
+            nodecount = struct.unpack_from('!Q', self._index,
+                                           self.params.indexstart - 8)[0]
+            return self.params.indexstart + nodecount * self.INDEXENTRYLENGTH
 
     def freememory(self):
         """Unmap and remap the memory to free it up after known expensive
@@ -305,9 +314,9 @@ class mutablebasepack(versionmixin):
 
         largefanout = len(self.entries) > SMALLFANOUTCUTOFF
         if largefanout:
-            params = indexparams(LARGEFANOUTPREFIX)
+            params = indexparams(LARGEFANOUTPREFIX, self.VERSION)
         else:
-            params = indexparams(SMALLFANOUTPREFIX)
+            params = indexparams(SMALLFANOUTPREFIX, self.VERSION)
 
         fanouttable = [EMPTYFANOUT] * params.fanoutcount
 
@@ -332,10 +341,13 @@ class mutablebasepack(versionmixin):
             last = offset
             rawfanouttable += struct.pack('!I', offset)
 
+        rawentrieslength = struct.pack('!Q', len(self.entries))
         rawindex = self.createindex(locations)
 
         self._writeheader(params)
         self.idxfp.write(rawfanouttable)
+        if self.VERSION == 1:
+            self.idxfp.write(rawentrieslength)
         self.idxfp.write(rawindex)
         self.idxfp.close()
 
@@ -356,7 +368,7 @@ class indexparams(object):
     __slots__ = ('fanoutprefix', 'fanoutstruct', 'fanoutcount', 'fanoutsize',
                  'indexstart')
 
-    def __init__(self, prefixsize):
+    def __init__(self, prefixsize, version):
         self.fanoutprefix = prefixsize
 
         # The struct pack format for fanout table location (i.e. the format that
@@ -376,3 +388,6 @@ class indexparams(object):
         self.fanoutsize = self.fanoutcount * 4
 
         self.indexstart = FANOUTSTART + self.fanoutsize
+        if version == 1:
+            # Skip the index length
+            self.indexstart += 8
