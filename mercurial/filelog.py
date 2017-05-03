@@ -18,7 +18,7 @@ from . import (
 
 _mdre = re.compile('\1\n')
 def parsemeta(text):
-    """return (metadatadict, keylist, metadatasize)"""
+    """return (metadatadict, metadatasize)"""
     # text can be buffer, so we can't use .startswith or .index
     if text[:2] != '\1\n':
         return None, None
