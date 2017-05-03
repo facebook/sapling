@@ -837,8 +837,6 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     elif extra or good + bad + skip + reset + extend + bool(command) > 1:
         raise error.Abort(_('incompatible arguments'))
 
-    cmdutil.checkunfinished(repo)
-
     if reset:
         hbisect.resetstate(repo)
         return
@@ -865,6 +863,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         """common used update sequence"""
         if noupdate:
             return
+        cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         return hg.clean(repo, node, show_stats=show_stats)
 

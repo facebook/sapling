@@ -551,7 +551,14 @@ test the same case, this time with updating
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     msg 6
   
-
+  $ hg graft -q 15
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  abort: unresolved conflicts, can't continue
+  (use 'hg resolve' and 'hg graft --continue')
+  [255]
+  $ hg bisect --reset
+  $ hg up -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Check that bisect does not break on obsolete changesets
 =========================================================
