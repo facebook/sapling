@@ -379,7 +379,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
             return r
         m.matchfn = lfmatchfn
 
-        ui.debug('updated patterns: %s\n' % sorted(pats))
+        ui.debug('updated patterns: %s\n' % ', '.join(sorted(pats)))
         return m, pats
 
     # For hg log --patch, the match object is used in two different senses:

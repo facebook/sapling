@@ -47,7 +47,7 @@ changeset graph
 
 Make sure largefiles doesn't interfere with logging a regular file
   $ hg --debug log a -T '{rev}: {desc}\n' --config extensions.largefiles=
-  updated patterns: ['.hglf/a', 'a']
+  updated patterns: .hglf/a, a
   0: a
   $ hg log a
   changeset:   0:9161b9aeaf16
@@ -67,7 +67,7 @@ Make sure largefiles doesn't interfere with logging a regular file
   summary:     a
   
   $ hg --debug log glob:a* -T '{rev}: {desc}\n' --config extensions.largefiles=
-  updated patterns: ['glob:.hglf/a*', 'glob:a*']
+  updated patterns: glob:.hglf/a*, glob:a*
   3: d
   0: a
 
