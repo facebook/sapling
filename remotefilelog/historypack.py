@@ -193,31 +193,9 @@ class historypack(basepack.basepack):
         else:
             end = indexend
 
-        # Bisect between start and end to find node
-        startnode = self._index[start:start + NODELENGTH]
-        endnode = self._index[end:end + NODELENGTH]
-        entrylen = self.INDEXENTRYLENGTH
-
-        if startnode == namehash:
-            entry = self._index[start:start + entrylen]
-        elif endnode == namehash:
-            entry = self._index[end:end + entrylen]
-        else:
-            while start < end - entrylen:
-                mid = start  + (end - start) / 2
-                mid = mid - ((mid - params.indexstart) % entrylen)
-                midnode = self._index[mid:mid + NODELENGTH]
-                if midnode == namehash:
-                    entry = self._index[mid:mid + entrylen]
-                    break
-                if namehash > midnode:
-                    start = mid
-                    startnode = midnode
-                elif namehash < midnode:
-                    end = mid
-                    endnode = midnode
-            else:
-                raise KeyError(name)
+        entry = self._bisect(namehash, start, end, self.INDEXENTRYLENGTH)
+        if not entry:
+            raise KeyError(name)
 
         rawentry = struct.unpack(self.INDEXFORMAT, entry)
         if self.VERSION == 0:
@@ -256,6 +234,31 @@ class historypack(basepack.basepack):
                         ENTRYCOUNTSIZE)
         return (name, nodelistoffset, nodelistsize,
                 nodeindexoffset, nodeindexsize)
+
+    def _bisect(self, node, start, end, entrylen):
+        # Bisect between start and end to find node
+        origstart = start
+        startnode = self._index[start:start + NODELENGTH]
+        endnode = self._index[end:end + NODELENGTH]
+
+        if startnode == node:
+            return self._index[start:start + entrylen]
+        elif endnode == node:
+            return self._index[end:end + entrylen]
+        else:
+            while start < end - entrylen:
+                mid = start + (end - start) / 2
+                mid = mid - ((mid - origstart) % entrylen)
+                midnode = self._index[mid:mid + NODELENGTH]
+                if midnode == node:
+                    return self._index[mid:mid + entrylen]
+                if node > midnode:
+                    start = mid
+                    startnode = midnode
+                elif node < midnode:
+                    end = mid
+                    endnode = midnode
+        return None
 
     def markledger(self, ledger):
         for filename, node in self:
