@@ -171,8 +171,6 @@ def loadall(ui):
                 continue
         try:
             load(ui, name, path)
-        except KeyboardInterrupt:
-            raise
         except Exception as inst:
             inst = _forbytes(inst)
             if path:

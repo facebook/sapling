@@ -67,8 +67,6 @@ def read(repo):
             partial.setdefault(label, []).append(node)
             if state == 'c':
                 partial._closednodes.add(node)
-    except KeyboardInterrupt:
-        raise
     except Exception as inst:
         if repo.ui.debugflag:
             msg = 'invalid branchheads cache'
