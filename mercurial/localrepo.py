@@ -164,7 +164,7 @@ class localpeer(peer.peerrepository):
                                           **kwargs)
         cb = util.chunkbuffer(chunks)
 
-        if bundlecaps is not None and 'HG20' in bundlecaps:
+        if exchange.bundle2requested(bundlecaps):
             # When requesting a bundle2, getbundle returns a stream to make the
             # wire level function happier. We need to build a proper object
             # from it in local peer.
