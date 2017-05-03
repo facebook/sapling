@@ -196,10 +196,10 @@
   $ hg prefetch -r .
   3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
   $ find $TESTTMP/hgcache -type f | sort
+  $TESTTMP/hgcache/master/packs/47d8f1b90a73af4ff8af19fcd10bdc027b6a881a.histidx
+  $TESTTMP/hgcache/master/packs/47d8f1b90a73af4ff8af19fcd10bdc027b6a881a.histpack
   $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.dataidx
   $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.datapack
-  $TESTTMP/hgcache/master/packs/bc793de8656fc1534908d4d69fd4448c1cb00e91.histidx
-  $TESTTMP/hgcache/master/packs/bc793de8656fc1534908d4d69fd4448c1cb00e91.histpack
   $ hg cat -r . x
   x2
   $ hg cat -r . y

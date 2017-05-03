@@ -157,8 +157,8 @@
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.dataidx
   $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.datapack
-  $TESTTMP/hgcache/master/packs/b00dd932d142d1e3f1b446503cfae02dc3012216.histidx
-  $TESTTMP/hgcache/master/packs/b00dd932d142d1e3f1b446503cfae02dc3012216.histpack
+  $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histidx
+  $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histpack
   $TESTTMP/hgcache/repos
 
   $ cp -R . ../shallow2
@@ -375,8 +375,8 @@
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.dataidx
   $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.datapack
-  $TESTTMP/hgcache/master/packs/7e90f8dd34eda5d9a328b431ac711ecebcd4127e.histidx
-  $TESTTMP/hgcache/master/packs/7e90f8dd34eda5d9a328b431ac711ecebcd4127e.histpack
+  $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histidx
+  $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
   $TESTTMP/hgcache/repos
 
   $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'

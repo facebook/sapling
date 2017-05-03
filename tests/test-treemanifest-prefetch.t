@@ -60,10 +60,10 @@
 Test prefetchtrees
   $ hg prefetchtrees -r '0 + 1 + 2'
   $ ls $CACHEDIR/master/packs/manifests
+  29938257d506f677320d5abec8e34a1a9ed635fe.histidx
+  29938257d506f677320d5abec8e34a1a9ed635fe.histpack
   8adc618d23082c0a5311a4bbf9ac08b9b9672471.dataidx
   8adc618d23082c0a5311a4bbf9ac08b9b9672471.datapack
-  c0a571385df83107268172e0ab75abb30a12079a.histidx
-  c0a571385df83107268172e0ab75abb30a12079a.histpack
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
   
   subdir
@@ -156,12 +156,12 @@ Test auto prefetch during normal access
   $ ls $CACHEDIR/master/packs/manifests
   148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
   148e9eb32f473ea522c591c95be0f9e772be9675.datapack
+  214f2046312905a44188b27497625a36ffaa4c3d.histidx
+  214f2046312905a44188b27497625a36ffaa4c3d.histpack
   4ee15de76c068ec1c80e3e61f2c3c476a779078a.dataidx
   4ee15de76c068ec1c80e3e61f2c3c476a779078a.datapack
-  6fbf331dc6290577b48479f94c2746754f4a898a.histidx
-  6fbf331dc6290577b48479f94c2746754f4a898a.histpack
-  a2b37afce1a72987e098a62a03ef89f3f208bc70.histidx
-  a2b37afce1a72987e098a62a03ef89f3f208bc70.histpack
+  e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histidx
+  e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histpack
 
 Test auto prefetch during pull
 

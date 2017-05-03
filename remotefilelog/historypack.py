@@ -75,7 +75,7 @@ class historypack(basepack.basepack):
     INDEXFORMAT = INDEXFORMAT
     INDEXENTRYLENGTH = INDEXENTRYLENGTH
 
-    VERSION = 0
+    SUPPORTED_VERSIONS = [0, 1]
 
     def getmissing(self, keys):
         missing = []
@@ -352,10 +352,15 @@ class mutablehistorypack(basepack.mutablebasepack):
     INDEXFORMAT = INDEXFORMAT
     INDEXENTRYLENGTH = INDEXENTRYLENGTH
 
-    VERSION = 0
+    SUPPORTED_VERSIONS = [0, 1]
 
-    def __init__(self, ui, packpath):
-        super(mutablehistorypack, self).__init__(ui, packpath)
+    def __init__(self, ui, packpath, version=0):
+        # internal config: remotefilelog.historypackv1
+        if version == 0 and ui.configbool('remotefilelog', 'historypackv1',
+                                          False):
+            version = 1
+
+        super(mutablehistorypack, self).__init__(ui, packpath, version=version)
         self.files = {}
         self.fileentries = {}
 

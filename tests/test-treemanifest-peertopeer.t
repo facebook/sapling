@@ -43,8 +43,8 @@
   > EOF
 
   $ ls .hg/store/packs/manifests
-  36c63010eaf0a52d3536ced5e32bf4c6847a0e40.histidx
-  36c63010eaf0a52d3536ced5e32bf4c6847a0e40.histpack
+  15f45e8ca8affec27464278498594f94a3624815.histidx
+  15f45e8ca8affec27464278498594f94a3624815.histpack
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.dataidx
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.datapack
 
@@ -70,7 +70,7 @@ Pushing p2p puts the received packs in the local pack store
   > EOF
   $ hg push -q ../client2
   $ ls ../client2/.hg/store/packs/manifests
-  36c63010eaf0a52d3536ced5e32bf4c6847a0e40.histidx
-  36c63010eaf0a52d3536ced5e32bf4c6847a0e40.histpack
+  15f45e8ca8affec27464278498594f94a3624815.histidx
+  15f45e8ca8affec27464278498594f94a3624815.histpack
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.dataidx
   fb1ee78215bfece34ca8e233fcf5e9fd69ec52bd.datapack

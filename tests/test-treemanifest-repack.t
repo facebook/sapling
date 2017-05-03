@@ -32,9 +32,9 @@
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
-  -r--r--r--     180 49bfd5c81a3ca40372ddaea09c4c23c40934a198.histpack
-  -r--r--r--      89 54d5b52963363915130d0d7bcddcfd70be1dd0fc.histpack
+  -r--r--r--      89 4301ce26f4c07686220c7f57d80b466cfba9899e.histpack
   -r--r--r--     100 65df85879cdd898607ee3f323a0b61edc7de25b8.datapack
+  -r--r--r--     180 7da383a74e4ff5333b3733b9a52eb05c40b1df3d.histpack
   -r--r--r--     248 bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
 
 - Verify datapack contents
@@ -62,7 +62,12 @@
   >   echo $i
   >   hg debughistorypack "$i"
   > done
-  $TESTTMP/hgcache/master/packs/manifests/49bfd5c81a3ca40372ddaea09c4c23c40934a198.histpack
+  $TESTTMP/hgcache/master/packs/manifests/4301ce26f4c07686220c7f57d80b466cfba9899e.histpack
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  a0c8bcbbb45c  000000000000  000000000000  1f0dee641bb7  
+  $TESTTMP/hgcache/master/packs/manifests/7da383a74e4ff5333b3733b9a52eb05c40b1df3d.histpack
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
@@ -71,17 +76,12 @@
   dir
   Node          P1 Node       P2 Node       Link Node     Copy From
   23226e7a252c  000000000000  000000000000  8e83608cbe60  
-  $TESTTMP/hgcache/master/packs/manifests/54d5b52963363915130d0d7bcddcfd70be1dd0fc.histpack
-  
-  
-  Node          P1 Node       P2 Node       Link Node     Copy From
-  a0c8bcbbb45c  000000000000  000000000000  1f0dee641bb7  
 
 - Repack and reverify
   $ hg repack
 
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
-  -r--r--r--     262 6ef9454b3616ff75edca21af6f617d21a79f5963.histpack
+  -r--r--r--     262 7535b6084226436bbdff33043969e7fa963e8428.histpack
   -r--r--r--     315 d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.datapack
@@ -168,8 +168,8 @@ Test repacking from revlogs to pack files on the server
 
   $ hg repack
   $ ls .hg/cache/packs/manifests
-  6ef9454b3616ff75edca21af6f617d21a79f5963.histidx
-  6ef9454b3616ff75edca21af6f617d21a79f5963.histpack
+  7535b6084226436bbdff33043969e7fa963e8428.histidx
+  7535b6084226436bbdff33043969e7fa963e8428.histpack
   d24c358c968883e3b6c4bd6a85845dfb28fd8de6.dataidx
   d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
