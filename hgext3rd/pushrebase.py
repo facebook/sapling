@@ -552,7 +552,7 @@ def _addpushbackobsolete(repo, reply, markers, markerdate,
                          clientobsmarkerversions):
     '''adds obsmarkers to reply'''
     # experimental config: pushrebase.pushback.obsmarkers
-    # if set to True, the server will not push back obsmarkers.
+    # if set to False, the server will not push back obsmarkers.
     if not repo.ui.configbool('pushrebase', 'pushback.obsmarkers', True):
         return
 
