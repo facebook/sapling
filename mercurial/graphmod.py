@@ -273,7 +273,7 @@ def _getpaddingline(echars, idx, ncols, edges):
         # | | |             | | |
         line.extend(echars[idx * 2:(idx + 1) * 2])
     else:
-        line.extend('  ')
+        line.extend([' ', ' '])
     # all edges to the right of the current node
     remainder = ncols - idx - 1
     if remainder > 0:
@@ -410,14 +410,17 @@ def ascii(ui, state, type, char, text, coldata):
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
     shift_interline = echars[:idx * 2]
-    shift_interline.extend(' ' * (2 + coldiff))
+    for i in xrange(2 + coldiff):
+        shift_interline.append(' ')
     count = ncols - idx - 1
     if coldiff == -1:
-        shift_interline.extend('/ ' * count)
+        for i in xrange(count):
+            shift_interline.extend(['/', ' '])
     elif coldiff == 0:
         shift_interline.extend(echars[(idx + 1) * 2:ncols * 2])
     else:
-        shift_interline.extend(r'\ ' * count)
+        for i in xrange(count):
+            shift_interline.extend(['\\', ' '])
 
     # draw edges from the current node to its parents
     _drawedges(echars, edges, nodeline, shift_interline)
