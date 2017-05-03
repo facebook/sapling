@@ -8,9 +8,14 @@ from . import (
 )
 
 # (filename hash, offset, size)
-INDEXFORMAT = '!20sQQ'
-INDEXENTRYLENGTH = 36
+INDEXFORMAT0 = '!20sQQ'
+INDEXENTRYLENGTH0 = struct.calcsize(INDEXFORMAT0)
+INDEXFORMAT1 = '!20sQQII'
+INDEXENTRYLENGTH1 = struct.calcsize(INDEXFORMAT1)
 NODELENGTH = 20
+
+NODEINDEXFORMAT = '!20sQ'
+NODEINDEXENTRYLENGTH = struct.calcsize(NODEINDEXFORMAT)
 
 # (node, p1, p2, linknode)
 PACKFORMAT = "!20s20s20s20sH"
@@ -72,10 +77,17 @@ class historypack(basepack.basepack):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    INDEXFORMAT = INDEXFORMAT
-    INDEXENTRYLENGTH = INDEXENTRYLENGTH
-
     SUPPORTED_VERSIONS = [0, 1]
+
+    def __init__(self, path):
+        super(historypack, self).__init__(path)
+
+        if self.VERSION == 0:
+            self.INDEXFORMAT = INDEXFORMAT0
+            self.INDEXENTRYLENGTH = INDEXENTRYLENGTH0
+        else:
+            self.INDEXFORMAT = INDEXFORMAT1
+            self.INDEXENTRYLENGTH = INDEXENTRYLENGTH1
 
     def getmissing(self, keys):
         missing = []
@@ -220,7 +232,24 @@ class historypack(basepack.basepack):
             else:
                 raise KeyError(name)
 
-        filenamehash, offset, size = struct.unpack(self.INDEXFORMAT, entry)
+        rawentry = struct.unpack(self.INDEXFORMAT, entry)
+        if self.VERSION == 0:
+            x, offset, size = rawentry
+            nodeindexoffset = None
+            nodeindexsize = None
+        else:
+            x, offset, size, nodeindexoffset, nodeindexsize = rawentry
+            rawnamelen = self._index[nodeindexoffset:nodeindexoffset +
+                                                     constants.FILENAMESIZE]
+            actualnamelen = struct.unpack('!H', rawnamelen)[0]
+            nodeindexoffset += constants.FILENAMESIZE
+            actualname = self._index[nodeindexoffset:nodeindexoffset +
+                                                     actualnamelen]
+            if actualname != name:
+                raise KeyError("found file name %s when looking for %s" %
+                               (actualname, name))
+            nodeindexoffset += actualnamelen
+
         filenamelength = struct.unpack('!H', self._data[offset:offset +
                                                     constants.FILENAMESIZE])[0]
         offset += constants.FILENAMESIZE
@@ -323,15 +352,20 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     .histidx
         The index file provides a mapping from filename to the file section in
-        the histpack. It consists of two parts, the fanout and the index.
+        the histpack. In V1 it also contains sub-indexes for specific nodes
+        within each file. It consists of three parts, the fanout, the file index
+        and the node indexes.
 
-        The index is a list of index entries, sorted by filename hash (one per
-        file section in the pack). Each entry has:
+        The file index is a list of index entries, sorted by filename hash (one
+        per file section in the pack). Each entry has:
 
         - node (The 20 byte hash of the filename)
         - pack entry offset (The location of this file section in the histpack)
         - pack content size (The on-disk length of this file section's pack
                              data)
+        - node index offset (The location of the file's node index in the index
+                             file) [1]
+        - node index size (the on-disk length of this file's node index) [1]
 
         The fanout is a quick lookup table to reduce the number of steps for
         bisecting the index. It is a series of 4 byte pointers to positions
@@ -341,18 +375,27 @@ class mutablehistorypack(basepack.mutablebasepack):
         with 4F. This saves log(2^16) bisect steps.
 
         dataidx = <fanouttable>
-                  <index>
+                  <file count: 8 byte unsigned> [1]
+                  <fileindex>
+                  <node count: 8 byte unsigned> [1]
+                  [<nodeindex>,...] [1]
         fanouttable = [<index offset: 4 byte unsigned int>,...] (2^16 entries)
-        index = [<index entry>,...]
-        indexentry = <node: 20 byte>
-                     <pack file section offset: 8 byte unsigned int>
-                     <pack file section size: 8 byte unsigned int>
+
+        fileindex = [<file index entry>,...]
+        fileindexentry = <node: 20 byte>
+                         <pack file section offset: 8 byte unsigned int>
+                         <pack file section size: 8 byte unsigned int>
+                         <node index offset: 4 byte unsigned int> [1]
+                         <node index size: 4 byte unsigned int>   [1]
+        nodeindex = <filename>[<node index entry>,...] [1]
+        filename = <filename len : 2 byte unsigned int><filename value> [1]
+        nodeindexentry = <node: 20 byte> [1]
+                         <pack file node offset: 8 byte unsigned int> [1]
+
+    [1]: new in version 1.
     """
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
-
-    INDEXFORMAT = INDEXFORMAT
-    INDEXENTRYLENGTH = INDEXENTRYLENGTH
 
     SUPPORTED_VERSIONS = [0, 1]
 
@@ -364,7 +407,18 @@ class mutablehistorypack(basepack.mutablebasepack):
 
         super(mutablehistorypack, self).__init__(ui, packpath, version=version)
         self.files = {}
+        self.entrylocations = {}
         self.fileentries = {}
+
+        if version == 0:
+            self.INDEXFORMAT = INDEXFORMAT0
+            self.INDEXENTRYLENGTH = INDEXENTRYLENGTH0
+        else:
+            self.INDEXFORMAT = INDEXFORMAT1
+            self.INDEXENTRYLENGTH = INDEXENTRYLENGTH1
+
+        self.NODEINDEXFORMAT = NODEINDEXFORMAT
+        self.NODEINDEXENTRYLENGTH = NODEINDEXENTRYLENGTH
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         copyfrom = copyfrom or ''
@@ -401,8 +455,19 @@ class mutablehistorypack(basepack.mutablebasepack):
             sortednodes = reversed(shallowutil.sortnodes(
                 (e[0] for e in entries),
                 parentfunc))
-            rawdata = ''.join('%s%s%s%s%s%s' % entrymap[n] for n
-                              in sortednodes)
+
+            rawstrings = []
+
+            # Record the node locations for the index
+            locations = self.entrylocations.setdefault(filename, {})
+            offset = sectionstart + sectionlen
+            for node in sortednodes:
+                locations[node] = offset
+                raw = '%s%s%s%s%s%s' % entrymap[node]
+                rawstrings.append(raw)
+                offset += len(raw)
+
+            rawdata = ''.join(rawstrings)
             sectionlen += len(rawdata)
 
             self.writeraw(rawdata)
@@ -420,14 +485,52 @@ class mutablehistorypack(basepack.mutablebasepack):
 
         return super(mutablehistorypack, self).close(ledger=ledger)
 
-    def createindex(self, nodelocations):
-        files = ((hashlib.sha1(filename).digest(), offset, size)
+    def createindex(self, nodelocations, indexoffset):
+        fileindexformat = self.INDEXFORMAT
+        fileindexlength = self.INDEXENTRYLENGTH
+        nodeindexformat = self.NODEINDEXFORMAT
+        nodeindexlength = self.NODEINDEXENTRYLENGTH
+        version = self.VERSION
+
+        files = ((hashlib.sha1(filename).digest(), filename, offset, size)
                 for filename, (offset, size) in self.files.iteritems())
         files = sorted(files)
 
-        rawindex = ""
-        fmt = self.INDEXFORMAT
-        for namehash, offset, size in files:
-            rawindex += struct.pack(fmt, namehash, offset, size)
+        # node index is after file index size, file index, and node index size
+        indexlensize = struct.calcsize('!Q')
+        nodeindexoffset = (indexoffset + indexlensize +
+                           (len(files) * fileindexlength) + indexlensize)
 
-        return rawindex
+        fileindexentries = []
+        nodeindexentries = []
+        nodecount = 0
+        for namehash, filename, offset, size in files:
+            # File section index
+            if version == 0:
+                rawentry = struct.pack(fileindexformat, namehash, offset, size)
+            else:
+                nodelocations = self.entrylocations[filename]
+
+                nodeindexsize = len(nodelocations) * nodeindexlength
+
+                rawentry = struct.pack(fileindexformat, namehash, offset, size,
+                                       nodeindexoffset, nodeindexsize)
+                # Node index
+                nodeindexentries.append(struct.pack(constants.FILENAMESTRUCT,
+                                                    len(filename)) + filename)
+                nodeindexoffset += constants.FILENAMESIZE + len(filename)
+
+                for node, location in sorted(nodelocations.iteritems()):
+                    nodeindexentries.append(struct.pack(nodeindexformat, node,
+                                                        location))
+                    nodecount += 1
+
+                nodeindexoffset += len(nodelocations) * nodeindexlength
+
+            fileindexentries.append(rawentry)
+
+        nodecountraw = ''
+        if version == 1:
+            nodecountraw = struct.pack('!Q', nodecount)
+        return (''.join(fileindexentries) + nodecountraw +
+                ''.join(nodeindexentries))

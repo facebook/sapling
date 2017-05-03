@@ -342,7 +342,10 @@ class mutablebasepack(versionmixin):
             rawfanouttable += struct.pack('!I', offset)
 
         rawentrieslength = struct.pack('!Q', len(self.entries))
-        rawindex = self.createindex(locations)
+
+        # The index offset is the it's location in the file. So after the 2 byte
+        # header and the fanouttable.
+        rawindex = self.createindex(locations, 2 + len(rawfanouttable))
 
         self._writeheader(params)
         self.idxfp.write(rawfanouttable)

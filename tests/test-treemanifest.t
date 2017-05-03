@@ -54,7 +54,7 @@ Test autocreatetrees
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1146 678f597a73b2b96f2e120c84ef8a84069a250266.dataidx
   -r--r--r--     315 678f597a73b2b96f2e120c84ef8a84069a250266.datapack
-  -r--r--r--    1106 ed1a27864c5d25f144a51961ad6e79088f2a7571.histidx
+  -r--r--r--    1224 ed1a27864c5d25f144a51961ad6e79088f2a7571.histidx
   -r--r--r--     265 ed1a27864c5d25f144a51961ad6e79088f2a7571.histpack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266
@@ -77,7 +77,7 @@ Test that commit creates local trees
   $ echo z >> subdir/z
   $ hg commit -qAm 'modify subdir/z'
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1106 57710544ca24ac4f36682ec279959879c92a3275.histidx
+  -r--r--r--    1196 57710544ca24ac4f36682ec279959879c92a3275.histidx
   -r--r--r--     183 57710544ca24ac4f36682ec279959879c92a3275.histpack
   -r--r--r--    1106 a7f7e084adff88a01cf76909345be1e56ee704a9.dataidx
   -r--r--r--     254 a7f7e084adff88a01cf76909345be1e56ee704a9.datapack

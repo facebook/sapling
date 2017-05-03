@@ -44,7 +44,7 @@
 
 # Test that the packs are readonly
   $ ls_l $CACHEDIR/master/packs
-  -r--r--r--    1070 276d308429d0303762befa376788300f0310f90e.histidx
+  -r--r--r--    1145 276d308429d0303762befa376788300f0310f90e.histidx
   -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
   -r--r--r--    1074 8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
   -r--r--r--      69 8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack

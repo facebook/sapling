@@ -465,7 +465,7 @@ class mutabledatapack(basepack.mutablebasepack):
 
         self.writeraw(rawdata)
 
-    def createindex(self, nodelocations):
+    def createindex(self, nodelocations, indexoffset):
         entries = sorted((n, db, o, s) for n, (db, o, s)
                          in self.entries.iteritems())
 
