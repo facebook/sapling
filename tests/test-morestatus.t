@@ -54,6 +54,9 @@ Test bisect state
   # To mark the changeset bad:     hg bisect --bad
   # To abort:                      hg bisect --reset
 
+Verify that suppressing a morestatus state warning works with the config knob:
+  $ hg status --config morestatus.skipstates=bisect
+
 Test hg status is normal after bisect reset
   $ hg bisect --reset
   $ hg status

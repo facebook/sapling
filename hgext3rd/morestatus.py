@@ -149,6 +149,10 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     return ret
 
 def getrepostate(repo):
+    # experimental config: morestatus.skipstates
+    skip = set(repo.ui.configlist('morestatus', 'skipstates', []))
     for state, statedetectionpredicate, msgfn in STATES:
+        if state in skip:
+            continue
         if statedetectionpredicate(repo):
             return (state, statedetectionpredicate, msgfn)
