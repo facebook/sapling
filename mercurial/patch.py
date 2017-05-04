@@ -2523,19 +2523,23 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     for f1, f2, copyop in _filepairs(modified, added, removed, copy, opts):
         content1 = None
         content2 = None
+        fctx1 = None
+        fctx2 = None
         flag1 = None
         flag2 = None
         if f1:
-            content1 = getfilectx(f1, ctx1).data()
+            fctx1 = getfilectx(f1, ctx1)
+            content1 = fctx1.data()
             if opts.git or losedatafn:
                 flag1 = ctx1.flags(f1)
         if f2:
-            content2 = getfilectx(f2, ctx2).data()
+            fctx2 = getfilectx(f2, ctx2)
+            content2 = fctx2.data()
             if opts.git or losedatafn:
                 flag2 = ctx2.flags(f2)
         binary = False
         if opts.git or losedatafn:
-            binary = util.binary(content1) or util.binary(content2)
+            binary = any(f.isbinary() for f in [fctx1, fctx2] if f is not None)
 
         if losedatafn and not opts.git:
             if (binary or
