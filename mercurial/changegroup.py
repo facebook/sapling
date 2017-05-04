@@ -976,8 +976,10 @@ def getchangegroup(repo, source, outgoing, version='01'):
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
-# deprecate me once all users are gone
-getlocalchangegroup = getchangegroup
+def getlocalchangegroup(repo, *args, **kwargs):
+    repo.ui.deprecwarn('getlocalchangegroup is deprecated, use getchangegroup',
+                       '4.3')
+    return getchangegroup(repo, *args, **kwargs)
 
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
