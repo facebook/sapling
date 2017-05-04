@@ -1357,8 +1357,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or None
         outgoing = discovery.outgoing(repo, common, heads)
-        cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
-                                        version=cgversion)
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -1369,8 +1367,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 onlyheads=heads,
                                                 force=opts.get('force'),
                                                 portable=True)
-        cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
-                                             version=cgversion)
+    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
     if not cg:
         scmutil.nochangesfound(ui, repo, not base and outgoing.excluded)
         return 1
