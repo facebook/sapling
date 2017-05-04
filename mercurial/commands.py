@@ -1384,8 +1384,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         raise error.ProgrammingError(
             'bundle: unexpected changegroup version %s' % cgversion)
 
-    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
-
     # TODO compression options should be derived from bundlespec parsing.
     # This is a temporary hack to allow adjusting bundle compression
     # level without a) formalizing the bundlespec changes to declare it
@@ -1394,6 +1392,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     complevel = ui.configint('experimental', 'bundlecomplevel')
     if complevel is not None:
         compopts['level'] = complevel
+
+    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
 
     bundle2.writebundle(ui, cg, fname, bversion, compression=bcompression,
                         compopts=compopts)
