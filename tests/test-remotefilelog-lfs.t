@@ -102,10 +102,11 @@
   new file mode 100644
   --- /dev/null
   +++ b/x
-  @@ -0,0 +1,3 @@
+  @@ -0,0 +1,4 @@
   +version https://git-lfs.github.com/spec/v1
   +oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
   +size 17
+  +x-is-binary 0
   
   1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   diff --git a/x b/y
@@ -113,23 +114,25 @@
   rename to y
   --- a/x
   +++ b/y
-  @@ -1,3 +1,5 @@
+  @@ -1,4 +1,6 @@
    version https://git-lfs.github.com/spec/v1
    oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
    size 17
   +x-hg-copy x
   +x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
+   x-is-binary 0
   
   2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   diff --git a/y b/y
   --- a/y
   +++ b/y
-  @@ -1,5 +1,1 @@
+  @@ -1,6 +1,1 @@
   -version https://git-lfs.github.com/spec/v1
   -oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
   -size 17
   -x-hg-copy x
   -x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
+  -x-is-binary 0
   +NOTLFS
   
   3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
@@ -141,11 +144,12 @@
   diff --git a/x b/x
   --- a/x
   +++ b/x
-  @@ -1,1 +1,3 @@
+  @@ -1,1 +1,4 @@
   -NOTLFS
   +version https://git-lfs.github.com/spec/v1
   +oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
   +size 24
+  +x-is-binary 0
   
 # lfs content could be read after repack
 
@@ -155,10 +159,10 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.dataidx
-  $TESTTMP/hgcache/master/packs/0d6bdf4471b22c04f34aaf0007d17f22f6495efb.datapack
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histidx
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histpack
+  $TESTTMP/hgcache/master/packs/fd280cbfab2f4047961d1ec5f7858e763ac985ab.dataidx
+  $TESTTMP/hgcache/master/packs/fd280cbfab2f4047961d1ec5f7858e763ac985ab.datapack
   $TESTTMP/hgcache/repos
 
   $ cp -R . ../shallow2
@@ -204,10 +208,11 @@
   new file mode 100644
   --- /dev/null
   +++ b/x
-  @@ -0,0 +1,3 @@
+  @@ -0,0 +1,4 @@
   +version https://git-lfs.github.com/spec/v1
   +oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
   +size 17
+  +x-is-binary 0
   
   1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   diff --git a/x b/y
@@ -215,23 +220,25 @@
   rename to y
   --- a/x
   +++ b/y
-  @@ -1,3 +1,5 @@
+  @@ -1,4 +1,6 @@
    version https://git-lfs.github.com/spec/v1
    oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
    size 17
   +x-hg-copy x
   +x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
+   x-is-binary 0
   
   2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   diff --git a/y b/y
   --- a/y
   +++ b/y
-  @@ -1,5 +1,1 @@
+  @@ -1,6 +1,1 @@
   -version https://git-lfs.github.com/spec/v1
   -oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
   -size 17
   -x-hg-copy x
   -x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
+  -x-is-binary 0
   +NOTLFS
   
   3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
@@ -243,11 +250,12 @@
   diff --git a/x b/x
   --- a/x
   +++ b/x
-  @@ -1,1 +1,3 @@
+  @@ -1,1 +1,4 @@
   -NOTLFS
   +version https://git-lfs.github.com/spec/v1
   +oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
   +size 24
+  +x-is-binary 0
   
 # lfs working copy in shallow repo
 
@@ -277,6 +285,7 @@
   size 35
   x-hg-copy x
   x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
+  x-is-binary 0
 
   $ hg log -r . -T '{file_copies}\n'
   y (x)
@@ -311,7 +320,7 @@
   rename to y
   --- a/x
   +++ b/y
-  @@ -1,3 +1,5 @@
+  @@ -1,4 +1,6 @@
    version https://git-lfs.github.com/spec/v1
   -oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
   -size 24
@@ -319,6 +328,7 @@
   +size 35
   +x-hg-copy x
   +x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
+   x-is-binary 0
   
 # pull lfs content from server and update
 
@@ -355,7 +365,7 @@
   rename to y
   --- a/x
   +++ b/y
-  @@ -1,3 +1,5 @@
+  @@ -1,4 +1,6 @@
    version https://git-lfs.github.com/spec/v1
   -oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
   -size 24
@@ -363,6 +373,7 @@
   +size 35
   +x-hg-copy x
   +x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
+   x-is-binary 0
   
 # repack again
 
@@ -373,8 +384,8 @@
   $TESTTMP/hgcache
   $TESTTMP/hgcache/master
   $TESTTMP/hgcache/master/packs
-  $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.dataidx
-  $TESTTMP/hgcache/master/packs/2f7dc7c815aae3a4ac806c899311e92f3cdba862.datapack
+  $TESTTMP/hgcache/master/packs/879f0543e467d3cffb512cc0392ebece41b1480f.dataidx
+  $TESTTMP/hgcache/master/packs/879f0543e467d3cffb512cc0392ebece41b1480f.datapack
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histidx
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
   $TESTTMP/hgcache/repos

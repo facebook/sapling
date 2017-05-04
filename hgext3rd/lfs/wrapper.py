@@ -104,6 +104,13 @@ def writetostore(self, text):
             hashalgo=hashalgo,
             size=len(text))
 
+    # by default, we expect the content to be binary. however, LFS could also
+    # be used for non-binary content. add a special entry for non-binary data.
+    # this will be used by filectx.isbinary().
+    if not hgutil.binary(text):
+        # not hg filelog metadata (affecting commit hash), no "x-hg-" prefix
+        metadata['x-is-binary'] = '0'
+
     # translate hg filelog metadata to lfs metadata with "x-hg-" prefix
     if hgmeta is not None:
         for k, v in hgmeta.iteritems():
@@ -158,6 +165,17 @@ def filelogsize(orig, self, rev):
         metadata = pointer.deserialize(rawtext)
         return int(metadata['size'])
     return orig(self, rev)
+
+def filectxisbinary(orig, self):
+    flog = self.filelog()
+    node = self.filenode()
+    if _islfs(flog, node):
+        # fast path: use lfs metadata to answer isbinary
+        rawtext = flog.revision(node, raw=True)
+        metadata = pointer.deserialize(rawtext)
+        # if lfs metadata says nothing, assume it's binary by default
+        return bool(int(metadata['x-is-binary'] or 1))
+    return orig(self)
 
 def vfsinit(orig, self, othervfs):
     orig(self, othervfs)

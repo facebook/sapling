@@ -35,6 +35,7 @@ from __future__ import absolute_import
 
 from mercurial import (
     changegroup,
+    context,
     exchange,
     extensions,
     filelog,
@@ -88,6 +89,8 @@ def extsetup(ui):
     wrapfunction(changegroup,
                  'allsupportedversions',
                  wrapper.allsupportedversions)
+
+    wrapfunction(context.basefilectx, 'isbinary', wrapper.filectxisbinary)
 
     revlog.addflagprocessor(
         revlog.REVIDX_EXTSTORED,

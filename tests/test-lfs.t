@@ -32,6 +32,7 @@
   chunks d7dbc611df1fe7dfacfe267a2bfd32ba8fc27ad16aa72af7e6c553a120b92f18:1000,ed0f071aa4ff28ab9863b6cfc5f407e915612d70502422e4ab9b09f3dfec4a74:501
   hashalgo sha256
   size 1501
+  x-is-binary 0
 
 # Check the blobstore is populated
   $ find .hg/cache/localblobstore | sort
@@ -220,6 +221,7 @@
   chunks 2e81056070ae365867a5e7f804abe39c12e07bdf11c098994d1bc0ab9981910a:20,903f301311488de7befd35be124433f73d3b7b6bce1d75440474907ff2ae7591:19
   hashalgo sha256
   size 39
+  x-is-binary 0
 
   $ cd ..
 
@@ -262,6 +264,7 @@
   version https://git-lfs.github.com/spec/v1
   oid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024
   size 29
+  x-is-binary 0
   
   a1 @ 1
   \x01 (esc)
@@ -285,11 +288,13 @@
   size 29
   x-hg-copy a1
   x-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4
+  x-is-binary 0
   
   a2 @ 2
   version https://git-lfs.github.com/spec/v1
   oid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943
   size 32
+  x-is-binary 0
 
 # Verify commit hashes include rename metadata
 
@@ -424,6 +429,40 @@
   
   $ cd ..
 
+# Test isbinary
+
+  $ hg init repo10
+  $ cd repo10
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > lfs=
+  > [lfs]
+  > threshold=1
+  > EOF
+  $ $PYTHON <<'EOF'
+  > def write(path, content):
+  >     with open(path, 'wb') as f:
+  >         f.write(content)
+  > write('a', b'\0\0')
+  > write('b', b'\1\n')
+  > write('c', b'\1\n\0')
+  > write('d', b'xx')
+  > EOF
+  $ hg commit -m binarytest -A a b c d
+  $ cat > $TESTTMP/dumpbinary.py << EOF
+  > def reposetup(ui, repo):
+  >     for n in 'abcd':
+  >         ui.write(('%s: binary=%s\n') % (n, repo['.'][n].isbinary()))
+  > EOF
+  $ hg --config extensions.dumpbinary=$TESTTMP/dumpbinary.py id --trace
+  a: binary=True
+  b: binary=False
+  c: binary=True
+  d: binary=False
+  b55353847f02 tip
+
+  $ cd ..
+
 # Verify the repos
 
   $ cat > $TESTTMP/dumpflog.py << EOF
@@ -449,7 +488,8 @@
   >               % (name, sizes, flags, hashes))
   > EOF
 
-  $ for i in client client2 server repo3 repo4 repo5 repo6 repo7 repo8; do
+  $ for i in client client2 server repo3 repo4 repo5 repo6 repo7 repo8 repo9 \
+  >          repo10; do
   >   echo 'repo:' $i
   >   hg --cwd $i verify --config extensions.dumpflog=$TESTTMP/dumpflog.py -q
   > done
@@ -457,14 +497,16 @@
   repo: client2
   repo: server
   repo: repo3
-    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
-    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
+    l: rawsizes=[435, 6, 8, 230] flags=[8192, 0, 0, 8192] hashes=['45db', '948c', 'cc88', '0051']
+    s: rawsizes=[74, 297, 297, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', '9a56', '2573', '826b']
   repo: repo4
-    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
-    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
+    l: rawsizes=[435, 6, 8, 230] flags=[8192, 0, 0, 8192] hashes=['45db', '948c', 'cc88', '0051']
+    s: rawsizes=[74, 297, 297, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', '9a56', '2573', '826b']
   repo: repo5
-    l: rawsizes=[421, 6, 8, 216] flags=[8192, 0, 0, 8192] hashes=['0c9b', '948c', 'cc88', '5f1a']
-    s: rawsizes=[74, 283, 283, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', 'ff24', '2217', '826b']
+    l: rawsizes=[435, 6, 8, 230] flags=[8192, 0, 0, 8192] hashes=['45db', '948c', 'cc88', '0051']
+    s: rawsizes=[74, 297, 297, 8] flags=[0, 8192, 8192, 0] hashes=['3c80', '9a56', '2573', '826b']
   repo: repo6
   repo: repo7
   repo: repo8
+  repo: repo9
+  repo: repo10
