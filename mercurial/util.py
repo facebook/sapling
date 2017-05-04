@@ -1913,6 +1913,7 @@ def strdate(string, format, defaults=None):
     # add missing elements from defaults
     usenow = False # default to using biased defaults
     for part in ("S", "M", "HI", "d", "mb", "yY"): # decreasing specificity
+        part = pycompat.bytestr(part)
         found = [True for p in part if ("%"+p) in format]
         if not found:
             date += "@" + defaults[part][usenow]
