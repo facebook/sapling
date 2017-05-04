@@ -25,7 +25,6 @@ from . import (
     cmdutil,
     color,
     commands,
-    debugcommands,
     demandimport,
     encoding,
     error,
@@ -749,10 +748,6 @@ def _dispatch(req):
 
     rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
     path, lui = _getlocal(ui, rpath)
-
-    # Side-effect of accessing is debugcommands module is guaranteed to be
-    # imported and commands.table is populated.
-    debugcommands.command
 
     uis = {ui, lui}
 

@@ -21,7 +21,6 @@ from mercurial import (
     cmdutil,
     commands,
     copies,
-    debugcommands,
     exchange,
     extensions,
     filemerge,
@@ -40,11 +39,6 @@ from . import (
 )
 
 def uisetup(ui):
-    # TODO: debugcommands should use a separate command table
-    # Side-effect of accessing is debugcommands module is guaranteed to be
-    # imported and commands.table is populated.
-    debugcommands.command
-
     # Disable auto-status for some commands which assume that all
     # files in the result are under Mercurial's control
 

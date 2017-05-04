@@ -32,7 +32,6 @@ from . import (
     changegroup,
     cmdutil,
     color,
-    commands,
     context,
     dagparser,
     dagutil,
@@ -71,9 +70,7 @@ from . import (
 
 release = lockmod.release
 
-# We reuse the command table from commands because it is easier than
-# teaching dispatch about multiple tables.
-command = registrar.command(commands.table)
+command = registrar.command()
 
 @command('debugancestor', [], _('[INDEX] REV1 REV2'), optionalrepo=True)
 def debugancestor(ui, repo, *args):

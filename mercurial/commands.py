@@ -26,6 +26,7 @@ from . import (
     changegroup,
     cmdutil,
     copies,
+    debugcommands as debugcommandsmod,
     destutil,
     dirstateguard,
     discovery,
@@ -59,6 +60,7 @@ from . import (
 release = lockmod.release
 
 table = {}
+table.update(debugcommandsmod.command._table)
 
 command = registrar.command(table)
 
