@@ -297,6 +297,7 @@ ignore = [
     'distutils.msvc9compiler',
     '__builtin__',
     'builtins',
+    'urwid.command_map', # for pudb
     ]
 
 if _pypy:
