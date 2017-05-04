@@ -2508,6 +2508,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         revinfo = ' '.join(["-r %s" % rev for rev in revs])
         return 'diff %s %s' % (revinfo, f)
 
+    def isempty(fctx):
+        return fctx is None or fctx.size() == 0
+
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
 
@@ -2546,9 +2549,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 # copy/rename
                 f2 in copy or
                 # empty file creation
-                (not f1 and not content2) or
+                (not f1 and isempty(fctx2)) or
                 # empty file deletion
-                (not content1 and not f2) or
+                (isempty(fctx1) and not f2) or
                 # create with flags
                 (not f1 and flag2) or
                 # change flags
