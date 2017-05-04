@@ -1,9 +1,7 @@
 from __future__ import absolute_import
 
-import errno
 import functools
 import json
-import os
 
 from mercurial import (
     error,
@@ -170,30 +168,15 @@ class _dummyremote(object):
         path = repo.ui.config('lfs', 'remotepath', None)
         if path is None:
             raise error.ProgrammingError('dummystore: must set "remotepath"')
-        try:
-            os.makedirs(path)
-        except OSError as exc:
-            if exc.errno == errno.EEXIST:
-                pass
-            else:
-                raise
-        self._storepath = path
+        fullpath = repo.vfs.join(path)
+        self.vfs = lfsutil.lfsvfs(fullpath)
 
     def write(self, storeid, data):
-        fname = self.filename(storeid)
-        try:
-            os.makedirs(os.path.dirname(fname))
-        except OSError as exc:
-            if exc.errno == errno.EEXIST:
-                pass
-            else:
-                raise
-        with open(self.filename(storeid), 'w+') as fp:
+        with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
             fp.write(data)
 
     def read(self, storeid):
-        with open(self.filename(storeid), 'r+') as fp:
-            return fp.read()
+        return self.vfs.read(storeid.oid)
 
     def writebatch(self, storeids, fromstore, ui=None, total=None):
         for id in storeids:
@@ -204,10 +187,6 @@ class _dummyremote(object):
         for id in storeids:
             content = self.read(id)
             tostore.write(id, content)
-
-    def filename(self, storeid):
-        filename = os.path.join(self._storepath, storeid.oid)
-        return filename
 
 class _nullremote(object):
     """Null store storing blobs to /dev/null."""

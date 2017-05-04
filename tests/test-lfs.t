@@ -202,7 +202,7 @@
 # Test bypass
 
   $ hg cat -r tip large --config lfs.remotepath=$TESTTMP/404 --config lfs.blobstore=cache/404
-  abort: No such file or directory: $TESTTMP/404/8e92251415339ae9b148c8da89ed5ec665905166a1ab11b09dca8fad83344738
+  abort: No such file or directory: $TESTTMP/404/8e/92251415339ae9b148c8da89ed5ec665905166a1ab11b09dca8fad83344738
   [255]
 
   $ hg cat -r tip large --config lfs.remotepath=$TESTTMP/404 --config lfs.blobstore=cache/404 --config lfs.bypass=1
