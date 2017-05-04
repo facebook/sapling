@@ -1373,8 +1373,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         scmutil.nochangesfound(ui, repo, not base and outgoing.excluded)
         return 1
 
-    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
-
     if cgversion == '01': #bundle1
         if bcompression is None:
             bcompression = 'UN'
@@ -1385,6 +1383,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
     else:
         raise error.ProgrammingError(
             'bundle: unexpected changegroup version %s' % cgversion)
+
+    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
 
     # TODO compression options should be derived from bundlespec parsing.
     # This is a temporary hack to allow adjusting bundle compression
