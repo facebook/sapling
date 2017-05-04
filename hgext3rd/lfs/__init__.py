@@ -18,10 +18,6 @@ Configs::
     blobstore = cache/localblobstore
     # size of a file to make it use LFS
     threshold = 10M
-    # chunk large files into small blobs client-side. note: this feature is
-    # an extension, not part of the standard Git-LFS specification. if this is
-    # not set, large files will not be chunked.
-    chunksize = 10M
 
     # When bypass is set to True, lfs will bypass downloading or uploading
     # blobs, and only skip some hash checks. For example, "hg cat FILE" will
@@ -62,10 +58,8 @@ def reposetup(ui, repo):
         return
 
     threshold = repo.ui.configbytes('lfs', 'threshold', None)
-    chunksize = repo.ui.configbytes('lfs', 'chunksize', None)
 
     repo.svfs.options['lfsthreshold'] = threshold
-    repo.svfs.options['lfschunksize'] = chunksize
     repo.svfs.lfslocalblobstore = blobstore.local(repo)
     repo.svfs.lfsremoteblobstore = blobstore.remote(repo)
 

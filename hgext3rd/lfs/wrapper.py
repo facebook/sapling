@@ -75,34 +75,15 @@ def writetostore(self, text):
         # lfs blob does not contain hg filelog metadata
         text = text[offset:]
 
-    offset = 0
-    chunkoids = []
-    chunksize = self.opener.options['lfschunksize']
-
-    if not chunksize:
-        chunksize = len(text)
-
-    while offset < len(text):
-        chunk = text[offset:offset + chunksize]  # Python handles overflows
-        chunklen = len(chunk)
-        # compute sha256 for git-lfs
-        sha = util.sha256(chunk)
-        # Store actual contents to local blobstore
-        storeid = blobstore.StoreID(sha, chunklen)
-        self.opener.lfslocalblobstore.write(storeid, chunk)
-        chunkoids.append(storeid)
-        offset += chunklen
+    # compute sha256 for git-lfs
+    sha = util.sha256(text)
+    # Store actual contents to local blobstore
+    storeid = blobstore.StoreID(sha, len(text))
+    self.opener.lfslocalblobstore.write(storeid, text)
 
     # replace contents with metadata
     hashalgo = 'sha256'
-    if len(chunkoids) == 1:
-        storeid = chunkoids[0]
-        metadata = pointer.GithubPointer(storeid.oid, hashalgo, storeid.size)
-    else:
-        metadata = pointer.ChunkingPointer(
-            chunks=[{'oid': v.oid, 'size': v.size} for v in chunkoids],
-            hashalgo=hashalgo,
-            size=len(text))
+    metadata = pointer.GithubPointer(storeid.oid, hashalgo, storeid.size)
 
     # by default, we expect the content to be binary. however, LFS could also
     # be used for non-binary content. add a special entry for non-binary data.

@@ -92,58 +92,9 @@ class GithubPointer(BasePointer):
     def tostoreids(self):
         return [StoreID(self['oid'], self['size'])]
 
-class ChunkingPointer(BasePointer):
-
-    VERSION = 'https://git-lfs.github.com/spec/chunking\n'
-
-    def __init__(self, chunks, hashalgo, size, extrameta=None):
-        super(ChunkingPointer, self).__init__(extrameta)
-        self['chunks'] = chunks
-        self['hashalgo'] = hashalgo
-        self['size'] = size
-
-    @staticmethod
-    def deserialize(text):
-        metadata = dict()
-        for line in text.splitlines()[1:]:
-            if len(line) == 0:
-                continue
-            key, value = line.split(' ', 1)
-            if key == 'chunks':
-                rawchunks = value.split(',')
-                chunks = []
-                for chunk in rawchunks:
-                    oid, size = chunk.split(':', 1)
-                    chunks.append({
-                        'oid': oid,
-                        'size': size
-                    })
-                metadata['chunks'] = chunks
-            else:
-                metadata[key] = value
-        assert 'chunks' in metadata
-        assert 'size' in metadata
-        assert 'hashalgo' in metadata
-        return ChunkingPointer(
-            chunks=metadata['chunks'],
-            hashalgo=metadata['hashalgo'],
-            size=metadata['size'],
-            extrameta=metadata)
-
-    @staticmethod
-    def _transformkv(key, value):
-        if key == 'chunks':
-            rawchunks = ['%s:%s' % (v['oid'], v['size']) for v in value]
-            return 'chunks %s\n' % (','.join(rawchunks))
-        return '%s %s\n' % (key, value)
-
-    def tostoreids(self):
-        return [StoreID(v['oid'], v['size']) for v in self['chunks']]
-
 def deserialize(text):
     pointerformats = [
         GithubPointer,
-        ChunkingPointer,
     ]
 
     for cls in pointerformats:
