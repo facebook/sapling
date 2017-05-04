@@ -256,7 +256,7 @@ def binary(mctx, x):
     """
     # i18n: "binary" is a keyword
     getargs(x, 0, 0, _("binary takes no arguments"))
-    return [f for f in mctx.existing() if util.binary(mctx.ctx[f].data())]
+    return [f for f in mctx.existing() if mctx.ctx[f].isbinary()]
 
 @predicate('exec()', callexisting=True)
 def exec_(mctx, x):
