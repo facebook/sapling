@@ -1,4 +1,4 @@
-Some Mercurial commands produce a lot of output, and Mercurial will
+Some Mercurial commands can produce a lot of output, and Mercurial will
 attempt to use a pager to make those commands more pleasant.
 
 To set the pager that should be used, set the application variable::
