@@ -419,7 +419,7 @@ effect and style see :hg:`help color`.
     terminal. Any invalid value will disable color.
 
 ``pagermode``
-    String: optinal override of ``color.mode`` used with pager.
+    String: optional override of ``color.mode`` used with pager.
 
     On some systems, terminfo mode may cause problems when using
     color with ``less -R`` as a pager program. less with the -R option

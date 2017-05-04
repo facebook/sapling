@@ -1032,7 +1032,7 @@ sub-topics can be accessed
   
       The *delta data* is a series of *delta*s that describe a diff from an
       existing entry (either that the recipient already has, or previously
-      specified in the bundlei/changegroup).
+      specified in the bundle/changegroup).
   
       The *delta header* is different between versions "1", "2", and "3" of the
       changegroup format.
@@ -3183,7 +3183,7 @@ Sub-topic topics rendered properly
   <p>
   The *delta data* is a series of *delta*s that describe a diff from an existing
   entry (either that the recipient already has, or previously specified in the
-  bundlei/changegroup).
+  bundle/changegroup).
   </p>
   <p>
   The *delta header* is different between versions &quot;1&quot;, &quot;2&quot;, and

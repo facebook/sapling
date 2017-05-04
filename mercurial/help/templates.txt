@@ -62,7 +62,7 @@ We provide a limited set of infix arithmetic operations on integers::
   * for multiplication
   / for floor division (division rounded to integer nearest -infinity)
 
-Division fulfils the law x = x / y + mod(x, y).
+Division fulfills the law x = x / y + mod(x, y).
 
 Also, for any expression that returns a list, there is a list operator::
 
