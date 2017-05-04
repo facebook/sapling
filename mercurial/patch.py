@@ -2532,12 +2532,10 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         flag2 = None
         if f1:
             fctx1 = getfilectx(f1, ctx1)
-            content1 = fctx1.data()
             if opts.git or losedatafn:
                 flag1 = ctx1.flags(f1)
         if f2:
             fctx2 = getfilectx(f2, ctx2)
-            content2 = fctx2.data()
             if opts.git or losedatafn:
                 flag2 = ctx2.flags(f2)
         # if binary is True, output "summary" or "base85", but not "text diff"
@@ -2595,6 +2593,25 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         #  yes      | yes  *        *   *     | text diff | yes
         #  no       | *    *        *   *     | text diff | yes
         # [1]: hash(fctx.data()) is outputted. so fctx.data() cannot be faked
+        if binary and (not opts.git or (opts.git and opts.nobinary and not
+                                        opts.index)):
+            # fast path: no binary content will be displayed, content1 and
+            # content2 are only used for equivalent test. cmp() could have a
+            # fast path.
+            if fctx1 is not None:
+                content1 = b'\0'
+            if fctx2 is not None:
+                if fctx1 is not None and not fctx1.cmp(fctx2):
+                    content2 = b'\0' # not different
+                else:
+                    content2 = b'\0\0'
+        else:
+            # normal path: load contents
+            if fctx1 is not None:
+                content1 = fctx1.data()
+            if fctx2 is not None:
+                content2 = fctx2.data()
+
         if binary and opts.git and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text:
