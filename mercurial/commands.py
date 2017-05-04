@@ -706,7 +706,8 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
 
     def commitfunc(ui, repo, message, match, opts):
         editform = 'backout'
-        e = cmdutil.getcommiteditor(editform=editform, **opts)
+        e = cmdutil.getcommiteditor(editform=editform,
+                                    **pycompat.strkwargs(opts))
         if not message:
             # we don't translate commit messages
             message = "Backed out changeset %s" % short(node)
@@ -2240,7 +2241,8 @@ def _dograft(ui, repo, *revs, **opts):
     if not opts.get('date') and opts.get('currentdate'):
         opts['date'] = "%d %d" % util.makedate()
 
-    editor = cmdutil.getcommiteditor(editform='graft', **opts)
+    editor = cmdutil.getcommiteditor(editform='graft',
+                                     **pycompat.strkwargs(opts))
 
     cont = False
     if opts.get('continue'):
@@ -5216,7 +5218,8 @@ def tag(ui, repo, name1, *names, **opts):
             editform = 'tag.remove'
         else:
             editform = 'tag.add'
-        editor = cmdutil.getcommiteditor(editform=editform, **opts)
+        editor = cmdutil.getcommiteditor(editform=editform,
+                                         **pycompat.strkwargs(opts))
 
         # don't allow tagging the null rev
         if (not opts.get('remove') and
