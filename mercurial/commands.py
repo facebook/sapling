@@ -452,7 +452,7 @@ def annotate(ui, repo, *pats, **opts):
                                      whitespace=True)
     for abs in ctx.walk(m):
         fctx = ctx[abs]
-        if not opts.get('text') and util.binary(fctx.data()):
+        if not opts.get('text') and fctx.isbinary():
             fm.plain(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
