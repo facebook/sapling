@@ -190,7 +190,7 @@ class changelogrevision(object):
 
         # The list of files may be empty. Which means nl3 is the first of the
         # double newline that precedes the description.
-        if text[nl3 + 1] == '\n':
+        if text[nl3 + 1:nl3 + 2] == '\n':
             doublenl = nl3
         else:
             doublenl = text.index('\n\n', nl3 + 1)

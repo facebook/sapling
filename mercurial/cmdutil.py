@@ -491,10 +491,10 @@ def makefilename(repo, pat, node, desc=None,
         patlen = len(pat)
         i = 0
         while i < patlen:
-            c = pat[i]
+            c = pat[i:i + 1]
             if c == '%':
                 i += 1
-                c = pat[i]
+                c = pat[i:i + 1]
                 c = expander[c]()
             newname.append(c)
             i += 1

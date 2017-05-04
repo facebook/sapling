@@ -1980,13 +1980,13 @@ def parsedate(date, formats=None, bias=None):
             # this piece is for rounding the specific end of unknowns
             b = bias.get(part)
             if b is None:
-                if part[0] in "HMS":
+                if part[0:1] in "HMS":
                     b = "00"
                 else:
                     b = "0"
 
             # this piece is for matching the generic end to today's date
-            n = datestr(now, "%" + part[0])
+            n = datestr(now, "%" + part[0:1])
 
             defaults[part] = (b, n)
 
