@@ -1370,7 +1370,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 onlyheads=heads,
                                                 force=opts.get('force'),
                                                 portable=True)
-        cg = changegroup.getlocalchangegroup(repo, 'bundle', outgoing,
+        cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
                                              version=cgversion)
     if not cg:
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
