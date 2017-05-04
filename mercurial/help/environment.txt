@@ -8,7 +8,7 @@ HG
 HGEDITOR
     This is the name of the editor to run when committing. See EDITOR.
 
-    (deprecated, use configuration file)
+    (deprecated, see :hg:`help config.ui.editor`)
 
 HGENCODING
     This overrides the default locale setting detected by Mercurial.
@@ -36,7 +36,7 @@ HGMERGE
     will be executed with three arguments: local file, remote file,
     ancestor file.
 
-    (deprecated, use configuration file)
+    (deprecated, see :hg:`help config.ui.merge`)
 
 HGRCPATH
     A list of files or directories to search for configuration
@@ -87,7 +87,7 @@ HGUSER
     - interactive prompt
     - LOGNAME (with ``@hostname`` appended)
 
-    (deprecated, use configuration file)
+    (deprecated, see :hg:`help config.ui.username`)
 
 EMAIL
     May be used as the author of a commit; see HGUSER.
