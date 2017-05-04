@@ -184,7 +184,7 @@ def prepush(pushop):
     # We beed to pass on the information to the remote about the threshold so
     # that _peek_islargefile can mark the file as large file.
     threshold = repo.svfs.options.get('lfsthreshold')
-    if threshold is not None:
+    if threshold is not None and util.safehasattr(remoterepo, 'svfs'):
         remoterepo.svfs.options['lfsthreshold'] = threshold
 
     if ui.verbose:
