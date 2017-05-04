@@ -3540,7 +3540,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
     """Add --mq option to operate on patch repository instead of main"""
 
     # some commands do not like getting unknown options
-    mq = kwargs.pop('mq', None)
+    mq = kwargs.pop(r'mq', None)
 
     if not mq:
         return orig(ui, repo, *args, **kwargs)
