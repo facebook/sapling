@@ -808,7 +808,7 @@ def comparison(web, req, tmpl):
         context = parsecontext(web.config('web', 'comparisoncontext', '5'))
 
     def filelines(f):
-        if util.binary(f.data()):
+        if f.isbinary():
             mt = mimetypes.guess_type(f.path())[0]
             if not mt:
                 mt = 'application/octet-stream'
@@ -886,7 +886,7 @@ def annotate(web, req, tmpl):
             yield p
 
     def annotate(**map):
-        if util.binary(fctx.data()):
+        if fctx.isbinary():
             mt = (mimetypes.guess_type(fctx.path())[0]
                   or 'application/octet-stream')
             lines = [((fctx.filectx(fctx.filerev()), 1), '(binary:%s)' % mt)]
