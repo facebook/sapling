@@ -950,7 +950,7 @@ def _pushchangeset(pushop):
                                    'push',
                                    fastpath=True)
     else:
-        cg = changegroup.getlocalchangegroup(pushop.repo, 'push', outgoing)
+        cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing)
 
     # apply changegroup to remote
     if unbundle:
