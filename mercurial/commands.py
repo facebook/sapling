@@ -1368,10 +1368,12 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 onlyheads=heads,
                                                 force=opts.get('force'),
                                                 portable=True)
-    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
-    if not cg:
+
+    if not outgoing.missing:
         scmutil.nochangesfound(ui, repo, not base and outgoing.excluded)
         return 1
+
+    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
 
     if cgversion == '01': #bundle1
         if bcompression is None:
