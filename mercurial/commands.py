@@ -1359,7 +1359,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         outgoing = discovery.outgoing(repo, common, heads)
         cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
                                         version=cgversion)
-        outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -1373,7 +1372,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         cg = changegroup.getchangegroup(repo, 'bundle', outgoing,
                                              version=cgversion)
     if not cg:
-        scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
+        scmutil.nochangesfound(ui, repo, not base and outgoing.excluded)
         return 1
 
     if cgversion == '01': #bundle1
