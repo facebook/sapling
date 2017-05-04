@@ -1,4 +1,4 @@
-Some Mercurial commands produce a lot of output, and Mercurial will
+Some Mercurial commands can produce a lot of output, and Mercurial will
 attempt to use a pager to make those commands more pleasant.
 
 To set the pager that should be used, set the application variable::
@@ -9,6 +9,13 @@ To set the pager that should be used, set the application variable::
 If no pager is set, Mercurial uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, a default pager
 will be used, typically `less` on Unix and `more` on Windows.
+
+.. container:: windows
+
+  On Windows, `more` is not color aware, so using it effectively disables color.
+  MSYS and Cygwin shells provide `less` as a pager, which can be configured to
+  support ANSI color codes.  See :hg:`help config.color.pagermode` to configure
+  the color mode when invoking a pager.
 
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::

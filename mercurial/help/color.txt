@@ -17,6 +17,13 @@ To disable color use::
 
 See :hg:`help config.ui.color` for details.
 
+.. container:: windows
+
+  The default pager on Windows does not support color, so enabling the pager
+  will effectively disable color.  See :hg:`help config.ui.paginate` to disable
+  the pager.  Alternately, MSYS and Cygwin shells provide `less` as a pager,
+  which can be configured to support ANSI color mode.
+
 Mode
 ====
 

@@ -4,6 +4,7 @@ Setup
   > [ui]
   > color = yes
   > formatted = always
+  > paginate = never
   > [color]
   > mode = ansi
   > EOF

@@ -24,7 +24,7 @@ A "bundlespec" string has the following formats:
     The literal bundle format string is used.
 
 <compression>-<type>
-    The compression engine and format are delimited by a hypthen (``-``).
+    The compression engine and format are delimited by a hyphen (``-``).
 
 Optional parameters follow the ``<type>``. Parameters are URI escaped
 ``key=value`` pairs. Each pair is delimited by a semicolon (``;``). The
