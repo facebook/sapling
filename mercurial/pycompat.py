@@ -87,6 +87,14 @@ if ispy3:
         >>> s = bytestr(b'foo')
         >>> assert s is bytestr(s)
 
+        __bytes__() should be called if provided:
+
+        >>> class bytesable(object):
+        ...     def __bytes__(self):
+        ...         return b'bytes'
+        >>> bytestr(bytesable())
+        b'bytes'
+
         There's no implicit conversion from non-ascii str as its encoding is
         unknown:
 
@@ -127,7 +135,8 @@ if ispy3:
         def __new__(cls, s=b''):
             if isinstance(s, bytestr):
                 return s
-            if not isinstance(s, (bytes, bytearray)):
+            if (not isinstance(s, (bytes, bytearray))
+                and not hasattr(s, u'__bytes__')):  # hasattr-py3-only
                 s = str(s).encode(u'ascii')
             return bytes.__new__(cls, s)
 
