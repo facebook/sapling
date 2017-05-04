@@ -167,3 +167,20 @@ If importing results in no new rules being added, no refresh should take place!
   > *.py
   > EOF
   $ hg sparse --import-rules $HGTMP/rules_to_import
+
+If an exception is raised during refresh, restore the existing rules again.
+
+  $ cat > $HGTMP/rules_to_import <<EOF
+  > [exclude]
+  > *.html
+  > EOF
+  $ hg sparse --import-rules $HGTMP/rules_to_import
+  abort: sparse._refresh called!
+  [255]
+  $ cat .hg/sparse
+  %include webpage.sparse
+  [include]
+  *.py
+  *.txt
+  [exclude]
+  *.py

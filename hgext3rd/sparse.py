@@ -781,8 +781,9 @@ def _import(ui, repo, files, opts, force=False):
         raw = ''
         if repo.vfs.exists('sparse'):
             raw = repo.vfs.read('sparse')
-        includes, excludes, profiles = repo.readsparseconfig(raw)
-        profiles = set(profiles)
+        oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
+        includes, excludes, profiles = map(
+                set, (oincludes, oexcludes, oprofiles))
 
         # all active rules
         aincludes, aexcludes, aprofiles = set(), set(), set()
@@ -818,8 +819,12 @@ def _import(ui, repo, files, opts, force=False):
             oldsparsematch = repo.sparsematch()
             repo.writesparseconfig(includes, excludes, profiles)
 
-            fcounts = map(
-                len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+            try:
+                fcounts = map(
+                    len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
+            except Exception:
+                repo.writesparseconfig(oincludes, oexcludes, oprofiles)
+                raise
 
         _verbose_output(ui, opts, profilecount, includecount, excludecount,
                         *fcounts)
