@@ -966,7 +966,7 @@ def getlocalchangegroupraw(repo, source, outgoing, version='01'):
     bundler = getbundler(version, repo)
     return getsubsetraw(repo, outgoing, bundler, source)
 
-def getlocalchangegroup(repo, source, outgoing, version='01'):
+def getchangegroup(repo, source, outgoing, version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
@@ -976,16 +976,8 @@ def getlocalchangegroup(repo, source, outgoing, version='01'):
     bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
-def getchangegroup(repo, source, outgoing, version='01'):
-    """Like changegroupsubset, but returns the set difference between the
-    ancestors of heads and the ancestors common.
-
-    If heads is None, use the local heads. If common is None, use [nullid].
-
-    The nodes in common might not all be known locally due to the way the
-    current discovery protocol works.
-    """
-    return getlocalchangegroup(repo, source, outgoing, version=version)
+# deprecate me once all users are gone
+getlocalchangegroup = getchangegroup
 
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
