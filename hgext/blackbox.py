@@ -173,7 +173,7 @@ def wrapui(ui):
                 ui._bbinlog = True
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
-                pid = str(util.getpid())
+                pid = '%d' % util.getpid()
                 formattedmsg = msg[0] % msg[1:]
                 rev = '(unknown)'
                 changed = ''

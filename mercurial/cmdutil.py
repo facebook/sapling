@@ -1361,7 +1361,7 @@ class jsonchangeset(changeset_printer):
         if rev is None:
             jrev = jnode = 'null'
         else:
-            jrev = str(rev)
+            jrev = '%d' % rev
             jnode = '"%s"' % hex(ctx.node())
         j = encoding.jsonescape
 
@@ -1608,7 +1608,7 @@ def finddate(ui, repo, date):
         if rev in results:
             ui.status(_("found revision %s from %s\n") %
                       (rev, util.datestr(results[rev])))
-            return str(rev)
+            return '%d' % rev
 
     raise error.Abort(_("revision matching date not found"))
 
