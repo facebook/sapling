@@ -135,26 +135,26 @@ distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
 # Static c libaries
 if iswindows:
-    libraries = []
+    availablelibraries = {}
 else:
-    libraries = [
-        ("datapack", {
+    availablelibraries = {
+        'datapack': {
             "sources" : ["cdatapack/cdatapack.c"],
             "include_dirs" : ["clib"] + include_dirs,
             "libraries" : ["lz4", "sha1"],
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
-        }),
-        ('mpatch', {
+        },
+        'mpatch': {
             'sources': ['cstore/mpatch.c']
-        }),
-        ("sha1", {
+        },
+        "sha1": {
             "sources" : ["clib/sha1/sha1.c", "clib/sha1/ubc_check.c"],
             "include_dirs" : ["clib/sha1"] + include_dirs,
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
-        }),
-    ]
+        },
+    }
 
 # modules that are single files in hgext3rd
 hgext3rd = [
@@ -326,10 +326,16 @@ for package in availablepackages:
     if package.split('.')[-1] in components:
         packages.append(package)
 
+librarynames = set()
 ext_modules = []
 for ext_module in availableextmodules:
     if ext_module in components:
-        ext_modules.extend(availableextmodules[ext_module])
+        modules = availableextmodules[ext_module]
+        ext_modules.extend(modules)
+        librarynames.update(l for m in modules for l in m.libraries)
+
+libraries = [(n, availablelibraries[n])
+             for n in librarynames if n in availablelibraries]
 
 # Dependencies between our native libraries means we need to build in order
 ext_order = {
