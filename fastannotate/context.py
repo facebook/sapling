@@ -560,7 +560,8 @@ class _annotatecontext(object):
             fctx = self._resolvefctx(hsh, revmap.rev2path(rev))
             annotated = linelog.annotateresult
             lines = mdiff.splitnewlines(fctx.data())
-            assert len(lines) == len(annotated)
+            if len(lines) != len(annotated):
+                raise faerror.CorruptedFileError('unexpected annotated lines')
             # resolve lines from the annotate result
             for i, line in enumerate(lines):
                 k = annotated[i]
@@ -581,8 +582,12 @@ class _annotatecontext(object):
         else:
             hsh = f.node()
         llrev = self.revmap.hsh2rev(hsh)
-        assert llrev
-        assert (self.revmap.rev2flag(llrev) & revmapmod.sidebranchflag) == 0
+        if not llrev:
+            raise faerror.CorruptedFileError('%s is not in revmap'
+                                             % node.hex(hsh))
+        if (self.revmap.rev2flag(llrev) & revmapmod.sidebranchflag) != 0:
+            raise faerror.CorruptedFileError('%s is not in revmap mainbranch'
+                                             % node.hex(hsh))
         self.linelog.annotate(llrev)
         result = [(self.revmap.rev2hsh(r), l)
                   for r, l in self.linelog.annotateresult]
@@ -619,7 +624,8 @@ class _annotatecontext(object):
         def getllrev(f):
             """(fctx) -> int"""
             # f should not be a linelog revision
-            assert not isinstance(f, int)
+            if isinstance(f, int):
+                raise error.ProgrammingError('f should not be an int')
             # f is a fctx, allocate linelog rev on demand
             hsh = f.node()
             rev = revmap.hsh2rev(hsh)
@@ -676,7 +682,8 @@ class _annotatecontext(object):
             llrev = 0
         else:
             llrev = self.revmap.hsh2rev(fctx.node())
-            assert llrev
+            if not llrev:
+                raise faerror.CannotReuseError()
         if self.linelog.maxrev != llrev:
             raise faerror.CannotReuseError()
 

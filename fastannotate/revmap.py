@@ -5,11 +5,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import bisect
 import os
 import struct
 
-from fastannotate import error
+from . import error
+from mercurial import error as hgerror
+from mercurial.node import hex
 
 # the revmap file format is straightforward:
 #
@@ -88,8 +92,10 @@ class revmap(object):
         """add a binary hg hash and return the mapped linelog revision.
         if flush is True, incrementally update the file.
         """
-        assert hsh not in self._hsh2rev
-        assert len(hsh) == _hshlen
+        if hsh in self._hsh2rev:
+            raise error.CorruptedFileError('%r is in revmap already' % hex(hsh))
+        if len(hsh) != _hshlen:
+            raise hgerror.ProgrammingError('hsh must be %d-char long' % _hshlen)
         idx = len(self._rev2hsh)
         flag = 0
         if sidebranch:
@@ -195,7 +201,8 @@ class revmap(object):
         f.write(struct.pack('B', flag))
         if flag & renameflag:
             path = self.rev2path(rev)
-            assert path is not None
+            if path is None:
+                raise error.CorruptedFileError('cannot find path for %s' % rev)
             f.write(path + '\0')
         f.write(hsh)
 
