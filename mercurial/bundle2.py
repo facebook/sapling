@@ -1339,6 +1339,42 @@ def obsmarkersversion(caps):
     obscaps = caps.get('obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
+def writenewbundle(ui, repo, source, filename, bundletype, outgoing, opts,
+                   vfs=None, compression=None, compopts=None):
+    if bundletype.startswith('HG10'):
+        cg = changegroup.getchangegroup(repo, source, outgoing, version='01')
+        return writebundle(ui, cg, filename, bundletype, vfs=vfs,
+                           compression=compression, compopts=compopts)
+    elif not bundletype.startswith('HG20'):
+        raise error.ProgrammingError('unknown bundle type: %s' % bundletype)
+
+    bundle = bundle20(ui)
+    bundle.setcompression(compression, compopts)
+    _addpartsfromopts(ui, repo, bundle, source, outgoing, opts)
+    chunkiter = bundle.getchunks()
+
+    return changegroup.writechunks(ui, chunkiter, filename, vfs=vfs)
+
+def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
+    # We should eventually reconcile this logic with the one behind
+    # 'exchange.getbundle2partsgenerator'.
+    #
+    # The type of input from 'getbundle' and 'writenewbundle' are a bit
+    # different right now. So we keep them separated for now for the sake of
+    # simplicity.
+
+    # we always want a changegroup in such bundle
+    cgversion = opts.get('cg.version')
+    if cgversion is None:
+        cgversion = changegroup.safeversion(repo)
+    cg = changegroup.getchangegroup(repo, source, outgoing,
+                                    version=cgversion)
+    part = bundler.newpart('changegroup', data=cg.getchunks())
+    part.addparam('version', cg.version)
+    if 'clcount' in cg.extras:
+        part.addparam('nbchanges', str(cg.extras['clcount']),
+                      mandatory=False)
+
 def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
                 compopts=None):
     """Write a bundle file and return its filename.

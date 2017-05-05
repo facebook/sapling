@@ -1393,10 +1393,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
     if complevel is not None:
         compopts['level'] = complevel
 
-    cg = changegroup.getchangegroup(repo, 'bundle', outgoing, version=cgversion)
 
-    bundle2.writebundle(ui, cg, fname, bversion, compression=bcompression,
-                        compopts=compopts)
+    contentopts = {'cg.version': cgversion}
+    bundle2.writenewbundle(ui, repo, 'bundle', fname, bversion, outgoing,
+                           contentopts, compression=bcompression,
+                           compopts=compopts)
 
 @command('cat',
     [('o', 'output', '',
