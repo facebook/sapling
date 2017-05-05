@@ -1021,6 +1021,8 @@ class dirstate(object):
             wadd = work.append
             while work:
                 nd = work.pop()
+                if not match.visitdir(nd):
+                    continue
                 skip = None
                 if nd == '.':
                     nd = ''
