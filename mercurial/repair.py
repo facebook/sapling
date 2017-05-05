@@ -16,6 +16,7 @@ from .node import short
 from . import (
     bundle2,
     changegroup,
+    discovery,
     error,
     exchange,
     obsolete,
@@ -24,10 +25,7 @@ from . import (
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    cgversion = changegroup.safeversion(repo)
 
-    cg = changegroup.changegroupsubset(repo, bases, heads, 'strip',
-                                       version=cgversion)
     backupdir = "strip-backup"
     vfs = repo.vfs
     if not vfs.isdir(backupdir):
@@ -39,6 +37,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     totalhash = hashlib.sha1(''.join(allhashes)).hexdigest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
 
+    cgversion = changegroup.safeversion(repo)
     comp = None
     if cgversion != '01':
         bundletype = "HG20"
@@ -48,8 +47,11 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
-    return bundle2.writebundle(repo.ui, cg, name, bundletype, vfs,
-                                   compression=comp)
+
+    outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
+    contentopts = {'cg.version': cgversion}
+    return bundle2.writenewbundle(repo.ui, repo, 'strip', name, bundletype,
+                                  outgoing, contentopts, vfs, compression=comp)
 
 def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""
