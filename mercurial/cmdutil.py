@@ -2309,7 +2309,7 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot = []
 
     s = repo.status(match=matchmod.badmatch(match, badfn), clean=True)
-    forget = sorted(s[0] + s[1] + s[3] + s[6])
+    forget = sorted(s.modified + s.added + s.deleted + s.clean)
     if explicitonly:
         forget = [f for f in forget if match.exact(f)]
 
