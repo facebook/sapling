@@ -16,6 +16,7 @@ cpp_library(
     '@/eden/hg/datastorage:datapack',
     '@/folly:folly',
     '@/folly:subprocess',
+    '@/folly/experimental:env_util',
   ],
   external_deps = [
     'gflags',

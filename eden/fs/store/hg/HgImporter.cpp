@@ -15,6 +15,7 @@
 #include <folly/Bits.h>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
+#include <folly/experimental/EnvUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gflags/gflags.h>
@@ -45,6 +46,13 @@ DEFINE_string(
     hgImportHelper,
     "",
     "The path to the mercurial import helper script");
+
+DEFINE_string(
+    hgPythonPath,
+    "",
+    "Value to use for the PYTHONPATH when running mercurial import script. If "
+    "this value is non-empty, the existing PYTHONPATH from the environment is "
+    "replaced with this value.");
 
 namespace {
 
@@ -356,7 +364,13 @@ HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
   // Send commands to the child on its stdin.
   // Receive output on HELPER_PIPE_FD.
   opts.stdinFd(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
-  helper_ = Subprocess{cmd, opts};
+  auto env = folly::experimental::EnvironmentState::fromCurrentEnvironment();
+  if (!FLAGS_hgPythonPath.empty()) {
+    env->erase("PYTHONPATH");
+    env->emplace("PYTHONPATH", FLAGS_hgPythonPath);
+  }
+  auto envVector = env.toVector();
+  helper_ = Subprocess{cmd, opts, nullptr, &envVector};
   SCOPE_FAIL {
     helper_.closeParentFd(STDIN_FILENO);
     helper_.wait();
