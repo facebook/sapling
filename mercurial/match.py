@@ -134,7 +134,7 @@ class match(object):
         self._includeroots = set()
         self._excluderoots = set()
         # dirs are directories which are non-recursively included.
-        self._includedirs = set(['.'])
+        self._includedirs = set()
 
         if badfn is not None:
             self.bad = badfn
@@ -254,7 +254,7 @@ class match(object):
             return 'all'
         if dir in self._excluderoots:
             return False
-        if ((self._includeroots or self._includedirs != set(['.'])) and
+        if ((self._includeroots or self._includedirs) and
             '.' not in self._includeroots and
             dir not in self._includeroots and
             dir not in self._includedirs and
@@ -684,16 +684,16 @@ def _rootsanddirs(kindpats):
 
     >>> _rootsanddirs(\
         [('glob', 'g/h/*', ''), ('glob', 'g/h', ''), ('glob', 'g*', '')])
-    (['g/h', 'g/h', '.'], ['g'])
+    (['g/h', 'g/h', '.'], ['g', '.'])
     >>> _rootsanddirs(\
         [('rootfilesin', 'g/h', ''), ('rootfilesin', '', '')])
-    ([], ['g/h', '.', 'g'])
+    ([], ['g/h', '.', 'g', '.'])
     >>> _rootsanddirs(\
         [('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
-    (['r', 'p/p', '.'], ['p'])
+    (['r', 'p/p', '.'], ['p', '.'])
     >>> _rootsanddirs(\
         [('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
-    (['.', '.', '.'], [])
+    (['.', '.', '.'], ['.'])
     '''
     r, d = _patternrootsanddirs(kindpats)
 
@@ -701,6 +701,8 @@ def _rootsanddirs(kindpats):
     # scanned to get to either the roots or the other exact directories.
     d.extend(util.dirs(d))
     d.extend(util.dirs(r))
+    # util.dirs() does not include the root directory, so add it manually
+    d.append('.')
 
     return r, d
 
