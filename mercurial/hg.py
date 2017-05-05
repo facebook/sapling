@@ -869,7 +869,7 @@ def _outgoing(ui, repo, dest, opts):
         revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
 
     other = peer(repo, opts, dest)
-    outgoing = discovery.findcommonoutgoing(repo.unfiltered(), other, revs,
+    outgoing = discovery.findcommonoutgoing(repo, other, revs,
                                             force=opts.get('force'))
     o = outgoing.missing
     if not o:
