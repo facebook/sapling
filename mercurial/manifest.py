@@ -1340,12 +1340,7 @@ class manifestlog(object):
                    the revlog
         """
         if node in self._dirmancache.get(dir, ()):
-            cachemf = self._dirmancache[dir][node]
-            # The old manifest may put non-ctx manifests in the cache, so
-            # skip those since they don't implement the full api.
-            if (isinstance(cachemf, manifestctx) or
-                isinstance(cachemf, treemanifestctx)):
-                return cachemf
+            return self._dirmancache[dir][node]
 
         if dir:
             if self._revlog._treeondisk:
