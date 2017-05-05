@@ -1375,6 +1375,8 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
         part.addparam('nbchanges', str(cg.extras['clcount']),
                       mandatory=False)
 
+    addparttagsfnodescache(repo, bundler, outgoing)
+
 def addparttagsfnodescache(repo, bundler, outgoing):
     # we include the tags fnode cache for the bundle changeset
     # (as an optional parts)
