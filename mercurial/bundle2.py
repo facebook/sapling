@@ -1375,6 +1375,30 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
         part.addparam('nbchanges', str(cg.extras['clcount']),
                       mandatory=False)
 
+def addparttagsfnodescache(repo, bundler, outgoing):
+    # we include the tags fnode cache for the bundle changeset
+    # (as an optional parts)
+    cache = tags.hgtagsfnodescache(repo.unfiltered())
+    chunks = []
+
+    # .hgtags fnodes are only relevant for head changesets. While we could
+    # transfer values for all known nodes, there will likely be little to
+    # no benefit.
+    #
+    # We don't bother using a generator to produce output data because
+    # a) we only have 40 bytes per head and even esoteric numbers of heads
+    # consume little memory (1M heads is 40MB) b) we don't want to send the
+    # part if we don't have entries and knowing if we have entries requires
+    # cache lookups.
+    for node in outgoing.missingheads:
+        # Don't compute missing, as this may slow down serving.
+        fnode = cache.getfnode(node, computemissing=False)
+        if fnode is not None:
+            chunks.extend([node, fnode])
+
+    if chunks:
+        bundler.newpart('hgtagsfnodes', data=''.join(chunks))
+
 def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
                 compopts=None):
     """Write a bundle file and return its filename.
