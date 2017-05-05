@@ -1937,7 +1937,8 @@ def strdate(string, format, defaults=None):
             # elements are relative to today
             usenow = True
 
-    timetuple = time.strptime(date, format)
+    timetuple = time.strptime(encoding.strfromlocal(date),
+                              encoding.strfromlocal(format))
     localunixtime = int(calendar.timegm(timetuple))
     if offset is None:
         # local timezone
