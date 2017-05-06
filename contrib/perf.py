@@ -887,6 +887,7 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
     see ``perfrevlog`` and ``perfrevlogrevision``.
     """
     rl = cmdutil.openrevlog(repo, 'perfrevlogchunks', file_, opts)
+    segmentforrevs = rl._chunkraw
 
     # Verify engines argument.
     if engines:
@@ -918,22 +919,22 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
     def doread():
         rl.clearcaches()
         for rev in revs:
-            rl._chunkraw(rev, rev)
+            segmentforrevs(rev, rev)
 
     def doreadcachedfh():
         rl.clearcaches()
         fh = rlfh(rl)
         for rev in revs:
-            rl._chunkraw(rev, rev, df=fh)
+            segmentforrevs(rev, rev, df=fh)
 
     def doreadbatch():
         rl.clearcaches()
-        rl._chunkraw(revs[0], revs[-1])
+        segmentforrevs(revs[0], revs[-1])
 
     def doreadbatchcachedfh():
         rl.clearcaches()
         fh = rlfh(rl)
-        rl._chunkraw(revs[0], revs[-1], df=fh)
+        segmentforrevs(revs[0], revs[-1], df=fh)
 
     def dochunk():
         rl.clearcaches()
@@ -1002,6 +1003,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         raise error.CommandError('perfrevlogrevision', 'invalid arguments')
 
     r = cmdutil.openrevlog(repo, 'perfrevlogrevision', file_, opts)
+    segmentforrevs = r._chunkraw
     node = r.lookup(rev)
     rev = r.rev(node)
 
@@ -1033,7 +1035,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
     def doread(chain):
         if not cache:
             r.clearcaches()
-        r._chunkraw(chain[0], chain[-1])
+        segmentforrevs(chain[0], chain[-1])
 
     def dorawchunks(data, chain):
         if not cache:
@@ -1061,7 +1063,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         r.revision(node)
 
     chain = r._deltachain(rev)[0]
-    data = r._chunkraw(chain[0], chain[-1])[1]
+    data = segmentforrevs(chain[0], chain[-1])[1]
     rawchunks = getrawchunks(data, chain)
     bins = r._chunks(chain)
     text = str(bins[0])
