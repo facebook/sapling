@@ -850,7 +850,6 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
 
     The start revision can be defined via ``-s/--startrev``.
     """
-    timer, fm = gettimer(ui, opts)
     _len = getlen(ui)
 
     def d():
@@ -867,6 +866,7 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
         for x in xrange(beginrev, endrev, dist):
             r.revision(r.node(x))
 
+    timer, fm = gettimer(ui, opts)
     timer(d)
     fm.end()
 
