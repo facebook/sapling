@@ -229,7 +229,8 @@ Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting
   > odd.executable = echo
   > EOF
 #if windows
-TODO
+  $ hg --debug odd | grep '^running'
+  running '"*\\echo.exe" --foo="sp ace" "sp ace" --bar="sp ace" "sp ace"' in * (glob)
 #else
   $ hg --debug odd | grep '^running'
   running "*/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob)
