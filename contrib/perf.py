@@ -887,7 +887,12 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
     see ``perfrevlog`` and ``perfrevlogrevision``.
     """
     rl = cmdutil.openrevlog(repo, 'perfrevlogchunks', file_, opts)
-    segmentforrevs = rl._chunkraw
+
+    # _chunkraw was renamed to _getsegmentforrevs.
+    try:
+        segmentforrevs = rl._getsegmentforrevs
+    except AttributeError:
+        segmentforrevs = rl._chunkraw
 
     # Verify engines argument.
     if engines:
@@ -1003,7 +1008,13 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         raise error.CommandError('perfrevlogrevision', 'invalid arguments')
 
     r = cmdutil.openrevlog(repo, 'perfrevlogrevision', file_, opts)
-    segmentforrevs = r._chunkraw
+
+    # _chunkraw was renamed to _getsegmentforrevs.
+    try:
+        segmentforrevs = r._getsegmentforrevs
+    except AttributeError:
+        segmentforrevs = r._chunkraw
+
     node = r.lookup(rev)
     rev = r.rev(node)
 

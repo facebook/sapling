@@ -1147,7 +1147,7 @@ class revlog(object):
 
         return self._readsegment(offset, length, df=df)
 
-    def _chunkraw(self, startrev, endrev, df=None):
+    def _getsegmentforrevs(self, startrev, endrev, df=None):
         """Obtain a segment of raw data corresponding to a range of revisions.
 
         Accepts the start and end revisions and an optional already-open
@@ -1190,7 +1190,7 @@ class revlog(object):
 
         Returns a str holding uncompressed data for the requested revision.
         """
-        return self.decompress(self._chunkraw(rev, rev, df=df)[1])
+        return self.decompress(self._getsegmentforrevs(rev, rev, df=df)[1])
 
     def _chunks(self, revs, df=None):
         """Obtain decompressed chunks for the specified revisions.
@@ -1217,7 +1217,7 @@ class revlog(object):
         ladd = l.append
 
         try:
-            offset, data = self._chunkraw(revs[0], revs[-1], df=df)
+            offset, data = self._getsegmentforrevs(revs[0], revs[-1], df=df)
         except OverflowError:
             # issue4215 - we can't cache a run of chunks greater than
             # 2G on Windows
@@ -1443,7 +1443,7 @@ class revlog(object):
         df = self.opener(self.datafile, 'w')
         try:
             for r in self:
-                df.write(self._chunkraw(r, r)[1])
+                df.write(self._getsegmentforrevs(r, r)[1])
         finally:
             df.close()
 
