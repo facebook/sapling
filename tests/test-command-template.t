@@ -1180,7 +1180,10 @@ Check that recursive reference does not fall into RuntimeError (issue4758):
 
  common mistake:
 
-  $ hg log -T '{changeset}\n'
+  $ cat << EOF > issue4758
+  > changeset = '{changeset}\n'
+  > EOF
+  $ hg log --style ./issue4758
   abort: recursive reference 'changeset' in template
   [255]
 
@@ -1196,7 +1199,10 @@ Check that recursive reference does not fall into RuntimeError (issue4758):
 
  buildmap() -> gettemplate(), where no thunk was made:
 
-  $ hg log -T '{files % changeset}\n'
+  $ cat << EOF > issue4758
+  > changeset = '{files % changeset}\n'
+  > EOF
+  $ hg log --style ./issue4758
   abort: recursive reference 'changeset' in template
   [255]
 
