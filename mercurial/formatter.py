@@ -433,19 +433,16 @@ def loadtemplater(ui, spec, cache=None):
     assert not (spec.tmpl and spec.mapfile)
     if spec.mapfile:
         return templater.templater.frommapfile(spec.mapfile, cache=cache)
-    return _maketemplater(ui, spec.ref, spec.tmpl, cache=cache)
+    return maketemplater(ui, spec.tmpl, cache=cache)
 
 def maketemplater(ui, tmpl, cache=None):
     """Create a templater from a string template 'tmpl'"""
-    return _maketemplater(ui, '', tmpl, cache=cache)
-
-def _maketemplater(ui, topic, tmpl, cache=None):
     aliases = ui.configitems('templatealias')
     t = templater.templater(cache=cache, aliases=aliases)
     t.cache.update((k, templater.unquotestring(v))
                    for k, v in ui.configitems('templates'))
     if tmpl:
-        t.cache[topic] = tmpl
+        t.cache[''] = tmpl
     return t
 
 def formatter(ui, out, topic, opts):
