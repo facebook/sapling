@@ -9,15 +9,11 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
   > sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  contrib/perf.py:867:
-   >             r.revision(r.node(x))
-   don't convert rev to node before passing to revision(nodeorrev)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   Skipping tests/badserverext.py it has no-che?k-code (glob)
-  [1]
 
 @commands in debugcommands.py should be in alphabetical order.
 

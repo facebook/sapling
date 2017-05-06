@@ -864,7 +864,7 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
             dist = -1 * dist
 
         for x in xrange(beginrev, endrev, dist):
-            r.revision(r.node(x))
+            r.revision(x)
 
     timer, fm = gettimer(ui, opts)
     timer(d)
