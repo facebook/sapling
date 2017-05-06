@@ -215,14 +215,15 @@ Empty argument must be quoted
   running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob) (windows !)
   running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob) (no-windows !)
 
-#if execbit
 
 Test extdiff of multiple files in tmp dir:
 
   $ hg update -C 0 > /dev/null
   $ echo changed > a
   $ echo changed > b
+#if execbit
   $ chmod +x b
+#endif
 
 Diff in working directory, before:
 
@@ -234,8 +235,8 @@ Diff in working directory, before:
   -a
   +changed
   diff --git a/b b/b
-  old mode 100644
-  new mode 100755
+  old mode 100644 (execbit !)
+  new mode 100755 (execbit !)
   --- a/b
   +++ b/b
   @@ -1,1 +1,1 @@
@@ -255,7 +256,9 @@ Prepare custom diff/edit tool:
   > file('a/b', 'ab').write('edited\n')
   > EOT
 
+#if execbit
   $ chmod +x 'diff tool.py'
+#endif
 
 will change to /tmp/extdiff.TMP and populate directories a.TMP and a
 and start tool
@@ -274,8 +277,8 @@ Diff in working directory, after:
   +changed
   +edited
   diff --git a/b b/b
-  old mode 100644
-  new mode 100755
+  old mode 100644 (execbit !)
+  new mode 100755 (execbit !)
   --- a/b
   +++ b/b
   @@ -1,1 +1,2 @@
@@ -286,31 +289,37 @@ Diff in working directory, after:
 Test extdiff with --option:
 
   $ hg extdiff -p echo -o this -c 1
-  this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
   $ hg falabala -o this -c 1
-  diffing this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  diffing this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  diffing this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Test extdiff's handling of options with spaces in them:
 
   $ hg edspace -c 1
-  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
   $ hg extdiff -p echo -o "name  <user@example.com>" -c 1
-  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Test with revsets:
 
   $ hg extdif -p echo -c "rev(1)"
-  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
   $ hg extdif -p echo -r "0::1"
-  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Fallback to merge-tools.tool.executable|regkey
@@ -319,8 +328,14 @@ Fallback to merge-tools.tool.executable|regkey
   > #!/bin/sh
   > echo "** custom diff **"
   > EOF
+#if execbit
   $ chmod +x dir/tool.sh
+#endif
   $ tool=`pwd`/dir/tool.sh
+
+TODO: Fix this on Windows.  It currently tries to run 'tl a.* a', instead of
+falling back to tool.sh
+#if no-windows
   $ hg --debug tl --config extdiff.tl= --config merge-tools.tl.executable=$tool
   making snapshot of 2 files from rev * (glob)
     a
@@ -332,10 +347,9 @@ Fallback to merge-tools.tool.executable|regkey
   ** custom diff **
   cleaning up temp directory
   [1]
+#endif
 
   $ cd ..
-
-#endif
 
 #if symlink
 
