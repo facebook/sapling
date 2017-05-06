@@ -854,6 +854,7 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
 
     def d():
         r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
+        r.clearcaches()
 
         beginrev = startrev
         endrev = _len(r)
