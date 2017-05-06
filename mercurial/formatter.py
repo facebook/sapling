@@ -374,6 +374,21 @@ class templateformatter(baseformatter):
         self._out.write(templater.stringify(g))
 
 def lookuptemplate(ui, topic, tmpl):
+    """Find the template matching the given -T/--template spec 'tmpl'
+
+    'tmpl' can be any of the following:
+
+     - a literal template (e.g. '{rev}')
+     - a map-file name or path (e.g. 'changelog')
+     - a reference to [templates] in config file
+     - a path to raw template file
+
+    A map file defines a stand-alone template environment. If a map file
+    selected, all templates defined in the file will be loaded, and the
+    template matching the given topic will be rendered. No aliases will be
+    loaded from user config.
+    """
+
     # looks like a literal template?
     if '{' in tmpl:
         return tmpl, None

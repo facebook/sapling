@@ -1647,8 +1647,9 @@ class changeset_templater(changeset_printer):
                     self.t(self._parts['footer'], **props))
 
 def _lookuplogtemplate(ui, tmpl, style):
-    """
-    Find the template matching the given template spec or style.
+    """Find the template matching the given template spec or style
+
+    See formatter.lookuptemplate() for details.
     """
 
     # ui settings
