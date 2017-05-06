@@ -692,11 +692,13 @@ def reposetup(ui, repo):
 
         # at this point since fsmonitorstate wasn't present, repo.dirstate is
         # not a fsmonitordirstate
-        repo.dirstate.__class__ = makedirstate(repo.dirstate.__class__)
-        # nuke the dirstate so that _fsmonitorinit and subsequent configuration
-        # changes take effect on it
-        del repo._filecache['dirstate']
-        delattr(repo.unfiltered(), 'dirstate')
+        dirstate = repo.dirstate
+        dirstate.__class__ = makedirstate(dirstate.__class__)
+        dirstate._fsmonitorinit(fsmonitorstate, client)
+        # invalidate property cache, but keep filecache which contains the
+        # wrapped dirstate object
+        del repo.unfiltered().__dict__['dirstate']
+        assert dirstate is repo._filecache['dirstate'].obj
 
         class fsmonitorrepo(repo.__class__):
             def status(self, *args, **kwargs):
