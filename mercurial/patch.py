@@ -2540,9 +2540,9 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             content2 = fctx2.data()
             if opts.git or losedatafn:
                 flag2 = ctx2.flags(f2)
-        binary = False
-        if opts.git or losedatafn:
-            binary = any(f.isbinary() for f in [fctx1, fctx2] if f is not None)
+        # if binary is True, output "summary" or "base85", but not "text diff"
+        binary = not opts.text and any(f.isbinary()
+                                       for f in [fctx1, fctx2] if f is not None)
 
         if losedatafn and not opts.git:
             if (binary or
@@ -2595,7 +2595,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         #  yes      | yes  *        *   *     | text diff | yes
         #  no       | *    *        *   *     | text diff | yes
         # [1]: hash(fctx.data()) is outputted. so fctx.data() cannot be faked
-        if binary and opts.git and not opts.nobinary and not opts.text:
+        if binary and opts.git and not opts.nobinary:
             text = mdiff.b85diff(content1, content2)
             if text:
                 header.append('index %s..%s' %
