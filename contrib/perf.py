@@ -850,14 +850,14 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
 
     The start revision can be defined via ``-s/--startrev``.
     """
-    _len = getlen(ui)
+    rl = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
+    rllen = getlen(ui)(rl)
 
     def d():
-        r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
-        r.clearcaches()
+        rl.clearcaches()
 
         beginrev = startrev
-        endrev = _len(r)
+        endrev = rllen
         dist = opts['dist']
 
         if reverse:
@@ -865,7 +865,7 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
             dist = -1 * dist
 
         for x in xrange(beginrev, endrev, dist):
-            r.revision(x)
+            rl.revision(x)
 
     timer, fm = gettimer(ui, opts)
     timer(d)
