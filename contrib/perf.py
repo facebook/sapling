@@ -856,15 +856,15 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
     def d():
         r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
 
-        startrev = 0
+        beginrev = startrev
         endrev = _len(r)
         dist = opts['dist']
 
         if reverse:
-            startrev, endrev = endrev, startrev
+            beginrev, endrev = endrev, beginrev
             dist = -1 * dist
 
-        for x in xrange(startrev, endrev, dist):
+        for x in xrange(beginrev, endrev, dist):
             r.revision(r.node(x))
 
     timer(d)
