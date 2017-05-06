@@ -62,15 +62,10 @@ Should diff cloned directories:
 
 Should diff cloned files directly:
 
-#if windows
   $ hg falabala -r 0:1
-  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob)
+  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
-#else
-  $ hg falabala -r 0:1
-  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
-  [1]
-#endif
 
 Specifying an empty revision should abort.
 
@@ -92,41 +87,27 @@ Test diff during merge:
 
 Should diff cloned file against wc file:
 
-#if windows
   $ hg falabala
-  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "*\\a\\a" (glob)
+  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "*\\a\\a" (glob) (windows !)
+  diffing */extdiff.*/a.2a13a4d2da36/a */a/a (glob) (no-windows !)
   [1]
-#else
-  $ hg falabala
-  diffing */extdiff.*/a.2a13a4d2da36/a */a/a (glob)
-  [1]
-#endif
 
 
 Test --change option:
 
   $ hg ci -d '2 0' -mtest3
-#if windows
+
   $ hg falabala -c 1
-  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob)
+  diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
+  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
-#else
-  $ hg falabala -c 1
-  diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
-  [1]
-#endif
 
 Check diff are made from the first parent:
 
-#if windows
   $ hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
-  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "a.46c0e4daeb72\\a" (glob)
+  diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "a.46c0e4daeb72\\a" (glob) (windows !)
+  diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob) (no-windows !)
   diff-like tools yield a non-zero exit code
-#else
-  $ hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
-  diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob)
-  diff-like tools yield a non-zero exit code
-#endif
 
 issue3153: ensure using extdiff with removed subrepos doesn't crash:
 
@@ -158,21 +139,16 @@ issue4463: usage of command line configuration without additional quoting
   > EOF
   $ hg update -q -C 0
   $ echo a >> a
-#if windows
+
   $ hg --debug 4463a | grep '^running'
-  running 'echo a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running 'echo a-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
   $ hg --debug 4463b | grep '^running'
-  running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running 'echo b-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
   $ hg --debug echo | grep '^running'
-  running '*echo* "*\\a" "*\\a"' in */extdiff.* (glob)
-#else
-  $ hg --debug 4463a | grep '^running'
-  running 'echo a-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
-  $ hg --debug 4463b | grep '^running'
-  running 'echo b-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
-  $ hg --debug echo | grep '^running'
-  running '*echo */a $TESTTMP/a/a' in */extdiff.* (glob)
-#endif
+  running '*echo* "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running '*echo */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
 
 (getting options from other than extdiff section)
 
@@ -189,29 +165,22 @@ issue4463: usage of command line configuration without additional quoting
   > [merge-tools]
   > 4463b3.diffargs = b3-naked 'single quoted' "double quoted"
   > EOF
-#if windows
+
   $ hg --debug 4463b2 | grep '^running'
-  running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running 'echo b2-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
   $ hg --debug 4463b3 | grep '^running'
-  running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running 'echo b3-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
   $ hg --debug 4463b4 | grep '^running'
-  running 'echo "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running 'echo */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
   $ hg --debug 4463b4 --option b4-naked --option 'being quoted' | grep '^running'
-  running 'echo b4-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
+  running 'echo b4-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running "echo b4-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob) (no-windows !)
   $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' | grep '^running'
-  running 'echo echo-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob)
-#else
-  $ hg --debug 4463b2 | grep '^running'
-  running 'echo b2-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
-  $ hg --debug 4463b3 | grep '^running'
-  running 'echo b3-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob)
-  $ hg --debug 4463b4 | grep '^running'
-  running 'echo */a $TESTTMP/a/a' in */extdiff.* (glob)
-  $ hg --debug 4463b4 --option b4-naked --option 'being quoted' | grep '^running'
-  running "echo b4-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob)
-  $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' | grep '^running'
-  running "echo echo-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob)
-#endif
+  running 'echo echo-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
+  running "echo echo-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob) (no-windows !)
 
   $ touch 'sp ace'
   $ hg add 'sp ace'
@@ -228,13 +197,10 @@ Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting
   > odd.diffargs = --foo='\$clabel' '\$clabel' "--bar=\$clabel" "\$clabel"
   > odd.executable = echo
   > EOF
-#if windows
+
   $ hg --debug odd | grep '^running'
-  running '"*\\echo.exe" --foo="sp ace" "sp ace" --bar="sp ace" "sp ace"' in * (glob)
-#else
-  $ hg --debug odd | grep '^running'
-  running "*/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob)
-#endif
+  running '"*\\echo.exe" --foo="sp ace" "sp ace" --bar="sp ace" "sp ace"' in * (glob) (windows !)
+  running "*/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob) (no-windows !)
 
 Empty argument must be quoted
 
@@ -244,13 +210,10 @@ Empty argument must be quoted
   > [merge-tools]
   > kdiff3.diffargs=--L1 \$plabel1 --L2 \$clabel \$parent \$child
   > EOF
-#if windows
+
   $ hg --debug kdiff3 -r0 | grep '^running'
-  running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob)
-#else
-  $ hg --debug kdiff3 -r0 | grep '^running'
-  running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob)
-#endif
+  running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob) (windows !)
+  running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob) (no-windows !)
 
 #if execbit
 
