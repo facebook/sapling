@@ -1075,7 +1075,7 @@ class revlog(object):
         p1, p2 = self.parents(node)
         return hash(text, p1, p2) != node
 
-    def _addchunk(self, offset, data):
+    def _cachesegment(self, offset, data):
         """Add a segment to the revlog cache.
 
         Accepts an absolute offset and the data that is at that location.
@@ -1087,7 +1087,7 @@ class revlog(object):
         else:
             self._chunkcache = offset, data
 
-    def _loadchunk(self, offset, length, df=None):
+    def _readsegment(self, offset, length, df=None):
         """Load a segment of raw data from the revlog.
 
         Accepts an absolute offset, length to read, and an optional existing
@@ -1118,12 +1118,12 @@ class revlog(object):
         d = df.read(reallength)
         if closehandle:
             df.close()
-        self._addchunk(realoffset, d)
+        self._cachesegment(realoffset, d)
         if offset != realoffset or reallength != length:
             return util.buffer(d, offset - realoffset, length)
         return d
 
-    def _getchunk(self, offset, length, df=None):
+    def _getsegment(self, offset, length, df=None):
         """Obtain a segment of raw data from the revlog.
 
         Accepts an absolute offset, length of bytes to obtain, and an
@@ -1145,7 +1145,7 @@ class revlog(object):
                 return d # avoid a copy
             return util.buffer(d, cachestart, cacheend - cachestart)
 
-        return self._loadchunk(offset, length, df=df)
+        return self._readsegment(offset, length, df=df)
 
     def _chunkraw(self, startrev, endrev, df=None):
         """Obtain a segment of raw data corresponding to a range of revisions.
@@ -1179,7 +1179,7 @@ class revlog(object):
             end += (endrev + 1) * self._io.size
         length = end - start
 
-        return start, self._getchunk(start, length, df=df)
+        return start, self._getsegment(start, length, df=df)
 
     def _chunk(self, rev, df=None):
         """Obtain a single decompressed chunk for a revision.
