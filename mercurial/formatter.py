@@ -399,7 +399,8 @@ def lookuptemplate(ui, topic, tmpl):
         # is it a mapfile for a style?
         if os.path.basename(tmpl).startswith("map-"):
             return None, os.path.realpath(tmpl)
-        tmpl = open(tmpl).read()
+        with open(tmpl) as f:
+            tmpl = f.read()
         return tmpl, None
 
     # constant string?
