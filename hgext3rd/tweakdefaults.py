@@ -321,7 +321,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
                 'mutually exclusive') % (currentinvalidargs[0]))
 
     if rev:
-        opts['message'] = repo[rev].description()
+        opts['message'] = scmutil.revsingle(repo, rev).description()
 
     return orig(ui, repo, *pats, **opts)
 
