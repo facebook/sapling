@@ -331,11 +331,19 @@ Fallback to merge-tools.tool.executable|regkey
 #if execbit
   $ chmod +x dir/tool.sh
 #endif
-  $ tool=`pwd`/dir/tool.sh
 
-TODO: Fix this on Windows.  It currently tries to run 'tl a.* a', instead of
-falling back to tool.sh
-#if no-windows
+Windows can't run *.sh directly, so create a shim executable that can be.
+Without something executable, the next hg command will try to run `tl` instead
+of $tool (and fail).
+#if windows
+  $ cat > dir/tool.bat <<EOF
+  > @sh -c "`pwd`/dir/tool.sh %1 %2"
+  > EOF
+  $ tool=`pwd`/dir/tool.bat
+#else
+  $ tool=`pwd`/dir/tool.sh
+#endif
+
   $ hg --debug tl --config extdiff.tl= --config merge-tools.tl.executable=$tool
   making snapshot of 2 files from rev * (glob)
     a
@@ -343,11 +351,11 @@ falling back to tool.sh
   making snapshot of 2 files from working directory
     a
     b
-  running '$TESTTMP/a/dir/tool.sh a.* a' in */extdiff.* (glob)
+  running '$TESTTMP/a/dir/tool.bat a.* a' in */extdiff.* (glob) (windows !)
+  running '$TESTTMP/a/dir/tool.sh a.* a' in */extdiff.* (glob) (no-windows !)
   ** custom diff **
   cleaning up temp directory
   [1]
-#endif
 
   $ cd ..
 
