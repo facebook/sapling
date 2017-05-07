@@ -324,8 +324,11 @@ Test with revsets:
 
 Fallback to merge-tools.tool.executable|regkey
   $ mkdir dir
-  $ cat > 'dir/tool.sh' << EOF
+  $ cat > 'dir/tool.sh' << 'EOF'
   > #!/bin/sh
+  > # Mimic a tool that syncs all attrs, including mtime
+  > cp $1/a $2/a
+  > touch -r $1/a $2/a
   > echo "** custom diff **"
   > EOF
 #if execbit
@@ -344,6 +347,9 @@ of $tool (and fail).
   $ tool=`pwd`/dir/tool.sh
 #endif
 
+  $ cat a
+  changed
+  edited
   $ hg --debug tl --config extdiff.tl= --config merge-tools.tl.executable=$tool
   making snapshot of 2 files from rev * (glob)
     a
@@ -354,8 +360,11 @@ of $tool (and fail).
   running '$TESTTMP/a/dir/tool.bat a.* a' in */extdiff.* (glob) (windows !)
   running '$TESTTMP/a/dir/tool.sh a.* a' in */extdiff.* (glob) (no-windows !)
   ** custom diff **
+  file changed while diffing. Overwriting: $TESTTMP/a/a (src: */extdiff.*/a/a) (glob)
   cleaning up temp directory
   [1]
+  $ cat a
+  a
 
   $ cd ..
 

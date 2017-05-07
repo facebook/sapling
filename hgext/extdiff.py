@@ -101,7 +101,7 @@ def snapshot(ui, repo, files, node, tmproot, listsubrepos):
         dirname = '%s.%s' % (dirname, short(node))
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
-    fns_and_mtime = []
+    fnsandstat = []
 
     if node is not None:
         ui.note(_('making snapshot of %d files from rev %s\n') %
@@ -124,9 +124,8 @@ def snapshot(ui, repo, files, node, tmproot, listsubrepos):
             if node is None:
                 dest = os.path.join(base, wfn)
 
-                fns_and_mtime.append((dest, repo.wjoin(fn),
-                                      os.lstat(dest).st_mtime))
-    return dirname, fns_and_mtime
+                fnsandstat.append((dest, repo.wjoin(fn), os.lstat(dest)))
+    return dirname, fnsandstat
 
 def dodiff(ui, repo, cmdline, pats, opts):
     '''Do the actual diff:
@@ -199,7 +198,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
                 dir1b = None
                 rev1b = ''
 
-            fns_and_mtime = []
+            fnsandstat = []
 
             # If node2 in not the wc or there is >1 change, copy it
             dir2root = ''
@@ -212,8 +211,8 @@ def dodiff(ui, repo, cmdline, pats, opts):
                 #the working dir in this case (because the other cases
                 #are: diffing 2 revisions or single file -- in which case
                 #the file is already directly passed to the diff tool).
-                dir2, fns_and_mtime = snapshot(ui, repo, modadd, None, tmproot,
-                                               subrepos)
+                dir2, fnsandstat = snapshot(ui, repo, modadd, None, tmproot,
+                                            subrepos)
             else:
                 # This lets the diff tool open the changed file directly
                 dir2 = ''
@@ -249,7 +248,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
             dir2 = repo.vfs.reljoin(tmproot, label2)
             dir1b = None
             label1b = None
-            fns_and_mtime = []
+            fnsandstat = []
 
         # Function to quote file/dir names in the argument string.
         # When not operating in 3-way mode, an empty string is
@@ -275,8 +274,13 @@ def dodiff(ui, repo, cmdline, pats, opts):
         ui.debug('running %r in %s\n' % (cmdline, tmproot))
         ui.system(cmdline, cwd=tmproot, blockedtag='extdiff')
 
-        for copy_fn, working_fn, mtime in fns_and_mtime:
-            if os.lstat(copy_fn).st_mtime != mtime:
+        for copy_fn, working_fn, st in fnsandstat:
+            cpstat = os.lstat(copy_fn)
+            # Some tools copy the file and attributes, so mtime may not detect
+            # all changes.  A size check will detect more cases, but not all.
+            # The only certain way to detect every case is to diff all files,
+            # which could be expensive.
+            if cpstat.st_mtime != st.st_mtime or cpstat.st_size != st.st_size:
                 ui.debug('file changed while diffing. '
                          'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
