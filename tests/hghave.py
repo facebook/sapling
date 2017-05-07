@@ -502,7 +502,7 @@ def has_system_sh():
 
 @check("serve", "platform and python can manage 'hg serve -d'")
 def has_serve():
-    return os.name != 'nt' # gross approximation
+    return True
 
 @check("test-repo", "running tests from repository")
 def has_test_repo():
