@@ -119,34 +119,34 @@ enum ConflictType {
   /**
    * We failed to update this particular path due to an error
    */
-  ERROR,
+  ERROR = 0,
   /**
    * A locally modified file was deleted in the new Tree
    */
-  MODIFIED_REMOVED,
+  MODIFIED_REMOVED = 1,
   /**
    * An untracked local file exists in the new Tree
    */
-  UNTRACKED_ADDED,
+  UNTRACKED_ADDED = 2,
   /**
    * The file was removed locally, but modified in the new Tree
    */
-  REMOVED_MODIFIED,
+  REMOVED_MODIFIED = 3,
   /**
    * The file was removed locally, and also removed in the new Tree.
    */
-  MISSING_REMOVED,
+  MISSING_REMOVED = 4,
   /**
    * A locally modified file was modified in the new Tree
    * This may be contents modifications, or a file type change (directory to
    * file or vice-versa), or permissions changes.
    */
-  MODIFIED,
+  MODIFIED = 5,
   /**
    * A directory was supposed to be removed or replaced with a file,
    * but it contains untracked files preventing us from updating it.
    */
-  DIRECTORY_NOT_EMPTY,
+  DIRECTORY_NOT_EMPTY = 6,
 }
 
 /**
