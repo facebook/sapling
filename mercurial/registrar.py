@@ -96,15 +96,14 @@ class _funcregistrarbase(object):
         """
         pass
 
-def command(table):
-    """Returns a function object to be used as a decorator for making commands.
+class command(_funcregistrarbase):
+    """Decorator to register a command function to table
 
-    This function receives a command table as its argument. The table should
+    This class receives a command table as its argument. The table should
     be a dict.
 
-    The returned function can be used as a decorator for adding commands
-    to that command table. This function accepts multiple arguments to define
-    a command.
+    The created object can be used as a decorator for adding commands to
+    that command table. This accepts multiple arguments to define a command.
 
     The first argument is the command name.
 
@@ -126,20 +125,18 @@ def command(table):
     repository locations. See ``findrepo()``. If a repository is found, it
     will be used.
     """
-    def cmd(name, options=(), synopsis=None, norepo=False, optionalrepo=False,
-            inferrepo=False):
-        def decorator(func):
+
+    def _doregister(self, func, name, options=(), synopsis=None,
+                    norepo=False, optionalrepo=False, inferrepo=False):
+        if True:
             func.norepo = norepo
             func.optionalrepo = optionalrepo
             func.inferrepo = inferrepo
             if synopsis:
-                table[name] = func, list(options), synopsis
+                self._table[name] = func, list(options), synopsis
             else:
-                table[name] = func, list(options)
+                self._table[name] = func, list(options)
             return func
-        return decorator
-
-    return cmd
 
 class revsetpredicate(_funcregistrarbase):
     """Decorator to register revset predicate
