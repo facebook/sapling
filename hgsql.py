@@ -34,7 +34,9 @@ INITIAL_SYNC_FORCE = 'force'
 initialsync = INITIAL_SYNC_NORMAL
 
 cls = localrepo.localrepository
-for reqs in ['supportedformats', 'openerreqs', '_basesupported']:
+# Do NOT add hgsql to localrepository.supportedformats. Doing that breaks
+# streaming clones.
+for reqs in ['openerreqs', '_basesupported']:
     getattr(cls, reqs).add('hgsql')
 
 def newreporequirements(orig, repo):
