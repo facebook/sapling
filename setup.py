@@ -77,6 +77,7 @@ from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
 from distutils.command.build_scripts import build_scripts
+from distutils.command.install import install
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
@@ -464,6 +465,14 @@ class buildhgexe(build_ext):
         dir = os.path.dirname(self.get_ext_fullpath('dummy'))
         return os.path.join(self.build_temp, dir, 'hg.exe')
 
+class hginstall(install):
+    def get_sub_commands(self):
+        # Screen out egg related commands to prevent egg generation.  But allow
+        # mercurial.egg-info generation, since that is part of modern
+        # packaging.
+        excl = {'bdist_egg'}
+        return filter(lambda x: x not in excl, install.get_sub_commands(self))
+
 class hginstalllib(install_lib):
     '''
     This is a specialization of install_lib that replaces the copy_file used
@@ -575,6 +584,7 @@ cmdclass = {'build': hgbuild,
             'build_py': hgbuildpy,
             'build_scripts': hgbuildscripts,
             'build_hgextindex': buildhgextindex,
+            'install': hginstall,
             'install_lib': hginstalllib,
             'install_scripts': hginstallscripts,
             'build_hgexe': buildhgexe,
