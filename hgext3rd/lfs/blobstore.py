@@ -27,9 +27,7 @@ class local(object):
     """
 
     def __init__(self, repo):
-        # deprecated config: lfs.blobstore
-        storepath = repo.ui.config('lfs', 'blobstore', 'cache/localblobstore')
-        fullpath = repo.vfs.join(storepath)
+        fullpath = repo.svfs.join('lfs/objects')
         self.vfs = lfsutil.lfsvfs(fullpath)
 
     def getstoreid(self, oid):

@@ -8,7 +8,6 @@
   > lfs=$TESTDIR/../hgext3rd/lfs/
   > [lfs]
   > threshold=10B
-  > blobstore=cache/localblobstore
   > remotestore=dummy
   > remotepath=$TESTTMP/dummy-remote/
   > [diff]
