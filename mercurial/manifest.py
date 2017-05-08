@@ -1317,8 +1317,7 @@ class manifestlog(object):
             cachesize = opts.get('manifestcachesize', cachesize)
         self._treeinmem = usetreemanifest
 
-        self._oldmanifest = repo._constructmanifest()
-        self._revlog = self._oldmanifest
+        self._revlog = repo._constructmanifest()
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
