@@ -89,8 +89,8 @@ class GithubPointer(BasePointer):
             size=metadata['size'],
             extrameta=metadata)
 
-    def tostoreids(self):
-        return [StoreID(self['oid'], self['size'])]
+    def tostoreid(self):
+        return StoreID(self['oid'], self['size'])
 
 def deserialize(text):
     pointerformats = [

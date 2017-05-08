@@ -3,12 +3,13 @@
 from __future__ import absolute_import
 
 from mercurial import (
+    error,
     filelog,
     revlog,
     util as hgutil,
 )
 from mercurial.i18n import _
-from mercurial.node import bin, nullid
+from mercurial.node import bin, nullid, short
 
 from . import (
     blobstore,
@@ -45,10 +46,8 @@ def readfromstore(self, text):
     # still write hg filelog metadata
     if not self.opener.options['lfsbypass']:
         verifyhash = True
-        storeids = metadata.tostoreids()
+        storeids = [metadata.tostoreid()]
         store = self.opener.lfslocalblobstore
-        if not isinstance(storeids, list):
-            storeids = [storeids]
         missing = filter(lambda id: not store.has(id), storeids)
         if missing:
             self.opener.lfsremoteblobstore.readbatch(missing, store)
@@ -177,51 +176,44 @@ def prepush(pushop):
     deserialized into metadata so that we can block the push on their upload to
     the remote blobstore.
     """
-    repo = pushop.repo
-    ui = pushop.ui
-    remoterepo = pushop.remote.local()
+    pointers = extractpointers(pushop.repo, pushop.outgoing.missing)
+    uploadblobs(pushop.repo, [p.tostoreid() for p in pointers])
 
-    # We beed to pass on the information to the remote about the threshold so
-    # that _peek_islargefile can mark the file as large file.
-    threshold = repo.svfs.options.get('lfsthreshold')
-    if threshold is not None and util.safehasattr(remoterepo, 'svfs'):
-        remoterepo.svfs.options['lfsthreshold'] = threshold
-
+def extractpointers(repo, revs):
+    """return a list of lfs pointers added by given revs"""
+    ui = repo.ui
     if ui.verbose:
         ui.write(_('lfs: computing set of blobs to upload\n'))
-    toupload = []
-    totalsize = 0
-    for i, n in enumerate(pushop.outgoing.missing):
+    pointers = {}
+    for i, n in enumerate(revs):
         ctx = repo[n]
         files = set(ctx.files())
         for f in files:
             if f not in ctx:
                 continue
-            filectx = ctx[f]
-            flags = filectx.filelog().flags(filectx.filerev())
-            if flags & revlog.REVIDX_EXTSTORED != revlog.REVIDX_EXTSTORED:
+            fctx = ctx[f]
+            if not _islfs(fctx.filelog(), fctx.filenode()):
                 continue
             try:
-                metadata = pointer.deserialize(ctx[f].rawdata())
-                totalsize += long(metadata['size'])
-                storeids = metadata.tostoreids()
-                if isinstance(storeids, list):
-                    toupload.extend(storeids)
-                else:
-                    toupload.append(storeids)
+                metadata = pointer.deserialize(fctx.rawdata())
+                pointers[metadata['oid']] = metadata
             except pointer.PointerDeserializationError:
-                msg = _('lfs: could not deserialize pointer for file %s, '
-                        'revision %s\n')
-                ui.write(msg % (f, filectx.filerev()))
-                raise
+                raise error.Abort(_('lfs: corrupted pointer (%s@%s)\n')
+                                  % (f, short(ctx.node())))
+    return pointers.values()
 
-    if not toupload:
+def uploadblobs(repo, storeids):
+    """upload given storeids from local blobstore"""
+    if not storeids:
         return
 
+    totalsize = sum(s.size for s in storeids)
+
+    ui = repo.ui
     if ui.verbose:
         msg = _('lfs: need to upload %s objects (%s)\n')
-        ui.write(msg % (len(toupload), hgutil.bytecount(totalsize)))
+        ui.write(msg % (len(storeids), hgutil.bytecount(totalsize)))
 
     remoteblob = repo.svfs.lfsremoteblobstore
-    remoteblob.writebatch(toupload, repo.svfs.lfslocalblobstore,
+    remoteblob.writebatch(storeids, repo.svfs.lfslocalblobstore,
                           total=totalsize)
