@@ -1709,15 +1709,48 @@ def sqlverify(ui, repo, *args, **opts):
         firstrev = max(minrev, maxrev - stepsize)
         lastrev = maxrev
 
+        insql = set()
         revlogcache = {}
         ui.progress('verifying', 0, total=maxrev - minrev)
         while True:
-            _sqlverify(repo, firstrev, lastrev, revlogcache)
+            insql.update(_sqlverify(repo, firstrev, lastrev, revlogcache))
             ui.progress('verifying', maxrev - firstrev, total=maxrev - minrev)
             if firstrev == minrev:
                 break
             lastrev = firstrev - 1
             firstrev = max(minrev, firstrev - stepsize)
+
+        # Check that on disk revlogs don't have extra information that isn't in
+        # hgsql
+        earliestmtime = time.time() - (3600 * 24 * 7)
+        corrupted = False
+        for filepath, x, x in repo.store.walk():
+            # If the revlog is recent, check it
+            stat = repo.svfs.lstat(path=filepath)
+            if stat.st_mtime <= earliestmtime:
+                continue
+
+            rl = revlogcache.get(filepath)
+            if rl is None:
+                if filepath == '00changelog.i':
+                    rl = repo.unfiltered().changelog
+                elif filepath == '00manifest.i':
+                    rl = repo.manifestlog._revlog
+                else:
+                    rl = revlog.revlog(repo.svfs, filepath)
+            for rev in xrange(len(rl) - 1, -1, -1):
+                node = rl.node(rev)
+                linkrev = rl.linkrev(rev)
+                if linkrev < minrev:
+                    break
+                if (filepath, node) not in insql:
+                    corrupted = True
+                    repo.ui.status(("corruption: '%s:%s' with linkrev %s "
+                                    "exists on local disk, but not in sql\n") %
+                                    (filepath, hex(node), linkrev))
+
+        if corrupted:
+            raise error.Abort("Verification failed")
 
         ui.progress('verifying', None)
         ui.status("Verification passed\n")
@@ -1731,13 +1764,14 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
         args=(queue, abort, minrev, maxrev))
     t.setDaemon(True)
 
+    insql = set()
     try:
         t.start()
 
         while True:
             revdata = queue.get()
             if not revdata:
-                return
+                return insql
 
             # The background thread had an exception, rethrow from the
             # foreground thread.
@@ -1769,6 +1803,8 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
                 # so strip that data.
                 type = revlog.gettype(sqlentry[0])
                 sqlentry = (revlog.offset_type(0, type),) + sqlentry[1:]
+
+            insql.add((path, node))
 
             revlogentry = rl.index[rev]
             if revlogentry != sqlentry:

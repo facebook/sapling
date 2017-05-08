@@ -32,3 +32,21 @@ Run with incorrect local revlogs
   add b
   $ hg sqlverify 2>&1 | grep Corruption
   hgext_hgsql.CorruptionException: '*' with linkrev *, disk does not match mysql (glob)
+
+  $ hg strip -q -r 1: --config hgsql.bypass=True --no-backup
+  $ hg log -r tip --forcesync -T '\n'
+  
+
+Run with correct changelog but incorrect revlogs
+  $ hg sqlverify
+  Verification passed
+  $ mkdir .hg/store/backups
+  $ cp .hg/store/00changelog* .hg/store/backups/
+  $ echo >> a
+  $ hg commit -qm "modify a" --config hgsql.bypass=True
+  $ cp .hg/store/backups/* .hg/store/
+  $ hg sqlverify
+  corruption: 'data/a.i:eb2346e7cf59326667069bf8647698840687803d' with linkrev 3 exists on local disk, but not in sql
+  corruption: '00manifest.i:05e2c764eb21dd7c597aab767cec621af1292344' with linkrev 3 exists on local disk, but not in sql
+  abort: Verification failed
+  [255]
