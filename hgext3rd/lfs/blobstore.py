@@ -73,7 +73,7 @@ class _gitlfsremote(object):
         objects = []
         storeidmap = {}
         for storeid in storeids:
-            oid = storeid.oid[:40]  # Limitation in Dewey, hashes max 40 char
+            oid = storeid.oid
             size = storeid.size
             objects.append({
                 'oid': oid,
