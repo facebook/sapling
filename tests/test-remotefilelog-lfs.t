@@ -8,8 +8,7 @@
   > lfs=$TESTDIR/../hgext3rd/lfs/
   > [lfs]
   > threshold=10B
-  > remotestore=dummy
-  > remotepath=$TESTTMP/dummy-remote/
+  > url=file:$TESTTMP/dummy-remote/
   > [diff]
   > git=1
   > EOF
@@ -35,12 +34,6 @@
   $ hg commit -m x-lfs-again
 
   $ hg push -q ../lfs-upload-trigger
-
-  $ cat >> .hg/hgrc <<EOF
-  > [lfs]
-  > # "bare" server usually has bypass set. it should also work if bypass=0
-  > bypass=1
-  > EOF
 
   $ cd ..
 
@@ -95,61 +88,6 @@
   
   * files fetched over * (glob)
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n' --config lfs.bypass=1
-  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
-  diff --git a/x b/x
-  new file mode 100644
-  --- /dev/null
-  +++ b/x
-  @@ -0,0 +1,4 @@
-  +version https://git-lfs.github.com/spec/v1
-  +oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-  +size 17
-  +x-is-binary 0
-  
-  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
-  diff --git a/x b/y
-  rename from x
-  rename to y
-  --- a/x
-  +++ b/y
-  @@ -1,4 +1,6 @@
-   version https://git-lfs.github.com/spec/v1
-   oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-   size 17
-  +x-hg-copy x
-  +x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
-   x-is-binary 0
-  
-  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
-  diff --git a/y b/y
-  --- a/y
-  +++ b/y
-  @@ -1,6 +1,1 @@
-  -version https://git-lfs.github.com/spec/v1
-  -oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-  -size 17
-  -x-hg-copy x
-  -x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
-  -x-is-binary 0
-  +NOTLFS
-  
-  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
-  diff --git a/y b/x
-  rename from y
-  rename to x
-  
-  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
-  diff --git a/x b/x
-  --- a/x
-  +++ b/x
-  @@ -1,1 +1,4 @@
-  -NOTLFS
-  +version https://git-lfs.github.com/spec/v1
-  +oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
-  +size 24
-  +x-is-binary 0
-  
 # lfs content could be read after repack
 
   $ hg repack
@@ -201,61 +139,6 @@
    NOTLFS
   +BECOME-LFS-AGAIN
   
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n' --config lfs.bypass=1
-  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
-  diff --git a/x b/x
-  new file mode 100644
-  --- /dev/null
-  +++ b/x
-  @@ -0,0 +1,4 @@
-  +version https://git-lfs.github.com/spec/v1
-  +oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-  +size 17
-  +x-is-binary 0
-  
-  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
-  diff --git a/x b/y
-  rename from x
-  rename to y
-  --- a/x
-  +++ b/y
-  @@ -1,4 +1,6 @@
-   version https://git-lfs.github.com/spec/v1
-   oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-   size 17
-  +x-hg-copy x
-  +x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
-   x-is-binary 0
-  
-  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
-  diff --git a/y b/y
-  --- a/y
-  +++ b/y
-  @@ -1,6 +1,1 @@
-  -version https://git-lfs.github.com/spec/v1
-  -oid sha256:802935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
-  -size 17
-  -x-hg-copy x
-  -x-hg-copyrev 1ff4e6c9b2764057ea0c52f7b4a5a9be2e79c8e0
-  -x-is-binary 0
-  +NOTLFS
-  
-  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
-  diff --git a/y b/x
-  rename from y
-  rename to x
-  
-  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
-  diff --git a/x b/x
-  --- a/x
-  +++ b/x
-  @@ -1,1 +1,4 @@
-  -NOTLFS
-  +version https://git-lfs.github.com/spec/v1
-  +oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
-  +size 24
-  +x-is-binary 0
-  
 # lfs working copy in shallow repo
 
   $ echo ADD-A-LINE >> x
@@ -300,7 +183,7 @@
   added 1 changesets with 1 changes to 1 files
 
   $ cd ../master
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n' --config lfs.bypass=0
+  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
   5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
@@ -311,23 +194,6 @@
    NOTLFS
    BECOME-LFS-AGAIN
   +ADD-A-LINE
-  
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n' --config lfs.bypass=1
-  5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
-  diff --git a/x b/y
-  rename from x
-  rename to y
-  --- a/x
-  +++ b/y
-  @@ -1,4 +1,6 @@
-   version https://git-lfs.github.com/spec/v1
-  -oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
-  -size 24
-  +oid sha256:a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442
-  +size 35
-  +x-hg-copy x
-  +x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
-   x-is-binary 0
   
 # pull lfs content from server and update
 
@@ -356,23 +222,6 @@
    NOTLFS
    BECOME-LFS-AGAIN
   +ADD-A-LINE
-  
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n' --config lfs.bypass=1
-  5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
-  diff --git a/x b/y
-  rename from x
-  rename to y
-  --- a/x
-  +++ b/y
-  @@ -1,4 +1,6 @@
-   version https://git-lfs.github.com/spec/v1
-  -oid sha256:080f1dba758e4406ab1e722e16fc18965ab2b183979432957418173bf983427f
-  -size 24
-  +oid sha256:a2fcdb080e9838f6e1476a494c1d553e6ffefb68b0d146a06f34b535b5198442
-  +size 35
-  +x-hg-copy x
-  +x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
-   x-is-binary 0
   
 # repack again
 

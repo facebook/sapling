@@ -40,18 +40,14 @@ def readfromstore(self, text):
     contents of the blobstore should be checked using checkhash.
     """
     metadata = pointer.deserialize(text)
-    verifyhash = False
 
-    # if bypass is set, do not read remote blobstore, skip hash check, but
-    # still write hg filelog metadata
-    if not self.opener.options['lfsbypass']:
-        verifyhash = True
-        storeids = [metadata.tostoreid()]
-        store = self.opener.lfslocalblobstore
-        missing = filter(lambda id: not store.has(id), storeids)
-        if missing:
-            self.opener.lfsremoteblobstore.readbatch(missing, store)
-        text = ''.join([store.read(id) for id in storeids])
+    verifyhash = True
+    storeids = [metadata.tostoreid()]
+    store = self.opener.lfslocalblobstore
+    missing = filter(lambda id: not store.has(id), storeids)
+    if missing:
+        self.opener.lfsremoteblobstore.readbatch(missing, store)
+    text = ''.join([store.read(id) for id in storeids])
 
     # pack hg filelog metadata
     hgmeta = {}
@@ -65,9 +61,6 @@ def readfromstore(self, text):
     return (text, verifyhash)
 
 def writetostore(self, text):
-    if self.opener.options['lfsbypass']:
-        return (text, False)
-
     # hg filelog metadata (includes rename, etc)
     hgmeta, offset = filelog.parsemeta(text)
     if offset and offset > 0:
@@ -112,16 +105,15 @@ def _islfs(rlog, node=None, rev=None):
 def filelogaddrevision(orig, self, text, transaction, link, p1, p2,
                        cachedelta=None, node=None,
                        flags=revlog.REVIDX_DEFAULT_FLAGS, **kwds):
-    if not self.opener.options['lfsbypass']:
-        threshold = self.opener.options['lfsthreshold']
-        textlen = len(text)
-        # exclude hg rename meta from file size
-        meta, offset = filelog.parsemeta(text)
-        if offset:
-            textlen -= offset
+    threshold = self.opener.options['lfsthreshold']
+    textlen = len(text)
+    # exclude hg rename meta from file size
+    meta, offset = filelog.parsemeta(text)
+    if offset:
+        textlen -= offset
 
-        if threshold and textlen > threshold:
-            flags |= revlog.REVIDX_EXTSTORED
+    if threshold and textlen > threshold:
+        flags |= revlog.REVIDX_EXTSTORED
 
     return orig(self, text, transaction, link, p1, p2, cachedelta=cachedelta,
                 node=node, flags=flags, **kwds)
