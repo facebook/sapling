@@ -333,20 +333,9 @@ Disabling the TLS 1.0 warning works
   > --config hostsecurity.disabletls10warning=true
   5fed3813f7f5
 
-#if no-sslcontext no-py27+
-Setting ciphers doesn't work in Python 2.6
-  $ P="$CERTSDIR" hg --config hostsecurity.ciphers=HIGH -R copy-pull id https://localhost:$HGPORT/
-  warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
-  abort: setting ciphers in [hostsecurity] is not supported by this version of Python
-  (remove the config option or run Mercurial with a modern Python version (preferred))
-  [255]
-#endif
+Error message for setting ciphers is different depending on SSLContext support
 
-Setting ciphers works in Python 2.7+ but the error message is different on
-legacy ssl. We test legacy once and do more feature checking on modern
-configs.
-
-#if py27+ no-sslcontext
+#if no-sslcontext
   $ P="$CERTSDIR" hg --config hostsecurity.ciphers=invalid -R copy-pull id https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info
   abort: *No cipher can be selected. (glob)
