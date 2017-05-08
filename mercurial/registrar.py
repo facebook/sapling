@@ -128,15 +128,14 @@ class command(_funcregistrarbase):
 
     def _doregister(self, func, name, options=(), synopsis=None,
                     norepo=False, optionalrepo=False, inferrepo=False):
-        if True:
-            func.norepo = norepo
-            func.optionalrepo = optionalrepo
-            func.inferrepo = inferrepo
-            if synopsis:
-                self._table[name] = func, list(options), synopsis
-            else:
-                self._table[name] = func, list(options)
-            return func
+        func.norepo = norepo
+        func.optionalrepo = optionalrepo
+        func.inferrepo = inferrepo
+        if synopsis:
+            self._table[name] = func, list(options), synopsis
+        else:
+            self._table[name] = func, list(options)
+        return func
 
 class revsetpredicate(_funcregistrarbase):
     """Decorator to register revset predicate
