@@ -4,18 +4,15 @@
 Configs::
 
     [lfs]
-    # remote endpoint
-    remoteurl = https://example.com/lfs
-    # user for HTTP auth
-    remoteuser = user
-    # password for HTTP auth
-    remotepassword = password
-    # blobstore type. "git-lfs", "dummy" (test-only), or "null" (interal use)
-    remotestore = git-lfs
-    # local filesystem path (only used by the dummy blobstore, test-only)
-    remotepath = /tmp/test
-    # location of the blob storage
-    blobstore = cache/localblobstore
+    # Remote endpoint. Multiple protocols are supported:
+    # - http(s)://user:pass@example.com/path
+    #   git-lfs endpoint
+    # - file:///tmp/path
+    #   local filesystem, usually for testing
+    # if unset, lfs will prompt setting this when it must use this value.
+    # (default: unset)
+    url = https://example.com/lfs
+
     # size of a file to make it use LFS
     threshold = 10M
 

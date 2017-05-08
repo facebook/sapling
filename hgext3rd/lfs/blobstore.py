@@ -5,6 +5,7 @@ import json
 
 from mercurial import (
     error,
+    url as urlmod,
     util,
 )
 from mercurial.i18n import _
@@ -26,6 +27,7 @@ class local(object):
     """
 
     def __init__(self, repo):
+        # deprecated config: lfs.blobstore
         storepath = repo.ui.config('lfs', 'blobstore', 'cache/localblobstore')
         fullpath = repo.vfs.join(storepath)
         self.vfs = lfsutil.lfsvfs(fullpath)
@@ -46,21 +48,12 @@ class local(object):
 
 class _gitlfsremote(object):
 
-    def __init__(self, repo):
+    def __init__(self, repo, url):
         ui = repo.ui
-        url = ui.config('lfs', 'remoteurl', None)
-        user = ui.config('lfs', 'remoteuser', None)
-        password = ui.config('lfs', 'remotepassword', None)
-        assert url is not None
         self.ui = ui
-        self.baseurl = url
-        if user is not None and password is not None:
-            urlreq = util.urlreq
-            passwdmanager = urlreq.httppasswordmgrwithdefaultrealm()
-            passwdmanager.add_password(None, url, user, password)
-            authenticator = urlreq.httpbasicauthhandler(passwdmanager)
-            opener = urlreq.buildopener(authenticator)
-            urlreq.installopener(opener)
+        baseurl, authinfo = url.authinfo()
+        self.baseurl = baseurl.rstrip('/')
+        self.urlopener = urlmod.opener(ui, authinfo)
 
     def writebatch(self, storeids, fromstore, total=None):
         """Batch upload from local to remote blobstore."""
@@ -96,11 +89,11 @@ class _gitlfsremote(object):
         # Batch upload the blobs to git-lfs.
         if self.ui.verbose:
             self.ui.write(_('lfs: mapping blobs to %s URLs\n') % action)
-        batchreq = urlreq.request(self.baseurl + 'objects/batch',
+        batchreq = urlreq.request('%s/objects/batch' % self.baseurl,
                                   data=requestdata)
         batchreq.add_header('Accept', 'application/vnd.git-lfs+json')
         batchreq.add_header('Content-Type', 'application/vnd.git-lfs+json')
-        raw_response = urlreq.urlopen(batchreq)
+        raw_response = self.urlopener.open(batchreq)
         response = json.loads(raw_response.read())
 
         topic = {'upload': _('lfs uploading'),
@@ -140,7 +133,7 @@ class _gitlfsremote(object):
                 for k, v in headers:
                     request.add_header(k, v)
 
-                response = urlreq.urlopen(request)
+                response = self.urlopener.open(request)
 
                 if action == 'download':
                     # If downloading blobs, store downloaded data to local
@@ -161,44 +154,37 @@ class _gitlfsremote(object):
         if self.ui.verbose:
             self.ui.write(_('lfs: %s completed\n') % action)
 
+    def __del__(self):
+        # copied from mercurial/httppeer.py
+        urlopener = getattr(self, 'urlopener', None)
+        if urlopener:
+            for h in urlopener.handlers:
+                h.close()
+                getattr(h, "close_all", lambda : None)()
+
 class _dummyremote(object):
     """Dummy store storing blobs to temp directory."""
 
-    def __init__(self, repo):
-        path = repo.ui.config('lfs', 'remotepath', None)
-        if path is None:
-            raise error.ProgrammingError('dummystore: must set "remotepath"')
-        fullpath = repo.vfs.join(path)
+    def __init__(self, repo, url):
+        fullpath = repo.vfs.join('lfs', url.path)
         self.vfs = lfsutil.lfsvfs(fullpath)
-
-    def write(self, storeid, data):
-        with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
-            fp.write(data)
-
-    def read(self, storeid):
-        return self.vfs.read(storeid.oid)
 
     def writebatch(self, storeids, fromstore, ui=None, total=None):
         for id in storeids:
             content = fromstore.read(id)
-            self.write(id, content)
+            with self.vfs(id.oid, 'wb', atomictemp=True) as fp:
+                fp.write(content)
 
     def readbatch(self, storeids, tostore, ui=None, total=None):
         for id in storeids:
-            content = self.read(id)
+            content = self.vfs.read(id.oid)
             tostore.write(id, content)
 
 class _nullremote(object):
     """Null store storing blobs to /dev/null."""
 
-    def __init__(self, repo):
+    def __init__(self, repo, url):
         pass
-
-    def write(self, storeid, data):
-        pass
-
-    def read(self, storeid):
-        raise NotImplementedError()
 
     def writebatch(self, storeids, fromstore, ui=None, total=None):
         pass
@@ -206,18 +192,51 @@ class _nullremote(object):
     def readbatch(self, storeids, tostore, ui=None, total=None):
         pass
 
+class _promptremote(object):
+    """Prompt user to set lfs.url when accessed."""
+
+    def __init__(self, repo, url):
+        pass
+
+    def writebatch(self, storeids, fromstore, ui=None, total=None):
+        self._prompt()
+
+    def readbatch(self, storeids, tostore, ui=None, total=None):
+        self._prompt()
+
+    def _prompt(self):
+        raise error.Abort(_('lfs.url needs to be configured'))
+
 _storemap = {
-    'git-lfs': _gitlfsremote,
-    'dummy': _dummyremote,
+    'https': _gitlfsremote,
+    'http': _gitlfsremote,
+    'file': _dummyremote,
     'null': _nullremote,
+    None: _promptremote,
 }
 
 def remote(repo):
     """remotestore factory. return a store in _storemap depending on config"""
-    storename = repo.ui.config('lfs', 'remotestore', 'git-lfs')
-    if storename not in _storemap:
-        raise error.Abort(_('lfs: unknown remotestore: %s') % storename)
-    return _storemap[storename](repo)
+    defaulturl = ''
+
+    # convert deprecated configs to the new url. TODO: remove this if other
+    # places are migrated to the new url config.
+    # deprecated config: lfs.remotestore
+    deprecatedstore = repo.ui.config('lfs', 'remotestore')
+    if deprecatedstore == 'dummy':
+        # deprecated config: lfs.remotepath
+        defaulturl = 'file://' + repo.ui.config('lfs', 'remotepath')
+    elif deprecatedstore == 'git-lfs':
+        # deprecated config: lfs.remoteurl
+        defaulturl = repo.ui.config('lfs', 'remoteurl')
+    elif deprecatedstore == 'null':
+        defaulturl = 'null://'
+
+    url = util.url(repo.ui.config('lfs', 'url', defaulturl))
+    scheme = url.scheme
+    if scheme not in _storemap:
+        raise error.Abort(_('lfs: unknown url scheme: %s') % scheme)
+    return _storemap[scheme](repo, url)
 
 class RequestFailedError(error.RevlogError):
     def __init__(self, oid, action):
