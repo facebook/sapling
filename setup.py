@@ -58,6 +58,10 @@ def get_env_path_list(var_name, default=None):
 include_dirs = get_env_path_list('INCLUDE_DIRS')
 library_dirs = get_env_path_list('LIBRARY_DIRS')
 
+def filter_existing_dirs(dirs):
+    '''Filters the given list and keeps only existing directory names.'''
+    return [d for d in dirs if os.path.isdir(d)]
+
 # Historical default values.
 # We should perhaps clean these up in the future after verifying that it
 # doesn't break the build on any platforms.
@@ -71,11 +75,11 @@ if include_dirs is None:
     if iswindows:
         include_dirs = []
     else:
-        include_dirs = [
+        include_dirs = filter_existing_dirs([
             '/usr/local/include',
             '/opt/local/include',
             '/opt/homebrew/include/',
-        ]
+        ])
 
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory"""
@@ -88,11 +92,11 @@ if library_dirs is None:
     if iswindows:
         library_dirs = []
     else:
-        library_dirs = [
+        library_dirs = filter_existing_dirs([
             '/usr/local/lib',
             '/opt/local/lib',
             '/opt/homebrew/lib/',
-        ]
+        ])
     library_dirs.append('build/' + distutils_dir_name('lib'))
 
 # Override the default c static library building code in distutils since it
