@@ -59,7 +59,8 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
 
   // Short circuit and just return the full text if it's one long
   if (links.size() == 0) {
-    return ConstantStringRef((const char*)fulltextLink->delta, fulltextLink->delta_sz);
+    return ConstantStringRef((const char*)fulltextLink->delta,
+                             (size_t)fulltextLink->delta_sz);
   }
 
   std::reverse(links.begin(), links.end());
