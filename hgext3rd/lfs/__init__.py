@@ -28,18 +28,24 @@ from __future__ import absolute_import
 
 from mercurial import (
     changegroup,
+    cmdutil,
     context,
     exchange,
     extensions,
     filelog,
     revlog,
+    scmutil,
     vfs as vfsmod,
 )
+from mercurial.i18n import _
 
 from . import (
     blobstore,
     wrapper,
 )
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 def reposetup(ui, repo):
     # Nothing to do with a remote repo
@@ -102,3 +108,16 @@ def extsetup(ui):
     # bundlerepo uses "vfsmod.readonlyvfs(othervfs)", we need to make sure lfs
     # options and blob stores are passed from othervfs to the new readonlyvfs.
     wrapfunction(vfsmod.readonlyvfs, '__init__', wrapper.vfsinit)
+
+@command('debuglfsupload',
+         [('r', 'rev', [], _('upload large files introduced by REV')),
+          ('o', 'oid', [], _('upload given lfs object ID'))])
+def debuglfsupload(ui, repo, **opts):
+    """upload lfs blobs added by the working copy parent or given revisions"""
+    store = repo.svfs.lfslocalblobstore
+    storeids = [store.getstoreid(o) for o in opts.get('oid', [])]
+    revs = opts.get('rev')
+    if revs:
+        pointers = wrapper.extractpointers(repo, scmutil.revrange(repo, revs))
+        storeids += [p.tostoreid() for p in pointers]
+    wrapper.uploadblobs(repo, storeids)

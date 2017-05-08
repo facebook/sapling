@@ -32,6 +32,13 @@ class local(object):
         fullpath = repo.vfs.join(storepath)
         self.vfs = lfsutil.lfsvfs(fullpath)
 
+    def getstoreid(self, oid):
+        """Return StoreID from a given oid"""
+        if self.vfs.exists(oid):
+            return StoreID(oid, self.vfs.stat(oid).st_size)
+        else:
+            raise KeyError(oid)
+
     def write(self, storeid, data):
         """Write blob to local blobstore."""
         with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
