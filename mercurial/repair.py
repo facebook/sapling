@@ -165,13 +165,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             tr.startgroup()
             cl.strip(striprev, tr)
             mfst.strip(striprev, tr)
-            if 'treemanifest' in repo.requirements: # safe but unnecessary
-                                                    # otherwise
-                for unencoded, encoded, size in repo.store.datafiles():
-                    if (unencoded.startswith('meta/') and
-                        unencoded.endswith('00manifest.i')):
-                        dir = unencoded[5:-12]
-                        repo.manifestlog._revlog.dirlog(dir).strip(striprev, tr)
+            striptrees(repo, tr, striprev, files)
+
             for fn in files:
                 repo.file(fn).strip(striprev, tr)
             tr.endgroup()
@@ -239,6 +234,15 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # return the backup file path (or None if 'backup' was False) so
     # extensions can use it
     return backupfile
+
+def striptrees(repo, tr, striprev, files):
+    if 'treemanifest' in repo.requirements: # safe but unnecessary
+                                            # otherwise
+        for unencoded, encoded, size in repo.store.datafiles():
+            if (unencoded.startswith('meta/') and
+                unencoded.endswith('00manifest.i')):
+                dir = unencoded[5:-12]
+                repo.manifestlog._revlog.dirlog(dir).strip(striprev, tr)
 
 def rebuildfncache(ui, repo):
     """Rebuilds the fncache file from repo history.
