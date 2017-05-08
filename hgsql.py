@@ -1709,9 +1709,10 @@ def sqlverify(ui, repo, *args, **opts):
         firstrev = max(minrev, maxrev - stepsize)
         lastrev = maxrev
 
+        revlogcache = {}
         ui.progress('verifying', 0, total=maxrev - minrev)
         while True:
-            _sqlverify(repo, firstrev, lastrev)
+            _sqlverify(repo, firstrev, lastrev, revlogcache)
             ui.progress('verifying', maxrev - firstrev, total=maxrev - minrev)
             if firstrev == minrev:
                 break
@@ -1723,7 +1724,7 @@ def sqlverify(ui, repo, *args, **opts):
 
     executewithsql(repo, _helper, False)
 
-def _sqlverify(repo, minrev, maxrev):
+def _sqlverify(repo, minrev, maxrev, revlogcache):
     queue = Queue.Queue()
     abort = threading.Event()
     t = threading.Thread(target=repo.fetchthread,
@@ -1750,13 +1751,15 @@ def _sqlverify(repo, minrev, maxrev):
 
             sqlentry = struct.unpack(revlog.indexformatng, packedentry)
 
-            rl = None
-            if path == '00changelog.i':
-                rl = repo.changelog
-            elif path == '00manifest.i':
-                rl = repo.manifestlog._revlog
-            else:
-                rl = revlog.revlog(repo.svfs, path)
+            rl = revlogcache.get(path)
+            if rl is None:
+                if path == '00changelog.i':
+                    rl = repo.unfiltered().changelog
+                elif path == '00manifest.i':
+                    rl = repo.manifestlog._revlog
+                else:
+                    rl = revlog.revlog(repo.svfs, path)
+                revlogcache[path] = rl
 
             node = sqlentry[7]
             rev = rl.rev(node)
