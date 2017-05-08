@@ -17,7 +17,7 @@ from . import (
 class StoreID(object):
     def __init__(self, oid, size):
         self.oid = oid
-        self.size = size
+        self.size = int(size)
 
 class local(object):
     """Local blobstore for large file contents.
