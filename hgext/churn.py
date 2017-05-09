@@ -133,7 +133,7 @@ def churn(ui, repo, *pats, **opts):
     Examples::
 
       # display count of changed lines for every committer
-      hg churn -t "{author|email}"
+      hg churn -T "{author|email}"
 
       # display daily activity graph
       hg churn -f "%H" -s -c
