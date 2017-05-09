@@ -93,6 +93,7 @@ The first client works on several diffs while the second client lands one of her
   adding manifests
   adding file changes
   added 4 changesets with 1 changes to 4 files (+1 heads)
+  3 new obsolescence markers
   updating bookmark master
 
 Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
