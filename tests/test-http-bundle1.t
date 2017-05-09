@@ -58,6 +58,7 @@ clone via stream
 try to clone via stream, should use pull instead
 
   $ hg clone --uncompressed http://localhost:$HGPORT1/ copy2
+  warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
   adding manifests
@@ -75,6 +76,8 @@ try to clone via stream but missing requirements, so should use pull instead
   > EOF
 
   $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --uncompressed http://localhost:$HGPORT/ copy3
+  warning: stream clone requested but client is missing requirements: generaldelta
+  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
   adding changesets
   adding manifests

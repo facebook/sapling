@@ -80,11 +80,21 @@ def canperformstreamclone(pullop, bailifbundle2supported=False):
         streamreqs = remote.capable('streamreqs')
         # This is weird and shouldn't happen with modern servers.
         if not streamreqs:
+            pullop.repo.ui.warn(_(
+                'warning: stream clone requested but server has them '
+                'disabled\n'))
             return False, None
 
         streamreqs = set(streamreqs.split(','))
         # Server requires something we don't support. Bail.
-        if streamreqs - repo.supportedformats:
+        missingreqs = streamreqs - repo.supportedformats
+        if missingreqs:
+            pullop.repo.ui.warn(_(
+                'warning: stream clone requested but client is missing '
+                'requirements: %s\n') % ', '.join(sorted(missingreqs)))
+            pullop.repo.ui.warn(
+                _('(see https://www.mercurial-scm.org/wiki/MissingRequirement '
+                  'for more information)\n'))
             return False, None
         requirements = streamreqs
 
