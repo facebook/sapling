@@ -226,6 +226,7 @@ else:
                 libraries=[
                     'datapack',
                     'lz4',
+                    'mpatch',
                     'sha1',
                 ],
                 extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
