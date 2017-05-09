@@ -2741,7 +2741,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     if node:
                         obs.append((ctx, ()))
 
-                    obsolete.createmarkers(repo, obs)
+                    obsolete.createmarkers(repo, obs, operation='amend')
         if not createmarkers and newid != old.node():
             # Strip the intermediate commit (if there was one) and the amended
             # commit

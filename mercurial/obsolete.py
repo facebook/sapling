@@ -1203,7 +1203,8 @@ def _computedivergentset(repo):
     return divergent
 
 
-def createmarkers(repo, relations, flag=0, date=None, metadata=None):
+def createmarkers(repo, relations, flag=0, date=None, metadata=None,
+                  operation=None):
     """Add obsolete markers between changesets in a repo
 
     <relations> must be an iterable of (<old>, (<new>, ...)[,{metadata}])
@@ -1224,6 +1225,8 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
         metadata = {}
     if 'user' not in metadata:
         metadata['user'] = repo.ui.username()
+    if operation:
+        metadata['operation'] = operation
     tr = repo.transaction('add-obsolescence-marker')
     try:
         markerargs = []

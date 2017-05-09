@@ -1360,7 +1360,7 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
                     succs = (repo[newrev],)
                 markers.append((repo[rev], succs))
         if markers:
-            obsolete.createmarkers(repo, markers)
+            obsolete.createmarkers(repo, markers, operation='rebase')
     else:
         rebased = [rev for rev in state
                    if state[rev] > nullmerge and state[rev] != rev]

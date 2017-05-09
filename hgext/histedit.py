@@ -1631,7 +1631,7 @@ def safecleanupnode(ui, repo, name, nodes):
                              key=repo.changelog.rev)
         markers = [getmarker(t) for t in sortednodes]
         if markers:
-            obsolete.createmarkers(repo, markers)
+            obsolete.createmarkers(repo, markers, operation='histedit')
     else:
         return cleanupnode(ui, repo, name, nodes)
 
