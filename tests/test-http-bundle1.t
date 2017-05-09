@@ -66,6 +66,23 @@ try to clone via stream, should use pull instead
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+try to clone via stream but missing requirements, so should use pull instead
+
+  $ cat > $TESTTMP/removesupportedformat.py << EOF
+  > from mercurial import localrepo
+  > def extsetup(ui):
+  >     localrepo.localrepository.supportedformats.remove('generaldelta')
+  > EOF
+
+  $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --uncompressed http://localhost:$HGPORT/ copy3
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 4 changes to 4 files
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 clone via pull
 
   $ hg clone http://localhost:$HGPORT1/ copy-pull
