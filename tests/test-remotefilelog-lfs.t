@@ -284,3 +284,29 @@
    BECOME-LFS-AGAIN
   +ADD-A-LINE
   
+# bundle should not include LFS blobs
+
+  $ cat > noise.py <<EOF
+  > import os
+  > import sys
+  > # random content so compression is ineffective
+  > length = int(sys.argv[1])
+  > sys.stdout.write(os.urandom(length))
+  > sys.stdout.flush()
+  > EOF
+  $ hg bookmark -i base
+  $ $PYTHON noise.py 20000000 >> y
+  $ hg commit -m 'make y 20MB' y
+  $ $PYTHON noise.py  1000000 >> y
+  $ hg commit -m 'make y 1MB'
+  $ hg bundle -r '(base::)-base' --base base test-bundle
+  2 changesets found
+  $ $PYTHON <<EOF
+  > import os
+  > size = os.stat('test-bundle').st_size
+  > if size <= 10000:
+  >     print('size is less than 10 KB - expected')
+  > else:
+  >     print('unexpected size: %s' % size)
+  > EOF
+  size is less than 10 KB - expected

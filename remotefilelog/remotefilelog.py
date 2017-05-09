@@ -182,8 +182,8 @@ class remotefilelog(object):
         return linknode
 
     def revdiff(self, node1, node2):
-        return mdiff.textdiff(self.revision(node1),
-                              self.revision(node2))
+        return mdiff.textdiff(self.revision(node1, raw=True),
+                              self.revision(node2, raw=True))
 
     def lookup(self, node):
         if len(node) == 40:
