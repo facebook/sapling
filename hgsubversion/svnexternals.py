@@ -289,7 +289,7 @@ class externalsupdater:
         self.ui = ui
 
     def update(self, wpath, rev, source, pegrev):
-        path = self.repo.wjoin(wpath)
+        path = self.repo.wvfs.join(wpath)
         revspec = []
         if rev:
             revspec = ['-r', rev]
@@ -321,7 +321,7 @@ class externalsupdater:
         self.svn(['co'] + revspec + [source, dest], cwd)
 
     def delete(self, wpath):
-        path = self.repo.wjoin(wpath)
+        path = self.repo.wvfs.join(wpath)
         if os.path.isdir(path):
             self.ui.status(_('removing external %s\n') % wpath)
 
@@ -368,7 +368,7 @@ def updateexternals(ui, args, repo, **opts):
 
     # Retrieve current externals status
     try:
-        oldext = file(repo.join('svn/externals'), 'rb').read()
+        oldext = file(repo.vfs.join('svn/externals'), 'rb').read()
     except IOError:
         oldext = ''
     newext = ''
@@ -386,7 +386,7 @@ def updateexternals(ui, args, repo, **opts):
         else:
             raise hgutil.Abort(_('unknown update actions: %r') % action)
 
-    file(repo.join('svn/externals'), 'wb').write(newext)
+    file(repo.vfs.join('svn/externals'), 'wb').write(newext)
 
 def getchanges(ui, repo, parentctx, exts):
     """Take a parent changectx and the new externals definitions as an

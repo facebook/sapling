@@ -341,7 +341,7 @@ def genignore(ui, repo, force=False, **opts):
         raise error.RepoError("There is no Mercurial repository"
                               " here (.hg not found)")
 
-    ignpath = repo.wjoin('.hgignore')
+    ignpath = repo.wvfs.join('.hgignore')
     if not force and os.path.exists(ignpath):
         raise hgutil.Abort('not overwriting existing .hgignore, try --force?')
     svn = svnrepo.svnremoterepo(repo.ui).svn
@@ -363,7 +363,7 @@ def genignore(ui, repo, force=False, **opts):
         lines = props['svn:ignore'].strip().split('\n')
         ignorelines += [dir and (dir + '/' + prop) or prop for prop in lines if prop.strip()]
 
-    repo.wopener('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
+    repo.wvfs('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
 
 
 def info(ui, repo, **opts):

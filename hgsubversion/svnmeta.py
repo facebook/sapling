@@ -26,7 +26,7 @@ class SVNMeta(object):
         # simple and public variables
         self.ui = repo.ui
         self.repo = repo
-        self.path = os.path.normpath(repo.join('..'))
+        self.path = os.path.normpath(repo.vfs.join('..'))
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.addedtags = {}
         self.deletedtags = {}
