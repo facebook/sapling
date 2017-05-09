@@ -1141,6 +1141,10 @@ class filectx(basefilectx):
     def rawdata(self):
         return self._filelog.revision(self._filenode, raw=True)
 
+    def rawflags(self):
+        """low-level revlog flags"""
+        return self._filelog.flags(self._filerev)
+
     def data(self):
         try:
             return self._filelog.read(self._filenode)
