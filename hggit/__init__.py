@@ -210,7 +210,7 @@ def reposetup(ui, repo):
 
         if (getattr(dirstate, 'rootcache', False) and
             (not ignoremod or getattr(ignore, 'readpats', False)) and
-            hgutil.safehasattr(repo, 'join') and
+            hgutil.safehasattr(repo, 'vfs') and
             os.path.exists(repo.vfs.join('git'))):
             # only install our dirstate wrapper if it has a hope of working
             import gitdirstate

@@ -106,7 +106,7 @@ class GitHandler(object):
         self.ui = ui
 
         if ui.configbool('git', 'intree'):
-            self.gitdir = self.repo.wjoin('.git')
+            self.gitdir = self.repo.wvfs.join('.git')
         else:
             self.gitdir = self.repo.vfs.join('git')
 
@@ -159,7 +159,7 @@ class GitHandler(object):
     def init_author_file(self):
         self.author_map = {}
         if self.ui.config('git', 'authors'):
-            with open(self.repo.wjoin(self.ui.config('git', 'authors'))) as f:
+            with open(self.repo.wvfs.join(self.ui.config('git', 'authors'))) as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith('#'):
