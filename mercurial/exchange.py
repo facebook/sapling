@@ -1330,7 +1330,9 @@ def _pullbundle2(pullop):
     For now, the only supported data are changegroup."""
     kwargs = {'bundlecaps': caps20to10(pullop.repo)}
 
-    streaming, streamreqs = streamclone.canperformstreamclone(pullop)
+    # At the moment we don't do stream clones over bundle2. If that is
+    # implemented then here's where the check for that will go.
+    streaming = False
 
     # pulling changegroup
     pullop.stepsdone.add('changegroup')
