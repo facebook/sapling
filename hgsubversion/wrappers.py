@@ -660,9 +660,13 @@ def clone(orig, ui, source, dest=None, **opts):
 
     # calling hg.clone directoly to get the repository instances it returns,
     # breaks in subtle ways, so we double-wrap
-    orighgclone = extensions.wrapfunction(hg, 'clone', hgclonewrapper)
-    orig(ui, source, dest, **opts)
-    hg.clone = orighgclone
+    orighgclone = None
+    try:
+        orighgclone = extensions.wrapfunction(hg, 'clone', hgclonewrapper)
+        orig(ui, source, dest, **opts)
+    finally:
+        if orighgclone:
+            hg.clone = orighgclone
 
     # do this again; the ui instance isn't shared between the wrappers
     if data.get('branches'):
