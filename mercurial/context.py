@@ -762,8 +762,11 @@ class basefilectx(object):
         return self._filerev
     def filenode(self):
         return self._filenode
-    def flags(self):
+    @propertycache
+    def _flags(self):
         return self._changectx.flags(self._path)
+    def flags(self):
+        return self._flags
     def filelog(self):
         return self._filelog
     def rev(self):
@@ -2061,8 +2064,6 @@ class memfilectx(committablefilectx):
         return self._data
     def size(self):
         return len(self.data())
-    def flags(self):
-        return self._flags
     def renamed(self):
         return self._copied
 
