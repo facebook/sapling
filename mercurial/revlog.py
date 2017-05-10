@@ -1502,6 +1502,15 @@ class revlog(object):
         if validatehash:
             self.checkhash(rawtext, node, p1=p1, p2=p2)
 
+        return self.addrawrevision(rawtext, transaction, link, p1, p2, node,
+                                   flags, cachedelta=cachedelta)
+
+    def addrawrevision(self, rawtext, transaction, link, p1, p2, node, flags,
+                       cachedelta=None):
+        """add a raw revision with known flags, node and parents
+        useful when reusing a revision not stored in this revlog (ex: received
+        over wire, or read from an external bundle).
+        """
         dfh = None
         if not self._inline:
             dfh = self.opener(self.datafile, "a+")
