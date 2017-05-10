@@ -418,7 +418,14 @@
   > write('c', b'\1\n\0')
   > write('d', b'xx')
   > EOF
-  $ hg commit -m binarytest -A a b c d
+  $ hg add a b c d
+  $ hg diff --stat
+   a |  Bin 
+   b |    1 +
+   c |  Bin 
+   d |    1 +
+   4 files changed, 2 insertions(+), 0 deletions(-)
+  $ hg commit -m binarytest
   $ cat > $TESTTMP/dumpbinary.py << EOF
   > def reposetup(ui, repo):
   >     for n in 'abcd':

@@ -94,6 +94,9 @@ def writetostore(self, text):
 
 def _islfs(rlog, node=None, rev=None):
     if rev is None:
+        if node is None:
+            # both None - likely working copy content where node is not ready
+            return False
         rev = rlog.rev(node)
     else:
         node = rlog.node(rev)
