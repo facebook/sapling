@@ -75,7 +75,8 @@ _configsections = [
 # sensitive environment variables affecting confighash
 _envre = re.compile(r'''\A(?:
                     CHGHG
-                    |HG(?:[A-Z].*)?
+                    |HG(?:DEMANDIMPORT|EMITWARNINGS|MODULEPOLICY|PROF|RCPATH)?
+                    |HG(?:ENCODING|PLAIN).*
                     |LANG(?:UAGE)?
                     |LC_.*
                     |LD_.*
