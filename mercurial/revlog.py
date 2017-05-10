@@ -1359,6 +1359,9 @@ class revlog(object):
         Note: If the ``raw`` argument is set, it has precedence over the
         operation and will only update the value of ``validatehash``.
         """
+        # fast path: no flag processors will run
+        if flags == 0:
+            return text, True
         if not operation in ('read', 'write'):
             raise ProgrammingError(_("invalid '%s' operation ") % (operation))
         # Check all flags are known.
