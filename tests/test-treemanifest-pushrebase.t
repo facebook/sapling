@@ -53,6 +53,11 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   > treemanifest=
   > [treemanifest]
   > server=True
+  > # Sleep gives all the hg serve processes time to load the original repo
+  > # state. Otherwise there are race with loading hg server while pushes are
+  > # happening.
+  > [hooks]
+  > prepushrebase.sleep=sleep 0.2
   > EOF
   $ mkdir subdir/
   $ touch subdir/a && hg ci -Aqm subdir/a
