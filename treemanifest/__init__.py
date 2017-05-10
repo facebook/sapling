@@ -62,6 +62,7 @@ from mercurial import (
     manifest,
     mdiff,
     phases,
+    repair,
     revlog,
     sshserver,
     util,
@@ -107,6 +108,8 @@ def extsetup(ui):
 
     wireproto.commands['gettreepack'] = (servergettreepack, '*')
     wireproto.wirepeer.gettreepack = clientgettreepack
+
+    extensions.wrapfunction(repair, 'striptrees', striptrees)
 
 def reposetup(ui, repo):
     wraprepo(repo)
@@ -986,3 +989,14 @@ def gettreepackpart(pushop, bundler):
     part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
     part.addparam('version', '1')
     part.addparam('treecache', 'False')
+
+def striptrees(orig, repo, tr, striprev, files):
+    if repo.ui.configbool('treemanifest', 'server'):
+        treerevlog = repo.manifestlog.treemanifestlog._revlog
+        for dir in util.dirs(files):
+            # If the revlog doesn't exist, this returns an empty revlog and is a
+            # no-op.
+            rl = treerevlog.dirlog(dir)
+            rl.strip(striprev, tr)
+
+        treerevlog.strip(striprev, tr)

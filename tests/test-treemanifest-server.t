@@ -65,3 +65,27 @@ Test pushing with pushrebase creates trees on the server
   $ hg debugdata .hg/store/00manifesttree.i 1
   subdir\x00bc0c2c938b929f98b1c31a8c5994396ebb096bf0t (esc)
   subdir2\x00ddb35f099a648a43a997aef53123bce309c794fdt (esc)
+
+Test stripping trees
+  $ hg up -q tip
+  $ echo a >> subdir/a
+  $ hg commit -Aqm 'modify subdir/a'
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      50     -1       0 85b359fdb09e 000000000000 000000000000
+       1        50      62      0       1 54cbf534b62b 85b359fdb09e 000000000000
+       2       112      61      1       2 a6f4164c3e4e 54cbf534b62b 000000000000
+  $ hg debugindex .hg/store/meta/subdir/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
+       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
+  $ hg strip -r tip
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/0619d7982079-bc05b04f-backup.hg (glob)
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      50     -1       0 85b359fdb09e 000000000000 000000000000
+       1        50      62      0       1 54cbf534b62b 85b359fdb09e 000000000000
+  $ hg debugindex .hg/store/meta/subdir/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
