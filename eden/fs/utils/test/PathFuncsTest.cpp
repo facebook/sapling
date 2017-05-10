@@ -662,11 +662,12 @@ TEST(PathFuncs, realpath) {
 
   // Set up some files to test with
   folly::checkUnixError(
-      open("simple.txt", O_WRONLY | O_CREAT), "failed to create simple.txt");
+      open("simple.txt", O_WRONLY | O_CREAT, 0644),
+      "failed to create simple.txt");
   folly::checkUnixError(mkdir("parent", 0755), "failed to mkdir parent");
   folly::checkUnixError(mkdir("parent/child", 0755), "failed to mkdir child");
   folly::checkUnixError(
-      open("parent/child/file.txt", O_WRONLY | O_CREAT),
+      open("parent/child/file.txt", O_WRONLY | O_CREAT, 0644),
       "failed to create file.txt");
   folly::checkUnixError(
       symlink("parent//child/../child/file.txt", "wonky_link"),
