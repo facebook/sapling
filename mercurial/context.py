@@ -801,6 +801,8 @@ class basefilectx(object):
         return self._copied
     def repo(self):
         return self._repo
+    def size(self):
+        return len(self.data())
 
     def path(self):
         return self._path
@@ -2065,8 +2067,6 @@ class memfilectx(committablefilectx):
 
     def data(self):
         return self._data
-    def size(self):
-        return len(self.data())
 
     def remove(self, ignoremissing=False):
         """wraps unlink for a repo's working directory"""
