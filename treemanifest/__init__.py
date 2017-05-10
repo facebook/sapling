@@ -64,9 +64,7 @@ from mercurial import (
     phases,
     revlog,
     sshserver,
-    store,
     util,
-    vfs as vfsmod,
     wireproto,
 )
 from mercurial.i18n import _
@@ -179,18 +177,18 @@ def clientreposetup(repo):
     )
 
 class treemanifestlog(manifest.manifestlog):
-    def __init__(self, opener):
-        usetreemanifest = False
+    def __init__(self, opener, treemanifest=False):
+        assert treemanifest is False
         cachesize = 4
 
         opts = getattr(opener, 'options', None)
         if opts is not None:
-            usetreemanifest = opts.get('treemanifest', usetreemanifest)
             cachesize = opts.get('manifestcachesize', cachesize)
-        self._treeinmem = usetreemanifest
+        self._treeinmem = True
 
         self._revlog = manifest.manifestrevlog(opener,
-                                               indexfile='00manifesttree.i')
+                                               indexfile='00manifesttree.i',
+                                               treemanifest=True)
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
@@ -228,31 +226,7 @@ def _addmanifestgroup(*args, **kwargs):
 
 def getmanifestlog(orig, self):
     mfl = orig(self)
-
-    # The treemanifest needs its own opener with the treemanifest option set. We
-    # can't just set it globally because the normal repo needs to access the
-    # manifest without the treemanifest option set. Unfortunately, openers don't
-    # have nice easy copy functions, so we have to redo the appropriate creation
-    # based on the type of store.
-    repostore = self.store
-    if isinstance(repostore, store.fncachestore):
-        opener = store._fncachevfs(repostore.rawvfs,
-                                   repostore.fncache,
-                                   repostore.encode)
-    elif isinstance(repostore, store.encodedstore):
-        opener = vfsmod.filtervfs(repostore.rawvfs,
-                                  store.encodefilename)
-    else:
-        opener = vfsmod.filtervfs(repostore.rawvfs,
-                                  store.encodedir)
-
-    opener.options = self.svfs.options.copy()
-    opener.options.update({
-        'treemanifest': True,
-    })
-
-    mfl.treemanifestlog = treemanifestlog(opener)
-
+    mfl.treemanifestlog = treemanifestlog(self.svfs)
     return mfl
 
 def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
