@@ -688,9 +688,6 @@ class basefilectx(object):
     workingfilectx: a filecontext that represents files from the working
                     directory,
     memfilectx: a filecontext that represents files in-memory."""
-    def __new__(cls, repo, path, *args, **kwargs):
-        return super(basefilectx, cls).__new__(cls)
-
     @propertycache
     def _filelog(self):
         return self._repo.file(self._path)
