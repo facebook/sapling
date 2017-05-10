@@ -797,6 +797,8 @@ class basefilectx(object):
         return self._changectx.manifest()
     def changectx(self):
         return self._changectx
+    def renamed(self):
+        return self._copied
     def repo(self):
         return self._repo
 
@@ -1149,7 +1151,8 @@ class filectx(basefilectx):
     def size(self):
         return self._filelog.size(self._filerev)
 
-    def renamed(self):
+    @propertycache
+    def _copied(self):
         """check if file was actually renamed in this changeset revision
 
         If rename logged in file revision, we report copy for changeset only
@@ -2064,8 +2067,6 @@ class memfilectx(committablefilectx):
         return self._data
     def size(self):
         return len(self.data())
-    def renamed(self):
-        return self._copied
 
     def remove(self, ignoremissing=False):
         """wraps unlink for a repo's working directory"""
