@@ -16,6 +16,7 @@ from .i18n import _
 from .node import (
     bin,
     hex,
+    nullid,
 )
 
 from . import (
@@ -841,6 +842,17 @@ def getbundle(repo, proto, others):
                               hint=bundle2requiredhint)
 
     try:
+        if repo.ui.configbool('server', 'disablefullbundle', False):
+            # Check to see if this is a full clone.
+            clheads = set(repo.changelog.heads())
+            heads = set(opts.get('heads', set()))
+            common = set(opts.get('common', set()))
+            common.discard(nullid)
+            if not common and clheads == heads:
+                raise error.Abort(
+                    _('server has pull-based clones disabled'),
+                    hint=_('remove --pull if specified or upgrade Mercurial'))
+
         chunks = exchange.getbundlechunks(repo, 'serve', **opts)
     except error.Abort as exc:
         # cleanly forward Abort error to the client

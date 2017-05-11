@@ -1660,6 +1660,12 @@ Controls generic server settings.
     When set, clients will try to use the uncompressed streaming
     protocol. (default: False)
 
+``disablefullbundle``
+    When set, servers will refuse attempts to do pull-based clones.
+    If this option is set, ``preferuncompressed`` and/or clone bundles
+    are highly recommended. Partial clones will still be allowed.
+    (default: False)
+
 ``validate``
     Whether to validate the completeness of pushed changesets by
     checking that all new file revisions specified in manifests are
