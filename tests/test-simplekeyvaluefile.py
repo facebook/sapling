@@ -33,7 +33,8 @@ class mockvfs(object):
         return mockfile(path, self).read()
 
     def readlines(self, path):
-        return mockfile(path, self).read().split('\n')
+        # lines need to contain the trailing '\n' to mock the real readlines
+        return [l for l in mockfile(path, self).read().splitlines(True)]
 
     def __call__(self, path, mode, atomictemp):
         return mockfile(path, self)
@@ -42,11 +43,13 @@ class testsimplekeyvaluefile(unittest.TestCase):
     def setUp(self):
         self.vfs = mockvfs()
 
-    def testbasicwriting(self):
-        d = {'key1': 'value1', 'Key2': 'value2'}
-        scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write(d)
+    def testbasicwritingiandreading(self):
+        dw = {'key1': 'value1', 'Key2': 'value2'}
+        scmutil.simplekeyvaluefile(self.vfs, 'kvfile').write(dw)
         self.assertEqual(sorted(self.vfs.read('kvfile').split('\n')),
                          ['', 'Key2=value2', 'key1=value1'])
+        dr = scmutil.simplekeyvaluefile(self.vfs, 'kvfile').read()
+        self.assertEqual(dr, dw)
 
     def testinvalidkeys(self):
         d = {'0key1': 'value1', 'Key2': 'value2'}

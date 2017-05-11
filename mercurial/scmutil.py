@@ -925,7 +925,10 @@ class simplekeyvaluefile(object):
     def read(self):
         lines = self.vfs.readlines(self.path)
         try:
-            d = dict(line[:-1].split('=', 1) for line in lines if line)
+            # the 'if line.strip()' part prevents us from failing on empty
+            # lines which only contain '\n' therefore are not skipped
+            # by 'if line'
+            d = dict(line[:-1].split('=', 1) for line in lines if line.strip())
         except ValueError as e:
             raise error.CorruptedState(str(e))
         return d
