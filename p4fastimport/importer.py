@@ -164,8 +164,9 @@ class RCSImporter(collections.Mapping):
     def revisions(self):
         revs = set()
         if os.path.isfile(self.rcspath):
-            stdout = util.popen('rlog %s' % util.shellquote(self.rcspath),
-                        mode='rb')
+            stdout = util.popen('rlog %s 2>%s'
+                                % (util.shellquote(self.rcspath), os.devnull),
+                                mode='rb')
             for l in stdout.readlines():
                 m = re.match('revision 1.(\d+)', l)
                 if m:
