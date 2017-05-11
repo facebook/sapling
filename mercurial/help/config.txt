@@ -1132,6 +1132,7 @@ The following per-host settings can be defined.
     A list of hashes of the DER encoded peer/remote certificate. Values have
     the form ``algorithm``:``fingerprint``. e.g.
     ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``.
+    In addition, colons (``:``) can appear in the fingerprint part.
 
     The following algorithms/prefixes are supported: ``sha1``, ``sha256``,
     ``sha512``.
@@ -1181,6 +1182,7 @@ For example::
     [hostsecurity]
     hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2
     hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
+    hg3.example.com:fingerprints = sha256:9a:b0:dc:e2:75:ad:8a:b7:84:58:e5:1f:07:32:f1:87:e6:bd:24:22:af:b7:ce:8e:9c:b4:10:cf:b9:f4:0e:d2
     foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem
 
 To change the default minimum protocol version to TLS 1.2 but to allow TLS 1.1
