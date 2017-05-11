@@ -323,9 +323,6 @@ class basectx(object):
     def hasdir(self, dir):
         return self._manifest.hasdir(dir)
 
-    def dirty(self, missing=False, merge=True, branch=True):
-        return False
-
     def status(self, other=None, match=None, listignored=False,
                listclean=False, listunknown=False, listsubrepos=False):
         """return status of files between two nodes or node and working
@@ -1568,6 +1565,9 @@ class committablectx(basectx):
         # runtime may prevent 'wlock.release()' in 'repo.commit()'
         # from immediately doing so for subsequent changing files
         self._repo.dirstate.write(self._repo.currenttransaction())
+
+    def dirty(self, missing=False, merge=True, branch=True):
+        return False
 
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
