@@ -39,9 +39,15 @@ githelp on a command with unrecognized option packed with other options should f
   Please try passing the option as it's own flag: -v
   
   If this is a valid git command, please search/ask in the Source Control @ FB group (and don't forget to tell us what the git command does).
-  
   [255]
 
+githelp with a customized footer for invalid commands
+  $ hg --config githelp.unknown.footer="This is a custom footer." githelp -- commit -pv
+  abort: unknown option v packed with other options
+  Please try passing the option as it's own flag: -v
+  
+  This is a custom footer.
+  [255]
 
 githelp for git rebase --skip
   $ hg githelp -- git rebase --skip

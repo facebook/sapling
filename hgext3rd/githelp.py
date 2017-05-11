@@ -11,6 +11,15 @@ Tries to map a given git command to a Mercurial command:
   $ hg githelp -- git checkout master
   hg update master
 
+If an unknown command or parameter combination is detected, an error is
+produced, followed by a footer with instructions on how to contact the
+maintainers if the command is legitimate. To customize this footer, set:
+
+  [githelp]
+  unknown.footer = My footer message
+
+(newlines are possible in hgrc by indenting the lines after the first)
+
 """
 from mercurial.i18n import _
 from mercurial import (
@@ -29,11 +38,15 @@ command = cmdutil.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 class GitUnknownError(error.Abort):
-    failmessage = ("\n\nIf this is a valid git command, please search/ask in "
-                   "the Source Control @ FB group (and don't forget to tell "
-                   "us what the git command does).\n")
-    def __init__(self, msg):
-        msg = msg + GitUnknownError.failmessage
+    defaultfooter = (
+        "If this is a valid git command, please search/ask in the Source "
+        "Control @ FB group (and don't forget to tell us what the git command "
+        "does).")
+    def __init__(self, ui, msg):
+        footer = ui.config('githelp', 'unknown.footer',
+                           GitUnknownError.defaultfooter)
+        if footer:
+            msg = msg + '\n\n' + footer
         super(GitUnknownError, self).__init__(msg)
 
 def convert(s):
@@ -62,7 +75,7 @@ def githelp(ui, repo, *args, **kwargs):
 
     cmd = args[0]
     if not cmd in gitcommands:
-        raise GitUnknownError("error: unknown git command %s" % (cmd))
+        raise GitUnknownError(ui, "error: unknown git command %s" % (cmd))
 
     args = args[1:]
     return gitcommands[cmd](ui, repo, *args, **kwargs)
@@ -84,11 +97,11 @@ def parseoptions(ui, cmdoptions, args):
             elif ('-' + ex.opt) in ex.msg:
                 flag = '-' + ex.opt
             else:
-                raise GitUnknownError("unknown option %s" % ex.opt)
+                raise GitUnknownError(ui, "unknown option %s" % ex.opt)
             try:
                 args.remove(flag)
             except Exception:
-                raise GitUnknownError(
+                raise GitUnknownError(ui,
                     "unknown option {0} packed with other options\n"
                     "Please try passing the option as it's own flag: -{0}" \
                     .format(ex.opt))
@@ -333,7 +346,7 @@ def checkout(ui, repo, *args, **kwargs):
         cmd = Command('revert')
         cmd['--all'] = None
     else:
-        raise GitUnknownError("a commit must be specified")
+        raise GitUnknownError(ui, "a commit must be specified")
 
     ui.status((str(cmd)), "\n")
 
@@ -383,7 +396,7 @@ def clone(ui, repo, *args, **kwargs):
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if len(args) == 0:
-        raise GitUnknownError("a repository to clone must be specified")
+        raise GitUnknownError(ui, "a repository to clone must be specified")
 
     cmd = Command('clone')
     cmd.append(args[0])
@@ -773,7 +786,8 @@ def rebase(ui, repo, *args, **kwargs):
             "\n\n"))
         cmd['-d'] = convert(opts.get('onto'))
         if len(args) < 2:
-            raise GitUnknownError("Expected format: git rebase --onto X Y Z")
+            raise GitUnknownError(ui,
+                                  "Expected format: git rebase --onto X Y Z")
         cmd['-s'] = "'::%s - ::%s'" % (convert(args[1]), convert(args[0]))
     else:
         if len(args) == 1:
