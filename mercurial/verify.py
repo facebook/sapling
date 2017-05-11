@@ -427,13 +427,14 @@ class verifier(object):
                 #  2. hash check: depending on flag processor, we may need to
                 #     use either "text" (external), or "rawtext" (in revlog).
                 try:
-                    l = len(fl.read(n))
+                    fl.read(n) # side effect: read content and do checkhash
                     rp = fl.renamed(n)
-                    if l != fl.size(i):
-                        # the "L1 == L2" check
-                        if len(fl.revision(n, raw=True)) != fl.rawsize(i):
-                            self.err(lr, _("unpacked size is %s, %s expected") %
-                                     (l, fl.size(i)), f)
+                    # the "L1 == L2" check
+                    l1 = fl.rawsize(i)
+                    l2 = len(fl.revision(n, raw=True))
+                    if l1 != l2:
+                        self.err(lr, _("unpacked size is %s, %s expected") %
+                                 (l2, l1), f)
                 except error.CensoredNodeError:
                     # experimental config: censor.policy
                     if ui.config("censor", "policy", "abort") == "abort":
