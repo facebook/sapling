@@ -2079,14 +2079,6 @@ class memctx(committablectx):
             # memoizing increases performance for e.g. vcs convert scenarios.
             self._filectxfn = makecachingfilectxfn(filectxfn)
 
-        if extra:
-            self._extra = extra.copy()
-        else:
-            self._extra = {}
-
-        if self._extra.get('branch', '') == '':
-            self._extra['branch'] = 'default'
-
         if editor:
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
@@ -2298,14 +2290,6 @@ class metadataonlyctx(committablectx):
 
         self._files = originalctx.files()
         self.substate = {}
-
-        if extra:
-            self._extra = extra.copy()
-        else:
-            self._extra = {}
-
-        if self._extra.get('branch', '') == '':
-            self._extra['branch'] = 'default'
 
         if editor:
             self._text = editor(self._repo, self, [])
