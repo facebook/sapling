@@ -298,18 +298,6 @@ Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pip
   |
   o  0: M0
   
-Mixed rebasable and non-rebasable bases (unresolved, issue5422):
-
-  $ rebasewithdag -b C+D -d B <<'EOS'
-  >   D
-  >  /
-  > B C
-  > |/
-  > A
-  > EOS
-  nothing to rebase
-  [1]
-
 Disconnected graph:
 
   $ rebasewithdag -b B -d Z <<'EOS'

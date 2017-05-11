@@ -384,7 +384,9 @@ class rebaseruntime(object):
             names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
             if names:
                 desc += ' (%s)' % ' '.join(names)
-            if self.state[rev] == revtodo:
+            if self.state[rev] == rev:
+                ui.status(_('already rebased %s\n') % desc)
+            elif self.state[rev] == revtodo:
                 pos += 1
                 ui.status(_('rebasing %s\n') % desc)
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
@@ -508,7 +510,7 @@ class rebaseruntime(object):
             # Nodeids are needed to reset bookmarks
             nstate = {}
             for k, v in self.state.iteritems():
-                if v > nullmerge:
+                if v > nullmerge and v != k:
                     nstate[repo[k].node()] = repo[v].node()
                 elif v == revprecursor:
                     succ = self.obsoletenotrebased[k]
@@ -1248,6 +1250,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     roots.sort()
     state = dict.fromkeys(rebaseset, revtodo)
     detachset = set()
+    emptyrebase = True
     for root in roots:
         commonbase = root.ancestor(dest)
         if commonbase == root:
@@ -1260,9 +1263,13 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
             else:
                 samebranch = root.branch() == dest.branch()
             if not collapse and samebranch and root in dest.children():
+                # mark the revision as done by setting its new revision
+                # equal to its old (current) revisions
+                state[root.rev()] = root.rev()
                 repo.ui.debug('source is a child of destination\n')
-                return None
+                continue
 
+        emptyrebase = False
         repo.ui.debug('rebase onto %s starting from %s\n' % (dest, root))
         # Rebase tries to turn <dest> into a parent of <root> while
         # preserving the number of parents of rebased changesets:
@@ -1305,6 +1312,13 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
             # ancestors of <root> not ancestors of <dest>
             detachset.update(repo.changelog.findmissingrevs([commonbase.rev()],
                                                             [root.rev()]))
+    if emptyrebase:
+        return None
+    for rev in sorted(state):
+        parents = [p for p in repo.changelog.parentrevs(rev) if p != nullrev]
+        # if all parents of this revision are done, then so is this revision
+        if parents and all((state.get(p) == p for p in parents)):
+            state[rev] = rev
     for r in detachset:
         if r not in state:
             state[r] = nullmerge
@@ -1332,7 +1346,7 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
         markers = []
         for rev, newrev in sorted(state.items()):
-            if newrev >= 0:
+            if newrev >= 0 and newrev != rev:
                 if rev in skipped:
                     succs = ()
                 elif collapsedas is not None:
@@ -1343,7 +1357,8 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
         if markers:
             obsolete.createmarkers(repo, markers)
     else:
-        rebased = [rev for rev in state if state[rev] > nullmerge]
+        rebased = [rev for rev in state
+                   if state[rev] > nullmerge and state[rev] != rev]
         if rebased:
             stripped = []
             for root in repo.set('roots(%ld)', rebased):
