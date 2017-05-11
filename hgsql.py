@@ -1727,6 +1727,9 @@ def sqlverify(ui, repo, *args, **opts):
         earliestmtime = time.time() - (3600 * 24 * 7)
         corrupted = False
         for filepath, x, x in repo.store.walk():
+            if filepath[-2:] != '.i':
+                continue
+
             # If the revlog is recent, check it
             stat = repo.svfs.lstat(path=filepath)
             if stat.st_mtime <= earliestmtime:
