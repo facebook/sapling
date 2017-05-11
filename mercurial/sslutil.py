@@ -13,7 +13,6 @@ import hashlib
 import os
 import re
 import ssl
-import sys
 
 from .i18n import _
 from . import (
@@ -58,9 +57,6 @@ except AttributeError:
 
     # We implement SSLContext using the interface from the standard library.
     class SSLContext(object):
-        # ssl.wrap_socket gained the "ciphers" named argument in 2.7.
-        _supportsciphers = sys.version_info >= (2, 7)
-
         def __init__(self, protocol):
             # From the public interface of SSLContext
             self.protocol = protocol
@@ -92,13 +88,6 @@ except AttributeError:
             self._cacerts = cafile
 
         def set_ciphers(self, ciphers):
-            if not self._supportsciphers:
-                raise error.Abort(_('setting ciphers in [hostsecurity] is not '
-                                    'supported by this version of Python'),
-                                  hint=_('remove the config option or run '
-                                         'Mercurial with a modern Python '
-                                         'version (preferred)'))
-
             self._ciphers = ciphers
 
         def wrap_socket(self, socket, server_hostname=None, server_side=False):
@@ -113,10 +102,8 @@ except AttributeError:
                 'cert_reqs': self.verify_mode,
                 'ssl_version': self.protocol,
                 'ca_certs': self._cacerts,
+                'ciphers': self._ciphers,
             }
-
-            if self._supportsciphers:
-                args['ciphers'] = self._ciphers
 
             return ssl.wrap_socket(socket, **args)
 
