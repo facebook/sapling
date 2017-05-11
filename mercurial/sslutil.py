@@ -807,13 +807,11 @@ def validatesocket(sock):
                 if settings['legacyfingerprint']:
                     ui.warn(_('(SHA-1 fingerprint for %s found in legacy '
                               '[hostfingerprints] section; '
-                              'if you trust this fingerprint, set the '
-                              'following config value in [hostsecurity] and '
-                              'remove the old one from [hostfingerprints] '
-                              'to upgrade to a more secure SHA-256 '
-                              'fingerprint: '
-                              '%s:fingerprints=%s)\n') % (
-                                  host, host, nicefingerprint))
+                              'if you trust this fingerprint, remove the old '
+                              'SHA-1 fingerprint from [hostfingerprints] and '
+                              'add the following entry to the new '
+                              '[hostsecurity] section: %s:fingerprints=%s)\n') %
+                            (host, host, nicefingerprint))
                 return
 
         # Pinned fingerprint didn't match. This is a fatal error.
