@@ -1341,16 +1341,15 @@ Grafting of plain changes correctly detects that 3 and 5 should be skipped:
   skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
   grafting 2:42127f193bcd "b"
 
-Extending the graft range to include a merge will unfortunately make us miss
-that 3 and 5 should be skipped:
+Extending the graft range to include a (skipped) merge of 3 will not prevent us from
+also detecting that both 3 and 5 should be skipped:
 
   $ hg up -qCr 4
   $ hg graft --tool :local -r 2::7
   skipping ungraftable merge revision 6
+  skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
   skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
   grafting 2:42127f193bcd "b"
-  grafting 3:ca093ca2f1d9 "x"
-  note: graft of 3:ca093ca2f1d9 created no changes to commit
   grafting 7:d3c3f2b38ecc "xx"
   note: graft of 7:d3c3f2b38ecc created no changes to commit
 

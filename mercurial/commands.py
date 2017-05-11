@@ -2295,7 +2295,9 @@ def _dograft(ui, repo, *revs, **opts):
         # check ancestors for earlier grafts
         ui.debug('scanning for duplicate grafts\n')
 
-        for rev in repo.changelog.findmissingrevs(revs, [crev]):
+        # The only changesets we can be sure doesn't contain grafts of any
+        # revs, are the ones that are common ancestors of *all* revs:
+        for rev in repo.revs('only(%d,ancestor(%ld))', crev, revs):
             ctx = repo[rev]
             n = ctx.extra().get('source')
             if n in ids:
