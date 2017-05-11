@@ -72,5 +72,13 @@ class testsimplekeyvaluefile(unittest.TestCase):
         self.assertRaises(error.CorruptedState,
                           scmutil.simplekeyvaluefile(self.vfs, 'badfile').read)
 
+    def testfirstline(self):
+        dw = {'key1': 'value1'}
+        scmutil.simplekeyvaluefile(self.vfs, 'fl').write(dw, firstline='1.0')
+        self.assertEqual(self.vfs.read('fl'), '1.0\nkey1=value1\n')
+        dr = scmutil.simplekeyvaluefile(self.vfs, 'fl')\
+                    .read(firstlinenonkeyval=True)
+        self.assertEqual(dr, {'__firstline': '1.0', 'key1': 'value1'})
+
 if __name__ == "__main__":
     silenttestrunner.main(__name__)
