@@ -1,0 +1,12 @@
+missed keys: oid, size
+ok
+unexpected value: version='https://unknown.github.com/spec/v1'
+cannot parse git-lfs text: 'version https://git-lfs.github.com/spec/v1\n\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 12345\nx-foo extra-information\n'
+unexpected value: oid='ahs256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393'
+unexpected value: oid='4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393'
+unexpected value: size='0x12345'
+ok
+cannot parse git-lfs text: 'version https://git-lfs.github.com/spec/v1\noid sha256:4d7a214614ab2935c943f9e0ff69d22eadbb8f32b1258daaa5e2ca24d17e2393\nsize 12345\nx-foo extra\ninformation\n'
+unexpected key: x_foo
+missed keys: oid
+missed keys: oid, size
