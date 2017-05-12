@@ -381,7 +381,6 @@ class subdirmatcher(match):
         self._path = path
         self._matcher = matcher
         self._always = matcher._always
-        self._pathrestricted = matcher._pathrestricted
 
         self._files = [f[len(path) + 1:] for f in matcher._files
                        if f.startswith(path + "/")]
@@ -398,14 +397,17 @@ class subdirmatcher(match):
         # call the original matcher with the subdirectory path prepended.
         self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
 
-    def abs(self, f):
-        return self._matcher.abs(self._path + "/" + f)
-
     def bad(self, f, msg):
         self._matcher.bad(self._path + "/" + f, msg)
 
+    def abs(self, f):
+        return self._matcher.abs(self._path + "/" + f)
+
     def rel(self, f):
         return self._matcher.rel(self._path + "/" + f)
+
+    def uipath(self, f):
+        return self._matcher.uipath(self._path + "/" + f)
 
     def visitdir(self, dir):
         if dir == '.':
