@@ -250,7 +250,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   rebased as 19c888675e13
   rebasing 10:2f2496ddf49d "merge" (tip)
    future parents are 11 and 7
-   already in target
+   already in destination
    merge against 10:2f2496ddf49d
      detach base 9:e31216eec445
     searching for copies back to rev 3

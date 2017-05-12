@@ -186,7 +186,7 @@ Force a commit on B' during the interruption:
 Abort the rebasing:
 
   $ hg rebase --abort
-  warning: new changesets detected on target branch, can't strip
+  warning: new changesets detected on destination branch, can't strip
   rebase aborted
 
   $ hg tglog

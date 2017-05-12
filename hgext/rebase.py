@@ -905,7 +905,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest):
         repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
         mergemod.update(repo, p1, False, True)
     else:
-        repo.ui.debug(" already in target\n")
+        repo.ui.debug(" already in destination\n")
     repo.dirstate.write(repo.currenttransaction())
     repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
     if base is not None:
@@ -1191,8 +1191,8 @@ def abort(repo, originalwd, dest, state, activebookmark=None):
         if dstates:
             descendants = set(repo.changelog.descendants(dstates))
         if descendants - set(dstates):
-            repo.ui.warn(_("warning: new changesets detected on target branch, "
-                        "can't strip\n"))
+            repo.ui.warn(_("warning: new changesets detected on destination "
+                           "branch, can't strip\n"))
             cleanup = False
 
         if cleanup:
