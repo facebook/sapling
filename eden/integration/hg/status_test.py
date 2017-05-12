@@ -17,26 +17,29 @@ class StatusTest(HgExtensionTestBase):
 
     def test_status(self):
         '''Test various `hg status` states in the root of an Eden mount.'''
-        empty_status = self.status()
-        self.assertEqual('', empty_status)
+        self.assert_status_empty()
 
         self.touch('world.txt')
-        untracked_status = self.status()
-        self.assertEqual('? world.txt\n', untracked_status)
+        self.assert_status({'world.txt': '?'})
 
         self.hg('add', 'world.txt')
-        added_status = self.status()
-        self.assertEqual('A world.txt\n', added_status)
+        self.assert_status({'world.txt': 'A'})
 
         self.rm('hello.txt')
-        missing_status = self.status()
-        self.assertEqual('A world.txt\n! hello.txt\n', missing_status)
+        self.assert_status({
+            'hello.txt': '!',
+            'world.txt': 'A',
+        })
 
         with open(self.get_path('hello.txt'), 'w') as f:
             f.write('new contents')
-        modified_status = self.status()
-        self.assertEqual('M hello.txt\nA world.txt\n', modified_status)
+        self.assert_status({
+            'hello.txt': 'M',
+            'world.txt': 'A',
+        })
 
         self.hg('rm', '--force', 'hello.txt')
-        removed_status = self.status()
-        self.assertEqual('A world.txt\nR hello.txt\n', removed_status)
+        self.assert_status({
+            'hello.txt': 'R',
+            'world.txt': 'A',
+        })

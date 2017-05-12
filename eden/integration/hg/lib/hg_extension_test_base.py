@@ -121,7 +121,12 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         return self.repo.status()
 
     def assert_status(self, expected, msg=None, check_ignored=True):
-        '''Returns the output of `hg status` as a string.'''
+        '''Asserts the output of `hg status`. `expected` is a dict where keys
+        are paths relative to the repo root and values are the single-character
+        string that represents the status: 'M', 'A', 'R', '!', '?', 'I'.
+
+        'C' is not currently supported.
+        '''
         args = ['status', '--print0']
         if check_ignored:
             args.append('-mardui')
