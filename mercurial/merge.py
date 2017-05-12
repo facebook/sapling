@@ -823,11 +823,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
 
     # Don't use m2-vs-ma optimization if:
     # - ma is the same as m1 or m2, which we're just going to diff again later
-    # - The matcher is set already, so we can't override it
     # - The caller specifically asks for a full diff, which is useful during bid
     #   merge.
-    if (pa not in ([wctx, p2] + wctx.parents()) and
-        matcher is None and not forcefulldiff):
+    if (pa not in ([wctx, p2] + wctx.parents()) and not forcefulldiff):
         # Identify which files are relevant to the merge, so we can limit the
         # total m1-vs-m2 diff to just those files. This has significant
         # performance benefits in large repositories.
@@ -839,7 +837,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 relevantfiles.add(copykey)
         for movedirkey in movewithdir.iterkeys():
             relevantfiles.add(movedirkey)
-        matcher = scmutil.matchfiles(repo, relevantfiles)
+        filesmatcher = scmutil.matchfiles(repo, relevantfiles)
+        matcher = matchmod.intersectmatchers(matcher, filesmatcher)
 
     diff = m1.diff(m2, match=matcher)
 
