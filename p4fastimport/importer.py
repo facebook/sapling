@@ -347,9 +347,9 @@ class FileImporter(object):
             if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
                 lfspointer = lfsext.pointer.deserialize(
                         hgfilelog.revision(node, raw=True))
-                largefiles.append((c.cl, self.depotfile, lfspointer['oid']))
-                self._ui.debug('largefile: %s, oid: %s\n' % (
-                    self.relpath, lfspointer['oid']))
+                oid = lfspointer.tostoreid().oid
+                largefiles.append((c.cl, self.depotfile, oid))
+                self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
 
         newlen = len(hgfilelog)
         return fileflags, largefiles, origlen, newlen

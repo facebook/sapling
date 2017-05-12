@@ -40,14 +40,11 @@ def readfromstore(self, text):
     contents of the blobstore should be checked using checkhash.
     """
     metadata = pointer.deserialize(text)
-
-    verifyhash = True
-    storeids = [metadata.tostoreid()]
+    storeid = metadata.tostoreid()
     store = self.opener.lfslocalblobstore
-    missing = filter(lambda id: not store.has(id), storeids)
-    if missing:
-        self.opener.lfsremoteblobstore.readbatch(missing, store)
-    text = ''.join([store.read(id) for id in storeids])
+    if not store.has(storeid):
+        self.opener.lfsremoteblobstore.readbatch([storeid], store)
+    text = store.read(storeid)
 
     # pack hg filelog metadata
     hgmeta = {}
@@ -58,7 +55,7 @@ def readfromstore(self, text):
     if hgmeta or text.startswith('\1\n'):
         text = filelog.packmeta(hgmeta, text)
 
-    return (text, verifyhash)
+    return (text, True)
 
 def writetostore(self, text):
     # hg filelog metadata (includes rename, etc)
@@ -75,7 +72,8 @@ def writetostore(self, text):
 
     # replace contents with metadata
     hashalgo = 'sha256'
-    metadata = pointer.GithubPointer(storeid.oid, hashalgo, storeid.size)
+    oid = '%s:%s' % (hashalgo, storeid.oid)
+    metadata = pointer.GithubPointer(oid=oid, size=str(storeid.size))
 
     # by default, we expect the content to be binary. however, LFS could also
     # be used for non-binary content. add a special entry for non-binary data.
@@ -88,9 +86,9 @@ def writetostore(self, text):
     if hgmeta is not None:
         for k, v in hgmeta.iteritems():
             metadata['x-hg-%s' % k] = v
-    text = str(metadata)
 
-    return (text, False)
+    rawtext = metadata.serialize()
+    return (rawtext, False)
 
 def _islfs(rlog, node=None, rev=None):
     if rev is None:
@@ -149,7 +147,7 @@ def filectxisbinary(orig, self):
         rawtext = flog.revision(node, raw=True)
         metadata = pointer.deserialize(rawtext)
         # if lfs metadata says nothing, assume it's binary by default
-        return bool(int(metadata['x-is-binary'] or 1))
+        return bool(int(metadata.get('x-is-binary', 1)))
     return orig(self)
 
 def vfsinit(orig, self, othervfs):
