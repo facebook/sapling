@@ -671,6 +671,72 @@ f.other:
   space
   $ rm f.base f.local f.other
 
+check that internal:dump doesn't dump files if premerge runs
+successfully
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ hg merge -r 3 --config ui.merge=internal:dump
+  merging f
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  revision 3
+  # hg stat
+  M f
+  # hg resolve --list
+  R f
+
+check that internal:forcedump dumps files, even if local and other can
+be merged easily
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ hg merge -r 3 --config ui.merge=internal:forcedump
+  merging f
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.base
+  ? f.local
+  ? f.orig
+  ? f.other
+  # hg resolve --list
+  U f
+
+  $ cat f.base
+  revision 0
+  space
+
+  $ cat f.local
+  revision 1
+  space
+
+  $ cat f.other
+  revision 0
+  space
+  revision 3
+
+  $ rm -f f.base f.local f.other
+
 ui.merge specifies internal:other but is overruled by pattern for false:
 
   $ beforemerge

@@ -1760,10 +1760,17 @@ Test dynamic list of merge tools only shows up once
         accordingly be named "a.txt.local", "a.txt.other" and "a.txt.base" and
         they will be placed in the same directory as "a.txt".
   
+        This implies permerge. Therefore, files aren't dumped, if premerge runs
+        successfully. Use :forcedump to forcibly write files out.
+  
       ":fail"
         Rather than attempting to merge files that were modified on both
         branches, it marks them as unresolved. The resolve command must be used
         to resolve these conflicts.
+  
+      ":forcedump"
+        Creates three versions of the files as same as :dump, but omits
+        premerge.
   
       ":local"
         Uses the local 'p1()' version of files as the merged version.

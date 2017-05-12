@@ -458,7 +458,11 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     perform a merge manually. If the file to be merged is named
     ``a.txt``, these files will accordingly be named ``a.txt.local``,
     ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
-    same directory as ``a.txt``."""
+    same directory as ``a.txt``.
+
+    This implies permerge. Therefore, files aren't dumped, if premerge
+    runs successfully. Use :forcedump to forcibly write files out.
+    """
     a, b, c, back = files
 
     fd = fcd.path()
@@ -467,6 +471,15 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     repo.wwrite(fd + ".other", fco.data(), fco.flags())
     repo.wwrite(fd + ".base", fca.data(), fca.flags())
     return False, 1, False
+
+@internaltool('forcedump', mergeonly)
+def _forcedump(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                labels=None):
+    """
+    Creates three versions of the files as same as :dump, but omits premerge.
+    """
+    return _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                labels=labels)
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
