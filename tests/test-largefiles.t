@@ -212,6 +212,25 @@ Test display of largefiles in hgweb
   $ killdaemons.py
 #endif
 
+Test largefiles can be loaded in hgweb (wrapcommand() shouldn't fail)
+
+  $ cat <<EOF > "$TESTTMP/hgweb.cgi"
+  > #!/usr/bin/env python
+  > from mercurial import demandimport; demandimport.enable()
+  > from mercurial.hgweb import hgweb
+  > from mercurial.hgweb import wsgicgi
+  > application = hgweb('.', 'test repo')
+  > wsgicgi.launch(application)
+  > EOF
+
+  $ PATH_INFO='/' \
+  > QUERY_STRING='' \
+  > REQUEST_METHOD='GET' \
+  > SCRIPT_NAME='' \
+  > SERVER_NAME='localhost' \
+  > SERVER_PORT='80' \
+  > python "$TESTTMP/hgweb.cgi" > /dev/null
+
 Test archiving the various revisions.  These hit corner cases known with
 archiving.
 

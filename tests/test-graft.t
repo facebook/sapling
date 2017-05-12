@@ -1307,4 +1307,48 @@ Graft a change into a new file previously grafted into a renamed directory
   $ hg status --change .
   M b/x
 
+Prepare for test of skipped changesets and how merges can influence it:
+
+  $ hg merge -q -r 1 --tool :local
+  $ hg ci -m m
+  $ echo xx >> b/x
+  $ hg ci -m xx
+
+  $ hg log -G -T '{rev} {desc|firstline}'
+  @  7 xx
+  |
+  o    6 m
+  |\
+  | o  5 y
+  | |
+  +---o  4 y
+  | |
+  | o  3 x
+  | |
+  | o  2 b
+  | |
+  o |  1 x
+  |/
+  o  0 a
+  
+Grafting of plain changes correctly detects that 3 and 5 should be skipped:
+
+  $ hg up -qCr 4
+  $ hg graft --tool :local -r 2::5
+  skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
+  skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
+  grafting 2:42127f193bcd "b"
+
+Extending the graft range to include a (skipped) merge of 3 will not prevent us from
+also detecting that both 3 and 5 should be skipped:
+
+  $ hg up -qCr 4
+  $ hg graft --tool :local -r 2::7
+  skipping ungraftable merge revision 6
+  skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
+  skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
+  grafting 2:42127f193bcd "b"
+  grafting 7:d3c3f2b38ecc "xx"
+  note: graft of 7:d3c3f2b38ecc created no changes to commit
+
   $ cd ..

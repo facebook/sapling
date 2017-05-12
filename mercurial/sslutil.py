@@ -825,7 +825,7 @@ def validatesocket(sock):
                               'remove the old one from [hostfingerprints] '
                               'to upgrade to a more secure SHA-256 '
                               'fingerprint: '
-                              '%s.fingerprints=%s)\n') % (
+                              '%s:fingerprints=%s)\n') % (
                                   host, host, nicefingerprint))
                 return
 

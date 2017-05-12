@@ -1831,7 +1831,7 @@ Test dynamic list of merge tools only shows up once
          but it will by default not be used for symlinks and binary files.
       7. If the file to be merged is not binary and is not a symlink, then
          internal ":merge" is used.
-      8. The merge of the file fails and must be resolved before commit.
+      8. Otherwise, ":prompt" is used.
   
       Note:
          After selecting a merge program, Mercurial will by default attempt to
