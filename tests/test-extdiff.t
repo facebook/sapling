@@ -329,6 +329,7 @@ Fallback to merge-tools.tool.executable|regkey
   > # Mimic a tool that syncs all attrs, including mtime
   > cp $1/a $2/a
   > touch -r $1/a $2/a
+  > chmod +x $2/a
   > echo "** custom diff **"
   > EOF
 #if execbit
@@ -365,6 +366,32 @@ of $tool (and fail).
   [1]
   $ cat a
   a
+
+#if execbit
+  $ [ -x a ]
+
+  $ cat > 'dir/tool.sh' << 'EOF'
+  > #!/bin/sh
+  > chmod -x $2/a
+  > echo "** custom diff **"
+  > EOF
+
+  $ hg --debug tl --config extdiff.tl= --config merge-tools.tl.executable=$tool
+  making snapshot of 2 files from rev * (glob)
+    a
+    b
+  making snapshot of 2 files from working directory
+    a
+    b
+  running '$TESTTMP/a/dir/tool.sh a.* a' in */extdiff.* (glob)
+  ** custom diff **
+  file changed while diffing. Overwriting: $TESTTMP/a/a (src: */extdiff.*/a/a) (glob)
+  cleaning up temp directory
+  [1]
+
+  $ [ -x a ]
+  [1]
+#endif
 
   $ cd ..
 

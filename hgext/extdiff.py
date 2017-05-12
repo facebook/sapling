@@ -280,7 +280,11 @@ def dodiff(ui, repo, cmdline, pats, opts):
             # all changes.  A size check will detect more cases, but not all.
             # The only certain way to detect every case is to diff all files,
             # which could be expensive.
-            if cpstat.st_mtime != st.st_mtime or cpstat.st_size != st.st_size:
+            # copyfile() carries over the permission, so the mode check could
+            # be in an 'elif' branch, but for the case where the file has
+            # changed without affecting mtime or size.
+            if (cpstat.st_mtime != st.st_mtime or cpstat.st_size != st.st_size
+                or (cpstat.st_mode & 0o100) != (st.st_mode & 0o100)):
                 ui.debug('file changed while diffing. '
                          'Overwriting: %s (src: %s)\n' % (working_fn, copy_fn))
                 util.copyfile(copy_fn, working_fn)
