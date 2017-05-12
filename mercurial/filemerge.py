@@ -133,7 +133,7 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     def check(tool, pat, symlink, binary, changedelete):
         tmsg = tool
         if pat:
-            tmsg += " specified for " + pat
+            tmsg = _("%s (for pattern %s)") % (tool, pat)
         if not _findtool(ui, tool):
             if pat: # explicitly requested tool deserves a warning
                 ui.warn(_("couldn't find merge tool %s\n") % tmsg)
