@@ -209,6 +209,9 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
 
     # internal merge or prompt as last resort
     if symlink or binary or changedelete:
+        if not changedelete and len(tools):
+            # any tool is rejected by capability for symlink or binary
+            ui.warn(_("no tool found to merge %s\n") % path)
         return ":prompt", None
     return ":merge", None
 
@@ -260,8 +263,8 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             choice = ['other', 'local', 'unresolved'][index]
         else:
             index = ui.promptchoice(
-                _("no tool found to merge %(fd)s\n"
-                  "keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved?"
+                _("keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved"
+                  " for %(fd)s?"
                   "$$ &Local $$ &Other $$ &Unresolved") % prompts, 2)
             choice = ['local', 'other', 'unresolved'][index]
 

@@ -531,8 +531,7 @@ ui.merge specifies internal:prompt:
   true.executable=cat
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -556,8 +555,7 @@ ui.merge specifies :prompt, with 'leave unresolved' chosen
   $ hg merge -r 2 --config ui.merge=:prompt --config ui.interactive=True << EOF
   > u
   > EOF
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -579,8 +577,7 @@ prompt with EOF
   true.executable=cat
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt --config ui.interactive=true
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? 
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -593,8 +590,7 @@ prompt with EOF
   # hg resolve --list
   U f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? 
   [1]
   $ aftermerge
   # cat f
@@ -607,8 +603,7 @@ prompt with EOF
   U f
   $ rm f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? 
   [1]
   $ aftermerge
   # cat f
@@ -619,8 +614,7 @@ prompt with EOF
   # hg resolve --list
   U f
   $ hg resolve --all --config ui.merge=internal:prompt
-  no tool found to merge f
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? u
   [1]
   $ aftermerge
   # cat f

@@ -470,8 +470,7 @@ Force prompts with no input (should be similar to :fail)
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
-  no tool found to merge file3
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -529,8 +528,7 @@ Force prompts
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  no tool found to merge file3
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? u
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? u
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -676,8 +674,7 @@ invocations.)
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
-  no tool found to merge file3
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
   
@@ -705,8 +702,7 @@ invocations.)
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
-  no tool found to merge file3
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
   
@@ -724,8 +720,7 @@ invocations.)
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [merge rev] changed file2 which local [working copy] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? 
-  no tool found to merge file3
-  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved? 
+  keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for file3? 
   --- diff of status ---
   (status identical)
   
