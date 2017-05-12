@@ -1281,3 +1281,68 @@ Verify naming of temporary files and that extension is preserved:
   */f~base.?????? $TESTTMP/f.txt.orig */f~other.??????.txt $TESTTMP/f.txt (glob)
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+
+Check that debugpicktool examines which merge tool is chosen for
+specified file as expected
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+
+(default behavior: checking files in the working parent context)
+
+  $ hg manifest
+  f
+  $ hg debugpickmergetool
+  f = true
+
+(-X/-I and file patterns limmit examination targets)
+
+  $ hg debugpickmergetool -X f
+  $ hg debugpickmergetool unknown
+  unknown: no such file in rev ef83787e2614
+
+(--changedelete emulates merging change and delete)
+
+  $ hg debugpickmergetool --changedelete
+  f = :prompt
+
+(-r REV causes checking files in specified revision)
+
+  $ hg manifest -r tip
+  f.txt
+  $ hg debugpickmergetool -r tip
+  f.txt = true
+
+#if symlink
+
+(symlink causes chosing :prompt)
+
+  $ hg debugpickmergetool -r 6d00b3726f6e
+  f = :prompt
+
+#endif
+
+(--verbose shows some configurations)
+
+  $ hg debugpickmergetool --tool foobar -v
+  with --tool 'foobar'
+  f = foobar
+
+  $ HGMERGE=false hg debugpickmergetool -v
+  with HGMERGE='false'
+  f = false
+
+  $ hg debugpickmergetool --config ui.merge=false -v
+  with ui.merge='false'
+  f = false
+
+(--debug shows errors detected intermediately)
+
+  $ hg debugpickmergetool --config merge-patterns.f=true --config merge-tools.true.executable=nonexistentmergetool --debug f
+  couldn't find merge tool true (for pattern f)
+  couldn't find merge tool true
+  f = false

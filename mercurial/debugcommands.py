@@ -40,6 +40,7 @@ from . import (
     error,
     exchange,
     extensions,
+    filemerge,
     fileset,
     formatter,
     hg,
@@ -1501,6 +1502,84 @@ def debugpathcomplete(ui, repo, *specs, **opts):
     files.update(dirs)
     ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
     ui.write('\n')
+
+@command('debugpickmergetool',
+        [('r', 'rev', '', _('check for files in this revision'), _('REV')),
+         ('', 'changedelete', None, _('emulate merging change and delete')),
+        ] + commands.walkopts + commands.mergetoolopts,
+        _('[PATTERN]...'),
+        inferrepo=True)
+def debugpickmergetool(ui, repo, *pats, **opts):
+    """examine which merge tool is chosen for specified file
+
+    As described in :hg:`help merge-tools`, Mercurial examines
+    configurations below in this order to decide which merge tool is
+    chosen for specified file.
+
+    1. ``--tool`` option
+    2. ``HGMERGE`` environment variable
+    3. configurations in ``merge-patterns`` section
+    4. configuration of ``ui.merge``
+    5. configurations in ``merge-tools`` section
+    6. ``hgmerge`` tool (for historical reason only)
+    7. default tool for fallback (``:merge`` or ``:prompt``)
+
+    This command writes out examination result in the style below::
+
+        FILE = MERGETOOL
+
+    By default, all files known in the first parent context of the
+    working directory are examined. Use file patterns and/or -I/-X
+    options to limit target files. -r/--rev is also useful to examine
+    files in another context without actual updating to it.
+
+    With --debug, this command shows warning messages while matching
+    against ``merge-patterns`` and so on, too. It is recommended to
+    use this option with explicit file patterns and/or -I/-X options,
+    because this option increases amount of output per file according
+    to configurations in hgrc.
+
+    With -v/--verbose, this command shows configurations below at
+    first (only if specified).
+
+    - ``--tool`` option
+    - ``HGMERGE`` environment variable
+    - configuration of ``ui.merge``
+
+    If merge tool is chosen before matching against
+    ``merge-patterns``, this command can't show any helpful
+    information, even with --debug. In such case, information above is
+    useful to know why a merge tool is chosen.
+    """
+    overrides = {}
+    if opts['tool']:
+        overrides[('ui', 'forcemerge')] = opts['tool']
+        ui.note(('with --tool %r\n') % (opts['tool']))
+
+    with ui.configoverride(overrides, 'debugmergepatterns'):
+        hgmerge = encoding.environ.get("HGMERGE")
+        if hgmerge is not None:
+            ui.note(('with HGMERGE=%r\n') % (hgmerge))
+        uimerge = ui.config("ui", "merge")
+        if uimerge:
+            ui.note(('with ui.merge=%r\n') % (uimerge))
+
+        ctx = scmutil.revsingle(repo, opts.get('rev'))
+        m = scmutil.match(ctx, pats, opts)
+        changedelete = opts['changedelete']
+        for path in ctx.walk(m):
+            fctx = ctx[path]
+            try:
+                if not ui.debugflag:
+                    ui.pushbuffer(error=True)
+                tool, toolpath = filemerge._picktool(repo, ui, path,
+                                                     fctx.isbinary(),
+                                                     'l' in fctx.flags(),
+                                                     changedelete)
+            finally:
+                if not ui.debugflag:
+                    ui.popbuffer()
+            ui.write(('%s = %s\n') % (path, tool))
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'), norepo=True)
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):

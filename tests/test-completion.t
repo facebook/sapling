@@ -99,6 +99,7 @@ Show debug commands if there are no other candidates
   debugnamecomplete
   debugobsolete
   debugpathcomplete
+  debugpickmergetool
   debugpushkey
   debugpvec
   debugrebuilddirstate
@@ -272,6 +273,7 @@ Show all commands + options
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
+  debugpickmergetool: rev, changedelete, include, exclude, tool
   debugpushkey: 
   debugpvec: 
   debugrebuilddirstate: rev, minimal
