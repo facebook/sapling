@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from ...lib import find_executables, hgrepo, testcase
+from pathlib import Path
 import configparser
 import os
 
@@ -64,6 +65,17 @@ class HgExtensionTestBase(testcase.EdenTestCase):
     '''
     def setup_eden_test(self):
         super().setup_eden_test()
+
+        # Create or update an ~/.hgrc to ensure ui.username is defined.
+        hgrc = os.path.join(os.environ['HOME'], '.hgrc')
+        Path(hgrc).touch()
+        config = configparser.ConfigParser()
+        config.read(hgrc)
+        if 'ui' not in config:
+            config['ui'] = {}
+        config['ui']['username'] = 'Kevin Flynn <lightcyclist@example.com>'
+        with open(hgrc, 'w') as f:
+            config.write(f)
 
         # Create the backing repository
         self.backing_repo_name = 'backing_repo'
