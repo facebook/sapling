@@ -73,7 +73,7 @@ def writetostore(self, text):
     # replace contents with metadata
     hashalgo = 'sha256'
     oid = '%s:%s' % (hashalgo, storeid.oid)
-    metadata = pointer.GithubPointer(oid=oid, size=str(storeid.size))
+    metadata = pointer.gitlfspointer(oid=oid, size=str(storeid.size))
 
     # by default, we expect the content to be binary. however, LFS could also
     # be used for non-binary content. add a special entry for non-binary data.

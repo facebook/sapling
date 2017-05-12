@@ -13,12 +13,12 @@ from .blobstore import StoreID
 class InvalidPointer(error.RevlogError):
     pass
 
-class GithubPointer(dict):
+class gitlfspointer(dict):
     VERSION = 'https://git-lfs.github.com/spec/v1'
 
     def __init__(self, *args, **kwargs):
         self['version'] = self.VERSION
-        super(GithubPointer, self).__init__(*args, **kwargs)
+        super(gitlfspointer, self).__init__(*args, **kwargs)
 
     @classmethod
     def deserialize(cls, text):
@@ -62,4 +62,4 @@ class GithubPointer(dict):
             raise InvalidPointer(_('missed keys: %s') % ', '.join(miss))
         return self
 
-deserialize = GithubPointer.deserialize
+deserialize = gitlfspointer.deserialize
