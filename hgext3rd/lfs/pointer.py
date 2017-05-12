@@ -8,8 +8,6 @@ from mercurial import (
 )
 from mercurial.i18n import _
 
-from .blobstore import StoreID
-
 class InvalidPointer(error.RevlogError):
     pass
 
@@ -32,8 +30,11 @@ class gitlfspointer(dict):
         items = sorted(self.validate().iteritems(), key=sortkeyfunc)
         return ''.join('%s %s\n' % (k, v) for k, v in items)
 
-    def tostoreid(self):
-        return StoreID(self['oid'].split(':')[-1], self['size'])
+    def oid(self):
+        return self['oid'].split(':')[-1]
+
+    def size(self):
+        return int(self['size'])
 
     # regular expressions used by _validate
     # see https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md

@@ -95,14 +95,9 @@ def extsetup(ui):
     wrapfunction(vfsmod.readonlyvfs, '__init__', wrapper.vfsinit)
 
 @command('debuglfsupload',
-         [('r', 'rev', [], _('upload large files introduced by REV')),
-          ('o', 'oid', [], _('upload given lfs object ID'))])
+         [('r', 'rev', [], _('upload large files introduced by REV'))])
 def debuglfsupload(ui, repo, **opts):
     """upload lfs blobs added by the working copy parent or given revisions"""
-    store = repo.svfs.lfslocalblobstore
-    storeids = [store.getstoreid(o) for o in opts.get('oid', [])]
-    revs = opts.get('rev')
-    if revs:
-        pointers = wrapper.extractpointers(repo, scmutil.revrange(repo, revs))
-        storeids += [p.tostoreid() for p in pointers]
-    wrapper.uploadblobs(repo, storeids)
+    revs = opts.get('rev', [])
+    pointers = wrapper.extractpointers(repo, scmutil.revrange(repo, revs))
+    wrapper.uploadblobs(repo, pointers)

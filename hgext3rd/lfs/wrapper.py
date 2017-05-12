@@ -12,7 +12,6 @@ from mercurial.i18n import _
 from mercurial.node import bin, nullid, short
 
 from . import (
-    blobstore,
     pointer,
     util,
 )
@@ -39,19 +38,19 @@ def readfromstore(self, text):
     Returns a 2-typle (text, validatehash) where validatehash is True as the
     contents of the blobstore should be checked using checkhash.
     """
-    metadata = pointer.deserialize(text)
-    storeid = metadata.tostoreid()
+    p = pointer.deserialize(text)
+    oid = p.oid()
     store = self.opener.lfslocalblobstore
-    if not store.has(storeid):
-        self.opener.lfsremoteblobstore.readbatch([storeid], store)
-    text = store.read(storeid)
+    if not store.has(oid):
+        self.opener.lfsremoteblobstore.readbatch([p], store)
+    text = store.read(oid)
 
     # pack hg filelog metadata
     hgmeta = {}
-    for k in metadata.keys():
+    for k in p.keys():
         if k.startswith('x-hg-'):
             name = k[len('x-hg-'):]
-            hgmeta[name] = metadata[k]
+            hgmeta[name] = p[k]
     if hgmeta or text.startswith('\1\n'):
         text = filelog.packmeta(hgmeta, text)
 
@@ -64,16 +63,13 @@ def writetostore(self, text):
         # lfs blob does not contain hg filelog metadata
         text = text[offset:]
 
-    # compute sha256 for git-lfs
-    sha = util.sha256(text)
-    # Store actual contents to local blobstore
-    storeid = blobstore.StoreID(sha, len(text))
-    self.opener.lfslocalblobstore.write(storeid, text)
+    # git-lfs only supports sha256
+    oid = util.sha256(text)
+    self.opener.lfslocalblobstore.write(oid, text)
 
     # replace contents with metadata
-    hashalgo = 'sha256'
-    oid = '%s:%s' % (hashalgo, storeid.oid)
-    metadata = pointer.gitlfspointer(oid=oid, size=str(storeid.size))
+    longoid = 'sha256:%s' % oid
+    metadata = pointer.gitlfspointer(oid=longoid, size=str(len(text)))
 
     # by default, we expect the content to be binary. however, LFS could also
     # be used for non-binary content. add a special entry for non-binary data.
@@ -170,7 +166,7 @@ def prepush(pushop):
     the remote blobstore.
     """
     pointers = extractpointers(pushop.repo, pushop.outgoing.missing)
-    uploadblobs(pushop.repo, [p.tostoreid() for p in pointers])
+    uploadblobs(pushop.repo, pointers)
 
 def extractpointers(repo, revs):
     """return a list of lfs pointers added by given revs"""
@@ -195,18 +191,18 @@ def extractpointers(repo, revs):
                                   % (f, short(ctx.node())))
     return pointers.values()
 
-def uploadblobs(repo, storeids):
-    """upload given storeids from local blobstore"""
-    if not storeids:
+def uploadblobs(repo, pointers):
+    """upload given pointers from local blobstore"""
+    if not pointers:
         return
 
-    totalsize = sum(s.size for s in storeids)
+    totalsize = sum(p.size() for p in pointers)
 
     ui = repo.ui
     if ui.verbose:
         msg = _('lfs: need to upload %s objects (%s)\n')
-        ui.write(msg % (len(storeids), hgutil.bytecount(totalsize)))
+        ui.write(msg % (len(pointers), hgutil.bytecount(totalsize)))
 
     remoteblob = repo.svfs.lfsremoteblobstore
-    remoteblob.writebatch(storeids, repo.svfs.lfslocalblobstore,
+    remoteblob.writebatch(pointers, repo.svfs.lfslocalblobstore,
                           total=totalsize)

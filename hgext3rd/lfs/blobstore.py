@@ -14,11 +14,6 @@ from . import (
     util as lfsutil,
 )
 
-class StoreID(object):
-    def __init__(self, oid, size):
-        self.oid = oid
-        self.size = int(size)
-
 class local(object):
     """Local blobstore for large file contents.
 
@@ -30,26 +25,19 @@ class local(object):
         fullpath = repo.svfs.join('lfs/objects')
         self.vfs = lfsutil.lfsvfs(fullpath)
 
-    def getstoreid(self, oid):
-        """Return StoreID from a given oid"""
-        if self.vfs.exists(oid):
-            return StoreID(oid, self.vfs.stat(oid).st_size)
-        else:
-            raise KeyError(oid)
-
-    def write(self, storeid, data):
+    def write(self, oid, data):
         """Write blob to local blobstore."""
-        with self.vfs(storeid.oid, 'wb', atomictemp=True) as fp:
+        with self.vfs(oid, 'wb', atomictemp=True) as fp:
             fp.write(data)
 
-    def read(self, storeid):
+    def read(self, oid):
         """Read blob from local blobstore."""
-        return self.vfs.read(storeid.oid)
+        return self.vfs.read(oid)
 
-    def has(self, storeid):
+    def has(self, oid):
         """Returns True if the local blobstore contains the requested blob,
         False otherwise."""
-        return self.vfs.exists(storeid.oid)
+        return self.vfs.exists(oid)
 
 class _gitlfsremote(object):
 
@@ -60,32 +48,22 @@ class _gitlfsremote(object):
         self.baseurl = baseurl.rstrip('/')
         self.urlopener = urlmod.opener(ui, authinfo)
 
-    def writebatch(self, storeids, fromstore, total=None):
+    def writebatch(self, pointers, fromstore, total=None):
         """Batch upload from local to remote blobstore."""
-        self._batch(storeids, fromstore, 'upload', total=total)
+        self._batch(pointers, fromstore, 'upload', total=total)
 
-    def readbatch(self, storeids, tostore, total=None):
+    def readbatch(self, pointers, tostore, total=None):
         """Batch download from remote to local blostore."""
-        self._batch(storeids, tostore, 'download', total=total)
+        self._batch(pointers, tostore, 'download', total=total)
 
-    def _batch(self, storeids, localstore, action, total=None):
+    def _batch(self, pointers, localstore, action, total=None):
         if action not in ['upload', 'download']:
             # FIXME: we should not have that error raise too high
             raise UnavailableBatchOperationError(None, action)
 
         # Create the batch data for git-lfs.
         urlreq = util.urlreq
-        objects = []
-        storeidmap = {}
-        for storeid in storeids:
-            oid = storeid.oid
-            size = storeid.size
-            objects.append({
-                'oid': oid,
-                'size': size,
-            })
-            storeidmap[oid] = storeid
-
+        objects = [{'oid': p.oid(), 'size': p.size()} for p in pointers]
         requestdata = json.dumps({
             'objects': objects,
             'operation': action,
@@ -129,7 +107,7 @@ class _gitlfsremote(object):
 
                 if action == 'upload':
                     # If uploading blobs, read data from local blobstore.
-                    filedata = localstore.read(storeidmap[oid])
+                    filedata = localstore.read(oid)
                     request = urlreq.request(href, data=filedata)
                     request.get_method = lambda: 'PUT'
                 else:
@@ -143,7 +121,7 @@ class _gitlfsremote(object):
                 if action == 'download':
                     # If downloading blobs, store downloaded data to local
                     # blobstore
-                    localstore.write(storeidmap[oid], response.read())
+                    localstore.write(oid, response.read())
 
                 runningsize += size
             except util.urlerr.httperror:
@@ -174,16 +152,16 @@ class _dummyremote(object):
         fullpath = repo.vfs.join('lfs', url.path)
         self.vfs = lfsutil.lfsvfs(fullpath)
 
-    def writebatch(self, storeids, fromstore, ui=None, total=None):
-        for id in storeids:
-            content = fromstore.read(id)
-            with self.vfs(id.oid, 'wb', atomictemp=True) as fp:
+    def writebatch(self, pointers, fromstore, ui=None, total=None):
+        for p in pointers:
+            content = fromstore.read(p.oid())
+            with self.vfs(p.oid(), 'wb', atomictemp=True) as fp:
                 fp.write(content)
 
-    def readbatch(self, storeids, tostore, ui=None, total=None):
-        for id in storeids:
-            content = self.vfs.read(id.oid)
-            tostore.write(id, content)
+    def readbatch(self, pointers, tostore, ui=None, total=None):
+        for p in pointers:
+            content = self.vfs.read(p.oid())
+            tostore.write(p.oid(), content)
 
 class _nullremote(object):
     """Null store storing blobs to /dev/null."""
@@ -191,10 +169,10 @@ class _nullremote(object):
     def __init__(self, repo, url):
         pass
 
-    def writebatch(self, storeids, fromstore, ui=None, total=None):
+    def writebatch(self, pointers, fromstore, ui=None, total=None):
         pass
 
-    def readbatch(self, storeids, tostore, ui=None, total=None):
+    def readbatch(self, pointers, tostore, ui=None, total=None):
         pass
 
 class _promptremote(object):
@@ -203,10 +181,10 @@ class _promptremote(object):
     def __init__(self, repo, url):
         pass
 
-    def writebatch(self, storeids, fromstore, ui=None, total=None):
+    def writebatch(self, pointers, fromstore, ui=None, total=None):
         self._prompt()
 
-    def readbatch(self, storeids, tostore, ui=None, total=None):
+    def readbatch(self, pointers, tostore, ui=None, total=None):
         self._prompt()
 
     def _prompt(self):
