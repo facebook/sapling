@@ -198,6 +198,9 @@ class overlayfilectx(object):
         blob = self.repo.handler.git.get_object(_maybehex(self.fileid))
         return blob.data
 
+    def isbinary(self):
+        return util.binary(self.data())
+
 class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
         self.repo = repo
