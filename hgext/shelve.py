@@ -167,7 +167,7 @@ class shelvedstate(object):
     Handles saving and restoring a shelved state. Ensures that different
     versions of a shelved state are possible and handles them appropriately.
     """
-    _version = 1
+    _version = 2
     _filename = 'shelvedstate'
     _keep = 'keep'
     _nokeep = 'nokeep'
@@ -175,26 +175,9 @@ class shelvedstate(object):
     _noactivebook = ':no-active-bookmark'
 
     @classmethod
-    def load(cls, repo):
-        # Order is important, because old shelvestate file uses it
-        # to detemine values of fields (i.g. version is on the first line,
-        # name is on the second and so forth). Please do not change.
-        keys = ['version', 'name', 'originalwctx', 'pendingctx', 'parents',
-                'nodestoremove', 'branchtorestore', 'keep', 'activebook']
-        d = {}
-        fp = repo.vfs(cls._filename)
+    def _verifyandtransform(cls, d):
+        """Some basic shelvestate syntactic verification and transformation"""
         try:
-            for key in keys:
-                d[key] = fp.readline().strip()
-        finally:
-            fp.close()
-
-        # some basic syntactic verification and transformation
-        try:
-            d['version'] = int(d['version'])
-            if d['version'] != cls._version:
-                raise error.Abort(_('this version of shelve is incompatible '
-                                    'with the version used in this repo'))
             d['originalwctx'] = nodemod.bin(d['originalwctx'])
             d['pendingctx'] = nodemod.bin(d['pendingctx'])
             d['parents'] = [nodemod.bin(h)
@@ -204,6 +187,50 @@ class shelvedstate(object):
         except (ValueError, TypeError, KeyError) as err:
             raise error.CorruptedState(str(err))
 
+    @classmethod
+    def _getversion(cls, repo):
+        """Read version information from shelvestate file"""
+        fp = repo.vfs(cls._filename)
+        try:
+            version = int(fp.readline().strip())
+        except ValueError as err:
+            raise error.CorruptedState(str(err))
+        finally:
+            fp.close()
+        return version
+
+    @classmethod
+    def _readold(cls, repo):
+        """Read the old position-based version of a shelvestate file"""
+        # Order is important, because old shelvestate file uses it
+        # to detemine values of fields (i.g. name is on the second line,
+        # originalwctx is on the third and so forth). Please do not change.
+        keys = ['version', 'name', 'originalwctx', 'pendingctx', 'parents',
+                'nodestoremove', 'branchtorestore', 'keep', 'activebook']
+        # this is executed only seldomly, so it is not a big deal
+        # that we open this file twice
+        fp = repo.vfs(cls._filename)
+        d = {}
+        try:
+            for key in keys:
+                d[key] = fp.readline().strip()
+        finally:
+            fp.close()
+        return d
+
+    @classmethod
+    def load(cls, repo):
+        version = cls._getversion(repo)
+        if version < cls._version:
+            d = cls._readold(repo)
+        elif version == cls._version:
+            d = scmutil.simplekeyvaluefile(repo.vfs, cls._filename)\
+                       .read(firstlinenonkeyval=True)
+        else:
+            raise error.Abort(_('this version of shelve is incompatible '
+                                'with the version used in this repo'))
+
+        cls._verifyandtransform(d)
         try:
             obj = cls()
             obj.name = d['name']
@@ -224,19 +251,20 @@ class shelvedstate(object):
     @classmethod
     def save(cls, repo, name, originalwctx, pendingctx, nodestoremove,
              branchtorestore, keep=False, activebook=''):
-        fp = repo.vfs(cls._filename, 'wb')
-        fp.write('%i\n' % cls._version)
-        fp.write('%s\n' % name)
-        fp.write('%s\n' % nodemod.hex(originalwctx.node()))
-        fp.write('%s\n' % nodemod.hex(pendingctx.node()))
-        fp.write('%s\n' %
-                 ' '.join([nodemod.hex(p) for p in repo.dirstate.parents()]))
-        fp.write('%s\n' %
-                 ' '.join([nodemod.hex(n) for n in nodestoremove]))
-        fp.write('%s\n' % branchtorestore)
-        fp.write('%s\n' % (cls._keep if keep else cls._nokeep))
-        fp.write('%s\n' % (activebook or cls._noactivebook))
-        fp.close()
+        info = {
+            "name": name,
+            "originalwctx": nodemod.hex(originalwctx.node()),
+            "pendingctx": nodemod.hex(pendingctx.node()),
+            "parents": ' '.join([nodemod.hex(p)
+                                 for p in repo.dirstate.parents()]),
+            "nodestoremove": ' '.join([nodemod.hex(n)
+                                      for n in nodestoremove]),
+            "branchtorestore": branchtorestore,
+            "keep": cls._keep if keep else cls._nokeep,
+            "activebook": activebook or cls._noactivebook
+        }
+        scmutil.simplekeyvaluefile(repo.vfs, cls._filename)\
+               .write(info, firstline=str(cls._version))
 
     @classmethod
     def clear(cls, repo):
