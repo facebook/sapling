@@ -35,6 +35,7 @@ from mercurial import (
     cmdutil,
     error,
     extensions,
+    revlog,
     scmutil,
     verify,
 )
@@ -266,3 +267,57 @@ def run_import(ui, repo, client, changelists, **opts):
                 len(changelists), count))
         finally:
             tr.release()
+
+@command('debugscanlfs',
+         [('C', 'client', '', _('Perforce client to reverse lookup')),
+          ('r', 'rev', '.', _('display LFS files in REV')),
+          ('A', 'all', None, _('display LFS files all revisions'))])
+def debugscanlfs(ui, repo, **opts):
+    lfs = extensions.find('lfs')
+    def display(repo, filename, flog, rev):
+        filenode = flog.node(rev)
+        rawtext = flog.revision(filenode, raw=True)
+        ptr = lfs.pointer.deserialize(rawtext)
+        linkrev = flog.linkrev(rev)
+        cl = int(repo[linkrev].extra()['p4changelist'])
+        return _('%d %s %s %d %s\n') % (
+            flog.linkrev(rev), hex(filenode), ptr.oid(), cl, filename)
+
+    def batchfnmap(repo, client, infos):
+        for filename, flog, rev in infos:
+            whereinfo = p4.parse_where(client, filename)
+            yield 1, display(repo, whereinfo['depotFile'], flog, rev)
+
+    client = opts.get('client', None)
+    todisplay = []
+    if opts.get('all'):
+        prefix, suffix = "data/", ".i"
+        plen, slen = len(prefix), len(suffix)
+        for fn, b, size in repo.store.datafiles():
+            if size == 0 or fn[-slen:] != suffix or fn[:plen] != prefix:
+                continue
+            fn = fn[plen:-slen]
+            flog = repo.file(fn)
+            for rev in range(0, len(flog)):
+                flags = flog.flags(rev)
+                if bool(flags & revlog.REVIDX_EXTSTORED):
+                    if client:
+                        todisplay.append((fn, flog, rev))
+                    else:
+                        ui.write(display(repo, fn, flog, rev))
+    else:
+        revisions = repo.set(opts.get('rev', '.'))
+        for ctx in revisions:
+            for fn in ctx.manifest():
+                fctx = ctx[fn]
+                flog = fctx.filelog()
+                flags = flog.flags(fctx.filerev())
+                if bool(flags & revlog.REVIDX_EXTSTORED):
+                    if client:
+                        todisplay.append((fn, flog, fctx.filerev()))
+                    else:
+                        ui.write(display(repo, fn, flog, fctx.filerev()))
+    if todisplay:
+        args = (repo, client)
+        for i, s in runworker(ui, batchfnmap, args, todisplay):
+            ui.write(s)
