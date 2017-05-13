@@ -96,7 +96,7 @@
   f  fenugreek      ../fenugreek
   f  mammals/skunk  skunk
   $ hg debugwalk -I 'relglob:*k' .
-  matcher: <matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes='(?:(?:|.*/)[^/]*k(?:/|$))'>
+  matcher: <intersectionmatcher m1=<matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes=None>, m2=<matcher files=[], patterns=None, includes='(?:(?:|.*/)[^/]*k(?:/|$))'>>
   f  mammals/skunk  skunk
   $ hg debugwalk -I 're:.*k$'
   matcher: <matcher files=[], patterns=None, includes='(?:.*k$)'>
@@ -276,17 +276,17 @@
   f  fenugreek      fenugreek
   f  mammals/skunk  mammals/skunk
   $ hg debugwalk -Ibeans mammals
-  matcher: <matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes='(?:beans(?:/|$))'>
+  matcher: <intersectionmatcher m1=<matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))'>>
   $ hg debugwalk -Inon-existent
   matcher: <matcher files=[], patterns=None, includes='(?:non\\-existent(?:/|$))'>
   $ hg debugwalk -Inon-existent -Ibeans/black
   matcher: <matcher files=[], patterns=None, includes='(?:non\\-existent(?:/|$)|beans\\/black(?:/|$))'>
   f  beans/black  beans/black
   $ hg debugwalk -Ibeans beans/black
-  matcher: <matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes='(?:beans(?:/|$))'>
+  matcher: <intersectionmatcher m1=<matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))'>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Ibeans/black beans
-  matcher: <matcher files=['beans'], patterns='(?:beans(?:/|$))', includes='(?:beans\\/black(?:/|$))'>
+  matcher: <intersectionmatcher m1=<matcher files=['beans'], patterns='(?:beans(?:/|$))', includes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))'>>
   f  beans/black  beans/black
   $ hg debugwalk -Xbeans/black beans
   matcher: <differencematcher m1=<matcher files=['beans'], patterns='(?:beans(?:/|$))', includes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))'>>

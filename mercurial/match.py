@@ -142,9 +142,14 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                 kindpats.append((kind, pats, source))
             return kindpats
 
-    m = matcher(root, cwd, normalize, patterns, include=include,
+    m = matcher(root, cwd, normalize, patterns, include=None,
                 default=default, exact=exact, auditor=auditor, ctx=ctx,
                 listsubrepos=listsubrepos, warn=warn, badfn=badfn)
+    if include:
+        im = matcher(root, cwd, normalize, [], include=include, default=default,
+                     exact=False, auditor=auditor, ctx=ctx,
+                     listsubrepos=listsubrepos, warn=warn, badfn=None)
+        m = intersectmatchers(m, im)
     if exclude:
         em = matcher(root, cwd, normalize, [], include=exclude, default=default,
                      exact=False, auditor=auditor, ctx=ctx,
@@ -456,6 +461,75 @@ class differencematcher(basematcher):
 
     def __repr__(self):
         return ('<differencematcher m1=%r, m2=%r>' % (self._m1, self._m2))
+
+def intersectmatchers(m1, m2):
+    '''Composes two matchers by matching if both of them match.
+
+    The second matcher's non-matching-attributes (root, cwd, bad, explicitdir,
+    traversedir) are ignored.
+    '''
+    if m1 is None or m2 is None:
+        return m1 or m2
+    if m1.always():
+        m = copy.copy(m2)
+        # TODO: Consider encapsulating these things in a class so there's only
+        # one thing to copy from m1.
+        m.bad = m1.bad
+        m.explicitdir = m1.explicitdir
+        m.traversedir = m1.traversedir
+        m.abs = m1.abs
+        m.rel = m1.rel
+        m._relativeuipath |= m1._relativeuipath
+        return m
+    if m2.always():
+        m = copy.copy(m1)
+        m._relativeuipath |= m2._relativeuipath
+        return m
+    return intersectionmatcher(m1, m2)
+
+class intersectionmatcher(basematcher):
+    def __init__(self, m1, m2):
+        super(intersectionmatcher, self).__init__(m1._root, m1._cwd)
+        self._m1 = m1
+        self._m2 = m2
+        self.bad = m1.bad
+        self.explicitdir = m1.explicitdir
+        self.traversedir = m1.traversedir
+
+    @propertycache
+    def _files(self):
+        if self.isexact():
+            m1, m2 = self._m1, self._m2
+            if not m1.isexact():
+                m1, m2 = m2, m1
+            return [f for f in m1.files() if m2(f)]
+        # It neither m1 nor m2 is an exact matcher, we can't easily intersect
+        # the set of files, because their files() are not always files. For
+        # example, if intersecting a matcher "-I glob:foo.txt" with matcher of
+        # "path:dir2", we don't want to remove "dir2" from the set.
+        return self._m1.files() + self._m2.files()
+
+    def matchfn(self, f):
+        return self._m1(f) and self._m2(f)
+
+    def visitdir(self, dir):
+        visit1 = self._m1.visitdir(dir)
+        if visit1 == 'all':
+            return self._m2.visitdir(dir)
+        # bool() because visit1=True + visit2='all' should not be 'all'
+        return bool(visit1 and self._m2.visitdir(dir))
+
+    def always(self):
+        return self._m1.always() and self._m2.always()
+
+    def isexact(self):
+        return self._m1.isexact() or self._m2.isexact()
+
+    def anypats(self):
+        return self._m1.anypats() or self._m2.anypats()
+
+    def __repr__(self):
+        return ('<intersectionmatcher m1=%r, m2=%r>' % (self._m1, self._m2))
 
 class subdirmatcher(basematcher):
     """Adapt a matcher to work on a subdirectory only.
