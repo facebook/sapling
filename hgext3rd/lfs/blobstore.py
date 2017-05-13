@@ -75,9 +75,16 @@ class _gitlfsremote(object):
                                   data=requestdata)
         batchreq.add_header('Accept', 'application/vnd.git-lfs+json')
         batchreq.add_header('Content-Type', 'application/vnd.git-lfs+json')
-        raw_response = self.urlopener.open(batchreq)
-        response = json.loads(raw_response.read())
-
+        try:
+            rawjson = self.urlopener.open(batchreq).read()
+        except util.urlerr.httperror as ex:
+            raise LfsRemoteError(_('LFS HTTP error: %s (action=%s)')
+                                 % (ex, action))
+        try:
+            response = json.loads(rawjson)
+        except ValueError:
+            raise LfsRemoteError(_('LFS server returns invalid JSON: %s')
+                                 % rawjson)
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
         runningsize = 0
