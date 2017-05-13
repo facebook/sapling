@@ -258,9 +258,23 @@ class changelogrevision(object):
         return encoding.tolocal(self._text[self._offsets[3] + 2:])
 
 class changelog(revlog.revlog):
-    def __init__(self, opener):
-        revlog.revlog.__init__(self, opener, "00changelog.i",
-                               checkambig=True)
+    def __init__(self, opener, trypending=False):
+        """Load a changelog revlog using an opener.
+
+        If ``trypending`` is true, we attempt to load the index from a
+        ``00changelog.i.a`` file instead of the default ``00changelog.i``.
+        The ``00changelog.i.a`` file contains index (and possibly inline
+        revision) data for a transaction that hasn't been finalized yet.
+        It exists in a separate file to facilitate readers (such as
+        hooks processes) accessing data before a transaction is finalized.
+        """
+        if trypending and opener.exists('00changelog.i.a'):
+            indexfile = '00changelog.i.a'
+        else:
+            indexfile = '00changelog.i'
+
+        revlog.revlog.__init__(self, opener, indexfile, checkambig=True)
+
         if self._initempty:
             # changelogs don't benefit from generaldelta
             self.version &= ~revlog.REVLOGGENERALDELTA
@@ -400,27 +414,6 @@ class changelog(revlog.revlog):
         self._divert = False
         # split when we're done
         self.checkinlinesize(tr)
-
-    def readpending(self, file):
-        """read index data from a "pending" file
-
-        During a transaction, the actual changeset data is already stored in the
-        main file, but not yet finalized in the on-disk index. Instead, a
-        "pending" index is written by the transaction logic. If this function
-        is running, we are likely in a subprocess invoked in a hook. The
-        subprocess is informed that it is within a transaction and needs to
-        access its content.
-
-        This function will read all the index data out of the pending file and
-        overwrite the main index."""
-
-        if not self.opener.exists(file):
-            return # no pending data for changelog
-        r = revlog.revlog(self.opener, file)
-        self.index = r.index
-        self.nodemap = r.nodemap
-        self._nodecache = r._nodecache
-        self._chunkcache = r._chunkcache
 
     def _writepending(self, tr):
         "create a file containing the unfinalized state for pretxnchangegroup"

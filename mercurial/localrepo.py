@@ -528,10 +528,8 @@ class localrepository(object):
 
     @storecache('00changelog.i')
     def changelog(self):
-        c = changelog.changelog(self.svfs)
-        if txnutil.mayhavepending(self.root):
-            c.readpending('00changelog.i.a')
-        return c
+        return changelog.changelog(self.svfs,
+                                   trypending=txnutil.mayhavepending(self.root))
 
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
