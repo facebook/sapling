@@ -1534,6 +1534,40 @@ disabling in command line overlays with all configuration
 
   $ cd ..
 
+Prohibit registration of commands that don't use @command (issue5137)
+
+  $ hg init deprecated
+  $ cd deprecated
+
+  $ cat <<EOF > deprecatedcmd.py
+  > def deprecatedcmd(repo, ui):
+  >     pass
+  > cmdtable = {
+  >     'deprecatedcmd': (deprecatedcmd, [], ''),
+  > }
+  > EOF
+  $ cat <<EOF > .hg/hgrc
+  > [extensions]
+  > deprecatedcmd = `pwd`/deprecatedcmd.py
+  > mq = !
+  > hgext.mq = !
+  > hgext/mq = !
+  > EOF
+
+  $ hg deprecatedcmd > /dev/null
+  *** failed to import extension deprecatedcmd from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
+  *** (use @command decorator to register 'deprecatedcmd')
+  hg: unknown command 'deprecatedcmd'
+  [255]
+
+ the extension shouldn't be loaded at all so the mq works:
+
+  $ hg qseries --config extensions.mq= > /dev/null
+  *** failed to import extension deprecatedcmd from $TESTTMP/deprecated/deprecatedcmd.py: missing attributes: norepo, optionalrepo, inferrepo
+  *** (use @command decorator to register 'deprecatedcmd')
+
+  $ cd ..
+
 Test synopsis and docstring extending
 
   $ hg init exthelp

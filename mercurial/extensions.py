@@ -118,6 +118,20 @@ def _reportimporterror(ui, err, failed, next):
     if ui.debugflag:
         ui.traceback()
 
+# attributes set by registrar.command
+_cmdfuncattrs = ('norepo', 'optionalrepo', 'inferrepo')
+
+def _validatecmdtable(cmdtable):
+    """Check if extension commands have required attributes"""
+    for c, e in cmdtable.iteritems():
+        f = e[0]
+        missing = [a for a in _cmdfuncattrs if not util.safehasattr(f, a)]
+        if not missing:
+            continue
+        raise error.ProgrammingError(
+            'missing attributes: %s' % ', '.join(missing),
+            hint="use @command decorator to register '%s'" % c)
+
 def load(ui, name, path):
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
@@ -139,6 +153,7 @@ def load(ui, name, path):
         ui.warn(_('(third party extension %s requires version %s or newer '
                   'of Mercurial; disabling)\n') % (shortname, minver))
         return
+    _validatecmdtable(getattr(mod, 'cmdtable', {}))
 
     _extensions[shortname] = mod
     _order.append(shortname)
