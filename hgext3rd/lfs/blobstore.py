@@ -93,9 +93,12 @@ class _gitlfsremote(object):
             oid = str(obj['oid'])
             try:
                 # The action we're trying to perform should be available for the
-                # current blob.
+                # current blob. If upload is unavailable, it means the server
+                # has the object already, which is not an error.
                 if action not in obj.get('actions'):
-                    raise UnavailableBatchOperationError(oid, action)
+                    if action == 'upload':
+                        continue
+                    raise RequestFailedError(oid, action)
 
                 size = long(obj.get('size'))
                 href = str(obj['actions'][action].get('href'))
@@ -125,12 +128,6 @@ class _gitlfsremote(object):
                 runningsize += size
             except util.urlerr.httperror:
                 raise RequestFailedError(oid, action)
-            except UnavailableBatchOperationError:
-                if action == 'upload':
-                    # The blob is already known by the remote blobstore.
-                    continue
-                else:
-                    raise RequestFailedError(oid, action)
 
         self.ui.progress(topic, pos=None, total=total)
         if self.ui.verbose:
@@ -224,12 +221,3 @@ class RequestFailedError(error.RevlogError):
     def __init__(self, oid, action):
         message = _('the requested file could be %sed: %s') % (action, oid)
         super(RequestFailedError, self).__init__(message)
-
-class UnavailableBatchOperationError(error.RevlogError):
-    def __init__(self, oid, action):
-        self.oid = oid
-        self.action = action
-
-        message = (_('unknown batch operation "%s" for blob "%s"')
-                   % (self.action, self.oid or 'unknown'))
-        super(UnavailableBatchOperationError, self).__init__(message)
