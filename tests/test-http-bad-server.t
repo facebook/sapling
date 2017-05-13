@@ -71,13 +71,13 @@ Failure to read all bytes in initial HTTP request should yield connection relate
 TODO this error message is not very good
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: (''|) (re)
+  abort: error: ''
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\(1 from (-1|65537)\) -> \(1\) G (re)
+  readline(1 from 65537) -> (1) G
   read limit reached; closing socket
 
   $ rm -f error.log
@@ -87,13 +87,13 @@ Same failure, but server reads full HTTP request line
   $ hg --config badserver.closeafterrecvbytes=40 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: (''|) (re)
+  abort: error: ''
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\(40 from (-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(40 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(7 from -1) -> (7) Accept-
   read limit reached; closing socket
 
@@ -104,13 +104,13 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   $ hg --config badserver.closeafterrecvbytes=210 serve -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: (''|) (re)
+  abort: error: ''
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\(210 from (-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(210 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(177 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(150 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(115 from -1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -123,10 +123,10 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   write(21) -> Content-Length: 405\r\n
   write(2) -> \r\n
   write(405) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\(4[12] from (-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(41 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(1? from -1) -> (1?) Accept-Encoding* (glob)
   read limit reached; closing socket
-  readline\(210 from (-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(210 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(184 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(157 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(128 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -143,13 +143,13 @@ Failure to read getbundle HTTP request
   $ cat hg.pid > $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
-  abort: error: (''|) (re)
+  abort: error: ''
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\(292 from (-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(292 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(259 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(232 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(197 from -1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -162,13 +162,13 @@ Failure to read getbundle HTTP request
   write(21) -> Content-Length: 405\r\n
   write(2) -> \r\n
   write(405) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\(12[34] from (-1|65537)\) -> \(2[67]\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline\(12[34] from 65537\) -> \(2[67]\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
   readline(9? from -1) -> (27) Accept-Encoding: identity\r\n (glob)
   readline(7? from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n (glob)
   readline(4? from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n (glob)
   readline(1 from -1) -> (1) x (?)
   read limit reached; closing socket
-  readline\(292 from (-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(292 from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(266 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(239 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(210 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -184,9 +184,9 @@ Failure to read getbundle HTTP request
   write(20) -> Content-Length: 42\r\n
   write(2) -> \r\n
   write(42) -> 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
-  readline\(1[23] from (-1|65537)\) -> \(1[23]\) GET /\?cmd=ge.? (re)
+  readline\(1[23] from 65537\) -> \(1[23]\) GET /\?cmd=ge.? (re)
   read limit reached; closing socket
-  readline\(292 from (-1|65537)\) -> \(30\) GET /\?cmd=getbundle HTTP/1.1\\r\\n (re)
+  readline(292 from 65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(262 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(235 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(206 from -1) -> (206) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Ali
@@ -200,13 +200,13 @@ Now do a variation using POST to send arguments
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: (''|) (re)
+  abort: error: ''
   [255]
 
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\(315 from (-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(315 from 65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(282 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(255 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(220 from -1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -219,14 +219,14 @@ Now do a variation using POST to send arguments
   write(21) -> Content-Length: 418\r\n
   write(2) -> \r\n
   write(418) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httppostargs httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\(14[67] from (-1|65537)\) -> \(2[67]\) POST /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline\(14[67] from 65537\) -> \(2[67]\) POST /\?cmd=batch HTTP/1.1\\r\\n (re)
   readline\(1(19|20) from -1\) -> \(27\) Accept-Encoding: identity\\r\\n (re)
   readline(9? from -1) -> (41) content-type: application/mercurial-0.1\r\n (glob)
   readline(5? from -1) -> (19) vary: X-HgProto-1\r\n (glob)
   readline(3? from -1) -> (19) x-hgargs-post: 28\r\n (glob)
   readline(1? from -1) -> (1?) x-hgproto-1: * (glob)
   read limit reached; closing socket
-  readline\(315 from (-1|65537)\) -> \(27\) POST /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(315 from 65537) -> (27) POST /?cmd=batch HTTP/1.1\r\n
   readline(288 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(261 from -1) -> (41) content-type: application/mercurial-0.1\r\n
   readline(220 from -1) -> (19) vary: X-HgProto-1\r\n
@@ -257,7 +257,7 @@ Server sends a single character from the HTTP response line
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -282,7 +282,7 @@ Server sends an incomplete capabilities response body
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -317,7 +317,7 @@ TODO this output is horrible
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -330,7 +330,7 @@ TODO this output is horrible
   write(21 from 21) -> (537) Content-Length: 405\r\n
   write(2 from 2) -> (535) \r\n
   write(405 from 405) -> (130) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\((-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -360,7 +360,7 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -373,7 +373,7 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   write(21 from 21) -> (602) Content-Length: 405\r\n
   write(2 from 2) -> (600) \r\n
   write(405 from 405) -> (195) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\((-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -412,7 +412,7 @@ TODO this output is terrible
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -425,7 +425,7 @@ TODO this output is terrible
   write(21 from 21) -> (737) Content-Length: 405\r\n
   write(2 from 2) -> (735) \r\n
   write(405 from 405) -> (330) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\((-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -441,7 +441,7 @@ TODO this output is terrible
   write(20 from 20) -> (173) Content-Length: 42\r\n
   write(2 from 2) -> (171) \r\n
   write(42 from 42) -> (129) 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
-  readline\((-1|65537)\) -> \(30\) GET /\?cmd=getbundle HTTP/1.1\\r\\n (re)
+  readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
@@ -473,7 +473,7 @@ Server sends empty HTTP body for getbundle
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -486,7 +486,7 @@ Server sends empty HTTP body for getbundle
   write(21 from 21) -> (775) Content-Length: 405\r\n
   write(2 from 2) -> (773) \r\n
   write(405 from 405) -> (368) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\((-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -502,7 +502,7 @@ Server sends empty HTTP body for getbundle
   write(20 from 20) -> (211) Content-Length: 42\r\n
   write(2 from 2) -> (209) \r\n
   write(42 from 42) -> (167) 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
-  readline\((-1|65537)\) -> \(30\) GET /\?cmd=getbundle HTTP/1.1\\r\\n (re)
+  readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
@@ -536,7 +536,7 @@ Server sends partial compression string
   $ killdaemons.py $DAEMON_PIDS
 
   $ cat error.log
-  readline\((-1|65537)\) -> \(33\) GET /\?cmd=capabilities HTTP/1.1\\r\\n (re)
+  readline(65537) -> (33) GET /?cmd=capabilities HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -549,7 +549,7 @@ Server sends partial compression string
   write(21 from 21) -> (787) Content-Length: 405\r\n
   write(2 from 2) -> (785) \r\n
   write(405 from 405) -> (380) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
-  readline\((-1|65537)\) -> \(26\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
+  readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
@@ -565,7 +565,7 @@ Server sends partial compression string
   write(20 from 20) -> (223) Content-Length: 42\r\n
   write(2 from 2) -> (221) \r\n
   write(42 from 42) -> (179) 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
-  readline\((-1|65537)\) -> \(30\) GET /\?cmd=getbundle HTTP/1.1\\r\\n (re)
+  readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
