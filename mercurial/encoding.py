@@ -60,34 +60,9 @@ else:
     environ = dict((k.encode(u'utf-8'), v.encode(u'utf-8'))
                    for k, v in os.environ.items())  # re-exports
 
-def _getpreferredencoding():
-    '''
-    On darwin, getpreferredencoding ignores the locale environment and
-    always returns mac-roman. http://bugs.python.org/issue6202 fixes this
-    for Python 2.7 and up. This is the same corrected code for earlier
-    Python versions.
-
-    However, we can't use a version check for this method, as some distributions
-    patch Python to fix this. Instead, we use it as a 'fixer' for the mac-roman
-    encoding, as it is unlikely that this encoding is the actually expected.
-    '''
-    try:
-        locale.CODESET
-    except AttributeError:
-        # Fall back to parsing environment variables :-(
-        return locale.getdefaultlocale()[1]
-
-    oldloc = locale.setlocale(locale.LC_CTYPE)
-    locale.setlocale(locale.LC_CTYPE, "")
-    result = locale.nl_langinfo(locale.CODESET)
-    locale.setlocale(locale.LC_CTYPE, oldloc)
-
-    return result
-
 _encodingfixers = {
     '646': lambda: 'ascii',
     'ANSI_X3.4-1968': lambda: 'ascii',
-    'mac-roman': _getpreferredencoding
 }
 
 try:
