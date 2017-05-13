@@ -24,26 +24,6 @@ from . import (
     util,
 )
 
-_oldheaderinit = email.header.Header.__init__
-def _unifiedheaderinit(self, *args, **kw):
-    """
-    Python 2.7 introduces a backwards incompatible change
-    (Python issue1974, r70772) in email.Generator.Generator code:
-    pre-2.7 code passed "continuation_ws='\t'" to the Header
-    constructor, and 2.7 removed this parameter.
-
-    Default argument is continuation_ws=' ', which means that the
-    behavior is different in <2.7 and 2.7
-
-    We consider the 2.7 behavior to be preferable, but need
-    to have an unified behavior for versions 2.4 to 2.7
-    """
-    # override continuation_ws
-    kw['continuation_ws'] = ' '
-    _oldheaderinit(self, *args, **kw)
-
-setattr(email.header.Header, '__init__', _unifiedheaderinit)
-
 class STARTTLS(smtplib.SMTP):
     '''Derived class to verify the peer certificate for STARTTLS.
 
