@@ -98,47 +98,46 @@ class _gitlfsremote(object):
             self.ui.progress(topic, 0, total=total)
         for obj in response.get('objects'):
             oid = str(obj['oid'])
-            try:
-                # The action we're trying to perform should be available for the
-                # current blob. If upload is unavailable, it means the server
-                # has the object already, which is not an error.
-                if action not in obj.get('actions', []):
-                    if action == 'upload':
-                        continue
-                    m = obj.get('error', {}).get(
-                        'message', _('(server did not provide error message)'))
-                    raise LfsRemoteError(_('cannot download LFS object %s: %s')
-                                         % (oid, m))
-
-                size = long(obj.get('size'))
-                href = str(obj['actions'][action].get('href'))
-                headers = obj['actions'][action].get('header', {}).items()
-
-                if self.ui:
-                    self.ui.progress(topic, runningsize, total=total)
-
+            # The action we're trying to perform should be available for the
+            # current blob. If upload is unavailable, it means the server
+            # has the object already, which is not an error.
+            if action not in obj.get('actions', []):
                 if action == 'upload':
-                    # If uploading blobs, read data from local blobstore.
-                    filedata = localstore.read(oid)
-                    request = urlreq.request(href, data=filedata)
-                    request.get_method = lambda: 'PUT'
-                else:
-                    request = urlreq.request(href)
+                    continue
+                m = obj.get('error', {}).get(
+                    'message', _('(server did not provide error message)'))
+                raise LfsRemoteError(_('cannot download LFS object %s: %s')
+                                     % (oid, m))
 
-                for k, v in headers:
-                    request.add_header(k, v)
+            size = long(obj.get('size'))
+            href = str(obj['actions'][action].get('href'))
+            headers = obj['actions'][action].get('header', {}).items()
 
-                response = self.urlopener.open(request)
+            if self.ui:
+                self.ui.progress(topic, runningsize, total=total)
 
-                if action == 'download':
-                    # If downloading blobs, store downloaded data to local
-                    # blobstore
-                    localstore.write(oid, response.read())
+            if action == 'upload':
+                # If uploading blobs, read data from local blobstore.
+                filedata = localstore.read(oid)
+                request = urlreq.request(href, data=filedata)
+                request.get_method = lambda: 'PUT'
+            else:
+                request = urlreq.request(href)
 
-                runningsize += size
+            for k, v in headers:
+                request.add_header(k, v)
+
+            try:
+                response = self.urlopener.open(request).read()
             except util.urlerr.httperror as ex:
                 raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
                                      % (ex, oid, action))
+
+            if action == 'download':
+                # If downloading blobs, store downloaded data to local blobstore
+                localstore.write(oid, response)
+
+            runningsize += size
 
         self.ui.progress(topic, pos=None, total=total)
         if self.ui.verbose:
