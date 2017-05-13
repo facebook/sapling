@@ -128,7 +128,8 @@ class basemanifesttests(object):
         self.assertEqual('l', m.flags('bar/baz/qux.py'))
         self.assertEqual(BIN_HASH_1, m['foo'])
         self.assertEqual('', m.flags('foo'))
-        self.assertRaises(KeyError, lambda : m['wat'])
+        with self.assertRaises(KeyError):
+            m['wat']
 
     def testParseManifestV2(self):
         m1 = self.parsemanifest(A_SHORT_MANIFEST)
@@ -213,7 +214,8 @@ class basemanifesttests(object):
         self.assertEqual('', m.flags('alpha'))
         self.assertEqual('l', m.flags('bar/baz/qux.py'))
         self.assertEqual('', m.flags('beta'))
-        self.assertRaises(KeyError, lambda : m['foo'])
+        with self.assertRaises(KeyError):
+            m['foo']
 
     def testSetGetNodeSuffix(self):
         clean = self.parsemanifest(A_SHORT_MANIFEST)
@@ -255,12 +257,14 @@ class basemanifesttests(object):
                 assert False
             return True
         match.matchfn = filt
-        self.assertRaises(AssertionError, m.matches, match)
+        with self.assertRaises(AssertionError):
+            m.matches(match)
 
     def testRemoveItem(self):
         m = self.parsemanifest(A_SHORT_MANIFEST)
         del m['foo']
-        self.assertRaises(KeyError, lambda : m['foo'])
+        with self.assertRaises(KeyError):
+            m['foo']
         self.assertEqual(1, len(m))
         self.assertEqual(1, len(list(m)))
         # now restore and make sure everything works right

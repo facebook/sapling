@@ -326,7 +326,8 @@ bbb
         self.assertEquals(ml, MERGED_RESULT)
 
     def test_binary(self):
-        self.assertRaises(error.Abort, Merge3, ['\x00'], ['a'], ['b'])
+        with self.assertRaises(error.Abort):
+            Merge3(['\x00'], ['a'], ['b'])
 
     def test_dos_text(self):
         base_text = 'a\r\n'

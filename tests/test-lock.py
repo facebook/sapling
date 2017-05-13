@@ -260,11 +260,9 @@ class testlock(unittest.TestCase):
         lock = state.makelock(inheritchecker=check)
         state.assertacquirecalled(True)
 
-        def tryinherit():
+        with self.assertRaises(error.LockInheritanceContractViolation):
             with lock.inherit():
                 pass
-
-        self.assertRaises(error.LockInheritanceContractViolation, tryinherit)
 
         lock.release()
 

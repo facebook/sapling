@@ -47,7 +47,8 @@ class testatomictempfile(unittest.TestCase):
     # if a programmer screws up and passes bad args to atomictempfile, they
     # get a plain ordinary TypeError, not infinite recursion
     def testoops(self):
-        self.assertRaises(TypeError, atomictempfile)
+        with self.assertRaises(TypeError):
+            atomictempfile()
 
     # checkambig=True avoids ambiguity of timestamp
     def testcheckambig(self):
