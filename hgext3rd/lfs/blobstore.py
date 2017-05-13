@@ -58,8 +58,7 @@ class _gitlfsremote(object):
 
     def _batch(self, pointers, localstore, action, total=None):
         if action not in ['upload', 'download']:
-            # FIXME: we should not have that error raise too high
-            raise UnavailableBatchOperationError(None, action)
+            raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
 
         # Create the batch data for git-lfs.
         urlreq = util.urlreq
