@@ -95,10 +95,13 @@ class _gitlfsremote(object):
                 # The action we're trying to perform should be available for the
                 # current blob. If upload is unavailable, it means the server
                 # has the object already, which is not an error.
-                if action not in obj.get('actions'):
+                if action not in obj.get('actions', []):
                     if action == 'upload':
                         continue
-                    raise RequestFailedError(oid, action)
+                    m = obj.get('error', {}).get(
+                        'message', _('(server did not provide error message)'))
+                    raise LfsRemoteError(_('cannot download LFS object %s: %s')
+                                         % (oid, m))
 
                 size = long(obj.get('size'))
                 href = str(obj['actions'][action].get('href'))
@@ -126,8 +129,9 @@ class _gitlfsremote(object):
                     localstore.write(oid, response.read())
 
                 runningsize += size
-            except util.urlerr.httperror:
-                raise RequestFailedError(oid, action)
+            except util.urlerr.httperror as ex:
+                raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
+                                     % (ex, oid, action))
 
         self.ui.progress(topic, pos=None, total=total)
         if self.ui.verbose:
@@ -217,7 +221,5 @@ def remote(repo):
         raise error.Abort(_('lfs: unknown url scheme: %s') % scheme)
     return _storemap[scheme](repo, url)
 
-class RequestFailedError(error.RevlogError):
-    def __init__(self, oid, action):
-        message = _('the requested file could be %sed: %s') % (action, oid)
-        super(RequestFailedError, self).__init__(message)
+class LfsRemoteError(error.RevlogError):
+    pass

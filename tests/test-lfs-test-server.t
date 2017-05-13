@@ -47,3 +47,14 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
   lfs: mapping blobs to download URLs
   lfs: download completed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Check error message when the remote missed a blob:
+
+  $ echo FFFFF > b
+  $ hg commit -m b -A b
+  $ echo FFFFF >> b
+  $ hg commit -m b b
+  $ rm -rf .hg/store/lfs
+  $ hg update -C '.^'
+  abort: cannot download LFS object 8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13* (glob)
+  [255]
