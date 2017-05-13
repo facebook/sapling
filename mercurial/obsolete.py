@@ -217,8 +217,8 @@ def _fm0encodeonemarker(marker):
         if not parents:
             # mark that we explicitly recorded no parents
             metadata['p0'] = ''
-        for i, p in enumerate(parents):
-            metadata['p%i' % (i + 1)] = node.hex(p)
+        for i, p in enumerate(parents, 1):
+            metadata['p%i' % i] = node.hex(p)
     metadata = _fm0encodemeta(metadata)
     numsuc = len(sucs)
     format = _fm0fixed + (_fm0node * numsuc)
