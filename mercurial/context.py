@@ -1595,7 +1595,7 @@ class workingctx(committablectx):
         # to actual case in the filesystem.
         matcherfunc = matchmod.match
         if not util.fscasesensitive(r.root):
-            matcherfunc = matchmod.icasefsmatcher
+            matcherfunc = matchmod.icasefsmatch
         return matcherfunc(r.root, r.getcwd(), pats,
                            include, exclude, default,
                            auditor=r.auditor, ctx=self,

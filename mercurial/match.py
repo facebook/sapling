@@ -84,39 +84,71 @@ def _kindpatsalwaysmatch(kindpats):
             return False
     return True
 
-class match(object):
+def match(root, cwd, patterns, include=None, exclude=None, default='glob',
+          exact=False, auditor=None, ctx=None, listsubrepos=False, warn=None,
+          badfn=None):
+    """build an object to match a set of file patterns
+
+    arguments:
+    root - the canonical root of the tree you're matching against
+    cwd - the current working directory, if relevant
+    patterns - patterns to find
+    include - patterns to include (unless they are excluded)
+    exclude - patterns to exclude (even if they are included)
+    default - if a pattern in patterns has no explicit type, assume this one
+    exact - patterns are actually filenames (include/exclude still apply)
+    warn - optional function used for printing warnings
+    badfn - optional bad() callback for this matcher instead of the default
+
+    a pattern is one of:
+    'glob:<glob>' - a glob relative to cwd
+    're:<regexp>' - a regular expression
+    'path:<path>' - a path relative to repository root, which is matched
+                    recursively
+    'rootfilesin:<path>' - a path relative to repository root, which is
+                    matched non-recursively (will not match subdirectories)
+    'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
+    'relpath:<path>' - a path relative to cwd
+    'relre:<regexp>' - a regexp that needn't match the start of a name
+    'set:<fileset>' - a fileset expression
+    'include:<path>' - a file of patterns to read and include
+    'subinclude:<path>' - a file of patterns to match against files under
+                          the same directory
+    '<something>' - a pattern of the specified default type
+    """
+    return matcher(root, cwd, patterns, include=include, exclude=exclude,
+                   default=default, exact=exact, auditor=auditor, ctx=ctx,
+                   listsubrepos=listsubrepos, warn=warn, badfn=badfn)
+
+def icasefsmatch(root, cwd, patterns, include=None, exclude=None,
+                 default='glob', auditor=None, ctx=None,
+                 listsubrepos=False, badfn=None):
+    """A matcher for wdir on case insensitive filesystems, which normalizes the
+    given patterns to the case in the filesystem.
+    """
+    return icasefsmatcher(root, cwd, patterns, include=include, exclude=exclude,
+                          default=default, auditor=auditor, ctx=ctx,
+                          listsubrepos=listsubrepos, badfn=badfn)
+
+def exact(root, cwd, files, badfn=None):
+    return match(root, cwd, files, exact=True, badfn=badfn)
+
+def always(root, cwd):
+    return match(root, cwd, [])
+
+def badmatch(match, badfn):
+    """Make a copy of the given matcher, replacing its bad method with the given
+    one.
+    """
+    m = copy.copy(match)
+    m.bad = badfn
+    return m
+
+class matcher(object):
+
     def __init__(self, root, cwd, patterns, include=None, exclude=None,
                  default='glob', exact=False, auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
-        """build an object to match a set of file patterns
-
-        arguments:
-        root - the canonical root of the tree you're matching against
-        cwd - the current working directory, if relevant
-        patterns - patterns to find
-        include - patterns to include (unless they are excluded)
-        exclude - patterns to exclude (even if they are included)
-        default - if a pattern in patterns has no explicit type, assume this one
-        exact - patterns are actually filenames (include/exclude still apply)
-        warn - optional function used for printing warnings
-        badfn - optional bad() callback for this matcher instead of the default
-
-        a pattern is one of:
-        'glob:<glob>' - a glob relative to cwd
-        're:<regexp>' - a regular expression
-        'path:<path>' - a path relative to repository root, which is matched
-                        recursively
-        'rootfilesin:<path>' - a path relative to repository root, which is
-                        matched non-recursively (will not match subdirectories)
-        'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
-        'relpath:<path>' - a path relative to cwd
-        'relre:<regexp>' - a regexp that needn't match the start of a name
-        'set:<fileset>' - a fileset expression
-        'include:<path>' - a file of patterns to read and include
-        'subinclude:<path>' - a file of patterns to match against files under
-                              the same directory
-        '<something>' - a pattern of the specified default type
-        """
         if include is None:
             include = []
         if exclude is None:
@@ -331,21 +363,7 @@ class match(object):
             kindpats.append((kind, pat, ''))
         return kindpats
 
-def exact(root, cwd, files, badfn=None):
-    return match(root, cwd, files, exact=True, badfn=badfn)
-
-def always(root, cwd):
-    return match(root, cwd, [])
-
-def badmatch(match, badfn):
-    """Make a copy of the given matcher, replacing its bad method with the given
-    one.
-    """
-    m = copy.copy(match)
-    m.bad = badfn
-    return m
-
-class subdirmatcher(match):
+class subdirmatcher(matcher):
     """Adapt a matcher to work on a subdirectory only.
 
     The paths are remapped to remove/insert the path as needed:
@@ -416,10 +434,7 @@ class subdirmatcher(match):
             dir = self._path + "/" + dir
         return self._matcher.visitdir(dir)
 
-class icasefsmatcher(match):
-    """A matcher for wdir on case insensitive filesystems, which normalizes the
-    given patterns to the case in the filesystem.
-    """
+class icasefsmatcher(matcher):
 
     def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
                  ctx, listsubrepos=False, badfn=None):
