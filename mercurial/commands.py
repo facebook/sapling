@@ -1795,6 +1795,42 @@ def copy(ui, repo, *pats, **opts):
     with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
 
+@command('debugcommands', [], _('[COMMAND]'), norepo=True)
+def debugcommands(ui, cmd='', *args):
+    """list all available commands and options"""
+    for cmd, vals in sorted(table.iteritems()):
+        cmd = cmd.split('|')[0].strip('^')
+        opts = ', '.join([i[1] for i in vals[1]])
+        ui.write('%s: %s\n' % (cmd, opts))
+
+@command('debugcomplete',
+    [('o', 'options', None, _('show the command options'))],
+    _('[-o] CMD'),
+    norepo=True)
+def debugcomplete(ui, cmd='', **opts):
+    """returns the completion list associated with the given command"""
+
+    if opts.get('options'):
+        options = []
+        otables = [globalopts]
+        if cmd:
+            aliases, entry = cmdutil.findcmd(cmd, table, False)
+            otables.append(entry[1])
+        for t in otables:
+            for o in t:
+                if "(DEPRECATED)" in o[3]:
+                    continue
+                if o[0]:
+                    options.append('-%s' % o[0])
+                options.append('--%s' % o[1])
+        ui.write("%s\n" % "\n".join(options))
+        return
+
+    cmdlist, unused_allcmds = cmdutil.findpossible(cmd, table)
+    if ui.verbose:
+        cmdlist = [' '.join(c[0]) for c in cmdlist.values()]
+    ui.write("%s\n" % "\n".join(sorted(cmdlist)))
+
 @command('^diff',
     [('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV'))
