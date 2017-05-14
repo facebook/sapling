@@ -4,6 +4,7 @@ cpp_unittest(
   deps = [
     '@/eden/fs/model:model',
     '@/eden/fs/utils:utils',
+    '@/folly:array',
   ],
   external_deps = [
     ('googletest', None, 'gtest'),
