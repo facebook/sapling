@@ -3,7 +3,7 @@
   > """A small extension that tests our developer warnings
   > """
   > 
-  > from mercurial import registrar, repair, util
+  > from mercurial import error, registrar, repair, util
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -61,6 +61,9 @@
   > @command('nouiwarning', [], '')
   > def nouiwarning(ui, repo):
   >     util.nouideprecwarn('this is a test', '13.37')
+  > @command('programmingerror', [], '')
+  > def programmingerror(ui, repo):
+  >     raise error.ProgrammingError('something went wrong', hint='try again')
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -163,8 +166,22 @@ Test programming error failure:
   ** Python * (glob)
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: * (glob)
+  ** ProgrammingError: transaction requires locking
   Traceback (most recent call last):
   mercurial.error.ProgrammingError: transaction requires locking
+
+  $ hg programmingerror 2>&1 | egrep -v '^  '
+  ** Unknown exception encountered with possibly-broken third-party extension buggylocking
+  ** which supports versions unknown of Mercurial.
+  ** Please disable buggylocking and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: * (glob)
+  ** ProgrammingError: something went wrong
+  ** (try again)
+  Traceback (most recent call last):
+  mercurial.error.ProgrammingError: something went wrong
 
 Old style deprecation warning
 

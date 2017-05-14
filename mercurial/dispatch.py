@@ -162,6 +162,11 @@ def dispatch(req):
     ret = None
     try:
         ret = _runcatch(req)
+    except error.ProgrammingError as inst:
+        req.ui.warn(_('** ProgrammingError: %s\n') % inst)
+        if inst.hint:
+            req.ui.warn(_('** (%s)\n') % inst.hint)
+        raise
     except KeyboardInterrupt as inst:
         try:
             if isinstance(inst, error.SignalInterrupt):

@@ -174,7 +174,7 @@ class SignatureError(Exception):
 class PushRaced(RuntimeError):
     """An exception raised during unbundling that indicate a push race"""
 
-class ProgrammingError(RuntimeError):
+class ProgrammingError(Hint, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
 
 # bundle2 related errors
