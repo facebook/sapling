@@ -172,13 +172,15 @@ def loadall(ui):
         try:
             load(ui, name, path)
         except Exception as inst:
-            inst = _forbytes(inst)
+            msg = _forbytes(inst)
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
-                        % (name, path, inst))
+                        % (name, path, msg))
             else:
                 ui.warn(_("*** failed to import extension %s: %s\n")
-                        % (name, inst))
+                        % (name, msg))
+            if isinstance(inst, error.Hint) and inst.hint:
+                ui.warn(_("*** (%s)\n") % inst.hint)
             ui.traceback()
 
     for name in _order[newindex:]:
