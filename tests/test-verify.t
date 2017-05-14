@@ -317,3 +317,47 @@ test revlog format 0
   checking files
   1 files, 1 changesets, 1 total revisions
   $ cd ..
+
+test flag processor and skipflags
+
+  $ hg init skipflags
+  $ cd skipflags
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > flagprocesor=$RUNTESTDIR/flagprocessorext.py
+  > EOF
+  $ echo '[BASE64]content' > base64
+  $ hg commit -Aqm 'flag processor content' base64
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+
+  $ cat >> $TESTTMP/break-base64.py <<EOF
+  > from __future__ import absolute_import
+  > import base64
+  > base64.b64decode=lambda x: x
+  > EOF
+  $ cat >> .hg/hgrc <<EOF
+  > breakbase64=$TESTTMP/break-base64.py
+  > EOF
+
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+   base64@0: unpacking 794cee7777cb: integrity check failed on data/base64.i:0
+  1 files, 1 changesets, 1 total revisions
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+  $ hg verify --config verify.skipflags=2147483647
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+
