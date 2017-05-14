@@ -450,7 +450,7 @@ emailopts = [
     ('', 'base', [], _('a base changeset to specify instead of a destination '
        '(with -b/--bundle)'), _('REV')),
     ('', 'intro', None, _('send an introduction email for a single patch')),
-    ] + emailopts + commands.remoteopts,
+    ] + emailopts + cmdutil.remoteopts,
     _('hg email [OPTION]... [DEST]...'))
 def email(ui, repo, *revs, **opts):
     '''send changesets by email

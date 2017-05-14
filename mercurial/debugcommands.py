@@ -501,7 +501,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         ui.write(line)
         ui.write("\n")
 
-@command('debugdata', commands.debugrevlogopts, _('-c|-m|FILE REV'))
+@command('debugdata', cmdutil.debugrevlogopts, _('-c|-m|FILE REV'))
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
     if opts.get('changelog') or opts.get('manifest') or opts.get('dir'):
@@ -533,7 +533,7 @@ def debugdate(ui, date, range=None, **opts):
         ui.write(("match: %s\n") % m(d[0]))
 
 @command('debugdeltachain',
-    commands.debugrevlogopts + commands.formatteropts,
+    cmdutil.debugrevlogopts + cmdutil.formatteropts,
     _('-c|-m|FILE'),
     optionalrepo=True)
 def debugdeltachain(ui, repo, file_=None, **opts):
@@ -668,7 +668,7 @@ def debugstate(ui, repo, **opts):
     [('', 'old', None, _('use old-style discovery')),
     ('', 'nonheads', None,
      _('use old-style discovery with non-heads included')),
-    ] + commands.remoteopts,
+    ] + cmdutil.remoteopts,
     _('[-l REV] [-r REV] [-b BRANCH]... [OTHER]'))
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
@@ -730,7 +730,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         localrevs = opts.get('local_head')
         doit(localrevs, remoterevs)
 
-@command('debugextensions', commands.formatteropts, [], norepo=True)
+@command('debugextensions', cmdutil.formatteropts, [], norepo=True)
 def debugextensions(ui, **opts):
     '''show information about active extensions'''
     exts = extensions.extensions(ui)
@@ -882,7 +882,7 @@ def debugignore(ui, repo, *files, **opts):
             else:
                 ui.write(_("%s is not ignored\n") % f)
 
-@command('debugindex', commands.debugrevlogopts +
+@command('debugindex', cmdutil.debugrevlogopts +
     [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
     _('[-f FORMAT] -c|-m|FILE'),
     optionalrepo=True)
@@ -938,7 +938,7 @@ def debugindex(ui, repo, file_=None, **opts):
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
                     base, r.linkrev(i), pr[0], pr[1], shortfn(node)))
 
-@command('debugindexdot', commands.debugrevlogopts,
+@command('debugindexdot', cmdutil.debugrevlogopts,
     _('-c|-m|FILE'), optionalrepo=True)
 def debugindexdot(ui, repo, file_=None, **opts):
     """dump an index DAG as a graphviz dot file"""
@@ -952,7 +952,7 @@ def debugindexdot(ui, repo, file_=None, **opts):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
-@command('debuginstall', [] + commands.formatteropts, '', norepo=True)
+@command('debuginstall', [] + cmdutil.formatteropts, '', norepo=True)
 def debuginstall(ui, **opts):
     '''test Mercurial installation
 
@@ -1335,7 +1335,7 @@ def debugnamecomplete(ui, repo, *args):
          ('r', 'rev', [], _('display markers relevant to REV')),
          ('', 'index', False, _('display index of the marker')),
          ('', 'delete', [], _('delete markers specified by indices')),
-        ] + commands.commitopts2 + commands.formatteropts,
+        ] + cmdutil.commitopts2 + cmdutil.formatteropts,
          _('[OBSOLETED [REPLACEMENT ...]]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker
@@ -1507,7 +1507,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
 @command('debugpickmergetool',
         [('r', 'rev', '', _('check for files in this revision'), _('REV')),
          ('', 'changedelete', None, _('emulate merging change and delete')),
-        ] + commands.walkopts + commands.mergetoolopts,
+        ] + cmdutil.walkopts + cmdutil.mergetoolopts,
         _('[PATTERN]...'),
         inferrepo=True)
 def debugpickmergetool(ui, repo, *pats, **opts):
@@ -1684,7 +1684,7 @@ def debugrename(ui, repo, file1, *pats, **opts):
         else:
             ui.write(_("%s not renamed\n") % rel)
 
-@command('debugrevlog', commands.debugrevlogopts +
+@command('debugrevlog', cmdutil.debugrevlogopts +
     [('d', 'dump', False, _('dump index data'))],
     _('-c|-m|FILE'),
     optionalrepo=True)
@@ -2163,7 +2163,7 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
     """
     return upgrade.upgraderepo(ui, repo, run=run, optimize=optimize)
 
-@command('debugwalk', commands.walkopts, _('[OPTION]... [FILE]...'),
+@command('debugwalk', cmdutil.walkopts, _('[OPTION]... [FILE]...'),
          inferrepo=True)
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
@@ -2185,12 +2185,12 @@ def debugwalk(ui, repo, *pats, **opts):
     [('', 'three', '', 'three'),
     ('', 'four', '', 'four'),
     ('', 'five', '', 'five'),
-    ] + commands.remoteopts,
+    ] + cmdutil.remoteopts,
     _('REPO [OPTIONS]... [ONE [TWO]]'),
     norepo=True)
 def debugwireargs(ui, repopath, *vals, **opts):
     repo = hg.peer(ui, opts, repopath)
-    for opt in commands.remoteopts:
+    for opt in cmdutil.remoteopts:
         del opts[opt[1]]
     args = {}
     for k, v in opts.iteritems():

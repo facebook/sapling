@@ -104,108 +104,21 @@ globalopts = [
      _("when to paginate (boolean, always, auto, or never)"), _('TYPE')),
 ]
 
-dryrunopts = [('n', 'dry-run', None,
-               _('do not perform actions, just print output'))]
-
-remoteopts = [
-    ('e', 'ssh', '',
-     _('specify ssh command to use'), _('CMD')),
-    ('', 'remotecmd', '',
-     _('specify hg command to run on the remote side'), _('CMD')),
-    ('', 'insecure', None,
-     _('do not verify server certificate (ignoring web.cacerts config)')),
-]
-
-walkopts = [
-    ('I', 'include', [],
-     _('include names matching the given patterns'), _('PATTERN')),
-    ('X', 'exclude', [],
-     _('exclude names matching the given patterns'), _('PATTERN')),
-]
-
-commitopts = [
-    ('m', 'message', '',
-     _('use text as commit message'), _('TEXT')),
-    ('l', 'logfile', '',
-     _('read commit message from file'), _('FILE')),
-]
-
-commitopts2 = [
-    ('d', 'date', '',
-     _('record the specified date as commit date'), _('DATE')),
-    ('u', 'user', '',
-     _('record the specified user as committer'), _('USER')),
-]
-
-# hidden for now
-formatteropts = [
-    ('T', 'template', '',
-     _('display with template (EXPERIMENTAL)'), _('TEMPLATE')),
-]
-
-templateopts = [
-    ('', 'style', '',
-     _('display using template map file (DEPRECATED)'), _('STYLE')),
-    ('T', 'template', '',
-     _('display with template'), _('TEMPLATE')),
-]
-
-logopts = [
-    ('p', 'patch', None, _('show patch')),
-    ('g', 'git', None, _('use git extended diff format')),
-    ('l', 'limit', '',
-     _('limit number of changes displayed'), _('NUM')),
-    ('M', 'no-merges', None, _('do not show merges')),
-    ('', 'stat', None, _('output diffstat-style summary of changes')),
-    ('G', 'graph', None, _("show the revision DAG")),
-] + templateopts
-
-diffopts = [
-    ('a', 'text', None, _('treat all files as text')),
-    ('g', 'git', None, _('use git extended diff format')),
-    ('', 'binary', None, _('generate binary diffs in git mode (default)')),
-    ('', 'nodates', None, _('omit dates from diff headers'))
-]
-
-diffwsopts = [
-    ('w', 'ignore-all-space', None,
-     _('ignore white space when comparing lines')),
-    ('b', 'ignore-space-change', None,
-     _('ignore changes in the amount of white space')),
-    ('B', 'ignore-blank-lines', None,
-     _('ignore changes whose lines are all blank')),
-    ]
-
-diffopts2 = [
-    ('', 'noprefix', None, _('omit a/ and b/ prefixes from filenames')),
-    ('p', 'show-function', None, _('show which function each change is in')),
-    ('', 'reverse', None, _('produce a diff that undoes the changes')),
-    ] + diffwsopts + [
-    ('U', 'unified', '',
-     _('number of lines of context to show'), _('NUM')),
-    ('', 'stat', None, _('output diffstat-style summary of changes')),
-    ('', 'root', '', _('produce diffs relative to subdirectory'), _('DIR')),
-]
-
-mergetoolopts = [
-    ('t', 'tool', '', _('specify merge tool')),
-]
-
-similarityopts = [
-    ('s', 'similarity', '',
-     _('guess renamed files by similarity (0<=s<=100)'), _('SIMILARITY'))
-]
-
-subrepoopts = [
-    ('S', 'subrepos', None,
-     _('recurse into subrepositories'))
-]
-
-debugrevlogopts = [
-    ('c', 'changelog', False, _('open changelog')),
-    ('m', 'manifest', False, _('open manifest')),
-    ('', 'dir', '', _('open directory manifest')),
-]
+dryrunopts = cmdutil.dryrunopts
+remoteopts = cmdutil.remoteopts
+walkopts = cmdutil.walkopts
+commitopts = cmdutil.commitopts
+commitopts2 = cmdutil.commitopts2
+formatteropts = cmdutil.formatteropts
+templateopts = cmdutil.templateopts
+logopts = cmdutil.logopts
+diffopts = cmdutil.diffopts
+diffwsopts = cmdutil.diffwsopts
+diffopts2 = cmdutil.diffopts2
+mergetoolopts = cmdutil.mergetoolopts
+similarityopts = cmdutil.similarityopts
+subrepoopts = cmdutil.subrepoopts
+debugrevlogopts = cmdutil.debugrevlogopts
 
 # Commands start here, listed alphabetically
 

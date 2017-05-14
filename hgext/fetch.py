@@ -15,7 +15,6 @@ from mercurial.node import (
 )
 from mercurial import (
     cmdutil,
-    commands,
     error,
     exchange,
     hg,
@@ -39,7 +38,7 @@ testedwith = 'ships-with-hg-core'
     ('e', 'edit', None, _('invoke editor on commit messages')),
     ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
     ('', 'switch-parent', None, _('switch parents when merging')),
-    ] + commands.commitopts + commands.commitopts2 + commands.remoteopts,
+    ] + cmdutil.commitopts + cmdutil.commitopts2 + cmdutil.remoteopts,
     _('hg fetch [SOURCE]'))
 def fetch(ui, repo, source='default', **opts):
     '''pull changes from a remote repository, merge new changes if needed.

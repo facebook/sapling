@@ -33,7 +33,6 @@ from mercurial import (
     bundlerepo,
     changegroup,
     cmdutil,
-    commands,
     error,
     exchange,
     hg,
@@ -971,7 +970,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
           ('i', 'interactive', None,
            _('interactive mode, only works while creating a shelve')),
           ('', 'stat', None,
-           _('output diffstat-style summary of changes'))] + commands.walkopts,
+           _('output diffstat-style summary of changes'))] + cmdutil.walkopts,
          _('hg shelve [OPTION]... [FILE]...'))
 def shelvecmd(ui, repo, *pats, **opts):
     '''save and set aside changes from the working directory

@@ -23,7 +23,6 @@ from mercurial.i18n import _
 from mercurial import (
     bookmarks,
     cmdutil,
-    commands,
     dispatch,
     error,
     extensions,
@@ -421,7 +420,7 @@ _ignoreopts = ('no-merges', 'graph')
     'journal', [
         ('', 'all', None, 'show history for all names'),
         ('c', 'commits', None, 'show commit metadata'),
-    ] + [opt for opt in commands.logopts if opt[1] not in _ignoreopts],
+    ] + [opt for opt in cmdutil.logopts if opt[1] not in _ignoreopts],
     '[OPTION]... [BOOKMARKNAME]')
 def journal(ui, repo, *args, **opts):
     """show the previous position of bookmarks and the working copy

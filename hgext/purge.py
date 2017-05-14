@@ -29,7 +29,7 @@ import os
 
 from mercurial.i18n import _
 from mercurial import (
-    commands,
+    cmdutil,
     error,
     registrar,
     scmutil,
@@ -52,7 +52,7 @@ testedwith = 'ships-with-hg-core'
     ('p', 'print', None, _('print filenames instead of deleting them')),
     ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                             ' (implies -p/--print)')),
-    ] + commands.walkopts,
+    ] + cmdutil.walkopts,
     _('hg purge [OPTION]... [DIR]...'))
 def purge(ui, repo, *dirs, **opts):
     '''removes files not tracked by Mercurial

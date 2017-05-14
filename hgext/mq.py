@@ -2407,7 +2407,7 @@ def init(ui, repo, **opts):
            _('use uncompressed transfer (fast over LAN)')),
           ('p', 'patches', '',
            _('location of source patch repository'), _('REPO')),
-         ] + commands.remoteopts,
+         ] + cmdutil.remoteopts,
          _('hg qclone [OPTION]... SOURCE [DEST]'),
          norepo=True)
 def clone(ui, source, dest=None, **opts):
@@ -2575,7 +2575,7 @@ def setupheaderopts(ui, opts):
           ('D', 'currentdate', None, _('add "Date: <current date>" to patch')),
           ('d', 'date', '',
            _('add "Date: <DATE>" to patch'), _('DATE'))
-          ] + commands.walkopts + commands.commitopts,
+          ] + cmdutil.walkopts + cmdutil.commitopts,
          _('hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]...'),
          inferrepo=True)
 def new(ui, repo, patch, *args, **opts):
@@ -2624,7 +2624,7 @@ def new(ui, repo, patch, *args, **opts):
            _('add/update date field in patch with current date')),
           ('d', 'date', '',
            _('add/update date field in patch with given date'), _('DATE'))
-          ] + commands.walkopts + commands.commitopts,
+          ] + cmdutil.walkopts + cmdutil.commitopts,
          _('hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]...'),
          inferrepo=True)
 def refresh(ui, repo, *pats, **opts):
@@ -2657,7 +2657,7 @@ def refresh(ui, repo, *pats, **opts):
         return ret
 
 @command("^qdiff",
-         commands.diffopts + commands.diffopts2 + commands.walkopts,
+         cmdutil.diffopts + cmdutil.diffopts2 + cmdutil.walkopts,
          _('hg qdiff [OPTION]... [FILE]...'),
          inferrepo=True)
 def diff(ui, repo, *pats, **opts):
@@ -2682,7 +2682,7 @@ def diff(ui, repo, *pats, **opts):
 @command('qfold',
          [('e', 'edit', None, _('invoke editor on commit messages')),
           ('k', 'keep', None, _('keep folded patch files')),
-         ] + commands.commitopts,
+         ] + cmdutil.commitopts,
          _('hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH...'))
 def fold(ui, repo, *files, **opts):
     """fold the named patches into the current patch
@@ -3044,7 +3044,7 @@ def restore(ui, repo, rev, **opts):
           ('n', 'name', '',
            _('copy directory name'), _('NAME')),
           ('e', 'empty', None, _('clear queue status file')),
-          ('f', 'force', None, _('force copy'))] + commands.commitopts,
+          ('f', 'force', None, _('force copy'))] + cmdutil.commitopts,
          _('hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]'))
 def save(ui, repo, **opts):
     """save current queue state (DEPRECATED)

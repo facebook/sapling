@@ -52,7 +52,7 @@ from mercurial import (
 )
 
 release = lock.release
-templateopts = commands.templateopts
+templateopts = cmdutil.templateopts
 
 # The following constants are used throughout the rebase module. The ordering of
 # their values must be maintained.

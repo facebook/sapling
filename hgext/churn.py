@@ -17,7 +17,6 @@ import time
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
-    commands,
     encoding,
     patch,
     registrar,
@@ -115,7 +114,7 @@ def countrate(ui, repo, amap, *pats, **opts):
     ('s', 'sort', False, _('sort by key (default: sort by count)')),
     ('', 'diffstat', False, _('display added/removed lines separately')),
     ('', 'aliases', '', _('file with email aliases'), _('FILE')),
-    ] + commands.walkopts,
+    ] + cmdutil.walkopts,
     _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"),
     inferrepo=True)
 def churn(ui, repo, *pats, **opts):

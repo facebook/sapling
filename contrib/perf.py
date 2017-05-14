@@ -85,18 +85,20 @@ else:
 # available, because commands.formatteropts has been available since
 # 3.2 (or 7a7eed5176a4), even though formatting itself has been
 # available since 2.2 (or ae5f92e154d3)
-formatteropts = getattr(commands, "formatteropts", [])
+formatteropts = getattr(cmdutil, "formatteropts",
+                        getattr(commands, "formatteropts", []))
 
 # for "historical portability":
 # use locally defined option list, if debugrevlogopts isn't available,
 # because commands.debugrevlogopts has been available since 3.7 (or
 # 5606f7d0d063), even though cmdutil.openrevlog() has been available
 # since 1.9 (or a79fea6b3e77).
-revlogopts = getattr(commands, "debugrevlogopts", [
+revlogopts = getattr(cmdutil, "debugrevlogopts",
+                     getattr(commands, "debugrevlogopts", [
         ('c', 'changelog', False, ('open changelog')),
         ('m', 'manifest', False, ('open manifest')),
         ('', 'dir', False, ('open directory manifest')),
-        ])
+        ]))
 
 cmdtable = {}
 

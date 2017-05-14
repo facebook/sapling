@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 from mercurial.i18n import _
 from mercurial import (
+    cmdutil,
     commands,
     registrar,
 )
@@ -51,7 +52,7 @@ testedwith = 'ships-with-hg-core'
      _('show changesets within the given named branch'), _('BRANCH')),
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
-    ] + commands.logopts + commands.walkopts,
+    ] + cmdutil.logopts + cmdutil.walkopts,
     _('[OPTION]... [FILE]'),
     inferrepo=True)
 def glog(ui, repo, *pats, **opts):

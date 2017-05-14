@@ -19,11 +19,10 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
-    commands,
     registrar,
 )
 
-templateopts = commands.templateopts
+templateopts = cmdutil.templateopts
 
 cmdtable = {}
 command = registrar.command(cmdtable)

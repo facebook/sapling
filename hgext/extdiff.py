@@ -74,7 +74,6 @@ from mercurial.node import (
 from mercurial import (
     archival,
     cmdutil,
-    commands,
     error,
     filemerge,
     pycompat,
@@ -301,7 +300,7 @@ extdiffopts = [
     ('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV')),
     ('', 'patch', None, _('compare patches for two revisions'))
-    ] + commands.walkopts + commands.subrepoopts
+    ] + cmdutil.walkopts + cmdutil.subrepoopts
 
 @command('extdiff',
     [('p', 'program', '', _('comparison program to run'), _('CMD')),

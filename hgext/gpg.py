@@ -14,7 +14,6 @@ import tempfile
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
-    commands,
     error,
     match,
     node as hgnode,
@@ -222,7 +221,7 @@ def keystr(ui, key):
           ('m', 'message', '',
            _('use text as commit message'), _('TEXT')),
           ('e', 'edit', False, _('invoke editor on commit messages')),
-         ] + commands.commitopts2,
+         ] + cmdutil.commitopts2,
          _('hg sign [OPTION]... [REV]...'))
 def sign(ui, repo, *revs, **opts):
     """add a signature for the current or given revision

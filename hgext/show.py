@@ -58,7 +58,7 @@ class showcmdfunc(registrar._funcregistrarbase):
 showview = showcmdfunc()
 
 @command('show', [
-    # TODO: Switch this template flag to use commands.formatteropts if
+    # TODO: Switch this template flag to use cmdutil.formatteropts if
     # 'hg show' becomes stable before --template/-T is stable. For now,
     # we are putting it here without the '(EXPERIMENTAL)' flag because it
     # is an important part of the 'hg show' user experience and the entire
