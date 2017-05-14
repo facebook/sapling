@@ -176,39 +176,47 @@ class shelvedstate(object):
 
     @classmethod
     def load(cls, repo):
+        # Order is important, because old shelvestate file uses it
+        # to detemine values of fields (i.g. version is on the first line,
+        # name is on the second and so forth). Please do not change.
+        keys = ['version', 'name', 'originalwctx', 'pendingctx', 'parents',
+                'nodestoremove', 'branchtorestore', 'keep', 'activebook']
+        d = {}
         fp = repo.vfs(cls._filename)
         try:
-            version = int(fp.readline().strip())
-
-            if version != cls._version:
-                raise error.Abort(_('this version of shelve is incompatible '
-                                   'with the version used in this repo'))
-            name = fp.readline().strip()
-            wctx = nodemod.bin(fp.readline().strip())
-            pendingctx = nodemod.bin(fp.readline().strip())
-            parents = [nodemod.bin(h) for h in fp.readline().split()]
-            nodestoremove = [nodemod.bin(h) for h in fp.readline().split()]
-            branchtorestore = fp.readline().strip()
-            keep = fp.readline().strip() == cls._keep
-            activebook = fp.readline().strip()
-        except (ValueError, TypeError) as err:
-            raise error.CorruptedState(str(err))
+            for key in keys:
+                d[key] = fp.readline().strip()
         finally:
             fp.close()
 
+        # some basic syntactic verification and transformation
+        try:
+            d['version'] = int(d['version'])
+            if d['version'] != cls._version:
+                raise error.Abort(_('this version of shelve is incompatible '
+                                    'with the version used in this repo'))
+            d['originalwctx'] = nodemod.bin(d['originalwctx'])
+            d['pendingctx'] = nodemod.bin(d['pendingctx'])
+            d['parents'] = [nodemod.bin(h)
+                            for h in d['parents'].split(' ')]
+            d['nodestoremove'] = [nodemod.bin(h)
+                                  for h in d['nodestoremove'].split(' ')]
+        except (ValueError, TypeError, KeyError) as err:
+            raise error.CorruptedState(str(err))
+
         try:
             obj = cls()
-            obj.name = name
-            obj.wctx = repo[wctx]
-            obj.pendingctx = repo[pendingctx]
-            obj.parents = parents
-            obj.nodestoremove = nodestoremove
-            obj.branchtorestore = branchtorestore
-            obj.keep = keep
+            obj.name = d['name']
+            obj.wctx = repo[d['originalwctx']]
+            obj.pendingctx = repo[d['pendingctx']]
+            obj.parents = d['parents']
+            obj.nodestoremove = d['nodestoremove']
+            obj.branchtorestore = d.get('branchtorestore', '')
+            obj.keep = d.get('keep') == cls._keep
             obj.activebookmark = ''
-            if activebook != cls._noactivebook:
-                obj.activebookmark = activebook
-        except error.RepoLookupError as err:
+            if d.get('activebook', '') != cls._noactivebook:
+                obj.activebookmark = d.get('activebook', '')
+        except (error.RepoLookupError, KeyError) as err:
             raise error.CorruptedState(str(err))
 
         return obj
