@@ -214,13 +214,18 @@ Create hardlinked copy r4 of r3 (on Linux, we would call 'cp -al'):
 
   $ linkcp r3 r4
 
+'checklink' is produced by hardlinking a symlink, which is undefined whether
+the symlink should be followed or not. It does behave differently on Linux and
+BSD. Just remove it so the test pass on both platforms.
+
+  $ rm -f r4/.hg/cache/checklink
+
 r4 has hardlinks in the working dir (not just inside .hg):
 
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
   2 r4/.hg/branch
   2 r4/.hg/cache/checkisexec (execbit !)
-  3 r4/.hg/cache/checklink (?)
   ? r4/.hg/cache/checklink-target (glob) (symlink !)
   2 r4/.hg/cache/checknoexec (execbit !)
   2 r4/.hg/cache/branch2-base
