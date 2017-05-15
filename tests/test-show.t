@@ -184,6 +184,91 @@ Check --stat
   @@ -0,0 +1,1 @@
   +show
   
+Check --unified and -U
+
+  $ hg init diff
+  $ cd diff
+  $ cat >file <<EOF
+  > line1
+  > line2
+  > line3
+  > line4
+  > line5
+  > EOF
+  $ hg commit -qAm file
+  $ cat >>file <<EOF
+  > line6
+  > line7
+  > line8
+  > line9
+  > line10
+  > EOF
+  $ hg commit -qm file
+  $ hg show --unified=1
+  changeset:   1:8e33115c1596
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r fd78c1ae39e0 -r 8e33115c1596 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -5,1 +5,6 @@
+   line5
+  +line6
+  +line7
+  +line8
+  +line9
+  +line10
+  
+  $ hg show --unified=2
+  changeset:   1:8e33115c1596
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r fd78c1ae39e0 -r 8e33115c1596 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -4,2 +4,7 @@
+   line4
+   line5
+  +line6
+  +line7
+  +line8
+  +line9
+  +line10
+  
+
+Check behavior with nonsensical integers.
+  $ hg show --unified=-7
+  changeset:   1:8e33115c1596
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r fd78c1ae39e0 -r 8e33115c1596 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -13,-14 +13,-9 @@
+  +line6
+  +line7
+  +line8
+  +line9
+  +line10
+  
 
 
 
@@ -280,6 +365,8 @@ Confirm that --help works (it didn't when we used an alias)
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
+   -U --unified VALUE       number of lines of diff context to show (default:
+                            <type 'int'>)
   
   (some details hidden, use --verbose to show complete help)
   $ hg show --help --verbose
@@ -304,6 +391,8 @@ Confirm that --help works (it didn't when we used an alias)
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
+   -U --unified VALUE       number of lines of diff context to show (default:
+                            <type 'int'>)
   
   global options ([+] can be repeated):
   

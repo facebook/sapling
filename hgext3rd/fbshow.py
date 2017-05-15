@@ -42,8 +42,13 @@ def uisetup(ui):
         ('', 'stat', None, _('output diffstat-style summary of changes')),
     ] + commands.templateopts + commands.walkopts
 
+    local_opts = [
+        ('U', 'unified', int, _('number of lines of diff context to show')),
+    ]
+
     aliases, entry = cmdutil.findcmd('log', commands.table)
-    allowed_opts = [opt for opt in entry[1] if opt in permitted_opts]
+    allowed_opts = [opt for opt in entry[1]
+                        if opt in permitted_opts] + local_opts
 
     # manual call of the decorator
     command('^show',
@@ -81,6 +86,8 @@ def show(ui, repo, *args, **opts):
     # fix the slowness in copy tracking, but this works for now.
     # On a commit with lots of possible copies, Bryan O'Sullivan found that this
     # reduces "time hg show" from 1.76 seconds to 0.81 seconds.
-    overrides = {('diff', 'git'): opts.get('git'), ('ui', 'verbose'): True}
+    overrides = {('diff', 'git'): opts.get('git')
+                ,('diff','unified'):opts.get('unified')
+                ,('ui', 'verbose'): True}
     with ui.configoverride(overrides, 'show'):
         commands.log(ui, repo, *pats, **opts)
