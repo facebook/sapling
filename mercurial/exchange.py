@@ -936,19 +936,22 @@ def _pushchangeset(pushop):
     pushop.repo.prepushoutgoinghooks(pushop)
     outgoing = pushop.outgoing
     unbundle = pushop.remote.capable('unbundle')
+    # TODO: get bundlecaps from remote
+    bundlecaps = None
     # create a changegroup from local
     if pushop.revs is None and not (outgoing.excluded
                             or pushop.repo.changelog.filteredrevs):
         # push everything,
         # use the fast path, no race possible on push
-        bundler = changegroup.cg1packer(pushop.repo)
+        bundler = changegroup.cg1packer(pushop.repo, bundlecaps)
         cg = changegroup.getsubset(pushop.repo,
                                    outgoing,
                                    bundler,
                                    'push',
                                    fastpath=True)
     else:
-        cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing)
+        cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing,
+                                        bundlecaps=bundlecaps)
 
     # apply changegroup to remote
     if unbundle:
@@ -1575,7 +1578,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
         outgoing = _computeoutgoing(repo, heads, common)
-        bundler = changegroup.getbundler('01', repo)
+        bundler = changegroup.getbundler('01', repo, bundlecaps)
         return changegroup.getsubsetraw(repo, outgoing, bundler, source)
 
     # bundle20 case
@@ -1613,6 +1616,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
             version = max(cgversions)
         outgoing = _computeoutgoing(repo, heads, common)
         cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
+                                                bundlecaps=bundlecaps,
                                                 version=version)
 
     if cg:
