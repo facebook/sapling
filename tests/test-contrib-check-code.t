@@ -152,6 +152,15 @@
    >   $ function onwarn {}
    warning: don't use 'function', use old style
   [1]
+  $ cat > error.t <<EOF
+  >   $ [ foo == bar ]
+  > EOF
+  $ "$check_code" error.t
+  error.t:1:
+   >   $ [ foo == bar ]
+   [ foo == bar ] is a bashism, use [ foo = bar ] instead
+  [1]
+  $ rm error.t
   $ cat > raise-format.py <<EOF
   > raise SomeException, message
   > # this next line is okay
