@@ -50,10 +50,16 @@ class HgError(subprocess.CalledProcessError):
 
 
 class HgRepository(repobase.Repository):
-    def __init__(self, path):
+    def __init__(self, path, hgrc=None):
+        '''
+        If hgrc is specified, it will be used as the value of the HGRCPATH
+        environment variable when `hg` is run.
+        '''
         super().__init__(path)
         self.hg_environment = os.environ.copy()
         self.hg_environment['HGPLAIN'] = '1'
+        if hgrc is not None:
+            self.hg_environment['HGRCPATH'] = hgrc
         self.hg_bin = distutils.spawn.find_executable(
             'hg.real') or distutils.spawn.find_executable('hg')
 

@@ -193,7 +193,7 @@ class EdenTestCase(TestParent):
         '''
         return None
 
-    def create_repo(self, name, repo_class):
+    def create_repo(self, name, repo_class, **kwargs):
         '''
         Create a new repository.
 
@@ -208,7 +208,7 @@ class EdenTestCase(TestParent):
         '''
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
-        repo = repo_class(repo_path)
+        repo = repo_class(repo_path, **kwargs)
         repo.init()
 
         return repo

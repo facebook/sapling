@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from ...lib import find_executables, hgrepo, testcase
-from pathlib import Path
 import configparser
 import os
 
@@ -66,14 +65,29 @@ class HgExtensionTestBase(testcase.EdenTestCase):
     def setup_eden_test(self):
         super().setup_eden_test()
 
-        # Create or update an ~/.hgrc to ensure ui.username is defined.
-        hgrc = os.path.join(os.environ['HOME'], '.hgrc')
-        Path(hgrc).touch()
+        # Create an hgrc to use as the $HGRCPATH.
+        hgrc = os.path.join(self.tmp_dir, 'hgrc_for_self_dot_repo')
         config = configparser.ConfigParser()
-        config.read(hgrc)
-        if 'ui' not in config:
-            config['ui'] = {}
-        config['ui']['username'] = 'Kevin Flynn <lightcyclist@example.com>'
+        config['ui'] = {
+            'username': 'Kevin Flynn <lightcyclist@example.com>',
+        }
+        config['experimental'] = {
+            'evolution': 'createmarkers',
+            'evolutioncommands': 'prev next split fold obsolete metaedit',
+        }
+        config['extensions'] = {
+            'evolve': '',
+            'fbamend': '',
+            'fbhistedit': '',
+            'fsmonitor': '',
+            'histedit': '',
+            'inhibit': '',
+            'purge': '',
+            'rebase': '',
+            'reset': '',
+            'strip': '',
+            'tweakdefaults': '',
+        }
         with open(hgrc, 'w') as f:
             config.write(f)
 
@@ -81,7 +95,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         self.backing_repo_name = 'backing_repo'
         self.mount = os.path.join(self.mounts_dir, self.backing_repo_name)
         self.backing_repo = self.create_repo(self.backing_repo_name,
-                                             hgrepo.HgRepository)
+                                             hgrepo.HgRepository, hgrc=hgrc)
         self.populate_backing_repo(self.backing_repo)
 
         self.eden.add_repository(self.backing_repo_name, self.backing_repo.path)
@@ -91,7 +105,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         self.eden.clone(self.backing_repo_name, self.mount)
 
         # Now create the repository object that refers to the eden client
-        self.repo = hgrepo.HgRepository(self.mount)
+        self.repo = hgrepo.HgRepository(self.mount, hgrc=hgrc)
 
     def populate_backing_repo(self, repo):
         raise NotImplementedError('individual test classes must implement '
