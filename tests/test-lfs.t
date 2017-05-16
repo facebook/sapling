@@ -436,6 +436,50 @@
 
   $ cd ..
 
+# Test fctx.cmp fastpath - diff without LFS blobs
+
+  $ hg init repo11
+  $ cd repo11
+  $ cat >> .hg/hgrc <<EOF
+  > [lfs]
+  > threshold=1
+  > EOF
+  $ for i in 1 2 3; do
+  >     cp ../repo10/a a
+  >     if [ $i = 3 ]; then
+  >         # make a content-only change
+  >         chmod +x a
+  >         i=2
+  >     fi
+  >     echo $i >> a
+  >     hg commit -m $i -A a
+  > done
+  $ [ -d .hg/store/lfs/objects ]
+
+  $ cd ..
+
+  $ hg clone repo11 repo12 --noupdate
+  $ cd repo12
+  $ hg log --removed -p a -T '{desc}\n' --config diff.nobinary=1 --git
+  2
+  diff --git a/a b/a
+  old mode 100644
+  new mode 100755
+  
+  2
+  diff --git a/a b/a
+  Binary file a has changed
+  
+  1
+  diff --git a/a b/a
+  new file mode 100644
+  Binary file a has changed
+  
+  $ [ -d .hg/store/lfs/objects ]
+  [1]
+
+  $ cd ..
+
 # Verify the repos
 
   $ cat > $TESTTMP/dumpflog.py << EOF

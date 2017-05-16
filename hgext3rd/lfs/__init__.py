@@ -72,6 +72,7 @@ def extsetup(ui):
                  'allsupportedversions',
                  wrapper.allsupportedversions)
 
+    wrapfunction(context.basefilectx, 'cmp', wrapper.filectxcmp)
     wrapfunction(context.basefilectx, 'isbinary', wrapper.filectxisbinary)
 
     revlog.addflagprocessor(

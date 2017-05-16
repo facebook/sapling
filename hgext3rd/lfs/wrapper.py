@@ -135,6 +135,15 @@ def filelogsize(orig, self, rev):
         return int(metadata['size'])
     return orig(self, rev)
 
+def filectxcmp(orig, self, fctx):
+    """returns True if text is different than fctx"""
+    if all(_islfs(f.filelog(), f.filenode()) for f in (self, fctx)):
+        # fast path: check LFS oid
+        p1 = pointer.deserialize(self.rawdata())
+        p2 = pointer.deserialize(fctx.rawdata())
+        return p1.oid() != p2.oid()
+    return orig(self, fctx)
+
 def filectxisbinary(orig, self):
     flog = self.filelog()
     node = self.filenode()
