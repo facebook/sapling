@@ -238,12 +238,11 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 def striptrees(repo, tr, striprev, files):
     if 'treemanifest' in repo.requirements: # safe but unnecessary
                                             # otherwise
-        treerevlog = repo.manifestlog._revlog
-        for dir in util.dirs(files):
-            # If the revlog doesn't exist, this returns an empty revlog and is a
-            # no-op.
-            rl = treerevlog.dirlog(dir)
-            rl.strip(striprev, tr)
+        for unencoded, encoded, size in repo.store.datafiles():
+            if (unencoded.startswith('meta/') and
+                unencoded.endswith('00manifest.i')):
+                dir = unencoded[5:-12]
+                repo.manifestlog._revlog.dirlog(dir).strip(striprev, tr)
 
 def rebuildfncache(ui, repo):
     """Rebuilds the fncache file from repo history.
