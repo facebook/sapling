@@ -816,6 +816,11 @@ class fixupstate(object):
 
     def _stripoldcommits(self):
         nodelist = self.replacemap.keys()
+        # make sure we don't strip innocent children
+        revs = self.repo.revs('%ln - (::(heads(%ln::)-%ln))', nodelist,
+                              nodelist, nodelist)
+        tonode = self.repo.changelog.node
+        nodelist = [tonode(r) for r in revs]
         if nodelist:
             repair.strip(self.repo.ui, self.repo, nodelist)
 
