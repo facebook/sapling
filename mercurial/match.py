@@ -307,6 +307,7 @@ class matcher(basematcher):
             exclude = []
 
         self._anypats = bool(include or exclude)
+        self._anyincludepats = False
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
         self.patternspat = None
@@ -324,6 +325,7 @@ class matcher(basematcher):
             kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
+            self._anyincludepats = _anypats(kindpats)
             roots, dirs = _rootsanddirs(kindpats)
             self._includeroots.update(roots)
             self._includedirs.update(dirs)
@@ -381,13 +383,18 @@ class matcher(basematcher):
             return 'all'
         if dir in self._excluderoots:
             return False
-        if ((self._includeroots or self._includedirs) and
-            '.' not in self._includeroots and
-            dir not in self._includeroots and
-            dir not in self._includedirs and
-            not any(parent in self._includeroots
-                    for parent in util.finddirs(dir))):
-            return False
+        if self._includeroots or self._includedirs:
+            if (not self._anyincludepats and
+                not self._excluderoots and
+                dir in self._includeroots):
+                # The condition above is essentially self.prefix() for includes
+                return 'all'
+            if ('.' not in self._includeroots and
+                dir not in self._includeroots and
+                dir not in self._includedirs and
+                not any(parent in self._includeroots
+                        for parent in util.finddirs(dir))):
+                return False
         return (not self._fileset or
                 '.' in self._fileset or
                 dir in self._fileset or
