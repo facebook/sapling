@@ -224,6 +224,7 @@ class manifestrevlogstore(object):
         self._svfs = repo.svfs
         self._revlogs = dict()
         self._cl = revlog.revlog(self._svfs, '00changelog.i')
+        self._repackstartlinkrev = 0
 
     def get(self, name, node):
         return self._revlog(name).revision(node, raw=True)
@@ -292,10 +293,16 @@ class manifestrevlogstore(object):
 
         return missing
 
+    def setrepackstartlinkrev(self, rev):
+        self._repackstartlinkrev = rev
+
     def markledger(self, ledger):
         treename = ''
         rl = revlog.revlog(self._svfs, '00manifesttree.i')
-        for rev in xrange(0, len(rl)):
+        startlinkrev = self._repackstartlinkrev
+        for rev in xrange(len(rl) - 1, -1, -1):
+            if rl.linkrev(rev) < startlinkrev:
+                break
             node = rl.node(rev)
             ledger.markdataentry(self, treename, node)
             ledger.markhistoryentry(self, treename, node)
@@ -307,7 +314,9 @@ class manifestrevlogstore(object):
             treename = path[5:-len('/00manifest.i')]
 
             rl = revlog.revlog(self._svfs, path)
-            for rev in xrange(0, len(rl)):
+            for rev in xrange(len(rl) - 1, -1, -1):
+                if rl.linkrev(rev) < startlinkrev:
+                    break
                 node = rl.node(rev)
                 ledger.markdataentry(self, treename, node)
                 ledger.markhistoryentry(self, treename, node)

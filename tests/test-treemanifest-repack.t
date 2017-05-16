@@ -151,6 +151,7 @@
 
 Test repacking from revlogs to pack files on the server
   $ cd ../master
+
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > treemanifest=
@@ -182,3 +183,38 @@ Test repacking from revlogs to pack files on the server
   dir
   Node          Delta Base    Delta Length
   23226e7a252c  000000000000  43
+
+Test incremental revlog repacking
+# 1. Make that we'll need to repack
+  $ echo >> a
+  $ hg commit -Aqm 'modify a'
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 a0c8bcbbb45c 000000000000 000000000000
+       1        44      58      0       1 1832e0765de9 a0c8bcbbb45c 000000000000
+       2       102      55      1       2 1618a54c483e 1832e0765de9 000000000000
+
+# 2. Corrupt an early rev of the manifesttree, to prove we don't read it
+  $ cp .hg/store/00manifesttree.i .hg/store/00manifesttree.i.bak
+  $ printf xxxx | dd conv=notrunc of=.hg/store/00manifesttree.i bs=1 seek=32 >/dev/null 2>&1
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 78787878b45c 000000000000 000000000000
+       1        44      58      0       1 1832e0765de9 78787878b45c 000000000000
+       2       102      55      1       2 1618a54c483e 1832e0765de9 000000000000
+
+# 3. Check that the corrupt '78787878...' node is not in the pack
+  $ hg repack --incremental
+  $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
+  
+  
+  Node          Delta Base    Delta Length
+  1618a54c483e  000000000000  89
+  1832e0765de9  1618a54c483e  55
+  a0c8bcbbb45c  1832e0765de9  12
+  
+  dir
+  Node          Delta Base    Delta Length
+  23226e7a252c  000000000000  43
+
+  $ mv .hg/store/00manifesttree.i.bak .hg/store/00manifesttree.i

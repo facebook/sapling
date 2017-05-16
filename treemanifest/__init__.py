@@ -951,7 +951,7 @@ class remotetreedatastore(object):
     def markledger(self, ledger):
         pass
 
-def serverrepack(repo):
+def serverrepack(repo, incremental=False):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
     dpackstore = datapackstore(repo.ui, packpath)
@@ -960,6 +960,16 @@ def serverrepack(repo):
 
     hpackstore = historypackstore(repo.ui, packpath)
     histstore = unionmetadatastore(hpackstore, revlogstore)
+
+    if incremental:
+        latestpackedlinkrev = 0
+        mfrevlog = repo.manifestlog.treemanifestlog._revlog
+        for i in xrange(len(mfrevlog) - 1, 0, -1):
+            node = mfrevlog.node(i)
+            if not dpackstore.getmissing([('', node)]):
+                latestpackedlinkrev = mfrevlog.linkrev(i)
+                break
+        revlogstore.setrepackstartlinkrev(latestpackedlinkrev + 1)
 
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
 

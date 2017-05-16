@@ -74,7 +74,7 @@ def incrementalrepack(repo):
 
     if repo.ui.configbool('treemanifest', 'server'):
         treemfmod = extensions.find('treemanifest')
-        treemfmod.serverrepack(repo)
+        treemfmod.serverrepack(repo, incremental=True)
     elif util.safehasattr(repo.svfs, 'manifestdatastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
