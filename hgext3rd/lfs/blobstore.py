@@ -156,14 +156,22 @@ class _gitlfsremote(object):
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
         self.ui.progress(topic, 0, total=total)
-        for obj in objects:
+        if self.ui.verbose and len(objects) > 1:
+            self.ui.write(_('lfs: need to transfer %d objects\n')
+                          % len(objects))
+        for obj in sorted(objects, key=lambda o: o.get('oid')):
+            objsize = obj.get('size', 0)
+            if self.ui.verbose:
+                if action == 'download':
+                    msg = _('lfs: downloading %s (%s)\n')
+                elif action == 'upload':
+                    msg = _('lfs: uploading %s (%s)\n')
+                self.ui.write(msg % (obj.get('oid'), util.bytecount(objsize)))
             self._basictransfer(obj, action, localstore)
-            runningsize += obj.get('size', 0)
+            runningsize += objsize
             self.ui.progress(topic, runningsize, total=total)
 
         self.ui.progress(topic, pos=None, total=total)
-        if self.ui.verbose:
-            self.ui.write(_('lfs: %s completed\n') % action)
 
     def __del__(self):
         # copied from mercurial/httppeer.py
