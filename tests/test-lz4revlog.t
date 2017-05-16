@@ -125,6 +125,8 @@ uncompressed clone from lz4 to lz4 should be fine
 uncompressed clone from lz4 to non-lz4 should fall back to pull
 
   $ hg --config 'extensions.lz4revlog=!' clone -U --uncompressed http://localhost:$HGPORT/ nonesuch
+  warning: stream clone requested but client is missing requirements: lz4revlog
+  (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
   adding changesets
   adding manifests
