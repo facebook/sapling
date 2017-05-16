@@ -74,6 +74,7 @@ def extsetup(ui):
 
     wrapfunction(context.basefilectx, 'cmp', wrapper.filectxcmp)
     wrapfunction(context.basefilectx, 'isbinary', wrapper.filectxisbinary)
+    context.basefilectx.islfs = wrapper.filectxislfs
 
     revlog.addflagprocessor(
         revlog.REVIDX_EXTSTORED,

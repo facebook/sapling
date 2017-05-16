@@ -137,7 +137,8 @@ def filelogsize(orig, self, rev):
 
 def filectxcmp(orig, self, fctx):
     """returns True if text is different than fctx"""
-    if all(_islfs(f.filelog(), f.filenode()) for f in (self, fctx)):
+    # some fctx (ex. hg-git) is not based on basefilectx and do not have islfs
+    if self.islfs() and getattr(fctx, 'islfs', lambda: False)():
         # fast path: check LFS oid
         p1 = pointer.deserialize(self.rawdata())
         p2 = pointer.deserialize(fctx.rawdata())
@@ -145,15 +146,15 @@ def filectxcmp(orig, self, fctx):
     return orig(self, fctx)
 
 def filectxisbinary(orig, self):
-    flog = self.filelog()
-    node = self.filenode()
-    if _islfs(flog, node):
+    if self.islfs():
         # fast path: use lfs metadata to answer isbinary
-        rawtext = flog.revision(node, raw=True)
-        metadata = pointer.deserialize(rawtext)
+        metadata = pointer.deserialize(self.rawdata())
         # if lfs metadata says nothing, assume it's binary by default
         return bool(int(metadata.get('x-is-binary', 1)))
     return orig(self)
+
+def filectxislfs(self):
+    return _islfs(self.filelog(), self.filenode())
 
 def vfsinit(orig, self, othervfs):
     orig(self, othervfs)
