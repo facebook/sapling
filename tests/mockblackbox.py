@@ -3,8 +3,7 @@ from mercurial import (
     util,
 )
 
-def makedate():
-    return 0, 0
+# XXX: we should probably offer a devel option to do this in blackbox directly
 def getuser():
     return 'bob'
 def getpid():
@@ -12,6 +11,5 @@ def getpid():
 
 # mock the date and user apis so the output is always the same
 def uisetup(ui):
-    util.makedate = makedate
     util.getuser = getuser
     util.getpid = getpid

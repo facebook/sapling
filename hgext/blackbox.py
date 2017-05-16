@@ -171,7 +171,8 @@ def wrapui(ui):
                 return
             try:
                 ui._bbinlog = True
-                date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
+                default = self.configdate('devel', 'default-date')
+                date = util.datestr(default, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
                 pid = '%d' % util.getpid()
                 formattedmsg = msg[0] % msg[1:]
