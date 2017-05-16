@@ -196,9 +196,9 @@ def extractpointers(repo, revs):
             try:
                 metadata = pointer.deserialize(fctx.rawdata())
                 pointers[metadata['oid']] = metadata
-            except pointer.PointerDeserializationError:
-                raise error.Abort(_('lfs: corrupted pointer (%s@%s)\n')
-                                  % (f, short(ctx.node())))
+            except pointer.InvalidPointer as ex:
+                raise error.Abort(_('lfs: corrupted pointer (%s@%s): %s\n')
+                                  % (f, short(ctx.node()), ex))
     return pointers.values()
 
 def uploadblobs(repo, pointers):
