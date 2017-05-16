@@ -55,23 +55,19 @@ class _gitlfsremote(object):
         """Batch download from remote to local blostore."""
         self._batch(pointers, tostore, 'download')
 
-    def _batch(self, pointers, localstore, action):
-        if action not in ['upload', 'download']:
-            raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
+    def _batchrequest(self, pointers, action):
+        """Get metadata about objects pointed by pointers for given action
 
-        # Create the batch data for git-lfs.
-        urlreq = util.urlreq
+        Return decoded JSON object like {'objects': [{'oid': '', 'size': 1}]}
+        See https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
+        """
         objects = [{'oid': p.oid(), 'size': p.size()} for p in pointers]
         requestdata = json.dumps({
             'objects': objects,
             'operation': action,
         })
-
-        # Batch upload the blobs to git-lfs.
-        if self.ui.verbose:
-            self.ui.write(_('lfs: mapping blobs to %s URLs\n') % action)
-        batchreq = urlreq.request('%s/objects/batch' % self.baseurl,
-                                  data=requestdata)
+        batchreq = util.urlreq.request('%s/objects/batch' % self.baseurl,
+                                       data=requestdata)
         batchreq.add_header('Accept', 'application/vnd.git-lfs+json')
         batchreq.add_header('Content-Type', 'application/vnd.git-lfs+json')
         try:
@@ -84,11 +80,18 @@ class _gitlfsremote(object):
         except ValueError:
             raise LfsRemoteError(_('LFS server returns invalid JSON: %s')
                                  % rawjson)
-        topic = {'upload': _('lfs uploading'),
-                 'download': _('lfs downloading')}[action]
+        return response
+
+    def _batch(self, pointers, localstore, action):
+        if action not in ['upload', 'download']:
+            raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
+
+        response = self._batchrequest(pointers, action)
         runningsize = 0
         objects = response.get('objects', [])
         total = sum(x.get('size', 0) for x in objects)
+        topic = {'upload': _('lfs uploading'),
+                 'download': _('lfs downloading')}[action]
         self.ui.progress(topic, 0, total=total)
         for obj in objects:
             oid = str(obj['oid'])
@@ -113,10 +116,10 @@ class _gitlfsremote(object):
             if action == 'upload':
                 # If uploading blobs, read data from local blobstore.
                 filedata = localstore.read(oid)
-                request = urlreq.request(href, data=filedata)
+                request = util.urlreq.request(href, data=filedata)
                 request.get_method = lambda: 'PUT'
             else:
-                request = urlreq.request(href)
+                request = util.urlreq.request(href)
 
             for k, v in headers:
                 request.add_header(k, v)

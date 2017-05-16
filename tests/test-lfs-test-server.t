@@ -27,7 +27,6 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
   pushing to ../repo2
   searching for changes
   lfs: computing set of blobs to upload
-  lfs: mapping blobs to upload URLs
   lfs: upload completed
   1 changesets found
   uncompressed size of bundle content:
@@ -43,7 +42,6 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
   $ hg update tip -v
   resolving manifests
   getting a
-  lfs: mapping blobs to download URLs
   lfs: download completed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
