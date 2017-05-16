@@ -58,59 +58,59 @@ class remotefilelog(object):
         return self.addrevision(hashtext, transaction, linknode, p1, p2,
                                 node=node)
 
+    def _createfileblob(self, text, meta, flags, p1, p2, node, linknode):
+        # text passed to "_createfileblob" does not include filelog metadata
+        header = shallowutil.buildfileblobheader(len(text), flags)
+        data = "%s\0%s" % (header, text)
+
+        realp1 = p1
+        copyfrom = ""
+        if meta and 'copy' in meta:
+            copyfrom = meta['copy']
+            realp1 = bin(meta['copyrev'])
+
+        data += "%s%s%s%s%s\0" % (node, realp1, p2, linknode, copyfrom)
+
+        pancestors = {}
+        queue = []
+        if realp1 != nullid:
+            p1flog = self
+            if copyfrom:
+                p1flog = remotefilelog(self.opener, copyfrom, self.repo)
+
+            pancestors.update(p1flog.ancestormap(realp1))
+            queue.append(realp1)
+        if p2 != nullid:
+            pancestors.update(self.ancestormap(p2))
+            queue.append(p2)
+
+        visited = set()
+        ancestortext = ""
+
+        # add the ancestors in topological order
+        while queue:
+            c = queue.pop(0)
+            visited.add(c)
+            pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
+
+            pacopyfrom = pacopyfrom or ''
+            ancestortext += "%s%s%s%s%s\0" % (
+                c, pa1, pa2, ancestorlinknode, pacopyfrom)
+
+            if pa1 != nullid and pa1 not in visited:
+                queue.append(pa1)
+            if pa2 != nullid and pa2 not in visited:
+                queue.append(pa2)
+
+        data += ancestortext
+
+        return data
+
     def addrevision(self, text, transaction, linknode, p1, p2, cachedelta=None,
                     node=None, flags=revlog.REVIDX_DEFAULT_FLAGS):
         # text passed to "addrevision" includes hg filelog metadata header
         if node is None:
             node = revlog.hash(text, p1, p2)
-
-        def _createfileblob(text, meta):
-            # text passed to "_createfileblob" does not include filelog metadata
-            header = shallowutil.buildfileblobheader(len(text), flags)
-            data = "%s\0%s" % (header, text)
-
-            realp1 = p1
-            copyfrom = ""
-            if meta and 'copy' in meta:
-                copyfrom = meta['copy']
-                realp1 = bin(meta['copyrev'])
-
-            data += "%s%s%s%s%s\0" % (node, realp1, p2, linknode, copyfrom)
-
-            pancestors = {}
-            queue = []
-            if realp1 != nullid:
-                p1flog = self
-                if copyfrom:
-                    p1flog = remotefilelog(self.opener, copyfrom, self.repo)
-
-                pancestors.update(p1flog.ancestormap(realp1))
-                queue.append(realp1)
-            if p2 != nullid:
-                pancestors.update(self.ancestormap(p2))
-                queue.append(p2)
-
-            visited = set()
-            ancestortext = ""
-
-            # add the ancestors in topological order
-            while queue:
-                c = queue.pop(0)
-                visited.add(c)
-                pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
-
-                pacopyfrom = pacopyfrom or ''
-                ancestortext += "%s%s%s%s%s\0" % (
-                    c, pa1, pa2, ancestorlinknode, pacopyfrom)
-
-                if pa1 != nullid and pa1 not in visited:
-                    queue.append(pa1)
-                if pa2 != nullid and pa2 not in visited:
-                    queue.append(pa2)
-
-            data += ancestortext
-
-            return data
 
         meta, metaoffset = filelog.parsemeta(text)
         rawtext, validatehash = self._processflags(text, flags, 'write')
@@ -126,7 +126,8 @@ class remotefilelog(object):
             blobtext = text[metaoffset:]
         else:
             blobtext = text
-        data = _createfileblob(blobtext, meta)
+        data = self._createfileblob(blobtext, meta, flags, p1, p2, node,
+                                    linknode)
         self.repo.contentstore.addremotefilelognode(self.filename, node, data)
 
         return node
