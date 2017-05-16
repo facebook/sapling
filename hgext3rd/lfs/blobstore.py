@@ -86,7 +86,7 @@ class _gitlfsremote(object):
         """extract objects from response of the batch API
 
         response: parsed JSON object returned by batch API
-        return response['objects']
+        return response['objects'] filtered by action
         raise if any object has an error
         """
         # Scan errors from objects - fail early
@@ -95,7 +95,21 @@ class _gitlfsremote(object):
             error = obj.get('error')
             if error:
                 raise LfsRemoteError(_('LFS server error: %r') % obj)
-        return objects
+        # Filter objects with given action. Practically, this skips uploading
+        # objects which exist in the server.
+        filteredobjects = [o for o in objects if action in o.get('actions', [])]
+        # But for downloading, we want all objects. Therefore missing objects
+        # should be considered an error.
+        if action == 'download':
+            if len(filteredobjects) < len(objects):
+                missing = [o.get('oid', '?')
+                           for o in objects
+                           if action not in o.get('actions', [])]
+                raise LfsRemoteError(
+                    _('LFS server claims required objects do not exist:\n%s')
+                    % '\n'.join(missing))
+
+        return filteredobjects
 
     def _basictransfer(self, obj, action, localstore):
         """Download or upload a single object using basic transfer protocol
@@ -108,15 +122,6 @@ class _gitlfsremote(object):
         basic-transfers.md
         """
         oid = str(obj['oid'])
-
-        # The action we're trying to perform should be available for the
-        # current blob. If upload is unavailable, it means the server
-        # has the object already, which is not an error.
-        if action not in obj.get('actions', []):
-            m = obj.get('error', {}).get(
-                'message', _('(server did not provide error message)'))
-            raise LfsRemoteError(_('cannot download LFS object %s: %s')
-                                 % (oid, m))
 
         href = str(obj['actions'][action].get('href'))
         headers = obj['actions'][action].get('header', {}).items()

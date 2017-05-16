@@ -53,5 +53,6 @@ Check error message when the remote missed a blob:
   $ hg commit -m b b
   $ rm -rf .hg/store/lfs
   $ hg update -C '.^'
-  abort: cannot download LFS object 8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13* (glob)
+  abort: LFS server claims required objects do not exist:
+  8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13!
   [255]
