@@ -141,10 +141,10 @@ Stack of non-conflicting commits should be accepted
   adding a revisions
   adding b revisions
   added 3 changesets with 1 changes to 2 files (+1 heads)
-  updating the branch cache
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 15 bytes
+  updating the branch cache
 
 Check that we did not generate any check:heads parts
 

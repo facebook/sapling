@@ -356,7 +356,8 @@ Fbamend respects the createmarkers option
   bb
   committing manifest
   committing changelog
-  user education
+  updating the branch cache
+  obscache is out of dateuser education
   second line
   warning: the changeset's children were left behind
   (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)

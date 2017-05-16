@@ -235,7 +235,7 @@ In the below case, the first getfiles is for the ancestormap for the main
   $ for i in 6 7; do
   >   echo $i >> ../master/x
   >   hg --cwd ../master commit -A x -m $i
-  >   [ $i == 6 ] && hg --cwd ../master update side -q
+  >   [ $i = 6 ] && hg --cwd ../master update side -q
   > done || true
 
   $ hg pull -q

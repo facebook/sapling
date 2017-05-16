@@ -120,7 +120,6 @@ Test file permissions
   drwxrw[sx]r-x.? [0-9]+ .* \. (re)
   drwxrw[sx]r-x.? [0-9]+ .* \.\. (re)
   -rw-rw-r--.? 1 .* branchheads-served (re)
-  -rw-rw-r--.? 1 .* phaseroots (re)
 
 Test logging the dirsize and sparse profiles
 
