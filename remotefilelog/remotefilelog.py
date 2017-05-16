@@ -114,18 +114,37 @@ class remotefilelog(object):
 
         meta, metaoffset = filelog.parsemeta(text)
         rawtext, validatehash = self._processflags(text, flags, 'write')
-        if rawtext != text:
-            # rawtext is a different format that is only understood by the flag
-            # processor, we should not mangle it. pass it as-is so during read,
-            # the flag processor can decode it correctly.
-            blobtext = rawtext
-        elif metaoffset:
+        return self.addrawrevision(rawtext, transaction, linknode, p1, p2,
+                                   node, flags, cachedelta,
+                                   _metatuple=(meta, metaoffset))
+
+    def addrawrevision(self, rawtext, transaction, linknode, p1, p2, node,
+                       flags, cachedelta=None, _metatuple=None):
+        if _metatuple:
+            # _metatuple: used by "addrevision" internally by remotefilelog
+            # meta was parsed confidently
+            meta, metaoffset = _metatuple
+        else:
+            # not from self.addrevision, but something else (repo._filecommit)
+            # calls addrawrevision directly. remotefilelog needs to get and
+            # strip filelog metadata.
+            # we don't have confidence about whether rawtext contains filelog
+            # metadata or not (flag processor could replace it), so we just
+            # parse it as best-effort.
+            # in LFS (flags != 0)'s case, the best way is to call LFS code to
+            # get the meta information, instead of filelog.parsemeta.
+            meta, metaoffset = filelog.parsemeta(rawtext)
+        if flags != 0:
+            # when flags != 0, be conservative and do not mangle rawtext, since
+            # a read flag processor expects the text not being mangled at all.
+            metaoffset = 0
+        if metaoffset:
             # remotefilelog fileblob stores copy metadata in its ancestortext,
             # not its main blob. so we need to remove filelog metadata
             # (containing copy information) from text.
-            blobtext = text[metaoffset:]
+            blobtext = rawtext[metaoffset:]
         else:
-            blobtext = text
+            blobtext = rawtext
         data = self._createfileblob(blobtext, meta, flags, p1, p2, node,
                                     linknode)
         self.repo.contentstore.addremotefilelognode(self.filename, node, data)
