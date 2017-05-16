@@ -291,8 +291,12 @@
   $ echo 'THIS-IS-LFS-2-CHILD' > a
   $ hg commit -m branching -q
 
-  $ hg bundle --base 1 bundle.hg
+  $ hg bundle --base 1 bundle.hg -v
   4 changesets found
+  uncompressed size of bundle content:
+       * (changelog) (glob)
+       * (manifests) (glob)
+       *  a (glob)
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
   $ hg -R bundle.hg log -p -T '{rev} {desc}\n' a
   5 branching

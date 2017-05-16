@@ -184,6 +184,14 @@ def prepush(pushop):
     pointers = extractpointers(pushop.repo, pushop.outgoing.missing)
     uploadblobs(pushop.repo, pointers)
 
+def writenewbundle(orig, ui, repo, source, filename, bundletype, outgoing,
+                   *args, **kwargs):
+    """upload LFS blobs added by outgoing revisions on 'hg bundle'"""
+    pointers = extractpointers(repo, outgoing.missing)
+    uploadblobs(repo, pointers)
+    return orig(ui, repo, source, filename, bundletype, outgoing, *args,
+                **kwargs)
+
 def extractpointers(repo, revs):
     """return a list of lfs pointers added by given revs"""
     ui = repo.ui

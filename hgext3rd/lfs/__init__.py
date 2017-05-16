@@ -26,6 +26,7 @@ Configs::
 from __future__ import absolute_import
 
 from mercurial import (
+    bundle2,
     changegroup,
     cmdutil,
     context,
@@ -101,6 +102,9 @@ def extsetup(ui):
     # bundlerepo uses "vfsmod.readonlyvfs(othervfs)", we need to make sure lfs
     # options and blob stores are passed from othervfs to the new readonlyvfs.
     wrapfunction(vfsmod.readonlyvfs, '__init__', wrapper.vfsinit)
+
+    # when writing a bundle via "hg bundle" command, upload related LFS blobs
+    wrapfunction(bundle2, 'writenewbundle', wrapper.writenewbundle)
 
 @command('debuglfsupload',
          [('r', 'rev', [], _('upload large files introduced by REV'))])
