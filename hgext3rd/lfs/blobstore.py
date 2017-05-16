@@ -82,6 +82,21 @@ class _gitlfsremote(object):
                                  % rawjson)
         return response
 
+    def _extractobjects(self, response, action):
+        """extract objects from response of the batch API
+
+        response: parsed JSON object returned by batch API
+        return response['objects']
+        raise if any object has an error
+        """
+        # Scan errors from objects - fail early
+        objects = response.get('objects', [])
+        for obj in objects:
+            error = obj.get('error')
+            if error:
+                raise LfsRemoteError(_('LFS server error: %r') % obj)
+        return objects
+
     def _basictransfer(self, obj, action, localstore):
         """Download or upload a single object using basic transfer protocol
 
@@ -98,8 +113,6 @@ class _gitlfsremote(object):
         # current blob. If upload is unavailable, it means the server
         # has the object already, which is not an error.
         if action not in obj.get('actions', []):
-            if action == 'upload':
-                return
             m = obj.get('error', {}).get(
                 'message', _('(server did not provide error message)'))
             raise LfsRemoteError(_('cannot download LFS object %s: %s')
@@ -133,7 +146,7 @@ class _gitlfsremote(object):
 
         response = self._batchrequest(pointers, action)
         runningsize = 0
-        objects = response.get('objects', [])
+        objects = self._extractobjects(response, action)
         total = sum(x.get('size', 0) for x in objects)
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
