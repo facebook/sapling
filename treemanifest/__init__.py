@@ -737,7 +737,7 @@ def pull(orig, ui, repo, *pats, **opts):
 
         # Calculate what recent manifests are we missing
         firstrev = max(0, repo['tip'].rev() - prefetchcount + 1)
-        ctxs = list(repo.set('%s:', firstrev))
+        ctxs = list(repo.set('%s: & public()', firstrev))
         mfnodes = (ctx.manifestnode() for ctx in ctxs)
         missingnodes = mfstore.getmissing(('', n) for n in mfnodes)
         mfnodes = list(n for k, n in missingnodes)
