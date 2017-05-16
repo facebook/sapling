@@ -1,17 +1,25 @@
 from __future__ import absolute_import
 
 import json
+import re
 
 from mercurial import (
     error,
     url as urlmod,
     util,
+    vfs as vfsmod,
 )
 from mercurial.i18n import _
 
-from . import (
-    util as lfsutil,
-)
+# 64 bytes for SHA256
+_lfsre = re.compile(r'\A[a-f0-9]{64}\Z')
+
+class lfsvfs(vfsmod.vfs):
+    def join(self, path):
+        """split the path at first two characters, like: XX/XXXXX..."""
+        if not _lfsre.match(path):
+            raise error.ProgrammingError('unexpected lfs path: %s' % path)
+        return super(lfsvfs, self).join(path[0:2], path[2:])
 
 class local(object):
     """Local blobstore for large file contents.
@@ -22,7 +30,7 @@ class local(object):
 
     def __init__(self, repo):
         fullpath = repo.svfs.join('lfs/objects')
-        self.vfs = lfsutil.lfsvfs(fullpath)
+        self.vfs = lfsvfs(fullpath)
 
     def write(self, oid, data):
         """Write blob to local blobstore."""
@@ -186,7 +194,7 @@ class _dummyremote(object):
 
     def __init__(self, repo, url):
         fullpath = repo.vfs.join('lfs', url.path)
-        self.vfs = lfsutil.lfsvfs(fullpath)
+        self.vfs = lfsvfs(fullpath)
 
     def writebatch(self, pointers, fromstore):
         for p in pointers:

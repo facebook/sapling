@@ -2,18 +2,19 @@
 
 from __future__ import absolute_import
 
+import hashlib
+
 from mercurial import (
     error,
     filelog,
     revlog,
-    util as hgutil,
+    util,
 )
 from mercurial.i18n import _
 from mercurial.node import bin, nullid, short
 
 from . import (
     pointer,
-    util,
 )
 
 def supportedoutgoingversions(orig, repo):
@@ -64,7 +65,7 @@ def writetostore(self, text):
         text = text[offset:]
 
     # git-lfs only supports sha256
-    oid = util.sha256(text)
+    oid = hashlib.sha256(text).hexdigest()
     self.opener.lfslocalblobstore.write(oid, text)
 
     # replace contents with metadata
@@ -74,7 +75,7 @@ def writetostore(self, text):
     # by default, we expect the content to be binary. however, LFS could also
     # be used for non-binary content. add a special entry for non-binary data.
     # this will be used by filectx.isbinary().
-    if not hgutil.binary(text):
+    if not util.binary(text):
         # not hg filelog metadata (affecting commit hash), no "x-hg-" prefix
         metadata['x-is-binary'] = '0'
 
@@ -165,7 +166,7 @@ def vfsinit(orig, self, othervfs):
     # also copy lfs blobstores. note: this can run before reposetup, so lfs
     # blobstore attributes are not always ready at this time.
     for name in ['lfslocalblobstore', 'lfsremoteblobstore']:
-        if hgutil.safehasattr(othervfs, name):
+        if util.safehasattr(othervfs, name):
             setattr(self, name, getattr(othervfs, name))
 
 def prepush(pushop):
