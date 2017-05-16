@@ -26,7 +26,6 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
   $ hg push ../repo2 -v
   pushing to ../repo2
   searching for changes
-  lfs: computing set of blobs to upload
   lfs: uploading 31cf46fbc4ecd458a0943c5b4881f1f5a6dd36c53d6167d5b69ac45149b38e5b (12 bytes)
   1 changesets found
   uncompressed size of bundle content:
@@ -54,7 +53,6 @@ When the server has some blobs already
   $ hg push ../repo1 -v | grep -v '^  '
   pushing to ../repo1
   searching for changes
-  lfs: computing set of blobs to upload
   lfs: need to transfer 2 objects
   lfs: uploading 37a65ab78d5ecda767e8622c248b5dbff1e68b1678ab0e730d5eb8601ec8ad19 (20 bytes)
   lfs: uploading d11e1a642b60813aee592094109b406089b8dff4cb157157f753418ec7857998 (19 bytes)

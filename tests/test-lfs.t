@@ -55,7 +55,6 @@
   $ hg push -v | egrep -v '^(uncompressed| )'
   pushing to $TESTTMP/server (glob)
   searching for changes
-  lfs: computing set of blobs to upload
   2 changesets found
   adding changesets
   adding manifests
@@ -178,7 +177,6 @@
   $ echo SMALL > small
   $ hg commit -Aqm 'create a lfs file' large small
   $ hg debuglfsupload -r 'all()' -v
-  lfs: computing set of blobs to upload
 
   $ cd ..
 

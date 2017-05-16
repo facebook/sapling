@@ -171,7 +171,7 @@ def prepush(pushop):
 def extractpointers(repo, revs):
     """return a list of lfs pointers added by given revs"""
     ui = repo.ui
-    if ui.verbose:
+    if ui.debugflag:
         ui.write(_('lfs: computing set of blobs to upload\n'))
     pointers = {}
     for i, n in enumerate(revs):
