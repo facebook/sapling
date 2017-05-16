@@ -82,6 +82,51 @@ class _gitlfsremote(object):
                                  % rawjson)
         return response
 
+    def _basictransfer(self, obj, action, localstore):
+        """Download or upload a single object using basic transfer protocol
+
+        obj: dict, an object description returned by batch API
+        action: string, one of ['upload', 'download']
+        localstore: blobstore.local
+
+        See https://github.com/git-lfs/git-lfs/blob/master/docs/api/\
+        basic-transfers.md
+        """
+        oid = str(obj['oid'])
+
+        # The action we're trying to perform should be available for the
+        # current blob. If upload is unavailable, it means the server
+        # has the object already, which is not an error.
+        if action not in obj.get('actions', []):
+            if action == 'upload':
+                return
+            m = obj.get('error', {}).get(
+                'message', _('(server did not provide error message)'))
+            raise LfsRemoteError(_('cannot download LFS object %s: %s')
+                                 % (oid, m))
+
+        href = str(obj['actions'][action].get('href'))
+        headers = obj['actions'][action].get('header', {}).items()
+
+        request = util.urlreq.request(href)
+        if action == 'upload':
+            # If uploading blobs, read data from local blobstore.
+            request.data = localstore.read(oid)
+            request.get_method = lambda: 'PUT'
+
+        for k, v in headers:
+            request.add_header(k, v)
+
+        try:
+            response = self.urlopener.open(request).read()
+        except util.urlerr.httperror as ex:
+            raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
+                                 % (ex, oid, action))
+
+        if action == 'download':
+            # If downloading blobs, store downloaded data to local blobstore
+            localstore.write(oid, response)
+
     def _batch(self, pointers, localstore, action):
         if action not in ['upload', 'download']:
             raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
@@ -94,47 +139,9 @@ class _gitlfsremote(object):
                  'download': _('lfs downloading')}[action]
         self.ui.progress(topic, 0, total=total)
         for obj in objects:
-            oid = str(obj['oid'])
-            # The action we're trying to perform should be available for the
-            # current blob. If upload is unavailable, it means the server
-            # has the object already, which is not an error.
-            if action not in obj.get('actions', []):
-                if action == 'upload':
-                    continue
-                m = obj.get('error', {}).get(
-                    'message', _('(server did not provide error message)'))
-                raise LfsRemoteError(_('cannot download LFS object %s: %s')
-                                     % (oid, m))
-
-            size = long(obj.get('size'))
-            href = str(obj['actions'][action].get('href'))
-            headers = obj['actions'][action].get('header', {}).items()
-
-            if self.ui:
-                self.ui.progress(topic, runningsize, total=total)
-
-            if action == 'upload':
-                # If uploading blobs, read data from local blobstore.
-                filedata = localstore.read(oid)
-                request = util.urlreq.request(href, data=filedata)
-                request.get_method = lambda: 'PUT'
-            else:
-                request = util.urlreq.request(href)
-
-            for k, v in headers:
-                request.add_header(k, v)
-
-            try:
-                response = self.urlopener.open(request).read()
-            except util.urlerr.httperror as ex:
-                raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
-                                     % (ex, oid, action))
-
-            if action == 'download':
-                # If downloading blobs, store downloaded data to local blobstore
-                localstore.write(oid, response)
-
-            runningsize += size
+            self._basictransfer(obj, action, localstore)
+            runningsize += obj.get('size', 0)
+            self.ui.progress(topic, runningsize, total=total)
 
         self.ui.progress(topic, pos=None, total=total)
         if self.ui.verbose:
