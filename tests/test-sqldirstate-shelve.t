@@ -1470,9 +1470,8 @@ shelve on new branch, conflict with previous shelvedstate
 Removing restore branch information from shelvedstate file(making it looks like
 in previous versions) and running unshelve --continue
 
-  $ head -n 6 < .hg/shelvedstate > .hg/shelvedstate_oldformat
-  $ rm .hg/shelvedstate
-  $ mv .hg/shelvedstate_oldformat .hg/shelvedstate
+  $ cat .hg/shelvedstate | grep -v "branchtorestore" > .hg/shelvedstate_old
+  $ mv .hg/shelvedstate_old .hg/shelvedstate
 
   $ echo "aaabbbccc" > a
   $ rm a.orig
