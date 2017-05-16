@@ -257,7 +257,7 @@ class FileImporter(object):
         self._importset = importset
         self._p4filelog = p4filelog # type: p4.P4Filelog
 
-    @property
+    @util.propertycache
     def relpath(self):
         client = self._importset.client
         where = p4.parse_where(client, self.depotfile)

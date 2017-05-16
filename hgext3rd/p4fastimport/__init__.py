@@ -26,7 +26,9 @@ import sqlite3
 from . import (
     p4,
     importer,
+    filetransaction as ftrmod
 )
+
 from .util import runworker, lastcl, decodefileflags
 
 from mercurial.i18n import _
@@ -213,17 +215,16 @@ def run_import(ui, repo, client, changelists, **opts):
 
     ui.note(_('importing repository.\n'))
     with repo.wlock(), repo.lock():
-        tr = repo.transaction('import')
+        for a, b in importset.caseconflicts:
+            ui.warn(_('case conflict: %s and %s\n') % (a, b))
+        # 3. Import files.
+        count = 0
+        fileinfo = {}
+        largefiles = []
+        ftr = ftrmod.filetransaction(ui.warn, repo.svfs)
         try:
-            for a, b in importset.caseconflicts:
-                ui.warn(_('case conflict: %s and %s\n') % (a, b))
-
-            # 3. Import files.
-            count = 0
-            fileinfo = {}
-            largefiles = []
             for filelogs in map(sorted, runlist.values()):
-                wargs = (tr, ui, repo, importset)
+                wargs = (ftr, ui, repo, importset)
                 for i, serialized in runworker(ui, create, wargs, filelogs):
                     data = json.loads(serialized)
                     ui.progress(_('importing filelogs'), count,
@@ -240,33 +241,38 @@ def run_import(ui, repo, client, changelists, **opts):
                     largefiles.extend(data['largefiles'])
                     count += i
                 ui.progress(_('importing filelogs'), None)
+            ftr.close()
 
-            # 4. Generate manifest and changelog based on the filelogs
-            # we imported
-            clog = importer.ChangeManifestImporter(ui, repo, importset)
-            revisions = []
-            for cl, hgnode in clog.creategen(tr, fileinfo):
-                revisions.append((cl, hex(hgnode)))
+            tr = repo.transaction('import')
+            try:
+                # 4. Generate manifest and changelog based on the filelogs
+                # we imported
+                clog = importer.ChangeManifestImporter(ui, repo, importset)
+                revisions = []
+                for cl, hgnode in clog.creategen(tr, fileinfo):
+                    revisions.append((cl, hex(hgnode)))
 
-            if opts.get('bookmark'):
-                ui.note(_('writing bookmark\n'))
-                writebookmark(tr, repo, revisions, opts['bookmark'])
+                if opts.get('bookmark'):
+                    ui.note(_('writing bookmark\n'))
+                    writebookmark(tr, repo, revisions, opts['bookmark'])
 
-            if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
-                ui.note(_('writing lfs metadata to sqlite\n'))
-                writelfsmetadata(largefiles, revisions,
-                     ui.config('p4fastimport', 'lfsmetadata', None))
+                if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
+                    ui.note(_('writing lfs metadata to sqlite\n'))
+                    writelfsmetadata(largefiles, revisions,
+                         ui.config('p4fastimport', 'lfsmetadata', None))
 
-            if ui.config('p4fastimport', 'metadata', None) is not None:
-                ui.note(_('writing metadata to sqlite\n'))
-                writerevmetadata(revisions,
-                     ui.config('p4fastimport', 'metadata', None))
+                if ui.config('p4fastimport', 'metadata', None) is not None:
+                    ui.note(_('writing metadata to sqlite\n'))
+                    writerevmetadata(revisions,
+                         ui.config('p4fastimport', 'metadata', None))
 
-            tr.close()
-            ui.note(_('%d revision(s), %d file(s) imported.\n') % (
-                len(changelists), count))
+                tr.close()
+                ui.note(_('%d revision(s), %d file(s) imported.\n') % (
+                    len(changelists), count))
+            finally:
+                tr.release()
         finally:
-            tr.release()
+            ftr.release()
 
 @command('debugscanlfs',
          [('C', 'client', '', _('Perforce client to reverse lookup')),
