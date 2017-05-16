@@ -523,10 +523,10 @@ def log(*msg):
         sys.stdout.flush()
 
 def terminate(proc):
-    """Terminate subprocess (with fallback for Python versions < 2.6)"""
+    """Terminate subprocess"""
     vlog('# Terminating process %d' % proc.pid)
     try:
-        getattr(proc, 'terminate', lambda : os.kill(proc.pid, signal.SIGTERM))()
+        proc.terminate()
     except OSError:
         pass
 
