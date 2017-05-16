@@ -17,11 +17,26 @@ from mercurial.node import bin, nullid
 from mercurial import filelog, revlog, mdiff, ancestor, error
 from mercurial.i18n import _
 
+class remotefilelognodemap(object):
+    def __init__(self, filename, store):
+        self._filename = filename
+        self._store = store
+
+    def __contains__(self, node):
+        missing = self._store.getmissing([(self._filename, node)])
+        return not bool(missing)
+
+    def __get__(self, node):
+        if node not in self:
+            raise KeyError(node)
+        return node
+
 class remotefilelog(object):
     def __init__(self, opener, path, repo):
         self.opener = opener
         self.filename = path
         self.repo = repo
+        self.nodemap = remotefilelognodemap(self.filename, repo.contentstore)
 
         self.version = 1
 
