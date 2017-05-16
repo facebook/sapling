@@ -122,6 +122,10 @@ class HgRepository(repobase.Repository):
         # Get the commit ID and return it
         return self.hg('log', '-T{node}', '-r.')
 
+    def log(self):
+        '''Runs `hg log` and returns the commit hashes (most recent first).'''
+        return self.hg('log', '-T{node}\\0').split('\0')[:-1]
+
     def status(self):
         '''Returns the output of `hg status` as a string.'''
         return self.hg('status')
