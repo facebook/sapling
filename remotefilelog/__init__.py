@@ -32,7 +32,6 @@ from mercurial import (
     patch,
     repair,
     repoview,
-    revlog,
     revset,
     scmutil,
     smartset,
@@ -392,26 +391,28 @@ def onetimeclientsetup(ui):
     # This violates Mercurial's filelog->manifest->changelog write order,
     # but is generally fine for client repos.
     pendingfilecommits = []
-    def filelogadd(orig, self, text, meta, transaction, link, p1, p2):
+    def addrawrevision(orig, self, rawtext, transaction, link, p1, p2, node,
+                       flags, cachedelta=None, _metatuple=None):
         if isinstance(link, int):
-            pendingfilecommits.append((self, text, meta, transaction, link, p1,
-                                       p2))
-
-            hashtext = shallowutil.createrevlogtext(text, meta.get('copy'),
-                                                    meta.get('copyrev'))
-            node = revlog.hash(hashtext, p1, p2)
+            pendingfilecommits.append(
+                (self, rawtext, transaction, link, p1, p2, node, flags,
+                 cachedelta, _metatuple))
             return node
         else:
-            return orig(self, text, meta, transaction, link, p1, p2)
-    wrapfunction(remotefilelog.remotefilelog, 'add', filelogadd)
+            return orig(self, rawtext, transaction, link, p1, p2, node, flags,
+                        cachedelta, _metatuple=_metatuple)
+    wrapfunction(remotefilelog.remotefilelog, 'addrawrevision', addrawrevision)
 
     def changelogadd(orig, self, *args):
         node = orig(self, *args)
         for oldargs in pendingfilecommits:
-            log, text, meta, transaction, link, p1, p2 = oldargs
+            log, rt, tr, link, p1, p2, n, fl, c, m = oldargs
             linknode = self.node(link)
             if linknode == node:
-                log.add(text, meta, transaction, linknode, p1, p2)
+                log.addrawrevision(rt, tr, linknode, p1, p2, n, fl, c, m)
+            else:
+                raise error.ProgrammingError(
+                    'pending multiple integer revisions are not supported')
 
         del pendingfilecommits[0:len(pendingfilecommits)]
         return node
