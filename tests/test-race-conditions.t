@@ -51,6 +51,8 @@
   $ hg pull -q -R client2 ssh://user@dummy/master
   $ ls -l $TESTTMP/hgsql-lockorder*
   * $TESTTMP/hgsql-lockorder-* (glob)
+  * $TESTTMP/hgsql-lockorder-* (glob)
+  * $TESTTMP/hgsql-lockorder-* (glob)
 
   $ cd client
   $ hg up -q 1
@@ -80,14 +82,7 @@
 # Verify incorrect lock order taking is logged.
 # We know that streaming clones currently hit this code path, and the hg pull in
 # the above test used that code path.
-  $ cat $TESTTMP/hgsql-lockorder* | tail -n 10
-    File *, line *, in getstream (glob)
-      for chunk in it:
+  $ cat $TESTTMP/hgsql-lockorder* | grep generate
     File *, line *, in generatev1wireproto (glob)
       filecount, bytecount, it = generatev1(repo)
     File *, line *, in generatev1 (glob)
-      with repo.lock():
-    File *, line *, in lock (glob)
-      self._recordbadlockorder()
-    File *, line *, in _recordbadlockorder (glob)
-      stack = traceback.format_stack()
