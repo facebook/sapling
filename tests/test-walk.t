@@ -76,7 +76,7 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk -X ../beans
-  matcher: <matcher files=[], patterns=None, includes=None, excludes='(?:beans(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))', excludes=None>>
   f  fennel                          ../fennel
   f  fenugreek                       ../fenugreek
   f  fiddlehead                      ../fiddlehead
@@ -146,7 +146,7 @@
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk -X 'rootfilesin:'
-  matcher: <matcher files=[], patterns=None, includes=None, excludes='(?:^[^/]+$)'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:^[^/]+$)', excludes=None>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -194,7 +194,7 @@
   matcher: <matcher files=[], patterns=None, includes='(?:^mammals/[^/]+$)', excludes=None>
   f  mammals/skunk  skunk
   $ hg debugwalk -X 'rootfilesin:mammals'
-  matcher: <matcher files=[], patterns=None, includes=None, excludes='(?:^mammals/[^/]+$)'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:^mammals/[^/]+$)', excludes=None>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -289,35 +289,35 @@
   matcher: <matcher files=['beans'], patterns='(?:beans(?:/|$))', includes='(?:beans\\/black(?:/|$))', excludes=None>
   f  beans/black  beans/black
   $ hg debugwalk -Xbeans/black beans
-  matcher: <matcher files=['beans'], patterns='(?:beans(?:/|$))', includes=None, excludes='(?:beans\\/black(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=['beans'], patterns='(?:beans(?:/|$))', includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>>
   f  beans/borlotti  beans/borlotti
   f  beans/kidney    beans/kidney
   f  beans/navy      beans/navy
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk -Xbeans/black -Ibeans
-  matcher: <matcher files=[], patterns=None, includes='(?:beans(?:/|$))', excludes='(?:beans\\/black(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))', excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>>
   f  beans/borlotti  beans/borlotti
   f  beans/kidney    beans/kidney
   f  beans/navy      beans/navy
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk -Xbeans/black beans/black
-  matcher: <matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes=None, excludes='(?:beans\\/black(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Xbeans/black -Ibeans/black
-  matcher: <matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes='(?:beans\\/black(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>>
   $ hg debugwalk -Xbeans beans/black
-  matcher: <matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes=None, excludes='(?:beans(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=['beans/black'], patterns='(?:beans\\/black(?:/|$))', includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))', excludes=None>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Xbeans -Ibeans/black
-  matcher: <matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes='(?:beans(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=[], patterns=None, includes='(?:beans\\/black(?:/|$))', excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:beans(?:/|$))', excludes=None>>
   $ hg debugwalk 'glob:mammals/../beans/b*'
   matcher: <matcher files=['beans'], patterns='(?:beans\\/b[^/]*$)', includes=None, excludes=None>
   f  beans/black     beans/black
   f  beans/borlotti  beans/borlotti
   $ hg debugwalk '-X*/Procyonidae' mammals
-  matcher: <matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes=None, excludes='(?:[^/]*\\/Procyonidae(?:/|$))'>
+  matcher: <differencematcher m1=<matcher files=['mammals'], patterns='(?:mammals(?:/|$))', includes=None, excludes=None>, m2=<matcher files=[], patterns=None, includes='(?:[^/]*\\/Procyonidae(?:/|$))', excludes=None>>
   f  mammals/skunk  mammals/skunk
   $ hg debugwalk path:mammals
   matcher: <matcher files=['mammals'], patterns='(?:^mammals(?:/|$))', includes=None, excludes=None>

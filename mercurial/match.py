@@ -142,10 +142,15 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                 kindpats.append((kind, pats, source))
             return kindpats
 
-    return matcher(root, cwd, normalize, patterns, include=include,
-                   exclude=exclude, default=default, exact=exact,
-                   auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
-                   warn=warn, badfn=badfn)
+    m = matcher(root, cwd, normalize, patterns, include=include, exclude=None,
+                default=default, exact=exact, auditor=auditor, ctx=ctx,
+                listsubrepos=listsubrepos, warn=warn, badfn=badfn)
+    if exclude:
+        em = matcher(root, cwd, normalize, [], include=exclude, exclude=None,
+                     default=default, exact=False, auditor=auditor, ctx=ctx,
+                     listsubrepos=listsubrepos, warn=warn, badfn=None)
+        m = differencematcher(m, em)
+    return m
 
 def exact(root, cwd, files, badfn=None):
     return match(root, cwd, files, exact=True, badfn=badfn)
@@ -417,6 +422,62 @@ class matcher(basematcher):
         return ('<matcher files=%r, patterns=%r, includes=%r, excludes=%r>' %
                 (self._files, self.patternspat, self.includepat,
                  self.excludepat))
+
+class differencematcher(basematcher):
+    '''Composes two matchers by matching if the first matches and the second
+    does not. Well, almost... If the user provides a pattern like "-X foo foo",
+    Mercurial actually does match "foo" against that. That's because exact
+    matches are treated specially. So, since this differencematcher is used for
+    excludes, it needs to special-case exact matching.
+
+    The second matcher's non-matching-attributes (root, cwd, bad, explicitdir,
+    traversedir) are ignored.
+
+    TODO: If we want to keep the behavior described above for exact matches, we
+    should consider instead treating the above case something like this:
+    union(exact(foo), difference(pattern(foo), include(foo)))
+    '''
+    def __init__(self, m1, m2):
+        super(differencematcher, self).__init__(m1._root, m1._cwd)
+        self._m1 = m1
+        self._m2 = m2
+        self.bad = m1.bad
+        self.explicitdir = m1.explicitdir
+        self.traversedir = m1.traversedir
+
+    def matchfn(self, f):
+        return self._m1(f) and (not self._m2(f) or self._m1.exact(f))
+
+    @propertycache
+    def _files(self):
+        if self.isexact():
+            return [f for f in self._m1.files() if self(f)]
+        # If m1 is not an exact matcher, we can't easily figure out the set of
+        # files, because its files() are not always files. For example, if
+        # m1 is "path:dir" and m2 is "rootfileins:.", we don't
+        # want to remove "dir" from the set even though it would match m2,
+        # because the "dir" in m1 may not be a file.
+        return self._m1.files()
+
+    def visitdir(self, dir):
+        if self._m2.visitdir(dir) == 'all':
+            # There's a bug here: If m1 matches file 'dir/file' and m2 excludes
+            # 'dir' (recursively), we should still visit 'dir' due to the
+            # exception we have for exact matches.
+            return False
+        return bool(self._m1.visitdir(dir))
+
+    def isexact(self):
+        return self._m1.isexact()
+
+    def anypats(self):
+        return self._m1.anypats() or self._m2.anypats()
+
+    def prefix(self):
+        return not self.always() and not self.isexact() and not self.anypats()
+
+    def __repr__(self):
+        return ('<differencematcher m1=%r, m2=%r>' % (self._m1, self._m2))
 
 class subdirmatcher(basematcher):
     """Adapt a matcher to work on a subdirectory only.
