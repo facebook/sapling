@@ -196,13 +196,5 @@ def uploadblobs(repo, pointers):
     if not pointers:
         return
 
-    totalsize = sum(p.size() for p in pointers)
-
-    ui = repo.ui
-    if ui.verbose:
-        msg = _('lfs: need to upload %s objects (%s)\n')
-        ui.write(msg % (len(pointers), hgutil.bytecount(totalsize)))
-
     remoteblob = repo.svfs.lfsremoteblobstore
-    remoteblob.writebatch(pointers, repo.svfs.lfslocalblobstore,
-                          total=totalsize)
+    remoteblob.writebatch(pointers, repo.svfs.lfslocalblobstore)

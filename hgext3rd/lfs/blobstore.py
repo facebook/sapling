@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import functools
 import json
 
 from mercurial import (
@@ -48,15 +47,15 @@ class _gitlfsremote(object):
         self.baseurl = baseurl.rstrip('/')
         self.urlopener = urlmod.opener(ui, authinfo)
 
-    def writebatch(self, pointers, fromstore, total=None):
+    def writebatch(self, pointers, fromstore):
         """Batch upload from local to remote blobstore."""
-        self._batch(pointers, fromstore, 'upload', total=total)
+        self._batch(pointers, fromstore, 'upload')
 
-    def readbatch(self, pointers, tostore, total=None):
+    def readbatch(self, pointers, tostore):
         """Batch download from remote to local blostore."""
-        self._batch(pointers, tostore, 'download', total=total)
+        self._batch(pointers, tostore, 'download')
 
-    def _batch(self, pointers, localstore, action, total=None):
+    def _batch(self, pointers, localstore, action):
         if action not in ['upload', 'download']:
             raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
 
@@ -88,15 +87,10 @@ class _gitlfsremote(object):
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
         runningsize = 0
-        if total is None:
-            alttotal = functools.reduce(
-                lambda acc, x: acc + long(x.get('size', 0)),
-                response.get('objects'), 0)
-            if alttotal > 0:
-                total = alttotal
-        if self.ui:
-            self.ui.progress(topic, 0, total=total)
-        for obj in response.get('objects'):
+        objects = response.get('objects', [])
+        total = sum(x.get('size', 0) for x in objects)
+        self.ui.progress(topic, 0, total=total)
+        for obj in objects:
             oid = str(obj['oid'])
             # The action we're trying to perform should be available for the
             # current blob. If upload is unavailable, it means the server
@@ -158,13 +152,13 @@ class _dummyremote(object):
         fullpath = repo.vfs.join('lfs', url.path)
         self.vfs = lfsutil.lfsvfs(fullpath)
 
-    def writebatch(self, pointers, fromstore, ui=None, total=None):
+    def writebatch(self, pointers, fromstore):
         for p in pointers:
             content = fromstore.read(p.oid())
             with self.vfs(p.oid(), 'wb', atomictemp=True) as fp:
                 fp.write(content)
 
-    def readbatch(self, pointers, tostore, ui=None, total=None):
+    def readbatch(self, pointers, tostore):
         for p in pointers:
             content = self.vfs.read(p.oid())
             tostore.write(p.oid(), content)
@@ -175,10 +169,10 @@ class _nullremote(object):
     def __init__(self, repo, url):
         pass
 
-    def writebatch(self, pointers, fromstore, ui=None, total=None):
+    def writebatch(self, pointers, fromstore):
         pass
 
-    def readbatch(self, pointers, tostore, ui=None, total=None):
+    def readbatch(self, pointers, tostore):
         pass
 
 class _promptremote(object):
@@ -187,10 +181,10 @@ class _promptremote(object):
     def __init__(self, repo, url):
         pass
 
-    def writebatch(self, pointers, fromstore, ui=None, total=None):
+    def writebatch(self, pointers, fromstore, ui=None):
         self._prompt()
 
-    def readbatch(self, pointers, tostore, ui=None, total=None):
+    def readbatch(self, pointers, tostore, ui=None):
         self._prompt()
 
     def _prompt(self):

@@ -27,7 +27,6 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
   pushing to ../repo2
   searching for changes
   lfs: computing set of blobs to upload
-  lfs: need to upload 1 objects (12 bytes)
   lfs: mapping blobs to upload URLs
   lfs: upload completed
   1 changesets found

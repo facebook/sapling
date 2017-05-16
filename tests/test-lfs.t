@@ -56,7 +56,6 @@
   pushing to $TESTTMP/server (glob)
   searching for changes
   lfs: computing set of blobs to upload
-  lfs: need to upload 1 objects (1.47 KB)
   2 changesets found
   adding changesets
   adding manifests
@@ -180,7 +179,6 @@
   $ hg commit -Aqm 'create a lfs file' large small
   $ hg debuglfsupload -r 'all()' -v
   lfs: computing set of blobs to upload
-  lfs: need to upload 1 objects (39 bytes)
 
   $ cd ..
 
