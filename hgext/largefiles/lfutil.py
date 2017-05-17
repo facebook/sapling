@@ -296,8 +296,6 @@ def getstandinmatcher(repo, rmatcher=None):
         if not pats:
             pats = [wvfs.join(standindir)]
         match = scmutil.match(repo[None], pats, badfn=badfn)
-        # if pats is empty, it would incorrectly always match, so clear _always
-        match._always = False
     else:
         # no patterns: relative to repo root
         match = scmutil.match(repo[None], [wvfs.join(standindir)], badfn=badfn)
