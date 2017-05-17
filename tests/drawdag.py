@@ -214,6 +214,9 @@ class simplefilectx(object):
     def data(self):
         return self._data
 
+    def filenode(self):
+        return None
+
     def path(self):
         return self._path
 
