@@ -473,7 +473,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     newheads = []
     scratchheads = []
     nodestobundle = {}
-    allbundlerepos = []
+    allbundlestocleanup = []
     try:
         for head in heads:
             if head not in repo.changelog.nodemap:
@@ -482,7 +482,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                     bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
                     bundlerepo = repository(repo.ui, bundlepath)
 
-                    allbundlerepos.append(bundlerepo)
+                    allbundlestocleanup.append((bundlerepo, newbundlefile))
                     bundlerevs = set(_readbundlerevs(bundlerepo))
                     bundlecaps = _includefilelogstobundle(
                         bundlecaps, bundlerepo, bundlerevs, repo.ui)
@@ -499,8 +499,14 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                 newheads.extend(bundleroots)
                 scratchheads.append(head)
     finally:
-        for bundlerepo in allbundlerepos:
+        for bundlerepo, bundlefile in allbundlestocleanup:
             bundlerepo.close()
+            try:
+                os.unlink(bundlefile)
+            except (IOError, OSError):
+                # if we can't cleanup the file then just ignore the error,
+                # no need to fail
+                pass
 
     pullfrombundlestore = bool(scratchbundles)
     wrappedchangegrouppart = False
