@@ -347,14 +347,12 @@ def overridelog(orig, ui, repo, *pats, **opts):
                 else:
                     f = m._cwd + '/' + f
                 return back + lfutil.standin(f)
-
-            pats.update(fixpats(f, tostandin) for f in p)
         else:
             def tostandin(f):
                 if lfutil.isstandin(f):
                     return f
                 return lfutil.standin(f)
-            pats.update(fixpats(f, tostandin) for f in p)
+        pats.update(fixpats(f, tostandin) for f in p)
 
         for i in range(0, len(m._files)):
             # Don't add '.hglf' to m.files, since that is already covered by '.'
