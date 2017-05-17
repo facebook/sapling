@@ -767,6 +767,7 @@ def pushmarker(repo, key, old, new):
         tr = repo.transaction('pushkey: obsolete markers')
         try:
             repo.obsstore.mergemarkers(tr, data)
+            repo.invalidatevolatilesets()
             tr.close()
             return 1
         finally:
