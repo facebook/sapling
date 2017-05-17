@@ -357,7 +357,7 @@ def parseargs(args, parser):
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
-        if not os.path.basename(options.with_hg) == b'hg':
+        if os.path.basename(options.with_hg) not in [b'hg', b'hg.exe']:
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
         testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
