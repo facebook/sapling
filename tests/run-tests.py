@@ -216,6 +216,22 @@ def parselistfiles(files, listtype, warn=True):
         f.close()
     return entries
 
+def parsettestcases(path):
+    """read a .t test file, return a set of test case names
+
+    If path does not exist, return an empty set.
+    """
+    cases = set()
+    try:
+        with open(path, 'rb') as f:
+            for l in f:
+                if l.startswith(b'#testcases '):
+                    cases.update(l[11:].split())
+    except IOError as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+    return cases
+
 def getparser():
     """Obtain the OptionParser used by the CLI."""
     parser = optparse.OptionParser("%prog [options] [tests]")
@@ -587,6 +603,7 @@ class Test(unittest.TestCase):
         self.bname = os.path.basename(path)
         self.name = _strpath(self.bname)
         self._testdir = os.path.dirname(path)
+        self._tmpname = os.path.basename(path)
         self.errpath = os.path.join(self._testdir, b'%s.err' % self.bname)
 
         self._threadtmp = tmpdir
@@ -646,7 +663,7 @@ class Test(unittest.TestCase):
             if e.errno != errno.EEXIST:
                 raise
 
-        name = os.path.basename(self.path)
+        name = self._tmpname
         self._testtmp = os.path.join(self._threadtmp, name)
         os.mkdir(self._testtmp)
 
@@ -1055,6 +1072,19 @@ class TTest(Test):
     ESCAPEMAP = dict((bchr(i), br'\x%02x' % i) for i in range(256))
     ESCAPEMAP.update({b'\\': b'\\\\', b'\r': br'\r'})
 
+    def __init__(self, path, *args, **kwds):
+        # accept an extra "case" parameter
+        case = None
+        if 'case' in kwds:
+            case = kwds.pop('case')
+        self._case = case
+        self._allcases = parsettestcases(path)
+        super(TTest, self).__init__(path, *args, **kwds)
+        if case:
+            self.name = '%s (case %s)' % (self.name, _strpath(case))
+            self.errpath = b'%s.%s.err' % (self.errpath[:-4], case)
+            self._tmpname += b'-%s' % case
+
     @property
     def refpath(self):
         return os.path.join(self._testdir, self.bname)
@@ -1109,6 +1139,20 @@ class TTest(Test):
         if 'slow' in reqs:
             self._timeout = self._slowtimeout
         return True, None
+
+    def _iftest(self, args):
+        # implements "#if"
+        reqs = []
+        for arg in args:
+            if arg.startswith(b'no-') and arg[3:] in self._allcases:
+                if arg[3:] == self._case:
+                    return False
+            elif arg in self._allcases:
+                if arg != self._case:
+                    return False
+            else:
+                reqs.append(arg)
+        return self._hghave(reqs)[0]
 
     def _parsetest(self, lines):
         # We generate a shell script which outputs unique markers to line
@@ -1167,7 +1211,7 @@ class TTest(Test):
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
                 if skipping is not None:
                     after.setdefault(pos, []).append('  !!! nested #if\n')
-                skipping = not self._hghave(lsplit[1:])[0]
+                skipping = not self._iftest(lsplit[1:])
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b'#else'):
                 if skipping is None:
@@ -2263,14 +2307,29 @@ class TestRunner(object):
             else:
                 args = os.listdir(b'.')
 
-        return [{'path': t} for t in args
-                if os.path.basename(t).startswith(b'test-')
-                    and (t.endswith(b'.py') or t.endswith(b'.t'))]
+        tests = []
+        for t in args:
+            if not (os.path.basename(t).startswith(b'test-')
+                    and (t.endswith(b'.py') or t.endswith(b'.t'))):
+                continue
+            if t.endswith(b'.t'):
+                # .t file may contain multiple test cases
+                cases = sorted(parsettestcases(t))
+                if cases:
+                    tests += [{'path': t, 'case': c} for c in sorted(cases)]
+                else:
+                    tests.append({'path': t})
+            else:
+                tests.append({'path': t})
+        return tests
 
     def _runtests(self, testdescs):
         def _reloadtest(test, i):
             # convert a test back to its description dict
             desc = {'path': test.path}
+            case = getattr(test, '_case', None)
+            if case:
+                desc['case'] = case
             return self._gettest(desc, i)
 
         try:
@@ -2286,7 +2345,12 @@ class TestRunner(object):
             if self.options.restart:
                 orig = list(testdescs)
                 while testdescs:
-                    if os.path.exists(testdescs[0]['path'] + ".err"):
+                    desc = testdescs[0]
+                    if 'case' in desc:
+                        errpath = b'%s.%s.err' % (desc['path'], desc['case'])
+                    else:
+                        errpath = b'%s.err' % desc['path']
+                    if os.path.exists(errpath):
                         break
                     testdescs.pop(0)
                 if not testdescs:
@@ -2369,6 +2433,9 @@ class TestRunner(object):
         refpath = os.path.join(self._testdir, path)
         tmpdir = os.path.join(self._hgtmp, b'child%d' % count)
 
+        # extra keyword parameters. 'case' is used by .t tests
+        kwds = dict((k, testdesc[k]) for k in ['case'] if k in testdesc)
+
         t = testcls(refpath, tmpdir,
                     keeptmpdir=self.options.keep_tmpdir,
                     debug=self.options.debug,
@@ -2379,7 +2446,7 @@ class TestRunner(object):
                     shell=self.options.shell,
                     hgcommand=self._hgcommand,
                     usechg=bool(self.options.with_chg or self.options.chg),
-                    useipv6=useipv6)
+                    useipv6=useipv6, **kwds)
         t.should_reload = True
         return t
 

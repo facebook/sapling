@@ -900,3 +900,78 @@ support for bisecting failed tests automatically
   # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+  $ cd ..
+
+Test cases in .t files
+======================
+  $ mkdir cases
+  $ cd cases
+  $ cat > test-cases-abc.t <<'EOF'
+  > #testcases A B C
+  >   $ V=B
+  > #if A
+  >   $ V=A
+  > #endif
+  > #if C
+  >   $ V=C
+  > #endif
+  >   $ echo $V | sed 's/A/C/'
+  >   C
+  > #if C
+  >   $ [ $V = C ]
+  > #endif
+  > #if A
+  >   $ [ $V = C ]
+  >   [1]
+  > #endif
+  > #if no-C
+  >   $ [ $V = C ]
+  >   [1]
+  > #endif
+  >   $ [ $V = D ]
+  >   [1]
+  > EOF
+  $ rt
+  .
+  --- $TESTTMP/anothertests/cases/test-cases-abc.t
+  +++ $TESTTMP/anothertests/cases/test-cases-abc.t.B.err
+  @@ -7,7 +7,7 @@
+     $ V=C
+   #endif
+     $ echo $V | sed 's/A/C/'
+  -  C
+  +  B
+   #if C
+     $ [ $V = C ]
+   #endif
+  
+  ERROR: test-cases-abc.t (case B) output changed
+  !.
+  Failed test-cases-abc.t (case B): output changed
+  # Ran 3 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+--restart works
+
+  $ rt --restart
+  
+  --- $TESTTMP/anothertests/cases/test-cases-abc.t
+  +++ $TESTTMP/anothertests/cases/test-cases-abc.t.B.err
+  @@ -7,7 +7,7 @@
+     $ V=C
+   #endif
+     $ echo $V | sed 's/A/C/'
+  -  C
+  +  B
+   #if C
+     $ [ $V = C ]
+   #endif
+  
+  ERROR: test-cases-abc.t (case B) output changed
+  !.
+  Failed test-cases-abc.t (case B): output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
