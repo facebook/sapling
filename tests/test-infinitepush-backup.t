@@ -432,3 +432,18 @@ Delete backup state file and try again
   $ hg isbackedup -r . -r 630839011471e17
   6c4f4b30ae4c2dd928d551836c70c741ee836650 not backed up
   630839011471e17f808b92ab084bedfaca33b110 not backed up
+
+Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 2 commits:
+  remote:     cf2adfba1469  headone
+  remote:     6c4f4b30ae4c  headtwo
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg prune 6c4f4b30ae4c2dd928d551836c70c741ee836650
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at 630839011471
+  1 changesets pruned
+  $ hg isbackedup -r 6c4f4b30ae4c2dd928d551836c70c741ee836650
+  6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up

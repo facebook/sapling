@@ -312,9 +312,10 @@ def isbackedup(ui, repo, **opts):
     if not revs:
         revs = ['.']
     bkpstate = _readlocalbackupstate(ui, repo)
-    backeduprevs = repo.revs('draft() and ::%ls', bkpstate.heads)
-    for r in scmutil.revrange(repo, revs):
-        ui.write(_(repo[r].hex() + ' '))
+    unfi = repo.unfiltered()
+    backeduprevs = unfi.revs('draft() and ::%ls', bkpstate.heads)
+    for r in scmutil.revrange(unfi, revs):
+        ui.write(_(unfi[r].hex() + ' '))
         ui.write(_('backed up' if r in backeduprevs else 'not backed up'))
         ui.write(_('\n'))
 
