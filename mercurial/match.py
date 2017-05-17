@@ -142,9 +142,12 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                 kindpats.append((kind, pats, source))
             return kindpats
 
-    m = matcher(root, cwd, normalize, patterns, include=None,
-                default=default, exact=exact, auditor=auditor, ctx=ctx,
-                listsubrepos=listsubrepos, warn=warn, badfn=badfn)
+    if exact:
+        m = exactmatcher(root, cwd, patterns, badfn)
+    else:
+        m = matcher(root, cwd, normalize, patterns, include=None,
+                    default=default, exact=exact, auditor=auditor, ctx=ctx,
+                    listsubrepos=listsubrepos, warn=warn, badfn=badfn)
     if include:
         im = matcher(root, cwd, normalize, [], include=include, default=default,
                      exact=False, auditor=auditor, ctx=ctx,
@@ -158,7 +161,7 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
     return m
 
 def exact(root, cwd, files, badfn=None):
-    return match(root, cwd, files, exact=True, badfn=badfn)
+    return exactmatcher(root, cwd, files, badfn=badfn)
 
 def always(root, cwd):
     return match(root, cwd, [])
@@ -405,6 +408,33 @@ class matcher(basematcher):
     def __repr__(self):
         return ('<matcher files=%r, patterns=%r, includes=%r>' %
                 (self._files, self.patternspat, self.includepat))
+
+class exactmatcher(basematcher):
+    '''Matches the input files exactly. They are interpreted as paths, not
+    patterns (so no kind-prefixes).
+    '''
+
+    def __init__(self, root, cwd, files, badfn=None):
+        super(exactmatcher, self).__init__(root, cwd, badfn)
+
+        if isinstance(files, list):
+            self._files = files
+        else:
+            self._files = list(files)
+        self.matchfn = self.exact
+
+    @propertycache
+    def _dirs(self):
+        return set(util.dirs(self._fileset)) | {'.'}
+
+    def visitdir(self, dir):
+        return dir in self._dirs
+
+    def isexact(self):
+        return True
+
+    def __repr__(self):
+        return ('<exactmatcher files=%r>' % self._files)
 
 class differencematcher(basematcher):
     '''Composes two matchers by matching if the first matches and the second
