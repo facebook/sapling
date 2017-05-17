@@ -2062,11 +2062,11 @@ class TestRunner(object):
             self.options = options
 
             self._checktools()
-            tests = self.findtests(args)
+            testdescs = self.findtests(args)
             if options.profile_runner:
                 import statprof
                 statprof.start()
-            result = self._run(tests)
+            result = self._run(testdescs)
             if options.profile_runner:
                 statprof.stop()
                 statprof.display()
@@ -2075,9 +2075,9 @@ class TestRunner(object):
         finally:
             os.umask(oldmask)
 
-    def _run(self, tests):
+    def _run(self, testdescs):
         if self.options.random:
-            random.shuffle(tests)
+            random.shuffle(testdescs)
         else:
             # keywords for slow tests
             slow = {b'svn': 10,
@@ -2113,7 +2113,7 @@ class TestRunner(object):
                         val /= 10.0
                     perf[f] = val / 1000.0
                     return perf[f]
-            tests.sort(key=sortkey)
+            testdescs.sort(key=sortkey)
 
         self._testdir = osenvironb[b'TESTDIR'] = getattr(
             os, 'getcwdb', os.getcwd)()
@@ -2243,7 +2243,7 @@ class TestRunner(object):
         vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
 
         try:
-            return self._runtests(tests) or 0
+            return self._runtests(testdescs) or 0
         finally:
             time.sleep(.1)
             self._cleanup()
@@ -2267,7 +2267,7 @@ class TestRunner(object):
                 if os.path.basename(t).startswith(b'test-')
                     and (t.endswith(b'.py') or t.endswith(b'.t'))]
 
-    def _runtests(self, tests):
+    def _runtests(self, testdescs):
         def _reloadtest(test, i):
             # convert a test back to its description dict
             desc = {'path': test.path}
@@ -2284,16 +2284,16 @@ class TestRunner(object):
                 self._installchg()
 
             if self.options.restart:
-                orig = list(tests)
-                while tests:
-                    if os.path.exists(tests[0]['path'] + ".err"):
+                orig = list(testdescs)
+                while testdescs:
+                    if os.path.exists(testdescs[0]['path'] + ".err"):
                         break
-                    tests.pop(0)
-                if not tests:
+                    testdescs.pop(0)
+                if not testdescs:
                     print("running all tests")
-                    tests = orig
+                    testdescs = orig
 
-            tests = [self._gettest(t, i) for i, t in enumerate(tests)]
+            tests = [self._gettest(d, i) for i, d in enumerate(testdescs)]
 
             failed = False
             warned = False
@@ -2351,13 +2351,13 @@ class TestRunner(object):
             self._ports[count] = port
         return port
 
-    def _gettest(self, test, count):
+    def _gettest(self, testdesc, count):
         """Obtain a Test by looking at its filename.
 
         Returns a Test instance. The Test may not be runnable if it doesn't
         map to a known type.
         """
-        path = test['path']
+        path = testdesc['path']
         lctest = path.lower()
         testcls = Test
 
