@@ -64,6 +64,7 @@ def call_conduit(method, **kwargs):
     global connection, conduit_host, conduit_path, conduit_protocol
 
     # start connection
+    # TODO: move to python-requests
     if connection is None:
         if conduit_protocol == 'https':
             connection = httplib.HTTPSConnection(conduit_host)
@@ -73,9 +74,13 @@ def call_conduit(method, **kwargs):
     # send request
     path = conduit_path + method
     args = urlencode({'params': json.dumps(kwargs)})
+    headers = {
+        'Connection': 'Keep-Alive',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    }
     for attempt in xrange(MAX_CONNECT_RETRIES):
         try:
-            connection.request('POST', path, args, {'Connection': 'Keep-Alive'})
+            connection.request('POST', path, args, headers)
             break
         except httplib.HTTPException as e:
             connection.connect()

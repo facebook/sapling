@@ -67,6 +67,7 @@ class Client(object):
             }
         )
         urlparts = urlreq.urlparse(self._host)
+        # TODO: move to python-requests
         if self._connection is None:
             if urlparts.scheme == 'http':
                 self._connection = httplib.HTTPConnection(
@@ -78,9 +79,13 @@ class Client(object):
                 raise ClientError(
                     None, 'Unknown host scheme: %s', urlparts.scheme)
 
+        headers = {
+            'Connection': 'Keep-Alive',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        }
         # self._connection.set_debuglevel(1)
         self._connection.request('POST', (urlparts.path + method), req_data,
-                                 {'Connection': 'Keep-Alive'})
+                                 headers)
 
         response = json.load(self._connection.getresponse())
         if response['error_code'] is not None:
