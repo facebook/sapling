@@ -568,13 +568,21 @@ def cachefunc(func):
     return f
 
 class sortdict(collections.OrderedDict):
-    '''a simple sorted dictionary'''
+    '''a simple sorted dictionary
+
+    >>> d1 = sortdict([('a', 0), ('b', 1)])
+    >>> d2 = d1.copy()
+    >>> d2
+    sortdict([('a', 0), ('b', 1)])
+    >>> d2.update([('a', 2)])
+    >>> d2.keys() # should still be in last-set order
+    ['b', 'a']
+    '''
+
     def __setitem__(self, key, value):
         if key in self:
             del self[key]
         super(sortdict, self).__setitem__(key, value)
-    def copy(self):
-        return sortdict(self)
 
 class _lrucachenode(object):
     """A node in a doubly linked list.
