@@ -567,54 +567,14 @@ def cachefunc(func):
 
     return f
 
-class sortdict(dict):
+class sortdict(collections.OrderedDict):
     '''a simple sorted dictionary'''
-    def __init__(self, data=None):
-        self._list = []
-        if data:
-            self.update(data)
+    def __setitem__(self, key, value):
+        if key in self:
+            del self[key]
+        super(sortdict, self).__setitem__(key, value)
     def copy(self):
         return sortdict(self)
-    def __setitem__(self, key, val):
-        if key in self:
-            self._list.remove(key)
-        self._list.append(key)
-        dict.__setitem__(self, key, val)
-    def __iter__(self):
-        return self._list.__iter__()
-    def update(self, src):
-        if isinstance(src, dict):
-            src = src.iteritems()
-        for k, v in src:
-            self[k] = v
-    def clear(self):
-        dict.clear(self)
-        self._list = []
-    def items(self):
-        return [(k, self[k]) for k in self._list]
-    def __delitem__(self, key):
-        dict.__delitem__(self, key)
-        self._list.remove(key)
-    def pop(self, key, *args, **kwargs):
-        try:
-            self._list.remove(key)
-        except ValueError:
-            pass
-        return dict.pop(self, key, *args, **kwargs)
-    def keys(self):
-        return self._list[:]
-    def iterkeys(self):
-        return self._list.__iter__()
-    def iteritems(self):
-        for k in self._list:
-            yield k, self[k]
-    def insert(self, index, key, val):
-        self._list.insert(index, key)
-        dict.__setitem__(self, key, val)
-    def __repr__(self):
-        if not self:
-            return '%s()' % self.__class__.__name__
-        return '%s(%r)' % (self.__class__.__name__, self.items())
 
 class _lrucachenode(object):
     """A node in a doubly linked list.
