@@ -10,6 +10,7 @@ This extension will wrap the status command to make it show more context about
 the state of the repo
 """
 
+import os
 from mercurial import commands
 from mercurial.extensions import wrapcommand
 from mercurial.i18n import _
@@ -33,7 +34,10 @@ def conflictsmsg(repo, ui):
     m = scmutil.match(repo[None])
     unresolvedlist = [f for f in mergestate if m(f) and mergestate[f] == 'u']
     if unresolvedlist:
-        mergeliststr = '\n'.join(['    %s' % path for path in unresolvedlist])
+        mergeliststr = '\n'.join(
+            ['    %s' % os.path.relpath(
+                os.path.join(repo.root, path),
+                os.getcwd()) for path in unresolvedlist])
         msg = _('''Unresolved merge conflicts:
 
 %s
