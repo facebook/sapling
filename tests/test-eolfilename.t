@@ -33,7 +33,7 @@ test issue352
   [255]
   $ echo foo > "$A"
   $ hg debugwalk
-  matcher: <matcher files=[], patterns=None, includes=None, excludes=None>
+  matcher: <matcher files=[], patterns=None, includes=None>
   f  he\r (no-eol) (esc)
   llo  he\r (no-eol) (esc)
   llo

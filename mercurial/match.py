@@ -142,12 +142,12 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                 kindpats.append((kind, pats, source))
             return kindpats
 
-    m = matcher(root, cwd, normalize, patterns, include=include, exclude=None,
+    m = matcher(root, cwd, normalize, patterns, include=include,
                 default=default, exact=exact, auditor=auditor, ctx=ctx,
                 listsubrepos=listsubrepos, warn=warn, badfn=badfn)
     if exclude:
-        em = matcher(root, cwd, normalize, [], include=exclude, exclude=None,
-                     default=default, exact=False, auditor=auditor, ctx=ctx,
+        em = matcher(root, cwd, normalize, [], include=exclude, default=default,
+                     exact=False, auditor=auditor, ctx=ctx,
                      listsubrepos=listsubrepos, warn=warn, badfn=None)
         m = differencematcher(m, em)
     return m
@@ -305,25 +305,21 @@ class basematcher(object):
 class matcher(basematcher):
 
     def __init__(self, root, cwd, normalize, patterns, include=None,
-                 exclude=None, default='glob', exact=False, auditor=None,
-                 ctx=None, listsubrepos=False, warn=None, badfn=None):
+                 default='glob', exact=False, auditor=None, ctx=None,
+                 listsubrepos=False, warn=None, badfn=None):
         super(matcher, self).__init__(root, cwd, badfn)
         if include is None:
             include = []
-        if exclude is None:
-            exclude = []
 
-        self._anypats = bool(include or exclude)
+        self._anypats = bool(include)
         self._anyincludepats = False
         self._always = False
-        self._pathrestricted = bool(include or exclude or patterns)
+        self._pathrestricted = bool(include or patterns)
         self.patternspat = None
         self.includepat = None
-        self.excludepat = None
 
-        # roots are directories which are recursively included/excluded.
+        # roots are directories which are recursively included.
         self._includeroots = set()
-        self._excluderoots = set()
         # dirs are directories which are non-recursively included.
         self._includedirs = set()
 
@@ -337,18 +333,6 @@ class matcher(basematcher):
             self._includeroots.update(roots)
             self._includedirs.update(dirs)
             matchfns.append(im)
-        if exclude:
-            kindpats = normalize(exclude, 'glob', root, cwd, auditor, warn)
-            self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
-                                              listsubrepos, root)
-            if not _anypats(kindpats):
-                # Only consider recursive excludes as such - if a non-recursive
-                # exclude is used, we must still recurse into the excluded
-                # directory, at least to find subdirectories. In such a case,
-                # the regex still won't match the non-recursively-excluded
-                # files.
-                self._excluderoots.update(_roots(kindpats))
-            matchfns.append(lambda f: not em(f))
         if exact:
             if isinstance(patterns, list):
                 self._files = patterns
@@ -388,11 +372,8 @@ class matcher(basematcher):
     def visitdir(self, dir):
         if self.prefix() and dir in self._fileset:
             return 'all'
-        if dir in self._excluderoots:
-            return False
         if self._includeroots or self._includedirs:
             if (not self._anyincludepats and
-                not self._excluderoots and
                 dir in self._includeroots):
                 # The condition above is essentially self.prefix() for includes
                 return 'all'
@@ -419,9 +400,8 @@ class matcher(basematcher):
         return self.matchfn == self.exact
 
     def __repr__(self):
-        return ('<matcher files=%r, patterns=%r, includes=%r, excludes=%r>' %
-                (self._files, self.patternspat, self.includepat,
-                 self.excludepat))
+        return ('<matcher files=%r, patterns=%r, includes=%r>' %
+                (self._files, self.patternspat, self.includepat))
 
 class differencematcher(basematcher):
     '''Composes two matchers by matching if the first matches and the second
