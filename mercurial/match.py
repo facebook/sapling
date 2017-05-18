@@ -397,11 +397,6 @@ class subdirmatcher(match):
         # from the inputs. Instead, we override matchfn() and visitdir() to
         # call the original matcher with the subdirectory path prepended.
         self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
-        def visitdir(dir):
-            if dir == '.':
-                return matcher.visitdir(self._path)
-            return matcher.visitdir(self._path + "/" + dir)
-        self.visitdir = visitdir
 
     def abs(self, f):
         return self._matcher.abs(self._path + "/" + f)
@@ -411,6 +406,13 @@ class subdirmatcher(match):
 
     def rel(self, f):
         return self._matcher.rel(self._path + "/" + f)
+
+    def visitdir(self, dir):
+        if dir == '.':
+            dir = self._path
+        else:
+            dir = self._path + "/" + dir
+        return self._matcher.visitdir(dir)
 
 class icasefsmatcher(match):
     """A matcher for wdir on case insensitive filesystems, which normalizes the
