@@ -253,10 +253,10 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     fresh_instance = False
 
     exact = skipstep3 = False
-    if matchfn == match.exact:  # match.exact
+    if match.isexact():  # match.exact
         exact = True
         dirignore = util.always  # skip step 2
-    elif match.files() and not match.anypats():  # match.match, no patterns
+    elif match.prefix():  # match.match, no patterns
         skipstep3 = True
 
     if not exact and self._checkcase:
