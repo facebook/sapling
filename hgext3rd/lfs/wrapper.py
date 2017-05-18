@@ -19,6 +19,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, nullid, short
 
 from . import (
+    blobstore,
     pointer,
 )
 
@@ -174,6 +175,10 @@ def vfsinit(orig, self, othervfs):
         if util.safehasattr(othervfs, name):
             setattr(self, name, getattr(othervfs, name))
 
+def _canskipupload(repo):
+    # if remotestore is a null store, upload is a no-op and can be skipped
+    return isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)
+
 def prepush(pushop):
     """Prepush hook.
 
@@ -181,12 +186,16 @@ def prepush(pushop):
     deserialized into metadata so that we can block the push on their upload to
     the remote blobstore.
     """
+    if _canskipupload(pushop.repo):
+        return
     pointers = extractpointers(pushop.repo, pushop.outgoing.missing)
     uploadblobs(pushop.repo, pointers)
 
 def writenewbundle(orig, ui, repo, source, filename, bundletype, outgoing,
                    *args, **kwargs):
     """upload LFS blobs added by outgoing revisions on 'hg bundle'"""
+    if _canskipupload(repo):
+        return
     pointers = extractpointers(repo, outgoing.missing)
     uploadblobs(repo, pointers)
     return orig(ui, repo, source, filename, bundletype, outgoing, *args,
