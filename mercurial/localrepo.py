@@ -850,21 +850,20 @@ class localrepository(object):
         return self[changeid]
 
     def setparents(self, p1, p2=nullid):
-        self.dirstate.beginparentchange()
-        copies = self.dirstate.setparents(p1, p2)
-        pctx = self[p1]
-        if copies:
-            # Adjust copy records, the dirstate cannot do it, it
-            # requires access to parents manifests. Preserve them
-            # only for entries added to first parent.
-            for f in copies:
-                if f not in pctx and copies[f] in pctx:
-                    self.dirstate.copy(copies[f], f)
-        if p2 == nullid:
-            for f, s in sorted(self.dirstate.copies().items()):
-                if f not in pctx and s not in pctx:
-                    self.dirstate.copy(None, f)
-        self.dirstate.endparentchange()
+        with self.dirstate.parentchange():
+            copies = self.dirstate.setparents(p1, p2)
+            pctx = self[p1]
+            if copies:
+                # Adjust copy records, the dirstate cannot do it, it
+                # requires access to parents manifests. Preserve them
+                # only for entries added to first parent.
+                for f in copies:
+                    if f not in pctx and copies[f] in pctx:
+                        self.dirstate.copy(copies[f], f)
+            if p2 == nullid:
+                for f, s in sorted(self.dirstate.copies().items()):
+                    if f not in pctx and s not in pctx:
+                        self.dirstate.copy(None, f)
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.
