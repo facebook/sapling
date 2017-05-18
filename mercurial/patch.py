@@ -2654,19 +2654,28 @@ def diffstatdata(lines):
         if filename:
             results.append((filename, adds, removes, isbinary))
 
+    # inheader is used to track if a line is in the
+    # header portion of the diff.  This helps properly account
+    # for lines that start with '--' or '++'
+    inheader = False
+
     for line in lines:
         if line.startswith('diff'):
             addresult()
-            # set numbers to 0 anyway when starting new file
+            # starting a new file diff
+            # set numbers to 0 and reset inheader
+            inheader = True
             adds, removes, isbinary = 0, 0, False
             if line.startswith('diff --git a/'):
                 filename = gitre.search(line).group(2)
             elif line.startswith('diff -r'):
                 # format: "diff -r ... -r ... filename"
                 filename = diffre.search(line).group(1)
-        elif line.startswith('+') and not line.startswith('+++ '):
+        elif line.startswith('@@'):
+            inheader = False
+        elif line.startswith('+') and not inheader:
             adds += 1
-        elif line.startswith('-') and not line.startswith('--- '):
+        elif line.startswith('-') and not inheader:
             removes += 1
         elif (line.startswith('GIT binary patch') or
               line.startswith('Binary file')):

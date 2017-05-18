@@ -105,3 +105,83 @@ diffstat within directories:
   $ hg diff --stat --root . -I old
 
   $ cd ..
+
+Files with lines beginning with '--' or '++' should be properly counted in diffstat
+
+  $ hg up -Cr tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm dir1/new
+  $ rm dir2/new
+  $ rm "file with spaces"
+  $ cat > file << EOF
+  > line 1
+  > line 2
+  > line 3
+  > EOF
+  $ hg commit -Am file
+  adding file
+
+Lines added starting with '--' should count as additions
+  $ cat > file << EOF
+  > line 1
+  > -- line 2, with dashes
+  > line 3
+  > EOF
+
+  $ hg diff --root .
+  diff -r be1569354b24 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	* (glob)
+  @@ -1,3 +1,3 @@
+   line 1
+  -line 2
+  +-- line 2, with dashes
+   line 3
+
+  $ hg diff --root . --stat
+   file |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+
+Lines changed starting with '--' should count as deletions
+  $ hg commit -m filev2
+  $ cat > file << EOF
+  > line 1
+  > -- line 2, with dashes, changed again
+  > line 3
+  > EOF
+
+  $ hg diff --root .
+  diff -r 160f7c034df6 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	* (glob)
+  @@ -1,3 +1,3 @@
+   line 1
+  --- line 2, with dashes
+  +-- line 2, with dashes, changed again
+   line 3
+
+  $ hg diff --root . --stat
+   file |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
+
+Lines changed starting with '--' should count as deletions
+and starting with '++' should count as additions
+  $ cat > file << EOF
+  > line 1
+  > ++ line 2, switched dashes to plusses
+  > line 3
+  > EOF
+
+  $ hg diff --root .
+  diff -r 160f7c034df6 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	* (glob)
+  @@ -1,3 +1,3 @@
+   line 1
+  --- line 2, with dashes
+  +++ line 2, switched dashes to plusses
+   line 3
+
+  $ hg diff --root . --stat
+   file |  2 +-
+   1 files changed, 1 insertions(+), 1 deletions(-)
