@@ -1696,15 +1696,14 @@ def update(repo, node, branchmerge, force, ancestor=None,
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
         if not partial:
-            repo.dirstate.beginparentchange()
-            repo.setparents(fp1, fp2)
-            recordupdates(repo, actions, branchmerge)
-            # update completed, clear state
-            util.unlink(repo.vfs.join('updatestate'))
+            with repo.dirstate.parentchange():
+                repo.setparents(fp1, fp2)
+                recordupdates(repo, actions, branchmerge)
+                # update completed, clear state
+                util.unlink(repo.vfs.join('updatestate'))
 
-            if not branchmerge:
-                repo.dirstate.setbranch(p2.branch())
-            repo.dirstate.endparentchange()
+                if not branchmerge:
+                    repo.dirstate.setbranch(p2.branch())
 
     if not partial:
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
@@ -1742,10 +1741,9 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         parents.remove(pctx)
         pother = parents[0].node()
 
-    repo.dirstate.beginparentchange()
-    repo.setparents(repo['.'].node(), pother)
-    repo.dirstate.write(repo.currenttransaction())
-    # fix up dirstate for copies and renames
-    copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
-    repo.dirstate.endparentchange()
+    with repo.dirstate.parentchange():
+        repo.setparents(repo['.'].node(), pother)
+        repo.dirstate.write(repo.currenttransaction())
+        # fix up dirstate for copies and renames
+        copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
     return stats
