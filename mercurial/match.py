@@ -385,9 +385,9 @@ class subdirmatcher(match):
         self._files = [f[len(path) + 1:] for f in matcher._files
                        if f.startswith(path + "/")]
 
-        # If the parent repo had a path to this subrepo and no patterns are
-        # specified, this submatcher always matches.
-        if not self._always and not matcher._anypats:
+        # If the parent repo had a path to this subrepo and the matcher is
+        # a prefix matcher, this submatcher always matches.
+        if matcher.prefix():
             self._always = any(f == path for f in matcher._files)
 
         self._anypats = matcher._anypats
