@@ -1879,6 +1879,7 @@ class localrepository(object):
         changeset, finding all files matched by the match
         function
         '''
+        self.ui.deprecwarn('use repo[node].walk instead of repo.walk', '4.3')
         return self[node].walk(match)
 
     def status(self, node1='.', node2=None, match=None,
