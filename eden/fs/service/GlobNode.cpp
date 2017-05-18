@@ -124,34 +124,23 @@ Future<unordered_set<RelativePath>> GlobNode::evaluate(
     }
   }
 
-  // Recursively load child inodes and evaluate matches with a concurrency
-  // constraint.
-  // For now we only evaluate 1 child dir at a time.
-  // We could go larger but need to be careful about how this expands
-  // with the depth of the tree.
-  const constexpr size_t kConcurrency = 1;
+  // Recursively load child inodes and evaluate matches
 
-  auto childInodes = folly::window(
-      std::move(recurse),
-      [ rootPath = rootPath.copy(), root, this ](
-          const std::pair<PathComponent, GlobNode*>& item) {
-        auto candidateName = rootPath + item.first;
-        return root->getOrLoadChildTree(item.first).then([
-          candidateName,
-          node = item.second
-        ](TreeInodePtr dir) { return node->evaluate(candidateName, dir); });
-      },
-      kConcurrency);
-
-  // Merge the results to yield a de-duplicated set of matches
-  return folly::unorderedReduce(
-      std::move(childInodes),
-      std::move(results),
-      [](unordered_set<RelativePath> result,
-         const unordered_set<RelativePath>& matches) {
-        result.insert(matches.begin(), matches.end());
-        return result;
-      });
+  std::vector<Future<unordered_set<RelativePath>>> futures;
+  for (auto& item : recurse) {
+    auto candidateName = rootPath + item.first;
+    futures.emplace_back(root->getOrLoadChildTree(item.first).then([
+      candidateName,
+      node = item.second
+    ](TreeInodePtr dir) { return node->evaluate(candidateName, dir); }));
+  }
+  return folly::collect(futures).then([results = std::move(results)](
+      std::vector<std::unordered_set<RelativePath>> && matchVector) mutable {
+    for (auto& matches : matchVector) {
+      results.insert(matches.begin(), matches.end());
+    }
+    return results;
+  });
 }
 
 StringPiece GlobNode::tokenize(StringPiece& pattern, bool* hasSpecials) {
@@ -223,33 +212,24 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponent(
     }
   }
 
-  // Recursively load child inodes and evaluate matches with a concurrency
-  // constraint.
-  // For now we only evaluate 1 child dir at a time.
-  // We could go larger but need to be careful about how this expands
-  // with the depth of the tree.
-  const constexpr size_t kConcurrency = 1;
+  // Recursively load child inodes and evaluate matches
+  std::vector<Future<unordered_set<RelativePath>>> futures;
 
-  auto childInodes = folly::window(
-      std::move(subDirNames),
-      [ rootPath = rootPath.copy(), root, this ](
-          const RelativePath& candidateName) {
-        return root->getOrLoadChildTree(candidateName.basename())
-            .then([candidateName, this](TreeInodePtr dir) {
-              return evaluateRecursiveComponent(candidateName, dir);
-            });
-      },
-      kConcurrency);
+  for (auto& candidateName : subDirNames) {
+    futures.emplace_back(root->getOrLoadChildTree(candidateName.basename())
+                             .then([candidateName, this](TreeInodePtr dir) {
+                               return evaluateRecursiveComponent(
+                                   candidateName, dir);
+                             }));
+  }
 
-  // Merge the results to yield a de-duplicated set of matches
-  return folly::unorderedReduce(
-      childInodes,
-      results,
-      [](unordered_set<RelativePath> result,
-         const unordered_set<RelativePath>& matches) {
-        result.insert(matches.begin(), matches.end());
-        return result;
-      });
+  return folly::collect(futures).then([results = std::move(results)](
+      std::vector<std::unordered_set<RelativePath>> && matchVector) mutable {
+    for (auto& matches : matchVector) {
+      results.insert(matches.begin(), matches.end());
+    }
+    return results;
+  });
 }
 }
 }
