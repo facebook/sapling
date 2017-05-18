@@ -188,7 +188,6 @@ class match(object):
                 return True
 
         self.matchfn = m
-        self._fileroots = set(self._files)
 
     def __call__(self, fn):
         return self.matchfn(fn)
@@ -235,8 +234,12 @@ class match(object):
         return self._files
 
     @propertycache
+    def _fileset(self):
+        return set(self._files)
+
+    @propertycache
     def _dirs(self):
-        return set(util.dirs(self._fileroots)) | {'.'}
+        return set(util.dirs(self._fileset)) | {'.'}
 
     def visitdir(self, dir):
         '''Decides whether a directory should be visited based on whether it
@@ -250,7 +253,7 @@ class match(object):
         This function's behavior is undefined if it has returned False for
         one of the dir's parent directories.
         '''
-        if self.prefix() and dir in self._fileroots:
+        if self.prefix() and dir in self._fileset:
             return 'all'
         if dir in self._excluderoots:
             return False
@@ -261,16 +264,16 @@ class match(object):
             not any(parent in self._includeroots
                     for parent in util.finddirs(dir))):
             return False
-        return (not self._fileroots or
-                '.' in self._fileroots or
-                dir in self._fileroots or
+        return (not self._fileset or
+                '.' in self._fileset or
+                dir in self._fileset or
                 dir in self._dirs or
-                any(parentdir in self._fileroots
+                any(parentdir in self._fileset
                     for parentdir in util.finddirs(dir)))
 
     def exact(self, f):
         '''Returns True if f is in .files().'''
-        return f in self._fileroots
+        return f in self._fileset
 
     def anypats(self):
         '''Matcher uses patterns or include/exclude.'''
@@ -399,7 +402,6 @@ class subdirmatcher(match):
                 return matcher.visitdir(self._path)
             return matcher.visitdir(self._path + "/" + dir)
         self.visitdir = visitdir
-        self._fileroots = set(self._files)
 
     def abs(self, f):
         return self._matcher.abs(self._path + "/" + f)
@@ -428,8 +430,8 @@ class icasefsmatcher(match):
         # inexact case matches are treated as exact, and not noted without -v.
         if self._files:
             roots, dirs = _rootsanddirs(self._kp)
-            self._fileroots = set(roots)
-            self._fileroots.update(dirs)
+            self._fileset = set(roots)
+            self._fileset.update(dirs)
 
     def _normalize(self, patterns, default, root, cwd, auditor):
         self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
