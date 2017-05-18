@@ -600,14 +600,25 @@ class state_update(object):
         self.node = node
         self.distance = distance
         self.partial = partial
+        self._lock = None
 
     def __enter__(self):
+        # We explicitly need to take a lock here, before we proceed to update
+        # watchman about the update operation, so that we don't race with
+        # some other actor.  merge.update is going to take the wlock almost
+        # immediately anyway, so this is effectively extending the lock
+        # around a couple of short sanity checks.
+        self._lock = self.repo.wlock()
         self._state('state-enter')
         return self
 
     def __exit__(self, type_, value, tb):
-        status = 'ok' if type_ is None else 'failed'
-        self._state('state-leave', status=status)
+        try:
+            status = 'ok' if type_ is None else 'failed'
+            self._state('state-leave', status=status)
+        finally:
+            if self._lock:
+                self._lock.release()
 
     def _state(self, cmd, status='ok'):
         if not util.safehasattr(self.repo, '_watchmanclient'):
