@@ -279,7 +279,7 @@ class changelog(revlog.revlog):
 
         if self._initempty:
             # changelogs don't benefit from generaldelta
-            self.version &= ~revlog.REVLOGGENERALDELTA
+            self.version &= ~revlog.FLAG_GENERALDELTA
             self._generaldelta = False
 
         # Delta chains for changelogs tend to be very small because entries

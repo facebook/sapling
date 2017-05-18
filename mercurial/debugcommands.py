@@ -561,7 +561,7 @@ def debugdeltachain(ui, repo, file_=None, **opts):
     """
     r = cmdutil.openrevlog(repo, 'debugdeltachain', file_, opts)
     index = r.index
-    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+    generaldelta = r.version & revlog.FLAG_GENERALDELTA
 
     def revinfo(rev):
         e = index[rev]
@@ -892,7 +892,7 @@ def debugindex(ui, repo, file_=None, **opts):
     if format not in (0, 1):
         raise error.Abort(_("unknown format %d") % format)
 
-    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+    generaldelta = r.version & revlog.FLAG_GENERALDELTA
     if generaldelta:
         basehdr = ' delta'
     else:
@@ -1725,9 +1725,9 @@ def debugrevlog(ui, repo, file_=None, **opts):
     format = v & 0xFFFF
     flags = []
     gdelta = False
-    if v & revlog.REVLOGNGINLINEDATA:
+    if v & revlog.FLAG_INLINE_DATA:
         flags.append('inline')
-    if v & revlog.REVLOGGENERALDELTA:
+    if v & revlog.FLAG_GENERALDELTA:
         gdelta = True
         flags.append('generaldelta')
     if not flags:

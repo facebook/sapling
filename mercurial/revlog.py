@@ -45,13 +45,13 @@ _zlibdecompress = zlib.decompress
 
 # revlog header flags
 REVLOGV0 = 0
-REVLOGNG = 1
-REVLOGNGINLINEDATA = (1 << 16)
-REVLOGGENERALDELTA = (1 << 17)
-REVLOG_DEFAULT_FLAGS = REVLOGNGINLINEDATA
-REVLOG_DEFAULT_FORMAT = REVLOGNG
+REVLOGV1 = 1
+FLAG_INLINE_DATA = (1 << 16)
+FLAG_GENERALDELTA = (1 << 17)
+REVLOG_DEFAULT_FLAGS = FLAG_INLINE_DATA
+REVLOG_DEFAULT_FORMAT = REVLOGV1
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
-REVLOGNG_FLAGS = REVLOGNGINLINEDATA | REVLOGGENERALDELTA
+REVLOGV1_FLAGS = FLAG_INLINE_DATA | FLAG_GENERALDELTA
 
 # revlog index flags
 REVIDX_ISCENSORED = (1 << 15) # revision has censor metadata, must be verified
@@ -288,7 +288,7 @@ class revlog(object):
         if opts is not None:
             if 'revlogv1' in opts:
                 if 'generaldelta' in opts:
-                    v |= REVLOGGENERALDELTA
+                    v |= FLAG_GENERALDELTA
             else:
                 v = 0
             if 'chunkcachesize' in opts:
@@ -322,17 +322,17 @@ class revlog(object):
                 raise
 
         self.version = v
-        self._inline = v & REVLOGNGINLINEDATA
-        self._generaldelta = v & REVLOGGENERALDELTA
+        self._inline = v & FLAG_INLINE_DATA
+        self._generaldelta = v & FLAG_GENERALDELTA
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
         if fmt == REVLOGV0 and flags:
             raise RevlogError(_("index %s unknown flags %#04x for format v0")
                               % (self.indexfile, flags >> 16))
-        elif fmt == REVLOGNG and flags & ~REVLOGNG_FLAGS:
+        elif fmt == REVLOGV1 and flags & ~REVLOGV1_FLAGS:
             raise RevlogError(_("index %s unknown flags %#04x for revlogng")
                               % (self.indexfile, flags >> 16))
-        elif fmt > REVLOGNG:
+        elif fmt > REVLOGV1:
             raise RevlogError(_("index %s unknown format %d")
                               % (self.indexfile, fmt))
 
@@ -1452,7 +1452,7 @@ class revlog(object):
 
         fp = self.opener(self.indexfile, 'w', atomictemp=True,
                          checkambig=self._checkambig)
-        self.version &= ~(REVLOGNGINLINEDATA)
+        self.version &= ~FLAG_INLINE_DATA
         self._inline = False
         for i in self:
             e = self._io.packentry(self.index[i], self.node, self.version, i)
