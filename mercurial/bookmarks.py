@@ -226,6 +226,28 @@ def deletedivergent(repo, deletefrom, bm):
                 deleted = True
     return deleted
 
+def headsforactive(repo):
+    """Given a repo with an active bookmark, return divergent bookmark nodes.
+
+    Args:
+      repo: A repository with an active bookmark.
+
+    Returns:
+      A list of binary node ids that is the full list of other
+      revisions with bookmarks divergent from the active bookmark. If
+      there were no divergent bookmarks, then this list will contain
+      only one entry.
+    """
+    if not repo._activebookmark:
+        raise ValueError(
+            'headsforactive() only makes sense with an active bookmark')
+    name = repo._activebookmark.split('@', 1)[0]
+    heads = []
+    for mark, n in repo._bookmarks.iteritems():
+        if mark.split('@', 1)[0] == name:
+            heads.append(n)
+    return heads
+
 def calculateupdate(ui, repo, checkout):
     '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
     check out and where to move the active bookmark from, if needed.'''

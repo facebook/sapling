@@ -234,7 +234,7 @@ msgdestmerge = {
 def _destmergebook(repo, action='merge', sourceset=None, destspace=None):
     """find merge destination in the active bookmark case"""
     node = None
-    bmheads = repo.bookmarkheads(repo._activebookmark)
+    bmheads = bookmarks.headsforactive(repo)
     curhead = repo[repo._activebookmark].node()
     if len(bmheads) == 2:
         if curhead == bmheads[0]:
@@ -355,7 +355,7 @@ def desthistedit(ui, repo):
     return None
 
 def _statusotherbook(ui, repo):
-    bmheads = repo.bookmarkheads(repo._activebookmark)
+    bmheads = bookmarks.headsforactive(repo)
     curhead = repo[repo._activebookmark].node()
     if repo.revs('%n and parents()', curhead):
         # we are on the active bookmark

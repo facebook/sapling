@@ -507,14 +507,6 @@ class localrepository(object):
     def _activebookmark(self):
         return self._bookmarks.active
 
-    def bookmarkheads(self, bookmark):
-        name = bookmark.split('@', 1)[0]
-        heads = []
-        for mark, n in self._bookmarks.iteritems():
-            if mark.split('@', 1)[0] == name:
-                heads.append(n)
-        return heads
-
     # _phaserevs and _phasesets depend on changelog. what we need is to
     # call _phasecache.invalidate() if '00changelog.i' was changed, but it
     # can't be easily expressed in filecache mechanism.
