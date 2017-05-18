@@ -124,6 +124,8 @@ class dirstate(object):
         prevents writing an incoherent dirstate where the parent doesn't
         match the contents.
         '''
+        self._ui.deprecwarn('beginparentchange is obsoleted by the '
+                            'parentchange context manager.', '4.3')
         self._parentwriters += 1
 
     def endparentchange(self):
@@ -131,6 +133,8 @@ class dirstate(object):
         dirstate parents. Once all parent changes have been marked done,
         the wlock will be free to write the dirstate on release.
         '''
+        self._ui.deprecwarn('endparentchange is obsoleted by the '
+                            'parentchange context manager.', '4.3')
         if self._parentwriters > 0:
             self._parentwriters -= 1
 
