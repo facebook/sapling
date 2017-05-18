@@ -145,10 +145,9 @@ def icasefsmatch(root, cwd, patterns, include=None, exclude=None,
             kindpats.append((kind, pats, source))
         return kindpats
 
-    return icasefsmatcher(root, cwd, normalize, patterns=patterns,
-                          include=include, exclude=exclude, default=default,
-                          auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
-                          badfn=badfn)
+    return matcher(root, cwd, normalize, patterns=patterns, include=include,
+                   exclude=exclude, default=default, auditor=auditor, ctx=ctx,
+                   listsubrepos=listsubrepos, badfn=badfn)
 
 def exact(root, cwd, files, badfn=None):
     return match(root, cwd, files, exact=True, badfn=badfn)
@@ -452,16 +451,6 @@ class subdirmatcher(matcher):
         else:
             dir = self._path + "/" + dir
         return self._matcher.visitdir(dir)
-
-class icasefsmatcher(matcher):
-
-    def __init__(self, root, cwd, normalize, patterns, include, exclude,
-                 default, auditor, ctx, listsubrepos=False, badfn=None):
-        init = super(icasefsmatcher, self).__init__
-
-        init(root, cwd, normalize=normalize, patterns=patterns, include=include,
-             exclude=exclude, default=default, auditor=auditor,
-             ctx=ctx, listsubrepos=listsubrepos, badfn=badfn)
 
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
