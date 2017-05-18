@@ -932,14 +932,13 @@ class queue(object):
                         merged.append(f)
                     else:
                         removed.append(f)
-                repo.dirstate.beginparentchange()
-                for f in removed:
-                    repo.dirstate.remove(f)
-                for f in merged:
-                    repo.dirstate.merge(f)
-                p1, p2 = repo.dirstate.parents()
-                repo.setparents(p1, merge)
-                repo.dirstate.endparentchange()
+                with repo.dirstate.parentchange():
+                    for f in removed:
+                        repo.dirstate.remove(f)
+                    for f in merged:
+                        repo.dirstate.merge(f)
+                    p1, p2 = repo.dirstate.parents()
+                    repo.setparents(p1, merge)
 
             if all_files and '.hgsubstate' in all_files:
                 wctx = repo[None]
@@ -1580,16 +1579,15 @@ class queue(object):
                 if keepchanges and tobackup:
                     raise error.Abort(_("local changes found, qrefresh first"))
                 self.backup(repo, tobackup)
-                repo.dirstate.beginparentchange()
-                for f in a:
-                    repo.wvfs.unlinkpath(f, ignoremissing=True)
-                    repo.dirstate.drop(f)
-                for f in m + r:
-                    fctx = ctx[f]
-                    repo.wwrite(f, fctx.data(), fctx.flags())
-                    repo.dirstate.normal(f)
-                repo.setparents(qp, nullid)
-                repo.dirstate.endparentchange()
+                with repo.dirstate.parentchange():
+                    for f in a:
+                        repo.wvfs.unlinkpath(f, ignoremissing=True)
+                        repo.dirstate.drop(f)
+                    for f in m + r:
+                        fctx = ctx[f]
+                        repo.wwrite(f, fctx.data(), fctx.flags())
+                        repo.dirstate.normal(f)
+                    repo.setparents(qp, nullid)
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
