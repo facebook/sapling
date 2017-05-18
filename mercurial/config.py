@@ -68,7 +68,7 @@ class config(object):
     def sections(self):
         return sorted(self._data.keys())
     def items(self, section):
-        return self._data.get(section, {}).items()
+        return list(self._data.get(section, {}).iteritems())
     def set(self, section, item, value, source=""):
         if pycompat.ispy3:
             assert not isinstance(value, str), (
