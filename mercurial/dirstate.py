@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import collections
+import contextlib
 import errno
 import os
 import stat
@@ -98,6 +99,23 @@ class dirstate(object):
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
+
+    @contextlib.contextmanager
+    def parentchange(self):
+        '''Context manager for handling dirstate parents.
+
+        If an exception occurs in the scope of the context manager,
+        the incoherent dirstate won't be written when wlock is
+        released.
+        '''
+        self._parentwriters += 1
+        yield
+        # Typically we want the "undo" step of a context manager in a
+        # finally block so it happens even when an exception
+        # occurs. In this case, however, we only want to decrement
+        # parentwriters if the code in the with statement exits
+        # normally, so we don't have a try/finally here on purpose.
+        self._parentwriters -= 1
 
     def beginparentchange(self):
         '''Marks the beginning of a set of changes that involve changing
