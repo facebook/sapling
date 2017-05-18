@@ -205,16 +205,6 @@ Test incremental revlog repacking
 
 # 3. Check that the corrupt '78787878...' node is not in the pack
   $ hg repack --incremental
-  $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
-  
-  
-  Node          Delta Base    Delta Length
-  1618a54c483e  000000000000  89
-  1832e0765de9  1618a54c483e  55
-  a0c8bcbbb45c  1832e0765de9  12
-  
-  dir
-  Node          Delta Base    Delta Length
-  23226e7a252c  000000000000  43
-
+  $ hg debugdatapack .hg/cache/packs/manifests/*.datapack | grep 7878
+  [1]
   $ mv .hg/store/00manifesttree.i.bak .hg/store/00manifesttree.i
