@@ -116,9 +116,10 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                           the same directory
     '<something>' - a pattern of the specified default type
     """
-    return matcher(root, cwd, patterns, include=include, exclude=exclude,
-                   default=default, exact=exact, auditor=auditor, ctx=ctx,
-                   listsubrepos=listsubrepos, warn=warn, badfn=badfn)
+    return matcher(root, cwd, _donormalize, patterns, include=include,
+                   exclude=exclude, default=default, exact=exact,
+                   auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
+                   warn=warn, badfn=badfn)
 
 def icasefsmatch(root, cwd, patterns, include=None, exclude=None,
                  default='glob', auditor=None, ctx=None,
@@ -126,9 +127,28 @@ def icasefsmatch(root, cwd, patterns, include=None, exclude=None,
     """A matcher for wdir on case insensitive filesystems, which normalizes the
     given patterns to the case in the filesystem.
     """
-    return icasefsmatcher(root, cwd, patterns, include=include, exclude=exclude,
-                          default=default, auditor=auditor, ctx=ctx,
-                          listsubrepos=listsubrepos, badfn=badfn)
+    dirstate = ctx.repo().dirstate
+    dsnormalize = dirstate.normalize
+
+    def normalize(patterns, default, root, cwd, auditor, warn):
+        kp = _donormalize(patterns, default, root, cwd, auditor, warn)
+        kindpats = []
+        for kind, pats, source in kp:
+            if kind not in ('re', 'relre'):  # regex can't be normalized
+                p = pats
+                pats = dsnormalize(pats)
+
+                # Preserve the original to handle a case only rename.
+                if p != pats and p in dirstate:
+                    kindpats.append((kind, p, source))
+
+            kindpats.append((kind, pats, source))
+        return kindpats
+
+    return icasefsmatcher(root, cwd, normalize, patterns=patterns,
+                          include=include, exclude=exclude, default=default,
+                          auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
+                          badfn=badfn)
 
 def exact(root, cwd, files, badfn=None):
     return match(root, cwd, files, exact=True, badfn=badfn)
@@ -187,9 +207,9 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
 
 class matcher(object):
 
-    def __init__(self, root, cwd, patterns, include=None, exclude=None,
-                 default='glob', exact=False, auditor=None, ctx=None,
-                 listsubrepos=False, warn=None, badfn=None):
+    def __init__(self, root, cwd, normalize, patterns, include=None,
+                 exclude=None, default='glob', exact=False, auditor=None,
+                 ctx=None, listsubrepos=False, warn=None, badfn=None):
         if include is None:
             include = []
         if exclude is None:
@@ -213,8 +233,7 @@ class matcher(object):
 
         matchfns = []
         if include:
-            kindpats = self._normalize(include, 'glob', root, cwd, auditor,
-                                       warn)
+            kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             roots, dirs = _rootsanddirs(kindpats)
@@ -222,8 +241,7 @@ class matcher(object):
             self._includedirs.update(dirs)
             matchfns.append(im)
         if exclude:
-            kindpats = self._normalize(exclude, 'glob', root, cwd, auditor,
-                                       warn)
+            kindpats = normalize(exclude, 'glob', root, cwd, auditor, warn)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             if not _anypats(kindpats):
@@ -241,8 +259,7 @@ class matcher(object):
                 self._files = list(patterns)
             matchfns.append(self.exact)
         elif patterns:
-            kindpats = self._normalize(patterns, default, root, cwd, auditor,
-                                       warn)
+            kindpats = normalize(patterns, default, root, cwd, auditor, warn)
             if not _kindpatsalwaysmatch(kindpats):
                 self._files = _explicitfiles(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
@@ -365,9 +382,6 @@ class matcher(object):
     def prefix(self):
         return not self.always() and not self.isexact() and not self.anypats()
 
-    def _normalize(self, patterns, default, root, cwd, auditor, warn):
-        return _donormalize(patterns, default, root, cwd, auditor, warn)
-
 class subdirmatcher(matcher):
     """Adapt a matcher to work on a subdirectory only.
 
@@ -441,30 +455,13 @@ class subdirmatcher(matcher):
 
 class icasefsmatcher(matcher):
 
-    def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
-                 ctx, listsubrepos=False, badfn=None):
+    def __init__(self, root, cwd, normalize, patterns, include, exclude,
+                 default, auditor, ctx, listsubrepos=False, badfn=None):
         init = super(icasefsmatcher, self).__init__
-        self._dirstate = ctx.repo().dirstate
-        self._dsnormalize = self._dirstate.normalize
 
-        init(root, cwd, patterns, include, exclude, default, auditor=auditor,
+        init(root, cwd, normalize=normalize, patterns=patterns, include=include,
+             exclude=exclude, default=default, auditor=auditor,
              ctx=ctx, listsubrepos=listsubrepos, badfn=badfn)
-
-    def _normalize(self, patterns, default, root, cwd, auditor, warn):
-        kp = super(icasefsmatcher, self)._normalize(patterns, default, root,
-                                                    cwd, auditor, warn)
-        kindpats = []
-        for kind, pats, source in kp:
-            if kind not in ('re', 'relre'):  # regex can't be normalized
-                p = pats
-                pats = self._dsnormalize(pats)
-
-                # Preserve the original to handle a case only rename.
-                if p != pats and p in self._dirstate:
-                    kindpats.append((kind, p, source))
-
-            kindpats.append((kind, pats, source))
-        return kindpats
 
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
