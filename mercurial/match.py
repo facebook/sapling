@@ -202,19 +202,107 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
         kindpats.append((kind, pat, ''))
     return kindpats
 
-class matcher(object):
+class basematcher(object):
+
+    def __init__(self, root, cwd, badfn=None):
+        self._root = root
+        self._cwd = cwd
+        if badfn is not None:
+            self.bad = badfn
+        self._files = [] # exact files and roots of patterns
+        self.matchfn = lambda f: False
+
+    def __call__(self, fn):
+        return self.matchfn(fn)
+    def __iter__(self):
+        for f in self._files:
+            yield f
+    # Callbacks related to how the matcher is used by dirstate.walk.
+    # Subscribers to these events must monkeypatch the matcher object.
+    def bad(self, f, msg):
+        '''Callback from dirstate.walk for each explicit file that can't be
+        found/accessed, with an error message.'''
+        pass
+
+    # If an explicitdir is set, it will be called when an explicitly listed
+    # directory is visited.
+    explicitdir = None
+
+    # If an traversedir is set, it will be called when a directory discovered
+    # by recursive traversal is visited.
+    traversedir = None
+
+    def abs(self, f):
+        '''Convert a repo path back to path that is relative to the root of the
+        matcher.'''
+        return f
+
+    def rel(self, f):
+        '''Convert repo path back to path that is relative to cwd of matcher.'''
+        return util.pathto(self._root, self._cwd, f)
+
+    def uipath(self, f):
+        '''Convert repo path to a display path.  If patterns or -I/-X were used
+        to create this matcher, the display path will be relative to cwd.
+        Otherwise it is relative to the root of the repo.'''
+        return self.rel(f)
+
+    def files(self):
+        '''Explicitly listed files or patterns or roots:
+        if no patterns or .always(): empty list,
+        if exact: list exact files,
+        if not .anypats(): list all files and dirs,
+        else: optimal roots'''
+        return self._files
+
+    @propertycache
+    def _fileset(self):
+        return set(self._files)
+
+    def exact(self, f):
+        '''Returns True if f is in .files().'''
+        return f in self._fileset
+
+    def visitdir(self, dir):
+        '''Decides whether a directory should be visited based on whether it
+        has potential matches in it or one of its subdirectories. This is
+        based on the match's primary, included, and excluded patterns.
+
+        Returns the string 'all' if the given directory and all subdirectories
+        should be visited. Otherwise returns True or False indicating whether
+        the given directory should be visited.
+
+        This function's behavior is undefined if it has returned False for
+        one of the dir's parent directories.
+        '''
+        return False
+
+    def anypats(self):
+        '''Matcher uses patterns or include/exclude.'''
+        return False
+
+    def always(self):
+        '''Matcher will match everything and .files() will be empty
+        - optimization might be possible and necessary.'''
+        return False
+
+    def isexact(self):
+        return False
+
+    def prefix(self):
+        return not self.always() and not self.isexact() and not self.anypats()
+
+class matcher(basematcher):
 
     def __init__(self, root, cwd, normalize, patterns, include=None,
                  exclude=None, default='glob', exact=False, auditor=None,
                  ctx=None, listsubrepos=False, warn=None, badfn=None):
+        super(matcher, self).__init__(root, cwd, badfn)
         if include is None:
             include = []
         if exclude is None:
             exclude = []
 
-        self._root = root
-        self._cwd = cwd
-        self._files = [] # exact files and roots of patterns
         self._anypats = bool(include or exclude)
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
@@ -227,9 +315,6 @@ class matcher(object):
         self._excluderoots = set()
         # dirs are directories which are non-recursively included.
         self._includedirs = set()
-
-        if badfn is not None:
-            self.bad = badfn
 
         matchfns = []
         if include:
@@ -281,70 +366,14 @@ class matcher(object):
 
         self.matchfn = m
 
-    def __call__(self, fn):
-        return self.matchfn(fn)
-    def __iter__(self):
-        for f in self._files:
-            yield f
-
-    # Callbacks related to how the matcher is used by dirstate.walk.
-    # Subscribers to these events must monkeypatch the matcher object.
-    def bad(self, f, msg):
-        '''Callback from dirstate.walk for each explicit file that can't be
-        found/accessed, with an error message.'''
-        pass
-
-    # If an explicitdir is set, it will be called when an explicitly listed
-    # directory is visited.
-    explicitdir = None
-
-    # If an traversedir is set, it will be called when a directory discovered
-    # by recursive traversal is visited.
-    traversedir = None
-
-    def abs(self, f):
-        '''Convert a repo path back to path that is relative to the root of the
-        matcher.'''
-        return f
-
-    def rel(self, f):
-        '''Convert repo path back to path that is relative to cwd of matcher.'''
-        return util.pathto(self._root, self._cwd, f)
-
     def uipath(self, f):
-        '''Convert repo path to a display path.  If patterns or -I/-X were used
-        to create this matcher, the display path will be relative to cwd.
-        Otherwise it is relative to the root of the repo.'''
         return (self._pathrestricted and self.rel(f)) or self.abs(f)
-
-    def files(self):
-        '''Explicitly listed files or patterns or roots:
-        if no patterns or .always(): empty list,
-        if exact: list exact files,
-        if not .anypats(): list all files and dirs,
-        else: optimal roots'''
-        return self._files
-
-    @propertycache
-    def _fileset(self):
-        return set(self._files)
 
     @propertycache
     def _dirs(self):
         return set(util.dirs(self._fileset)) | {'.'}
 
     def visitdir(self, dir):
-        '''Decides whether a directory should be visited based on whether it
-        has potential matches in it or one of its subdirectories. This is
-        based on the match's primary, included, and excluded patterns.
-
-        Returns the string 'all' if the given directory and all subdirectories
-        should be visited. Otherwise returns True or False indicating whether
-        the given directory should be visited.
-
-        This function's behavior is undefined if it has returned False for
-        one of the dir's parent directories.
-        '''
         if self.prefix() and dir in self._fileset:
             return 'all'
         if dir in self._excluderoots:
@@ -363,24 +392,14 @@ class matcher(object):
                 any(parentdir in self._fileset
                     for parentdir in util.finddirs(dir)))
 
-    def exact(self, f):
-        '''Returns True if f is in .files().'''
-        return f in self._fileset
-
     def anypats(self):
-        '''Matcher uses patterns or include/exclude.'''
         return self._anypats
 
     def always(self):
-        '''Matcher will match everything and .files() will be empty
-        - optimization might be possible and necessary.'''
         return self._always
 
     def isexact(self):
         return self.matchfn == self.exact
-
-    def prefix(self):
-        return not self.always() and not self.isexact() and not self.anypats()
 
     def __repr__(self):
         return ('<matcher files=%r, patterns=%r, includes=%r, excludes=%r>' %
