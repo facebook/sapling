@@ -450,19 +450,11 @@ class icasefsmatcher(matcher):
         init(root, cwd, patterns, include, exclude, default, auditor=auditor,
              ctx=ctx, listsubrepos=listsubrepos, badfn=badfn)
 
-        # m.exact(file) must be based off of the actual user input, otherwise
-        # inexact case matches are treated as exact, and not noted without -v.
-        if self._files:
-            roots, dirs = _rootsanddirs(self._kp)
-            self._fileset = set(roots)
-            self._fileset.update(dirs)
-
     def _normalize(self, patterns, default, root, cwd, auditor, warn):
-        self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
-                                                          root, cwd, auditor,
-                                                          warn)
+        kp = super(icasefsmatcher, self)._normalize(patterns, default, root,
+                                                    cwd, auditor, warn)
         kindpats = []
-        for kind, pats, source in self._kp:
+        for kind, pats, source in kp:
             if kind not in ('re', 'relre'):  # regex can't be normalized
                 p = pats
                 pats = self._dsnormalize(pats)

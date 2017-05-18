@@ -196,7 +196,6 @@ Test that adding a directory doesn't require case matching (issue4578)
   adding CapsDir1/CapsDir/SubDir/Def.txt (glob)
 
   $ hg forget capsdir1/capsdir/abc.txt
-  removing CapsDir1/CapsDir/AbC.txt (glob)
 
   $ hg forget capsdir1/capsdir
   removing CapsDir1/CapsDir/SubDir/Def.txt (glob)
@@ -232,7 +231,6 @@ and OS X
   +def
 
   $ hg mv CapsDir1/CapsDir/abc.txt CapsDir1/CapsDir/ABC.txt
-  moving CapsDir1/CapsDir/AbC.txt to CapsDir1/CapsDir/ABC.txt (glob)
   $ hg ci -m "case changing rename" CapsDir1/CapsDir/AbC.txt CapsDir1/CapsDir/ABC.txt
 
   $ hg status -A capsdir1/capsdir
