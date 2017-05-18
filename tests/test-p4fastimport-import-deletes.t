@@ -60,6 +60,7 @@ Simple import
   changelist 2: writing changelog: second
   changelist 3: writing manifest. node: f1f6d03759eb p1: 572c24bb3dc1 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: third
+  updating the branch cache (?)
   3 revision(s), 3 file(s) imported.
 
 Verify

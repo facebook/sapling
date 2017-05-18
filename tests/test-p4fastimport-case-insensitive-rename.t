@@ -57,6 +57,7 @@ import
   changelist 2: writing changelog: moveway
   changelist 3: writing manifest. node: 6541d210de72 p1: 510da33a44e3 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: moveback
+  updating the branch cache (?)
   3 revision(s), 3 file(s) imported.
 
 Verify

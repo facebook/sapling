@@ -70,6 +70,7 @@ Simple import
   changelist 2: writing manifest. node: aff99eae550e p1: a9ab65129a6d p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   writing bookmark
+  updating the branch cache (?)
   2 revision(s), 2 file(s) imported.
 
 Verify

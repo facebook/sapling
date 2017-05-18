@@ -70,6 +70,7 @@ Simple import
   changelist 2: writing manifest. node: 31c95d82cc49 p1: 0637b0361958 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   writing lfs metadata to sqlite
+  updating the branch cache (?)
   2 revision(s), 3 file(s) imported.
 
 Verify

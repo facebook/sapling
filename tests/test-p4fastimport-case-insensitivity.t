@@ -50,6 +50,7 @@ import
   changelist 2: writing changelog: delete
   changelist 3: writing manifest. node: c1187994dfbb p1: af76bc402ee6 p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: add with case-inensitivity match
+  updating the branch cache (?)
   3 revision(s), 2 file(s) imported.
 
 Verify

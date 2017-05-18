@@ -79,6 +79,7 @@ Import
   changelist 3: writing changelog: CL3(3)
   changelist 4: writing manifest. node: c654b16ed766 p1: 63f2b10f26c4 p2: 000000000000 linkrev: 2
   changelist 4: writing changelog: CL4(2)
+  updating the branch cache (?)
   3 revision(s), 1 file(s) imported.
   $ hg verify
   checking changesets

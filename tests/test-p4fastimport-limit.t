@@ -81,6 +81,7 @@ Simple import
   changelist 2: writing manifest. node: e2b9d9177f8d p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   writing bookmark
+  updating the branch cache (?)
   2 revision(s), 3 file(s) imported.
   $ hg p4fastimport --bookmark master --limit 2 --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 3, node: * (glob)
@@ -99,6 +100,7 @@ Simple import
   changelist 3: writing manifest. node: 2949480247c0 p1: e2b9d9177f8d p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: third
   writing bookmark
+  updating the branch cache (?)
   1 revision(s), 4 file(s) imported.
 
 Verify
