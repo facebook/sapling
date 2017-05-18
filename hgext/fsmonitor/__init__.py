@@ -601,6 +601,7 @@ class state_update(object):
         self.distance = distance
         self.partial = partial
         self._lock = None
+        self.need_leave = False
 
     def __enter__(self):
         # We explicitly need to take a lock here, before we proceed to update
@@ -609,20 +610,21 @@ class state_update(object):
         # immediately anyway, so this is effectively extending the lock
         # around a couple of short sanity checks.
         self._lock = self.repo.wlock()
-        self._state('state-enter')
+        self.need_leave = self._state('state-enter')
         return self
 
     def __exit__(self, type_, value, tb):
         try:
-            status = 'ok' if type_ is None else 'failed'
-            self._state('state-leave', status=status)
+            if self.need_leave:
+                status = 'ok' if type_ is None else 'failed'
+                self._state('state-leave', status=status)
         finally:
             if self._lock:
                 self._lock.release()
 
     def _state(self, cmd, status='ok'):
         if not util.safehasattr(self.repo, '_watchmanclient'):
-            return
+            return False
         try:
             commithash = self.repo[self.node].hex()
             self.repo._watchmanclient.command(cmd, {
@@ -637,10 +639,12 @@ class state_update(object):
                     # whether the working copy parent is changing
                     'partial': self.partial,
             }})
+            return True
         except Exception as e:
             # Swallow any errors; fire and forget
             self.repo.ui.log(
                 'watchman', 'Exception %s while running %s\n', e, cmd)
+            return False
 
 # Bracket working copy updates with calls to the watchman state-enter
 # and state-leave commands.  This allows clients to perform more intelligent
