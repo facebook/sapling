@@ -409,7 +409,7 @@ class matcher(basematcher):
                 (self._files, self.patternspat, self.includepat,
                  self.excludepat))
 
-class subdirmatcher(matcher):
+class subdirmatcher(basematcher):
     """Adapt a matcher to work on a subdirectory only.
 
     The paths are remapped to remove/insert the path as needed:
@@ -440,11 +440,10 @@ class subdirmatcher(matcher):
     """
 
     def __init__(self, path, matcher):
-        self._root = matcher._root
-        self._cwd = matcher._cwd
+        super(subdirmatcher, self).__init__(matcher._root, matcher._cwd)
         self._path = path
         self._matcher = matcher
-        self._always = matcher._always
+        self._always = matcher.always()
 
         self._files = [f[len(path) + 1:] for f in matcher._files
                        if f.startswith(path + "/")]
@@ -454,7 +453,6 @@ class subdirmatcher(matcher):
         if matcher.prefix():
             self._always = any(f == path for f in matcher._files)
 
-        self._anypats = matcher._anypats
         # Some information is lost in the superclass's constructor, so we
         # can not accurately create the matching function for the subdirectory
         # from the inputs. Instead, we override matchfn() and visitdir() to
@@ -479,6 +477,12 @@ class subdirmatcher(matcher):
         else:
             dir = self._path + "/" + dir
         return self._matcher.visitdir(dir)
+
+    def always(self):
+        return self._always
+
+    def anypats(self):
+        return self._matcher.anypats()
 
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
