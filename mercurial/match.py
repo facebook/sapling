@@ -160,7 +160,6 @@ class matcher(object):
         self._anypats = bool(include or exclude)
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
-        self._warn = warn
 
         # roots are directories which are recursively included/excluded.
         self._includeroots = set()
@@ -173,7 +172,8 @@ class matcher(object):
 
         matchfns = []
         if include:
-            kindpats = self._normalize(include, 'glob', root, cwd, auditor)
+            kindpats = self._normalize(include, 'glob', root, cwd, auditor,
+                                       warn)
             self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             roots, dirs = _rootsanddirs(kindpats)
@@ -181,7 +181,8 @@ class matcher(object):
             self._includedirs.update(dirs)
             matchfns.append(im)
         if exclude:
-            kindpats = self._normalize(exclude, 'glob', root, cwd, auditor)
+            kindpats = self._normalize(exclude, 'glob', root, cwd, auditor,
+                                       warn)
             self.excludepat, em = _buildmatch(ctx, kindpats, '(?:/|$)',
                                               listsubrepos, root)
             if not _anypats(kindpats):
@@ -199,7 +200,8 @@ class matcher(object):
                 self._files = list(patterns)
             matchfns.append(self.exact)
         elif patterns:
-            kindpats = self._normalize(patterns, default, root, cwd, auditor)
+            kindpats = self._normalize(patterns, default, root, cwd, auditor,
+                                       warn)
             if not _kindpatsalwaysmatch(kindpats):
                 self._files = _explicitfiles(kindpats)
                 self._anypats = self._anypats or _anypats(kindpats)
@@ -322,7 +324,7 @@ class matcher(object):
     def prefix(self):
         return not self.always() and not self.isexact() and not self.anypats()
 
-    def _normalize(self, patterns, default, root, cwd, auditor):
+    def _normalize(self, patterns, default, root, cwd, auditor, warn):
         '''Convert 'kind:pat' from the patterns list to tuples with kind and
         normalized and rooted patterns and with listfiles expanded.'''
         kindpats = []
@@ -342,22 +344,23 @@ class matcher(object):
                 except EnvironmentError:
                     raise error.Abort(_("unable to read file list (%s)") % pat)
                 for k, p, source in self._normalize(files, default, root, cwd,
-                                                    auditor):
+                                                    auditor, warn):
                     kindpats.append((k, p, pat))
                 continue
             elif kind == 'include':
                 try:
                     fullpath = os.path.join(root, util.localpath(pat))
-                    includepats = readpatternfile(fullpath, self._warn)
+                    includepats = readpatternfile(fullpath, warn)
                     for k, p, source in self._normalize(includepats, default,
-                                                        root, cwd, auditor):
+                                                        root, cwd, auditor,
+                                                        warn):
                         kindpats.append((k, p, source or pat))
                 except error.Abort as inst:
                     raise error.Abort('%s: %s' % (pat, inst[0]))
                 except IOError as inst:
-                    if self._warn:
-                        self._warn(_("skipping unreadable pattern file "
-                                     "'%s': %s\n") % (pat, inst.strerror))
+                    if warn:
+                        warn(_("skipping unreadable pattern file '%s': %s\n") %
+                             (pat, inst.strerror))
                 continue
             # else: re or relre - which cannot be normalized
             kindpats.append((kind, pat, ''))
@@ -452,9 +455,10 @@ class icasefsmatcher(matcher):
             self._fileset = set(roots)
             self._fileset.update(dirs)
 
-    def _normalize(self, patterns, default, root, cwd, auditor):
+    def _normalize(self, patterns, default, root, cwd, auditor, warn):
         self._kp = super(icasefsmatcher, self)._normalize(patterns, default,
-                                                          root, cwd, auditor)
+                                                          root, cwd, auditor,
+                                                          warn)
         kindpats = []
         for kind, pats, source in self._kp:
             if kind not in ('re', 'relre'):  # regex can't be normalized
