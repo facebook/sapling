@@ -144,6 +144,47 @@ def badmatch(match, badfn):
     m.bad = badfn
     return m
 
+def _donormalize(patterns, default, root, cwd, auditor, warn):
+    '''Convert 'kind:pat' from the patterns list to tuples with kind and
+    normalized and rooted patterns and with listfiles expanded.'''
+    kindpats = []
+    for kind, pat in [_patsplit(p, default) for p in patterns]:
+        if kind in ('glob', 'relpath'):
+            pat = pathutil.canonpath(root, cwd, pat, auditor)
+        elif kind in ('relglob', 'path', 'rootfilesin'):
+            pat = util.normpath(pat)
+        elif kind in ('listfile', 'listfile0'):
+            try:
+                files = util.readfile(pat)
+                if kind == 'listfile0':
+                    files = files.split('\0')
+                else:
+                    files = files.splitlines()
+                files = [f for f in files if f]
+            except EnvironmentError:
+                raise error.Abort(_("unable to read file list (%s)") % pat)
+            for k, p, source in _donormalize(files, default, root, cwd,
+                                             auditor, warn):
+                kindpats.append((k, p, pat))
+            continue
+        elif kind == 'include':
+            try:
+                fullpath = os.path.join(root, util.localpath(pat))
+                includepats = readpatternfile(fullpath, warn)
+                for k, p, source in _donormalize(includepats, default,
+                                                 root, cwd, auditor, warn):
+                    kindpats.append((k, p, source or pat))
+            except error.Abort as inst:
+                raise error.Abort('%s: %s' % (pat, inst[0]))
+            except IOError as inst:
+                if warn:
+                    warn(_("skipping unreadable pattern file '%s': %s\n") %
+                         (pat, inst.strerror))
+            continue
+        # else: re or relre - which cannot be normalized
+        kindpats.append((kind, pat, ''))
+    return kindpats
+
 class matcher(object):
 
     def __init__(self, root, cwd, patterns, include=None, exclude=None,
@@ -325,46 +366,7 @@ class matcher(object):
         return not self.always() and not self.isexact() and not self.anypats()
 
     def _normalize(self, patterns, default, root, cwd, auditor, warn):
-        '''Convert 'kind:pat' from the patterns list to tuples with kind and
-        normalized and rooted patterns and with listfiles expanded.'''
-        kindpats = []
-        for kind, pat in [_patsplit(p, default) for p in patterns]:
-            if kind in ('glob', 'relpath'):
-                pat = pathutil.canonpath(root, cwd, pat, auditor)
-            elif kind in ('relglob', 'path', 'rootfilesin'):
-                pat = util.normpath(pat)
-            elif kind in ('listfile', 'listfile0'):
-                try:
-                    files = util.readfile(pat)
-                    if kind == 'listfile0':
-                        files = files.split('\0')
-                    else:
-                        files = files.splitlines()
-                    files = [f for f in files if f]
-                except EnvironmentError:
-                    raise error.Abort(_("unable to read file list (%s)") % pat)
-                for k, p, source in self._normalize(files, default, root, cwd,
-                                                    auditor, warn):
-                    kindpats.append((k, p, pat))
-                continue
-            elif kind == 'include':
-                try:
-                    fullpath = os.path.join(root, util.localpath(pat))
-                    includepats = readpatternfile(fullpath, warn)
-                    for k, p, source in self._normalize(includepats, default,
-                                                        root, cwd, auditor,
-                                                        warn):
-                        kindpats.append((k, p, source or pat))
-                except error.Abort as inst:
-                    raise error.Abort('%s: %s' % (pat, inst[0]))
-                except IOError as inst:
-                    if warn:
-                        warn(_("skipping unreadable pattern file '%s': %s\n") %
-                             (pat, inst.strerror))
-                continue
-            # else: re or relre - which cannot be normalized
-            kindpats.append((kind, pat, ''))
-        return kindpats
+        return _donormalize(patterns, default, root, cwd, auditor, warn)
 
 class subdirmatcher(matcher):
     """Adapt a matcher to work on a subdirectory only.
