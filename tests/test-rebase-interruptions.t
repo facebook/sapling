@@ -272,3 +272,34 @@ Abort the rebasing:
   o  0:public 'A'
   
   $ cd ..
+
+Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
+  $ hg init repo
+  $ cd repo
+  $ echo a > a
+  $ hg commit -qAm base
+  $ echo b >> a
+  $ hg commit -qm b
+  $ hg up '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c >> a
+  $ hg commit -qm c
+  $ hg rebase -s 1 -d 2 --noninteractive
+  rebasing 1:fdaca8533b86 "b"
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ echo a > a
+  $ echo c >> a
+  $ hg resolve --mark a
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 1:fdaca8533b86 "b"
+  note: rebase of 1:fdaca8533b86 created no changes to commit
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fdaca8533b86-7fd70513-backup.hg (glob)
+  $ hg resolve --list
+  $ test -f .hg/merge
+  [1]
+
