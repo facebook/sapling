@@ -273,7 +273,9 @@ class changelog(revlog.revlog):
         else:
             indexfile = '00changelog.i'
 
-        revlog.revlog.__init__(self, opener, indexfile, checkambig=True)
+        datafile = '00changelog.d'
+        revlog.revlog.__init__(self, opener, indexfile, datafile=datafile,
+                               checkambig=True)
 
         if self._initempty:
             # changelogs don't benefit from generaldelta

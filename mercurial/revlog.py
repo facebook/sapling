@@ -252,7 +252,7 @@ class revlog(object):
     If checkambig, indexfile is opened with checkambig=True at
     writing, to avoid file stat ambiguity.
     """
-    def __init__(self, opener, indexfile, checkambig=False):
+    def __init__(self, opener, indexfile, datafile=None, checkambig=False):
         """
         create a revlog object
 
@@ -260,7 +260,7 @@ class revlog(object):
         and can be used to implement COW semantics or the like.
         """
         self.indexfile = indexfile
-        self.datafile = indexfile[:-2] + ".d"
+        self.datafile = datafile or (indexfile[:-2] + ".d")
         self.opener = opener
         #  When True, indexfile is opened with checkambig=True at writing, to
         #  avoid file stat ambiguity.
