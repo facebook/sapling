@@ -247,11 +247,25 @@ class locallegacypeer(localpeer):
 
 class localrepository(object):
 
-    supportedformats = {'revlogv1', 'generaldelta', 'treemanifest',
-                        'manifestv2'}
-    _basesupported = supportedformats | {'store', 'fncache', 'shared',
-                                         'relshared', 'dotencode'}
-    openerreqs = {'revlogv1', 'generaldelta', 'treemanifest', 'manifestv2'}
+    supportedformats = {
+        'revlogv1',
+        'generaldelta',
+        'treemanifest',
+        'manifestv2',
+    }
+    _basesupported = supportedformats | {
+        'store',
+        'fncache',
+        'shared',
+        'relshared',
+        'dotencode',
+    }
+    openerreqs = {
+        'revlogv1',
+        'generaldelta',
+        'treemanifest',
+        'manifestv2',
+    }
     filtername = None
 
     # a list of (ui, featureset) functions.
