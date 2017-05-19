@@ -1353,7 +1353,11 @@ class committablectx(basectx):
 
     @propertycache
     def _date(self):
-        return util.makedate()
+        ui = self._repo.ui
+        date = ui.configdate('devel', 'default-date')
+        if date is None:
+            date = util.makedate()
+        return date
 
     def subrev(self, subpath):
         return None
