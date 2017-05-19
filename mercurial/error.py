@@ -177,6 +177,9 @@ class PushRaced(RuntimeError):
 class ProgrammingError(Hint, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
 
+class WdirUnsupported(Exception):
+    """An exception which is raised when 'wdir()' is not supported"""
+
 # bundle2 related errors
 class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
