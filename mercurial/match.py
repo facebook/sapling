@@ -149,14 +149,14 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                            default=default, auditor=auditor, ctx=ctx,
                            listsubrepos=listsubrepos, warn=warn, badfn=badfn)
     if include:
-        im = includematcher(root, cwd, normalize, [], include=include,
-                            default=default, auditor=auditor, ctx=ctx,
-                            listsubrepos=listsubrepos, warn=warn, badfn=None)
+        im = includematcher(root, cwd, normalize, include, auditor=auditor,
+                            ctx=ctx, listsubrepos=listsubrepos, warn=warn,
+                            badfn=None)
         m = intersectmatchers(m, im)
     if exclude:
-        em = includematcher(root, cwd, normalize, [], include=exclude,
-                            default=default, auditor=auditor, ctx=ctx,
-                            listsubrepos=listsubrepos, warn=warn, badfn=None)
+        em = includematcher(root, cwd, normalize, exclude, auditor=auditor,
+                            ctx=ctx, listsubrepos=listsubrepos, warn=warn,
+                            badfn=None)
         m = differencematcher(m, em)
     return m
 
@@ -403,93 +403,38 @@ class patternmatcher(basematcher):
 
 class includematcher(basematcher):
 
-    def __init__(self, root, cwd, normalize, patterns, include=None,
-                 default='glob', auditor=None, ctx=None,
+    def __init__(self, root, cwd, normalize, include, auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
-        super(includematcher, self).__init__(root, cwd, badfn,
-                                             relativeuipath=bool(include or
-                                                                 patterns))
-        if include is None:
-            include = []
+        super(includematcher, self).__init__(root, cwd, badfn)
 
-        self._anypats = bool(include)
-        self._anyincludepats = False
-        self._always = False
-        self.patternspat = None
-        self.includepat = None
-
+        kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
+        self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
+                                          listsubrepos, root)
+        self._anyincludepats = _anypats(kindpats)
+        roots, dirs = _rootsanddirs(kindpats)
         # roots are directories which are recursively included.
-        self._includeroots = set()
+        self._includeroots = set(roots)
         # dirs are directories which are non-recursively included.
-        self._includedirs = set()
-
-        matchfns = []
-        if include:
-            kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
-            self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
-                                              listsubrepos, root)
-            self._anyincludepats = _anypats(kindpats)
-            roots, dirs = _rootsanddirs(kindpats)
-            self._includeroots.update(roots)
-            self._includedirs.update(dirs)
-            matchfns.append(im)
-        if patterns:
-            kindpats = normalize(patterns, default, root, cwd, auditor, warn)
-            if not _kindpatsalwaysmatch(kindpats):
-                self._files = _explicitfiles(kindpats)
-                self._anypats = self._anypats or _anypats(kindpats)
-                self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
-                                                   listsubrepos, root)
-                matchfns.append(pm)
-
-        if not matchfns:
-            m = util.always
-            self._always = True
-        elif len(matchfns) == 1:
-            m = matchfns[0]
-        else:
-            def m(f):
-                for matchfn in matchfns:
-                    if not matchfn(f):
-                        return False
-                return True
-
-        self.matchfn = m
-
-    @propertycache
-    def _dirs(self):
-        return set(util.dirs(self._fileset)) | {'.'}
+        self._includedirs = set(dirs)
+        self.matchfn = im
 
     def visitdir(self, dir):
-        if self.prefix() and dir in self._fileset:
+        if not self._anyincludepats and dir in self._includeroots:
+            # The condition above is essentially self.prefix() for includes
             return 'all'
-        if self._includeroots or self._includedirs:
-            if (not self._anyincludepats and
-                dir in self._includeroots):
-                # The condition above is essentially self.prefix() for includes
-                return 'all'
-            if ('.' not in self._includeroots and
-                dir not in self._includeroots and
-                dir not in self._includedirs and
-                not any(parent in self._includeroots
-                        for parent in util.finddirs(dir))):
-                return False
-        return (not self._fileset or
-                '.' in self._fileset or
-                dir in self._fileset or
-                dir in self._dirs or
-                any(parentdir in self._fileset
-                    for parentdir in util.finddirs(dir)))
+        if ('.' not in self._includeroots and
+            dir not in self._includeroots and
+            dir not in self._includedirs and
+            not any(parent in self._includeroots
+                    for parent in util.finddirs(dir))):
+            return False
+        return True
 
     def anypats(self):
-        return self._anypats
-
-    def always(self):
-        return self._always
+        return True
 
     def __repr__(self):
-        return ('<includematcher patterns=%r, includes=%r>' %
-                (self.patternspat, self.includepat))
+        return ('<includematcher includes=%r>' % self.includepat)
 
 class exactmatcher(basematcher):
     '''Matches the input files exactly. They are interpreted as paths, not

@@ -164,7 +164,7 @@ Test relative ignore path (issue4473):
   A b.o
 
   $ hg debugignore
-  <includematcher patterns=None, includes='(?:(?:|.*/)[^/]*(?:/|$))'>
+  <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
 
   $ hg debugignore b.o
   b.o is ignored
