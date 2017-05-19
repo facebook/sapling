@@ -1924,6 +1924,9 @@ def parsedate(date, formats=None, bias=None):
     The date may be a "unixtime offset" string or in one of the specified
     formats. If the date already is a (unixtime, offset) tuple, it is returned.
 
+    This function calls rawparsedate and convert ValueError to Abort for
+    functions that needs higher level exception.
+
     >>> parsedate(' today ') == parsedate(\
                                   datetime.date.today().strftime('%b %d'))
     True
@@ -1937,6 +1940,20 @@ def parsedate(date, formats=None, bias=None):
     True
     >>> tz == strtz
     True
+    """
+    try:
+        return rawparsedate(date, formats=formats, bias=bias)
+    except ValueError as exception:
+        raise Abort(str(exception))
+
+def rawparsedate(date, formats=None, bias=None):
+    """parse a localized date/time and return a (unixtime, offset) tuple.
+
+    The date may be a "unixtime offset" string or in one of the specified
+    formats. If the date already is a (unixtime, offset) tuple, it is returned.
+
+    See docstring of parsedate for example.
+    Raise ValueError for invalid date value.
     """
     if bias is None:
         bias = {}
@@ -1984,15 +2001,15 @@ def parsedate(date, formats=None, bias=None):
             else:
                 break
         else:
-            raise Abort(_('invalid date: %r') % date)
+            raise ValueError(_('invalid date: %r') % date)
     # validate explicit (probably user-specified) date and
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
     # to UTC+14
     if when < -0x80000000 or when > 0x7fffffff:
-        raise Abort(_('date exceeds 32 bits: %d') % when)
+        raise ValueError(_('date exceeds 32 bits: %d') % when)
     if offset < -50400 or offset > 43200:
-        raise Abort(_('impossible time zone offset: %d') % offset)
+        raise ValueError(_('impossible time zone offset: %d') % offset)
     return when, offset
 
 def matchdate(date):
