@@ -42,7 +42,7 @@ def composelargefilematcher(match, manifest):
     lfile = lambda f: lfutil.standin(f) in manifest
     m._files = filter(lfile, m._files)
     m._fileset = set(m._files)
-    m._always = False
+    m.always = lambda: False
     origmatchfn = m.matchfn
     m.matchfn = lambda f: lfile(f) and origmatchfn(f)
     return m
@@ -57,7 +57,7 @@ def composenormalfilematcher(match, manifest, exclude=None):
             manifest or f in excluded)
     m._files = filter(notlfile, m._files)
     m._fileset = set(m._files)
-    m._always = False
+    m.always = lambda: False
     origmatchfn = m.matchfn
     m.matchfn = lambda f: notlfile(f) and origmatchfn(f)
     return m
@@ -369,7 +369,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
                 m._files.append(standin)
 
         m._fileset = set(m._files)
-        m._always = False
+        m.always = lambda: False
         origmatchfn = m.matchfn
         def lfmatchfn(f):
             lf = lfutil.splitstandin(f)
