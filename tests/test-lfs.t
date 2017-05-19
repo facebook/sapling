@@ -141,6 +141,15 @@
   $ echo SHORTER > s
   $ hg commit -m 'switch large and small again'
 
+# Test lfs_files template
+
+  $ hg log -r 'all()' -T '{rev} {join(lfs_files, ", ")}\n'
+  0 large
+  1 l
+  2 s
+  3 s
+  4 l
+
 # Push and pull the above repo
 
   $ hg --cwd .. init repo4

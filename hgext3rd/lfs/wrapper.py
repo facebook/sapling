@@ -207,22 +207,27 @@ def extractpointers(repo, revs):
     if ui.debugflag:
         ui.write(_('lfs: computing set of blobs to upload\n'))
     pointers = {}
-    for i, n in enumerate(revs):
-        ctx = repo[n]
-        files = set(ctx.files())
-        for f in files:
-            if f not in ctx:
-                continue
-            fctx = ctx[f]
-            if not _islfs(fctx.filelog(), fctx.filenode()):
-                continue
-            try:
-                metadata = pointer.deserialize(fctx.rawdata())
-                pointers[metadata['oid']] = metadata
-            except pointer.InvalidPointer as ex:
-                raise error.Abort(_('lfs: corrupted pointer (%s@%s): %s\n')
-                                  % (f, short(ctx.node()), ex))
+    for r in revs:
+        ctx = repo[r]
+        for p in pointersfromctx(ctx).values():
+            pointers[p.oid()] = p
     return pointers.values()
+
+def pointersfromctx(ctx):
+    """return a dict {path: pointer} for given single changectx"""
+    result = {}
+    for f in ctx.files():
+        if f not in ctx:
+            continue
+        fctx = ctx[f]
+        if not _islfs(fctx.filelog(), fctx.filenode()):
+            continue
+        try:
+            result[f] = pointer.deserialize(fctx.rawdata())
+        except pointer.InvalidPointer as ex:
+            raise error.Abort(_('lfs: corrupted pointer (%s@%s): %s\n')
+                              % (f, short(ctx.node()), ex))
+    return result
 
 def uploadblobs(repo, pointers):
     """upload given pointers from local blobstore"""

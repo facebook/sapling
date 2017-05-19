@@ -33,6 +33,7 @@ from mercurial import (
     exchange,
     extensions,
     filelog,
+    registrar,
     revlog,
     scmutil,
     vfs as vfsmod,
@@ -46,6 +47,8 @@ from . import (
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+
+templatekeyword = registrar.templatekeyword()
 
 def reposetup(ui, repo):
     # Nothing to do with a remote repo
@@ -105,6 +108,12 @@ def extsetup(ui):
 
     # when writing a bundle via "hg bundle" command, upload related LFS blobs
     wrapfunction(bundle2, 'writenewbundle', wrapper.writenewbundle)
+
+@templatekeyword('lfs_files')
+def lfsfiles(repo, ctx, **args):
+    """List of strings. LFS files added or modified by the changeset."""
+    pointers = wrapper.pointersfromctx(ctx) # {path: pointer}
+    return sorted(pointers.keys())
 
 @command('debuglfsupload',
          [('r', 'rev', [], _('upload large files introduced by REV'))])
