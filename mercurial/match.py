@@ -146,17 +146,17 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
         m = exactmatcher(root, cwd, patterns, badfn)
     else:
         m = matcher(root, cwd, normalize, patterns, include=None,
-                    default=default, exact=exact, auditor=auditor, ctx=ctx,
+                    default=default, auditor=auditor, ctx=ctx,
                     listsubrepos=listsubrepos, warn=warn, badfn=badfn)
     if include:
         im = matcher(root, cwd, normalize, [], include=include, default=default,
-                     exact=False, auditor=auditor, ctx=ctx,
-                     listsubrepos=listsubrepos, warn=warn, badfn=None)
+                     auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
+                     warn=warn, badfn=None)
         m = intersectmatchers(m, im)
     if exclude:
         em = matcher(root, cwd, normalize, [], include=exclude, default=default,
-                     exact=False, auditor=auditor, ctx=ctx,
-                     listsubrepos=listsubrepos, warn=warn, badfn=None)
+                     auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
+                     warn=warn, badfn=None)
         m = differencematcher(m, em)
     return m
 
@@ -314,7 +314,7 @@ class basematcher(object):
 class matcher(basematcher):
 
     def __init__(self, root, cwd, normalize, patterns, include=None,
-                 default='glob', exact=False, auditor=None, ctx=None,
+                 default='glob', auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
         super(matcher, self).__init__(root, cwd, badfn,
                                       relativeuipath=bool(include or patterns))
@@ -342,13 +342,7 @@ class matcher(basematcher):
             self._includeroots.update(roots)
             self._includedirs.update(dirs)
             matchfns.append(im)
-        if exact:
-            if isinstance(patterns, list):
-                self._files = patterns
-            else:
-                self._files = list(patterns)
-            matchfns.append(self.exact)
-        elif patterns:
+        if patterns:
             kindpats = normalize(patterns, default, root, cwd, auditor, warn)
             if not _kindpatsalwaysmatch(kindpats):
                 self._files = _explicitfiles(kindpats)
@@ -402,12 +396,9 @@ class matcher(basematcher):
     def always(self):
         return self._always
 
-    def isexact(self):
-        return self.matchfn == self.exact
-
     def __repr__(self):
-        return ('<matcher files=%r, patterns=%r, includes=%r>' %
-                (self._files, self.patternspat, self.includepat))
+        return ('<matcher patterns=%r, includes=%r>' %
+                (self.patternspat, self.includepat))
 
 class exactmatcher(basematcher):
     '''Matches the input files exactly. They are interpreted as paths, not
