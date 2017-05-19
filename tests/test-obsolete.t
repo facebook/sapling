@@ -1252,7 +1252,7 @@ only a subset of those are displayed (because of --rev option)
   $ hg debugobsolete --index --rev "3+7" -Tjson
   [
    {
-    "date": *, (glob)
+    "date": [0.0, 0],
     "flag": 0,
     "index": 1,
     "metadata": {"user": "test"},
@@ -1260,7 +1260,7 @@ only a subset of those are displayed (because of --rev option)
     "succnodes": ["d27fb9b066076fd921277a4b9e8b9cb48c95bc6a"]
    },
    {
-    "date": *, (glob)
+    "date": [0.0, 0],
     "flag": 0,
     "index": 3,
     "metadata": {"operation": "amend", "user": "test"},
@@ -1271,15 +1271,15 @@ only a subset of those are displayed (because of --rev option)
 
 Test the --delete option of debugobsolete command
   $ hg debugobsolete --index
-  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 \(.*\) {'user': 'test'} (re)
-  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 \(.*\) {'user': 'test'} (re)
-  2 1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 \(.*\) {'user': 'test'} (re)
-  3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 (*) {'operation': 'amend', 'user': 'test'} (glob)
+  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  2 1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg debugobsolete --delete 1 --delete 3
   deleted 2 obsolescence markers
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 \(.*\) {'user': 'test'} (re)
-  1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 \(.*\) {'user': 'test'} (re)
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
 Test adding changeset after obsmarkers affecting it
 (eg: during pull, or unbundle)

@@ -584,7 +584,7 @@ class obsstore(object):
         return self._readonly
 
     def create(self, transaction, prec, succs=(), flag=0, parents=None,
-               date=None, metadata=None):
+               date=None, metadata=None, ui=None):
         """obsolete: add a new obsolete marker
 
         * ensuring it is hashable
@@ -603,6 +603,10 @@ class obsstore(object):
             if 'date' in metadata:
                 # as a courtesy for out-of-tree extensions
                 date = util.parsedate(metadata.pop('date'))
+            elif ui is not None:
+                date = ui.configdate('devel', 'default-date')
+                if date is None:
+                    date = util.makedate()
             else:
                 date = util.makedate()
         if len(prec) != 20:
@@ -1286,7 +1290,8 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
         for args in markerargs:
             nprec, nsucs, npare, localmetadata = args
             repo.obsstore.create(tr, nprec, nsucs, flag, parents=npare,
-                                 date=date, metadata=localmetadata)
+                                 date=date, metadata=localmetadata,
+                                 ui=repo.ui)
             repo.filteredrevcache.clear()
         tr.close()
     finally:
