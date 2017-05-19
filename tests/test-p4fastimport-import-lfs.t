@@ -76,17 +76,13 @@ Simple import
 Verify
 (waiting for https://patchwork.mercurial-scm.org/patch/20582/)
 
-  $ hg --debug verify || true
+  $ hg --debug verify --config verify.skipflags=8192
   repository uses revlog format 1
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-   Main/largefile@0: unpacking b3a729dd094e: lfs.url needs to be configured (?)
-   Main/largefile@1: unpacking 9f14f96519e1: lfs.url needs to be configured (?)
   3 files, 2 changesets, 6 total revisions
-  2 integrity errors encountered! (?)
-  (first damaged changeset appears to be 0) (?)
 
   $ test -d .hg/store/lfs/objects
   [1]
