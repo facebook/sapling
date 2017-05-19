@@ -145,9 +145,9 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
     if exact:
         m = exactmatcher(root, cwd, patterns, badfn)
     elif patterns:
-        m = patternmatcher(root, cwd, normalize, patterns, default=default,
-                           auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
-                           warn=warn, badfn=badfn)
+        kindpats = normalize(patterns, default, root, cwd, auditor, warn)
+        m = patternmatcher(root, cwd, kindpats, ctx=ctx,
+                           listsubrepos=listsubrepos, badfn=badfn)
     else:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably adding a
@@ -155,14 +155,14 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
         m = alwaysmatcher(root, cwd, badfn)
 
     if include:
-        im = includematcher(root, cwd, normalize, include, auditor=auditor,
-                            ctx=ctx, listsubrepos=listsubrepos, warn=warn,
-                            badfn=None)
+        kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
+        im = includematcher(root, cwd, kindpats, ctx=ctx,
+                            listsubrepos=listsubrepos, badfn=None)
         m = intersectmatchers(m, im)
     if exclude:
-        em = includematcher(root, cwd, normalize, exclude, auditor=auditor,
-                            ctx=ctx, listsubrepos=listsubrepos, warn=warn,
-                            badfn=None)
+        kindpats = normalize(exclude, 'glob', root, cwd, auditor, warn)
+        em = includematcher(root, cwd, kindpats, ctx=ctx,
+                            listsubrepos=listsubrepos, badfn=None)
         m = differencematcher(m, em)
     return m
 
@@ -338,12 +338,10 @@ class alwaysmatcher(basematcher):
 
 class patternmatcher(basematcher):
 
-    def __init__(self, root, cwd, normalize, patterns, default='glob',
-                 auditor=None, ctx=None, listsubrepos=False, warn=None,
+    def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False,
                  badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
 
-        kindpats = normalize(patterns, default, root, cwd, auditor, warn)
         if not _kindpatsalwaysmatch(kindpats):
             self._files = _explicitfiles(kindpats)
             self._anypats = _anypats(kindpats)
@@ -383,11 +381,10 @@ class patternmatcher(basematcher):
 
 class includematcher(basematcher):
 
-    def __init__(self, root, cwd, normalize, include, auditor=None, ctx=None,
-                 listsubrepos=False, warn=None, badfn=None):
+    def __init__(self, root, cwd, kindpats, ctx=None, listsubrepos=False,
+                 badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
-        kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
         self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                           listsubrepos, root)
         self._anypats = _anypats(kindpats)
