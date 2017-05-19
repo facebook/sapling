@@ -76,6 +76,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
             'evolutioncommands': 'prev next split fold obsolete metaedit',
         }
         config['extensions'] = {
+            'directaccess': '',
             'evolve': '',
             'fbamend': '',
             'fbhistedit': '',
@@ -87,6 +88,9 @@ class HgExtensionTestBase(testcase.EdenTestCase):
             'reset': '',
             'strip': '',
             'tweakdefaults': '',
+        }
+        config['directaccess'] = {
+            'loadsafter': 'tweakdefaults',
         }
         with open(hgrc, 'w') as f:
             config.write(f)
