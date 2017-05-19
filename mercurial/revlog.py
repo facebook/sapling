@@ -26,6 +26,7 @@ from .node import (
     hex,
     nullid,
     nullrev,
+    wdirrev,
 )
 from .i18n import _
 from . import (
@@ -481,7 +482,12 @@ class revlog(object):
         return self.index[rev][4]
 
     def parentrevs(self, rev):
-        return self.index[rev][5:7]
+        try:
+            return self.index[rev][5:7]
+        except IndexError:
+            if rev == wdirrev:
+                raise error.WdirUnsupported
+            raise
 
     def node(self, rev):
         return self.index[rev][7]
