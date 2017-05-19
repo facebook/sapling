@@ -209,7 +209,6 @@ class basematcher(object):
         self._cwd = cwd
         if badfn is not None:
             self.bad = badfn
-        self._files = [] # exact files and roots of patterns
         self.matchfn = lambda f: False
 
     def __call__(self, fn):
@@ -246,6 +245,10 @@ class basematcher(object):
         to create this matcher, the display path will be relative to cwd.
         Otherwise it is relative to the root of the repo.'''
         return self.rel(f)
+
+    @propertycache
+    def _files(self):
+        return []
 
     def files(self):
         '''Explicitly listed files or patterns or roots:
