@@ -1408,7 +1408,10 @@ def p1(repo, subset, x):
     ps = set()
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
-        ps.add(cl.parentrevs(r)[0])
+        try:
+            ps.add(cl.parentrevs(r)[0])
+        except error.WdirUnsupported:
+            ps.add(repo[r].parents()[0].rev())
     ps -= {node.nullrev}
     # XXX we should turn this into a baseset instead of a set, smartset may do
     # some optimizations from the fact this is a baseset.

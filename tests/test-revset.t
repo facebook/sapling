@@ -1221,6 +1221,15 @@ BROKEN: should be '-1'
 Test working-directory revision
   $ hg debugrevspec 'wdir()'
   2147483647
+  $ hg debugrevspec 'wdir()^'
+  9
+  $ hg up 7
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg debugrevspec 'wdir()^'
+  7
+For tests consistency
+  $ hg up 9
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugrevspec 'tip or wdir()'
   9
   2147483647
