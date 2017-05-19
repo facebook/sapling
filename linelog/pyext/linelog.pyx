@@ -2,8 +2,9 @@ from libc.errno cimport errno
 from libc.stdint cimport uint32_t, uint8_t
 from libc.stdlib cimport malloc, free, realloc
 from libc.string cimport memcpy, memset, strdup
-from posix cimport fcntl, mman, stat, unistd
-from posix.types cimport off_t
+IF UNAME_SYSNAME != "Windows":
+    from posix cimport fcntl, mman, stat, unistd
+    from posix.types cimport off_t
 
 import os
 
@@ -53,8 +54,11 @@ cdef extern from "../linelog.c":
             linelog_annotateresult *ar, linelog_offset offset1,
             linelog_offset offset2)
 
-cdef size_t pagesize = <size_t>unistd.sysconf(unistd._SC_PAGESIZE)
-cdef size_t unitsize = pagesize # used when resizing a buffer
+IF UNAME_SYSNAME == "Windows":
+    cdef size_t unitsize = 4096
+ELSE:
+    cdef size_t pagesize = <size_t>unistd.sysconf(unistd._SC_PAGESIZE)
+    cdef size_t unitsize = pagesize # used when resizing a buffer
 
 class LinelogError(Exception):
     _messages = {
@@ -159,82 +163,83 @@ cdef _excwitherrno(exctype, hint=None, filename=None):
         message += ' (' + hint + ')'
     return exctype(errno, message, filename)
 
-cdef class _filebuffer(_buffer): # linelog_buf backed by filesystem
-    cdef int fd
-    cdef size_t maplen
-    cdef char *path
+IF UNAME_SYSNAME != "Windows":
+    cdef class _filebuffer(_buffer): # linelog_buf backed by filesystem
+        cdef int fd
+        cdef size_t maplen
+        cdef char *path
 
-    def __cinit__(self, path):
-        self.fd = -1
-        self.maplen = 0
-        self.path = strdup(path)
-        if self.path == NULL:
-            raise MemoryError()
-        self._open()
-
-    def __dealloc__(self):
-        free(self.path)
-        self.close()
-
-    cdef resize(self, size_t newsize):
-        if self.fd == -1:
+        def __cinit__(self, path):
+            self.fd = -1
+            self.maplen = 0
+            self.path = strdup(path)
+            if self.path == NULL:
+                raise MemoryError()
             self._open()
-        self._unmap()
-        r = unistd.ftruncate(self.fd, <off_t>newsize)
-        if r != 0:
-            raise _excwitherrno(IOError, 'ftruncate')
-        self._map()
 
-    cdef flush(self):
-        if self.buf.data == NULL:
-            return
-        r = mman.msync(self.buf.data, self.buf.size, mman.MS_ASYNC)
-        if r != 0:
-            raise _excwitherrno(OSError, 'msync')
+        def __dealloc__(self):
+            free(self.path)
+            self.close()
 
-    cdef close(self):
-        self.flush()
-        self._unmap()
-        if self.fd == -1:
-            return
-        unistd.close(self.fd)
-        self.fd = -1
+        cdef resize(self, size_t newsize):
+            if self.fd == -1:
+                self._open()
+            self._unmap()
+            r = unistd.ftruncate(self.fd, <off_t>newsize)
+            if r != 0:
+                raise _excwitherrno(IOError, 'ftruncate')
+            self._map()
 
-    cdef _open(self):
-        self.close()
-        fd = fcntl.open(self.path, fcntl.O_RDWR | fcntl.O_CREAT, 0o644)
-        if fd == -1:
-            raise _excwitherrno(IOError, None, self.path)
-        self.fd = fd
-        self._map()
+        cdef flush(self):
+            if self.buf.data == NULL:
+                return
+            r = mman.msync(self.buf.data, self.buf.size, mman.MS_ASYNC)
+            if r != 0:
+                raise _excwitherrno(OSError, 'msync')
 
-    cdef _map(self):
-        assert self.fd != -1
-        self._unmap()
+        cdef close(self):
+            self.flush()
+            self._unmap()
+            if self.fd == -1:
+                return
+            unistd.close(self.fd)
+            self.fd = -1
 
-        cdef stat.struct_stat st
-        r = stat.fstat(self.fd, &st)
-        if r != 0:
-            raise _excwitherrno(IOError, 'fstat')
+        cdef _open(self):
+            self.close()
+            fd = fcntl.open(self.path, fcntl.O_RDWR | fcntl.O_CREAT, 0o644)
+            if fd == -1:
+                raise _excwitherrno(IOError, None, self.path)
+            self.fd = fd
+            self._map()
 
-        cdef size_t filelen = <size_t>st.st_size
-        self.maplen = (1 if filelen == 0 else filelen) # cannot be 0
-        p = mman.mmap(NULL, self.maplen, mman.PROT_READ | mman.PROT_WRITE,
-                      mman.MAP_SHARED, self.fd, 0)
-        if p == NULL:
-            raise _excwitherrno(OSError, 'mmap')
+        cdef _map(self):
+            assert self.fd != -1
+            self._unmap()
 
-        self.buf.data = <uint8_t *>p
-        self.buf.size = filelen
+            cdef stat.struct_stat st
+            r = stat.fstat(self.fd, &st)
+            if r != 0:
+                raise _excwitherrno(IOError, 'fstat')
 
-    cdef _unmap(self):
-        if self.buf.data == NULL:
-            return
-        r = mman.munmap(self.buf.data, self.maplen)
-        if r != 0:
-            raise _excwitherrno(OSError, 'munmap')
-        memset(&self.buf, 0, sizeof(linelog_buf))
-        self.maplen = 0
+            cdef size_t filelen = <size_t>st.st_size
+            self.maplen = (1 if filelen == 0 else filelen) # cannot be 0
+            p = mman.mmap(NULL, self.maplen, mman.PROT_READ | mman.PROT_WRITE,
+                          mman.MAP_SHARED, self.fd, 0)
+            if p == NULL:
+                raise _excwitherrno(OSError, 'mmap')
+
+            self.buf.data = <uint8_t *>p
+            self.buf.size = filelen
+
+        cdef _unmap(self):
+            if self.buf.data == NULL:
+                return
+            r = mman.munmap(self.buf.data, self.maplen)
+            if r != 0:
+                raise _excwitherrno(OSError, 'munmap')
+            memset(&self.buf, 0, sizeof(linelog_buf))
+            self.maplen = 0
 
 cdef _ar2list(const linelog_annotateresult *ar):
     result = []
@@ -268,7 +273,10 @@ cdef class linelog:
         """
         self.path = path
         if path:
-            self.buf = _filebuffer(path)
+            IF UNAME_SYSNAME == 'Windows':
+                raise RuntimeError('on-disk linelog is unavailable on Windows')
+            ELSE:
+                self.buf = _filebuffer(path)
         else:
             self.buf = _memorybuffer()
         if self.buf.getactualsize() == 0:

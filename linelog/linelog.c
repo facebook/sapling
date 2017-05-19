@@ -12,7 +12,29 @@
 #include <stdbool.h> /* bool */
 #include <stdlib.h> /* realloc, free */
 #include <string.h> /* NULL, memcpy, memmove, memset */
+
+#if defined(_WIN32) || defined(_WIN64)
+/* Windows does not have arpa/inet.h. Reinvent htonl and ntohl. Modern x86
+ * compiler could produce efficient "bswap" instruction. */
+#define bswap32(x) { \
+	x = ((x << 8) & 0xFF00FF00) | ((x >> 8) & 0xFF00FF); \
+	x = (x << 16) | (x >> 16); }
+
+inline static int islittleendian(void) {
+	uint32_t i = 1;
+	return (*((uint8_t*)(&i))) == 1;
+}
+
+static uint32_t htonl(uint32_t x) {
+	if (islittleendian())
+		bswap32(x);
+	return x;
+}
+
+#define ntohl htonl
+#else
 #include <arpa/inet.h> /* htonl, ntohl */
+#endif
 
 /* linelog_buf.data is a plain array of instructions.
 

@@ -182,7 +182,11 @@ availablepackages = hgext3rdpkgs + [
     'remotefilelog',
 ]
 
-if not iswindows:
+if iswindows:
+    availablepackages += [
+        'linelog',
+    ]
+else:
     availablepackages += [
         'fastannotate',
         'fastmanifest',
@@ -199,7 +203,16 @@ def distutils_dir_name(dname):
 
 if iswindows:
     # The modules that successfully compile on Windows
-    availableextmodules = {}
+    availableextmodules = {
+        'linelog' : [
+            Extension('linelog',
+                sources=['linelog/pyext/linelog.pyx'],
+                extra_compile_args=filter(None, [
+                    STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                ]),
+            ),
+        ],
+    }
 else:
     availableextmodules = {
         'cstore' : [
@@ -306,7 +319,7 @@ while processdep:
 
 if iswindows:
     # The modules that successfully compile on Windows
-    cythonmodules = []
+    cythonmodules = ['linelog']
 else:
     cythonmodules = [
         'linelog',
