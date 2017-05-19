@@ -1105,10 +1105,7 @@ class localrepository(object):
                                **pycompat.strkwargs(hookargs))
             reporef()._afterlock(hook)
         tr.addfinalize('txnclose-hook', txnclosehook)
-        def warmscache(tr2):
-            repo = reporef()
-            repo.updatecaches(tr2)
-        tr.addpostclose('warms-cache', warmscache)
+        tr.addpostclose('warms-cache', self._buildcacheupdater(tr))
         def txnaborthook(tr2):
             """To be run if transaction is aborted
             """
@@ -1242,6 +1239,20 @@ class localrepository(object):
         # invalidated.
         self.destroyed()
         return 0
+
+    def _buildcacheupdater(self, newtransaction):
+        """called during transaction to build the callback updating cache
+
+        Lives on the repository to help extension who might want to augment
+        this logic. For this purpose, the created transaction is passed to the
+        method.
+        """
+        # we must avoid cyclic reference between repo and transaction.
+        reporef = weakref.ref(self)
+        def updater(tr):
+            repo = reporef()
+            repo.updatecaches(tr)
+        return updater
 
     @unfilteredmethod
     def updatecaches(self, tr=None):
