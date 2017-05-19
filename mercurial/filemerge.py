@@ -49,6 +49,17 @@ nomerge = None
 mergeonly = 'mergeonly'  # just the full merge, no premerge
 fullmerge = 'fullmerge'  # both premerge and merge
 
+_localchangedotherdeletedmsg = _(
+    "local%(l)s changed %(fd)s which other%(o)s deleted\n"
+    "use (c)hanged version, (d)elete, or leave (u)nresolved?"
+    "$$ &Changed $$ &Delete $$ &Unresolved")
+
+_otherchangedlocaldeletedmsg = _(
+    "other%(o)s changed %(fd)s which local%(l)s deleted\n"
+    "use (c)hanged version, leave (d)eleted, or "
+    "leave (u)nresolved?"
+    "$$ &Changed $$ &Deleted $$ &Unresolved")
+
 class absentfilectx(object):
     """Represents a file that's ostensibly in a context but is actually not
     present in it.
@@ -250,16 +261,11 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     try:
         if fco.isabsent():
             index = ui.promptchoice(
-                _("local%(l)s changed %(fd)s which other%(o)s deleted\n"
-                  "use (c)hanged version, (d)elete, or leave (u)nresolved?"
-                  "$$ &Changed $$ &Delete $$ &Unresolved") % prompts, 2)
+                _localchangedotherdeletedmsg % prompts, 2)
             choice = ['local', 'other', 'unresolved'][index]
         elif fcd.isabsent():
             index = ui.promptchoice(
-                _("other%(o)s changed %(fd)s which local%(l)s deleted\n"
-                  "use (c)hanged version, leave (d)eleted, or "
-                  "leave (u)nresolved?"
-                  "$$ &Changed $$ &Deleted $$ &Unresolved") % prompts, 2)
+                _otherchangedlocaldeletedmsg % prompts, 2)
             choice = ['other', 'local', 'unresolved'][index]
         else:
             index = ui.promptchoice(
