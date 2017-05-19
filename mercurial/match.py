@@ -341,36 +341,21 @@ class patternmatcher(basematcher):
     def __init__(self, root, cwd, normalize, patterns, default='glob',
                  auditor=None, ctx=None, listsubrepos=False, warn=None,
                  badfn=None):
-        super(patternmatcher, self).__init__(root, cwd, badfn,
-                                             relativeuipath=bool(patterns))
+        super(patternmatcher, self).__init__(root, cwd, badfn)
 
-        self._anypats = False
-        self._always = False
-        self.patternspat = None
-
-        matchfns = []
-        if patterns:
-            kindpats = normalize(patterns, default, root, cwd, auditor, warn)
-            if not _kindpatsalwaysmatch(kindpats):
-                self._files = _explicitfiles(kindpats)
-                self._anypats = self._anypats or _anypats(kindpats)
-                self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
-                                                   listsubrepos, root)
-                matchfns.append(pm)
-
-        if not matchfns:
-            m = util.always
-            self._always = True
-        elif len(matchfns) == 1:
-            m = matchfns[0]
+        kindpats = normalize(patterns, default, root, cwd, auditor, warn)
+        if not _kindpatsalwaysmatch(kindpats):
+            self._files = _explicitfiles(kindpats)
+            self._anypats = _anypats(kindpats)
+            self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
+                                               listsubrepos, root)
+            self._always = False
+            self.matchfn = pm
         else:
-            def m(f):
-                for matchfn in matchfns:
-                    if not matchfn(f):
-                        return False
-                return True
-
-        self.matchfn = m
+            self._anypats = False
+            self.patternspat = None
+            self._always = True
+            self.matchfn = lambda f: True
 
     @propertycache
     def _dirs(self):
