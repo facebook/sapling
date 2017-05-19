@@ -146,8 +146,11 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
         m = exactmatcher(root, cwd, patterns, badfn)
     elif patterns:
         kindpats = normalize(patterns, default, root, cwd, auditor, warn)
-        m = patternmatcher(root, cwd, kindpats, ctx=ctx,
-                           listsubrepos=listsubrepos, badfn=badfn)
+        if _kindpatsalwaysmatch(kindpats):
+            m = alwaysmatcher(root, cwd, badfn, relativeuipath=True)
+        else:
+            m = patternmatcher(root, cwd, kindpats, ctx=ctx,
+                               listsubrepos=listsubrepos, badfn=badfn)
     else:
         # It's a little strange that no patterns means to match everything.
         # Consider changing this to match nothing (probably adding a
@@ -320,9 +323,9 @@ class basematcher(object):
 class alwaysmatcher(basematcher):
     '''Matches everything.'''
 
-    def __init__(self, root, cwd, badfn=None):
+    def __init__(self, root, cwd, badfn=None, relativeuipath=False):
         super(alwaysmatcher, self).__init__(root, cwd, badfn,
-                                            relativeuipath=False)
+                                            relativeuipath=relativeuipath)
 
     def always(self):
         return True
@@ -342,26 +345,17 @@ class patternmatcher(basematcher):
                  badfn=None):
         super(patternmatcher, self).__init__(root, cwd, badfn)
 
-        if not _kindpatsalwaysmatch(kindpats):
-            self._files = _explicitfiles(kindpats)
-            self._anypats = _anypats(kindpats)
-            self.patternspat, pm = _buildmatch(ctx, kindpats, '$',
-                                               listsubrepos, root)
-            self._always = False
-            self.matchfn = pm
-        else:
-            self._anypats = False
-            self.patternspat = None
-            self._always = True
-            self.matchfn = lambda f: True
+        self._files = _explicitfiles(kindpats)
+        self._anypats = _anypats(kindpats)
+        self.patternspat, pm = _buildmatch(ctx, kindpats, '$', listsubrepos,
+                                           root)
+        self.matchfn = pm
 
     @propertycache
     def _dirs(self):
         return set(util.dirs(self._fileset)) | {'.'}
 
     def visitdir(self, dir):
-        if self.always():
-            return 'all'
         if self.prefix() and dir in self._fileset:
             return 'all'
         return ('.' in self._fileset or
@@ -372,9 +366,6 @@ class patternmatcher(basematcher):
 
     def anypats(self):
         return self._anypats
-
-    def always(self):
-        return self._always
 
     def __repr__(self):
         return ('<patternmatcher patterns=%r>' % self.patternspat)
