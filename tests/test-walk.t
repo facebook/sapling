@@ -29,7 +29,7 @@
   $ hg commit -m "commit #0"
 
   $ hg debugwalk
-  matcher: <patternmatcher patterns=None>
+  matcher: <alwaysmatcher>
   f  beans/black                     beans/black
   f  beans/borlotti                  beans/borlotti
   f  beans/kidney                    beans/kidney
@@ -61,7 +61,7 @@
 
   $ cd mammals
   $ hg debugwalk
-  matcher: <patternmatcher patterns=None>
+  matcher: <alwaysmatcher>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -76,7 +76,7 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk -X ../beans
-  matcher: <differencematcher m1=<patternmatcher patterns=None>, m2=<includematcher includes='(?:beans(?:/|$))'>>
+  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:beans(?:/|$))'>>
   f  fennel                          ../fennel
   f  fenugreek                       ../fenugreek
   f  fiddlehead                      ../fiddlehead
@@ -146,7 +146,7 @@
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk -X 'rootfilesin:'
-  matcher: <differencematcher m1=<patternmatcher patterns=None>, m2=<includematcher includes='(?:^[^/]+$)'>>
+  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:^[^/]+$)'>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -194,7 +194,7 @@
   matcher: <includematcher includes='(?:^mammals/[^/]+$)'>
   f  mammals/skunk  skunk
   $ hg debugwalk -X 'rootfilesin:mammals'
-  matcher: <differencematcher m1=<patternmatcher patterns=None>, m2=<includematcher includes='(?:^mammals/[^/]+$)'>>
+  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:^mammals/[^/]+$)'>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney

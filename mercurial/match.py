@@ -144,10 +144,16 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
 
     if exact:
         m = exactmatcher(root, cwd, patterns, badfn)
-    else:
+    elif patterns:
         m = patternmatcher(root, cwd, normalize, patterns, default=default,
                            auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
                            warn=warn, badfn=badfn)
+    else:
+        # It's a little strange that no patterns means to match everything.
+        # Consider changing this to match nothing (probably adding a
+        # "nevermatcher").
+        m = alwaysmatcher(root, cwd, badfn)
+
     if include:
         im = includematcher(root, cwd, normalize, include, auditor=auditor,
                             ctx=ctx, listsubrepos=listsubrepos, warn=warn,
@@ -164,7 +170,7 @@ def exact(root, cwd, files, badfn=None):
     return exactmatcher(root, cwd, files, badfn=badfn)
 
 def always(root, cwd):
-    return match(root, cwd, [])
+    return alwaysmatcher(root, cwd)
 
 def badmatch(match, badfn):
     """Make a copy of the given matcher, replacing its bad method with the given
@@ -310,6 +316,25 @@ class basematcher(object):
 
     def prefix(self):
         return not self.always() and not self.isexact() and not self.anypats()
+
+class alwaysmatcher(basematcher):
+    '''Matches everything.'''
+
+    def __init__(self, root, cwd, badfn=None):
+        super(alwaysmatcher, self).__init__(root, cwd, badfn,
+                                            relativeuipath=False)
+
+    def always(self):
+        return True
+
+    def matchfn(self, f):
+        return True
+
+    def visitdir(self, dir):
+        return 'all'
+
+    def __repr__(self):
+        return '<alwaysmatcher>'
 
 class patternmatcher(basematcher):
 
