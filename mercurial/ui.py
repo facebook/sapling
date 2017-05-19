@@ -598,6 +598,19 @@ class ui(object):
         return self.configwith(config.parselist, section, name, default or [],
                                'list', untrusted)
 
+    def configdate(self, section, name, default=None, untrusted=False):
+        """parse a configuration element as a tuple of ints
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'date', '0 0')
+        >>> u.configdate(s, 'date')
+        (0, 0)
+        """
+        if self.config(section, name, default, untrusted):
+            return self.configwith(util.parsedate, section, name, default,
+                                   'date', untrusted)
+        return default
+
     def hasconfig(self, section, name, untrusted=False):
         return self._data(untrusted).hasitem(section, name)
 
