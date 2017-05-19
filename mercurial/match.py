@@ -86,7 +86,7 @@ def _kindpatsalwaysmatch(kindpats):
 
 def match(root, cwd, patterns, include=None, exclude=None, default='glob',
           exact=False, auditor=None, ctx=None, listsubrepos=False, warn=None,
-          badfn=None):
+          badfn=None, icasefs=False):
     """build an object to match a set of file patterns
 
     arguments:
@@ -99,6 +99,8 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
     exact - patterns are actually filenames (include/exclude still apply)
     warn - optional function used for printing warnings
     badfn - optional bad() callback for this matcher instead of the default
+    icasefs - make a matcher for wdir on case insensitive filesystems, which
+        normalizes the given patterns to the case in the filesystem
 
     a pattern is one of:
     'glob:<glob>' - a glob relative to cwd
@@ -116,38 +118,30 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                           the same directory
     '<something>' - a pattern of the specified default type
     """
-    return matcher(root, cwd, _donormalize, patterns, include=include,
+    normalize = _donormalize
+    if icasefs:
+        dirstate = ctx.repo().dirstate
+        dsnormalize = dirstate.normalize
+
+        def normalize(patterns, default, root, cwd, auditor, warn):
+            kp = _donormalize(patterns, default, root, cwd, auditor, warn)
+            kindpats = []
+            for kind, pats, source in kp:
+                if kind not in ('re', 'relre'):  # regex can't be normalized
+                    p = pats
+                    pats = dsnormalize(pats)
+
+                    # Preserve the original to handle a case only rename.
+                    if p != pats and p in dirstate:
+                        kindpats.append((kind, p, source))
+
+                kindpats.append((kind, pats, source))
+            return kindpats
+
+    return matcher(root, cwd, normalize, patterns, include=include,
                    exclude=exclude, default=default, exact=exact,
                    auditor=auditor, ctx=ctx, listsubrepos=listsubrepos,
                    warn=warn, badfn=badfn)
-
-def icasefsmatch(root, cwd, patterns, include=None, exclude=None,
-                 default='glob', auditor=None, ctx=None,
-                 listsubrepos=False, badfn=None):
-    """A matcher for wdir on case insensitive filesystems, which normalizes the
-    given patterns to the case in the filesystem.
-    """
-    dirstate = ctx.repo().dirstate
-    dsnormalize = dirstate.normalize
-
-    def normalize(patterns, default, root, cwd, auditor, warn):
-        kp = _donormalize(patterns, default, root, cwd, auditor, warn)
-        kindpats = []
-        for kind, pats, source in kp:
-            if kind not in ('re', 'relre'):  # regex can't be normalized
-                p = pats
-                pats = dsnormalize(pats)
-
-                # Preserve the original to handle a case only rename.
-                if p != pats and p in dirstate:
-                    kindpats.append((kind, p, source))
-
-            kindpats.append((kind, pats, source))
-        return kindpats
-
-    return matcher(root, cwd, normalize, patterns=patterns, include=include,
-                   exclude=exclude, default=default, auditor=auditor, ctx=ctx,
-                   listsubrepos=listsubrepos, badfn=badfn)
 
 def exact(root, cwd, files, badfn=None):
     return match(root, cwd, files, exact=True, badfn=badfn)
