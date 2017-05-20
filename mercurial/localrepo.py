@@ -244,6 +244,10 @@ class locallegacypeer(localpeer):
     def changegroupsubset(self, bases, heads, source):
         return changegroup.changegroupsubset(self._repo, bases, heads, source)
 
+# Increment the sub-version when the revlog v2 format changes to lock out old
+# clients.
+REVLOGV2_REQUIREMENT = 'exp-revlogv2.0'
+
 class localrepository(object):
 
     supportedformats = {
@@ -251,6 +255,7 @@ class localrepository(object):
         'generaldelta',
         'treemanifest',
         'manifestv2',
+        REVLOGV2_REQUIREMENT,
     }
     _basesupported = supportedformats | {
         'store',
@@ -439,6 +444,10 @@ class localrepository(object):
         for r in self.requirements:
             if r.startswith('exp-compression-'):
                 self.svfs.options['compengine'] = r[len('exp-compression-'):]
+
+        # TODO move "revlogv2" to openerreqs once finalized.
+        if REVLOGV2_REQUIREMENT in self.requirements:
+            self.svfs.options['revlogv2'] = True
 
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)
@@ -2069,5 +2078,12 @@ def newreporequirements(repo):
         requirements.add('treemanifest')
     if ui.configbool('experimental', 'manifestv2', False):
         requirements.add('manifestv2')
+
+    revlogv2 = ui.config('experimental', 'revlogv2')
+    if revlogv2 == 'enable-unstable-format-and-corrupt-my-data':
+        requirements.remove('revlogv1')
+        # generaldelta is implied by revlogv2.
+        requirements.discard('generaldelta')
+        requirements.add(REVLOGV2_REQUIREMENT)
 
     return requirements

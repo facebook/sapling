@@ -45,6 +45,12 @@ The following values for the format/version short are defined:
 1
    RevlogNG (*next generation*). It replaced version 0 when it was
    implemented in 2006.
+2
+   In-development version incorporating accumulated knowledge and
+   missing features from 10+ years of revlog version 1.
+57005 (0xdead)
+   Reserved for internal testing of new versions. No defined format
+   beyond 32-bit header.
 
 The feature flags short consists of bit flags. Where 0 is the least
 significant bit, the following bit offsets define flags:
@@ -141,6 +147,14 @@ length from bytes 8-11 define how to access this data.
 
 The first 4 bytes of the revlog are shared between the revlog header
 and the 6 byte absolute offset field from the first revlog entry.
+
+Version 2 Format
+================
+
+(In development. Format not finalized or stable.)
+
+Version 2 is currently identical to version 1. This will obviously
+change.
 
 Delta Chains
 ============

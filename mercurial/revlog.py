@@ -51,12 +51,16 @@ _zlibdecompress = zlib.decompress
 # revlog header flags
 REVLOGV0 = 0
 REVLOGV1 = 1
+# Dummy value until file format is finalized.
+# Reminder: change the bounds check in revlog.__init__ when this is changed.
+REVLOGV2 = 0xDEAD
 FLAG_INLINE_DATA = (1 << 16)
 FLAG_GENERALDELTA = (1 << 17)
 REVLOG_DEFAULT_FLAGS = FLAG_INLINE_DATA
 REVLOG_DEFAULT_FORMAT = REVLOGV1
 REVLOG_DEFAULT_VERSION = REVLOG_DEFAULT_FORMAT | REVLOG_DEFAULT_FLAGS
 REVLOGV1_FLAGS = FLAG_INLINE_DATA | FLAG_GENERALDELTA
+REVLOGV2_FLAGS = REVLOGV1_FLAGS
 
 # revlog index flags
 REVIDX_ISCENSORED = (1 << 15) # revision has censor metadata, must be verified
@@ -291,7 +295,10 @@ class revlog(object):
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, 'options', None)
         if opts is not None:
-            if 'revlogv1' in opts:
+            if 'revlogv2' in opts:
+                # version 2 revlogs always use generaldelta.
+                v = REVLOGV2 | FLAG_GENERALDELTA | FLAG_INLINE_DATA
+            elif 'revlogv1' in opts:
                 if 'generaldelta' in opts:
                     v |= FLAG_GENERALDELTA
             else:
@@ -338,6 +345,11 @@ class revlog(object):
                                   (flags >> 16, fmt, self.indexfile))
         elif fmt == REVLOGV1:
             if flags & ~REVLOGV1_FLAGS:
+                raise RevlogError(_('unknown flags (%#04x) in version %d '
+                                    'revlog %s') %
+                                  (flags >> 16, fmt, self.indexfile))
+        elif fmt == REVLOGV2:
+            if flags & ~REVLOGV2_FLAGS:
                 raise RevlogError(_('unknown flags (%#04x) in version %d '
                                     'revlog %s') %
                                   (flags >> 16, fmt, self.indexfile))
