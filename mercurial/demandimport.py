@@ -158,7 +158,7 @@ class _demandmod(object):
 _pypy = '__pypy__' in sys.builtin_module_names
 
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
-    if not locals or name in ignore or fromlist == ('*',):
+    if locals is None or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
         return _hgextimport(_import, name, globals, locals, fromlist, level)
     elif not fromlist:
