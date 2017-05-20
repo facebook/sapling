@@ -110,9 +110,9 @@ def fixcorrupt(ui, repo, *args, **opts):
     logs = [('changelog', repo.changelog),
             ('manifest', repo.manifestlog._revlog)]
 
-    # ensure they are REVLOGNG and do not use inline index
+    # ensure they are REVLOGV1 and do not use inline index
     for name, log in logs:
-        if (log.version & 0xFFFF) != revlog.REVLOGNG:
+        if (log.version & 0xFFFF) != revlog.REVLOGV1:
             raise error.Abort(_('%s: unsupported revlog version %d')
                               % (name, log.version & 0xffff))
         if log._inline:
