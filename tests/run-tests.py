@@ -90,7 +90,7 @@ if sys.version_info > (3, 5, 0):
         return p.decode('utf-8')
 
 elif sys.version_info >= (3, 0, 0):
-    print('%s is only supported on Python 3.5+ and 2.6-2.7, not %s' %
+    print('%s is only supported on Python 3.5+ and 2.7, not %s' %
           (sys.argv[0], '.'.join(str(v) for v in sys.version_info[:3])))
     sys.exit(70) # EX_SOFTWARE from `man 3 sysexit`
 else:
@@ -317,7 +317,7 @@ def getparser():
     parser.add_option("--ipv6", action="store_true",
                       help="prefer IPv6 to IPv4 for network related tests")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
-        help="enable Py3k warnings on Python 2.6+")
+        help="enable Py3k warnings on Python 2.7+")
     # This option should be deleted once test-check-py3-compat.t and other
     # Python 3 tests run with Python 3.
     parser.add_option("--with-python3", metavar="PYTHON3",
@@ -435,7 +435,7 @@ def parseargs(args, parser):
     if options.py3k_warnings:
         if PYTHON3:
             parser.error(
-                '--py3k-warnings can only be used on Python 2.6 and 2.7')
+                '--py3k-warnings can only be used on Python 2.7')
     if options.with_python3:
         if PYTHON3:
             parser.error('--with-python3 cannot be used when executing with '
