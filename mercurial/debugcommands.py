@@ -1313,6 +1313,8 @@ def debugnamecomplete(ui, repo, *args):
          ('', 'record-parents', False,
           _('record parent information for the precursor')),
          ('r', 'rev', [], _('display markers relevant to REV')),
+         ('', 'exclusive', False, _('restrict display to markers only '
+                                    'relevant to REV')),
          ('', 'index', False, _('display index of the marker')),
          ('', 'delete', [], _('delete markers specified by indices')),
         ] + cmdutil.commitopts2 + cmdutil.formatteropts,
@@ -1391,7 +1393,8 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         if opts['rev']:
             revs = scmutil.revrange(repo, opts['rev'])
             nodes = [repo[r].node() for r in revs]
-            markers = list(obsolete.getmarkers(repo, nodes=nodes))
+            markers = list(obsolete.getmarkers(repo, nodes=nodes,
+                                               exclusive=opts['exclusive']))
             markers.sort(key=lambda x: x._data)
         else:
             markers = obsolete.getmarkers(repo)

@@ -737,6 +737,129 @@ class obsstore(object):
             seennodes |= pendingnodes
         return seenmarkers
 
+def _filterprunes(markers):
+    """return a set with no prune markers"""
+    return set(m for m in markers if m[1])
+
+def exclusivemarkers(repo, nodes):
+    """set of markers relevant to "nodes" but no other locally-known nodes
+
+    This function compute the set of markers "exclusive" to a locally-known
+    node. This means we walk the markers starting from <nodes> until we reach a
+    locally-known precursors outside of <nodes>. Element of <nodes> with
+    locally-known successors outside of <nodes> are ignored (since their
+    precursors markers are also relevant to these successors).
+
+    For example:
+
+        # (A0 rewritten as A1)
+        #
+        # A0 <-1- A1 # Marker "1" is exclusive to A1
+
+        or
+
+        # (A0 rewritten as AX; AX rewritten as A1; AX is unkown locally)
+        #
+        # <-1- A0 <-2- AX <-3- A1 # Marker "2,3" are exclusive to A1
+
+        or
+
+        # (A0 has unknown precursors, A0 rewritten as A1 and A2 (divergence))
+        #
+        #          <-2- A1 # Marker "2" is exclusive to A0,A1
+        #        /
+        # <-1- A0
+        #        \
+        #         <-3- A2 # Marker "3" is exclusive to A0,A2
+        #
+        # in addition:
+        #
+        #  Markers "2,3" are exclusive to A1,A2
+        #  Markers "1,2,3" are exclusive to A0,A1,A2
+
+    An example usage is strip. When stripping a changeset, we also want to
+    strip the markers exclusive to this changeset. Otherwise we would have
+    "dangling"" obsolescence markers from its precursors: Obsolescence markers
+    marking a node as obsolete without any successors available locally.
+
+    As for relevant markers, the prune markers for children will be followed.
+    Of course, they will only be followed if the pruned children is
+    locally-known. Since the prune markers are relevant to the pruned node.
+    However, while prune markers are considered relevant to the parent of the
+    pruned changesets, prune markers for locally-known changeset (with no
+    successors) are considered exclusive to the pruned nodes. This allows
+    to strip the prune markers (with the rest of the exclusive chain) alongside
+    the pruned changesets.
+    """
+    # running on a filtered repository would be dangerous as markers could be
+    # reported as exclusive when they are relevant for other filtered nodes.
+    unfi = repo.unfiltered()
+
+    # shortcut to various useful item
+    nm = unfi.changelog.nodemap
+    precursorsmarkers = unfi.obsstore.precursors
+    successormarkers = unfi.obsstore.successors
+    childrenmarkers = unfi.obsstore.children
+
+    # exclusive markers (return of the function)
+    exclmarkers = set()
+    # we need fast membership testing
+    nodes = set(nodes)
+    # looking for head in the obshistory
+    #
+    # XXX we are ignoring all issues in regard with cycle for now.
+    stack = [n for n in nodes if not _filterprunes(successormarkers.get(n, ()))]
+    stack.sort()
+    # nodes already stacked
+    seennodes = set(stack)
+    while stack:
+        current = stack.pop()
+        # fetch precursors markers
+        markers = list(precursorsmarkers.get(current, ()))
+        # extend the list with prune markers
+        for mark in successormarkers.get(current, ()):
+            if not mark[1]:
+                markers.append(mark)
+        # and markers from children (looking for prune)
+        for mark in childrenmarkers.get(current, ()):
+            if not mark[1]:
+                markers.append(mark)
+        # traverse the markers
+        for mark in markers:
+            if mark in exclmarkers:
+                # markers already selected
+                continue
+
+            # If the markers is about the current node, select it
+            #
+            # (this delay the addition of markers from children)
+            if mark[1] or mark[0] == current:
+                exclmarkers.add(mark)
+
+            # should we keep traversing through the precursors?
+            prec = mark[0]
+
+            # nodes in the stack or already processed
+            if prec in seennodes:
+                continue
+
+            # is this a locally known node ?
+            known = prec in nm
+            # if locally-known and not in the <nodes> set the traversal
+            # stop here.
+            if known and prec not in nodes:
+                continue
+
+            # do not keep going if there are unselected markers pointing to this
+            # nodes. If we end up traversing these unselected markers later the
+            # node will be taken care of at that point.
+            precmarkers = _filterprunes(successormarkers.get(prec))
+            if precmarkers.issubset(exclmarkers):
+                seennodes.add(prec)
+                stack.append(prec)
+
+    return exclmarkers
+
 def commonversion(versions):
     """Return the newest version listed in both versions and our local formats.
 
@@ -804,13 +927,15 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
-def getmarkers(repo, nodes=None):
+def getmarkers(repo, nodes=None, exclusive=False):
     """returns markers known in a repository
 
     If <nodes> is specified, only markers "relevant" to those nodes are are
     returned"""
     if nodes is None:
         rawmarkers = repo.obsstore
+    elif exclusive:
+        rawmarkers = exclusivemarkers(repo, nodes)
     else:
         rawmarkers = repo.obsstore.relevantmarkers(nodes)
 

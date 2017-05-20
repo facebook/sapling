@@ -267,6 +267,42 @@ We need to create a clone of 5 and add a special marker with a flag
   o  0:1f0dee641bb7 (public) [ ] add a
   
 
+Basic exclusive testing
+
+  $ hg log -G --hidden
+  @  6:6f9641995072 (draft) [tip ] add n3w_3_c
+  |
+  | x  5:5601fb93a350 (draft *obsolete*) [ ] add new_3_c
+  |/
+  | x  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c
+  |/
+  | x  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c
+  |/
+  | o  2:245bde4270cd (public) [ ] add original_c
+  |/
+  o  1:7c3bad9141dc (public) [ ] add b
+  |
+  o  0:1f0dee641bb7 (public) [ ] add a
+  
+  $ hg debugobsolete --rev 6f9641995072
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 6f9641995072 --exclusive
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 5601fb93a350 --hidden
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 5601fb93a350 --hidden --exclusive
+  $ hg debugobsolete --rev 5601fb93a350+6f9641995072 --hidden --exclusive
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
+
   $ cd ..
 
 Revision 0 is hidden

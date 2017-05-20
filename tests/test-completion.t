@@ -272,7 +272,7 @@ Show all commands + options
   debuglocks: force-lock, force-wlock
   debugmergestate: 
   debugnamecomplete: 
-  debugobsolete: flags, record-parents, rev, index, delete, date, user, template
+  debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
   debugpushkey: 
