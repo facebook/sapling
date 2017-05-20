@@ -1,3 +1,35 @@
+  $ hg init empty-repo
+  $ cd empty-repo
+
+Flags on revlog version 0 are rejected
+
+  >>> with open('.hg/store/00changelog.i', 'wb') as fh:
+  ...     fh.write('\x00\x01\x00\x00')
+
+  $ hg log
+  abort: index 00changelog.i unknown flags 0x01 for format v0!
+  [255]
+
+Unknown flags on revlog version 1 are rejected
+
+  >>> with open('.hg/store/00changelog.i', 'wb') as fh:
+  ...     fh.write('\x00\x04\x00\x01')
+
+  $ hg log
+  abort: index 00changelog.i unknown flags 0x04 for revlogng!
+  [255]
+
+Unknown version is rejected
+
+  >>> with open('.hg/store/00changelog.i', 'wb') as fh:
+  ...     fh.write('\x00\x00\x00\x02')
+
+  $ hg log
+  abort: index 00changelog.i unknown format 2!
+  [255]
+
+  $ cd ..
+
 Test for CVE-2016-3630
 
   $ hg init
