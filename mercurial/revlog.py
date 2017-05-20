@@ -189,7 +189,7 @@ class revlogoldio(object):
 
     def packentry(self, entry, node, version, rev):
         if gettype(entry[0]):
-            raise RevlogError(_("index entry flags need RevlogNG"))
+            raise RevlogError(_('index entry flags need revlog version 1'))
         e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
               node(entry[5]), node(entry[6]), entry[7])
         return _pack(indexformatv0, *e2)

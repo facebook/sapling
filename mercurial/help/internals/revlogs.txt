@@ -60,23 +60,23 @@ significant bit, the following bit offsets define flags:
 The following header values are common:
 
 00 00 00 01
-   RevlogNG
+   v1
 00 01 00 01
-   RevlogNG + inline
+   v1 + inline
 00 02 00 01
-   RevlogNG + generaldelta
+   v1 + generaldelta
 00 03 00 01
-   RevlogNG + inline + generaldelta
+   v1 + inline + generaldelta
 
 Following the 32-bit header is the remainder of the first index entry.
 Following that are remaining *index* data. Inlined revision data is
 possibly located between index entries. More on this layout is described
 below.
 
-RevlogNG Format
-===============
+Version 1 Format
+================
 
-RevlogNG (version 1) begins with an index describing the revisions in
+Version 1 (RevlogNG) begins with an index describing the revisions in
 the revlog. If the ``inline`` flag is set, revision data is stored inline,
 or between index entries (as opposed to in a separate container).
 
