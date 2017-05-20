@@ -1184,6 +1184,17 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ hg log -G --hidden
   @  0:a78f55e5508c (draft) [tip ] 0
   
+  $ hg debugbundle .hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg
+  Stream params: sortdict([('Compression', 'BZ')])
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '4')])"
+      e016b03fd86fcccc54817d120b90b751aaf367d6
+      e008cf2834908e5d6b0f792a9d4b0e2272260fb8
+      f27abbcc1f77fb409cf9160482fe619541e2d605
+      b0551702f918510f01ae838ab03a463054c67b46
+  obsmarkers -- 'sortdict()'
+      version: 1 (139 bytes)
+      e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
   $ hg pull .hg/strip-backup/*
   pulling from .hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg

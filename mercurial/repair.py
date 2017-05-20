@@ -49,7 +49,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         bundletype = "HG10UN"
 
     outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
-    contentopts = {'cg.version': cgversion}
+    contentopts = {'cg.version': cgversion, 'obsolescence': True}
     return bundle2.writenewbundle(repo.ui, repo, 'strip', name, bundletype,
                                   outgoing, contentopts, vfs, compression=comp)
 
