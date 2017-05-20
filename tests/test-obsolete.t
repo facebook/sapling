@@ -1211,35 +1211,88 @@ Test ability to pull changeset with locally applying obsolescence markers
   o  0:a78f55e5508c (draft) [ ] 0
   
 
+  $ hg strip --hidden -r 2 --config extensions.strip= --config devel.strip-obsmarkers=no
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-39c978dc-backup.hg (glob)
+  $ hg debugobsolete
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
+  $ hg log -G
+  @  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+  $ hg log -G --hidden
+  @  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+  $ hg debugbundle .hg/strip-backup/e008cf283490-*-backup.hg
+  Stream params: sortdict([('Compression', 'BZ')])
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+      e008cf2834908e5d6b0f792a9d4b0e2272260fb8
+      f27abbcc1f77fb409cf9160482fe619541e2d605
+  obsmarkers -- 'sortdict()'
+      version: 1 (70 bytes)
+      f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+  $ hg pull .hg/strip-backup/e008cf283490-*-backup.hg
+  pulling from .hg/strip-backup/e008cf283490-39c978dc-backup.hg
+  searching for changes
+  no changes found
+  $ hg debugobsolete
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
+  $ hg log -G
+  @  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+  $ hg log -G --hidden
+  @  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+
+Testing that strip remove markers:
+
   $ hg strip -r 1 --config extensions.strip=
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e016b03fd86f-65ede734-backup.hg (glob)
+  $ hg debugobsolete
   $ hg log -G
   @  0:a78f55e5508c (draft) [tip ] 0
   
   $ hg log -G --hidden
   @  0:a78f55e5508c (draft) [tip ] 0
   
-  $ hg debugbundle .hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg
+  $ hg debugbundle .hg/strip-backup/e016b03fd86f-*-backup.hg
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '4')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
       e016b03fd86fcccc54817d120b90b751aaf367d6
-      e008cf2834908e5d6b0f792a9d4b0e2272260fb8
-      f27abbcc1f77fb409cf9160482fe619541e2d605
       b0551702f918510f01ae838ab03a463054c67b46
   obsmarkers -- 'sortdict()'
       version: 1 (139 bytes)
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
       f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
-  $ hg pull .hg/strip-backup/*
-  pulling from .hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg
-  searching for changes
+  $ hg unbundle .hg/strip-backup/e016b03fd86f-*-backup.hg
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  2 new obsolescence markers
   (run 'hg update' to get a working copy)
+  $ hg debugobsolete | sort
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
   $ hg log -G
   o  2:b0551702f918 (draft) [tip ] 2
   |

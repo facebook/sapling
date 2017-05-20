@@ -122,6 +122,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     savebases = [cl.node(r) for r in saverevs]
     stripbases = [cl.node(r) for r in tostrip]
 
+    stripobsidx = obsmarkers = ()
+    if repo.ui.configbool('devel', 'strip-obsmarkers', True):
+        obsmarkers = obsolete.exclusivemarkers(repo, stripbases)
+    if obsmarkers:
+        stripobsidx = [i for i, m in enumerate(repo.obsstore)
+                       if m in obsmarkers]
+
     # For a set s, max(parents(s) - s) is the same as max(heads(::s - s)), but
     # is much faster
     newbmtarget = repo.revs('max(parents(%ld) - (%ld))', tostrip, tostrip)
@@ -184,6 +191,9 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                     fp.truncate(troffset)
                 if troffset == 0:
                     repo.store.markremoved(file)
+
+            deleteobsmarkers(repo.obsstore, stripobsidx)
+            del repo.obsstore
 
         if tmpbundlefile:
             ui.note(_("adding branch\n"))

@@ -108,7 +108,7 @@ check that --hidden is propagated to the subrepo
 verify will warn if locked-in subrepo revisions are hidden or missing
 
   $ hg ci -m "amended subrepo (again)"
-  $ hg --config extensions.strip= --hidden strip -R subrepo -qr 'tip'
+  $ hg --config extensions.strip= --hidden strip -R subrepo -qr 'tip' --config devel.strip-obsmarkers=no
   $ hg verify
   checking changesets
   checking manifests

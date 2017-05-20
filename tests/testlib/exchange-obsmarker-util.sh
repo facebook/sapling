@@ -32,6 +32,9 @@ evolution=all
 # we need to strip some changeset for some test cases
 hgext.strip=
 
+[devel]
+strip-obsmarkers = no
+
 [alias]
 # fix date used to create obsolete markers.
 debugobsolete=debugobsolete -d '0 0'

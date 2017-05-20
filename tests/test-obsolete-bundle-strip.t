@@ -80,13 +80,25 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   >     if [ $orphan -eq 0 ];
   >     then
   >         printf "# stripping: "
+  >         prestripfile="${prefix}-pre-strip.txt"
+  >         poststripfile="${prefix}-post-strip.txt"
+  >         strippedfile="${prefix}-stripped-markers.txt"
+  >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${prestripfile}"
   >         hg strip --hidden --rev "${revs}"
+  >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${poststripfile}"
   >         hg debugbundle .hg/strip-backup/* | grep "obsmarkers --" -A 100 | sed 1,2d > "${stripcontentfile}"
   >         echo '### Backup markers ###'
   >         cat "${stripcontentfile}"
   >         echo '### diff <relevant> <backed-up> ###'
   >         cmp "${markersfile}" "${stripcontentfile}" || diff -u "${markersfile}" "${stripcontentfile}"
   >         echo '#################################'
+  >         cat "${prestripfile}" "${poststripfile}" | sort | uniq -u > "${strippedfile}"
+  >         echo '### Stripped markers ###'
+  >         cat "${strippedfile}"
+  >         echo '### diff <exclusive> <stripped> ###'
+  >         cmp "${exclufile}" "${strippedfile}" || diff -u "${exclufile}" "${strippedfile}"
+  >         echo '#################################'
+  >         # restore and clean up repo for the next test
   >         hg unbundle .hg/strip-backup/* | sed 's/^/# unbundling: /'
   >         # clean up directory for the next test
   >         rm .hg/strip-backup/*
@@ -150,6 +162,9 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
@@ -180,10 +195,16 @@ Actual testing
       a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: 2 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
@@ -212,10 +233,17 @@ Actual testing
       a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
+  # unbundling: 3 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 chain with prune children
@@ -295,10 +323,15 @@ problematic)
       29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: 1 new obsolescence markers
   # unbundling: (run 'hg update' to get a working copy)
 
   $ testrevs 'desc("C-A1")'
@@ -324,10 +357,15 @@ problematic)
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: 1 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 bundling multiple revisions
@@ -378,10 +416,17 @@ bundling multiple revisions
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 3 changesets with 3 changes to 3 files (+1 heads)
+  # unbundling: 3 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 chain with precursors also pruned
@@ -440,6 +485,9 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
@@ -469,10 +517,15 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: 1 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
@@ -501,10 +554,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
+  # unbundling: 3 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 chain with missing prune
@@ -532,7 +592,7 @@ setup
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
 
-  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup
+  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
 
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -574,10 +634,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: 3 new obsolescence markers
   # unbundling: (run 'hg update' to get a working copy)
 
 chain with precursors also pruned
@@ -603,7 +670,7 @@ setup
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
 
-  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup
+  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup --config devel.strip-obsmarkers=no
 
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -645,10 +712,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: 3 new obsolescence markers
   # unbundling: (run 'hg update' to get a working copy)
 
 Chain with fold and split
@@ -730,6 +804,9 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
@@ -754,6 +831,9 @@ Actual testing
       9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
+  #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
   #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
@@ -780,6 +860,9 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
@@ -804,6 +887,9 @@ Actual testing
       9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
+  #################################
+  ### Stripped markers ###
+  ### diff <exclusive> <stripped> ###
   #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
@@ -857,10 +943,20 @@ Actual testing
       c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      27ec657ca21dd27c36c99fa75586f72ff0d442f1 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a9b9da38ed96f8c6c14f429441f625a344eb4696 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: 6 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 Bundle multiple revisions
@@ -1050,10 +1146,23 @@ Bundle multiple revisions
       c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      27ec657ca21dd27c36c99fa75586f72ff0d442f1 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a9b9da38ed96f8c6c14f429441f625a344eb4696 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 5 changesets with 5 changes to 5 files (+4 heads)
+  # unbundling: 9 new obsolescence markers
   # unbundling: (run 'hg heads' to see heads)
 
 changeset pruned on its own
@@ -1117,10 +1226,15 @@ Actual testing
       cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: 1 new obsolescence markers
   # unbundling: (run 'hg update' to get a working copy)
   $ testrevs 'desc("C-")'
   ### Matched revisions###
@@ -1140,8 +1254,13 @@ Actual testing
       cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <backed-up> ###
   #################################
+  ### Stripped markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <exclusive> <stripped> ###
+  #################################
   # unbundling: adding changesets
   # unbundling: adding manifests
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files
+  # unbundling: 1 new obsolescence markers
   # unbundling: (run 'hg update' to get a working copy)
