@@ -35,7 +35,8 @@ if ($ed -eq $nil)
   exit 1
 }
 
-if (($ed -eq "vim") -or ($ed -eq "emacs") -or ($ed -eq "nano"))
+if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
+    ($ed -eq "nano") -or ($ed -eq "notepad++"))
 {
   $lines = Get-Lines
   $firstline = if ($lines.Length -gt 0) { $lines[0] } else { $nil }
@@ -46,6 +47,15 @@ if (($ed -eq "vim") -or ($ed -eq "emacs") -or ($ed -eq "nano"))
   # or the user stops editing the file
   while (($firstline -ne $nil) -and ($firstline -ne $previousline))
   {
+    if ($ed -eq "notepad++")
+    {
+        $linearg = "-n$firstline"
+    }
+    else
+    {
+        $linearg = "+$firstline"
+    }
+
     Start-Process -Wait $ed $linearg,$file
     $previousline = $firstline
     $lines = Get-Lines
