@@ -32,6 +32,25 @@ def hideablerevs(repo):
     lead to crashes."""
     return obsolete.getrevs(repo, 'obsolete')
 
+def _getdynamicblockers(repo):
+    """Non-cacheable revisions blocking hidden changesets from being filtered.
+
+    Get revisions that will block hidden changesets and are likely to change,
+    but unlikely to create hidden blockers. They won't be cached, so be careful
+    with adding additional computation."""
+
+    cl = repo.changelog
+    blockers = set()
+    blockers.update([par.rev() for par in repo[None].parents()])
+    blockers.update([cl.rev(bm) for bm in repo._bookmarks.values()])
+
+    tags = {}
+    tagsmod.readlocaltags(repo.ui, repo, tags, {})
+    if tags:
+        rev, nodemap = cl.rev, cl.nodemap
+        blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
+    return blockers
+
 def _getstatichidden(repo):
     """Revision to be hidden (disregarding dynamic blocker)
 
@@ -72,25 +91,6 @@ def _getstatichidden(repo):
                 if pre < len(seen) and getphase(repo, rev):
                     heappush(heap, -parent)
     return hidden
-
-def _getdynamicblockers(repo):
-    """Non-cacheable revisions blocking hidden changesets from being filtered.
-
-    Get revisions that will block hidden changesets and are likely to change,
-    but unlikely to create hidden blockers. They won't be cached, so be careful
-    with adding additional computation."""
-
-    cl = repo.changelog
-    blockers = set()
-    blockers.update([par.rev() for par in repo[None].parents()])
-    blockers.update([cl.rev(bm) for bm in repo._bookmarks.values()])
-
-    tags = {}
-    tagsmod.readlocaltags(repo.ui, repo, tags, {})
-    if tags:
-        rev, nodemap = cl.rev, cl.nodemap
-        blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
-    return blockers
 
 cacheversion = 1
 cachefile = 'cache/hidden'
