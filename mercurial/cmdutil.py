@@ -1143,7 +1143,30 @@ extraexportmap = {}
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None, match=None):
-    '''export changesets as hg patches.'''
+    '''export changesets as hg patches
+
+    Args:
+      repo: The repository from which we're exporting revisions.
+      revs: A list of revisions to export as revision numbers.
+      template: An optional string to use for generating patch file names.
+      fp: An optional file-like object to which patches should be written.
+      switch_parent: If True, show diffs against second parent when not nullid.
+                     Default is false, which always shows diff against p1.
+      opts: diff options to use for generating the patch.
+      match: If specified, only export changes to files matching this matcher.
+
+    Returns:
+      Nothing.
+
+    Side Effect:
+      "HG Changeset Patch" data is emitted to one of the following
+      destinations:
+        fp is specified: All revs are written to the specified
+                         file-like object.
+        template specified: Each rev is written to a unique file named using
+                            the given template.
+        Neither fp nor template specified: All revs written to repo.ui.write()
+    '''
 
     total = len(revs)
     revwidth = max([len(str(rev)) for rev in revs])
