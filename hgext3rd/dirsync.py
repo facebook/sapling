@@ -133,7 +133,7 @@ def _commit(orig, self, *args, **kwargs):
                 return path in mirroredfiles or origmatch(path)
             match.matchfn = extramatches
             match._files.extend(mirroredfiles)
-            match._fileroots.update(mirroredfiles)
+            match._fileset.update(mirroredfiles)
         return orig(self, *args, **kwargs)
     finally:
         wlock.release()
