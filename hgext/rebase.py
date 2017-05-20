@@ -1537,4 +1537,4 @@ def uisetup(ui):
     cmdutil.afterresolvedstates.append(
         ['rebasestate', _('hg rebase --continue')])
     # ensure rebased rev are not hidden
-    extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
+    extensions.wrapfunction(repoview, 'revealedrevs', _rebasedvisible)

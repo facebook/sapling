@@ -32,7 +32,7 @@ def hideablerevs(repo):
     lead to crashes."""
     return obsolete.getrevs(repo, 'obsolete')
 
-def _getdynamicblockers(repo):
+def revealedrevs(repo):
     """Non-cacheable revisions blocking hidden changesets from being filtered.
 
     Get revisions that will block hidden changesets and are likely to change,
@@ -185,7 +185,7 @@ def computehidden(repo):
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
-        dynamic = hidden & _getdynamicblockers(repo)
+        dynamic = hidden & revealedrevs(repo)
         if dynamic:
             blocked = cl.ancestors(dynamic, inclusive=True)
             hidden = frozenset(r for r in hidden if r not in blocked)
