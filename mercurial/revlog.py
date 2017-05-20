@@ -328,15 +328,19 @@ class revlog(object):
         self._generaldelta = v & FLAG_GENERALDELTA
         flags = v & ~0xFFFF
         fmt = v & 0xFFFF
-        if fmt == REVLOGV0 and flags:
-            raise RevlogError(_("index %s unknown flags %#04x for format v0")
-                              % (self.indexfile, flags >> 16))
-        elif fmt == REVLOGV1 and flags & ~REVLOGV1_FLAGS:
-            raise RevlogError(_("index %s unknown flags %#04x for revlogng")
-                              % (self.indexfile, flags >> 16))
-        elif fmt > REVLOGV1:
-            raise RevlogError(_("index %s unknown format %d")
-                              % (self.indexfile, fmt))
+        if fmt == REVLOGV0:
+            if flags:
+                raise RevlogError(_('unknown flags (%#04x) in version %d '
+                                    'revlog %s') %
+                                  (flags >> 16, fmt, self.indexfile))
+        elif fmt == REVLOGV1:
+            if flags & ~REVLOGV1_FLAGS:
+                raise RevlogError(_('unknown flags (%#04x) in version %d '
+                                    'revlog %s') %
+                                  (flags >> 16, fmt, self.indexfile))
+        else:
+            raise RevlogError(_('unknown version (%d) in revlog %s') %
+                              (fmt, self.indexfile))
 
         self.storedeltachains = True
 

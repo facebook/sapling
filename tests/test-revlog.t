@@ -7,7 +7,7 @@ Flags on revlog version 0 are rejected
   ...     fh.write('\x00\x01\x00\x00')
 
   $ hg log
-  abort: index 00changelog.i unknown flags 0x01 for format v0!
+  abort: unknown flags (0x01) in version 0 revlog 00changelog.i!
   [255]
 
 Unknown flags on revlog version 1 are rejected
@@ -16,7 +16,7 @@ Unknown flags on revlog version 1 are rejected
   ...     fh.write('\x00\x04\x00\x01')
 
   $ hg log
-  abort: index 00changelog.i unknown flags 0x04 for revlogng!
+  abort: unknown flags (0x04) in version 1 revlog 00changelog.i!
   [255]
 
 Unknown version is rejected
@@ -25,7 +25,7 @@ Unknown version is rejected
   ...     fh.write('\x00\x00\x00\x02')
 
   $ hg log
-  abort: index 00changelog.i unknown format 2!
+  abort: unknown version (2) in revlog 00changelog.i!
   [255]
 
   $ cd ..
