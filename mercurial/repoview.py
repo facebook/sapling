@@ -92,6 +92,43 @@ def _getstatichidden(repo):
                     heappush(heap, -parent)
     return hidden
 
+def _domainancestors(pfunc, revs, domain):
+    """return ancestors of 'revs' within 'domain'
+
+    - pfunc(r): a funtion returning parent of 'r',
+    - revs: iterable of revnum,
+    - domain: consistent set of revnum.
+
+    The domain must be consistent: no connected subset are the ancestors of
+    another connected subset. In other words, if the parents of a revision are
+    not in the domains, no other ancestors of that revision. For example, with
+    the following graph:
+
+        F
+        |
+        E
+        | D
+        | |
+        | C
+        |/
+        B
+        |
+        A
+
+    If C, D, E and F are in the domain but B is not, A cannot be ((A) is an
+    ancestors disconnected subset disconnected of (C+D)).
+
+    (Ancestors are returned inclusively)
+    """
+    stack = list(revs)
+    ancestors = set(stack)
+    while stack:
+        for p in pfunc(stack.pop()):
+            if p != nullrev and p in domain and p not in ancestors:
+                ancestors.add(p)
+                stack.append(p)
+    return ancestors
+
 cacheversion = 1
 cachefile = 'cache/hidden'
 
