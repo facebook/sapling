@@ -377,10 +377,11 @@ class patternmatcher(basematcher):
         return set(util.dirs(self._fileset)) | {'.'}
 
     def visitdir(self, dir):
+        if self.always():
+            return 'all'
         if self.prefix() and dir in self._fileset:
             return 'all'
-        return (not self._fileset or
-                '.' in self._fileset or
+        return ('.' in self._fileset or
                 dir in self._fileset or
                 dir in self._dirs or
                 any(parentdir in self._fileset
