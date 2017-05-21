@@ -1227,6 +1227,14 @@ Test working-directory revision
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugrevspec 'wdir()^'
   7
+  $ hg debugrevspec 'wdir()^0'
+  2147483647
+  $ hg debugrevspec 'wdir()~0'
+  2147483647
+  $ hg debugrevspec 'p1(wdir())'
+  7
+  $ hg debugrevspec 'parents(wdir())'
+  7
   $ hg debugrevspec 'wdir()^1'
   7
   $ hg debugrevspec 'wdir()^2'
