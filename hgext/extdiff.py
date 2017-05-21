@@ -240,7 +240,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
         else:
             template = 'hg-%h.patch'
             cmdutil.export(repo, [repo[node1a].rev(), repo[node2].rev()],
-                           template=repo.vfs.reljoin(tmproot, template),
+                           fntemplate=repo.vfs.reljoin(tmproot, template),
                            match=matcher)
             label1a = cmdutil.makefilename(repo, template, node1a)
             label2 = cmdutil.makefilename(repo, template, node2)
