@@ -1129,7 +1129,15 @@ def perfrevset(ui, repo, expr, clear=False, contexts=False, **opts):
     timer(d)
     fm.end()
 
-@command('perfvolatilesets', formatteropts)
+def _clearobsstore(repo):
+    unfi = repo.unfiltered()
+    if 'obsstore' in vars(unfi):
+        del unfi.obsstore
+        del unfi._filecache['obsstore']
+
+@command('perfvolatilesets',
+         [('', 'clear-obsstore', False, 'drop obsstore between each call.'),
+         ] + formatteropts)
 def perfvolatilesets(ui, repo, *names, **opts):
     """benchmark the computation of various volatile set
 
@@ -1140,6 +1148,8 @@ def perfvolatilesets(ui, repo, *names, **opts):
     def getobs(name):
         def d():
             repo.invalidatevolatilesets()
+            if opts['clear_obsstore']:
+                _clearobsstore(repo)
             obsolete.getrevs(repo, name)
         return d
 
@@ -1153,6 +1163,8 @@ def perfvolatilesets(ui, repo, *names, **opts):
     def getfiltered(name):
         def d():
             repo.invalidatevolatilesets()
+            if opts['clear_obsstore']:
+                _clearobsstore(repo)
             repoview.filterrevs(repo, name)
         return d
 
