@@ -47,30 +47,6 @@ def revealedrevs(repo):
         blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return blockers
 
-def _getstatichidden(repo):
-    """Revision to be hidden (disregarding dynamic blocker)
-
-    To keep a consistent graph, we cannot hide any revisions with
-    non-hidden descendants. This function computes the set of
-    revisions that could be hidden while keeping the graph consistent.
-
-    A second pass will be done to apply "dynamic blocker" like bookmarks or
-    working directory parents.
-
-    """
-    assert not repo.changelog.filteredrevs
-    hidden = hideablerevs(repo)
-    if hidden:
-        pfunc = repo.changelog.parentrevs
-
-        mutablephases = (phases.draft, phases.secret)
-        mutable = repo._phasecache.getrevset(repo, mutablephases)
-        blockers = _consistencyblocker(pfunc, hidden, mutable)
-
-        if blockers:
-            hidden = hidden - _domainancestors(pfunc, blockers, mutable)
-    return hidden
-
 def _consistencyblocker(pfunc, hideable, domain):
     """return non-hideable changeset blocking hideable one
 
@@ -129,21 +105,20 @@ def computehidden(repo):
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
 
-    hidden = frozenset()
-    hideable = hideablerevs(repo)
-    if hideable:
-        cl = repo.changelog
-        hidden = frozenset(_getstatichidden(repo))
+    hidden = hideablerevs(repo)
+    if hidden:
+        pfunc = repo.changelog.parentrevs
+        mutablephases = (phases.draft, phases.secret)
+        mutable = repo._phasecache.getrevset(repo, mutablephases)
+
+        blockers = _consistencyblocker(pfunc, hidden, mutable)
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
-        dynamic = hidden & revealedrevs(repo)
-        if dynamic:
-            pfunc = cl.parentrevs
-            mutablephases = (phases.draft, phases.secret)
-            mutable = repo._phasecache.getrevset(repo, mutablephases)
-            hidden = hidden - _domainancestors(pfunc, dynamic, mutable)
-    return hidden
+        blockers |= (hidden & revealedrevs(repo))
+        if blockers:
+            hidden = hidden - _domainancestors(pfunc, blockers, mutable)
+    return frozenset(hidden)
 
 def computeunserved(repo):
     """compute the set of revision that should be filtered when used a server
