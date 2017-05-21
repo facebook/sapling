@@ -28,8 +28,8 @@ if libdir != '@' 'LIBDIR' '@':
 
 # enable importing on demand to reduce startup time
 try:
-    if sys.version_info[0] < 3:
-        from mercurial import demandimport; demandimport.enable()
+    if sys.version_info[0] < 3 or sys.version_info >= (3, 6):
+        import hgdemandimport; hgdemandimport.enable()
 except ImportError:
     sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
                      ' '.join(sys.path))
