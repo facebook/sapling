@@ -29,11 +29,8 @@ def hideablerevs(repo):
     return obsolete.getrevs(repo, 'obsolete')
 
 def revealedrevs(repo):
-    """Non-cacheable revisions blocking hidden changesets from being filtered.
-
-    Get revisions that will block hidden changesets and are likely to change,
-    but unlikely to create hidden blockers. They won't be cached, so be careful
-    with adding additional computation."""
+    """non-cacheable revisions blocking hidden changesets from being filtered
+    """
 
     cl = repo.changelog
     blockers = set()
