@@ -1506,7 +1506,7 @@ def parentspec(repo, subset, x, n, order):
                 ps.add(cl.parentrevs(r)[0])
             except error.WdirUnsupported:
                 ps.add(repo[r].parents()[0].rev())
-        elif n == 2:
+        else:
             try:
                 parents = cl.parentrevs(r)
                 if parents[1] != node.nullrev:
