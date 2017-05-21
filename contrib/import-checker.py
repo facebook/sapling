@@ -24,6 +24,9 @@ allowsymbolimports = (
     'mercurial.node',
 )
 
+# Whitelist of symbols that can be directly imported.
+directsymbols = ()
+
 # Modules that must be aliased because they are commonly confused with
 # common variables and can create aliasing and readability issues.
 requirealias = {
@@ -464,10 +467,11 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
             found = fromlocal(node.module, node.level)
             if found and found[2]:  # node.module is a package
                 prefix = found[0] + '.'
-                symbols = [n.name for n in node.names
-                           if not fromlocal(prefix + n.name)]
+                symbols = (n.name for n in node.names
+                           if not fromlocal(prefix + n.name))
             else:
-                symbols = [n.name for n in node.names]
+                symbols = (n.name for n in node.names)
+            symbols = [sym for sym in symbols if sym not in directsymbols]
             if node.module and node.col_offset == root_col_offset:
                 if symbols and fullname not in allowsymbolimports:
                     yield msg('direct symbol import %s from %s',
