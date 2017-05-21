@@ -1456,10 +1456,10 @@ def parents(repo, subset, x):
         up = ps.update
         parentrevs = cl.parentrevs
         for r in getset(repo, fullreposet(repo), x):
-            if r == node.wdirrev:
-                up(p.rev() for p in repo[r].parents())
-            else:
+            try:
                 up(parentrevs(r))
+            except error.WdirUnsupported:
+                up(p.rev() for p in repo[r].parents())
     ps -= {node.nullrev}
     return subset & ps
 
