@@ -2130,7 +2130,7 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
-@predicate('wdir', safe=True)
+@predicate('wdir()', safe=True)
 def wdir(repo, subset, x):
     """Working directory. (EXPERIMENTAL)"""
     # i18n: "wdir" is a keyword
