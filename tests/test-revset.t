@@ -1233,6 +1233,7 @@ Test working-directory revision
   2147483647
   $ hg debugrevspec 'p1(wdir())'
   7
+  $ hg debugrevspec 'p2(wdir())'
   $ hg debugrevspec 'parents(wdir())'
   7
   $ hg debugrevspec 'wdir()^1'
