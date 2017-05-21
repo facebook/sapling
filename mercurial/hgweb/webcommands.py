@@ -1374,7 +1374,7 @@ def help(web, req, tmpl):
         subtopic = None
 
     try:
-        doc = helpmod.help_(u, topic, subtopic=subtopic)
+        doc = helpmod.help_(u, commands, topic, subtopic=subtopic)
     except error.UnknownCommand:
         raise ErrorResponse(HTTP_NOT_FOUND)
     return tmpl('help', topic=topicname, doc=doc)

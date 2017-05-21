@@ -11,6 +11,7 @@ import difflib
 import errno
 import os
 import re
+import sys
 
 from .i18n import _
 from .node import (
@@ -2745,7 +2746,8 @@ def help_(ui, name=None, **opts):
     if ui.verbose:
         keep.append('verbose')
 
-    formatted = help.formattedhelp(ui, name, keep=keep, **opts)
+    commands = sys.modules[__name__]
+    formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)
     ui.pager('help')
     ui.write(formatted)
 

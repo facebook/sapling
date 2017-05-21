@@ -114,7 +114,7 @@ def filtercmd(ui, cmd, kw, doc):
         return True
     return False
 
-def topicmatch(ui, kw):
+def topicmatch(ui, commands, kw):
     """Return help topics matching kw.
 
     Returns {'section': [(name, summary), ...], ...} where section is
@@ -134,7 +134,6 @@ def topicmatch(ui, kw):
             or lowercontains(header)
             or (callable(doc) and lowercontains(doc(ui)))):
             results['topics'].append((names[0], header))
-    from . import commands # avoid cycle
     for cmd, entry in commands.table.iteritems():
         if len(entry) == 3:
             summary = entry[2]
@@ -299,13 +298,13 @@ addtopicsymbols('templates', '.. functionsmarker', templater.funcs)
 addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands,
                 dedent=True)
 
-def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
+def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
+          **opts):
     '''
     Generate the help for 'name' as unformatted restructured text. If
     'name' is None, describe the commands available.
     '''
 
-    from . import commands # avoid cycle
     opts = pycompat.byteskwargs(opts)
 
     def helpcmd(name, subtopic=None):
@@ -569,7 +568,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
     rst = []
     kw = opts.get('keyword')
     if kw or name is None and any(opts[o] for o in opts):
-        matches = topicmatch(ui, name or '')
+        matches = topicmatch(ui, commands, name or '')
         helpareas = []
         if opts.get('extension'):
             helpareas += [('extensions', _('Extensions'))]
@@ -620,7 +619,8 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
 
     return ''.join(rst)
 
-def formattedhelp(ui, name, keep=None, unknowncmd=False, full=True, **opts):
+def formattedhelp(ui, commands, name, keep=None, unknowncmd=False, full=True,
+                  **opts):
     """get help for a given topic (as a dotted name) as rendered rst
 
     Either returns the rendered help text or raises an exception.
@@ -646,7 +646,7 @@ def formattedhelp(ui, name, keep=None, unknowncmd=False, full=True, **opts):
     termwidth = ui.termwidth() - 2
     if textwidth <= 0 or termwidth < textwidth:
         textwidth = termwidth
-    text = help_(ui, name,
+    text = help_(ui, commands, name,
                  subtopic=subtopic, unknowncmd=unknowncmd, full=full, **opts)
 
     formatted, pruned = minirst.format(text, textwidth, keep=keep,
