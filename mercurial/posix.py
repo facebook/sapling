@@ -244,7 +244,17 @@ def checklink(path):
                 # create a fixed file to link to; doesn't matter if it
                 # already exists.
                 target = 'checklink-target'
-                open(os.path.join(cachedir, target), 'w').close()
+                try:
+                    open(os.path.join(cachedir, target), 'w').close()
+                except IOError as inst:
+                    if inst[0] == errno.EACCES:
+                        # If we can't write to cachedir, just pretend
+                        # that the fs is readonly and by association
+                        # that the fs won't support symlinks. This
+                        # seems like the least dangerous way to avoid
+                        # data loss.
+                        return False
+                    raise
             try:
                 os.symlink(target, name)
                 if cachedir is None:
