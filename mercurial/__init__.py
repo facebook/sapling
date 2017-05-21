@@ -53,7 +53,14 @@ if sys.version_info[0] >= 3:
 
             # TODO need to support loaders from alternate specs, like zip
             # loaders.
-            spec.loader = hgloader(spec.name, spec.origin)
+            loader = hgloader(spec.name, spec.origin)
+            # Can't use util.safehasattr here because that would require
+            # importing util, and we're in import code.
+            if hasattr(spec.loader, 'loader'): # hasattr-py3-only
+                # This is a nested loader (maybe a lazy loader?)
+                spec.loader.loader = loader
+            else:
+                spec.loader = loader
             return spec
 
     def replacetokens(tokens, fullname):
