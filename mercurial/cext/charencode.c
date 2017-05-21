@@ -9,6 +9,7 @@
 
 #include <Python.h>
 
+#include "charencode.h"
 #include "util.h"
 
 static const char lowertable[128] = {

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "charencode.h"
 #include "util.h"
 
 #define DEFAULT_LINES 100000
@@ -37,9 +38,6 @@ typedef struct {
 #define MANIFEST_OOM -1
 #define MANIFEST_NOT_SORTED -2
 #define MANIFEST_MALFORMED -3
-
-/* defined in charencode.c */
-PyObject *unhexlify(const char *str, int len);
 
 /* get the length of the path for a line */
 static size_t pathlen(line *l) {

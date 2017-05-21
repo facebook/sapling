@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "charencode.h"
 #include "util.h"
 #include "bitmanipulation.h"
 

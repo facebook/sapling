@@ -767,7 +767,7 @@ extmodules = [
                                          'mercurial/cext/pathencode.c',
                                          'mercurial/cext/revlog.c'],
               include_dirs=common_include_dirs,
-              depends=common_depends),
+              depends=common_depends + ['mercurial/cext/charencode.h']),
     Extension('mercurial.cext.osutil', ['mercurial/cext/osutil.c'],
               include_dirs=common_include_dirs,
               extra_compile_args=osutil_cflags,

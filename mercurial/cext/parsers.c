@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "charencode.h"
 #include "util.h"
 #include "bitmanipulation.h"
 
@@ -28,12 +29,6 @@
 #endif
 
 static const char *const versionerrortext = "Python minor version mismatch";
-
-/* defined in charencode.c */
-PyObject *unhexlify(const char *str, int len);
-PyObject *asciilower(PyObject *self, PyObject *args);
-PyObject *asciiupper(PyObject *self, PyObject *args);
-PyObject *make_file_foldmap(PyObject *self, PyObject *args);
 
 static PyObject *dict_new_presized(PyObject *self, PyObject *args)
 {
