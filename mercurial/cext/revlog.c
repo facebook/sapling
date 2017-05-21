@@ -1930,8 +1930,7 @@ bail:
 void revlog_module_init(PyObject *mod)
 {
 	indexType.tp_new = PyType_GenericNew;
-	if (PyType_Ready(&indexType) < 0 ||
-	    PyType_Ready(&dirstateTupleType) < 0)
+	if (PyType_Ready(&indexType) < 0)
 		return;
 	Py_INCREF(&indexType);
 	PyModule_AddObject(mod, "index", (PyObject *)&indexType);

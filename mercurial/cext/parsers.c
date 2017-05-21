@@ -944,6 +944,8 @@ static void module_init(PyObject *mod)
 	manifest_module_init(mod);
 	revlog_module_init(mod);
 
+	if (PyType_Ready(&dirstateTupleType) < 0)
+		return;
 	Py_INCREF(&dirstateTupleType);
 	PyModule_AddObject(mod, "dirstatetuple",
 			   (PyObject *)&dirstateTupleType);
