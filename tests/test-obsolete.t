@@ -1280,5 +1280,36 @@ Test the --delete option of debugobsolete command
   $ hg debugobsolete
   cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 \(.*\) {'user': 'test'} (re)
   1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 \(.*\) {'user': 'test'} (re)
-  $ cd ..
 
+Test adding changeset after obsmarkers affecting it
+(eg: during pull, or unbundle)
+
+  $ mkcommit e
+  $ hg bundle -r . --base .~1 ../bundle-2.hg
+  1 changesets found
+  $ getid .
+  $ hg --config extensions.strip= strip -r .
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/tmpe/issue4845/doindexrev/.hg/strip-backup/9bc153528424-ee80edd4-backup.hg (glob)
+  $ hg debugobsolete 9bc153528424ea266d13e57f9ff0d799dfe61e4b
+  $ hg unbundle ../bundle-2.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg log -G
+  @  7:7ae79c5d60f0 (draft) [tip ] dd
+  |
+  | o  6:4715cf767440 (draft) [ ] d
+  |/
+  o  5:29346082e4a9 (draft) [ ] cc
+  |
+  o  3:d27fb9b06607 (draft) [ ] bb
+  |
+  | o  2:6fdef60fcbab (draft) [ ] b
+  |/
+  o  1:f9bd49731b0b (draft) [ ] aa
+  
+
+  $ cd ..
