@@ -42,7 +42,7 @@ typedef unsigned char bool;
 #include <stdbool.h>
 #endif
 
-static int8_t hextable[256] = {
+static const int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

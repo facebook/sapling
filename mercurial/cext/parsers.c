@@ -27,9 +27,9 @@
 #define PyInt_AsLong PyLong_AsLong
 #endif
 
-static char *versionerrortext = "Python minor version mismatch";
+static const char *const versionerrortext = "Python minor version mismatch";
 
-static char lowertable[128] = {
+static const char lowertable[128] = {
 	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
 	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
@@ -50,7 +50,7 @@ static char lowertable[128] = {
 	'\x78', '\x79', '\x7a', '\x7b', '\x7c', '\x7d', '\x7e', '\x7f'
 };
 
-static char uppertable[128] = {
+static const char uppertable[128] = {
 	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
 	'\x10', '\x11', '\x12', '\x13', '\x14', '\x15', '\x16', '\x17',
