@@ -10,7 +10,6 @@ from __future__ import absolute_import
 
 import copy
 import hashlib
-import heapq
 import struct
 
 from .node import nullrev
@@ -63,34 +62,32 @@ def _getstatichidden(repo):
 
     """
     assert not repo.changelog.filteredrevs
-    hidden = set(hideablerevs(repo))
+    hidden = hideablerevs(repo)
     if hidden:
-        getphase = repo._phasecache.phase
-        getparentrevs = repo.changelog.parentrevs
-        # Skip heads which are public (guaranteed to not be hidden)
-        heap = [-r for r in repo.changelog.headrevs() if getphase(repo, r)]
-        heapq.heapify(heap)
-        heappop = heapq.heappop
-        heappush = heapq.heappush
-        seen = set() # no need to init it with heads, they have no children
-        while heap:
-            rev = -heappop(heap)
-            # All children have been processed so at that point, if no children
-            # removed 'rev' from the 'hidden' set, 'rev' is going to be hidden.
-            blocker = rev not in hidden
-            for parent in getparentrevs(rev):
-                if parent == nullrev:
-                    continue
-                if blocker:
-                    # If visible, ensure parent will be visible too
-                    hidden.discard(parent)
-                # - Avoid adding the same revision twice
-                # - Skip nodes which are public (guaranteed to not be hidden)
-                pre = len(seen)
-                seen.add(parent)
-                if pre < len(seen) and getphase(repo, rev):
-                    heappush(heap, -parent)
+        pfunc = repo.changelog.parentrevs
+
+        mutablephases = (phases.draft, phases.secret)
+        mutable = repo._phasecache.getrevset(repo, mutablephases)
+        blockers = _consistencyblocker(pfunc, hidden, mutable)
+
+        if blockers:
+            hidden = hidden - _domainancestors(pfunc, blockers, mutable)
     return hidden
+
+def _consistencyblocker(pfunc, hideable, domain):
+    """return non-hideable changeset blocking hideable one
+
+    For consistency, we cannot actually hide a changeset if one of it children
+    are visible, this function find such children.
+    """
+    others = domain - hideable
+    blockers = set()
+    for r in others:
+        for p in pfunc(r):
+            if p != nullrev and p in hideable:
+                blockers.add(r)
+                break
+    return blockers
 
 def _domainancestors(pfunc, revs, domain):
     """return ancestors of 'revs' within 'domain'
