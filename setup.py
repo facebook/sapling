@@ -591,7 +591,7 @@ packages = ['mercurial',
 
 common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
-                  'mercurial/util.h']
+                  'mercurial/cext/util.h']
 common_include_dirs = ['mercurial']
 
 osutil_cflags = []
