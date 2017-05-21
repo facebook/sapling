@@ -119,7 +119,7 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
     m = matcher
 
     wctx = repo[None]
-    for f in repo[None].walk(matchmod.badmatch(m, lambda x, y: None)):
+    for f in wctx.walk(matchmod.badmatch(m, lambda x, y: None)):
         exact = m.exact(f)
         lfile = lfutil.standin(f) in wctx
         nfile = f in wctx

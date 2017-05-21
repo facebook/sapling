@@ -715,8 +715,8 @@ def copy(ui, repo, pats, opts, rename=False):
             badstates = '?'
         else:
             badstates = '?r'
-        m = scmutil.match(repo[None], [pat], opts, globbed=True)
-        for abs in repo[None].walk(m):
+        m = scmutil.match(wctx, [pat], opts, globbed=True)
+        for abs in wctx.walk(m):
             state = repo.dirstate[abs]
             rel = m.rel(abs)
             exact = m.exact(abs)
@@ -3049,7 +3049,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
         if not m.always():
             matcher = matchmod.badmatch(m, lambda x, y: False)
-            for abs in repo[None].walk(matcher):
+            for abs in wctx.walk(matcher):
                 names[abs] = m.rel(abs), m.exact(abs)
 
             # walk target manifest to fill `names`

@@ -34,7 +34,6 @@ delete .hgsub and revert it
   $ hg revert .hgsub
   warning: subrepo spec file '.hgsub' not found
   warning: subrepo spec file '.hgsub' not found
-  warning: subrepo spec file '.hgsub' not found
 
 delete .hgsubstate and revert it
 
