@@ -9,12 +9,9 @@
 from __future__ import absolute_import
 
 import copy
-import hashlib
-import struct
 
 from .node import nullrev
 from . import (
-    error,
     obsolete,
     phases,
     tags as tagsmod,
@@ -126,82 +123,6 @@ def _domainancestors(pfunc, revs, domain):
                 stack.append(p)
     return ancestors
 
-cacheversion = 1
-cachefile = 'cache/hidden'
-
-def cachehash(repo, hideable):
-    """return sha1 hash of repository data to identify a valid cache.
-
-    We calculate a sha1 of repo heads and the content of the obsstore and write
-    it to the cache. Upon reading we can easily validate by checking the hash
-    against the stored one and discard the cache in case the hashes don't match.
-    """
-    h = hashlib.sha1()
-    h.update(''.join(repo.heads()))
-    h.update('%d' % hash(frozenset(hideable)))
-    return h.digest()
-
-def _writehiddencache(cachefile, cachehash, hidden):
-    """write hidden data to a cache file"""
-    data = struct.pack('>%ii' % len(hidden), *sorted(hidden))
-    cachefile.write(struct.pack(">H", cacheversion))
-    cachefile.write(cachehash)
-    cachefile.write(data)
-
-def trywritehiddencache(repo, hideable, hidden):
-    """write cache of hidden changesets to disk
-
-    Will not write the cache if a wlock cannot be obtained lazily.
-    The cache consists of a head of 22byte:
-       2 byte    version number of the cache
-      20 byte    sha1 to validate the cache
-     n*4 byte    hidden revs
-    """
-    wlock = fh = None
-    try:
-        wlock = repo.wlock(wait=False)
-        # write cache to file
-        newhash = cachehash(repo, hideable)
-        fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
-        _writehiddencache(fh, newhash, hidden)
-        fh.close()
-    except (IOError, OSError):
-        repo.ui.debug('error writing hidden changesets cache\n')
-    except error.LockHeld:
-        repo.ui.debug('cannot obtain lock to write hidden changesets cache\n')
-    finally:
-        if wlock:
-            wlock.release()
-
-def _readhiddencache(repo, cachefilename, newhash):
-    hidden = fh = None
-    try:
-        if repo.vfs.exists(cachefile):
-            fh = repo.vfs.open(cachefile, 'rb')
-            version, = struct.unpack(">H", fh.read(2))
-            oldhash = fh.read(20)
-            if (cacheversion, oldhash) == (version, newhash):
-                # cache is valid, so we can start reading the hidden revs
-                data = fh.read()
-                count = len(data) / 4
-                hidden = frozenset(struct.unpack('>%ii' % count, data))
-        return hidden
-    except struct.error:
-        repo.ui.debug('corrupted hidden cache\n')
-        # No need to fix the content as it will get rewritten
-        return None
-    except (IOError, OSError):
-        repo.ui.debug('cannot read hidden cache\n')
-        return None
-    finally:
-        if fh:
-            fh.close()
-
-def tryreadcache(repo, hideable):
-    """read a cache if the cache exists and is valid, otherwise returns None."""
-    newhash = cachehash(repo, hideable)
-    return _readhiddencache(repo, cachefile, newhash)
-
 def computehidden(repo):
     """compute the set of hidden revision to filter
 
@@ -212,10 +133,7 @@ def computehidden(repo):
     hideable = hideablerevs(repo)
     if hideable:
         cl = repo.changelog
-        hidden = tryreadcache(repo, hideable)
-        if hidden is None:
-            hidden = frozenset(_getstatichidden(repo))
-            trywritehiddencache(repo, hideable, hidden)
+        hidden = frozenset(_getstatichidden(repo))
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.

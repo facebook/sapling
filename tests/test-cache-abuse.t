@@ -70,10 +70,6 @@ Beat up tags caches:
   $ damage tags tags2-visible
   $ damage "tag -f t3" hgtagsfnodes1
 
-Beat up hidden cache:
-
-  $ damage log hidden
-
 Beat up branch caches:
 
   $ damage branches branch2-base "rm .hg/cache/branch2-[vs]*"
