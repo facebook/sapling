@@ -9,6 +9,10 @@ from __future__ import absolute_import
 
 import sys
 
+# Allow 'from mercurial import demandimport' to keep working.
+import hgdemandimport
+demandimport = hgdemandimport
+
 __all__ = []
 
 # Python 3 uses a custom module loader that transforms source code between

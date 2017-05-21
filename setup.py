@@ -587,7 +587,8 @@ packages = ['mercurial',
             'mercurial.pure',
             'hgext', 'hgext.convert', 'hgext.fsmonitor',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
-            'hgext.largefiles', 'hgext.zeroconf', 'hgext3rd']
+            'hgext.largefiles', 'hgext.zeroconf', 'hgext3rd',
+            'hgdemandimport']
 
 common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
@@ -793,7 +794,7 @@ setup(name='mercurial',
       package_data=packagedata,
       cmdclass=cmdclass,
       distclass=hgdist,
-      options={'py2exe': {'packages': ['hgext', 'email']},
+      options={'py2exe': {'packages': ['hgdemandimport', 'hgext', 'email']},
                'bdist_mpkg': {'zipdist': False,
                               'license': 'COPYING',
                               'readme': 'contrib/macosx/Readme.html',

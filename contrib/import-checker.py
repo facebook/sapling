@@ -25,7 +25,9 @@ allowsymbolimports = (
 )
 
 # Whitelist of symbols that can be directly imported.
-directsymbols = ()
+directsymbols = (
+    'demandimport',
+)
 
 # Modules that must be aliased because they are commonly confused with
 # common variables and can create aliasing and readability issues.
