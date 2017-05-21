@@ -1227,6 +1227,12 @@ Test working-directory revision
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugrevspec 'wdir()^'
   7
+  $ hg debugrevspec 'wdir()^1'
+  7
+  $ hg debugrevspec 'wdir()^2'
+  $ hg debugrevspec 'wdir()^3'
+  hg: parse error: ^ expects a number 0, 1, or 2
+  [255]
 For tests consistency
   $ hg up 9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

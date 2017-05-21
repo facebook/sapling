@@ -1502,11 +1502,19 @@ def parentspec(repo, subset, x, n, order):
         if n == 0:
             ps.add(r)
         elif n == 1:
-            ps.add(cl.parentrevs(r)[0])
+            try:
+                ps.add(cl.parentrevs(r)[0])
+            except error.WdirUnsupported:
+                ps.add(repo[r].parents()[0].rev())
         elif n == 2:
-            parents = cl.parentrevs(r)
-            if parents[1] != node.nullrev:
-                ps.add(parents[1])
+            try:
+                parents = cl.parentrevs(r)
+                if parents[1] != node.nullrev:
+                    ps.add(parents[1])
+            except error.WdirUnsupported:
+                parents = repo[r].parents()
+                if len(parents) == 2:
+                    ps.add(parents[1].rev())
     return subset & ps
 
 @predicate('present(set)', safe=True)
