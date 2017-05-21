@@ -224,8 +224,10 @@ def computehidden(repo):
         # changesets and remove those.
         dynamic = hidden & revealedrevs(repo)
         if dynamic:
-            blocked = cl.ancestors(dynamic, inclusive=True)
-            hidden = frozenset(r for r in hidden if r not in blocked)
+            pfunc = cl.parentrevs
+            mutablephases = (phases.draft, phases.secret)
+            mutable = repo._phasecache.getrevset(repo, mutablephases)
+            hidden = hidden - _domainancestors(pfunc, dynamic, mutable)
     return hidden
 
 def computeunserved(repo):
