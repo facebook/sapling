@@ -260,16 +260,15 @@ def unamend(ui, repo, **opts):
             changedfiles.extend(diff.iterkeys())
 
             tr = repo.transaction('unamend')
-            dirstate.beginparentchange()
-            dirstate.rebuild(precnode, cm, changedfiles)
-            # we want added and removed files to be shown
-            # properly, not with ? and ! prefixes
-            for filename, data in diff.iteritems():
-                if data[0][0] is None:
-                    dirstate.add(filename)
-                if data[1][0] is None:
-                    dirstate.remove(filename)
-            dirstate.endparentchange()
+            with dirstate.parentchange():
+                dirstate.rebuild(precnode, cm, changedfiles)
+                # we want added and removed files to be shown
+                # properly, not with ? and ! prefixes
+                for filename, data in diff.iteritems():
+                    if data[0][0] is None:
+                        dirstate.add(filename)
+                    if data[1][0] is None:
+                        dirstate.remove(filename)
             for book in ctxbookmarks:
                 repobookmarks[book] = precnode
             repobookmarks.recordchange(tr)

@@ -165,9 +165,8 @@ def uncommit(ui, repo, *pats, **opts):
                 obsolete.createmarkers(repo, [(old, (repo[newid],))])
                 phases.retractboundary(repo, tr, oldphase, [newid])
 
-                repo.dirstate.beginparentchange()
-                repo.dirstate.setparents(newid, node.nullid)
-                _uncommitdirstate(repo, old, match)
-                repo.dirstate.endparentchange()
+                with repo.dirstate.parentchange():
+                    repo.dirstate.setparents(newid, node.nullid)
+                    _uncommitdirstate(repo, old, match)
 
                 _updatebookmarks(repo, old.node(), newid, tr)

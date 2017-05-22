@@ -757,11 +757,10 @@ class fixupstate(object):
             def restore():
                 dirstate._fsmonitorstate.invalidate = bak
             dirstate._fsmonitorstate.invalidate = noop
-        dirstate.beginparentchange()
         try:
-            dirstate.rebuild(ctx.node(), ctx.manifest(), self.paths)
+            with dirstate.parentchange():
+                dirstate.rebuild(ctx.node(), ctx.manifest(), self.paths)
         finally:
-            dirstate.endparentchange()
             restore()
 
     @staticmethod
