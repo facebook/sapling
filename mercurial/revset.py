@@ -75,9 +75,14 @@ def _revancestors(repo, revs, followfirst):
             if current not in seen:
                 seen.add(current)
                 yield current
-                for parent in cl.parentrevs(current)[:cut]:
-                    if parent != node.nullrev:
-                        heapq.heappush(h, -parent)
+                try:
+                    for parent in cl.parentrevs(current)[:cut]:
+                        if parent != node.nullrev:
+                            heapq.heappush(h, -parent)
+                except error.WdirUnsupported:
+                    for parent in repo[current].parents()[:cut]:
+                        if parent.rev() != node.nullrev:
+                            heapq.heappush(h, -parent.rev())
 
     return generatorset(iterate(), iterasc=False)
 
