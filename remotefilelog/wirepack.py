@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from mercurial.i18n import _
 from mercurial.node import nullid
 import constants
 import struct
@@ -45,6 +46,8 @@ def receivepack(ui, fh, packpath):
     receiveddata = []
     receivedhistory = []
     mkstickygroupdir(ui, packpath)
+    totalcount = 0
+    ui.progress(_("receiving pack"), totalcount)
     with datapack.mutabledatapack(ui, packpath) as dpack:
         with historypack.mutablehistorypack(ui, packpath) as hpack:
             pendinghistory = defaultdict(dict)
@@ -63,8 +66,11 @@ def receivepack(ui, fh, packpath):
                     dpack.add(filename, node, deltabase, delta)
                     receiveddata.append((filename, node))
                     count += 1
+
                 if count == 0 and filename == '':
                     break
+                totalcount += 1
+                ui.progress(_("receiving pack"), totalcount)
 
             # Add history to pack in toposorted order
             for filename, nodevalues in sorted(pendinghistory.iteritems()):
@@ -82,6 +88,7 @@ def receivepack(ui, fh, packpath):
                 for node in sortednodes:
                     node, p1, p2, linknode, copyfrom = nodevalues[node]
                     hpack.add(filename, node, p1, p2, linknode, copyfrom)
+    ui.progress(_("receiving pack"), None)
 
     return receiveddata, receivedhistory
 
