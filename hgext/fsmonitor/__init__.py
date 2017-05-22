@@ -148,19 +148,7 @@ def _hashignore(ignore):
 
     """
     sha1 = hashlib.sha1()
-    if util.safehasattr(ignore, 'includepat'):
-        sha1.update(ignore.includepat)
-    sha1.update('\0\0')
-    if util.safehasattr(ignore, 'excludepat'):
-        sha1.update(ignore.excludepat)
-    sha1.update('\0\0')
-    if util.safehasattr(ignore, 'patternspat'):
-        sha1.update(ignore.patternspat)
-    sha1.update('\0\0')
-    if util.safehasattr(ignore, '_files'):
-        for f in ignore._files:
-            sha1.update(f)
-    sha1.update('\0')
+    sha1.update(repr(ignore))
     return sha1.hexdigest()
 
 _watchmanencoding = pywatchman.encoding.get_local_encoding()

@@ -810,11 +810,7 @@ def debugignore(ui, repo, *files, **opts):
     ignore = repo.dirstate._ignore
     if not files:
         # Show all the patterns
-        includepat = getattr(ignore, 'includepat', None)
-        if includepat is not None:
-            ui.write("%s\n" % includepat)
-        else:
-            raise error.Abort(_("no ignore patterns found"))
+        ui.write("%s\n" % repr(ignore))
     else:
         for f in files:
             nf = util.normpath(f)

@@ -214,6 +214,9 @@ class matcher(object):
         self._anypats = bool(include or exclude)
         self._always = False
         self._pathrestricted = bool(include or exclude or patterns)
+        self.patternspat = None
+        self.includepat = None
+        self.excludepat = None
 
         # roots are directories which are recursively included/excluded.
         self._includeroots = set()
@@ -374,6 +377,11 @@ class matcher(object):
 
     def prefix(self):
         return not self.always() and not self.isexact() and not self.anypats()
+
+    def __repr__(self):
+        return ('<matcher files=%r, patterns=%r, includes=%r, excludes=%r>' %
+                (self._files, self.patternspat, self.includepat,
+                 self.excludepat))
 
 class subdirmatcher(matcher):
     """Adapt a matcher to work on a subdirectory only.
