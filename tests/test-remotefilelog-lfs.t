@@ -310,3 +310,58 @@
   >     print('unexpected size: %s' % size)
   > EOF
   size is less than 10 KB - expected
+
+# LFS fast path about binary diff works
+
+  $ cd $TESTTMP/master
+  $ hg up -C tip -q
+  $ $PYTHON << EOF
+  > with open('a.bin', 'wb') as f:
+  >     f.write(b'\x00\x01\x02\x00' * 10)
+  > EOF
+
+  $ hg commit -m binary -A a.bin
+  $ for i in 1 2; do
+  >    echo $i >> a.bin
+  >    hg commit -m $i a.bin
+  > done
+
+  $ chmod +x a.bin
+  $ hg commit -m 'mode change' a.bin
+
+  $ for i in 3 4; do
+  >    echo $i >> a.bin
+  >    hg commit -m $i a.bin
+  > done
+
+  $ cd $TESTTMP/shallow
+  $ hg pull -q
+  $ hg log --removed a.bin --config diff.nobinary=1 --git -p -T '{desc}\n' -r '::tip' --config lfs.url=null://
+  binary
+  diff --git a/a.bin b/a.bin
+  new file mode 100644
+  Binary file a.bin has changed
+  
+  1
+  diff --git a/a.bin b/a.bin
+  Binary file a.bin has changed
+  
+  2
+  diff --git a/a.bin b/a.bin
+  Binary file a.bin has changed
+  
+  mode change
+  diff --git a/a.bin b/a.bin
+  old mode 100644
+  new mode 100755
+  
+  3
+  diff --git a/a.bin b/a.bin
+  Binary file a.bin has changed
+  
+  4
+  diff --git a/a.bin b/a.bin
+  Binary file a.bin has changed
+  
+  5 files fetched over 5 fetches - (5 misses, 0.00% hit ratio) over * (glob)
+

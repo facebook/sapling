@@ -379,17 +379,6 @@ class remotefilectx(context.filectx):
             self._repo.fileservice.prefetch(fetch)
         return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
 
-    def cmp(self, fctx):
-        """compare with other file context
-
-        returns True if different than fctx.
-        """
-        if (self.size() == fctx.size() or
-            self._repo._encodefilterpats):
-            return self._filelog.cmp(self._filenode, fctx.data())
-
-        return True
-
     # Return empty set so that the hg serve and thg don't stack trace
     def children(self):
         return []
