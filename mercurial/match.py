@@ -120,6 +120,9 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
     """
     normalize = _donormalize
     if icasefs:
+        if exact:
+            raise error.Abort(_("a case-insensitive exact matcher doesn't "
+                                "make sense"))
         dirstate = ctx.repo().dirstate
         dsnormalize = dirstate.normalize
 
