@@ -371,3 +371,18 @@ Test local remotefilelog blob is correct when based on a pack
   d4a3ed9310e5 => aee31534993a  000000000000  421535db10b6  
   aee31534993a => 1406e7411862  000000000000  a89d614e2364  
   1406e7411862 => 000000000000  000000000000  b292c1e3311f  
+
+Test limiting the max delta chain length
+  $ hg repack --config packs.maxchainlen=1
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.dataidx
+  
+  x
+  Node          Delta Base    Delta Length
+  1bb2e6237e03  000000000000  8
+  d4a3ed9310e5  1bb2e6237e03  12
+  aee31534993a  000000000000  4
+  1406e7411862  aee31534993a  12
+  
+  y
+  Node          Delta Base    Delta Length
+  577959738234  000000000000  8

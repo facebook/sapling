@@ -4,6 +4,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+The remotefilelog extension is used to leave file contents on the server and
+only download them ondemand as needed.
+
+Configs:
+
+    ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
+"""
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
 import shallowbundle, debugcommands, remotefilelogserver, shallowverifier

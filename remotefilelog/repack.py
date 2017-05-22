@@ -285,6 +285,7 @@ class repacker(object):
 
     def repackdata(self, ledger, target):
         ui = self.repo.ui
+        maxchainlen = ui.configint('packs', 'maxchainlen', 1000)
 
         byfile = {}
         for entry in ledger.entries.itervalues():
@@ -319,7 +320,7 @@ class repacker(object):
             orderednodes.extend(sorted(nohistory))
 
             # Compute deltas and write to the pack
-            deltabases = defaultdict(lambda: nullid)
+            deltabases = defaultdict(lambda: (nullid, 0))
             nodes = set(nodes)
             for i, node in enumerate(orderednodes):
                 # orderednodes is all ancestors, but we only want to serialize
@@ -332,7 +333,7 @@ class repacker(object):
                 # Find delta base
                 # TODO: allow delta'ing against most recent descendant instead
                 # of immediate child
-                deltabase = deltabases[node]
+                deltabase, chainlen = deltabases[node]
 
                 # Use available ancestor information to inform our delta choices
                 ancestorinfo = ancestors.get(node)
@@ -345,14 +346,16 @@ class repacker(object):
                     if copyfrom:
                         p1 = nullid
 
-                    # Record this child as the delta base for its parents.
-                    # This may be non optimal, since the parents may have many
-                    # children, and this will only choose the last one.
-                    # TODO: record all children and try all deltas to find best
-                    if p1 != nullid:
-                        deltabases[p1] = node
-                    if p2 != nullid:
-                        deltabases[p2] = node
+                    if chainlen < maxchainlen:
+                        # Record this child as the delta base for its parents.
+                        # This may be non optimal, since the parents may have
+                        # many children, and this will only choose the last one.
+                        # TODO: record all children and try all deltas to find
+                        # best
+                        if p1 != nullid:
+                            deltabases[p1] = (node, chainlen + 1)
+                        if p2 != nullid:
+                            deltabases[p2] = (node, chainlen + 1)
 
                 # Compute delta
                 # TODO: Optimize the deltachain fetching. Since we're
