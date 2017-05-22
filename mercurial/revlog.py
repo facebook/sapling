@@ -490,7 +490,12 @@ class revlog(object):
             raise
 
     def node(self, rev):
-        return self.index[rev][7]
+        try:
+            return self.index[rev][7]
+        except IndexError:
+            if rev == wdirrev:
+                raise error.WdirUnsupported
+            raise
 
     # Derived from index values.
 
