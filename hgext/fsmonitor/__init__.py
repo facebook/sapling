@@ -669,7 +669,7 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
     with state_update(repo, node, distance, partial):
         return orig(
             repo, node, branchmerge, force, ancestor, mergeancestor,
-            labels, matcher, *kwargs)
+            labels, matcher, **kwargs)
 
 def reposetup(ui, repo):
     # We don't work with largefiles or inotify
