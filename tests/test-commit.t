@@ -120,7 +120,7 @@ commit added file that has been deleted
 An empty date was interpreted as epoch origin
 
   $ echo foo >> foo
-  $ hg commit -d '' -m commit-no-date
+  $ hg commit -d '' -m commit-no-date --config devel.default-date=
   $ hg tip --template '{date|isodate}\n' | grep '1970'
   [1]
 

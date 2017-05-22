@@ -6,6 +6,7 @@ Create a repository:
   defaults.shelve=--date "0 0"
   defaults.tag=-d "0 0"
   devel.all-warnings=true
+  devel.default-date=0 0
   largefiles.usercache=$TESTTMP/.cache/largefiles (glob)
   ui.slash=True
   ui.interactive=False
