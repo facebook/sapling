@@ -1141,6 +1141,39 @@ extraexport = []
 # it is given two arguments (sequencenumber, changectx)
 extraexportmap = {}
 
+def _exportsingle(repo, ctx, match, switch_parent, rev, seqno, write, diffopts):
+    node = ctx.node()
+    parents = [p.node() for p in ctx.parents() if p]
+    branch = ctx.branch()
+    if switch_parent:
+        parents.reverse()
+
+    if parents:
+        prev = parents[0]
+    else:
+        prev = nullid
+
+    write("# HG changeset patch\n")
+    write("# User %s\n" % ctx.user())
+    write("# Date %d %d\n" % ctx.date())
+    write("#      %s\n" % util.datestr(ctx.date()))
+    if branch and branch != 'default':
+        write("# Branch %s\n" % branch)
+    write("# Node ID %s\n" % hex(node))
+    write("# Parent  %s\n" % hex(prev))
+    if len(parents) > 1:
+        write("# Parent  %s\n" % hex(parents[1]))
+
+    for headerid in extraexport:
+        header = extraexportmap[headerid](seqno, ctx)
+        if header is not None:
+            write('# %s\n' % header)
+    write(ctx.description().rstrip())
+    write("\n\n")
+
+    for chunk, label in patch.diffui(repo, prev, node, match, opts=diffopts):
+        write(chunk, label=label)
+
 def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
            opts=None, match=None):
     '''export changesets as hg patches
@@ -1172,62 +1205,31 @@ def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
     revwidth = max(len(str(rev)) for rev in revs)
     filemode = {}
 
-    def single(rev, seqno, fp):
+    for seqno, rev in enumerate(revs, 1):
         ctx = repo[rev]
-        node = ctx.node()
-        parents = [p.node() for p in ctx.parents() if p]
-        branch = ctx.branch()
-        if switch_parent:
-            parents.reverse()
-
-        if parents:
-            prev = parents[0]
-        else:
-            prev = nullid
-
-        shouldclose = False
+        fo = None
+        dest = '<unnamed>'
         if not fp and len(fntemplate) > 0:
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
-            fp = makefileobj(repo, fntemplate, node, desc=desc, total=total,
-                             seqno=seqno, revwidth=revwidth, mode='wb',
-                             modemap=filemode)
-            shouldclose = True
-        if fp and not getattr(fp, 'name', '<unnamed>').startswith('<'):
-            repo.ui.note("%s\n" % fp.name)
-
-        if not fp:
-            write = repo.ui.write
-        else:
+            fo = makefileobj(repo, fntemplate, ctx.node(), desc=desc,
+                             total=total, seqno=seqno, revwidth=revwidth,
+                             mode='wb', modemap=filemode)
+            dest = fo.name
+            def write(s, **kw):
+                fo.write(s)
+        elif fp:
+            dest = getattr(fp, 'name', dest)
             def write(s, **kw):
                 fp.write(s)
-
-        write("# HG changeset patch\n")
-        write("# User %s\n" % ctx.user())
-        write("# Date %d %d\n" % ctx.date())
-        write("#      %s\n" % util.datestr(ctx.date()))
-        if branch and branch != 'default':
-            write("# Branch %s\n" % branch)
-        write("# Node ID %s\n" % hex(node))
-        write("# Parent  %s\n" % hex(prev))
-        if len(parents) > 1:
-            write("# Parent  %s\n" % hex(parents[1]))
-
-        for headerid in extraexport:
-            header = extraexportmap[headerid](seqno, ctx)
-            if header is not None:
-                write('# %s\n' % header)
-        write(ctx.description().rstrip())
-        write("\n\n")
-
-        for chunk, label in patch.diffui(repo, prev, node, match, opts=opts):
-            write(chunk, label=label)
-
-        if shouldclose:
-            fp.close()
-
-    for seqno, rev in enumerate(revs):
-        single(rev, seqno + 1, fp)
+        else:
+            write = repo.ui.write
+        if not dest.startswith('<'):
+            repo.ui.note("%s\n" % dest)
+        _exportsingle(
+            repo, ctx, match, switch_parent, rev, seqno, write, opts)
+        if fo is not None:
+            fo.close()
 
 def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                    changes=None, stat=False, fp=None, prefix='',
