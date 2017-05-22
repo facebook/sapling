@@ -1205,11 +1205,19 @@ def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
     revwidth = max(len(str(rev)) for rev in revs)
     filemode = {}
 
+    write = None
+    dest = '<unnamed>'
+    if fp:
+        dest = getattr(fp, 'name', dest)
+        def write(s, **kw):
+            fp.write(s)
+    elif not fntemplate:
+        write = repo.ui.write
+
     for seqno, rev in enumerate(revs, 1):
         ctx = repo[rev]
         fo = None
-        dest = '<unnamed>'
-        if not fp and len(fntemplate) > 0:
+        if not fp and fntemplate:
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
             fo = makefileobj(repo, fntemplate, ctx.node(), desc=desc,
@@ -1218,12 +1226,6 @@ def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
             dest = fo.name
             def write(s, **kw):
                 fo.write(s)
-        elif fp:
-            dest = getattr(fp, 'name', dest)
-            def write(s, **kw):
-                fp.write(s)
-        else:
-            write = repo.ui.write
         if not dest.startswith('<'):
             repo.ui.note("%s\n" % dest)
         _exportsingle(
