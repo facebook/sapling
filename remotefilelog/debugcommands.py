@@ -95,7 +95,7 @@ def debugindex(orig, ui, repo, file_=None, **opts):
     if format not in (0, 1):
         raise error.Abort(_("unknown format %d") % format)
 
-    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+    generaldelta = r.version & revlog.FLAG_GENERALDELTA
     if generaldelta:
         basehdr = ' delta'
     else:

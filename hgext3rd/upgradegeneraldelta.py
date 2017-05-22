@@ -52,7 +52,7 @@ def _upgrade(ui, repo):
     # probably only works with revlogng -- it became the default years ago so
     # that's fine
     v = struct.unpack(revlog.versionformat, i)[0]
-    isgeneraldelta = v & revlog.REVLOGGENERALDELTA
+    isgeneraldelta = v & revlog.FLAG_GENERALDELTA
     if isgeneraldelta:
         return
 
