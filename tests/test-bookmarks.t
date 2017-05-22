@@ -311,6 +311,15 @@ bookmark with integer name
   abort: cannot use an integer as a name
   [255]
 
+bookmark with a name that matches a node id
+  $ hg bookmark 925d80f479bb db815d6d32e6
+  bookmark 925d80f479bb matches a changeset hash
+  (did you leave a -r out of an 'hg bookmark' command?)
+  bookmark db815d6d32e6 matches a changeset hash
+  (did you leave a -r out of an 'hg bookmark' command?)
+  $ hg bookmark -d 925d80f479bb
+  $ hg bookmark -d db815d6d32e6
+
 incompatible options
 
   $ hg bookmark -m Y -d Z

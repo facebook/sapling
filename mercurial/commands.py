@@ -968,6 +968,11 @@ def bookmark(ui, repo, *names, **opts):
             and not force):
             raise error.Abort(
                 _("a bookmark cannot have the name of an existing branch"))
+        if len(mark) > 3 and mark in repo and not force:
+            repo.ui.warn(
+                _("bookmark %s matches a changeset hash\n"
+                  "(did you leave a -r out of an 'hg bookmark' command?)\n") %
+                mark)
 
     if delete and rename:
         raise error.Abort(_("--delete and --rename are incompatible"))
