@@ -1,10 +1,6 @@
 Create a repository:
 
   $ hg config
-  defaults.backout=-d "0 0"
-  defaults.commit=-d "0 0"
-  defaults.shelve=--date "0 0"
-  defaults.tag=-d "0 0"
   devel.all-warnings=true
   devel.default-date=0 0
   largefiles.usercache=$TESTTMP/.cache/largefiles (glob)

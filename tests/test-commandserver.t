@@ -187,10 +187,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['-R', 'foo', 'showconfig', 'ui', 'defaults'])
   *** runcommand showconfig
   bundle.mainreporoot=$TESTTMP/repo
-  defaults.backout=-d "0 0"
-  defaults.commit=-d "0 0"
-  defaults.shelve=--date "0 0"
-  defaults.tag=-d "0 0"
   devel.all-warnings=true
   devel.default-date=0 0
   largefiles.usercache=$TESTTMP/.cache/largefiles
@@ -204,10 +200,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   web\.ipv6=(?:True|False) (re)
   *** runcommand init foo
   *** runcommand -R foo showconfig ui defaults
-  defaults.backout=-d "0 0"
-  defaults.commit=-d "0 0"
-  defaults.shelve=--date "0 0"
-  defaults.tag=-d "0 0"
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
