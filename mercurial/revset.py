@@ -383,7 +383,10 @@ def ancestorspec(repo, subset, x, n, order):
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
         for i in range(n):
-            r = cl.parentrevs(r)[0]
+            try:
+                r = cl.parentrevs(r)[0]
+            except error.WdirUnsupported:
+                r = repo[r].parents()[0].rev()
         ps.add(r)
     return subset & ps
 

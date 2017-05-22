@@ -1229,6 +1229,8 @@ Test working-directory revision
   7
   $ hg debugrevspec 'wdir()^0'
   2147483647
+  $ hg debugrevspec 'wdir()~3'
+  5
   $ hg debugrevspec 'wdir()~0'
   2147483647
   $ hg debugrevspec 'p1(wdir())'
