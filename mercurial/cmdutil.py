@@ -1169,7 +1169,7 @@ def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
     '''
 
     total = len(revs)
-    revwidth = max([len(str(rev)) for rev in revs])
+    revwidth = max(len(str(rev)) for rev in revs)
     filemode = {}
 
     def single(rev, seqno, fp):
