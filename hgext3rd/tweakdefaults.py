@@ -772,11 +772,15 @@ def bmactive(repo):
     except AttributeError:
         return repo._bookmarkcurrent
 
-def _createmarkers(orig, repo, relations, flag=0, date=None, metadata=None):
-    operation = repo.ui.config(globaldata, createmarkersoperation, None)
+def _createmarkers(orig, repo, relations, flag=0, date=None, metadata=None,
+                   operation=None):
+    operation = repo.ui.config(globaldata, createmarkersoperation, operation)
     if operation is None:
         return orig(repo, relations, flag, date, metadata)
 
+    # While _createmarkers in newer Mercurial does have an operation argument,
+    # it is ignored unless certain configs are set. Let's just continue to set
+    # it directly on the metadata for now.
     if metadata is None:
         metadata = {}
     metadata['operation'] = operation
