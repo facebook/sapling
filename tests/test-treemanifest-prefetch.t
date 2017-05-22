@@ -166,6 +166,8 @@ Test auto prefetch during normal access
 Test auto prefetch during pull
 
 - Prefetch everything
+  $ echo a >> a
+  $ hg commit -Aqm 'draft commit that shouldnt affect prefetch'
   $ rm -rf $CACHEDIR/master
   $ hg pull --config treemanifest.pullprefetchcount=10 --traceback
   pulling from ssh://user@dummy/master
@@ -197,6 +199,8 @@ Test auto prefetch during pull
   
   Node          Delta Base    Delta Length
   ef362f8bbe8a  000000000000  46
+
+  $ hg strip -q -r 'draft()'
 
 - Prefetch just the top manifest (but the full one)
   $ rm -rf $CACHEDIR/master
