@@ -743,8 +743,9 @@ def pull(orig, ui, repo, *pats, **opts):
         mfnodes = list(n for k, n in missingnodes)
 
         # Calculate which parents we already have
-        parentctxs = repo.set('parents(roots(%ln:))',
-                              (ctx.node() for ctx in ctxs))
+        ctxnodes = list(ctx.node() for ctx in ctxs)
+        parentctxs = repo.set('parents(%ln) - %ln',
+                              ctxnodes, ctxnodes)
         basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
         missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
         basemfnodes.difference_update(n for k, n in missingbases)
