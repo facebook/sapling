@@ -53,7 +53,7 @@ When the server has some blobs already
   $ hg push ../repo1 -v | grep -v '^  '
   pushing to ../repo1
   searching for changes
-  lfs: need to transfer 2 objects
+  lfs: need to transfer 2 objects (39 bytes)
   lfs: uploading 37a65ab78d5ecda767e8622c248b5dbff1e68b1678ab0e730d5eb8601ec8ad19 (20 bytes)
   lfs: uploading d11e1a642b60813aee592094109b406089b8dff4cb157157f753418ec7857998 (19 bytes)
   1 changesets found

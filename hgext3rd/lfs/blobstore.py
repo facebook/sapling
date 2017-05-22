@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import json
+import os
 import re
 
 from mercurial import (
@@ -27,6 +28,34 @@ class lfsvfs(vfsmod.vfs):
         if not _lfsre.match(path):
             raise error.ProgrammingError('unexpected lfs path: %s' % path)
         return super(lfsvfs, self).join(path[0:2], path[2:])
+
+class filewithprogress(object):
+    """a file-like object that supports __len__ and read.
+
+    Useful to provide progress information for how many bytes are read.
+    """
+
+    def __init__(self, fp, callback):
+        self._fp = fp
+        self._callback = callback # func(readsize)
+        fp.seek(0, os.SEEK_END)
+        self._len = fp.tell()
+        fp.seek(0)
+
+    def __len__(self):
+        return self._len
+
+    def read(self, size):
+        if self._fp is None:
+            return b''
+        data = self._fp.read(size)
+        if data:
+            if self._callback:
+                self._callback(len(data))
+        else:
+            self._fp.close()
+            self._fp = None
+        return data
 
 class local(object):
     """Local blobstore for large file contents.
@@ -126,7 +155,7 @@ class _gitlfsremote(object):
 
         return filteredobjects
 
-    def _basictransfer(self, obj, action, localstore):
+    def _basictransfer(self, obj, action, localstore, progress=None):
         """Download or upload a single object using basic transfer protocol
 
         obj: dict, an object description returned by batch API
@@ -144,14 +173,22 @@ class _gitlfsremote(object):
         request = util.urlreq.request(href)
         if action == 'upload':
             # If uploading blobs, read data from local blobstore.
-            request.data = localstore.read(oid)
+            request.data = filewithprogress(localstore.vfs(oid), progress)
             request.get_method = lambda: 'PUT'
 
         for k, v in headers:
             request.add_header(k, v)
 
+        response = b''
         try:
-            response = self.urlopener.open(request).read()
+            req = self.urlopener.open(request)
+            while True:
+                data = req.read(1048576)
+                if not data:
+                    break
+                if action == 'download' and progress:
+                    progress(len(data))
+                response += data
         except util.urlerr.httperror as ex:
             raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
                                  % (ex, oid, action))
@@ -165,15 +202,19 @@ class _gitlfsremote(object):
             raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
 
         response = self._batchrequest(pointers, action)
-        runningsize = 0
+        prunningsize = [0]
         objects = self._extractobjects(response, action)
         total = sum(x.get('size', 0) for x in objects)
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
-        self.ui.progress(topic, 0, total=total)
         if self.ui.verbose and len(objects) > 1:
-            self.ui.write(_('lfs: need to transfer %d objects\n')
-                          % len(objects))
+            self.ui.write(_('lfs: need to transfer %d objects (%s)\n')
+                          % (len(objects), util.bytecount(total)))
+        self.ui.progress(topic, 0, total=total)
+        def progress(size):
+            # advance progress bar by "size" bytes
+            prunningsize[0] += size
+            self.ui.progress(topic, prunningsize[0], total=total)
         for obj in sorted(objects, key=lambda o: o.get('oid')):
             objsize = obj.get('size', 0)
             if self.ui.verbose:
@@ -182,9 +223,7 @@ class _gitlfsremote(object):
                 elif action == 'upload':
                     msg = _('lfs: uploading %s (%s)\n')
                 self.ui.write(msg % (obj.get('oid'), util.bytecount(objsize)))
-            self._basictransfer(obj, action, localstore)
-            runningsize += objsize
-            self.ui.progress(topic, runningsize, total=total)
+            self._basictransfer(obj, action, localstore, progress=progress)
 
         self.ui.progress(topic, pos=None, total=total)
 
