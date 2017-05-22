@@ -47,7 +47,6 @@ from .bundleparts import (
 from mercurial import (
     bundle2,
     changegroup,
-    cmdutil,
     commands,
     discovery,
     encoding,
@@ -56,6 +55,7 @@ from mercurial import (
     lock as lockmod,
     osutil,
     phases,
+    registrar,
     scmutil,
     util,
 )
@@ -66,7 +66,7 @@ from mercurial.node import bin, hex, nullrev
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])

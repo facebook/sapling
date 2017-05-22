@@ -38,6 +38,7 @@ from mercurial import (
     match,
     merge,
     patch,
+    registrar,
     repair,
     repoview,
     revset,
@@ -62,7 +63,7 @@ except Exception:
     hasstreamclone = False
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 repoclass = localrepo.localrepository

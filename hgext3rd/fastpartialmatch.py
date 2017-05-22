@@ -39,10 +39,10 @@ from functools import partial
 from hgext3rd.generic_bisect import bisect
 
 from mercurial import (
-    cmdutil,
     error,
     extensions,
     localrepo,
+    registrar,
     revlog,
     util,
     vfs as vfsmod,
@@ -66,7 +66,7 @@ import struct
 LookupError = error.LookupError
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 _partialindexdir = 'partialindex'
 

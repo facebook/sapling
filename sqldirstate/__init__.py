@@ -9,7 +9,8 @@ testedwith = 'ships-with-fb-hgext'
 
 from sqldirstate import makedirstate, toflat, tosql, writefakedirstate
 
-from mercurial import commands, error, extensions, cmdutil, localrepo, util
+from mercurial import commands, error, extensions, localrepo, util
+from mercurial import registrar
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 
@@ -118,7 +119,7 @@ def reposetup(ui, repo):
 
 # debug commands
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('debugsqldirstate', [], 'hg debugsqldirstate [on|off]')
 def debugsqldirstate(ui, repo, cmd, **opts):

@@ -11,11 +11,11 @@ import os
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     commands,
     error,
     extensions,
     patch,
+    registrar,
     scmutil,
     util,
 )
@@ -27,7 +27,7 @@ from . import (
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 def _matchpaths(repo, rev, pats, opts, aopts=facontext.defaultopts):
     """generate paths matching given patterns"""

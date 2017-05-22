@@ -42,6 +42,7 @@ from mercurial import (
     obsolete,
     patch,
     phases,
+    registrar,
     repair,
     scmutil,
     util,
@@ -51,7 +52,7 @@ from mercurial.i18n import _
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 colortable = {
     'absorb.node': 'blue bold',

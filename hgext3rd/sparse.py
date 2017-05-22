@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg
+from mercurial import localrepo, error, hg, registrar
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -17,7 +17,7 @@ from mercurial.i18n import _
 import os, collections, hashlib
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):

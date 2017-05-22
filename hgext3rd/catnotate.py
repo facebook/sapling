@@ -1,9 +1,9 @@
-from mercurial import util, cmdutil, scmutil, util
+from mercurial import util, cmdutil, registrar, scmutil, util
 from mercurial.i18n import _
 import os
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 @command('^catnotate', [

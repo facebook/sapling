@@ -7,10 +7,10 @@
 
 import errno, os, tempfile, mmap, time
 
-from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
+from mercurial import bundle2, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revsetlang
 from mercurial import obsolete, pushkey, phases, extensions, manifest
-from mercurial import encoding
+from mercurial import encoding, registrar
 from mercurial.extensions import wrapcommand, wrapfunction, unwrapfunction
 from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
@@ -19,7 +19,7 @@ from mercurial.i18n import _
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 rebaseparttype = 'b2x:rebase'
 commonheadsparttype = 'b2x:commonheads'

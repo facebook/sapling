@@ -52,7 +52,6 @@ bundles.
 from mercurial import (
     bundle2,
     changegroup,
-    cmdutil,
     commands,
     error,
     exchange,
@@ -62,6 +61,7 @@ from mercurial import (
     manifest,
     mdiff,
     phases,
+    registrar,
     repair,
     revlog,
     sshserver,
@@ -88,7 +88,7 @@ import os
 import struct
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 PACK_CATEGORY='manifests'
 

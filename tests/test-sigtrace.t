@@ -2,10 +2,10 @@
   $ export PYTHONPATH
 
   $ cat >> $TESTTMP/signal.py << EOF
-  > from mercurial import cmdutil
+  > from mercurial import registrar
   > import os, signal
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('signal', norepo=True)
   > def signalcommand(ui, *pats, **kwds):
   >     os.kill(os.getpid(), getattr(signal, 'SIG' + pats[0]))

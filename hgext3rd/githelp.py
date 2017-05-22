@@ -23,9 +23,9 @@ maintainers if the command is legitimate. To customize this footer, set:
 """
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     error,
     fancyopts,
+    registrar,
     util,
 )
 from hgext import pager
@@ -34,7 +34,7 @@ import re, getopt
 pager.attended.append('githelp')
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 class GitUnknownError(error.Abort):

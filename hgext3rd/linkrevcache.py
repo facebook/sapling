@@ -54,11 +54,11 @@ import shutil
 import sys
 
 from mercurial import (
-    cmdutil,
     context,
     extensions,
     filelog,
     node,
+    registrar,
     util,
 )
 from mercurial.i18n import _
@@ -66,7 +66,7 @@ from mercurial.i18n import _
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 _chosendbm = None
 

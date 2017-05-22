@@ -34,9 +34,9 @@ from .util import runworker, lastcl, decodefileflags
 from mercurial.i18n import _
 from mercurial.node import short, hex
 from mercurial import (
-    cmdutil,
     error,
     extensions,
+    registrar,
     revlog,
     scmutil,
     verify,
@@ -129,7 +129,7 @@ def create(tr, ui, repo, importset, filelogs):
         })
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command(
     'p4fastimport',

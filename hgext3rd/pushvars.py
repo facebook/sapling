@@ -15,12 +15,12 @@
 # will result in both HG_USERVAR_BYPASS_REVIEWERS and HG_USERVAR_DEBUG
 # available to the hook environment.
 
-from mercurial import bundle2, cmdutil, exchange, extensions
+from mercurial import bundle2, exchange, extensions, registrar
 from mercurial import error, commands
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @exchange.b2partsgenerator('pushvars')
 def _getbundlesendvars(pushop, bundler):

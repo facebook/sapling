@@ -90,8 +90,8 @@ and flat manifest, asynchronously and synchronously.
 
 import sys
 
-from mercurial import bookmarks, cmdutil, dispatch, error, extensions
-from mercurial import localrepo, manifest
+from mercurial import bookmarks, dispatch, error, extensions
+from mercurial import localrepo, manifest, registrar
 from mercurial import revset as revsetmod
 from mercurial.i18n import _
 
@@ -101,7 +101,7 @@ import debug
 from implementation import manifestfactory, fastmanifestcache
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),

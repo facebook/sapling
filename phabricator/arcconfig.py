@@ -6,12 +6,12 @@ import errno
 import json
 import os
 from mercurial import (
-    cmdutil,
-    error
+    error,
+    registrar,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 class ArcConfigError(Exception):
     pass

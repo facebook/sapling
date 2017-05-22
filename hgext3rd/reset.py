@@ -5,13 +5,13 @@
 from mercurial.i18n import _
 from mercurial.node import hex
 from mercurial import extensions, merge, scmutil, hg
-from mercurial import cmdutil, obsolete, repair, bundlerepo, error
-from mercurial import exchange, phases, pycompat
+from mercurial import obsolete, repair, bundlerepo, error
+from mercurial import exchange, phases, pycompat, registrar
 from mercurial import lock as lockmod
 import os, glob, binascii
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 def _isevolverepo(repo):

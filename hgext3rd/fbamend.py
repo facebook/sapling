@@ -42,6 +42,7 @@ from mercurial import (
     merge,
     obsolete,
     phases,
+    registrar,
     repair,
     scmutil,
     util,
@@ -53,7 +54,7 @@ from collections import defaultdict, deque
 from itertools import count
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 rebasemod = None

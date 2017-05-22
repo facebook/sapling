@@ -11,16 +11,16 @@ import time
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     encoding,
     error,
+    registrar,
     revlog,
 )
 
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 def quickchecklog(ui, log, name, knownbroken):
     """

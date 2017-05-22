@@ -4,12 +4,12 @@
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     bookmarks,
     commands,
     debugcommands,
     encoding,
     error,
+    registrar,
     util,
 )
 from mercurial import pycompat, scmutil
@@ -22,7 +22,7 @@ from hgext3rd import (
 import os, socket, re, time, traceback
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 _failsafeerrors = []
 

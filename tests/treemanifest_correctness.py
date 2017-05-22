@@ -6,9 +6,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 from mercurial import (
-    cmdutil,
     manifest,
     mdiff,
+    registrar,
 )
 from mercurial.node import nullid
 from remotefilelog import datapack, contentstore, shallowutil
@@ -17,7 +17,7 @@ from fastmanifest import cachemanager
 import cstore
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 @command('testtree', [

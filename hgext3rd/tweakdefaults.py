@@ -53,13 +53,13 @@ Config::
 from mercurial.i18n import _
 from mercurial import (
     bookmarks,
-    cmdutil,
     commands,
     error,
     encoding,
     extensions,
     hg,
     obsolete,
+    registrar,
     scmutil,
     templater,
     util,
@@ -72,7 +72,7 @@ wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 globaldata = 'globaldata'

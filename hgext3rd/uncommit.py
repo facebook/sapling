@@ -18,7 +18,6 @@ the working directory.
 """
 
 from mercurial import (
-    cmdutil,
     phases,
     obsolete,
     commands,
@@ -26,12 +25,13 @@ from mercurial import (
     scmutil,
     copies,
     context,
-    node
+    node,
+    registrar,
 )
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 

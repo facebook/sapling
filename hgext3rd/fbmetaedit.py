@@ -16,6 +16,7 @@ from mercurial import (
     error,
     extensions,
     lock as lockmod,
+    registrar,
     scmutil,
     obsolete,
 )
@@ -25,7 +26,7 @@ wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 

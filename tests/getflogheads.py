@@ -1,8 +1,8 @@
-from mercurial import cmdutil, hg
+from mercurial import hg, registrar
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('getflogheads',
          [],

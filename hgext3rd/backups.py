@@ -14,8 +14,8 @@ To disable that warning, set ``backups.warnobsolescence`` to False.
 """
 
 from mercurial import cmdutil, commands, error, bundlerepo
-from mercurial import hg, exchange, obsolete
-from mercurial import bundle2
+from mercurial import hg, exchange, obsolete, registrar
+from mercurial import bundle2, registrar
 from mercurial import lock as lockmod
 from mercurial import pycompat
 from hgext import pager
@@ -26,7 +26,7 @@ import os, glob, time
 pager.attended.append('backups')
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 msgwithcreatermarkers = """Marker creation is enabled so no changeset should be
 stripped unless you explicitly called hg strip. hg backups will show you the

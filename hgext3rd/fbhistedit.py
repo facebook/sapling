@@ -19,11 +19,12 @@ from mercurial import hg
 from mercurial import lock
 from mercurial import node
 from mercurial import pycompat
+from mercurial import registrar
 from mercurial import scmutil
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 

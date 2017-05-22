@@ -1,8 +1,8 @@
-from mercurial import cmdutil
+from mercurial import registrar
 from mercurial.node import hex, nullid
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 @command('whereami')

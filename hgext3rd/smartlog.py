@@ -50,7 +50,7 @@ from hgext import pager
 pager.attended.append('smartlog')
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 commit_info = False
 hiddenchanges = 0

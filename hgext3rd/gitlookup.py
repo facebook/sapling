@@ -21,14 +21,14 @@
 # This also provides client and server commands to download all the Git metadata
 # via bundle2.
 
-from mercurial import bundle2, cmdutil, exchange, encoding, extensions, hg
-from mercurial import localrepo, util, wireproto, error
+from mercurial import bundle2, exchange, encoding, extensions, hg
+from mercurial import localrepo, util, wireproto, error, registrar
 from mercurial.node import bin, nullid
 from mercurial.i18n import _
 import errno, urllib
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 def wrapwireprotocommand(command, wrapper):
     '''Wrap the wire proto command named `command' in table

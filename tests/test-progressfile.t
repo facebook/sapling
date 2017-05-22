@@ -2,14 +2,14 @@
   $ export PYTHONPATH
 
   $ cat > loop.py <<EOF
-  > from mercurial import cmdutil, commands
+  > from mercurial import commands, registrar
   > import time
   > 
   > from mercurial.extensions import wrapfunction
   > # This borrows heavily from test-progress.t:
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > 
   > def uisetup(ui):
   >     def progress(orig, *args, **kwargs):

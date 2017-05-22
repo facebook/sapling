@@ -30,6 +30,7 @@ from mercurial import (
     cmdutil,
     destutil,
     node,
+    registrar,
     scmutil,
     error,
     util,
@@ -535,7 +536,7 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
             pass
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 

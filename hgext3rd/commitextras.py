@@ -7,13 +7,13 @@
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     commands,
     extensions,
+    registrar,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):

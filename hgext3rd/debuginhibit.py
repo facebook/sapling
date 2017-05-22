@@ -30,6 +30,7 @@ from mercurial import (
     cmdutil,
     extensions,
     error,
+    registrar,
     scmutil,
 )
 from mercurial.i18n import _
@@ -38,7 +39,7 @@ from mercurial.node import short
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 inhibit = None
 

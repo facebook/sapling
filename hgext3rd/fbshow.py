@@ -30,10 +30,10 @@ For example, 'hg show --stat' prints something like:
 """
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, error, scmutil
+from mercurial import cmdutil, commands, error, registrar, scmutil
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):

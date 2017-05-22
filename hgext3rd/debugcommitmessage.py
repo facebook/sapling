@@ -2,11 +2,12 @@ from mercurial import (
     cmdutil,
     context,
     error,
+    registrar,
 )
 from mercurial.i18n import _
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('debugcommitmessage', [], _('FORM'))
 def debugcommitmessage(ui, repo, *args):

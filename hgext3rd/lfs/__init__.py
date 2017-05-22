@@ -28,7 +28,6 @@ from __future__ import absolute_import
 from mercurial import (
     bundle2,
     changegroup,
-    cmdutil,
     context,
     exchange,
     extensions,
@@ -46,7 +45,7 @@ from . import (
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 templatekeyword = registrar.templatekeyword()
 

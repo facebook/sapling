@@ -6,10 +6,10 @@
 generaldelta to generaldelta interactions with bundle2 but legacy clients
 without changegroup2 support
   $ cat > testcg2.py << EOF
-  > from mercurial import changegroup, cmdutil, util
+  > from mercurial import changegroup, registrar, util
   > import sys
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('testcg2', norepo=True)
   > def testcg2(ui):
   >     if not util.safehasattr(changegroup, 'cg2packer'):

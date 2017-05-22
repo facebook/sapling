@@ -1,9 +1,9 @@
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/errorredirect.py $TESTTMP
   $ cat > $TESTTMP/crash.py << EOF
-  > from mercurial import cmdutil
+  > from mercurial import registrar
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('crash', [])
   > def crash(ui, repo):
   >     raise 'crash'
