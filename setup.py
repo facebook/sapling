@@ -16,6 +16,7 @@ WEXTRA = "" if iswindows else "-Wextra"
 WCONVERSION = "" if iswindows else "-Wconversion"
 PEDANTIC = "" if iswindows else "-pedantic"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
+OPTIMIZATION = "" if iswindows else "-O2"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
 
 # --component allows the caller to specify what components they want. We can't
@@ -290,6 +291,15 @@ else:
                 ]),
             ),
         ],
+        'traceprof': [
+            Extension('hgext3rd.traceprof',
+                sources=['hgext3rd/traceprof.pyx'],
+                include_dirs=['hgext3rd/'],
+                extra_compile_args=filter(None, [
+                    OPTIMIZATION, STDCPP0X, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                ]),
+            ),
+        ]
     }
 
 allnames = availablepackages + availableextmodules.keys() + availablepymodules
@@ -324,6 +334,7 @@ else:
     cythonmodules = [
         'linelog',
         'patchrmdir',
+        'traceprof',
     ]
 for cythonmodule in cythonmodules:
     if cythonmodule in components:
@@ -409,6 +420,8 @@ class CleanExtCommand(Command):
         for path in self._rglob('*.pyx'):
             cpath = '%s.c' % path[:-4]
             removepath(cpath)
+            cpppath = cpath + 'pp'
+            removepath(cpppath)
 
         # print short summary
         if removed:

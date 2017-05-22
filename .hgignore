@@ -12,6 +12,7 @@ syntax: regexp
 .idea
 .testtimes*
 ^hgext3rd/.*\.c$
+^hgext3rd/traceprof\.c.*$
 ^cdatapack/cdatapack_dump$
 
 subinclude:cfastmanifest/.hgignore
