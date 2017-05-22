@@ -179,8 +179,10 @@ def _runextsetup(name, ui):
                 raise
             extsetup() # old extsetup with no ui argument
 
-def loadall(ui):
+def loadall(ui, whitelist=None):
     result = ui.configitems("extensions")
+    if whitelist:
+        result = [(k, v) for (k, v) in result if k in whitelist]
     newindex = len(_order)
     for (name, path) in result:
         if path:
