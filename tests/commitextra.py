@@ -3,7 +3,11 @@
 from mercurial import cmdutil, commands, scmutil
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+try:
+    from mercurial import registrar
+    command = registrar.command(cmdtable)
+except (ImportError, AttributeError):
+    command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 @command('commitextra',

@@ -84,7 +84,11 @@ testedwith = ('2.8.2 2.9.2 3.0.2 3.1.2 3.2.4 3.3.3 3.4.2 3.5.2 3.6.3 3.7.3'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+try:
+    from mercurial import registrar
+    command = registrar.command(cmdtable)
+except (ImportError, AttributeError):
+    command = cmdutil.command(cmdtable)
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
