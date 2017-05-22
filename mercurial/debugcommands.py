@@ -2125,6 +2125,7 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
     m = scmutil.match(repo[None], pats, opts)
+    ui.write(('matcher: %r\n' % m))
     items = list(repo[None].walk(m))
     if not items:
         return
