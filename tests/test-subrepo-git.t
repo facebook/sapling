@@ -2,6 +2,11 @@
 
 make git commits repeatable
 
+  $ cat >> $HGRCPATH <<EOF
+  > [defaults]
+  > commit = -d "0 0"
+  > EOF
+
   $ echo "[core]" >> $HOME/.gitconfig
   $ echo "autocrlf = false" >> $HOME/.gitconfig
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME

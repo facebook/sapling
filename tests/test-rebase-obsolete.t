@@ -902,7 +902,7 @@ rebase source is obsoleted (issue5198)
   $ hg up 9520eea781bc
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo 1 >> E
-  $ hg commit --amend -m "E'"
+  $ hg commit --amend -m "E'" -d "0 0"
   $ hg log -G
   @  9:69abe8906104 E'
   |
