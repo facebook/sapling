@@ -13,8 +13,20 @@ from .i18n import _
 from . import (
     encoding,
     error,
+    extensions,
     util,
 )
+
+def _loadprofiler(ui, profiler):
+    """load profiler extension. return profile method, or None on failure"""
+    extname = profiler
+    extensions.loadall(ui, whitelist=[extname])
+    try:
+        mod = extensions.find(extname)
+    except KeyError:
+        return None
+    else:
+        return getattr(mod, 'profile', None)
 
 @contextlib.contextmanager
 def lsprofile(ui, fp):
@@ -137,11 +149,15 @@ def profile(ui):
     manager exits, profiling results will be written to the configured output.
     """
     profiler = encoding.environ.get('HGPROF')
+    proffn = None
     if profiler is None:
         profiler = ui.config('profiling', 'type', default='stat')
     if profiler not in ('ls', 'stat', 'flame'):
-        ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
-        profiler = 'stat'
+        # try load profiler from extension with the same name
+        proffn = _loadprofiler(ui, profiler)
+        if proffn is None:
+            ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
+            profiler = 'stat'
 
     output = ui.config('profiling', 'output')
 
@@ -154,7 +170,9 @@ def profile(ui):
         fp = ui.ferr
 
     try:
-        if profiler == 'ls':
+        if proffn is not None:
+            pass
+        elif profiler == 'ls':
             proffn = lsprofile
         elif profiler == 'flame':
             proffn = flameprofile

@@ -181,7 +181,7 @@ def _runextsetup(name, ui):
 
 def loadall(ui, whitelist=None):
     result = ui.configitems("extensions")
-    if whitelist:
+    if whitelist is not None:
         result = [(k, v) for (k, v) in result if k in whitelist]
     newindex = len(_order)
     for (name, path) in result:

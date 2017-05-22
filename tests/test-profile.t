@@ -99,3 +99,51 @@ statprof can be used as a standalone module
   [1]
 
   $ cd ..
+
+profiler extension could be loaded before other extensions
+
+  $ cat > fooprof.py <<EOF
+  > from __future__ import absolute_import
+  > import contextlib
+  > @contextlib.contextmanager
+  > def profile(ui, fp):
+  >     print('fooprof: start profile')
+  >     yield
+  >     print('fooprof: end profile')
+  > def extsetup(ui):
+  >     ui.write('fooprof: loaded\n')
+  > EOF
+
+  $ cat > otherextension.py <<EOF
+  > from __future__ import absolute_import
+  > def extsetup(ui):
+  >     ui.write('otherextension: loaded\n')
+  > EOF
+
+  $ hg init b
+  $ cd b
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > other = $TESTTMP/otherextension.py
+  > fooprof = $TESTTMP/fooprof.py
+  > EOF
+
+  $ hg root
+  otherextension: loaded
+  fooprof: loaded
+  $TESTTMP/b (glob)
+  $ HGPROF=fooprof hg root --profile
+  fooprof: loaded
+  fooprof: start profile
+  otherextension: loaded
+  $TESTTMP/b (glob)
+  fooprof: end profile
+
+  $ HGPROF=other hg root --profile 2>&1 | head -n 2
+  otherextension: loaded
+  unrecognized profiler 'other' - ignored
+
+  $ HGPROF=unknown hg root --profile 2>&1 | head -n 1
+  unrecognized profiler 'unknown' - ignored
+
+  $ cd ..
