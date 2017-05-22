@@ -893,7 +893,9 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
                                  p2node in basemfnodeset):
             basetrees.append(trees.get(p2node))
 
-        subtrees = treemf.walksubtrees(comparetrees=basetrees)
+        # Only use the first two base trees, since the current tree
+        # implementation cannot handle more yet.
+        subtrees = treemf.walksubtrees(comparetrees=basetrees[:2])
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data
             data = [(subnode, nullid, subtext)]
