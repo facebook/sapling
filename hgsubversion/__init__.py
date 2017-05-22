@@ -196,34 +196,41 @@ hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
 if hgutil.safehasattr(commands, 'optionalrepo'):
     commands.optionalrepo += ' svn'
 
-cmdtable = {
-    "svn":
-        (svncommands.svn,
-         [('u', 'svn-url', '', 'path to the Subversion server.'),
-          ('', 'stupid', False, 'be stupid and use diffy replay.'),
-          ('A', 'authors', '', 'username mapping filename'),
-          ('', 'filemap', '',
-           'remap file to exclude paths or include only certain paths'),
-          ('', 'force', False, 'force an operation to happen'),
-          ('', 'username', '', 'username for authentication'),
-          ('', 'password', '', 'password for authentication'),
-          ('r', 'rev', '', 'Mercurial revision'),
-          ('', 'unsafe-skip-uuid-check', False,
-           'skip repository uuid check in rebuildmeta'),
-          ],
-         'hg svn <subcommand> ...',
-         ),
-}
+svnopts = [
+    ('u', 'svn-url', '', 'path to the Subversion server.'),
+    ('', 'stupid', False, 'be stupid and use diffy replay.'),
+    ('A', 'authors', '', 'username mapping filename'),
+    ('', 'filemap', '',
+     'remap file to exclude paths or include only certain paths'),
+    ('', 'force', False, 'force an operation to happen'),
+    ('', 'username', '', 'username for authentication'),
+    ('', 'password', '', 'password for authentication'),
+    ('r', 'rev', '', 'Mercurial revision'),
+    ('', 'unsafe-skip-uuid-check', False,
+     'skip repository uuid check in rebuildmeta'),
+]
+svnusage = 'hg svn <subcommand> ...'
 
 # only these methods are public
 __all__ = ('cmdtable', 'reposetup', 'uisetup')
 
-# set up templatekeywords (written this way to maintain backwards compatibility
-# until we drop support for 3.7)
+# set up commands and templatekeywords (written this way to maintain backwards
+# compatibility until we drop support for 3.7 for templatekeywords and 4.3 for
+# commands)
+cmdtable = {
+    "svn": (svncommands.svn, svnopts, svnusage),
+}
 try:
     from mercurial import registrar
     templatekeyword = registrar.templatekeyword()
     loadkeyword = lambda registrarobj: None  # no-op
+
+    if util.safehasattr(registrar, 'command'):
+        cmdtable = {}
+        command = registrar.command(cmdtable)
+        @command('svn', svnopts, svnusage)
+        def svncommand(*args, **kwargs):
+            return svncommands.svn(*args, **kwargs)
 except (ImportError, AttributeError):
     # registrar.templatekeyword isn't available = loading by old hg
 
