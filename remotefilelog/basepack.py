@@ -1,5 +1,6 @@
 import errno, hashlib, mmap, os, struct, time
-from mercurial import osutil, util
+from mercurial import util
+from mercurial.cext import osutil
 from mercurial.i18n import _
 from mercurial import vfs as vfsmod
 

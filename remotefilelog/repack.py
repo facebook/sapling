@@ -1,7 +1,8 @@
 import os
 from collections import defaultdict
 from hgext3rd.extutil import runshellcommand
-from mercurial import error, extensions, mdiff, osutil, util
+from mercurial import error, extensions, mdiff, util
+from mercurial.cext import osutil
 from mercurial.node import nullid
 from mercurial.i18n import _
 import constants, datapack, historypack, contentstore, metadatastore

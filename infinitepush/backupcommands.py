@@ -53,7 +53,6 @@ from mercurial import (
     error,
     hg,
     lock as lockmod,
-    osutil,
     phases,
     registrar,
     scmutil,
@@ -61,6 +60,7 @@ from mercurial import (
 )
 
 from collections import defaultdict, namedtuple
+from mercurial.cext import osutil
 from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev
 from mercurial.i18n import _

@@ -8,7 +8,7 @@
 from abc import abstractmethod, ABCMeta
 import collections, inspect
 
-from mercurial import parsers
+from mercurial.cext import parsers
 
 dirstatetuple = parsers.dirstatetuple
 
