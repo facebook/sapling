@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from functools import partial, update_wrapper
 from mercurial import commands, dispatch, extensions, filemerge
 from mercurial.i18n import _
 
@@ -38,8 +39,30 @@ def extsetup(ui):
         "use (c)hanged version, leave (d)eleted, or leave (u)nresolved?"
         "$$ &Changed $$ &Deleted $$ &Unresolved")
 
+    origpromptmerge = filemerge.internals[':prompt']
+    wrapperpromptmerge = partial(_promptmerge, origpromptmerge)
+    update_wrapper(wrapperpromptmerge, origpromptmerge)
+    # wrap function everywhere as in filemerge.internaltool
+    filemerge.internals[':prompt'] = wrapperpromptmerge
+    filemerge.internalsdoc[':prompt'] = wrapperpromptmerge
+    filemerge.internals['internal:prompt'] = wrapperpromptmerge
+
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     if "--tracecopies" in fullargs:
         ui.setconfig("experimental", "disablecopytrace",
                      False, "--tracecopies")
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
+
+def _promptmerge(origfunc, repo, mynode, orig, fcd, fco, *args, **kwargs):
+    ui = repo.ui
+    phases = sorted([_getctxfromfctx(fco).phase(),
+                     _getctxfromfctx(fcd).phase()])
+    if fco.isabsent() or fcd.isabsent():
+        ui.log("promptmerge", "", mergechangeddeleted=('%s' % phases))
+    return origfunc(repo, mynode, orig, fcd, fco, *args, **kwargs)
+
+def _getctxfromfctx(fctx):
+    if fctx.isabsent():
+        return fctx._ctx
+    else:
+        return fctx._changectx
