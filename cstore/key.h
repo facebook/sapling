@@ -14,7 +14,7 @@
 #include <vector>
 #include <stdexcept>
 
-#include "../ctreemanifest/convert.h"
+#include "convert.h"
 
 /* Represents a key into the Mercurial store. Each key is a (name, node) pair,
  * though store implementations can choose to ignore the name in some cases. */
