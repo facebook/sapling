@@ -35,7 +35,7 @@ class ClientConfigTest : public ::testing::Test {
   folly::fs::path mountPoint_;
   folly::fs::path userConfigPath_;
 
-  virtual void SetUp() override {
+  void SetUp() override {
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     clientDir_ = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir_);
@@ -72,7 +72,7 @@ class ClientConfigTest : public ::testing::Test {
     folly::writeFile(folly::StringPiece{localData}, localConfigPath.c_str());
   }
 
-  virtual void TearDown() override {
+  void TearDown() override {
     edenDir_.reset();
   }
 

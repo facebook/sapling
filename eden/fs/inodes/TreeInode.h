@@ -239,7 +239,7 @@ class TreeInode : public InodeBase {
   TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree);
   TreeInode(EdenMount* mount, Dir&& tree);
 
-  ~TreeInode();
+  ~TreeInode() override;
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   fusell::Dispatcher::Attr getAttrLocked(const Dir* contents);

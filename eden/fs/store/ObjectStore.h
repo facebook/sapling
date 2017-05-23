@@ -36,7 +36,7 @@ class ObjectStore : public IObjectStore {
   ObjectStore(
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<BackingStore> backingStore);
-  virtual ~ObjectStore();
+  ~ObjectStore() override;
 
   /**
    * Get a Tree by ID.

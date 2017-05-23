@@ -33,7 +33,7 @@ class HgBackingStore : public BackingStore {
    * the HgBackingStore object.
    */
   HgBackingStore(folly::StringPiece repository, LocalStore* localStore);
-  virtual ~HgBackingStore();
+  ~HgBackingStore() override;
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;

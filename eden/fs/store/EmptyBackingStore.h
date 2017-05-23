@@ -21,7 +21,7 @@ namespace eden {
 class EmptyBackingStore : public BackingStore {
  public:
   EmptyBackingStore();
-  virtual ~EmptyBackingStore();
+  ~EmptyBackingStore() override;
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
   folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) override;

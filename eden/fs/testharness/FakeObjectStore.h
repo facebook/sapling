@@ -27,7 +27,7 @@ namespace eden {
 class FakeObjectStore : public IObjectStore {
  public:
   FakeObjectStore();
-  virtual ~FakeObjectStore();
+  ~FakeObjectStore() override;
 
   void addTree(Tree&& tree);
   void addBlob(Blob&& blob);

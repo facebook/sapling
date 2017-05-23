@@ -34,7 +34,7 @@ class FakeBackingStore : public BackingStore {
   struct TreeEntryData;
 
   explicit FakeBackingStore(std::shared_ptr<LocalStore> localStore);
-  virtual ~FakeBackingStore();
+  ~FakeBackingStore() override;
 
   /*
    * BackingStore APIs

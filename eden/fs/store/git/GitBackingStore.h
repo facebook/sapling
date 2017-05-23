@@ -35,7 +35,7 @@ class GitBackingStore : public BackingStore {
    * the GitBackingStore object.
    */
   GitBackingStore(folly::StringPiece repository, LocalStore* localStore);
-  virtual ~GitBackingStore();
+  ~GitBackingStore() override;
 
   /**
    * Get the repository path.

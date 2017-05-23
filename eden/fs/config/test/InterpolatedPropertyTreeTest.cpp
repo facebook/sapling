@@ -19,10 +19,10 @@ using namespace facebook::eden;
 class InterpTest : public ::testing::Test {
  protected:
   std::unique_ptr<TemporaryDirectory> tmpDir_;
-  virtual void SetUp() override {
+  void SetUp() override {
     tmpDir_ = std::make_unique<TemporaryDirectory>("eden_interp_test_");
   }
-  virtual void TearDown() override {
+  void TearDown() override {
     tmpDir_.reset();
   }
 };
