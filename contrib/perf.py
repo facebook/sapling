@@ -581,6 +581,17 @@ def perfpathcopies(ui, repo, rev1, rev2, **opts):
     timer(d)
     fm.end()
 
+@command('perfphases', [], "")
+def perfphases(ui, repo, **opts):
+    """benchmark phasesets computation"""
+    timer, fm = gettimer(ui, opts)
+    phases = repo._phasecache
+    def d():
+        phases.invalidate()
+        phases.loadphaserevs(repo)
+    timer(d)
+    fm.end()
+
 @command('perfmanifest', [], 'REV')
 def perfmanifest(ui, repo, rev, **opts):
     timer, fm = gettimer(ui, opts)

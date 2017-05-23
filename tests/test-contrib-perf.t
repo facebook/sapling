@@ -93,6 +93,7 @@ perfstatus
    perfparents   (no help text available)
    perfpathcopies
                  (no help text available)
+   perfphases    benchmark phasesets computation
    perfrawfiles  (no help text available)
    perfrevlog    Benchmark reading a series of revisions from a revlog.
    perfrevlogchunks
