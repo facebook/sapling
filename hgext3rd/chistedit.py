@@ -39,7 +39,6 @@ from mercurial.i18n import _
 
 import functools
 import os
-import sys
 
 try:
     import curses
