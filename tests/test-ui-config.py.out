@@ -43,7 +43,11 @@ True
 ['foo', 'bar']
 ['foo bar']
 ['foo', 'bar']
+---
+(0, 0)
+(1113868800, 0)
 None
 True
 boolinvalid
 intinvalid
+dateinvalid

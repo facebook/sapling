@@ -32,6 +32,9 @@ parsed = dispatch._parseconfig(testui, [
     'lists.list16="longer quotation" with "no ending quotation',
     'lists.list17=this is \\" "not a quotation mark"',
     'lists.list18=\n \n\nding\ndong',
+    'date.epoch=0 0',
+    'date.birth=2005-04-19T00:00:00',
+    'date.invalid=0'
     ])
 
 print(repr(testui.configitems('values')))
@@ -82,6 +85,9 @@ print(repr(testui.configlist('lists', 'unknown', 'foo bar')))
 print(repr(testui.configlist('lists', 'unknown', 'foo, bar')))
 print(repr(testui.configlist('lists', 'unknown', ['foo bar'])))
 print(repr(testui.configlist('lists', 'unknown', ['foo', 'bar'])))
+print("---")
+print(repr(testui.configdate('date', 'epoch')))
+print(repr(testui.configdate('date', 'birth')))
 
 print(repr(testui.config('values', 'String')))
 
@@ -101,3 +107,7 @@ try:
     testui.configint('values', 'intinvalid')
 except error.ConfigError:
     print('intinvalid')
+try:
+    testui.configdate('date', 'invalid')
+except error.ConfigError:
+    print('dateinvalid')

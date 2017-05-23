@@ -607,7 +607,7 @@ class ui(object):
         (0, 0)
         """
         if self.config(section, name, default, untrusted):
-            return self.configwith(util.parsedate, section, name, default,
+            return self.configwith(util.rawparsedate, section, name, default,
                                    'date', untrusted)
         return default
 
