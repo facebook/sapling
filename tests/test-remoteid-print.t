@@ -12,11 +12,9 @@
 
 # enable the remoteid extension
 
-  $ fb_hgext_dir=`realpath $TESTDIR/..`
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > remoteid=$fb_hgext_dir/remoteid.py
-  > 
+  > remoteid=$TESTDIR/../hgext3rd/remoteid.py
   > [remotefilelog]
   > server=True
   > EOF
