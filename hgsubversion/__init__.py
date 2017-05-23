@@ -225,7 +225,7 @@ try:
     templatekeyword = registrar.templatekeyword()
     loadkeyword = lambda registrarobj: None  # no-op
 
-    if util.safehasattr(registrar, 'command'):
+    if hgutil.safehasattr(registrar, 'command'):
         cmdtable = {}
         command = registrar.command(cmdtable)
         @command('svn', svnopts, svnusage)
