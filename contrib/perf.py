@@ -591,12 +591,19 @@ def perfpathcopies(ui, repo, rev1, rev2, **opts):
     timer(d)
     fm.end()
 
-@command('perfphases', [], "")
+@command('perfphases',
+         [('', 'full', False, 'include file reading time too'),
+         ], "")
 def perfphases(ui, repo, **opts):
     """benchmark phasesets computation"""
     timer, fm = gettimer(ui, opts)
-    phases = repo._phasecache
+    _phases = repo._phasecache
+    full = opts.get('full')
     def d():
+        phases = _phases
+        if full:
+            clearfilecache(repo, '_phasecache')
+            phases = repo._phasecache
         phases.invalidate()
         phases.loadphaserevs(repo)
     timer(d)
