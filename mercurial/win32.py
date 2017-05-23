@@ -131,6 +131,7 @@ class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
                 ('srWindow', _SMALL_RECT),
                 ('dwMaximumWindowSize', _COORD)]
 
+_STD_OUTPUT_HANDLE = _DWORD(-11).value
 _STD_ERROR_HANDLE = _DWORD(-12).value
 
 # CreateToolhelp32Snapshot, Process32First, Process32Next
@@ -201,6 +202,12 @@ _kernel32.GetCurrentProcessId.restype = _DWORD
 _SIGNAL_HANDLER = ctypes.WINFUNCTYPE(_BOOL, _DWORD)
 _kernel32.SetConsoleCtrlHandler.argtypes = [_SIGNAL_HANDLER, _BOOL]
 _kernel32.SetConsoleCtrlHandler.restype = _BOOL
+
+_kernel32.SetConsoleMode.argtypes = [_HANDLE, _DWORD]
+_kernel32.SetConsoleMode.restype = _BOOL
+
+_kernel32.GetConsoleMode.argtypes = [_HANDLE, ctypes.c_void_p]
+_kernel32.GetConsoleMode.restype = _BOOL
 
 _kernel32.GetStdHandle.argtypes = [_DWORD]
 _kernel32.GetStdHandle.restype = _HANDLE
@@ -371,6 +378,29 @@ def termsize():
     width = csbi.srWindow.Right - csbi.srWindow.Left  # don't '+ 1'
     height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1
     return width, height
+
+def enablevtmode():
+    '''Enable virtual terminal mode for the associated console.  Return True if
+    enabled, else False.'''
+
+    ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4
+
+    handle = _kernel32.GetStdHandle(_STD_OUTPUT_HANDLE) # don't close the handle
+    if handle == _INVALID_HANDLE_VALUE:
+        return False
+
+    mode = _DWORD(0)
+
+    if not _kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+        return False
+
+    if (mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0:
+        mode.value |= ENABLE_VIRTUAL_TERMINAL_PROCESSING
+
+        if not _kernel32.SetConsoleMode(handle, mode):
+            return False
+
+    return True
 
 def _1stchild(pid):
     '''return the 1st found child of the given pid
