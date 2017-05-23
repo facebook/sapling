@@ -38,7 +38,8 @@ def _expandsets(kindpats, ctx, listsubrepos):
     for kind, pat, source in kindpats:
         if kind == 'set':
             if not ctx:
-                raise error.Abort(_("fileset expression with no context"))
+                raise error.ProgrammingError("fileset expression with no "
+                                             "context")
             s = ctx.getfileset(pat)
             fset.update(s)
 
@@ -121,8 +122,8 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
     normalize = _donormalize
     if icasefs:
         if exact:
-            raise error.Abort(_("a case-insensitive exact matcher doesn't "
-                                "make sense"))
+            raise error.ProgrammingError("a case-insensitive exact matcher "
+                                         "doesn't make sense")
         dirstate = ctx.repo().dirstate
         dsnormalize = dirstate.normalize
 
