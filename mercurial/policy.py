@@ -70,8 +70,18 @@ def _importfrom(pkgname, modname):
     getattr(mod, r'__doc__', None)
     return fakelocals[modname]
 
+# keep in sync with "version" in C modules
+_cextversions = {
+    r'base85': 1,
+    r'bdiff': 1,
+    r'diffhelpers': 1,
+    r'mpatch': 1,
+    r'osutil': 1,
+    r'parsers': 1,
+}
+
 def _checkmod(pkgname, modname, mod):
-    expected = 1  # TODO: maybe defined in table?
+    expected = _cextversions.get(modname)
     actual = getattr(mod, r'version', None)
     if actual != expected:
         raise ImportError(r'cannot import module %s.%s '
