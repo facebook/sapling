@@ -8,7 +8,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include "convert.h"
-#include "../clib/sha1/sha1.h"
+#include "sha1/sha1.h"
 #include "cdatapack.h"
 #include <stdlib.h>
 

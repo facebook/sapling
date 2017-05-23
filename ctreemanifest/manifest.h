@@ -42,7 +42,7 @@ class ManifestPtr {
 };
 
 #include "manifest_entry.h"
-#include "../cstore/store.h"
+#include "store.h"
 
 enum FindResultType {
   RESULT_FILE,

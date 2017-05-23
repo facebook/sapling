@@ -16,7 +16,7 @@
 
 #include "manifest.h"
 #include "manifest_fetcher.h"
-#include "../cstore/match.h"
+#include "match.h"
 
 enum FindResult {
   FIND_PATH_OK,

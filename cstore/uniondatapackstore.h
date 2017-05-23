@@ -11,7 +11,7 @@
 #define UNIONDATAPACKSTORE_H
 
 extern "C" {
-#include "../cdatapack/cdatapack.h"
+#include "cdatapack.h"
 }
 
 #include "key.h"

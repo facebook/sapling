@@ -15,7 +15,7 @@
 #include <string>
 
 extern "C" {
-#include "../cdatapack/cdatapack.h"
+#include "cdatapack.h"
 }
 
 #include "pythonutil.h"

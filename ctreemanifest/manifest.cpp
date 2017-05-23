@@ -7,7 +7,7 @@
 //
 // no-check-code
 
-#include "../clib/sha1/sha1.h"
+#include "sha1/sha1.h"
 
 #include "manifest.h"
 

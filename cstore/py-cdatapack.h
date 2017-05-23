@@ -15,7 +15,7 @@
 #include <Python.h>
 
 extern "C" {
-#include "../cdatapack/cdatapack.h"
+#include "cdatapack.h"
 }
 
 // ====  py_cdatapack PyObject declaration ====

@@ -11,7 +11,7 @@
 #define DATAPACKSTORE_H
 
 extern "C" {
-#include "../cdatapack/cdatapack.h"
+#include "cdatapack.h"
 }
 
 #include <string>

@@ -18,8 +18,8 @@
 #include "manifest.h"
 #include "pythonutil.h"
 #include "treemanifest.h"
-#include "../cstore/uniondatapackstore.h"
-#include "../cstore/py-structs.h"
+#include "uniondatapackstore.h"
+#include "py-structs.h"
 
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
