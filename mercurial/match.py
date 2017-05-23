@@ -410,25 +410,23 @@ class includematcher(basematcher):
         kindpats = normalize(include, 'glob', root, cwd, auditor, warn)
         self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
                                           listsubrepos, root)
-        self._anyincludepats = _anypats(kindpats)
+        self._anypats = _anypats(kindpats)
         roots, dirs = _rootsanddirs(kindpats)
         # roots are directories which are recursively included.
-        self._includeroots = set(roots)
+        self._roots = set(roots)
         # dirs are directories which are non-recursively included.
-        self._includedirs = set(dirs)
+        self._dirs = set(dirs)
         self.matchfn = im
 
     def visitdir(self, dir):
-        if not self._anyincludepats and dir in self._includeroots:
+        if not self._anypats and dir in self._roots:
             # The condition above is essentially self.prefix() for includes
             return 'all'
-        if ('.' not in self._includeroots and
-            dir not in self._includeroots and
-            dir not in self._includedirs and
-            not any(parent in self._includeroots
-                    for parent in util.finddirs(dir))):
-            return False
-        return True
+        return ('.' in self._roots or
+                dir in self._roots or
+                dir in self._dirs or
+                any(parentdir in self._roots
+                    for parentdir in util.finddirs(dir)))
 
     def anypats(self):
         return True
