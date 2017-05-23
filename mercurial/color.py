@@ -215,24 +215,34 @@ def _modesetup(ui):
         mode = ui.config('color', 'pagermode', mode)
 
     realmode = mode
-    if mode == 'auto':
-        if pycompat.osname == 'nt':
-            term = encoding.environ.get('TERM')
-            # TERM won't be defined in a vanilla cmd.exe environment.
+    if pycompat.osname == 'nt':
+        from . import win32
 
-            # UNIX-like environments on Windows such as Cygwin and MSYS will
-            # set TERM. They appear to make a best effort attempt at setting it
-            # to something appropriate. However, not all environments with TERM
-            # defined support ANSI. Since "ansi" could result in terminal
-            # gibberish, we error on the side of selecting "win32". However, if
-            # w32effects is not defined, we almost certainly don't support
-            # "win32", so don't even try.
-            if (term and 'xterm' in term) or not w32effects:
+        term = encoding.environ.get('TERM')
+        # TERM won't be defined in a vanilla cmd.exe environment.
+
+        # UNIX-like environments on Windows such as Cygwin and MSYS will
+        # set TERM. They appear to make a best effort attempt at setting it
+        # to something appropriate. However, not all environments with TERM
+        # defined support ANSI.
+        ansienviron = term and 'xterm' in term
+
+        if mode == 'auto':
+            # Since "ansi" could result in terminal gibberish, we error on the
+            # side of selecting "win32". However, if w32effects is not defined,
+            # we almost certainly don't support "win32", so don't even try.
+            # w32ffects is not populated when stdout is redirected, so checking
+            # it first avoids win32 calls in a state known to error out.
+            if ansienviron or not w32effects or win32.enablevtmode():
                 realmode = 'ansi'
             else:
                 realmode = 'win32'
-        else:
-            realmode = 'ansi'
+        # An empty w32effects is a clue that stdout is redirected, and thus
+        # cannot enable VT mode.
+        elif mode == 'ansi' and w32effects and not ansienviron:
+            win32.enablevtmode()
+    elif mode == 'auto':
+        realmode = 'ansi'
 
     def modewarn():
         # only warn if color.mode was explicitly set and we're in
