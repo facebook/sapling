@@ -78,18 +78,20 @@ def killdaemons(pidfile, tryhard=True, remove=False, logfn=None):
         logfn = lambda s: s
     # Kill off any leftover daemon processes
     try:
-        fp = open(pidfile)
-        for line in fp:
-            try:
-                pid = int(line)
-                if pid <= 0:
-                    raise ValueError
-            except ValueError:
-                logfn('# Not killing daemon process %s - invalid pid'
-                      % line.rstrip())
-                continue
+        pids = []
+        with open(pidfile) as fp:
+            for line in fp:
+                try:
+                    pid = int(line)
+                    if pid <= 0:
+                        raise ValueError
+                except ValueError:
+                    logfn('# Not killing daemon process %s - invalid pid'
+                          % line.rstrip())
+                    continue
+                pids.append(pid)
+        for pid in pids:
             kill(pid, logfn, tryhard)
-        fp.close()
         if remove:
             os.unlink(pidfile)
     except IOError:
