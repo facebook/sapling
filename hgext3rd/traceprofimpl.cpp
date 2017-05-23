@@ -28,10 +28,42 @@ typedef uint64_t rdtsc_t;
 
 /* information about a raw Python frame */
 struct FrameInfo {
-  std::string file;
-  std::string name;
+  PyCodeObject *code; /* PyCodeObject */
   frameid_t back;
-  lineno_t line;
+
+  /* needed by older C++ map which has difficulty on zero-copy assignment */
+  FrameInfo() { code = NULL; back = 0; }
+
+  void assign(PyFrameObject *frame, frameid_t backfid) {
+    back = backfid;
+    code = frame->f_code;
+    Py_XINCREF(code);
+  }
+
+  lineno_t line() {
+    if (!code) return 0;
+    return code->co_firstlineno;
+  }
+
+  const char *file() {
+    if (!code) return NULL;
+    return PyString_AsString(code->co_filename);
+  }
+
+  const char *name() {
+    if (!code) return NULL;
+    return PyString_AsString(code->co_name);
+  }
+
+  ~FrameInfo() {
+    Py_XDECREF(code);
+    code = NULL;
+  }
+
+private:
+  /* forbid copy */
+  FrameInfo(const FrameInfo& rhs);
+  FrameInfo(const FrameInfo&& rhs);
 };
 
 /* samples */
@@ -70,12 +102,7 @@ static frameid_t hashandstoreframe(PyFrameObject *frame) {
   if (!frame) return 0;
   frameid_t frameid = (frameid_t)hashframe(frame);
   if (frames.count(frameid) == 0) {
-    FrameInfo fi;
-    fi.file = PyString_AsString(frame->f_code->co_filename);
-    fi.name = PyString_AsString(frame->f_code->co_name);
-    fi.back = hashandstoreframe(frame->f_back);
-    fi.line = frame->f_code->co_firstlineno;
-    frames[frameid] = fi;
+    frames[frameid].assign(frame,hashandstoreframe(frame->f_back));
   }
   return frameid;
 }
@@ -124,13 +151,6 @@ static std::unordered_map<frameid_t, std::list<frameid_t> > framechildren;
 static std::unordered_map<frameid_t, uint64_t> fid2hash;
 static std::unordered_map<uint64_t, frameid_t> hash2fid;
 
-inline static uint32_t fnvhash(const std::string& s) {
-  uint32_t h = 2166136261;
-  for (char ch : s)
-    h = (h * 16777619) ^ ch;
-  return h;
-}
-
 /* hash FrameInfo, do not be affected by frame addresses */
 static uint64_t hashframeinfo(frameid_t fid) {
   if (fid == 0) {
@@ -138,9 +158,7 @@ static uint64_t hashframeinfo(frameid_t fid) {
   }
   if (!fid2hash.count(fid)) {
     auto& fi = frames[fid];
-    uint64_t v = fi.line;
-    v ^= (uint64_t)fnvhash(fi.name) << 5;
-    v ^= (uint64_t)fnvhash(fi.file) << 32;
+    uint64_t v = (uint64_t)fi.code;
     v ^= hashframeinfo(fi.back) << 1;
     fid2hash[fid] = v;
   }
@@ -323,7 +341,7 @@ static void fprintframetree(FILE *fp = stderr, frameid_t fid = 0,
     ncol += fprintf(fp, "%c ", ch);
 
     /* frame name */
-    ncol += fprintf(fp, "%s ", f.name.c_str());
+    ncol += fprintf(fp, "%s ", f.name());
 
     /* call count */
     if (s.count >= countthreshold) {
@@ -332,8 +350,8 @@ static void fprintframetree(FILE *fp = stderr, frameid_t fid = 0,
 
     /* file path */
     fprintindent(fp, 48 - ncol);
-    std::string path = f.file;
-    ncol += fprintf(fp, "%s:%d", shortname(path).c_str(), f.line);
+    std::string path = f.file();
+    ncol += fprintf(fp, "%s:%d", shortname(path).c_str(), f.line());
 
     /* end of line */
     fprintf(fp, "\n");
@@ -357,8 +375,8 @@ static void clear() {
   framechildren.clear();
   fid2hash.clear();
   hash2fid.clear();
-  frames.clear();
   samples.clear();
+  frames.clear();
 }
 
 static void report(FILE *fp = stderr) {

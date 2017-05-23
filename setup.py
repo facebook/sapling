@@ -296,6 +296,7 @@ else:
                 include_dirs=['hgext3rd/'],
                 extra_compile_args=filter(None, [
                     OPTIMIZATION, STDCPP0X, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                    PRODUCEDEBUGSYMBOLS
                 ]),
             ),
         ]
