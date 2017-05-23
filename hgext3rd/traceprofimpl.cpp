@@ -120,12 +120,63 @@ struct FrameSummary {
 static std::unordered_map<frameid_t, FrameSummary> summaries;
 static std::unordered_map<frameid_t, std::list<frameid_t> > framechildren;
 
+/* for dedup */
+static std::unordered_map<frameid_t, uint64_t> fid2hash;
+static std::unordered_map<uint64_t, frameid_t> hash2fid;
+
+inline static uint32_t fnvhash(const std::string& s) {
+  uint32_t h = 2166136261;
+  for (char ch : s)
+    h = (h * 16777619) ^ ch;
+  return h;
+}
+
+/* hash FrameInfo, do not be affected by frame addresses */
+static uint64_t hashframeinfo(frameid_t fid) {
+  if (fid == 0) {
+    return 0;
+  }
+  if (!fid2hash.count(fid)) {
+    auto& fi = frames[fid];
+    uint64_t v = fi.line;
+    v ^= (uint64_t)fnvhash(fi.name) << 5;
+    v ^= (uint64_t)fnvhash(fi.file) << 32;
+    v ^= hashframeinfo(fi.back) << 1;
+    fid2hash[fid] = v;
+  }
+  return fid2hash[fid];
+}
+
+/* fill hash2fid */
+static void buildframededup() {
+  for (auto& s : samples) {
+    frameid_t fid = s.frameid;
+    while (fid) {
+      uint64_t v = hashframeinfo(fid);
+      if (hash2fid.count(v) == 0) {
+        hash2fid[v] = fid;
+        fid = frames[fid].back;
+      } else {
+        break;
+      }
+    }
+  }
+}
+
+static frameid_t dedupfid(frameid_t fid) {
+  if (fid2hash.count(fid) == 0) {
+    return fid; /* no information available */
+  } else {
+    return hash2fid[fid2hash[fid]];
+  }
+}
+
 /* fill calltimes and summaries */
 static void buildsummaries() {
   std::unordered_map<frameid_t, std::list<Sample*>> calls;
 
   for (auto& s : samples) {
-    frameid_t fid = s.frameid;
+    frameid_t fid = dedupfid(s.frameid);
     if (s.op == PyTrace_CALL) {
       calls[fid].push_back(&s);
     } else if (s.op == PyTrace_RETURN) {
@@ -150,8 +201,9 @@ static void buildframetree() {
       continue; /* only interested in call */
     }
     for (frameid_t fid = s.frameid; fid;) {
+      fid = dedupfid(fid);
       auto& fi = frames[fid];
-      frameid_t pfid = fi.back;
+      frameid_t pfid = dedupfid(fi.back);
       auto& children = framechildren[pfid];
       int existed = 0;
       for (auto& c : children) {
@@ -217,6 +269,7 @@ static inline int fprintindent(FILE *fp, int indent) {
 /* config items */
 static double timethreshold = 2;
 static size_t countthreshold = 2;
+static int dedup = 1;
 
 static void settimethreshold(double ms) {
   timethreshold = ms;
@@ -224,6 +277,10 @@ static void settimethreshold(double ms) {
 
 static void setcountthreshold(size_t count) {
   countthreshold = count;
+}
+
+static void setdedup(int value) {
+  dedup = value;
 }
 
 static void fprintframetree(FILE *fp = stderr, frameid_t fid = 0,
@@ -295,9 +352,20 @@ static void fprintframetree(FILE *fp = stderr, frameid_t fid = 0,
   }
 }
 
+static void clear() {
+  summaries.clear();
+  framechildren.clear();
+  fid2hash.clear();
+  hash2fid.clear();
+  frames.clear();
+  samples.clear();
+}
+
 static void report(FILE *fp = stderr) {
+  if (dedup)
+    buildframededup();
   buildsummaries();
   buildframetree();
-  fprintframetree(fp);
+  fprintframetree(fp, dedupfid(0));
   fprintf(fp, "Total time: %.0f ms\n", (double)(r2 - r1) * rdtscratio);
 }

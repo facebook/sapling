@@ -22,6 +22,9 @@ Config::
 
     # minimal call count to show "(N times)"
     countthreshold = 2
+
+    # frame de-duplication (slower to print outputs)
+    framededup = yes
 """
 
 from libc.stdio cimport FILE
@@ -36,6 +39,8 @@ cdef extern from "traceprofimpl.cpp":
     void report(FILE *)
     void settimethreshold(double)
     void setcountthreshold(size_t)
+    void setdedup(int)
+    void clear()
 
 cdef extern from "Python.h":
     FILE* PyFile_AsFile(PyObject *p)
@@ -51,9 +56,12 @@ def profile(ui, fp):
         count = ui.configint('traceprof', 'countthreshold')
         if count is not None:
             setcountthreshold(count)
+        dedup = ui.configbool('traceprof', 'framededup', True)
+        setdedup(<int>dedup)
     enable()
     try:
         yield
     finally:
         disable()
     report(PyFile_AsFile(<PyObject *>fp))
+    clear()
