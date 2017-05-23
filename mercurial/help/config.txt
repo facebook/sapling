@@ -415,7 +415,7 @@ effect and style see :hg:`help color`.
 ``mode``
     String: control the method used to output color. One of ``auto``, ``ansi``,
     ``win32``, ``terminfo`` or ``debug``. In auto mode, Mercurial will
-    use ANSI mode by default (or win32 mode on Windows) if it detects a
+    use ANSI mode by default (or win32 mode prior to Windows 10) if it detects a
     terminal. Any invalid value will disable color.
 
 ``pagermode``
