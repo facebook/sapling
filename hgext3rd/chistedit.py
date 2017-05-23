@@ -44,7 +44,7 @@ import sys
 try:
     import curses
 except ImportError:
-    print("Python curses library required", file=sys.stderr)
+    curses = None
 
 KEY_LIST = ['pick', 'edit', 'fold', 'drop', 'mess', 'roll']
 ACTION_LABELS = {
@@ -548,6 +548,9 @@ testedwith = 'ships-with-fb-hgext'
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode
     to see an extensive help. Requires python-curses to be installed."""
+
+    if curses is None:
+        raise error.Abort(_("Python curses library required"))
 
     # disable color
     ui._colormode = None
