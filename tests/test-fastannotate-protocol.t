@@ -5,7 +5,7 @@
   > [ui]
   > ssh = $PYTHON "$TESTDIR/dummyssh"
   > [extensions]
-  > fastannotate=
+  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
   > [fastannotate]
   > mainbranch=@
   > EOF

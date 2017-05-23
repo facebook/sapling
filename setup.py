@@ -189,7 +189,6 @@ if iswindows:
     ]
 else:
     availablepackages += [
-        'fastannotate',
         'fastmanifest',
         'treemanifest',
         'linelog',

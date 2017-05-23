@@ -3,7 +3,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastannotate=
+  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
   > EOF
 
   $ HGMERGE=true; export HGMERGE

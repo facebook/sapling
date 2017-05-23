@@ -7,7 +7,7 @@
   > [diff]
   > git=1
   > [extensions]
-  > fastannotate=
+  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
   > [fastannotate]
   > modes=fctx
   > forcefollow=False
