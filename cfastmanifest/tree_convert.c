@@ -10,7 +10,7 @@
 #include "buffer.h"
 #include "convert.h"
 #include "path_buffer.h"
-#include "../portability/portability.h"
+#include "portability/portability.h"
 #include "tree.h"
 #include "tree_arena.h"
 

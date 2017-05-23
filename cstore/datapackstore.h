@@ -20,7 +20,7 @@ extern "C" {
 #include <vector>
 
 #include "key.h"
-#include "../portability/portability.h"
+#include "portability/portability.h"
 
 const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 

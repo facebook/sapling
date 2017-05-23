@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "../portability/portability.h"
+#include "portability/portability.h"
 #include "result.h"
 
 #if 0 // FIXME: (ttung) probably remove this

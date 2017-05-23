@@ -9,7 +9,7 @@
 #define __FASTMANIFEST_TREE_PATH_H__
 
 #include "node.h"
-#include "../portability/portability.h"
+#include "portability/portability.h"
 
 typedef struct _tree_state_changes_t {
   ptrdiff_t size_change;
