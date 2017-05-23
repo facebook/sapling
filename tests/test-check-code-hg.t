@@ -78,7 +78,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
   Skipping ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
   Skipping ctreemanifest/treemanifest.h it has no-che?k-code (glob)
-  Skipping statprof.py it has no-che?k-code (glob)
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
   Skipping tests/test-remotefilelog-bad-configs.t it has no-che?k-code (glob)
 

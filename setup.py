@@ -174,7 +174,7 @@ hgext3rdpkgs = [
     for p in glob('hgext3rd/*/__init__.py')
 ]
 
-availablepymodules = hgext3rd + ['statprof']
+availablepymodules = hgext3rd
 
 availablepackages = hgext3rdpkgs + [
     'infinitepush',
