@@ -197,7 +197,7 @@ class TestMount {
    * Load all inodes [recursively] under the specified subdirectory.
    */
   static void loadAllInodes(const TreeInodePtr& treeInode);
-  static FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit>
+  FOLLY_WARN_UNUSED_RESULT static folly::Future<folly::Unit>
   loadAllInodesFuture(const TreeInodePtr& treeInode);
 
   /** Convenience method for getting the Tree for the root of the mount. */

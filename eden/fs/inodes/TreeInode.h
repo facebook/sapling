@@ -592,8 +592,8 @@ class TreeInode : public InodeBase {
    * checkPreRemove() is called by tryRemoveChild() for file or directory
    * specific checks before unlinking an entry.  Returns an errno value or 0.
    */
-  static FOLLY_WARN_UNUSED_RESULT int checkPreRemove(const TreeInodePtr& child);
-  static FOLLY_WARN_UNUSED_RESULT int checkPreRemove(const FileInodePtr& child);
+  FOLLY_WARN_UNUSED_RESULT static int checkPreRemove(const TreeInodePtr& child);
+  FOLLY_WARN_UNUSED_RESULT static int checkPreRemove(const FileInodePtr& child);
 
   /**
    * This helper function starts loading a currently unloaded child inode.
