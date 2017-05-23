@@ -10,7 +10,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ echo "${LINTFILES:-`hg locate`}" | sed 's-\\-/-g' | grep -v clib/sha1/ |
   >   "$check_code" --warnings --per-file=0 - || false
-  Skipping CMakeLists.txt it has no-che?k-code (glob)
   Skipping cdatapack/cdatapack.c it has no-che?k-code (glob)
   Skipping cdatapack/cdatapack.h it has no-che?k-code (glob)
   Skipping cdatapack/cdatapack_dump.c it has no-che?k-code (glob)
