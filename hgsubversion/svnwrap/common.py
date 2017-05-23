@@ -55,7 +55,8 @@ class Revision(tuple):
         _paths = {}
         if paths:
             for p in paths:
-                _paths[p[len(strip_path):]] = paths[p]
+                if p.startswith(strip_path):
+                    _paths[p[len(strip_path):]] = paths[p]
         return tuple.__new__(self,
                              (revnum, author, message, date, _paths))
 
