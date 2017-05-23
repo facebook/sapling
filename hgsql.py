@@ -8,7 +8,7 @@
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import error, cmdutil, revlog, localrepo, extensions
+from mercurial import error, revlog, localrepo, extensions, registrar
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
@@ -22,7 +22,7 @@ with demandimport.deactivated():
     import mysql.connector
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 testedwith = '3.9.1'
 
 writelock = 'write_lock'
