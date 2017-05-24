@@ -1120,6 +1120,7 @@ class localrepository(object):
     def undofiles(self):
         return [(vfs, undoname(x)) for vfs, x in self._journalfiles()]
 
+    @unfilteredmethod
     def _writejournal(self, desc):
         self.dirstate.savebackup(None, prefix='journal.')
         self.vfs.write("journal.branch",
