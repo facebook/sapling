@@ -646,7 +646,11 @@ def extsetup(ui):
     extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
-    extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
+    # _getdynamicblockers was renamed to revealedrevs in 4.3
+    blockername = 'revealedrevs'
+    if not util.safehasattr(repoview, blockername):
+        blockername = '_getdynamicblockers'
+    extensions.wrapfunction(repoview, blockername, blockerhook)
     extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
     extensions.wrapfunction(repair, 'stripbmrevset', exstripbmrevset)
     if util.safehasattr(bookmarks, 'activate'):
