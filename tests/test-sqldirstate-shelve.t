@@ -148,11 +148,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      (*)* changes to: [mq]: second.patch (glob)
-  default         (*)* changes to: [mq]: second.patch (glob)
+  default-01      * changes to: [mq]: second.patch (glob)
+  default         * changes to: [mq]: second.patch (glob)
 
   $ hg shelve -l -p default
-  default         (*)* changes to: [mq]: second.patch (glob)
+  default         * changes to: [mq]: second.patch (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -262,7 +262,7 @@ expect "a" to no longer be present, but status otherwise unchanged
     c
   R b/b
   $ hg shelve -l --stat
-  wibble          (*)    wat (glob)
+  wibble          *   wat (glob)
    a/a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
@@ -491,7 +491,7 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   $ hg parents -q
   4:33f7f61e6c5e
   $ hg shelve -l
-  default         (*)* changes to: second (glob)
+  default         * changes to: second (glob)
   $ hg status
   M a/a
   A foo/foo
@@ -528,11 +528,11 @@ test keep and cleanup
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --list
-  default         (*)* changes to: create conflict (glob)
+  default         * changes to: create conflict (glob)
   $ hg unshelve -k
   unshelving change 'default'
   $ hg shelve --list
-  default         (*)* changes to: create conflict (glob)
+  default         * changes to: create conflict (glob)
   $ hg shelve --cleanup
   $ hg shelve --list
 
@@ -567,7 +567,7 @@ shelve should still work even if mq is disabled
   shelved as test
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --config extensions.mq=! shelve --list
-  test            (*)* changes to: create conflict (glob)
+  test            * changes to: create conflict (glob)
   $ hg bookmark
    * test                      4:33f7f61e6c5e
   $ hg --config extensions.mq=! unshelve
@@ -978,7 +978,7 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   shelved as default-01
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --patch default default-01
-  default-01      (1s ago)    changes to: create conflict
+  default-01      (* ago)    changes to: create conflict (glob)
   
   diff --git a/shelf-patch-b b/shelf-patch-b
   new file mode 100644
@@ -986,7 +986,7 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   +++ b/shelf-patch-b
   @@ -0,0 +1,1 @@
   +patch b
-  default         (1s ago)    changes to: create conflict
+  default         *   changes to: create conflict (glob)
   
   diff --git a/shelf-patch-a b/shelf-patch-a
   new file mode 100644
@@ -995,14 +995,14 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   @@ -0,0 +1,1 @@
   +patch a
   $ hg shelve --stat default default-01
-  default-01      (1s ago)    changes to: create conflict
+  default-01      *   changes to: create conflict (glob)
    shelf-patch-b |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  default         (1s ago)    changes to: create conflict
+  default         *   changes to: create conflict (glob)
    shelf-patch-a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch default
-  default         (*)* changes to: create conflict (glob)
+  default         * changes to: create conflict (glob)
   
   diff --git a/shelf-patch-a b/shelf-patch-a
   new file mode 100644
@@ -1011,7 +1011,7 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   @@ -0,0 +1,1 @@
   +patch a
   $ hg shelve --stat default
-  default         (*)* changes to: create conflict (glob)
+  default         * changes to: create conflict (glob)
    shelf-patch-a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   $ hg shelve --patch nonexistentshelf
