@@ -303,7 +303,7 @@ def _computehidden(repo):
     # changesets and remove those.
     # This part of code is almost identical to core mercurial
     # repoview.computehidden().
-    dynamic = hidden & repoview._getdynamicblockers(repo)
+    dynamic = hidden & repoview.revealedrevs(repo)
     if dynamic:
         cl = repo.changelog
         blocked = cl.ancestors(dynamic, inclusive=True)
