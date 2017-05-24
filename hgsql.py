@@ -333,7 +333,7 @@ class sqlcontext(object):
             self._profiler = lsprof.Profiler()
             self._profiler.enable(subcalls=True)
         elif profiler == 'stat':
-            import statprof
+            from mercurial import statprof
             statprof.reset(freq)
             statprof.start()
         else:
@@ -360,7 +360,7 @@ class sqlcontext(object):
                 stats.pprint(limit=30, file=f, climit=0)
                 f.write("Total Elapsed Time: %s\n" % elapsed)
         elif profiler == 'stat':
-            import statprof
+            from mercurial import statprof
             statprof.stop()
             path = os.path.join(outputdir, 'hgsql-profile-%s-%s-%s' %
                                            (pid, timestamp, rand))
