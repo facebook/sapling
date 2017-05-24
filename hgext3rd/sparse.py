@@ -1057,17 +1057,5 @@ def _hashmatcher(matcher):
         return matcher.hash()
 
     sha1 = hashlib.sha1()
-    if util.safehasattr(matcher, 'includepat'):
-        sha1.update(matcher.includepat)
-    sha1.update('\0\0')
-    if util.safehasattr(matcher, 'excludepat'):
-        sha1.update(matcher.excludepat)
-    sha1.update('\0\0')
-    if util.safehasattr(matcher, 'patternspat'):
-        sha1.update(matcher.patternspat)
-    sha1.update('\0\0')
-    if util.safehasattr(matcher, '_files'):
-        for f in matcher._files:
-            sha1.update(f + '\0')
-    sha1.update('\0')
+    sha1.update(repr(matcher))
     return sha1.hexdigest()
