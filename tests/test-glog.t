@@ -1513,7 +1513,7 @@ glog always reorders nodes which explains the difference with log
       ('symbol', 'date')
       ('string', '2 0 to 4 0')))
   $ hg log -G -d 'brace ) in a date'
-  abort: invalid date: 'brace ) in a date'
+  hg: parse error: invalid date: 'brace ) in a date'
   [255]
   $ testlog --prune 31 --prune 32
   []

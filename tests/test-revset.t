@@ -413,7 +413,7 @@ quoting needed
   hg: parse error: invalid \x escape
   [255]
   $ log 'date(tip)'
-  abort: invalid date: 'tip'
+  hg: parse error: invalid date: 'tip'
   [255]
   $ log '0:date'
   abort: unknown revision 'date'!

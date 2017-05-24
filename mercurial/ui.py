@@ -522,7 +522,7 @@ class ui(object):
             return default
         try:
             return convert(v)
-        except ValueError:
+        except (ValueError, error.ParseError):
             if desc is None:
                 desc = convert.__name__
             raise error.ConfigError(_("%s.%s is not a valid %s ('%s')")
@@ -607,7 +607,7 @@ class ui(object):
         (0, 0)
         """
         if self.config(section, name, default, untrusted):
-            return self.configwith(util.rawparsedate, section, name, default,
+            return self.configwith(util.parsedate, section, name, default,
                                    'date', untrusted)
         return default
 

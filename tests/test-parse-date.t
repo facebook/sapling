@@ -17,13 +17,13 @@ This runs with TZ="GMT"
   $ hg ci -d "1150000000 14400" -m "rev 4 (merge)"
   $ echo "fail" >> a
   $ hg ci -d "should fail" -m "fail"
-  abort: invalid date: 'should fail'
+  hg: parse error: invalid date: 'should fail'
   [255]
   $ hg ci -d "100000000000000000 1400" -m "fail"
-  abort: date exceeds 32 bits: 100000000000000000
+  hg: parse error: date exceeds 32 bits: 100000000000000000
   [255]
   $ hg ci -d "100000 1400000" -m "fail"
-  abort: impossible time zone offset: 1400000
+  hg: parse error: impossible time zone offset: 1400000
   [255]
 
 Check with local timezone other than GMT and with DST
