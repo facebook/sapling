@@ -196,7 +196,7 @@ hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
 if hgutil.safehasattr(commands, 'optionalrepo'):
     commands.optionalrepo += ' svn'
 
-svnopts = [
+svncommandopts = [
     ('u', 'svn-url', '', 'path to the Subversion server.'),
     ('', 'stupid', False, 'be stupid and use diffy replay.'),
     ('A', 'authors', '', 'username mapping filename'),
@@ -218,7 +218,7 @@ __all__ = ('cmdtable', 'reposetup', 'uisetup')
 # compatibility until we drop support for 3.7 for templatekeywords and 4.3 for
 # commands)
 cmdtable = {
-    "svn": (svncommands.svn, svnopts, svnusage),
+    "svn": (svncommands.svn, svncommandopts, svnusage),
 }
 try:
     from mercurial import registrar
@@ -228,7 +228,7 @@ try:
     if hgutil.safehasattr(registrar, 'command'):
         cmdtable = {}
         command = registrar.command(cmdtable)
-        @command('svn', svnopts, svnusage)
+        @command('svn', svncommandopts, svnusage)
         def svncommand(*args, **kwargs):
             return svncommands.svn(*args, **kwargs)
 except (ImportError, AttributeError):
