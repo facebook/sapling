@@ -2018,7 +2018,7 @@ def trypullbundlefromurl(ui, repo, url):
             except urlerr.httperror as e:
                 ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
             except urlerr.urlerror as e:
-                ui.warn(_('error fetching bundle: %s\n') % e.reason[1])
+                ui.warn(_('error fetching bundle: %s\n') % e.reason)
 
             return False
         finally:
