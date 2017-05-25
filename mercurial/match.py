@@ -209,11 +209,12 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
 
 class basematcher(object):
 
-    def __init__(self, root, cwd, badfn=None):
+    def __init__(self, root, cwd, badfn=None, relativeuipath=True):
         self._root = root
         self._cwd = cwd
         if badfn is not None:
             self.bad = badfn
+        self._relativeuipath = relativeuipath
 
     def __call__(self, fn):
         return self.matchfn(fn)
@@ -248,7 +249,7 @@ class basematcher(object):
         '''Convert repo path to a display path.  If patterns or -I/-X were used
         to create this matcher, the display path will be relative to cwd.
         Otherwise it is relative to the root of the repo.'''
-        return self.rel(f)
+        return (self._relativeuipath and self.rel(f)) or self.abs(f)
 
     @propertycache
     def _files(self):
@@ -307,14 +308,14 @@ class matcher(basematcher):
     def __init__(self, root, cwd, normalize, patterns, include=None,
                  default='glob', exact=False, auditor=None, ctx=None,
                  listsubrepos=False, warn=None, badfn=None):
-        super(matcher, self).__init__(root, cwd, badfn)
+        super(matcher, self).__init__(root, cwd, badfn,
+                                      relativeuipath=bool(include or patterns))
         if include is None:
             include = []
 
         self._anypats = bool(include)
         self._anyincludepats = False
         self._always = False
-        self._pathrestricted = bool(include or patterns)
         self.patternspat = None
         self.includepat = None
 
@@ -361,9 +362,6 @@ class matcher(basematcher):
                 return True
 
         self.matchfn = m
-
-    def uipath(self, f):
-        return (self._pathrestricted and self.rel(f)) or self.abs(f)
 
     @propertycache
     def _dirs(self):
