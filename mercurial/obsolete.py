@@ -446,8 +446,8 @@ def _readmarkers(data):
     diskversion = _unpack('>B', data[off:off + 1])[0]
     off += 1
     if diskversion not in formats:
-        raise error.Abort(_('parsing obsolete marker: unknown version %r')
-                         % diskversion)
+        msg = _('parsing obsolete marker: unknown version %r') % diskversion
+        raise error.UnknownVersion(msg, version=diskversion)
     return diskversion, formats[diskversion][0](data, off)
 
 def encodemarkers(markers, addheader=False, version=_fm0version):

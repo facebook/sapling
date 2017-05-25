@@ -138,6 +138,14 @@ class UnsupportedMergeRecords(Abort):
             hint=_('see https://mercurial-scm.org/wiki/MergeStateRecords for '
                    'more information'))
 
+class UnknownVersion(Abort):
+    """generic exception for aborting from an encounter with an unknown version
+    """
+
+    def __init__(self, msg, hint=None, version=None):
+        self.version = version
+        super(UnknownVersion, self).__init__(msg, hint=hint)
+
 class LockError(IOError):
     def __init__(self, errno, strerror, filename, desc):
         IOError.__init__(self, errno, strerror, filename)
