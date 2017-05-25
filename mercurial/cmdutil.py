@@ -2636,8 +2636,12 @@ def cat(ui, repo, ctx, matcher, fntemplate, prefix, **opts):
     err = 1
 
     def write(path):
-        fp = makefileobj(repo, fntemplate, ctx.node(),
-                         pathname=os.path.join(prefix, path))
+        if fntemplate:
+            filename = makefilename(repo, fntemplate, ctx.node(),
+                                    pathname=os.path.join(prefix, path))
+            fp = open(filename, 'wb')
+        else:
+            fp = _unclosablefile(ui.fout)
         data = ctx[path].data()
         if opts.get('decode'):
             data = repo.wwritedata(path, data)
