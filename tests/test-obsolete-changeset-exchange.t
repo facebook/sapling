@@ -97,6 +97,8 @@ check-that bundle can contain markers:
   changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
   obsmarkers -- 'sortdict()'
+      version: 1 (70 bytes)
+      9d73aac1b2ed7d53835eaeec212ed41ea47da53a f89bcc95eba5174b1ccc3e33a82e84c96e8338ee 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
   $ cd ..
 

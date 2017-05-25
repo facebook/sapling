@@ -288,6 +288,27 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
             ui.write("%s%s\n" % (indent_string, hex(node)))
             chain = node
 
+def _debugobsmarkers(ui, data, all=None, indent=0, **opts):
+    """display version and markers contained in 'data'"""
+    indent_string = ' ' * indent
+    try:
+        version, markers = obsolete._readmarkers(data)
+    except error.UnknownVersion as exc:
+        msg = "%sunsupported version: %s (%d bytes)\n"
+        msg %= indent_string, exc.version, len(data)
+        ui.write(msg)
+    else:
+        msg = "%sversion: %s (%d bytes)\n"
+        msg %= indent_string, version, len(data)
+        ui.write(msg)
+        fm = ui.formatter('debugobsolete', opts)
+        for rawmarker in sorted(markers):
+            m = obsolete.marker(None, rawmarker)
+            fm.startitem()
+            fm.plain(indent_string)
+            cmdutil.showmarker(fm, m)
+        fm.end()
+
 def _debugbundle2(ui, gen, all=None, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
@@ -299,6 +320,8 @@ def _debugbundle2(ui, gen, all=None, **opts):
             version = part.params.get('version', '01')
             cg = changegroup.getunbundler(version, part, 'UN')
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
+        if part.type == 'obsmarkers':
+            _debugobsmarkers(ui, part.read(), all=all, indent=4, **opts)
 
 @command('debugbundle',
         [('a', 'all', None, _('show all details')),
