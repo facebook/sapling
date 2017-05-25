@@ -409,6 +409,17 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
 
     return srcpeer, peer(ui, peeropts, dest)
 
+# Recomputing branch cache might be slow on big repos,
+# so just copy it
+def _copycache(srcrepo, dstcachedir, fname):
+    """copy a cache from srcrepo to destcachedir (if it exists)"""
+    srcbranchcache = srcrepo.vfs.join('cache/%s' % fname)
+    dstbranchcache = os.path.join(dstcachedir, fname)
+    if os.path.exists(srcbranchcache):
+        if not os.path.exists(dstcachedir):
+            os.mkdir(dstcachedir)
+        util.copyfile(srcbranchcache, dstbranchcache)
+
 def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
           update=True, stream=False, branch=None, shareopts=None):
     """Make a copy of an existing repository.
@@ -566,22 +577,12 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             if os.path.exists(srcbookmarks):
                 util.copyfile(srcbookmarks, dstbookmarks)
 
-            # Recomputing branch cache might be slow on big repos,
-            # so just copy it
-            def copybranchcache(fname):
-                srcbranchcache = srcrepo.vfs.join('cache/%s' % fname)
-                dstbranchcache = os.path.join(dstcachedir, fname)
-                if os.path.exists(srcbranchcache):
-                    if not os.path.exists(dstcachedir):
-                        os.mkdir(dstcachedir)
-                    util.copyfile(srcbranchcache, dstbranchcache)
-
             dstcachedir = os.path.join(destpath, 'cache')
             # In local clones we're copying all nodes, not just served
             # ones. Therefore copy all branch caches over.
-            copybranchcache('branch2')
+            _copycache(srcrepo, dstcachedir, 'branch2')
             for cachename in repoview.filtertable:
-                copybranchcache('branch2-%s' % cachename)
+                _copycache(srcrepo, dstcachedir, 'branch2-%s' % cachename)
 
             # we need to re-init the repo after manually copying the data
             # into it
