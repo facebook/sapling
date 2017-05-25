@@ -641,10 +641,6 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
         else:
             fp = repo.ui.fin
         return _unclosablefile(fp)
-    if util.safehasattr(pat, 'write') and writable:
-        return pat
-    if util.safehasattr(pat, 'read') and 'r' in mode:
-        return pat
     fn = makefilename(repo, pat, node, desc, total, seqno, revwidth, pathname)
     if modemap is not None:
         mode = modemap.get(fn, mode)
