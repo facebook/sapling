@@ -75,7 +75,7 @@ file containing the list of available bundle files suitable for seeding
 clones. If this file does not exist, the repository will not advertise the
 existence of clone bundles when clients connect.
 
-The manifest file contains a newline (\n) delimited list of entries.
+The manifest file contains a newline (\\n) delimited list of entries.
 
 Each line in this file defines an available bundle. Lines have the format:
 
