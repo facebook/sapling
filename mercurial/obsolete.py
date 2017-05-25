@@ -720,12 +720,15 @@ class obsstore(object):
         seenmarkers = set()
         seennodes = set(pendingnodes)
         precursorsmarkers = self.precursors
+        succsmarkers = self.successors
         children = self.children
         while pendingnodes:
             direct = set()
             for current in pendingnodes:
                 direct.update(precursorsmarkers.get(current, ()))
                 pruned = [m for m in children.get(current, ()) if not m[1]]
+                direct.update(pruned)
+                pruned = [m for m in succsmarkers.get(current, ()) if not m[1]]
                 direct.update(pruned)
             direct -= seenmarkers
             pendingnodes = set([m[0] for m in direct])

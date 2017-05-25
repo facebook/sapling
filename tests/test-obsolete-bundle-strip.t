@@ -100,3 +100,99 @@ Actual testing
   84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+chain with prune children
+=========================
+
+.  ⇠⊗ B0
+.   |
+.  ⇠ø⇠◔ A1
+.     |
+.     ●
+
+setup
+-----
+
+  $ mktestrepo prune
+  $ mkcommit 'C-A0'
+  $ mkcommit 'C-B0'
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ mkcommit 'C-A1'
+  created new head
+  $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
+  $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+  $ hg debugobsolete --record-parents `getid 'desc("C-B0")'`
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log --hidden -G
+  o  cf2c22470d67: C-A1
+  |
+  | x  29f93b1df87b: C-B0
+  | |
+  | x  84fcb0dfe17b: C-A0
+  |/
+  @  ea207398892e: ROOT
+  
+  $ hg debugobsolete
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Actual testing
+--------------
+
+  $ hg debugobsolete --rev 'desc("C-A0")'
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 'desc("C-B0")'
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 'desc("C-A1")'
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+chain with precursors also pruned
+=================================
+
+.   A0 (also pruned)
+.  ⇠ø⇠◔ A1
+.     |
+.     ●
+
+setup
+-----
+
+  $ mktestrepo prune-inline
+  $ mkcommit 'C-A0'
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit 'C-A1'
+  created new head
+  $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
+  $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
+  $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log --hidden -G
+  o  cf2c22470d67: C-A1
+  |
+  | x  84fcb0dfe17b: C-A0
+  |/
+  @  ea207398892e: ROOT
+  
+  $ hg debugobsolete
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Actual testing
+--------------
+
+  $ hg debugobsolete --rev 'desc("C-A0")'
+  84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --rev 'desc("C-A1")'
+  84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
