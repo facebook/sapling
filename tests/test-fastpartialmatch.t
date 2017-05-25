@@ -441,6 +441,8 @@ Create bookmark with the same prefix as commit hash. hg log should show commit
 with bookmark
   $ hg debugrebuildpartialindex
   $ hg book e26f27bf
+  bookmark e26f27bf matches a changeset hash
+  (did you leave a -r out of an 'hg bookmark' command?)
   $ mkcommit newcommitwithbook
   $ hg log -r e26f27bf
   changeset:   10:bf72b6cd3f5a
