@@ -573,6 +573,10 @@ class localrepository(object):
         return context.changectx(self, changeid)
 
     def __contains__(self, changeid):
+        """True if the given changeid exists
+
+        error.LookupError is raised if an ambiguous node specified.
+        """
         try:
             self[changeid]
             return True
