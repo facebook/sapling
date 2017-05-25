@@ -583,7 +583,7 @@ class TreeInode : public InodeBase {
    * on other unexpected error cases.
    */
   template <typename InodePtrType>
-  FOLLY_WARN_UNUSED_RESULT int tryRemoveChild(
+  FOLLY_NODISCARD int tryRemoveChild(
       const RenameLock& renameLock,
       PathComponentPiece name,
       InodePtrType child);
@@ -592,8 +592,8 @@ class TreeInode : public InodeBase {
    * checkPreRemove() is called by tryRemoveChild() for file or directory
    * specific checks before unlinking an entry.  Returns an errno value or 0.
    */
-  FOLLY_WARN_UNUSED_RESULT static int checkPreRemove(const TreeInodePtr& child);
-  FOLLY_WARN_UNUSED_RESULT static int checkPreRemove(const FileInodePtr& child);
+  FOLLY_NODISCARD static int checkPreRemove(const TreeInodePtr& child);
+  FOLLY_NODISCARD static int checkPreRemove(const FileInodePtr& child);
 
   /**
    * This helper function starts loading a currently unloaded child inode.
@@ -656,7 +656,7 @@ class TreeInode : public InodeBase {
    * The most likely cause of a failure is an ENOTEMPTY error if someone else
    * has already created a new file in a directory made empty by a checkout.
    */
-  FOLLY_WARN_UNUSED_RESULT bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
+  FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
 
   folly::Synchronized<Dir> contents_;
 };

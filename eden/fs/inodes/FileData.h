@@ -99,8 +99,7 @@ class FileData {
    * need to create an empty file in the overlay.  Otherwise we
    * need to go out to the LocalStore to obtain the backing data.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> materializeForWrite(
-      int openFlags);
+  FOLLY_NODISCARD folly::Future<folly::Unit> materializeForWrite(int openFlags);
 
   /**
    * Load the file data so it can be used for reading.
@@ -109,7 +108,7 @@ class FileData {
    * If the file is not materialized, this loads the Blob data from the
    * ObjectStore.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> ensureDataLoaded();
+  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
 
  private:
   ObjectStore* getObjectStore() const;

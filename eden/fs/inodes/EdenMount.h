@@ -243,10 +243,10 @@ class EdenMount {
    *     code does not need to descend into ignord directories at all.
    *
    * @return Returns a folly::Future that will be fulfilled when the diff
-   *     operation is complete.  This is marked FOLLY_WARN_UNUSED_RESULT to
+   *     operation is complete.  This is marked FOLLY_NODISCARD to
    *     make sure callers do not forget to wait for the operatio to complete.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> diff(
+  FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       InodeDiffCallback* callback,
       bool listIgnored = false);
 
@@ -255,10 +255,10 @@ class EdenMount {
    * modifying the working directory contents at all.
    *
    * @return Returns a folly::Future that will be fulfilled when the operation
-   *     is complete.  This is marked FOLLY_WARN_UNUSED_RESULT to make sure
+   *     is complete.  This is marked FOLLY_NODISCARD to make sure
    *     callers do not forget to wait for the operation to complete.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetParents(
+  FOLLY_NODISCARD folly::Future<folly::Unit> resetParents(
       const ParentCommits& parents);
 
   /**
@@ -269,8 +269,7 @@ class EdenMount {
    * compile time that it will only ever have a single parent commit on this
    * code path.
    */
-  FOLLY_WARN_UNUSED_RESULT folly::Future<folly::Unit> resetParent(
-      const Hash& parent);
+  FOLLY_NODISCARD folly::Future<folly::Unit> resetParent(const Hash& parent);
 
   /**
    * Acquire the rename lock in exclusive mode.
