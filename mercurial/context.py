@@ -949,7 +949,8 @@ class basefilectx(object):
             return p[1]
         return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
 
-    def annotate(self, follow=False, linenumber=False, diffopts=None):
+    def annotate(self, follow=False, linenumber=False, skiprevs=None,
+                 diffopts=None):
         '''returns a list of tuples of ((ctx, number), line) for each line
         in the file, where ctx is the filectx of the node where
         that line was last changed; if linenumber parameter is true, number is
@@ -1044,7 +1045,10 @@ class basefilectx(object):
             if ready:
                 visit.pop()
                 curr = decorate(f.data(), f)
-                curr = _annotatepair([hist[p] for p in pl], f, curr, False,
+                skipchild = False
+                if skiprevs is not None:
+                    skipchild = f._changeid in skiprevs
+                curr = _annotatepair([hist[p] for p in pl], f, curr, skipchild,
                                      diffopts)
                 for p in pl:
                     if needed[p] == 1:

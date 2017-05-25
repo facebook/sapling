@@ -217,6 +217,77 @@ annotate after rename merge with -l
   3 b:5: b5
   7 b:7: d
 
+--skip nothing (should be the same as no --skip at all)
+
+  $ hg annotate -nlf b --skip '1::0'
+  0 a:1: a
+  6 b:2: z
+  1 a:3: a
+  3 b:4: b4
+  4 b:5: c
+  3 b:5: b5
+  7 b:7: d
+
+--skip a modified line
+
+  $ hg annotate -nlf b --skip 6
+  0 a:1: a
+  1 a:2: z
+  1 a:3: a
+  3 b:4: b4
+  4 b:5: c
+  3 b:5: b5
+  7 b:7: d
+
+--skip added lines (and test multiple skip)
+
+  $ hg annotate -nlf b --skip 3
+  0 a:1: a
+  6 b:2: z
+  1 a:3: a
+  1 a:3: b4
+  4 b:5: c
+  1 a:3: b5
+  7 b:7: d
+
+  $ hg annotate -nlf b --skip 4
+  0 a:1: a
+  6 b:2: z
+  1 a:3: a
+  3 b:4: b4
+  1 a:3: c
+  3 b:5: b5
+  7 b:7: d
+
+  $ hg annotate -nlf b --skip 3 --skip 4
+  0 a:1: a
+  6 b:2: z
+  1 a:3: a
+  1 a:3: b4
+  1 a:3: c
+  1 a:3: b5
+  7 b:7: d
+
+  $ hg annotate -nlf b --skip 'merge()'
+  0 a:1: a
+  6 b:2: z
+  1 a:3: a
+  3 b:4: b4
+  4 b:5: c
+  3 b:5: b5
+  3 b:5: d
+
+--skip everything -- use the revision the file was introduced in
+
+  $ hg annotate -nlf b --skip 'all()'
+  0 a:1: a
+  0 a:1: z
+  0 a:1: a
+  0 a:1: b4
+  0 a:1: c
+  0 a:1: b5
+  0 a:1: d
+
 Issue2807: alignment of line numbers with -l
 
   $ echo more >> b

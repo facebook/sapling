@@ -262,7 +262,8 @@ def addremove(ui, repo, *pats, **opts):
     ('d', 'date', None, _('list the date (short with -q)')),
     ('n', 'number', None, _('list the revision number (default)')),
     ('c', 'changeset', None, _('list the changeset')),
-    ('l', 'line-number', None, _('show line number at the first appearance'))
+    ('l', 'line-number', None, _('show line number at the first appearance')),
+    ('', 'skip', [], _('revision to not display (EXPERIMENTAL)'), _('REV')),
     ] + diffwsopts + walkopts + formatteropts,
     _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'),
     inferrepo=True)
@@ -368,6 +369,10 @@ def annotate(ui, repo, *pats, **opts):
     follow = not opts.get('no_follow')
     diffopts = patch.difffeatureopts(ui, opts, section='annotate',
                                      whitespace=True)
+    skiprevs = opts.get('skip')
+    if skiprevs:
+        skiprevs = scmutil.revrange(repo, skiprevs)
+
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and fctx.isbinary():
@@ -375,7 +380,7 @@ def annotate(ui, repo, *pats, **opts):
             continue
 
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
-                              diffopts=diffopts)
+                              skiprevs=skiprevs, diffopts=diffopts)
         if not lines:
             continue
         formats = []
