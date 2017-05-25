@@ -2632,21 +2632,21 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
 
     return ret
 
-def cat(ui, repo, ctx, matcher, fntemplate, prefix, **opts):
+def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
     err = 1
 
     def write(path):
+        filename = None
         if fntemplate:
             filename = makefilename(repo, fntemplate, ctx.node(),
                                     pathname=os.path.join(prefix, path))
-            fp = open(filename, 'wb')
-        else:
-            fp = _unclosablefile(ui.fout)
-        with fp:
+        with formatter.maybereopen(basefm, filename, opts) as fm:
             data = ctx[path].data()
             if opts.get('decode'):
                 data = repo.wwritedata(path, data)
-            fp.write(data)
+            fm.startitem()
+            fm.write('data', '%s', data)
+            fm.data(abspath=path, path=matcher.rel(path))
 
     # Automation often uses hg cat on single files, so special case it
     # for performance to avoid the cost of parsing the manifest.
@@ -2670,7 +2670,7 @@ def cat(ui, repo, ctx, matcher, fntemplate, prefix, **opts):
         try:
             submatch = matchmod.subdirmatcher(subpath, matcher)
 
-            if not sub.cat(submatch, fntemplate,
+            if not sub.cat(submatch, basefm, fntemplate,
                            os.path.join(prefix, sub._path), **opts):
                 err = 0
         except error.RepoLookupError:

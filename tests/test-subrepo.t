@@ -1020,6 +1020,14 @@ Prepare a repo with subrepo
   $ hg cat sub/repo/foo
   test
   test
+  $ hg cat sub/repo/foo -Tjson
+  [
+   {
+    "abspath": "foo",
+    "data": "test\ntest\n",
+    "path": "sub/repo/foo" (glob)
+   }
+  ]
   $ mkdir -p tmp/sub/repo
   $ hg cat -r 0 --output tmp/%p_p sub/repo/foo
   $ cat tmp/sub/repo/foo_p

@@ -63,6 +63,46 @@ Test fileset
   tmp/h_45116003780e
   tmp/r_2
 
+Test template output
+
+  $ hg --cwd tmp cat ../b ../c -T '== {path} ({abspath}) ==\n{data}'
+  == ../b (b) == (glob)
+  1
+  == ../c (c) == (glob)
+  3
+
+  $ hg cat b c -Tjson --output -
+  [
+   {
+    "abspath": "b",
+    "data": "1\n",
+    "path": "b"
+   },
+   {
+    "abspath": "c",
+    "data": "3\n",
+    "path": "c"
+   }
+  ]
+
+  $ hg cat b c -Tjson --output 'tmp/%p.json'
+  $ cat tmp/b.json
+  [
+   {
+    "abspath": "b",
+    "data": "1\n",
+    "path": "b"
+   }
+  ]
+  $ cat tmp/c.json
+  [
+   {
+    "abspath": "c",
+    "data": "3\n",
+    "path": "c"
+   }
+  ]
+
 Test working directory
 
   $ echo b-wdir > b

@@ -241,7 +241,7 @@ Show all commands + options
   branch: force, clean
   branches: active, closed, template
   bundle: force, rev, branch, base, all, type, ssh, remotecmd, insecure
-  cat: output, rev, decode, include, exclude
+  cat: output, rev, decode, include, exclude, template
   config: untrusted, edit, local, global, template
   copy: after, force, include, exclude, dry-run
   debugancestor: 

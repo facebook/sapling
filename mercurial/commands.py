@@ -35,6 +35,7 @@ from . import (
     error,
     exchange,
     extensions,
+    formatter,
     graphmod,
     hbisect,
     help,
@@ -1338,7 +1339,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
      _('print output to file with formatted name'), _('FORMAT')),
     ('r', 'rev', '', _('print the given revision'), _('REV')),
     ('', 'decode', None, _('apply any matching decode filter')),
-    ] + walkopts,
+    ] + walkopts + formatteropts,
     _('[OPTION]... FILE...'),
     inferrepo=True)
 def cat(ui, repo, file1, *pats, **opts):
@@ -1368,9 +1369,13 @@ def cat(ui, repo, file1, *pats, **opts):
     if cmdutil.isstdiofilename(fntemplate):
         fntemplate = ''
 
-    if not fntemplate:
+    if fntemplate:
+        fm = formatter.nullformatter(ui, 'cat')
+    else:
         ui.pager('cat')
-    return cmdutil.cat(ui, repo, ctx, m, fntemplate, '', **opts)
+        fm = ui.formatter('cat', opts)
+    with fm:
+        return cmdutil.cat(ui, repo, ctx, m, fm, fntemplate, '', **opts)
 
 @command('^clone',
     [('U', 'noupdate', None, _('the clone will include an empty working '
