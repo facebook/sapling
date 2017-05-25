@@ -209,7 +209,6 @@ class basematcher(object):
         self._cwd = cwd
         if badfn is not None:
             self.bad = badfn
-        self.matchfn = lambda f: False
 
     def __call__(self, fn):
         return self.matchfn(fn)
@@ -265,6 +264,9 @@ class basematcher(object):
     def exact(self, f):
         '''Returns True if f is in .files().'''
         return f in self._fileset
+
+    def matchfn(self, f):
+        return False
 
     def visitdir(self, dir):
         '''Decides whether a directory should be visited based on whether it
