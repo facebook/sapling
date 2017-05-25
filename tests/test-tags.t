@@ -724,3 +724,11 @@ Check that the bundle includes cache data
       f63cc8fe54e4d326f8d692805d70e092f851ddb1
       40f0358cb314c824a5929ee527308d90e023bc10
   hgtagsfnodes -- 'sortdict()'
+
+Check that local clone includes cache data
+
+  $ hg clone tagsclient tags-local-clone
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ (cd tags-local-clone/.hg/cache/; ls -1 tag*)
+  tags2-visible

@@ -427,6 +427,9 @@ def _cachetocopy(srcrepo):
     cachefiles = ['branch2']
     cachefiles += ['branch2-%s' % f for f in repoview.filtertable]
     cachefiles += ['rbc-names-v1', 'rbc-revs-v1']
+    cachefiles += ['tags2']
+    cachefiles += ['tags2-%s' % f for f in repoview.filtertable]
+    cachefiles += ['hgtagsfnodes1']
     return cachefiles
 
 def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
