@@ -425,7 +425,8 @@ def _cachetocopy(srcrepo):
     # In local clones we're copying all nodes, not just served
     # ones. Therefore copy all branch caches over.
     cachefiles = ['branch2']
-    cachefiles.extend('branch2-%s' % f for f in repoview.filtertable)
+    cachefiles += ['branch2-%s' % f for f in repoview.filtertable]
+    cachefiles += ['rbc-names-v1', 'rbc-revs-v1']
     return cachefiles
 
 def clone(ui, peeropts, source, dest=None, pull=False, rev=None,

@@ -52,6 +52,8 @@ Ensure branchcache got copied over:
   checkisexec (execbit !)
   checklink (symlink !)
   checklink-target (symlink !)
+  rbc-names-v1
+  rbc-revs-v1
 
   $ cat a
   a
@@ -99,6 +101,8 @@ Ensure branchcache got copied over:
 
   $ ls .hg/cache
   branch2-served
+  rbc-names-v1
+  rbc-revs-v1
 
   $ cat a 2>/dev/null || echo "a not present"
   a not present
