@@ -969,15 +969,6 @@ class basefilectx(object):
             def decorate(text, rev):
                 return ([(rev, False)] * lines(text), text)
 
-        def pair(parent, child):
-            blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts)
-            for (a1, a2, b1, b2), t in blocks:
-                # Changed blocks ('!') or blocks made only of blank lines ('~')
-                # belong to the child.
-                if t == '=':
-                    child[0][b1:b2] = parent[0][a1:a2]
-            return child
-
         getlog = util.lrucachefunc(lambda x: self._repo.file(x))
 
         def parents(f):
@@ -1054,7 +1045,7 @@ class basefilectx(object):
                 visit.pop()
                 curr = decorate(f.data(), f)
                 for p in pl:
-                    curr = pair(hist[p], curr)
+                    curr = _annotatepair(hist[p], curr, diffopts)
                     if needed[p] == 1:
                         del hist[p]
                         del needed[p]
@@ -1081,6 +1072,15 @@ class basefilectx(object):
                 break
             c = visit.pop(max(visit))
             yield c
+
+def _annotatepair(parent, child, diffopts):
+    blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts)
+    for (a1, a2, b1, b2), t in blocks:
+        # Changed blocks ('!') or blocks made only of blank lines ('~')
+        # belong to the child.
+        if t == '=':
+            child[0][b1:b2] = parent[0][a1:a2]
+    return child
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
