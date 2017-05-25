@@ -373,3 +373,41 @@ Actual testing
   a9b9da38ed96f8c6c14f429441f625a344eb4696 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+changeset pruned on its own
+===========================
+
+. ⊗ B
+. |
+. ◕ A
+. |
+. ●
+
+setup
+-----
+
+  $ mktestrepo lonely-prune
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkcommit 'C-A'
+  $ mkcommit 'C-B'
+  $ hg debugobsolete --record-parent `getid 'desc("C-B")'`
+
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log --hidden -G
+  x  cefb651fc2fd: C-B
+  |
+  o  9ac430e15fca: C-A
+  |
+  @  ea207398892e: ROOT
+  
+  $ hg debugobsolete
+  cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Actual testing
+--------------
+  $ hg debugobsolete --rev 'desc("C-A")'
+  cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg debugobsolete --hidden --rev 'desc("C-B")'
+  cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
