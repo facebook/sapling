@@ -610,6 +610,10 @@ def makefilename(repo, pat, node, desc=None,
         raise error.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
+def isstdiofilename(pat):
+    """True if the given pat looks like a filename denoting stdin/stdout"""
+    return not pat or pat == '-'
+
 class _unclosablefile(object):
     def __init__(self, fp):
         self._fp = fp
@@ -635,7 +639,7 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
 
     writable = mode not in ('r', 'rb')
 
-    if not pat or pat == '-':
+    if isstdiofilename(pat):
         if writable:
             fp = repo.ui.fout
         else:
