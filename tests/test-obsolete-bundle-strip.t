@@ -196,3 +196,95 @@ Actual testing
   84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+chain with missing prune
+========================
+
+.   ⊗ B
+.   |
+.  ⇠◌⇠◔ A1
+.   |
+.   ●
+
+setup
+-----
+
+  $ mktestrepo missing-prune
+  $ mkcommit 'C-A0'
+  $ mkcommit 'C-B0'
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ mkcommit 'C-A1'
+  created new head
+  $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
+  $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+  $ hg debugobsolete --record-parents `getid 'desc("C-B0")'`
+
+(it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
+
+  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup
+
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log --hidden -G
+  o  cf2c22470d67: C-A1
+  |
+  @  ea207398892e: ROOT
+  
+  $ hg debugobsolete
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Actual testing
+--------------
+
+  $ hg debugobsolete --rev 'desc("C-A1")'
+  29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+chain with precursors also pruned
+=================================
+
+.   A0 (also pruned)
+.  ⇠◌⇠◔ A1
+.     |
+.     ●
+
+setup
+-----
+
+  $ mktestrepo prune-inline-missing
+  $ mkcommit 'C-A0'
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkcommit 'C-A1'
+  created new head
+  $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
+  $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
+  $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+
+(it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
+
+  $ hg strip --hidden --rev 'desc("C-A0")::' --no-backup
+
+  $ hg up 'desc("ROOT")'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log --hidden -G
+  o  cf2c22470d67: C-A1
+  |
+  @  ea207398892e: ROOT
+  
+  $ hg debugobsolete
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Actual testing
+--------------
+
+  $ hg debugobsolete --rev 'desc("C-A1")'
+  84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
