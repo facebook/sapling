@@ -420,6 +420,14 @@ def _copycache(srcrepo, dstcachedir, fname):
             os.mkdir(dstcachedir)
         util.copyfile(srcbranchcache, dstbranchcache)
 
+def _cachetocopy(srcrepo):
+    """return the list of cache file valuable to copy during a clone"""
+    # In local clones we're copying all nodes, not just served
+    # ones. Therefore copy all branch caches over.
+    cachefiles = ['branch2']
+    cachefiles.extend('branch2-%s' % f for f in repoview.filtertable)
+    return cachefiles
+
 def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
           update=True, stream=False, branch=None, shareopts=None):
     """Make a copy of an existing repository.
@@ -578,11 +586,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 util.copyfile(srcbookmarks, dstbookmarks)
 
             dstcachedir = os.path.join(destpath, 'cache')
-            # In local clones we're copying all nodes, not just served
-            # ones. Therefore copy all branch caches over.
-            _copycache(srcrepo, dstcachedir, 'branch2')
-            for cachename in repoview.filtertable:
-                _copycache(srcrepo, dstcachedir, 'branch2-%s' % cachename)
+            for cache in _cachetocopy(srcrepo):
+                _copycache(srcrepo, dstcachedir, cache)
 
             # we need to re-init the repo after manually copying the data
             # into it
