@@ -1044,7 +1044,8 @@ class basefilectx(object):
             if ready:
                 visit.pop()
                 curr = decorate(f.data(), f)
-                curr = _annotatepair([hist[p] for p in pl], curr, diffopts)
+                curr = _annotatepair([hist[p] for p in pl], f, curr, False,
+                                     diffopts)
                 for p in pl:
                     if needed[p] == 1:
                         del hist[p]
@@ -1073,9 +1074,72 @@ class basefilectx(object):
             c = visit.pop(max(visit))
             yield c
 
-def _annotatepair(parents, child, diffopts):
+def _annotatepair(parents, childfctx, child, skipchild, diffopts):
+    r'''
+    Given parent and child fctxes and annotate data for parents, for all lines
+    in either parent that match the child, annotate the child with the parent's
+    data.
+
+    Additionally, if `skipchild` is True, replace all other lines with parent
+    annotate data as well such that child is never blamed for any lines.
+
+    >>> oldfctx = 'old'
+    >>> p1fctx, p2fctx, childfctx = 'p1', 'p2', 'c'
+    >>> olddata = 'a\nb\n'
+    >>> p1data = 'a\nb\nc\n'
+    >>> p2data = 'a\nc\nd\n'
+    >>> childdata = 'a\nb2\nc\nc2\nd\n'
+    >>> diffopts = mdiff.diffopts()
+
+    >>> def decorate(text, rev):
+    ...     return ([(rev, i) for i in xrange(1, text.count('\n') + 1)], text)
+
+    Basic usage:
+
+    >>> oldann = decorate(olddata, oldfctx)
+    >>> p1ann = decorate(p1data, p1fctx)
+    >>> p1ann = _annotatepair([oldann], p1fctx, p1ann, False, diffopts)
+    >>> p1ann[0]
+    [('old', 1), ('old', 2), ('p1', 3)]
+    >>> p2ann = decorate(p2data, p2fctx)
+    >>> p2ann = _annotatepair([oldann], p2fctx, p2ann, False, diffopts)
+    >>> p2ann[0]
+    [('old', 1), ('p2', 2), ('p2', 3)]
+
+    Test with multiple parents (note the difference caused by ordering):
+
+    >>> childann = decorate(childdata, childfctx)
+    >>> childann = _annotatepair([p1ann, p2ann], childfctx, childann, False,
+    ...                          diffopts)
+    >>> childann[0]
+    [('old', 1), ('c', 2), ('p2', 2), ('c', 4), ('p2', 3)]
+
+    >>> childann = decorate(childdata, childfctx)
+    >>> childann = _annotatepair([p2ann, p1ann], childfctx, childann, False,
+    ...                          diffopts)
+    >>> childann[0]
+    [('old', 1), ('c', 2), ('p1', 3), ('c', 4), ('p2', 3)]
+
+    Test with skipchild (note the difference caused by ordering):
+
+    >>> childann = decorate(childdata, childfctx)
+    >>> childann = _annotatepair([p1ann, p2ann], childfctx, childann, True,
+    ...                          diffopts)
+    >>> childann[0]
+    [('old', 1), ('old', 2), ('p2', 2), ('p2', 2), ('p2', 3)]
+
+    >>> childann = decorate(childdata, childfctx)
+    >>> childann = _annotatepair([p2ann, p1ann], childfctx, childann, True,
+    ...                          diffopts)
+    >>> childann[0]
+    [('old', 1), ('old', 2), ('p1', 3), ('p1', 3), ('p2', 3)]
+    '''
     pblocks = [(parent, mdiff.allblocks(parent[1], child[1], opts=diffopts))
                for parent in parents]
+
+    if skipchild:
+        # Need to iterate over the blocks twice -- make it a list
+        pblocks = [(p, list(blocks)) for (p, blocks) in pblocks]
     # Mercurial currently prefers p2 over p1 for annotate.
     # TODO: change this?
     for parent, blocks in pblocks:
@@ -1084,6 +1148,40 @@ def _annotatepair(parents, child, diffopts):
             # belong to the child.
             if t == '=':
                 child[0][b1:b2] = parent[0][a1:a2]
+
+    if skipchild:
+        # Now try and match up anything that couldn't be matched,
+        # Reversing pblocks maintains bias towards p2, matching above
+        # behavior.
+        pblocks.reverse()
+
+        # The heuristics are:
+        # * Work on blocks of changed lines (effectively diff hunks with -U0).
+        # This could potentially be smarter but works well enough.
+        # * For a non-matching section, do a best-effort fit. Match lines in
+        #   diff hunks 1:1, dropping lines as necessary.
+        # * Repeat the last line as a last resort.
+
+        # First, replace as much as possible without repeating the last line.
+        remaining = [(parent, []) for parent, _blocks in pblocks]
+        for idx, (parent, blocks) in enumerate(pblocks):
+            for (a1, a2, b1, b2), _t in blocks:
+                if a2 - a1 >= b2 - b1:
+                    for bk in xrange(b1, b2):
+                        if child[0][bk][0] == childfctx:
+                            ak = min(a1 + (bk - b1), a2 - 1)
+                            child[0][bk] = parent[0][ak]
+                else:
+                    remaining[idx][1].append((a1, a2, b1, b2))
+
+        # Then, look at anything left, which might involve repeating the last
+        # line.
+        for parent, blocks in remaining:
+            for a1, a2, b1, b2 in blocks:
+                for bk in xrange(b1, b2):
+                    if child[0][bk][0] == childfctx:
+                        ak = min(a1 + (bk - b1), a2 - 1)
+                        child[0][bk] = parent[0][ak]
     return child
 
 class filectx(basefilectx):
