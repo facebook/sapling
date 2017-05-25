@@ -462,12 +462,6 @@ class subdirmatcher(basematcher):
         if matcher.prefix():
             self._always = any(f == path for f in matcher._files)
 
-        # Some information is lost in the superclass's constructor, so we
-        # can not accurately create the matching function for the subdirectory
-        # from the inputs. Instead, we override matchfn() and visitdir() to
-        # call the original matcher with the subdirectory path prepended.
-        self.matchfn = lambda fn: matcher.matchfn(self._path + "/" + fn)
-
     def bad(self, f, msg):
         self._matcher.bad(self._path + "/" + f, msg)
 
@@ -479,6 +473,13 @@ class subdirmatcher(basematcher):
 
     def uipath(self, f):
         return self._matcher.uipath(self._path + "/" + f)
+
+    def matchfn(self, f):
+        # Some information is lost in the superclass's constructor, so we
+        # can not accurately create the matching function for the subdirectory
+        # from the inputs. Instead, we override matchfn() and visitdir() to
+        # call the original matcher with the subdirectory path prepended.
+        return self._matcher.matchfn(self._path + "/" + f)
 
     def visitdir(self, dir):
         if dir == '.':
