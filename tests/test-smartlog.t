@@ -1,3 +1,5 @@
+#testcases default useancestorcache
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > smartlog = $TESTDIR/../hgext3rd/smartlog.py
@@ -5,6 +7,13 @@
   > graphstyle.grandparent=|
   > graphstyle.missing=|
   > EOF
+
+#if useancestorcache
+  $ cat >> $HGRCPATH <<EOF
+  > [smartlog]
+  > useancestorcache=1
+  > EOF
+#endif
 
 Build up a repo
 

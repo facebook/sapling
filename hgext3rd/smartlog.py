@@ -19,10 +19,14 @@ to the user.
     names = @, master, stable
     # move the top non-public stack to the second column
     indentnonpublic = True
+    # whether to use ancestor cache (speed up on huge repos)
+    useancestorcache = False
 """
 
 from __future__ import absolute_import
 
+import contextlib
+import gdbm
 from itertools import chain
 import re
 
@@ -36,6 +40,7 @@ from mercurial import (
     obsolete,
     phases,
     registrar,
+    revlog,
     revset,
     revsetlang,
     scmutil,
@@ -57,6 +62,30 @@ hiddenchanges = 0
 
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
+
+@contextlib.contextmanager
+def ancestorcache(path):
+    # simple cache to speed up revlog.ancestors
+    try:
+        db = gdbm.open(path, 'c')
+    except gdbm.error:
+        # database locked, fail gracefully
+        yield
+    else:
+        def revlogancestor(orig, self, a, b):
+            key = a + b
+            try:
+                return db[key]
+            except KeyError:
+                result = orig(self, a, b)
+                db[key] = result
+                return result
+        extensions.wrapfunction(revlog.revlog, 'ancestor', revlogancestor)
+        try:
+            yield
+        finally:
+            extensions.unwrapfunction(revlog.revlog, 'ancestor', revlogancestor)
+            db.close()
 
 def _drawendinglines(orig, lines, extra, edgemap, seen):
     # if we are going to have only one single column, draw the missing '|'s
@@ -552,6 +581,13 @@ Excludes:
 - All changesets under @/master/tip that aren't related to your changesets.
 - Your local heads that are older than 2 weeks.
     '''
+    if ui.configbool('smartlog', 'useancestorcache'):
+        with ancestorcache(repo.vfs.join('cache/smartlog-ancestor')):
+            return _smartlog(ui, repo, *pats, **opts)
+    else:
+        return _smartlog(ui, repo, *pats, **opts)
+
+def _smartlog(ui, repo, *pats, **opts):
     masterstring = opts.get('master')
     masterrevset = _masterrevset(ui, repo, masterstring)
 
