@@ -2,9 +2,6 @@
 Test obsmarkers interaction with bundle and strip
 ==================================================
 
-The file currently only contains test for bundle.
-Testing of strip will happen some time soon (tm).
-
 Setup a repository with various case
 ====================================
 
@@ -50,7 +47,7 @@ Config setup
   > }
 
 Function to compare the expected bundled obsmarkers with the actually bundled
-obsmarkers.
+obsmarkers. It also check the obsmarkers backed up during strip.
 
   $ testrevs () {
   >     revs="$1"
@@ -60,6 +57,7 @@ obsmarkers.
   >     markersfile="${prefix}-relevant-markers.txt"
   >     bundlefile="${prefix}-bundle.hg"
   >     contentfile="${prefix}-bundle-markers.hg"
+  >     stripcontentfile="${prefix}-bundle-markers.hg"
   >     hg debugobsolete --hidden --rev "${revs}" | sed 's/^/    /' > "${markersfile}"
   >     echo '### Matched revisions###'
   >     hg log --hidden --rev "${revs}" | sort
@@ -73,6 +71,22 @@ obsmarkers.
   >     echo '### diff <relevant> <bundled> ###'
   >     cmp "${markersfile}" "${contentfile}" || diff -u "${markersfile}" "${contentfile}"
   >     echo '#################################'
+  >     # if the matched revs do not have children, we also check the result of strip
+  >     orphan=`hg log --hidden -T '.\n' --rev "(not ${revs}) and (${revs}::)" | wc -l | sed -e 's/ //g'`
+  >     if [ $orphan -eq 0 ];
+  >     then
+  >         printf "# stripping: "
+  >         hg strip --hidden --rev "${revs}"
+  >         hg debugbundle .hg/strip-backup/* | grep "obsmarkers --" -A 100 | sed 1,2d > "${stripcontentfile}"
+  >         echo '### Backup markers ###'
+  >         cat "${stripcontentfile}"
+  >         echo '### diff <relevant> <backed-up> ###'
+  >         cmp "${markersfile}" "${stripcontentfile}" || diff -u "${markersfile}" "${stripcontentfile}"
+  >         echo '#################################'
+  >         hg unbundle .hg/strip-backup/* | sed 's/^/# unbundling: /'
+  >         # clean up directory for the next test
+  >         rm .hg/strip-backup/*
+  >     fi
   > }
 
 root setup
@@ -126,6 +140,16 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/simple-chain/.hg/strip-backup/84fcb0dfe17b-6454bbdc-backup.hg
+  ### Backup markers ###
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A1")'
   ### Matched revisions###
@@ -141,6 +165,18 @@ Actual testing
       a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/simple-chain/.hg/strip-backup/cf2c22470d67-fa0f07b0-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
   ### Matched revisions###
@@ -157,6 +193,18 @@ Actual testing
       a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/simple-chain/.hg/strip-backup/cf2c22470d67-fce4fc64-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 chain with prune children
 =========================
@@ -222,6 +270,16 @@ Actual testing
       29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune/.hg/strip-backup/29f93b1df87b-7fb32101-backup.hg
+  ### Backup markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: (run 'hg update' to get a working copy)
 
   $ testrevs 'desc("C-A1")'
   ### Matched revisions###
@@ -237,6 +295,18 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune/.hg/strip-backup/cf2c22470d67-fa0f07b0-backup.hg
+  ### Backup markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 bundling multiple revisions
 
@@ -272,6 +342,18 @@ bundling multiple revisions
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune/.hg/strip-backup/cf2c22470d67-884c33b0-backup.hg
+  ### Backup markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 3 changesets with 3 changes to 3 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 chain with precursors also pruned
 =================================
@@ -322,6 +404,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune-inline/.hg/strip-backup/84fcb0dfe17b-6454bbdc-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A1")'
   ### Matched revisions###
@@ -337,6 +430,18 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune-inline/.hg/strip-backup/cf2c22470d67-fa0f07b0-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
   ### Matched revisions###
@@ -353,6 +458,18 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune-inline/.hg/strip-backup/cf2c22470d67-fce4fc64-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 chain with missing prune
 ========================
@@ -410,6 +527,18 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/missing-prune/.hg/strip-backup/cf2c22470d67-fa0f07b0-backup.hg
+  ### Backup markers ###
+      29f93b1df87baee1824e014080d8adf145f81783 0 {84fcb0dfe17b256ebae52e05572993b9194c018a} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: (run 'hg update' to get a working copy)
 
 chain with precursors also pruned
 =================================
@@ -465,6 +594,18 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/prune-inline-missing/.hg/strip-backup/cf2c22470d67-fa0f07b0-backup.hg
+  ### Backup markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a 0 {ea207398892eb49e06441f10dda2a731f0450f20} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      84fcb0dfe17b256ebae52e05572993b9194c018a cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: (run 'hg update' to get a working copy)
 
 Chain with fold and split
 =========================
@@ -539,6 +680,16 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/9ac430e15fca-81204eba-backup.hg
+  ### Backup markers ###
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-B")'
   ### Matched revisions###
@@ -552,6 +703,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/a9b9da38ed96-7465d6e9-backup.hg
+  ### Backup markers ###
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-C")'
   ### Matched revisions###
@@ -565,6 +727,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/27ec657ca21d-d5dd1c7c-backup.hg
+  ### Backup markers ###
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-D")'
   ### Matched revisions###
@@ -578,6 +751,17 @@ Actual testing
       a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/06dc9da25ef0-9b1c0a91-backup.hg
+  ### Backup markers ###
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-E")'
   ### Matched revisions###
@@ -605,6 +789,24 @@ Actual testing
       c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/2f20ff6509f0-8adeb22d-backup.hg
+  ### Backup markers ###
+      06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      27ec657ca21dd27c36c99fa75586f72ff0d442f1 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a9b9da38ed96f8c6c14f429441f625a344eb4696 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 Bundle multiple revisions
 
@@ -746,6 +948,24 @@ Bundle multiple revisions
       c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/split-fold/.hg/strip-backup/a9b9da38ed96-eeb4258f-backup.hg
+  ### Backup markers ###
+      06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      27ec657ca21dd27c36c99fa75586f72ff0d442f1 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 06dc9da25ef03e1ff7864dded5fcba42eff2a3f0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c a9b9da38ed96f8c6c14f429441f625a344eb4696 27ec657ca21dd27c36c99fa75586f72ff0d442f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      9ac430e15fca923b0ba027ca85d4d75c5c9cb73c b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 9ac430e15fca923b0ba027ca85d4d75c5c9cb73c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a9b9da38ed96f8c6c14f429441f625a344eb4696 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 2f20ff6509f0e013e90c5c8efd996131c918b0ca 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 5 changesets with 5 changes to 5 files (+4 heads)
+  # unbundling: (run 'hg heads' to see heads)
 
 changeset pruned on its own
 ===========================
@@ -800,3 +1020,13 @@ Actual testing
       cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ### diff <relevant> <bundled> ###
   #################################
+  # stripping: saved backup bundle to $TESTTMP/lonely-prune/.hg/strip-backup/cefb651fc2fd-345c8dfa-backup.hg
+  ### Backup markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 1 changesets with 1 changes to 1 files
+  # unbundling: (run 'hg update' to get a working copy)
