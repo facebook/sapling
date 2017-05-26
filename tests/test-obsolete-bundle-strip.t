@@ -2,12 +2,8 @@
 Test obsmarkers interaction with bundle and strip
 ==================================================
 
-In practice, this file does not yet contains any tests for bundle and strip.
-But their will be some soon (tm).
-
-For now this test check the logic computing markers relevant to a set of
-revision. That logic will be use by "hg bundle" to select the markers to
-include, and strip to find the markers to backup.
+The file currently only contains test for bundle.
+Testing of strip will happen some time soon (tm).
 
 Setup a repository with various case
 ====================================
@@ -53,6 +49,32 @@ Config setup
   >     mkcommit ROOT
   > }
 
+Function to compare the expected bundled obsmarkers with the actually bundled
+obsmarkers.
+
+  $ testrevs () {
+  >     revs="$1"
+  >     testname=`basename \`pwd\``
+  >     revsname=`hg --hidden log -T '-{desc}\n' --rev "${revs}"`
+  >     prefix="${TESTTMP}/${testname}${revsname}"
+  >     markersfile="${prefix}-relevant-markers.txt"
+  >     bundlefile="${prefix}-bundle.hg"
+  >     contentfile="${prefix}-bundle-markers.hg"
+  >     hg debugobsolete --hidden --rev "${revs}" | sed 's/^/    /' > "${markersfile}"
+  >     echo '### Matched revisions###'
+  >     hg log --hidden --rev "${revs}" | sort
+  >     echo '### Relevant markers ###'
+  >     cat "${markersfile}"
+  >     printf "# bundling: "
+  >     hg bundle --hidden --base "parents(roots(${revs}))" --rev "${revs}" "${bundlefile}"
+  >     hg debugbundle "${bundlefile}" | grep "obsmarkers --" -A 100 | sed 1,2d > "${contentfile}"
+  >     echo '### Bundled markers ###'
+  >     cat "${contentfile}"
+  >     echo '### diff <relevant> <bundled> ###'
+  >     cmp "${markersfile}" "${contentfile}" || diff -u "${markersfile}" "${contentfile}"
+  >     echo '#################################'
+  > }
+
 root setup
 -------------
 
@@ -94,12 +116,47 @@ setup
 Actual testing
 --------------
 
-  $ hg debugobsolete --rev 'desc("C-A0")'
-  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  $ hg debugobsolete --rev 'desc("C-A1")'
-  84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ testrevs 'desc("C-A0")'
+  ### Matched revisions###
+  84fcb0dfe17b: C-A0
+  ### Relevant markers ###
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 1 changesets found
+  ### Bundled markers ###
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
+
+  $ testrevs 'desc("C-A1")'
+  ### Matched revisions###
+  cf2c22470d67: C-A1
+  ### Relevant markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 1 changesets found
+  ### Bundled markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
+
+  $ testrevs 'desc("C-A")'
+  ### Matched revisions###
+  84fcb0dfe17b: C-A0
+  cf2c22470d67: C-A1
+  ### Relevant markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 2 changesets found
+  ### Bundled markers ###
+      84fcb0dfe17b256ebae52e05572993b9194c018a a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 84fcb0dfe17b256ebae52e05572993b9194c018a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 cf2c22470d67233004e934a31184ac2b35389914 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
 
 chain with prune children
 =========================
