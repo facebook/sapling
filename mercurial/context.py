@@ -551,7 +551,7 @@ class changectx(basectx):
     def _manifest(self):
         return self._manifestctx.read()
 
-    @propertycache
+    @property
     def _manifestctx(self):
         return self._repo.manifestlog[self._changeset.manifest]
 
@@ -2314,7 +2314,7 @@ class metadataonlyctx(committablectx):
     def manifestnode(self):
         return self._manifestnode
 
-    @propertycache
+    @property
     def _manifestctx(self):
         return self._repo.manifestlog[self._manifestnode]
 
