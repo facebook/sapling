@@ -18,6 +18,7 @@
           <File Name="mercurial.mpatch.pyd" />
           <File Name="mercurial.osutil.pyd" />
           <File Name="mercurial.parsers.pyd" />
+          <File Name="mercurial.zstd.pyd" />
           <File Name="pyexpat.pyd" />
           <File Name="bz2.pyd" />
           <File Name="select.pyd" />
