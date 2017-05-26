@@ -136,8 +136,6 @@ make sure we can list remote bookmarks with --all
 
   $ hg bookmarks --all -T json
   [
-  ]
-  [
    {
     "node": "78f83396d79eebd439e09cb900db376fadb4d580",
     "remotebookmark": "beta/babar",

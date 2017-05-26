@@ -1176,15 +1176,17 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
         return ret
 
+    fm = ui.formatter('bookmarks', opts)
     if not remote:
-        displaylocalbookmarks(ui, repo, opts)
+        displaylocalbookmarks(ui, repo, opts, fm)
 
     if remote or opts.get('all'):
-        displayremotebookmarks(ui, repo, opts)
+        displayremotebookmarks(ui, repo, opts, fm)
 
-def displaylocalbookmarks(ui, repo, opts):
+    fm.end()
+
+def displaylocalbookmarks(ui, repo, opts, fm):
     # copy pasta from commands.py; need to patch core
-    fm = ui.formatter('bookmarks', opts)
     hexfn = fm.hexfunc
     marks = repo._bookmarks
     if len(marks) == 0 and (not fm or fm.isplain()) :
@@ -1232,20 +1234,17 @@ def displaylocalbookmarks(ui, repo, opts):
                     distances[bmark] = distance
         fm.data(active=(bmark == current))
         fm.plain('\n')
-    fm.end()
 
     # write distance cache
     writedistancecache(repo, distances)
 
-def displayremotebookmarks(ui, repo, opts):
+def displayremotebookmarks(ui, repo, opts, fm):
     n = 'remotebookmarks'
     if n not in repo.names:
         return
     ns = repo.names[n]
     color = ns.colorname
     label = 'log.' + color
-
-    fm = ui.formatter('bookmarks', opts)
 
     # it seems overkill to hide displaying hidden remote bookmarks
     repo = repo.unfiltered()
@@ -1269,7 +1268,6 @@ def displayremotebookmarks(ui, repo, opts):
         fm.condwrite(not ui.quiet, 'rev node', fmt, ctx.rev(),
                      fm.hexfunc(node), label=tmplabel)
         fm.plain('\n')
-    fm.end()
 
 def activepath(ui, remote):
     local = None
