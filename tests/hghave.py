@@ -605,7 +605,7 @@ def has_pure():
         os.environ.get("HGTEST_RUN_TESTS_PURE") == "--pure",
     ])
 
-@check("slow", "allow slow tests")
+@check("slow", "allow slow tests (use --allow-slow-tests)")
 def has_slow():
     return os.environ.get('HGTEST_SLOW') == 'slow'
 

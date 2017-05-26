@@ -555,7 +555,7 @@ timeouts
   > cat test-timeout.t >> test-slow-timeout.t
   $ rt --timeout=1 --slowtimeout=3 test-timeout.t test-slow-timeout.t
   st
-  Skipped test-slow-timeout.t: missing feature: allow slow tests
+  Skipped test-slow-timeout.t: missing feature: allow slow tests (use --allow-slow-tests)
   Failed test-timeout.t: timed out
   # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -852,7 +852,7 @@ test support for --allow-slow-tests
   > EOF
   $ rt test-very-slow-test.t
   s
-  Skipped test-very-slow-test.t: missing feature: allow slow tests
+  Skipped test-very-slow-test.t: missing feature: allow slow tests (use --allow-slow-tests)
   # Ran 0 tests, 1 skipped, 0 warned, 0 failed.
   $ rt $HGTEST_RUN_TESTS_PURE --allow-slow-tests test-very-slow-test.t
   .
