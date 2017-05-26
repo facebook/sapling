@@ -629,6 +629,10 @@ class subdirmatcher(basematcher):
     def anypats(self):
         return self._matcher.anypats()
 
+    def __repr__(self):
+        return ('<subdirmatcher path=%r, matcher=%r>' %
+                (self._path, self._matcher))
+
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
     return _patsplit(pattern, default)[0]
