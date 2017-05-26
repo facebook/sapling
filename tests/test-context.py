@@ -1,9 +1,11 @@
 from __future__ import absolute_import, print_function
 import os
+from mercurial.node import hex
 from mercurial import (
     context,
     encoding,
     hg,
+    scmutil,
     ui as uimod,
 )
 
@@ -146,3 +148,34 @@ print(actx2.status(other=wcctx,
                    match=scmutil.matchfiles(repo, ['bar-r', 'foo']),
                    listclean=True))
 print('wcctx._status=%s' % (str(wcctx._status)))
+
+os.chdir('..')
+
+# test manifestlog being changed
+print('== commit with manifestlog invalidated')
+
+repo = hg.repository(u, 'test2', create=1)
+os.chdir('test2')
+
+# make some commits
+for i in [b'1', b'2', b'3']:
+    with open(i, 'wb') as f:
+        f.write(i)
+    status = scmutil.status([], [i], [], [], [], [], [])
+    ctx = context.workingcommitctx(repo, status, text=i, user=b'test@test.com',
+                                   date=(0, 0))
+    ctx.p1().manifest() # side effect: cache manifestctx
+    n = repo.commitctx(ctx)
+    print('commit %s: %s' % (i, hex(n)))
+
+    # touch 00manifest.i mtime so storecache could expire.
+    # repo.__dict__['manifestlog'] is deleted by transaction releasefn.
+    st = repo.svfs.stat('00manifest.i')
+    repo.svfs.utime('00manifest.i', (st.st_mtime + 1, st.st_mtime + 1))
+
+    # read the file just committed
+    try:
+        if repo[n][i].data() != i:
+            print('data mismatch')
+    except Exception as ex:
+        print('cannot read data: %r' % ex)
