@@ -780,7 +780,23 @@ setup
 
 Actual testing
 --------------
-  $ hg debugobsolete --rev 'desc("C-A")'
-  cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  $ hg debugobsolete --hidden --rev 'desc("C-B")'
-  cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ testrevs 'desc("C-A")'
+  ### Matched revisions###
+  9ac430e15fca: C-A
+  ### Relevant markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 1 changesets found
+  ### Bundled markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
+  $ testrevs 'desc("C-B")'
+  ### Matched revisions###
+  cefb651fc2fd: C-B
+  ### Relevant markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 1 changesets found
+  ### Bundled markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
