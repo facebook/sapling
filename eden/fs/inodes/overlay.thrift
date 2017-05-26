@@ -1,3 +1,5 @@
+include "eden/fs/inodes/hgdirstate.thrift"
+
 namespace cpp2 facebook.eden.overlay
 
 typedef binary Hash
@@ -39,5 +41,6 @@ enum UserStatusDirective {
 }
 
 struct DirstateData {
-  1: map<RelativePath, UserStatusDirective> directives
+  1: map<RelativePath, hgdirstate.DirstateTuple> hgDirstateTuples
+  2: map<RelativePath, RelativePath> hgDestToSourceCopyMap
 }

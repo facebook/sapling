@@ -9,9 +9,10 @@
  */
 #pragma once
 #include <folly/Synchronized.h>
+#include <folly/experimental/StringKeyedUnorderedMap.h>
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
+#include "eden/fs/inodes/gen-cpp2/hgdirstate_types.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -38,42 +39,6 @@ class MountPoint;
  */
 char hgStatusCodeChar(StatusCode code);
 
-class HgStatus {
- public:
-  explicit HgStatus(std::unordered_map<RelativePath, StatusCode>&& statuses)
-      : statuses_(statuses) {}
-
-  /**
-   * What happens if `path` is not in the internal statuses_ map? Should it
-   * return CLEAN or something else?
-   */
-  StatusCode statusForPath(RelativePathPiece path) const;
-
-  size_t size() const {
-    return statuses_.size();
-  }
-
-  bool operator==(const HgStatus& other) const {
-    return statuses_ == other.statuses_;
-  }
-
-  /**
-   * Returns something akin to what you would see when running `hg status`.
-   * This is intended for debugging purposes: do not rely on the format of the
-   * return value.
-   */
-  std::string toString() const;
-
-  const std::unordered_map<RelativePath, StatusCode>* list() const {
-    return &statuses_;
-  }
-
- private:
-  std::unordered_map<RelativePath, StatusCode> statuses_;
-};
-
-std::ostream& operator<<(std::ostream& os, const HgStatus& status);
-
 struct DirstateAddRemoveError {
   DirstateAddRemoveError(RelativePathPiece p, folly::StringPiece s)
       : path{p}, errorMessage{s.str()} {}
@@ -91,9 +56,9 @@ inline bool operator!=(
     const DirstateAddRemoveError& rhs) {
   return !(lhs == rhs);
 }
-std::ostream& operator<<(
-    std::ostream& os,
-    const DirstateAddRemoveError& status);
+std::ostream& operator<<(std::ostream& os, const DirstateAddRemoveError& error);
+
+std::ostream& operator<<(std::ostream& os, const ThriftHgStatus& status);
 
 /**
  * This is designed to be a simple implemenation of an Hg dirstate. It's
@@ -132,41 +97,6 @@ class Dirstate {
   ThriftHgStatus getStatus(bool listIgnored) const;
 
   /**
-   * Analogous to `hg add <path1> <path2> ...` where each `<path>` identifies an
-   * untracked file (or directory that contains untracked files) to be tracked.
-   *
-   * Note that if `paths` is empty, then nothing will be added. To do the
-   * equivalent of `hg add .`, then `paths` should be a vector with one element
-   * whose value is `RelativePathPiece("")`.
-   */
-  void addAll(
-      const std::vector<RelativePathPiece>& paths,
-      std::vector<DirstateAddRemoveError>* errorsToReport);
-
-  /**
-   * Analogous to `hg rm <path1> <path2> ...` where each `<path>` identifies a
-   * file or directory in the manifest. (Note that the path may correspond to a
-   * file that has already been removed from disk.)
-   *
-   * In Mercurial proper, `hg rm` can take multiple paths, some of which are
-   * invalid arguments (they could be untracked files, for example). When this
-   * happens:
-   *
-   * 1. `hg rm` is applied for the valid arguments.
-   * 2. An error message is printed for each invalid argument.
-   * 3. An exit code of 1 is returned.
-   *
-   * In order to support this behavior, this method can add entries to
-   * errorsToReport, indicating error messages to present to the user. As such,
-   * if this adds entries to errorsToReport, the corresponding exit code to
-   * `hg rm` should be 1.
-   */
-  void removeAll(
-      const std::vector<RelativePathPiece>& paths,
-      bool force,
-      std::vector<DirstateAddRemoveError>* errorsToReport);
-
-  /**
    * Clean up the Dirstate after the current commit has changed.
    *
    * This removes Add and Remove directives if the corresponding files have
@@ -174,33 +104,26 @@ class Dirstate {
    */
   folly::Future<folly::Unit> onSnapshotChanged(const Tree* rootTree);
 
+  hgdirstate::DirstateTuple hgGetDirstateTuple(
+      const RelativePathPiece filename);
+  void hgSetDirstateTuple(
+      const RelativePathPiece filename,
+      const hgdirstate::DirstateTuple* tuple);
+  std::unordered_map<RelativePath, hgdirstate::DirstateTuple>
+  hgGetNonnormalFiles() const;
+
+  void hgCopyMapPut(
+      const RelativePathPiece dest,
+      const RelativePathPiece source);
+  RelativePath hgCopyMapGet(const RelativePathPiece dest) const;
+  folly::StringKeyedUnorderedMap<RelativePath> hgCopyMapGetAll() const;
+
  private:
-  /**
-   * Analogous to `hg rm <path>` where `<path>` is an ordinary file or symlink.
-   */
-  void remove(
-      RelativePathPiece path,
-      bool force,
-      std::vector<DirstateAddRemoveError>* errorsToReport);
-
-  /**
-   * Note that EdenMount::getInodeBlocking() throws if path does not
-   * correspond to an actual file. This helper function returns nullptr instead
-   * in that case.
-   */
-  InodePtr getInodeBaseOrNull(RelativePathPiece path) const;
-
   /** The EdenMount object that owns this Dirstate */
   EdenMount* const mount_{nullptr};
   DirstatePersistence persistence_;
-  /**
-   * Manifest of files in the working copy whose status is not CLEAN. These are
-   * also referred to as "nonnormal" files.
-   * TODO(mbolin): Consider StringKeyedMap instead of unordered_map.
-   */
-  folly::Synchronized<
-      std::unordered_map<RelativePath, overlay::UserStatusDirective>>
-      userDirectives_;
+
+  folly::Synchronized<DirstateData> data_;
 };
 }
 }

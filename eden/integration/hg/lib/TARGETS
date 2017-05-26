@@ -11,6 +11,7 @@ python_library(
   name = 'testutil',
   srcs = [
     'hg_extension_test_base.py',
+    'histedit_command.py',
   ],
   deps = [
     '@/eden/integration/lib:lib',

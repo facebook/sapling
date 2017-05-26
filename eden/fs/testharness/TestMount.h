@@ -128,9 +128,7 @@ class TestMount {
    * to imitate mounting an existing eden client that has saved dirstate
    * information.
    */
-  void setInitialDirstate(
-      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
-          userDirectives);
+  void setInitialDirstate(const DirstateData& dirstateData);
 
   /**
    * Get the ClientConfig object.

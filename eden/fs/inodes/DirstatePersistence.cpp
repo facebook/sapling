@@ -11,51 +11,61 @@
 
 #include <folly/FileUtil.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 
 namespace facebook {
 namespace eden {
 
 using apache::thrift::CompactSerializer;
 
-void DirstatePersistence::save(
-    const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
-        userDirectives) {
-  overlay::DirstateData dirstateData;
-  std::map<std::string, overlay::UserStatusDirective> directives;
-  for (auto& pair : userDirectives) {
-    directives[pair.first.stringPiece().str()] = pair.second;
+void DirstatePersistence::save(const DirstateData& data) {
+  std::map<std::string, hgdirstate::DirstateTuple> hgDirstateTuples;
+  for (auto& pair : data.hgDirstateTuples) {
+    hgDirstateTuples.emplace(pair.first.str(), pair.second);
   }
-  dirstateData.directives = directives;
-  auto serializedData = CompactSerializer::serialize<std::string>(dirstateData);
 
+  std::map<std::string, std::string> hgDestToSourceCopyMap;
+  for (auto& pair : data.hgDestToSourceCopyMap) {
+    hgDestToSourceCopyMap.emplace(
+        pair.first.str(), pair.second.stringPiece().str());
+  }
+
+  save(hgDirstateTuples, hgDestToSourceCopyMap);
+}
+
+void DirstatePersistence::save(
+    const std::map<std::string, hgdirstate::DirstateTuple>& hgDirstateTuples,
+    const std::map<std::string, std::string>& hgDestToSourceCopyMap) {
+  overlay::DirstateData dirstateData;
+  dirstateData.hgDirstateTuples = hgDirstateTuples;
+  dirstateData.__isset.hgDirstateTuples = true;
+  dirstateData.hgDestToSourceCopyMap = hgDestToSourceCopyMap;
+  dirstateData.__isset.hgDestToSourceCopyMap = true;
+  auto serializedData = CompactSerializer::serialize<std::string>(dirstateData);
   folly::writeFileAtomic(storageFile_.stringPiece(), serializedData, 0644);
 }
 
-std::unordered_map<RelativePath, overlay::UserStatusDirective>
-DirstatePersistence::load() {
+DirstateData DirstatePersistence::load() {
+  DirstateData loadedData;
   std::string serializedData;
-  std::unordered_map<RelativePath, overlay::UserStatusDirective> entries;
   if (!folly::readFile(storageFile_.c_str(), serializedData)) {
     int err = errno;
     if (err == ENOENT) {
-      return entries;
+      return loadedData;
     }
     folly::throwSystemErrorExplicit(err, "failed to read ", storageFile_);
   }
 
   auto dirstateData =
       CompactSerializer::deserialize<overlay::DirstateData>(serializedData);
-  for (auto& pair : dirstateData.directives) {
-    auto name = overlay::_UserStatusDirective_VALUES_TO_NAMES.find(pair.second);
-    if (name != overlay::_UserStatusDirective_VALUES_TO_NAMES.end()) {
-      entries[RelativePath(pair.first)] = pair.second;
-    } else {
-      throw std::runtime_error(folly::to<std::string>(
-          "Illegal enum value for UserStatusDirective: ", pair.second));
-    }
+  for (const auto& pair : dirstateData.get_hgDirstateTuples()) {
+    loadedData.hgDirstateTuples.emplace(pair.first, pair.second);
   }
-
-  return entries;
+  for (const auto& pair : dirstateData.get_hgDestToSourceCopyMap()) {
+    loadedData.hgDestToSourceCopyMap.emplace(
+        pair.first, RelativePath{pair.second});
+  }
+  return loadedData;
 }
 }
 }

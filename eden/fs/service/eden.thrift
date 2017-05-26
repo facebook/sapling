@@ -1,4 +1,5 @@
 include "common/fb303/if/fb303.thrift"
+include "eden/fs/inodes/hgdirstate.thrift"
 
 namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
@@ -106,15 +107,6 @@ struct ThriftHgStatus {
   1: map<string, StatusCode> entries
 }
 
-/**
- * Note that the error message always contains the path, so it can be displayed
- * to the user verbatim without having to prefix it with the path explicitly.
- */
-struct ScmAddRemoveError {
-  1: string path
-  2: string errorMessage
-}
-
 enum ConflictType {
   /**
    * We failed to update this particular path due to an error
@@ -167,6 +159,11 @@ struct ScmTreeEntry {
   1: binary name
   2: i32 mode
   3: BinaryHash id
+}
+
+struct HgNonnormalFile {
+  1: string relativePath
+  2: hgdirstate.DirstateTuple tuple
 }
 
 struct TreeInodeEntryDebugInfo {
@@ -325,16 +322,41 @@ service EdenService extends fb303.FacebookService {
     2: bool listIgnored,
   ) throws (1: EdenError ex)
 
-  list<ScmAddRemoveError> scmAdd(
+  void hgSetDirstateTuple(
     1: string mountPoint,
-    2: list<string> paths, // May be files or directories.
+    2: string relativePath,
+    3: hgdirstate.DirstateTuple tuple,
   ) throws (1: EdenError ex)
 
-  list<ScmAddRemoveError> scmRemove(
+  // Throw KeyError if no entry for relativePath?
+  hgdirstate.DirstateTuple hgGetDirstateTuple(
     1: string mountPoint,
-    2: list<string> paths, // May be files or directories.
-    3: bool force
+    2: string relativePath,
   ) throws (1: EdenError ex)
+
+  list<HgNonnormalFile> hgGetNonnormalFiles(
+    1: string mountPoint,
+  ) throws (1: EdenError ex)
+
+  // If relativePathSource is the empty string, remove the entry in the map for
+  // relativePathDest.
+  void hgCopyMapPut(
+    1: string mountPoint,
+    2: string relativePathDest,
+    3: string relativePathSource,
+  )
+
+  string hgCopyMapGet(
+    1: string mountPoint,
+    2: string relativePathDest,
+  )
+
+  /**
+   * In practice, this map should be fairly small.
+   */
+  map<string, string> hgCopyMapGetAll(
+    1: string mountPoint,
+  )
 
   //////// Debugging APIs ////////
 

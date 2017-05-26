@@ -9,12 +9,21 @@
  */
 #pragma once
 
-#include <unordered_map>
-#include "eden/fs/inodes/gen-cpp2/overlay_types.h"
+#include <folly/experimental/StringKeyedUnorderedMap.h>
+#include "eden/fs/inodes/gen-cpp2/hgdirstate_types.h"
+#include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
+
+// This is similar to the data stored in Mercurial's dirstate.py. The biggest
+// difference is that we only store "nonnormal" files whereas Mercurial's
+// dirstate stores information about all files in the repo.
+struct DirstateData {
+  folly::StringKeyedUnorderedMap<hgdirstate::DirstateTuple> hgDirstateTuples;
+  folly::StringKeyedUnorderedMap<RelativePath> hgDestToSourceCopyMap;
+};
 
 /**
  * Persists dirstate data to a local file.
@@ -24,17 +33,19 @@ class DirstatePersistence {
   explicit DirstatePersistence(AbsolutePathPiece storageFile)
       : storageFile_(storageFile) {}
 
-  void save(
-      const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
-          userDirectives);
+  void save(const DirstateData& data);
 
   /**
    * If the underlying storage file does not exist, then this returns an empty
    * map.
    */
-  std::unordered_map<RelativePath, overlay::UserStatusDirective> load();
+  DirstateData load();
 
  private:
+  void save(
+      const std::map<std::string, hgdirstate::DirstateTuple>& hgDirstateTuples,
+      const std::map<std::string, std::string>& hgDestToSourceCopyMap);
+
   AbsolutePath storageFile_;
 };
 }

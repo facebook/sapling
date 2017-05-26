@@ -1,6 +1,11 @@
 cpp_unittest(
   name = 'test',
-  srcs = glob(['*Test.cpp']),
+  srcs = glob(['*Test.cpp'], excludes=[
+    # TODO(mbolin): Figure out what is salvagable from these tests and then
+    # re-enable them.
+    "DirstateTest.cpp",
+    "DirstatePersistenceTest.cpp",
+  ]),
   deps = [
     '@/eden/fs/inodes:inodes',
     '@/eden/fs/testharness:testharness',

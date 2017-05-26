@@ -43,6 +43,7 @@ cpp_library(
         "@/eden/fs/config:config",
         "@/eden/fs/fuse:fusell",
         "@/eden/fs/fuse/privhelper:privhelper",
+        "@/eden/fs/inodes:hgdirstate-cpp2",
         "@/eden/fs/inodes:inodes",
         "@/eden/fs/store/git:git",
         "@/eden/fs/store/hg:hg",
@@ -71,6 +72,7 @@ thrift_library(
   languages = ['java', 'py'],
   deps = [
     '@/common/fb303/if:fb303',
+    '@/eden/fs/inodes:hgdirstate',
   ],
 )
 
@@ -98,6 +100,7 @@ thrift_library(
   languages = ['cpp2'],
   deps = [
     '@/common/fb303/if:fb303',
+    '@/eden/fs/inodes:hgdirstate',
   ],
 )
 
@@ -128,7 +131,7 @@ python_library(
   ],
   base_module = 'eden.thrift',
   deps = [
-    '@/eden/fs/service:thrift-py',
+    ':thrift-py',
   ],
 )
 

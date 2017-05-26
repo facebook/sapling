@@ -10,6 +10,7 @@
 #pragma once
 
 #include "common/fb303/cpp/FacebookBase2.h"
+#include "eden/fs/inodes/gen-cpp2/hgdirstate_types.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -93,16 +94,33 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored) override;
 
-  void scmAdd(
-      std::vector<ScmAddRemoveError>& errorsToReport,
+  void hgGetDirstateTuple(
+      hgdirstate::DirstateTuple& out,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths) override;
+      std::unique_ptr<std::string> relativePath) override;
 
-  void scmRemove(
-      std::vector<ScmAddRemoveError>& errorsToReport,
+  void hgSetDirstateTuple(
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths,
-      bool force) override;
+      std::unique_ptr<std::string> relativePath,
+      std::unique_ptr<hgdirstate::DirstateTuple> tuple) override;
+
+  void hgGetNonnormalFiles(
+      std::vector<HgNonnormalFile>& out,
+      std::unique_ptr<std::string> mountPoint) override;
+
+  void hgCopyMapPut(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> relativePathDest,
+      std::unique_ptr<std::string> relativePathSource) override;
+
+  void hgCopyMapGet(
+      std::string& relativePathSource,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> relativePathDest) override;
+
+  void hgCopyMapGetAll(
+      std::map<std::string, std::string>& copyMap,
+      std::unique_ptr<std::string> mountPoint) override;
 
   void debugGetScmTree(
       std::vector<ScmTreeEntry>& entries,

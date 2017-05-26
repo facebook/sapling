@@ -191,11 +191,9 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
   setInitialCommit(commitHash);
 }
 
-void TestMount::setInitialDirstate(
-    const std::unordered_map<RelativePath, overlay::UserStatusDirective>&
-        userDirectives) {
+void TestMount::setInitialDirstate(const DirstateData& dirstateData) {
   DirstatePersistence dirstatePersistence{config_->getDirstateStoragePath()};
-  dirstatePersistence.save(userDirectives);
+  dirstatePersistence.save(dirstateData);
 }
 
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {

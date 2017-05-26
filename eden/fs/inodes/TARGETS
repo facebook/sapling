@@ -5,6 +5,24 @@ thrift_library(
     'overlay.thrift': [],
   },
   languages = ['cpp2'],
+  deps = [
+    ':hgdirstate',
+  ]
+)
+
+thrift_library(
+  name = 'hgdirstate',
+  thrift_args = ['--strict'],
+  thrift_srcs = {
+    'hgdirstate.thrift': None,
+  },
+  # Need to support .java and .py because eden.thrift depends on this file.
+  languages = [
+    'cpp2',
+    'java',
+    'py',
+  ],
+  py_base_module = 'facebook',
 )
 
 cpp_library(
@@ -13,6 +31,7 @@ cpp_library(
   headers = glob(['*.h']),
   deps = [
     ':serialization-cpp2',
+    ':hgdirstate-cpp2',
     '@/eden/fs/config:config',
     '@/eden/fs/fuse:fusell',
     '@/eden/fs/journal:journal',
