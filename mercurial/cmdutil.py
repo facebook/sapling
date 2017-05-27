@@ -2632,11 +2632,11 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
 
     return ret
 
-def cat(ui, repo, ctx, matcher, prefix, **opts):
+def cat(ui, repo, ctx, matcher, fntemplate, prefix, **opts):
     err = 1
 
     def write(path):
-        fp = makefileobj(repo, opts.get('output'), ctx.node(),
+        fp = makefileobj(repo, fntemplate, ctx.node(),
                          pathname=os.path.join(prefix, path))
         data = ctx[path].data()
         if opts.get('decode'):
@@ -2666,8 +2666,8 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
         try:
             submatch = matchmod.subdirmatcher(subpath, matcher)
 
-            if not sub.cat(submatch, os.path.join(prefix, sub._path),
-                           **opts):
+            if not sub.cat(submatch, fntemplate,
+                           os.path.join(prefix, sub._path), **opts):
                 err = 0
         except error.RepoLookupError:
             ui.status(_("skipping missing subrepository: %s\n")

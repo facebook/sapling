@@ -538,7 +538,7 @@ class abstractsubrepo(object):
         self.ui.warn("%s: %s" % (prefix, _("addremove is not supported")))
         return 1
 
-    def cat(self, match, prefix, **opts):
+    def cat(self, match, fntemplate, prefix, **opts):
         return 1
 
     def status(self, rev2, **opts):
@@ -767,10 +767,11 @@ class hgsubrepo(abstractsubrepo):
                                  dry_run, similarity)
 
     @annotatesubrepoerror
-    def cat(self, match, prefix, **opts):
+    def cat(self, match, fntemplate, prefix, **opts):
         rev = self._state[1]
         ctx = self._repo[rev]
-        return cmdutil.cat(self.ui, self._repo, ctx, match, prefix, **opts)
+        return cmdutil.cat(self.ui, self._repo, ctx, match, fntemplate, prefix,
+                           **opts)
 
     @annotatesubrepoerror
     def status(self, rev2, **opts):
@@ -1832,7 +1833,7 @@ class gitsubrepo(abstractsubrepo):
 
 
     @annotatesubrepoerror
-    def cat(self, match, prefix, **opts):
+    def cat(self, match, fntemplate, prefix, **opts):
         rev = self._state[1]
         if match.anypats():
             return 1 #No support for include/exclude yet
@@ -1842,7 +1843,7 @@ class gitsubrepo(abstractsubrepo):
 
         for f in match.files():
             output = self._gitcommand(["show", "%s:%s" % (rev, f)])
-            fp = cmdutil.makefileobj(self._subparent, opts.get('output'),
+            fp = cmdutil.makefileobj(self._subparent, fntemplate,
                                      self._ctx.node(),
                                      pathname=self.wvfs.reljoin(prefix, f))
             fp.write(output)
