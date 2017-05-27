@@ -1,7 +1,11 @@
   $ cat >> fakepager.py <<EOF
   > import sys
+  > printed = False
   > for line in sys.stdin:
   >     sys.stdout.write('paged! %r\n' % line)
+  >     printed = True
+  > if not printed:
+  >     sys.stdout.write('paged empty output!\n')
   > EOF
 
 Enable ui.formatted because pager won't fire without it, and set up
@@ -280,6 +284,15 @@ explicit flags work too:
    8: a 8
    9: a 9
   10: a 10
+
+A command with --output option:
+
+  $ hg cat -r0 a
+  paged! 'a\n'
+  $ hg cat -r0 a --output=-
+  paged! 'a\n'
+  $ hg cat -r0 a --output=out
+  $ rm out
 
 Put annotate in the ignore list for pager:
   $ cat >> $HGRCPATH <<EOF
