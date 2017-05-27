@@ -20,7 +20,7 @@ Gather list of all installed files:
 
 Spot-check some randomly selected files:
   $ grep bdiff boms.txt | cut -d '	' -f 1,2,3
-  ./Library/Python/2.7/site-packages/mercurial/bdiff.so	100755	0/0
+  ./Library/Python/2.7/site-packages/mercurial/cext/bdiff.so	100755	0/0
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.py	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.pyc	100644	0/0
   ./Library/Python/2.7/site-packages/mercurial/pure/bdiff.pyo	100644	0/0
