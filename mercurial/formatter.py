@@ -207,6 +207,10 @@ class baseformatter(object):
         if self._item is not None:
             self._showitem()
 
+def nullformatter(ui, topic):
+    '''formatter that prints nothing'''
+    return baseformatter(ui, topic, opts={}, converter=_nullconverter)
+
 class _nestedformatter(baseformatter):
     '''build sub items and store them in the parent formatter'''
     def __init__(self, ui, converter, data):
