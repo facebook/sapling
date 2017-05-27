@@ -163,6 +163,9 @@ osx:
 	  --root=build/mercurial/ --prefix=/usr/local/ \
 	  --install-lib=/Library/Python/2.7/site-packages/
 	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"
+        # Place a bogon .DS_Store file in the target dir so we can be
+        # sure it doesn't get included in the final package.
+	touch build/mercurial/.DS_Store
         # install zsh completions - this location appears to be
         # searched by default as of macOS Sierra.
 	install -d build/mercurial/usr/local/share/zsh/site-functions/
@@ -176,7 +179,7 @@ osx:
 	mkdir -p $${OUTPUTDIR:-dist}
 	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
-	pkgbuild --root build/mercurial/ \
+	pkgbuild --filter \\.DS_Store --root build/mercurial/ \
 	  --identifier org.mercurial-scm.mercurial \
 	  --version "$${HGVER}" \
 	  build/mercurial.pkg && \

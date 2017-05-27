@@ -18,6 +18,11 @@
 Gather list of all installed files:
   $ lsbom mercurial.pkg/Bom > boms.txt
 
+We've had problems with the filter logic in the past. Make sure no
+.DS_Store files ended up in the final package:
+  $ grep DS_S boms.txt
+  [1]
+
 Spot-check some randomly selected files:
   $ grep bdiff boms.txt | cut -d '	' -f 1,2,3
   ./Library/Python/2.7/site-packages/mercurial/cext/bdiff.so	100755	0/0
