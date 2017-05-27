@@ -1072,3 +1072,177 @@ Check the result of the push
   |/
   o  842e2fac6304 C-ROOT (default)
   
+
+raced commit push a new head behind another named branch
+---------------------------------------------------------
+
+non-continuous branch are valid case, we tests for them.
+
+#  b (raced branch default)
+#  |
+#  o (branch foo)
+#  |
+#  | a (branch default)
+#  |/
+#  * (branch foo)
+#  |
+#  * (branch default)
+
+(resync-all)
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-other pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-racy pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+  $ hg -R server graph
+  o  b0ee3d6f51bc C-Q (default)
+  |
+  | o  1b58ee3f79e5 C-P (default)
+  | |
+  | o  d0a85b2252a9 C-O (other)
+  |/
+  o  55a6f1c01b48 C-Z (other)
+  |
+  o    866a66e18630 C-N (default)
+  |\
+  +---o  6fd3090135df C-M (default)
+  | |
+  | o  cac2cead0ff0 C-L (default)
+  | |
+  o |  be705100c623 C-K (default)
+  |\|
+  o |  d603e2c0cdd7 C-E (default)
+  | |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | | o  89420bf00fae C-J (default)
+  | | |
+  | | | o  b35ed749f288 C-I (my-second-test-branch)
+  | | |/
+  | | o  75d69cba5402 C-G (default)
+  | | |
+  | | | o  833be552cfe6 C-H (my-first-test-branch)
+  | | |/
+  | | o  d9e379a8c432 C-F (default)
+  | | |
+  +---o  51c544a58128 C-C (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  | |
+  o |  98217d5a1659 C-A (default)
+  |/
+  o  842e2fac6304 C-ROOT (default)
+  
+
+Creating changesets
+
+(update 'other' named branch head)
+
+  $ hg -R client-other/ up 'desc("C-P")'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo aaa >> client-other/a
+  $ hg -R client-other/ branch --force other
+  marked working directory as branch other
+  $ hg -R client-other/ commit -m "C-R"
+  created new head
+
+(update 'other named brnach through a 'default' changeset')
+
+  $ hg -R client-racy/ up 'desc("C-P")'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo bbb >> client-racy/a
+  $ hg -R client-racy/ commit -m "C-S"
+  $ echo bbb >> client-racy/a
+  $ hg -R client-racy/ branch --force other
+  marked working directory as branch other
+  $ hg -R client-racy/ commit -m "C-T"
+  created new head
+
+Pushing
+
+  $ hg -R client-racy push -r 'tip' > ./push-log 2>&1 &
+
+  $ waiton $TESTTMP/readyfile
+
+  $ hg -R client-other push -fr 'tip' --new-branch
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ release $TESTTMP/watchfile
+
+Check the result of the push
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  abort: push failed:
+  'repository changed while pushing - please try again'
+
+  $ hg -R server graph
+  o  de7b9e2ba3f6 C-R (other)
+  |
+  o  1b58ee3f79e5 C-P (default)
+  |
+  o  d0a85b2252a9 C-O (other)
+  |
+  | o  b0ee3d6f51bc C-Q (default)
+  |/
+  o  55a6f1c01b48 C-Z (other)
+  |
+  o    866a66e18630 C-N (default)
+  |\
+  +---o  6fd3090135df C-M (default)
+  | |
+  | o  cac2cead0ff0 C-L (default)
+  | |
+  o |  be705100c623 C-K (default)
+  |\|
+  o |  d603e2c0cdd7 C-E (default)
+  | |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | | o  89420bf00fae C-J (default)
+  | | |
+  | | | o  b35ed749f288 C-I (my-second-test-branch)
+  | | |/
+  | | o  75d69cba5402 C-G (default)
+  | | |
+  | | | o  833be552cfe6 C-H (my-first-test-branch)
+  | | |/
+  | | o  d9e379a8c432 C-F (default)
+  | | |
+  +---o  51c544a58128 C-C (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  | |
+  o |  98217d5a1659 C-A (default)
+  |/
+  o  842e2fac6304 C-ROOT (default)
+  
