@@ -97,6 +97,7 @@ These are the supported infix operators:
 
 ``x~n``
   The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``.
+  For n < 0, the nth unambiguous descendent of x.
 
 ``x ## y``
   Concatenate strings and identifiers into one string.

@@ -379,12 +379,33 @@ def _firstancestors(repo, subset, x):
     # Like ``ancestors(set)`` but follows only the first parents.
     return _ancestors(repo, subset, x, followfirst=True)
 
+def _childrenspec(repo, subset, x, n, order):
+    """Changesets that are the Nth child of a changeset
+    in set.
+    """
+    cs = set()
+    for r in getset(repo, fullreposet(repo), x):
+        for i in range(n):
+            c = repo[r].children()
+            if len(c) == 0:
+                break
+            if len(c) > 1:
+                raise error.RepoLookupError(
+                    _("revision in set has more than one child"))
+            r = c[0]
+        else:
+            cs.add(r)
+    return subset & cs
+
 def ancestorspec(repo, subset, x, n, order):
     """``set~n``
     Changesets that are the Nth ancestor (first parents only) of a changeset
     in set.
     """
     n = getinteger(n, _("~ expects a number"))
+    if n < 0:
+        # children lookup
+        return _childrenspec(repo, subset, x, -n, order)
     ps = set()
     cl = repo.changelog
     for r in getset(repo, fullreposet(repo), x):
