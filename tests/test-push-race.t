@@ -189,3 +189,92 @@ Check the result of the push
   |
   @  842e2fac6304 C-ROOT (default)
   
+
+Pushing on two different heads
+------------------------------
+
+Both try to replace a different head
+
+#  a b
+#  | |
+#  * *
+#  |/
+#  *
+
+(resync-all)
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-other pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-racy pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+  $ hg -R server graph
+  o  a9149a1428e2 C-B (default)
+  |
+  | o  98217d5a1659 C-A (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+
+Creating changesets
+
+  $ echo aa >> client-other/a
+  $ hg -R client-other/ commit -m "C-C"
+  $ echo bb >> client-racy/b
+  $ hg -R client-racy/ commit -m "C-D"
+
+Pushing
+
+  $ hg -R client-racy push -r 'tip' > ./push-log 2>&1 &
+
+  $ waiton $TESTTMP/readyfile
+
+  $ hg -R client-other push -r 'tip'
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ release $TESTTMP/watchfile
+
+Check the result of the push
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  abort: push failed:
+  'repository changed while pushing - please try again'
+
+  $ hg -R server graph
+  o  51c544a58128 C-C (default)
+  |
+  o  98217d5a1659 C-A (default)
+  |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
