@@ -384,3 +384,120 @@ Check the result of the push
   |/
   @  842e2fac6304 C-ROOT (default)
   
+
+Pushing touching different named branch (same topo): new branch raced
+---------------------------------------------------------------------
+
+Pushing two children on the same head, one is a different named branch
+
+#  a (raced, branch-a)
+#  |
+#  | b (default branch)
+#  |/
+#  *
+
+(resync-all)
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg -R ./client-other pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg -R ./client-racy pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+  $ hg -R server graph
+  o  d9e379a8c432 C-F (default)
+  |
+  o  51c544a58128 C-C (default)
+  |
+  | o  d603e2c0cdd7 C-E (default)
+  |/
+  o  98217d5a1659 C-A (default)
+  |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+
+Creating changesets
+
+(update existing head)
+
+  $ hg -R client-other/ up 'desc("C-F")'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo aaa >> client-other/a
+  $ hg -R client-other/ commit -m "C-G"
+
+(new named branch from that existing head)
+
+  $ hg -R client-racy/ up 'desc("C-F")'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo bbb >> client-racy/a
+  $ hg -R client-racy/ branch my-first-test-branch
+  marked working directory as branch my-first-test-branch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg -R client-racy/ commit -m "C-H"
+
+Pushing
+
+  $ hg -R client-racy push -r 'tip' --new-branch > ./push-log 2>&1 &
+
+  $ waiton $TESTTMP/readyfile
+
+  $ hg -R client-other push -fr 'tip'
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ release $TESTTMP/watchfile
+
+Check the result of the push
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  abort: push failed:
+  'repository changed while pushing - please try again'
+
+  $ hg -R server graph
+  o  75d69cba5402 C-G (default)
+  |
+  o  d9e379a8c432 C-F (default)
+  |
+  o  51c544a58128 C-C (default)
+  |
+  | o  d603e2c0cdd7 C-E (default)
+  |/
+  o  98217d5a1659 C-A (default)
+  |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
