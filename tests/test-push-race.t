@@ -111,8 +111,8 @@ We tests multiple cases:
 #if unrelated
 
   $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > checkheads-strict = no
+  > [server]
+  > concurrent-push-mode = check-related
   > EOF
 
 #endif
