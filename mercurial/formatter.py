@@ -103,6 +103,7 @@ baz: foo, bar
 
 from __future__ import absolute_import
 
+import contextlib
 import itertools
 import os
 
@@ -432,3 +433,29 @@ def formatter(ui, out, topic, opts):
     elif ui.configbool('ui', 'formatjson'):
         return jsonformatter(ui, out, topic, opts)
     return plainformatter(ui, out, topic, opts)
+
+@contextlib.contextmanager
+def openformatter(ui, filename, topic, opts):
+    """Create a formatter that writes outputs to the specified file
+
+    Must be invoked using the 'with' statement.
+    """
+    with util.posixfile(filename, 'wb') as out:
+        with formatter(ui, out, topic, opts) as fm:
+            yield fm
+
+@contextlib.contextmanager
+def _neverending(fm):
+    yield fm
+
+def maybereopen(fm, filename, opts):
+    """Create a formatter backed by file if filename specified, else return
+    the given formatter
+
+    Must be invoked using the 'with' statement. This will never call fm.end()
+    of the given formatter.
+    """
+    if filename:
+        return openformatter(fm._ui, filename, fm._topic, opts)
+    else:
+        return _neverending(fm)
