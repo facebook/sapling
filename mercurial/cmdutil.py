@@ -2642,11 +2642,11 @@ def cat(ui, repo, ctx, matcher, fntemplate, prefix, **opts):
             fp = open(filename, 'wb')
         else:
             fp = _unclosablefile(ui.fout)
-        data = ctx[path].data()
-        if opts.get('decode'):
-            data = repo.wwritedata(path, data)
-        fp.write(data)
-        fp.close()
+        with fp:
+            data = ctx[path].data()
+            if opts.get('decode'):
+                data = repo.wwritedata(path, data)
+            fp.write(data)
 
     # Automation often uses hg cat on single files, so special case it
     # for performance to avoid the cost of parsing the manifest.
