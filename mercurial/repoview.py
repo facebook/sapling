@@ -59,33 +59,13 @@ def _consistencyblocker(pfunc, hideable, domain):
                 break
     return blockers
 
-def _revealancestors(pfunc, hidden, revs, domain):
-    """reveals contiguous chains of hidden ancestors of 'revs' within 'domain'
-    by removing them from 'hidden'
+def _revealancestors(pfunc, hidden, revs):
+    """reveals contiguous chains of hidden ancestors of 'revs' by removing them
+    from 'hidden'
 
     - pfunc(r): a funtion returning parent of 'r',
     - hidden: the (preliminary) hidden revisions, to be updated
     - revs: iterable of revnum,
-    - domain: consistent set of revnum.
-
-    The domain must be consistent: no connected subset are the ancestors of
-    another connected subset. In other words, if the parents of a revision are
-    not in the domains, no other ancestors of that revision. For example, with
-    the following graph:
-
-        F
-        |
-        E
-        | D
-        | |
-        | C
-        |/
-        B
-        |
-        A
-
-    If C, D, E and F are in the domain but B is not, A cannot be ((A) is an
-    ancestors disconnected subset disconnected of (C+D)).
 
     (Ancestors are revealed inclusively, i.e. the elements in 'revs' are
     also revealed)
@@ -94,7 +74,7 @@ def _revealancestors(pfunc, hidden, revs, domain):
     hidden -= set(stack)
     while stack:
         for p in pfunc(stack.pop()):
-            if p != nullrev and p in domain and p in hidden:
+            if p != nullrev and p in hidden:
                 hidden.remove(p)
                 stack.append(p)
 
@@ -118,7 +98,7 @@ def computehidden(repo):
         if blockers:
             # don't modify possibly cached result of hideablerevs()
             hidden = hidden.copy()
-            _revealancestors(pfunc, hidden, blockers, mutable)
+            _revealancestors(pfunc, hidden, blockers)
     return frozenset(hidden)
 
 def computeunserved(repo):
