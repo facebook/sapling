@@ -1326,6 +1326,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
 
     contentopts = {'cg.version': cgversion}
+    if repo.ui.configbool('experimental', 'evolution.bundle-obsmarker', False):
+        contentopts['obsolescence'] = True
     bundle2.writenewbundle(ui, repo, 'bundle', fname, bversion, outgoing,
                            contentopts, compression=bcompression,
                            compopts=compopts)

@@ -83,6 +83,21 @@ check that bundle is not affected
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads)
+
+check-that bundle can contain markers:
+
+  $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5-obs.hg --config experimental.evolution.bundle-obsmarker=1
+  1 changesets found
+  $ hg debugbundle ../f89bcc95eba5.hg
+  Stream params: sortdict([('Compression', 'BZ')])
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+      f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
+  $ hg debugbundle ../f89bcc95eba5-obs.hg
+  Stream params: sortdict([('Compression', 'BZ')])
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+      f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
+  obsmarkers -- 'sortdict()'
+
   $ cd ..
 
 pull does not fetch excessive changesets when common node is hidden (issue4982)

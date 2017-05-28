@@ -1348,7 +1348,10 @@ def writenewbundle(ui, repo, source, filename, bundletype, outgoing, opts,
     elif not bundletype.startswith('HG20'):
         raise error.ProgrammingError('unknown bundle type: %s' % bundletype)
 
-    bundle = bundle20(ui)
+    caps = {}
+    if 'obsolescence' in opts:
+        caps['obsmarkers'] = ('V1',)
+    bundle = bundle20(ui, caps)
     bundle.setcompression(compression, compopts)
     _addpartsfromopts(ui, repo, bundle, source, outgoing, opts)
     chunkiter = bundle.getchunks()
@@ -1376,6 +1379,10 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
                       mandatory=False)
 
     addparttagsfnodescache(repo, bundler, outgoing)
+
+    if opts.get('obsolescence', False):
+        obsmarkers = repo.obsstore.relevantmarkers(outgoing.missing)
+        buildobsmarkerspart(bundler, obsmarkers)
 
 def addparttagsfnodescache(repo, bundler, outgoing):
     # we include the tags fnode cache for the bundle changeset
