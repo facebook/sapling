@@ -2338,7 +2338,7 @@ def MBTextWrapper(**kwargs):
                 # Convert current line back to a string and store it in list
                 # of all lines (return value).
                 if cur_line:
-                    lines.append(indent + ''.join(cur_line))
+                    lines.append(indent + r''.join(cur_line))
 
             return lines
 
