@@ -44,19 +44,6 @@ def pinnedrevs(repo):
         pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return pinned
 
-def _consistencyblocker(pfunc, hideable, revs):
-    """return non-hideable changeset blocking hideable one
-
-    For consistency, we cannot actually hide a changeset if one of it children
-    are visible, this function find such children.
-    """
-    blockers = set()
-    for r in revs:
-        for p in pfunc(r):
-            if p != nullrev and p in hideable:
-                blockers.add(r)
-                break
-    return blockers
 
 def _revealancestors(pfunc, hidden, revs):
     """reveals contiguous chains of hidden ancestors of 'revs' by removing them
@@ -89,16 +76,12 @@ def computehidden(repo):
         mutablephases = (phases.draft, phases.secret)
         mutable = repo._phasecache.getrevset(repo, mutablephases)
 
-        visible = mutable - hidden
-        blockers = _consistencyblocker(pfunc, hidden, visible)
-
-        # check if we have wd parents, bookmarks or tags pointing to hidden
-        # changesets and remove those.
-        blockers |= (hidden & pinnedrevs(repo))
-        if blockers:
+        visible = set(mutable - hidden)
+        visible |= (hidden & pinnedrevs(repo))
+        if visible:
             # don't modify possibly cached result of hideablerevs()
             hidden = hidden.copy()
-            _revealancestors(pfunc, hidden, blockers)
+            _revealancestors(pfunc, hidden, visible)
     return frozenset(hidden)
 
 def computeunserved(repo):
