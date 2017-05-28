@@ -97,6 +97,8 @@ perfstatus
    perfrawfiles  (no help text available)
    perfrevlogchunks
                  Benchmark operations on revlog chunks.
+   perfrevlogindex
+                 Benchmark operations against a revlog index.
    perfrevlogrevision
                  Benchmark obtaining a revlog revision.
    perfrevlogrevisions
@@ -147,6 +149,7 @@ perfstatus
   $ hg perfnodelookup 2
   $ hg perfpathcopies 1 2
   $ hg perfrawfiles 2
+  $ hg perfrevlogindex -c
   $ hg perfrevlogrevisions .hg/store/data/a.i
   $ hg perfrevlogrevision -m 0
   $ hg perfrevlogchunks -c

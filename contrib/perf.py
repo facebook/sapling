@@ -23,6 +23,7 @@ import functools
 import gc
 import os
 import random
+import struct
 import sys
 import time
 from mercurial import (
@@ -34,6 +35,7 @@ from mercurial import (
     extensions,
     mdiff,
     merge,
+    revlog,
     util,
 )
 
@@ -856,6 +858,122 @@ def perfdiffwd(ui, repo, **opts):
         title = 'diffopts: %s' % (diffopt and ('-' + diffopt) or 'none')
         timer(d, title)
     fm.end()
+
+@command('perfrevlogindex', revlogopts + formatteropts,
+         '-c|-m|FILE')
+def perfrevlogindex(ui, repo, file_=None, **opts):
+    """Benchmark operations against a revlog index.
+
+    This tests constructing a revlog instance, reading index data,
+    parsing index data, and performing various operations related to
+    index data.
+    """
+
+    rl = cmdutil.openrevlog(repo, 'perfrevlogindex', file_, opts)
+
+    opener = getattr(rl, 'opener')  # trick linter
+    indexfile = rl.indexfile
+    data = opener.read(indexfile)
+
+    header = struct.unpack('>I', data[0:4])[0]
+    version = header & 0xFFFF
+    if version == 1:
+        revlogio = revlog.revlogio()
+        inline = header & (1 << 16)
+    else:
+        raise error.Abort(('unsupported revlog version: %d') % version)
+
+    rllen = len(rl)
+
+    node0 = rl.node(0)
+    node25 = rl.node(rllen // 4)
+    node50 = rl.node(rllen // 2)
+    node75 = rl.node(rllen // 4 * 3)
+    node100 = rl.node(rllen - 1)
+
+    allrevs = range(rllen)
+    allrevsrev = list(reversed(allrevs))
+    allnodes = [rl.node(rev) for rev in range(rllen)]
+    allnodesrev = list(reversed(allnodes))
+
+    def constructor():
+        revlog.revlog(opener, indexfile)
+
+    def read():
+        with opener(indexfile) as fh:
+            fh.read()
+
+    def parseindex():
+        revlogio.parseindex(data, inline)
+
+    def getentry(revornode):
+        index = revlogio.parseindex(data, inline)[0]
+        index[revornode]
+
+    def getentries(revs, count=1):
+        index = revlogio.parseindex(data, inline)[0]
+
+        for i in range(count):
+            for rev in revs:
+                index[rev]
+
+    def resolvenode(node):
+        nodemap = revlogio.parseindex(data, inline)[1]
+        # This only works for the C code.
+        if nodemap is None:
+            return
+
+        try:
+            nodemap[node]
+        except error.RevlogError:
+            pass
+
+    def resolvenodes(nodes, count=1):
+        nodemap = revlogio.parseindex(data, inline)[1]
+        if nodemap is None:
+            return
+
+        for i in range(count):
+            for node in nodes:
+                try:
+                    nodemap[node]
+                except error.RevlogError:
+                    pass
+
+    benches = [
+        (constructor, 'revlog constructor'),
+        (read, 'read'),
+        (parseindex, 'create index object'),
+        (lambda: getentry(0), 'retrieve index entry for rev 0'),
+        (lambda: resolvenode('a' * 20), 'look up missing node'),
+        (lambda: resolvenode(node0), 'look up node at rev 0'),
+        (lambda: resolvenode(node25), 'look up node at 1/4 len'),
+        (lambda: resolvenode(node50), 'look up node at 1/2 len'),
+        (lambda: resolvenode(node75), 'look up node at 3/4 len'),
+        (lambda: resolvenode(node100), 'look up node at tip'),
+        # 2x variation is to measure caching impact.
+        (lambda: resolvenodes(allnodes),
+         'look up all nodes (forward)'),
+        (lambda: resolvenodes(allnodes, 2),
+         'look up all nodes 2x (forward)'),
+        (lambda: resolvenodes(allnodesrev),
+         'look up all nodes (reverse)'),
+        (lambda: resolvenodes(allnodesrev, 2),
+         'look up all nodes 2x (reverse)'),
+        (lambda: getentries(allrevs),
+         'retrieve all index entries (forward)'),
+        (lambda: getentries(allrevs, 2),
+         'retrieve all index entries 2x (forward)'),
+        (lambda: getentries(allrevsrev),
+         'retrieve all index entries (reverse)'),
+        (lambda: getentries(allrevsrev, 2),
+         'retrieve all index entries 2x (reverse)'),
+    ]
+
+    for fn, title in benches:
+        timer, fm = gettimer(ui, opts)
+        timer(fn, title=title)
+        fm.end()
 
 @command('perfrevlogrevisions', revlogopts + formatteropts +
          [('d', 'dist', 100, 'distance between the revisions'),
