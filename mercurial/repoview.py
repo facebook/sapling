@@ -53,11 +53,10 @@ def _revealancestors(pfunc, hidden, revs):
     - hidden: the (preliminary) hidden revisions, to be updated
     - revs: iterable of revnum,
 
-    (Ancestors are revealed inclusively, i.e. the elements in 'revs' are
-    also revealed)
+    (Ancestors are revealed exclusively, i.e. the elements in 'revs' are
+    *not* revealed)
     """
     stack = list(revs)
-    hidden -= set(stack)
     while stack:
         for p in pfunc(stack.pop()):
             if p != nullrev and p in hidden:
@@ -79,8 +78,7 @@ def computehidden(repo):
         visible = set(mutable - hidden)
         visible |= (hidden & pinnedrevs(repo))
         if visible:
-            # don't modify possibly cached result of hideablerevs()
-            hidden = hidden.copy()
+            hidden = hidden - visible
             _revealancestors(pfunc, hidden, visible)
     return frozenset(hidden)
 
