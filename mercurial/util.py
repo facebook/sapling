@@ -2310,7 +2310,7 @@ def MBTextWrapper(**kwargs):
 
                 # First chunk on line is whitespace -- drop it, unless this
                 # is the very beginning of the text (i.e. no lines started yet).
-                if self.drop_whitespace and chunks[-1].strip() == '' and lines:
+                if self.drop_whitespace and chunks[-1].strip() == r'' and lines:
                     del chunks[-1]
 
                 while chunks:
@@ -2332,7 +2332,7 @@ def MBTextWrapper(**kwargs):
 
                 # If the last chunk on this line is all whitespace, drop it.
                 if (self.drop_whitespace and
-                    cur_line and cur_line[-1].strip() == ''):
+                    cur_line and cur_line[-1].strip() == r''):
                     del cur_line[-1]
 
                 # Convert current line back to a string and store it in list
