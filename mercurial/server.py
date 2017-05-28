@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import os
-import sys
 import tempfile
 
 from .i18n import _
@@ -19,6 +18,7 @@ from . import (
     commandserver,
     error,
     hgweb,
+    pycompat,
     util,
 )
 
@@ -42,7 +42,7 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         os.close(lockfd)
         try:
             if not runargs:
-                runargs = util.hgcmd() + sys.argv[1:]
+                runargs = util.hgcmd() + pycompat.sysargv[1:]
             runargs.append('--daemon-postexec=unlink:%s' % lockpath)
             # Don't pass --cwd to the child process, because we've already
             # changed directory.
