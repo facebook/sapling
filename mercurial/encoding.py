@@ -194,8 +194,8 @@ if not _nativeenviron:
                    for k, v in os.environ.items())  # re-exports
 
 # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
-wide = (environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
-        and "WFA" or "WF")
+wide = _sysstr(environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide"
+               and "WFA" or "WF")
 
 def colwidth(s):
     "Find the column width of a string for display in the local encoding"
