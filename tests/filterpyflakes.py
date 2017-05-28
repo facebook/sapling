@@ -13,6 +13,9 @@ for line in sys.stdin:
     pats = [
         r"undefined name 'WindowsError'",
         r"redefinition of unused '[^']+' from line",
+        # for cffi, allow re-exports from pure.*
+        r"cffi/[^:]*:.*\bimport \*' used",
+        r"cffi/[^:]*:.*\*' imported but unused",
     ]
 
     keep = True
