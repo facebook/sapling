@@ -72,16 +72,16 @@ def _importfrom(pkgname, modname):
 
 # keep in sync with "version" in C modules
 _cextversions = {
-    r'base85': 1,
-    r'bdiff': 1,
-    r'diffhelpers': 1,
-    r'mpatch': 1,
-    r'osutil': 1,
-    r'parsers': 1,
+    (r'cext', r'base85'): 1,
+    (r'cext', r'bdiff'): 1,
+    (r'cext', r'diffhelpers'): 1,
+    (r'cext', r'mpatch'): 1,
+    (r'cext', r'osutil'): 1,
+    (r'cext', r'parsers'): 1,
 }
 
 def _checkmod(pkgname, modname, mod):
-    expected = _cextversions.get(modname)
+    expected = _cextversions.get((pkgname, modname))
     actual = getattr(mod, r'version', None)
     if actual != expected:
         raise ImportError(r'cannot import module %s.%s '
