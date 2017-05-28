@@ -44,15 +44,14 @@ def pinnedrevs(repo):
         pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return pinned
 
-def _consistencyblocker(pfunc, hideable, domain):
+def _consistencyblocker(pfunc, hideable, revs):
     """return non-hideable changeset blocking hideable one
 
     For consistency, we cannot actually hide a changeset if one of it children
     are visible, this function find such children.
     """
-    others = domain - hideable
     blockers = set()
-    for r in others:
+    for r in revs:
         for p in pfunc(r):
             if p != nullrev and p in hideable:
                 blockers.add(r)
@@ -90,7 +89,8 @@ def computehidden(repo):
         mutablephases = (phases.draft, phases.secret)
         mutable = repo._phasecache.getrevset(repo, mutablephases)
 
-        blockers = _consistencyblocker(pfunc, hidden, mutable)
+        visible = mutable - hidden
+        blockers = _consistencyblocker(pfunc, hidden, visible)
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
