@@ -615,7 +615,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
         # program name
         if not ui.quiet:
             rst = [_("Mercurial Distributed SCM\n"), '\n']
-        rst.extend(helplist(None, **opts))
+        rst.extend(helplist(None, **pycompat.strkwargs(opts)))
 
     return ''.join(rst)
 
