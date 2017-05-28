@@ -95,11 +95,12 @@ perfstatus
                  (no help text available)
    perfphases    benchmark phasesets computation
    perfrawfiles  (no help text available)
-   perfrevlog    Benchmark reading a series of revisions from a revlog.
    perfrevlogchunks
                  Benchmark operations on revlog chunks.
    perfrevlogrevision
                  Benchmark obtaining a revlog revision.
+   perfrevlogrevisions
+                 Benchmark reading a series of revisions from a revlog.
    perfrevrange  (no help text available)
    perfrevset    benchmark the execution time of a revset
    perfstartup   (no help text available)
@@ -146,7 +147,7 @@ perfstatus
   $ hg perfnodelookup 2
   $ hg perfpathcopies 1 2
   $ hg perfrawfiles 2
-  $ hg perfrevlog .hg/store/data/a.i
+  $ hg perfrevlogrevisions .hg/store/data/a.i
   $ hg perfrevlogrevision -m 0
   $ hg perfrevlogchunks -c
   $ hg perfrevrange

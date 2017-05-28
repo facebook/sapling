@@ -857,12 +857,13 @@ def perfdiffwd(ui, repo, **opts):
         timer(d, title)
     fm.end()
 
-@command('perfrevlog', revlogopts + formatteropts +
+@command('perfrevlogrevisions', revlogopts + formatteropts +
          [('d', 'dist', 100, 'distance between the revisions'),
           ('s', 'startrev', 0, 'revision to start reading at'),
           ('', 'reverse', False, 'read in reverse')],
          '-c|-m|FILE')
-def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
+def perfrevlogrevisions(ui, repo, file_=None, startrev=0, reverse=False,
+                        **opts):
     """Benchmark reading a series of revisions from a revlog.
 
     By default, we read every ``-d/--dist`` revision from 0 to tip of
@@ -870,7 +871,7 @@ def perfrevlog(ui, repo, file_=None, startrev=0, reverse=False, **opts):
 
     The start revision can be defined via ``-s/--startrev``.
     """
-    rl = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
+    rl = cmdutil.openrevlog(repo, 'perfrevlogrevisions', file_, opts)
     rllen = getlen(ui)(rl)
 
     def d():
@@ -907,7 +908,7 @@ def perfrevlogchunks(ui, repo, file_=None, engines=None, startrev=0, **opts):
     This command measures the time it takes to read+decompress and recompress
     chunks in a revlog. It effectively isolates I/O and compression performance.
     For measurements of higher-level operations like resolving revisions,
-    see ``perfrevlog`` and ``perfrevlogrevision``.
+    see ``perfrevlogrevisions`` and ``perfrevlogrevision``.
     """
     rl = cmdutil.openrevlog(repo, 'perfrevlogchunks', file_, opts)
 
