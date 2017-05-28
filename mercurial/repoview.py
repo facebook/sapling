@@ -29,7 +29,7 @@ def hideablerevs(repo):
     return obsolete.getrevs(repo, 'obsolete')
 
 def revealedrevs(repo):
-    """non-cacheable revisions blocking hidden changesets from being filtered
+    """revisions blocking hidden changesets from being filtered
     """
 
     cl = repo.changelog
