@@ -248,21 +248,6 @@ def getbundlespec(ui, fh):
     else:
         raise error.Abort(_('unknown bundle type: %s') % b)
 
-def buildobsmarkerspart(bundler, markers):
-    """add an obsmarker part to the bundler with <markers>
-
-    No part is created if markers is empty.
-    Raises ValueError if the bundler doesn't support any known obsmarker format.
-    """
-    if markers:
-        remoteversions = bundle2.obsmarkersversion(bundler.capabilities)
-        version = obsolete.commonversion(remoteversions)
-        if version is None:
-            raise ValueError('bundler does not support common obsmarker format')
-        stream = obsolete.encodemarkers(markers, True, version=version)
-        return bundler.newpart('obsmarkers', data=stream)
-    return None
-
 def _computeoutgoing(repo, heads, common):
     """Computes which revs are outgoing given a set of common
     and a set of heads.
@@ -822,7 +807,7 @@ def _pushb2obsmarkers(pushop, bundler):
     pushop.stepsdone.add('obsmarkers')
     if pushop.outobsmarkers:
         markers = sorted(pushop.outobsmarkers)
-        buildobsmarkerspart(bundler, markers)
+        bundle2.buildobsmarkerspart(bundler, markers)
 
 @b2partsgenerator('bookmarks')
 def _pushb2bookmarks(pushop, bundler):
@@ -1648,7 +1633,7 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
         subset = [c.node() for c in repo.set('::%ln', heads)]
         markers = repo.obsstore.relevantmarkers(subset)
         markers = sorted(markers)
-        buildobsmarkerspart(bundler, markers)
+        bundle2.buildobsmarkerspart(bundler, markers)
 
 @getbundle2partsgenerator('hgtagsfnodes')
 def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,

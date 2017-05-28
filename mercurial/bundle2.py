@@ -1401,6 +1401,22 @@ def addparttagsfnodescache(repo, bundler, outgoing):
     if chunks:
         bundler.newpart('hgtagsfnodes', data=''.join(chunks))
 
+def buildobsmarkerspart(bundler, markers):
+    """add an obsmarker part to the bundler with <markers>
+
+    No part is created if markers is empty.
+    Raises ValueError if the bundler doesn't support any known obsmarker format.
+    """
+    if not markers:
+        return None
+
+    remoteversions = obsmarkersversion(bundler.capabilities)
+    version = obsolete.commonversion(remoteversions)
+    if version is None:
+        raise ValueError('bundler does not support common obsmarker format')
+    stream = obsolete.encodemarkers(markers, True, version=version)
+    return bundler.newpart('obsmarkers', data=stream)
+
 def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
                 compopts=None):
     """Write a bundle file and return its filename.
