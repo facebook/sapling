@@ -84,7 +84,11 @@ def optrst(header, options, verbose):
             so = '-' + shortopt
         lo = '--' + longopt
         if default:
-            desc += _(" (default: %s)") % default
+            # default is of unknown type, and in Python 2 we abused
+            # the %s-shows-repr property to handle integers etc. To
+            # match that behavior on Python 3, we do str(default) and
+            # then convert it to bytes.
+            desc += _(" (default: %s)") % pycompat.bytestr(default)
 
         if isinstance(default, list):
             lo += " %s [+]" % optlabel
