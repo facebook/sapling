@@ -23,11 +23,11 @@ from mercurial import (
 table = commands.table
 helptable = help.helptable
 
-level2mark = ['"', '=', '-', '.', '#']
-reservedmarks = ['"']
+level2mark = [b'"', b'=', b'-', b'.', b'#']
+reservedmarks = [b'"']
 
 mark2level = {}
-for m, l in zip(level2mark, xrange(len(level2mark))):
+for m, l in zip(level2mark, range(len(level2mark))):
     if m not in reservedmarks:
         mark2level[m] = l
 
@@ -37,22 +37,25 @@ initlevel_ext = 1
 initlevel_ext_cmd = 3
 
 def showavailables(ui, initlevel):
-    ui.warn(('    available marks and order of them in this help: %s\n') %
-            (', '.join(['%r' % (m * 4) for m in level2mark[initlevel + 1:]])))
+    avail = ('    available marks and order of them in this help: %s\n') % (
+        ', '.join(['%r' % (m * 4) for m in level2mark[initlevel + 1:]]))
+    ui.warn(avail.encode('utf-8'))
 
 def checkseclevel(ui, doc, name, initlevel):
     ui.note(('checking "%s"\n') % name)
+    if not isinstance(doc, bytes):
+        doc = doc.encode('utf-8')
     blocks, pruned = minirst.parse(doc, 0, ['verbose'])
     errorcnt = 0
     curlevel = initlevel
     for block in blocks:
-        if block['type'] != 'section':
+        if block[b'type'] != b'section':
             continue
-        mark = block['underline']
-        title = block['lines'][0]
+        mark = block[b'underline']
+        title = block[b'lines'][0]
         if (mark not in mark2level) or (mark2level[mark] <= initlevel):
-            ui.warn(('invalid section mark %r for "%s" of %s\n') %
-                    (mark * 4, title, name))
+            ui.warn((('invalid section mark %r for "%s" of %s\n') %
+                     (mark * 4, title, name)).encode('utf-8'))
             showavailables(ui, initlevel)
             errorcnt += 1
             continue
@@ -72,7 +75,7 @@ def checkseclevel(ui, doc, name, initlevel):
 def checkcmdtable(ui, cmdtable, namefmt, initlevel):
     errorcnt = 0
     for k, entry in cmdtable.items():
-        name = k.split("|")[0].lstrip("^")
+        name = k.split(b"|")[0].lstrip(b"^")
         if not entry[0].__doc__:
             ui.note(('skip checking %s: no help document\n') %
                     (namefmt % name))
@@ -93,8 +96,8 @@ def checkhghelps(ui):
 
     errorcnt += checkcmdtable(ui, table, '%s command', initlevel_cmd)
 
-    for name in sorted(extensions.enabled().keys() +
-                       extensions.disabled().keys()):
+    for name in sorted(list(extensions.enabled()) +
+                       list(extensions.disabled())):
         mod = extensions.load(ui, name, None)
         if not mod.__doc__:
             ui.note(('skip checking %s extension: no help document\n') % name)
@@ -106,7 +109,7 @@ def checkhghelps(ui):
         cmdtable = getattr(mod, 'cmdtable', None)
         if cmdtable:
             errorcnt += checkcmdtable(ui, cmdtable,
-                                      '%s command of ' + name + ' extension',
+                                      '%%s command of %s extension' % name,
                                       initlevel_ext_cmd)
     return errorcnt
 
