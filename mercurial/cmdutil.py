@@ -449,8 +449,7 @@ def findcmd(cmd, table, strict=True):
         return choice[cmd]
 
     if len(choice) > 1:
-        clist = choice.keys()
-        clist.sort()
+        clist = sorted(choice)
         raise error.AmbiguousCommand(cmd, clist)
 
     if choice:
