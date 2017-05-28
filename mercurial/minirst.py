@@ -315,7 +315,8 @@ def findtables(blocks):
             # column markers are ASCII so we can calculate column
             # position in bytes
             columns = [x for x in xrange(len(div))
-                       if div[x] == '=' and (x == 0 or div[x - 1] == ' ')]
+                       if div[x:x + 1] == '=' and (x == 0 or
+                                                   div[x - 1:x] == ' ')]
             rows = []
             for l in block['lines'][1:-1]:
                 if l == div:
