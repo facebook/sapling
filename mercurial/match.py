@@ -415,7 +415,8 @@ class exactmatcher(basematcher):
             self._files = files
         else:
             self._files = list(files)
-        self.matchfn = self.exact
+
+    matchfn = basematcher.exact
 
     @propertycache
     def _dirs(self):
