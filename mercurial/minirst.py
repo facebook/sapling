@@ -356,7 +356,7 @@ def findsections(blocks):
             len(block['lines']) == 2 and
             encoding.colwidth(block['lines'][0]) == len(block['lines'][1]) and
             _sectionre.match(block['lines'][1])):
-            block['underline'] = block['lines'][1][0]
+            block['underline'] = block['lines'][1][0:1]
             block['type'] = 'section'
             del block['lines'][1]
     return blocks
