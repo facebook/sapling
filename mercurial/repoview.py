@@ -59,10 +59,12 @@ def _consistencyblocker(pfunc, hideable, domain):
                 break
     return blockers
 
-def _domainancestors(pfunc, revs, domain):
-    """return ancestors of 'revs' within 'domain'
+def _revealancestors(pfunc, hidden, revs, domain):
+    """reveals contiguous chains of hidden ancestors of 'revs' within 'domain'
+    by removing them from 'hidden'
 
     - pfunc(r): a funtion returning parent of 'r',
+    - hidden: the (preliminary) hidden revisions, to be updated
     - revs: iterable of revnum,
     - domain: consistent set of revnum.
 
@@ -85,16 +87,16 @@ def _domainancestors(pfunc, revs, domain):
     If C, D, E and F are in the domain but B is not, A cannot be ((A) is an
     ancestors disconnected subset disconnected of (C+D)).
 
-    (Ancestors are returned inclusively)
+    (Ancestors are revealed inclusively, i.e. the elements in 'revs' are
+    also revealed)
     """
     stack = list(revs)
-    ancestors = set(stack)
+    hidden -= set(stack)
     while stack:
         for p in pfunc(stack.pop()):
-            if p != nullrev and p in domain and p not in ancestors:
-                ancestors.add(p)
+            if p != nullrev and p in domain and p in hidden:
+                hidden.remove(p)
                 stack.append(p)
-    return ancestors
 
 def computehidden(repo):
     """compute the set of hidden revision to filter
@@ -114,7 +116,9 @@ def computehidden(repo):
         # changesets and remove those.
         blockers |= (hidden & pinnedrevs(repo))
         if blockers:
-            hidden = hidden - _domainancestors(pfunc, blockers, mutable)
+            # don't modify possibly cached result of hideablerevs()
+            hidden = hidden.copy()
+            _revealancestors(pfunc, hidden, blockers, mutable)
     return frozenset(hidden)
 
 def computeunserved(repo):
