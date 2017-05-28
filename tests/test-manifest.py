@@ -102,15 +102,6 @@ class basemanifesttests(object):
     def parsemanifest(self, text):
         raise NotImplementedError('parsemanifest not implemented by test case')
 
-    def assertIn(self, thing, container, msg=None):
-        # assertIn new in 2.7, use it if available, otherwise polyfill
-        sup = getattr(unittest.TestCase, 'assertIn', False)
-        if sup:
-            return sup(self, thing, container, msg=msg)
-        if not msg:
-            msg = 'Expected %r in %r' % (thing, container)
-        self.assert_(thing in container, msg)
-
     def testEmptyManifest(self):
         m = self.parsemanifest(EMTPY_MANIFEST)
         self.assertEqual(0, len(m))
