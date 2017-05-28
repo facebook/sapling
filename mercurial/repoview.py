@@ -28,21 +28,21 @@ def hideablerevs(repo):
     lead to crashes."""
     return obsolete.getrevs(repo, 'obsolete')
 
-def revealedrevs(repo):
+def pinnedrevs(repo):
     """revisions blocking hidden changesets from being filtered
     """
 
     cl = repo.changelog
-    blockers = set()
-    blockers.update([par.rev() for par in repo[None].parents()])
-    blockers.update([cl.rev(bm) for bm in repo._bookmarks.values()])
+    pinned = set()
+    pinned.update([par.rev() for par in repo[None].parents()])
+    pinned.update([cl.rev(bm) for bm in repo._bookmarks.values()])
 
     tags = {}
     tagsmod.readlocaltags(repo.ui, repo, tags, {})
     if tags:
         rev, nodemap = cl.rev, cl.nodemap
-        blockers.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
-    return blockers
+        pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
+    return pinned
 
 def _consistencyblocker(pfunc, hideable, domain):
     """return non-hideable changeset blocking hideable one
@@ -112,7 +112,7 @@ def computehidden(repo):
 
         # check if we have wd parents, bookmarks or tags pointing to hidden
         # changesets and remove those.
-        blockers |= (hidden & revealedrevs(repo))
+        blockers |= (hidden & pinnedrevs(repo))
         if blockers:
             hidden = hidden - _domainancestors(pfunc, blockers, mutable)
     return frozenset(hidden)
