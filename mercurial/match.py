@@ -480,9 +480,6 @@ class differencematcher(basematcher):
     def anypats(self):
         return self._m1.anypats() or self._m2.anypats()
 
-    def prefix(self):
-        return not self.always() and not self.isexact() and not self.anypats()
-
     def __repr__(self):
         return ('<differencematcher m1=%r, m2=%r>' % (self._m1, self._m2))
 
