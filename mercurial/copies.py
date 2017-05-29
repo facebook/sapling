@@ -598,17 +598,17 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, msrc, mdst, base, tca, remotebase, limit, data):
+def _checkcopies(srcctx, f, msrc, mdst, base, tca, remotebase, limit, data):
     """
     check possible copies of f from msrc to mdst
 
-    ctx = starting context for f in msrc
+    srcctx = starting context for f in msrc
     f = the filename to check (as in msrc)
     msrc = the source manifest
     mdst = the destination manifest
     base = the changectx used as a merge base
     tca = topological common ancestor for graft-like scenarios
-    remotebase = True if base is outside tca::ctx, False otherwise
+    remotebase = True if base is outside tca::srcctx, False otherwise
     limit = the rev number to not search beyond
     data = dictionary of dictionary to store copy data. (see mergecopies)
 
@@ -630,7 +630,7 @@ def _checkcopies(ctx, f, msrc, mdst, base, tca, remotebase, limit, data):
     # the base) this is more complicated as we must detect a divergence.
     # We use 'backwards = False' in that case.
     backwards = not remotebase and base != tca and f in mb
-    getfctx = _makegetfctx(ctx)
+    getfctx = _makegetfctx(srcctx)
 
     if msrc[f] == mb.get(f) and not remotebase:
         # Nothing to merge
