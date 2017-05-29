@@ -33,7 +33,7 @@ def _parsev1(data):
     # class exactly matches its C counterpart to try and help
     # prevent surprise breakage for anyone that develops against
     # the pure version.
-    if data and data[-1] != '\n':
+    if data and data[-1:] != '\n':
         raise ValueError('Manifest did not end in a newline.')
     prev = None
     for l in data.splitlines():
@@ -55,7 +55,7 @@ def _parsev2(data):
         end = data.find('\n', pos + 1) # +1 to skip stem length byte
         if end == -1:
             raise ValueError('Manifest ended with incomplete file entry.')
-        stemlen = ord(data[pos])
+        stemlen = ord(data[pos:pos + 1])
         items = data[pos + 1:end].split('\0')
         f = prevf[:stemlen] + items[0]
         if prevf > f:
