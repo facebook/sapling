@@ -331,13 +331,17 @@ def checkheads(pushop):
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     errormsg = None
-    # If there is no obsstore, allfuturecommon won't be used, so no
-    # need to compute it.
+    # If there are no obsstore, no post-processing are needed.
     if repo.obsstore:
         allmissing = set(outgoing.missing)
         cctx = repo.set('%ld', outgoing.common)
         allfuturecommon = set(c.node() for c in cctx)
         allfuturecommon.update(allmissing)
+        for branch, heads in sorted(headssum.iteritems()):
+            remoteheads, newheads, unsyncedheads = heads
+            result = _postprocessobsolete(pushop, allfuturecommon, newheads)
+            newheads = sorted(result[0])
+            headssum[branch] = (remoteheads, newheads, unsyncedheads)
     for branch, heads in sorted(headssum.iteritems()):
         remoteheads, newheads, unsyncedheads = heads
         # add unsynced data
@@ -347,9 +351,6 @@ def checkheads(pushop):
             oldhs = set(remoteheads)
         oldhs.update(unsyncedheads)
         dhs = None # delta heads, the new heads on branch
-        if repo.obsstore:
-            result = _postprocessobsolete(pushop, allfuturecommon, newheads)
-            newheads = sorted(result[0])
         newhs = set(newheads)
         newhs.update(unsyncedheads)
         if unsyncedheads:
