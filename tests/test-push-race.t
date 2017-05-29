@@ -1429,3 +1429,197 @@ Check the result of the push
   |/
   o  842e2fac6304 C-ROOT (default)
   
+
+racing commit push a new head obsoleting the one touched by the raced push
+--------------------------------------------------------------------------
+
+(mirror test case of the previous one
+
+#  a (raced branch default)
+#  |
+#  ø⇠◔ b (racing)
+#  |/
+#  *
+
+(resync-all)
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-other pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  1 new obsolescence markers
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ hg -R ./client-racy pull
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  (run 'hg update' to get a working copy)
+
+  $ hg -R server debugobsolete
+  b0ee3d6f51bc4c0ca6d4f2907708027a6c376233 720c5163ecf64dcc6216bee2d62bf3edb1882499 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg -R server graph
+  o  720c5163ecf6 C-V (default)
+  |
+  | o  a98a47d8b85b C-U (default)
+  | |
+  | x  b0ee3d6f51bc C-Q (default)
+  |/
+  | o  3d57ed3c1091 C-T (other)
+  | |
+  | o  2efd43f7b5ba C-S (default)
+  | |
+  | | o  de7b9e2ba3f6 C-R (other)
+  | |/
+  | o  1b58ee3f79e5 C-P (default)
+  | |
+  | o  d0a85b2252a9 C-O (other)
+  |/
+  o  55a6f1c01b48 C-Z (other)
+  |
+  o    866a66e18630 C-N (default)
+  |\
+  +---o  6fd3090135df C-M (default)
+  | |
+  | o  cac2cead0ff0 C-L (default)
+  | |
+  o |  be705100c623 C-K (default)
+  |\|
+  o |  d603e2c0cdd7 C-E (default)
+  | |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | | o  89420bf00fae C-J (default)
+  | | |
+  | | | o  b35ed749f288 C-I (my-second-test-branch)
+  | | |/
+  | | o  75d69cba5402 C-G (default)
+  | | |
+  | | | o  833be552cfe6 C-H (my-first-test-branch)
+  | | |/
+  | | o  d9e379a8c432 C-F (default)
+  | | |
+  +---o  51c544a58128 C-C (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  | |
+  o |  98217d5a1659 C-A (default)
+  |/
+  o  842e2fac6304 C-ROOT (default)
+  
+
+Creating changesets and markers
+
+(new topo branch obsoleting that same head)
+
+  $ hg -R client-other/ up 'desc("C-Q")'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo bbb >> client-other/a
+  $ hg -R client-other/ branch --force default
+  marked working directory as branch default
+  $ hg -R client-other/ commit -m "C-W"
+  created new head
+  $ ID_V=`hg -R client-other log -T '{node}\n' -r 'desc("C-V")'`
+  $ ID_W=`hg -R client-other log -T '{node}\n' -r 'desc("C-W")'`
+  $ hg -R client-other debugobsolete $ID_V $ID_W
+
+(continue the same head)
+
+  $ echo aaa >> client-racy/a
+  $ hg -R client-racy/ commit -m "C-X"
+
+Pushing
+
+  $ hg -R client-racy push -r 'tip' > ./push-log 2>&1 &
+
+  $ waiton $TESTTMP/readyfile
+
+  $ hg -R client-other push -fr 'tip' --new-branch
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 0 changes to 1 files (+1 heads)
+  remote: 1 new obsolescence markers
+
+  $ release $TESTTMP/watchfile
+
+Check the result of the push
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  abort: push failed:
+  'repository changed while pushing - please try again'
+
+  $ hg -R server debugobsolete
+  b0ee3d6f51bc4c0ca6d4f2907708027a6c376233 720c5163ecf64dcc6216bee2d62bf3edb1882499 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  720c5163ecf64dcc6216bee2d62bf3edb1882499 39bc0598afe90ab18da460bafecc0fa953b77596 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg -R server graph --hidden
+  o  39bc0598afe9 C-W (default)
+  |
+  | o  a98a47d8b85b C-U (default)
+  |/
+  x  b0ee3d6f51bc C-Q (default)
+  |
+  | o  3d57ed3c1091 C-T (other)
+  | |
+  | o  2efd43f7b5ba C-S (default)
+  | |
+  | | o  de7b9e2ba3f6 C-R (other)
+  | |/
+  | o  1b58ee3f79e5 C-P (default)
+  | |
+  | o  d0a85b2252a9 C-O (other)
+  |/
+  | x  720c5163ecf6 C-V (default)
+  |/
+  o  55a6f1c01b48 C-Z (other)
+  |
+  o    866a66e18630 C-N (default)
+  |\
+  +---o  6fd3090135df C-M (default)
+  | |
+  | o  cac2cead0ff0 C-L (default)
+  | |
+  o |  be705100c623 C-K (default)
+  |\|
+  o |  d603e2c0cdd7 C-E (default)
+  | |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | | o  89420bf00fae C-J (default)
+  | | |
+  | | | o  b35ed749f288 C-I (my-second-test-branch)
+  | | |/
+  | | o  75d69cba5402 C-G (default)
+  | | |
+  | | | o  833be552cfe6 C-H (my-first-test-branch)
+  | | |/
+  | | o  d9e379a8c432 C-F (default)
+  | | |
+  +---o  51c544a58128 C-C (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  | |
+  o |  98217d5a1659 C-A (default)
+  |/
+  o  842e2fac6304 C-ROOT (default)
+  
