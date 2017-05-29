@@ -598,14 +598,14 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, msrc, m2, base, tca, remotebase, limit, data):
+def _checkcopies(ctx, f, msrc, mdst, base, tca, remotebase, limit, data):
     """
-    check possible copies of f from msrc to m2
+    check possible copies of f from msrc to mdst
 
     ctx = starting context for f in msrc
     f = the filename to check (as in msrc)
     msrc = the source manifest
-    m2 = the destination manifest
+    mdst = the destination manifest
     base = the changectx used as a merge base
     tca = topological common ancestor for graft-like scenarios
     remotebase = True if base is outside tca::ctx, False otherwise
@@ -653,11 +653,11 @@ def _checkcopies(ctx, f, msrc, m2, base, tca, remotebase, limit, data):
             data['fullcopy'][of] = f # grafting backwards through renames
         else:
             data['fullcopy'][f] = of
-        if of not in m2:
+        if of not in mdst:
             continue # no match, keep looking
-        if m2[of] == mb.get(of):
+        if mdst[of] == mb.get(of):
             return # no merge needed, quit early
-        c2 = getfctx(of, m2[of])
+        c2 = getfctx(of, mdst[of])
         # c2 might be a plain new file on added on destination side that is
         # unrelated to the droids we are looking for.
         cr = _related(oc, c2, tca.rev())
