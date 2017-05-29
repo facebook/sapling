@@ -347,13 +347,10 @@ def checkheads(pushop):
             oldhs = set(remoteheads)
         oldhs.update(unsyncedheads)
         dhs = None # delta heads, the new heads on branch
-        if not repo.obsstore:
-            discardedheads = set()
-            newhs = set(newheads)
-        else:
-            newhs, discardedheads = _postprocessobsolete(pushop,
-                                                         allfuturecommon,
-                                                         newheads)
+        if repo.obsstore:
+            result = _postprocessobsolete(pushop, allfuturecommon, newheads)
+            newheads = sorted(result[0])
+        newhs = set(newheads)
         newhs.update(unsyncedheads)
         if unsyncedheads:
             if None in unsyncedheads:
