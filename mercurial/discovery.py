@@ -340,22 +340,21 @@ def checkheads(pushop):
         allfuturecommon.update(allmissing)
     for branch, heads in sorted(headssum.iteritems()):
         remoteheads, newheads, unsyncedheads = heads
-        candidate_newhs = set(newheads)
         # add unsynced data
         if remoteheads is None:
             oldhs = set()
         else:
             oldhs = set(remoteheads)
         oldhs.update(unsyncedheads)
-        candidate_newhs.update(unsyncedheads)
         dhs = None # delta heads, the new heads on branch
         if not repo.obsstore:
             discardedheads = set()
-            newhs = candidate_newhs
+            newhs = set(newheads)
         else:
             newhs, discardedheads = _postprocessobsolete(pushop,
                                                          allfuturecommon,
-                                                         candidate_newhs)
+                                                         newheads)
+        newhs.update(unsyncedheads)
         unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
         if unsynced:
             if None in unsynced:
