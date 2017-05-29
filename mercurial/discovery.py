@@ -242,6 +242,17 @@ def _headssummary(pushop):
         for l in items:
             if l is not None:
                 l.sort()
+    # If there are no obsstore, no post processing are needed.
+    if repo.obsstore:
+        allmissing = set(outgoing.missing)
+        cctx = repo.set('%ld', outgoing.common)
+        allfuturecommon = set(c.node() for c in cctx)
+        allfuturecommon.update(allmissing)
+        for branch, heads in sorted(headssum.iteritems()):
+            remoteheads, newheads, unsyncedheads = heads
+            result = _postprocessobsolete(pushop, allfuturecommon, newheads)
+            newheads = sorted(result[0])
+            headssum[branch] = (remoteheads, newheads, unsyncedheads)
     return headssum
 
 def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
@@ -334,17 +345,6 @@ def checkheads(pushop):
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     errormsg = None
-    # If there are no obsstore, no post-processing are needed.
-    if repo.obsstore:
-        allmissing = set(outgoing.missing)
-        cctx = repo.set('%ld', outgoing.common)
-        allfuturecommon = set(c.node() for c in cctx)
-        allfuturecommon.update(allmissing)
-        for branch, heads in sorted(headssum.iteritems()):
-            remoteheads, newheads, unsyncedheads = heads
-            result = _postprocessobsolete(pushop, allfuturecommon, newheads)
-            newheads = sorted(result[0])
-            headssum[branch] = (remoteheads, newheads, unsyncedheads)
     for branch, heads in sorted(headssum.iteritems()):
         remoteheads, newheads, unsyncedheads = heads
         # add unsynced data
