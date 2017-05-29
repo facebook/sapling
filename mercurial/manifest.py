@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import heapq
+import itertools
 import os
 import struct
 
@@ -779,7 +780,8 @@ class treemanifest(object):
 
     def iterentries(self):
         self._load()
-        for p, n in sorted(self._dirs.items() + self._files.items()):
+        for p, n in sorted(itertools.chain(self._dirs.items(),
+                                           self._files.items())):
             if p in self._files:
                 yield self._subpath(p), n, self._flags.get(p, '')
             else:
@@ -788,7 +790,8 @@ class treemanifest(object):
 
     def iteritems(self):
         self._load()
-        for p, n in sorted(self._dirs.items() + self._files.items()):
+        for p, n in sorted(itertools.chain(self._dirs.items(),
+                                           self._files.items())):
             if p in self._files:
                 yield self._subpath(p), n
             else:
@@ -797,7 +800,7 @@ class treemanifest(object):
 
     def iterkeys(self):
         self._load()
-        for p in sorted(self._dirs.keys() + self._files.keys()):
+        for p in sorted(itertools.chain(self._dirs, self._files)):
             if p in self._files:
                 yield self._subpath(p)
             else:
