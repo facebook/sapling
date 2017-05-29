@@ -185,13 +185,15 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
 def _headssummary(pushop):
     """compute a summary of branch and heads status before and after push
 
-    return {'branch': ([remoteheads], [newheads], [unsyncedheads])} mapping
+    return {'branch': ([remoteheads], [newheads],
+                       [unsyncedheads], [discardedheads])} mapping
 
-    - branch: the branch name
+    - branch: the branch name,
     - remoteheads: the list of remote heads known locally
-                   None if the branch is new
-    - newheads: the new remote heads (known locally) with outgoing pushed
-    - unsyncedheads: the list of remote heads unknown locally.
+                   None if the branch is new,
+    - newheads: the new remote heads (known locally) with outgoing pushed,
+    - unsyncedheads: the list of remote heads unknown locally,
+    - discardedheads: the list of heads made obsolete by the push.
     """
     repo = pushop.repo.unfiltered()
     remote = pushop.remote
@@ -242,6 +244,8 @@ def _headssummary(pushop):
         for l in items:
             if l is not None:
                 l.sort()
+        headssum[branch] = items + ([],)
+
     # If there are no obsstore, no post processing are needed.
     if repo.obsstore:
         allmissing = set(outgoing.missing)
@@ -249,10 +253,10 @@ def _headssummary(pushop):
         allfuturecommon = set(c.node() for c in cctx)
         allfuturecommon.update(allmissing)
         for branch, heads in sorted(headssum.iteritems()):
-            remoteheads, newheads, unsyncedheads = heads
+            remoteheads, newheads, unsyncedheads, placeholder = heads
             result = _postprocessobsolete(pushop, allfuturecommon, newheads)
-            newheads = sorted(result[0])
-            headssum[branch] = (remoteheads, newheads, unsyncedheads)
+            headssum[branch] = (remoteheads, sorted(result[0]), unsyncedheads,
+                                sorted(result[1]))
     return headssum
 
 def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
@@ -275,7 +279,7 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
         unsynced = [None]
     else:
         unsynced = []
-    return {None: (oldheads, newheads, unsynced)}
+    return {None: (oldheads, newheads, unsynced, [])}
 
 def _nowarnheads(pushop):
     # Compute newly pushed bookmarks. We don't warn about bookmarked heads.
@@ -346,7 +350,7 @@ def checkheads(pushop):
     # error message, depending on unsynced status, is displayed.
     errormsg = None
     for branch, heads in sorted(headssum.iteritems()):
-        remoteheads, newheads, unsyncedheads = heads
+        remoteheads, newheads, unsyncedheads, discardedheads = heads
         # add unsynced data
         if remoteheads is None:
             oldhs = set()
