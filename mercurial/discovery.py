@@ -235,6 +235,10 @@ def _headssummary(repo, remote, outgoing):
     newmap.update(repo, (ctx.rev() for ctx in missingctx))
     for branch, newheads in newmap.iteritems():
         headssum[branch][1][:] = newheads
+    for branch, items in headssum.iteritems():
+        for l in items:
+            if l is not None:
+                l.sort()
     return headssum
 
 def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
@@ -244,14 +248,14 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     # Construct {old,new}map with branch = None (topological branch).
     # (code based on update)
     knownnode = repo.changelog.hasnode # no nodemap until it is filtered
-    oldheads = list(h for h in remoteheads if knownnode(h))
+    oldheads = sorted(h for h in remoteheads if knownnode(h))
     # all nodes in outgoing.missing are children of either:
     # - an element of oldheads
     # - another element of outgoing.missing
     # - nullrev
     # This explains why the new head are very simple to compute.
     r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
-    newheads = list(c.node() for c in r)
+    newheads = sorted(c.node() for c in r)
     # set some unsynced head to issue the "unsynced changes" warning
     if inc:
         unsynced = [None]
