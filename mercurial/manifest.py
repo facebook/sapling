@@ -579,8 +579,10 @@ class manifestdict(object):
         c._lm = self._lm.copy()
         return c
 
-    def iteritems(self):
+    def items(self):
         return (x[:2] for x in self._lm.iterentries())
+
+    iteritems = items
 
     def iterentries(self):
         return self._lm.iterentries()
@@ -788,7 +790,7 @@ class treemanifest(object):
                 for x in n.iterentries():
                     yield x
 
-    def iteritems(self):
+    def items(self):
         self._load()
         for p, n in sorted(itertools.chain(self._dirs.items(),
                                            self._files.items())):
@@ -797,6 +799,8 @@ class treemanifest(object):
             else:
                 for f, sn in n.iteritems():
                     yield f, sn
+
+    iteritems = items
 
     def iterkeys(self):
         self._load()
