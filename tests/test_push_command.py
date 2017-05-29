@@ -157,6 +157,12 @@ class PushTests(test_util.TestBase):
         # If we're connecting via IPv6 the need to put brackets around the
         # hostname in the URL.
         ipv6 = selected[0] == socket.AF_INET6
+
+        # Ditch any interface information since that's not helpful in
+        # a URL
+        if ipv6 and ':' in self.host and '%' in self.host:
+            self.host = self.host.rsplit('%', 1)[0]
+
         urlfmt = 'svn://[%s]:%d/%s' if ipv6 else 'svn://%s:%d/%s'
 
         args = ['svnserve', '--daemon', '--foreground',
