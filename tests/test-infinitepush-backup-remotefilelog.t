@@ -56,30 +56,39 @@ bookmarks
   1 files fetched over 1 fetches - \(1 misses, 0.00% hit ratio\) over [\d.]+s (re)
   $ hg book badbooktobackup
   $ mkcommit clientbadcommit
-  $ hg log --graph -T '{desc}'
-  @  clientbadcommit
+  $ hg log --graph -T '{desc} {node}'
+  @  clientbadcommit 07e73d09a07862bc2b8beb13b72d2347f83e4981
   |
-  o  committostripsecond
+  o  committostripsecond 221b386ae565d9866b4838ae552ce3acc26e9fec
   |
-  o  committostripfirst
+  o  committostripfirst 48acd0edbb460dec0d93314393d41f801a9797ce
   |
-  o  serverinitialcommit
+  o  serverinitialcommit 22ea264ff89d6891c2889f15f338ac9fa2474f8b
   
   $ cd ..
 
 Strip commit server-side
   $ cd repo
-  $ hg strip 1
+  $ hg log -r 1 -T '{node}\n'
+  48acd0edbb460dec0d93314393d41f801a9797ce
+  $ hg strip 48acd0edbb460dec0d93314393d41f801a9797ce
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/48acd0edbb46-9d7996f9-backup.hg (glob)
   $ hg log --graph -T '{desc}'
   @  serverinitialcommit
   
-Now do a backup, it should not fail
+
+ Add two revisions to a dontbackupnodes config: one is a revision that was really stripped
+ from the server, another is just a node that doesn't exists in the repo
   $ cd ../client
+  $ cat >> .hg/hgrc << EOF
+  > [infinitepushbackup]
+  > dontbackupnodes=48acd0edbb460dec0d93314393d41f801a9797ce,unknownnode
+  > EOF
+
+Now do a backup, it should not fail
   $ hg pushbackup > /dev/null
-  filtering revisions: [1]
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  filtering nodes: ['07e73d09a07862bc2b8beb13b72d2347f83e4981']
 
 Now try to restore it from different client. Make sure bookmark
 `goodbooktobackup` is restored
@@ -109,8 +118,7 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ hg log -r . -T '{node}\n'
   507709f4da22941c0471885d8377c48d6dadce21
   $ hg pushbackup > /dev/null
-  filtering revisions: [1]
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  filtering nodes: ['07e73d09a07862bc2b8beb13b72d2347f83e4981']
   $ scratchbookmarks
   infinitepush/backups/test/*$TESTTMP/client/bookmarks/goodbooktobackup 22ea264ff89d6891c2889f15f338ac9fa2474f8b (glob)
   infinitepush/backups/test/*$TESTTMP/client/heads/507709f4da22941c0471885d8377c48d6dadce21 507709f4da22941c0471885d8377c48d6dadce21 (glob)

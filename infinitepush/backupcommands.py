@@ -27,6 +27,10 @@
     # backup for the same repo if pushbackup was called from different working
     # copies. This option cleans up the mess
     tempcleanworkingcopiesbackups = False
+
+    # Nodes that should not be backed up. Ancestors of these nodes won't be
+    # backed up either
+    dontbackupnodes = []
 """
 
 from __future__ import absolute_import
@@ -609,38 +613,28 @@ def findcommonoutgoing(repo, other, heads):
         return None
 
 def _getrevstobackup(repo, ui, other, headstobackup):
-    revs = list(repo[hexnode].rev() for hexnode in headstobackup)
+    # In rare cases it's possible to have a local node without filelogs.
+    # This is possible if remotefilelog is enabled and if the node was
+    # stripped server-side. We want to filter out these bad nodes and all
+    # of their descendants.
+    badnodes = ui.configlist('infinitepushbackup', 'dontbackupnodes', [])
+    badnodes = [node for node in badnodes if node in repo]
+    badrevs = [repo[node].rev() for node in badnodes]
+    badnodesdescendants = repo.set('%ld::', badrevs) if badrevs else set()
+    badnodesdescendants = set(ctx.hex() for ctx in badnodesdescendants)
+    filteredheads = filter(lambda head: head in badnodesdescendants,
+                           headstobackup)
 
-    outgoing = findcommonoutgoing(repo, other, revs)
-    rootstofilter = []
-    if outgoing:
-        # In rare cases it's possible to have node without filelogs only
-        # locally. It is possible if remotefilelog is enabled and if node was
-        # stripped server-side. In this case we want to filter this
-        # nodes and all ancestors out
-        for node in outgoing.missing:
-            changectx = repo[node]
-            for file in changectx.files():
-                if file not in changectx:
-                    # file was deleted in this commit
-                    continue
-                try:
-                    changectx.filectx(file).data()
-                except error.ResponseError:
-                    rootstofilter.append(changectx.rev())
-                    break
-
-    badhexnodes = set()
-    if rootstofilter:
-        ui.warn(_('filtering revisions: %s\n') % rootstofilter)
+    if filteredheads:
+        ui.warn(_('filtering nodes: %s\n') % filteredheads)
         ui.log('infinitepushbackup', 'corrupted nodes found',
                infinitepushbackupcorruptednodes='failure')
-        revstofilter = list(repo.revs('%ld::', rootstofilter))
-        badhexnodes = set(repo[rev].hex() for rev in revstofilter)
-        revs = set(revs) - set(revstofilter)
-        outgoing = findcommonoutgoing(repo, other, revs)
+    headstobackup = filter(lambda head: head not in badnodesdescendants,
+                           headstobackup)
 
-    return outgoing, badhexnodes
+    revs = list(repo[hexnode].rev() for hexnode in headstobackup)
+    outgoing = findcommonoutgoing(repo, other, revs)
+    return outgoing, set(filteredheads)
 
 def _localbackupstateexists(repo):
     return repo.vfs.exists(_backupstatefile)
