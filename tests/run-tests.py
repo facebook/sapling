@@ -2097,7 +2097,6 @@ class TestRunner(object):
 
     # Programs required to run tests.
     REQUIREDTOOLS = [
-        os.path.basename(_bytespath(sys.executable)),
         b'diff',
         b'grep',
         b'unzip',
