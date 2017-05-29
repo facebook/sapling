@@ -146,11 +146,17 @@ class PushTests(test_util.TestBase):
         # within the test harness with `getaddrinfo(3)` to ensure that the
         # client and server both use the same IPv4 or IPv6 address.
         addrinfo = socket.getaddrinfo(self.host, self.port)
-        self.host = addrinfo[0][4][0]
+        # On macOS svn seems to have issues with IPv6 at least some of
+        # the time, so try and bias towards IPv4. This works because
+        # AF_INET is less than AF_INET6 on all platforms I've
+        # checked. Hopefully any platform where that's not true will
+        # be fine with IPv6 all the time. :)
+        selected = sorted(addrinfo)[0]
+        self.host = selected[4][0]
 
         # If we're connecting via IPv6 the need to put brackets around the
         # hostname in the URL.
-        ipv6 = addrinfo[0][0] == socket.AF_INET6
+        ipv6 = selected[0] == socket.AF_INET6
         urlfmt = 'svn://[%s]:%d/%s' if ipv6 else 'svn://%s:%d/%s'
 
         args = ['svnserve', '--daemon', '--foreground',
