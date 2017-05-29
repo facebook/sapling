@@ -244,7 +244,7 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     # Construct {old,new}map with branch = None (topological branch).
     # (code based on update)
     knownnode = repo.changelog.hasnode # no nodemap until it is filtered
-    oldheads = set(h for h in remoteheads if knownnode(h))
+    oldheads = list(h for h in remoteheads if knownnode(h))
     # all nodes in outgoing.missing are children of either:
     # - an element of oldheads
     # - another element of outgoing.missing
@@ -254,9 +254,9 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     newheads = list(c.node() for c in r)
     # set some unsynced head to issue the "unsynced changes" warning
     if inc:
-        unsynced = {None}
+        unsynced = [None]
     else:
-        unsynced = set()
+        unsynced = []
     return {None: (oldheads, newheads, unsynced)}
 
 def _nowarnheads(pushop):
