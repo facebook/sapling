@@ -182,7 +182,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
 
     return og
 
-def _headssummary(repo, remote, outgoing):
+def _headssummary(pushop):
     """compute a summary of branch and heads status before and after push
 
     return {'branch': ([remoteheads], [newheads], [unsyncedheads])} mapping
@@ -193,6 +193,9 @@ def _headssummary(repo, remote, outgoing):
     - newheads: the new remote heads (known locally) with outgoing pushed
     - unsyncedheads: the list of remote heads unknown locally.
     """
+    repo = pushop.repo.unfiltered()
+    remote = pushop.remote
+    outgoing = pushop.outgoing
     cl = repo.changelog
     headssum = {}
     # A. Create set of branches involved in the push.
@@ -311,7 +314,7 @@ def checkheads(pushop):
         return
 
     if remote.capable('branchmap'):
-        headssum = _headssummary(repo, remote, outgoing)
+        headssum = _headssummary(pushop)
     else:
         headssum = _oldheadssummary(repo, remoteheads, outgoing, inc)
     newbranches = [branch for branch, heads in headssum.iteritems()
