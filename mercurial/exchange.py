@@ -323,8 +323,21 @@ class pushoperation(object):
         self.bkresult = None
         # discover.outgoing object (contains common and outgoing data)
         self.outgoing = None
-        # all remote heads before the push
+        # all remote topological heads before the push
         self.remoteheads = None
+        # Details of the remote branch pre and post push
+        #
+        # mapping: {'branch': ([remoteheads],
+        #                      [newheads],
+        #                      [unsyncedheads],
+        #                      [discardedheads])}
+        # - branch: the branch name
+        # - remoteheads: the list of remote heads known locally
+        #                None if the branch is new
+        # - newheads: the new remote heads (known locally) with outgoing pushed
+        # - unsyncedheads: the list of remote heads unknown locally.
+        # - discardedheads: the list of remote heads made obsolete by the push
+        self.pushbranchmap = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
         # phases changes that must be pushed along side the changesets
@@ -712,8 +725,23 @@ def _pushb2ctxcheckheads(pushop, bundler):
 
     Exists as an independent function to aid extensions
     """
-    if not pushop.force:
-        bundler.newpart('check:heads', data=iter(pushop.remoteheads))
+    # * 'force' do not check for push race,
+    # * if we don't push anything, there are nothing to check.
+    if not pushop.force and pushop.outgoing.missingheads:
+        allowunrelated = 'related' in bundler.capabilities.get('checkheads', ())
+        if not allowunrelated:
+            bundler.newpart('check:heads', data=iter(pushop.remoteheads))
+        else:
+            affected = set()
+            for branch, heads in pushop.pushbranchmap.iteritems():
+                remoteheads, newheads, unsyncedheads, discardedheads = heads
+                if remoteheads is not None:
+                    remote = set(remoteheads)
+                    affected |= set(discardedheads) & remote
+                    affected |= remote - set(newheads)
+            if affected:
+                data = iter(sorted(affected))
+                bundler.newpart('check:updated-heads', data=data)
 
 @b2partsgenerator('changeset')
 def _pushb2ctx(pushop, bundler):

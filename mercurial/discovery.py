@@ -332,6 +332,7 @@ def checkheads(pushop):
         headssum = _headssummary(pushop)
     else:
         headssum = _oldheadssummary(repo, remoteheads, outgoing, inc)
+    pushop.pushbranchmap = headssum
     newbranches = [branch for branch, heads in headssum.iteritems()
                    if heads[0] is None]
     # 1. Check for new branches on the remote.

@@ -102,6 +102,21 @@ A set of extension and shell functions ensures this scheduling.
   > graph = log -G --rev 'sort(all(), "topo")'
   > EOF
 
+We tests multiple cases:
+* strict: no race detected,
+* unrelated: race on unrelated heads are allowed.
+
+#testcases strict unrelated
+
+#if unrelated
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > checkheads-strict = no
+  > EOF
+
+#endif
+
 Setup
 -----
 
@@ -265,6 +280,7 @@ Pushing
 
 Check the result of the push
 
+#if strict
   $ cat ./push-log
   pushing to ssh://user@dummy/server
   searching for changes
@@ -282,6 +298,34 @@ Check the result of the push
   |/
   @  842e2fac6304 C-ROOT (default)
   
+#endif
+#if unrelated
+
+(The two heads are unrelated, push should be allowed)
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ hg -R server graph
+  o  59e76faf78bd C-D (default)
+  |
+  o  a9149a1428e2 C-B (default)
+  |
+  | o  51c544a58128 C-C (default)
+  | |
+  | o  98217d5a1659 C-A (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+#endif
+
 Pushing while someone creates a new head
 -----------------------------------------
 
@@ -295,6 +339,8 @@ Pushing a new changeset while someone creates a new branch.
 
 (resync-all)
 
+#if strict
+
   $ hg -R ./server pull ./client-racy
   pulling from ./client-racy
   searching for changes
@@ -303,6 +349,17 @@ Pushing a new changeset while someone creates a new branch.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
+
+#endif
+#if unrelated
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  no changes found
+
+#endif
+
   $ hg -R ./client-other pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -367,6 +424,8 @@ Pushing
 
 Check the result of the push
 
+#if strict
+
   $ cat ./push-log
   pushing to ssh://user@dummy/server
   searching for changes
@@ -389,6 +448,39 @@ Check the result of the push
   @  842e2fac6304 C-ROOT (default)
   
 
+#endif
+
+#if unrelated
+
+(The racing new head do not affect existing heads, push should go through)
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ hg -R server graph
+  o  d9e379a8c432 C-F (default)
+  |
+  o  51c544a58128 C-C (default)
+  |
+  | o  d603e2c0cdd7 C-E (default)
+  |/
+  o  98217d5a1659 C-A (default)
+  |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+#endif
+
 Pushing touching different named branch (same topo): new branch raced
 ---------------------------------------------------------------------
 
@@ -402,6 +494,8 @@ Pushing two children on the same head, one is a different named branch
 
 (resync-all)
 
+#if strict
+
   $ hg -R ./server pull ./client-racy
   pulling from ./client-racy
   searching for changes
@@ -410,6 +504,17 @@ Pushing two children on the same head, one is a different named branch
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
+
+#endif
+#if unrelated
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  no changes found
+
+#endif
+
   $ hg -R ./client-other pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -480,6 +585,7 @@ Pushing
 
 Check the result of the push
 
+#if strict
   $ cat ./push-log
   pushing to ssh://user@dummy/server
   searching for changes
@@ -505,6 +611,43 @@ Check the result of the push
   |/
   @  842e2fac6304 C-ROOT (default)
   
+#endif
+#if unrelated
+
+(unrelated named branches are unrelated)
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+
+  $ hg -R server graph
+  o  833be552cfe6 C-H (my-first-test-branch)
+  |
+  | o  75d69cba5402 C-G (default)
+  |/
+  o  d9e379a8c432 C-F (default)
+  |
+  o  51c544a58128 C-C (default)
+  |
+  | o  d603e2c0cdd7 C-E (default)
+  |/
+  o  98217d5a1659 C-A (default)
+  |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+#endif
+
+The racing new head do not affect existing heads, push should go through
 
 pushing touching different named branch (same topo): old branch raced
 ---------------------------------------------------------------------
@@ -519,6 +662,8 @@ Pushing two children on the same head, one is a different named branch
 
 (resync-all)
 
+#if strict
+
   $ hg -R ./server pull ./client-racy
   pulling from ./client-racy
   searching for changes
@@ -527,6 +672,17 @@ Pushing two children on the same head, one is a different named branch
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+#endif
+#if unrelated
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  no changes found
+
+#endif
+
   $ hg -R ./client-other pull
   pulling from ssh://user@dummy/server
   searching for changes
@@ -600,6 +756,8 @@ Pushing
 
 Check the result of the push
 
+#if strict
+
   $ cat ./push-log
   pushing to ssh://user@dummy/server
   searching for changes
@@ -630,6 +788,48 @@ Check the result of the push
   @  842e2fac6304 C-ROOT (default)
   
 
+#endif
+
+#if unrelated
+
+(unrelated named branches are unrelated)
+
+  $ cat ./push-log
+  pushing to ssh://user@dummy/server
+  searching for changes
+  wrote ready: $TESTTMP/readyfile
+  waiting on: $TESTTMP/watchfile
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+
+  $ hg -R server graph
+  o  89420bf00fae C-J (default)
+  |
+  | o  b35ed749f288 C-I (my-second-test-branch)
+  |/
+  o  75d69cba5402 C-G (default)
+  |
+  | o  833be552cfe6 C-H (my-first-test-branch)
+  |/
+  o  d9e379a8c432 C-F (default)
+  |
+  o  51c544a58128 C-C (default)
+  |
+  | o  d603e2c0cdd7 C-E (default)
+  |/
+  o  98217d5a1659 C-A (default)
+  |
+  | o  59e76faf78bd C-D (default)
+  | |
+  | o  a9149a1428e2 C-B (default)
+  |/
+  @  842e2fac6304 C-ROOT (default)
+  
+
+#endif
+
 pushing racing push touch multiple heads
 ----------------------------------------
 
@@ -644,6 +844,8 @@ There are multiple heads, but the racing push touch all of them
 
 (resync-all)
 
+#if strict
+
   $ hg -R ./server pull ./client-racy
   pulling from ./client-racy
   searching for changes
@@ -652,6 +854,18 @@ There are multiple heads, but the racing push touch all of them
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+#endif
+
+#if unrelated
+
+  $ hg -R ./server pull ./client-racy
+  pulling from ./client-racy
+  searching for changes
+  no changes found
+
+#endif
+
   $ hg -R ./client-other pull
   pulling from ssh://user@dummy/server
   searching for changes

@@ -1323,6 +1323,8 @@ def getrepocaps(repo, allowpushback=False):
         caps['obsmarkers'] = supportedformat
     if allowpushback:
         caps['pushback'] = ()
+    if not repo.ui.configbool('experimental', 'checkheads-strict', True):
+        caps['checkheads'] = ('related',)
     return caps
 
 def bundle2caps(remote):
@@ -1602,6 +1604,35 @@ def handlecheckheads(op, inpart):
     if sorted(heads) != sorted(op.repo.heads()):
         raise error.PushRaced('repository changed while pushing - '
                               'please try again')
+
+@parthandler('check:updated-heads')
+def handlecheckupdatedheads(op, inpart):
+    """check for race on the heads touched by a push
+
+    This is similar to 'check:heads' but focus on the heads actually updated
+    during the push. If other activities happen on unrelated heads, it is
+    ignored.
+
+    This allow server with high traffic to avoid push contention as long as
+    unrelated parts of the graph are involved."""
+    h = inpart.read(20)
+    heads = []
+    while len(h) == 20:
+        heads.append(h)
+        h = inpart.read(20)
+    assert not h
+    # trigger a transaction so that we are guaranteed to have the lock now.
+    if op.ui.configbool('experimental', 'bundle2lazylocking'):
+        op.gettransaction()
+
+    currentheads = set()
+    for ls in op.repo.branchmap().itervalues():
+        currentheads.update(ls)
+
+    for h in heads:
+        if h not in currentheads:
+            raise error.PushRaced('repository changed while pushing - '
+                                  'please try again')
 
 @parthandler('output')
 def handleoutput(op, inpart):
