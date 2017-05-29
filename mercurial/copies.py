@@ -598,13 +598,13 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
+def _checkcopies(ctx, f, msrc, m2, base, tca, remotebase, limit, data):
     """
-    check possible copies of f from m1 to m2
+    check possible copies of f from msrc to m2
 
-    ctx = starting context for f in m1
-    f = the filename to check (as in m1)
-    m1 = the source manifest
+    ctx = starting context for f in msrc
+    f = the filename to check (as in msrc)
+    msrc = the source manifest
     m2 = the destination manifest
     base = the changectx used as a merge base
     tca = topological common ancestor for graft-like scenarios
@@ -632,13 +632,13 @@ def _checkcopies(ctx, f, m1, m2, base, tca, remotebase, limit, data):
     backwards = not remotebase and base != tca and f in mb
     getfctx = _makegetfctx(ctx)
 
-    if m1[f] == mb.get(f) and not remotebase:
+    if msrc[f] == mb.get(f) and not remotebase:
         # Nothing to merge
         return
 
     of = None
     seen = {f}
-    for oc in getfctx(f, m1[f]).ancestors():
+    for oc in getfctx(f, msrc[f]).ancestors():
         ocr = oc.linkrev()
         of = oc.path()
         if of in seen:
