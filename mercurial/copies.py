@@ -631,7 +631,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
     # the base) this is more complicated as we must detect a divergence.
     # We use 'backwards = False' in that case.
     backwards = not remotebase and base != tca and f in mb
-    getfctx = _makegetfctx(srcctx)
+    getsrcfctx = _makegetfctx(srcctx)
 
     if msrc[f] == mb.get(f) and not remotebase:
         # Nothing to merge
@@ -639,7 +639,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
 
     of = None
     seen = {f}
-    for oc in getfctx(f, msrc[f]).ancestors():
+    for oc in getsrcfctx(f, msrc[f]).ancestors():
         ocr = oc.linkrev()
         of = oc.path()
         if of in seen:
@@ -658,7 +658,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
             continue # no match, keep looking
         if mdst[of] == mb.get(of):
             return # no merge needed, quit early
-        c2 = getfctx(of, mdst[of])
+        c2 = getsrcfctx(of, mdst[of])
         # c2 might be a plain new file on added on destination side that is
         # unrelated to the droids we are looking for.
         cr = _related(oc, c2, tca.rev())
