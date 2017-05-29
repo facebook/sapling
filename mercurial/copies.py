@@ -414,10 +414,10 @@ def mergecopies(repo, c1, c2, base):
                                       baselabel='topological common ancestor')
 
     for f in u1u:
-        _checkcopies(c1, f, m1, m2, base, tca, dirtyc1, limit, data1)
+        _checkcopies(c1, c2, f, m1, m2, base, tca, dirtyc1, limit, data1)
 
     for f in u2u:
-        _checkcopies(c2, f, m2, m1, base, tca, dirtyc2, limit, data2)
+        _checkcopies(c2, c1, f, m2, m1, base, tca, dirtyc2, limit, data2)
 
     copy = dict(data1['copy'].items() + data2['copy'].items())
     fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
@@ -462,8 +462,8 @@ def mergecopies(repo, c1, c2, base):
              'incompletediverge': bothincompletediverge
             }
     for f in bothnew:
-        _checkcopies(c1, f, m1, m2, base, tca, dirtyc1, limit, both1)
-        _checkcopies(c2, f, m2, m1, base, tca, dirtyc2, limit, both2)
+        _checkcopies(c1, c2, f, m1, m2, base, tca, dirtyc1, limit, both1)
+        _checkcopies(c2, c1, f, m2, m1, base, tca, dirtyc2, limit, both2)
     if dirtyc1:
         # incomplete copies may only be found on the "dirty" side for bothnew
         assert not both2['incomplete']
@@ -598,11 +598,13 @@ def _related(f1, f2, limit):
     except StopIteration:
         return False
 
-def _checkcopies(srcctx, f, msrc, mdst, base, tca, remotebase, limit, data):
+def _checkcopies(srcctx, dstctx, f, msrc, mdst, base, tca, remotebase,
+                 limit, data):
     """
     check possible copies of f from msrc to mdst
 
     srcctx = starting context for f in msrc
+    dstctx = destination context for f in mdst
     f = the filename to check (as in msrc)
     msrc = the source manifest
     mdst = the destination manifest
