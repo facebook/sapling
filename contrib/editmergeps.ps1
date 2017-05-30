@@ -60,7 +60,6 @@ if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
     $previousline = $firstline
     $lines = Get-Lines
     $firstline = if ($lines.Length -gt 0) { $lines[0] } else { $nil }
-    Write-Output "firstline is: $firstline, previousline is: $previousline"
   }
 }
 else
