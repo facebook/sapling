@@ -3,7 +3,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
-  > copytrace=$extpath/copytrace
+  > copytrace=$extpath/hgext3rd/copytrace.py
   > [experimental]
   > disablecopytrace=True
   > EOF
