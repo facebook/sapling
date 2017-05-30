@@ -65,7 +65,7 @@ if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
 }
 else
 {
-  $ "$ed" $file
+  & "$ed" $file
 }
 
 $conflicts=Get-Lines
