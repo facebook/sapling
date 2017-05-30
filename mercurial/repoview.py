@@ -71,14 +71,13 @@ def computehidden(repo):
 
     hidden = hideablerevs(repo)
     if hidden:
+        hidden = set(hidden - pinnedrevs(repo))
         pfunc = repo.changelog.parentrevs
         mutablephases = (phases.draft, phases.secret)
         mutable = repo._phasecache.getrevset(repo, mutablephases)
 
         visible = set(mutable - hidden)
-        visible |= (hidden & pinnedrevs(repo))
         if visible:
-            hidden = hidden - visible
             _revealancestors(pfunc, hidden, visible)
     return frozenset(hidden)
 
