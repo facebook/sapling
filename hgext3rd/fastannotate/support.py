@@ -88,21 +88,26 @@ def _hgwebannotate(orig, fctx, ui):
                                      section='annotate', whitespace=True)
     return _doannotate(fctx, diffopts=diffopts)
 
-def _fctxannotate(orig, self, follow=False, linenumber=False, diffopts=None):
+def _fctxannotate(orig, self, follow=False, linenumber=False, skiprevs=None,
+                  diffopts=None):
+    if skiprevs:
+        # skiprevs is not supported yet
+        return orig(self, follow, linenumber, skiprevs, diffopts)
     try:
         return _doannotate(self, follow, diffopts)
     except Exception as ex:
         self._repo.ui.debug('fastannotate: falling back to the vanilla '
                             'annotate: %r\n' % ex)
-        return orig(self, follow, linenumber, diffopts)
+        return orig(self, follow, linenumber, skiprevs, diffopts)
 
 def _remotefctxannotate(orig, self, follow=False, linenumber=None,
-                        diffopts=None, prefetchskip=None):
+                        skiprevs=None, diffopts=None, prefetchskip=None):
     # skipset: a set-like used to test if a fctx needs to be downloaded
     skipset = None
     with context.fctxannotatecontext(self, follow, diffopts) as ac:
         skipset = revmap.revmap(ac.revmappath)
-    return orig(self, follow, linenumber, diffopts, prefetchskip=skipset)
+    return orig(self, follow, linenumber, skiprevs, diffopts,
+                prefetchskip=skipset)
 
 def replacehgwebannotate():
     extensions.wrapfunction(hgweb.webutil, 'annotate', _hgwebannotate)

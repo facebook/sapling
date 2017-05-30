@@ -346,8 +346,8 @@ class remotefilectx(context.filectx):
 
         return None
 
-    def annotate(self, follow=False, linenumber=None, diffopts=None,
-                 prefetchskip=None):
+    def annotate(self, follow=False, linenumber=None, skiprevs=None,
+                 diffopts=None, prefetchskip=None):
         introctx = self
         if prefetchskip:
             # use introrev so prefetchskip can be accurately tested
@@ -377,7 +377,8 @@ class remotefilectx(context.filectx):
                             'for annotate\n' % len(fetch))
         if fetch:
             self._repo.fileservice.prefetch(fetch)
-        return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
+        return super(remotefilectx, self).annotate(follow, linenumber,
+                                                   skiprevs, diffopts)
 
     # Return empty set so that the hg serve and thg don't stack trace
     def children(self):
