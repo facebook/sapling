@@ -1,4 +1,4 @@
-  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
+  $ . $TESTDIR/require-ext.sh evolve
   $ . "$TESTDIR/histedit-helpers.sh"
 
 Setup
@@ -9,11 +9,11 @@ Setup
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > inhibit=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > fbamend=
   > evolve=
   > rebase=
-  > directaccess=
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbhistedit=
   > [experimental]
   > evolution = createmarkers

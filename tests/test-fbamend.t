@@ -481,7 +481,7 @@ Test fbamend with inhibit
   $ . $TESTDIR/require-ext.sh inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > inhibit=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > EOF
   $ cd ..
   $ hg init inhibitrepo
@@ -595,11 +595,10 @@ Make sure that unamend does not work without inhibit
   [255]
 
 Make sure that unamend works as expected with inhibit
-  $ . $TESTDIR/require-ext.sh directaccess
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > inhibit=
-  > directaccess=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
   $ hg unamend
 

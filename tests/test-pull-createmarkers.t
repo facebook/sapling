@@ -1,4 +1,4 @@
-  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit remotenames
+  $ . $TESTDIR/require-ext.sh evolve remotenames
 
 Setup
 
@@ -14,8 +14,8 @@ Test that hg pull creates obsolescence markers for landed diffs
   > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
-  > inhibit=
-  > directaccess=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
   > strip=
   > rebase=

@@ -1,4 +1,4 @@
-  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
+  $ . $TESTDIR/require-ext.sh evolve
 
 Test of warning for evolve users when inhibit is enabled
   $ cat >> $HGRCPATH <<EOF
@@ -9,8 +9,8 @@ Test of warning for evolve users when inhibit is enabled
   > [inhibit]
   > cutoff=2015-07-04
   > [extensions]
-  > inhibit=
-  > directaccess=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
   > EOF
   $ echo "inhibitwarn = $TESTDIR/../hgext3rd/inhibitwarn.py" >> $HGRCPATH

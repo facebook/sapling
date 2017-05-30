@@ -416,12 +416,12 @@ Push to svn server should fail
   [255]
 
 Scratch pull of pruned commits
-  $ . $TESTDIR/require-ext.sh inhibit directaccess evolve
+  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > directaccess=
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
-  > inhibit=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > [experimental]
   > evolution=createmarkers
   > evolutioncommands=obsolete

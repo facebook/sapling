@@ -194,12 +194,11 @@ a new hash for them
   
 Reset + Inhibit tests, with inhibit reset revives the same commit
 
-  $ . $TESTDIR/require-ext.sh directaccess inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > evolve =
-  > inhibit =
-  > directaccess =
+  > evolve=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > rebase=
   > EOF
 

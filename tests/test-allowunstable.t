@@ -1,14 +1,14 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
+  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > allowunstable=$TESTTMP/allowunstable.py
-  > directaccess=
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
   > histedit=
-  > inhibit=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > record=
   > [experimental]

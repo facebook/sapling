@@ -478,7 +478,7 @@ Test non-remotenames use of pull --rebase and --update requires --dest
 
 Prepare a repo for testing divergence warnings with respect to inhibit extension
 and allowance of prune rebases
-  $ . $TESTDIR/require-ext.sh directaccess evolve
+  $ . $TESTDIR/require-ext.sh evolve
   $ hg init repodiv && cd repodiv
   $ cat >> .hg/hgrc << EOF
   > [experimental]
@@ -488,7 +488,7 @@ and allowance of prune rebases
   > [extensions]
   > strip=
   > evolve=
-  > directaccess=
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
@@ -516,7 +516,9 @@ Test that we show divergence warning if inhibit is disabled
   [255]
 
 Test that we do not show divergence warning if inhibit is enabled
-  $ echo "inhibit=" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > EOF
   $ hg rebase -r 1 -d 3 --hidden
   rebasing 1:09d39afb522a "a"
 

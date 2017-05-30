@@ -1,13 +1,13 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
+  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/debuginhibit.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > debuginhibit=$TESTTMP/debuginhibit.py
-  > directaccess=
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
-  > inhibit=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > [debuginhibit]
   > printnodes = true
   > printstack = true
