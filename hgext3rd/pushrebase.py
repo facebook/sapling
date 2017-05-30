@@ -568,7 +568,7 @@ def _addpushbackobsolete(repo, reply, markers, markerdate,
         rawmarkers = [(pre.node(), tuple(s.node() for s in sucs), flag,
                        tuple(sorted(meta.items())), markerdate, parents)
                       for pre, sucs, meta in markers]
-        exchange.buildobsmarkerspart(reply, rawmarkers)
+        bundle2.buildobsmarkerspart(reply, rawmarkers)
     except ValueError as exc:
         repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
 
