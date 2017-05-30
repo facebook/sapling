@@ -56,7 +56,7 @@ if (($ed -eq "vim") -or ($ed -eq "emacs") -or `
         $linearg = "+$firstline"
     }
 
-    Start-Process -Wait $ed $linearg,$file
+    Start-Process -Wait -NoNewWindow $ed $linearg,$file
     $previousline = $firstline
     $lines = Get-Lines
     $firstline = if ($lines.Length -gt 0) { $lines[0] } else { $nil }
