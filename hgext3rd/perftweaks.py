@@ -17,11 +17,9 @@
 from mercurial import (
     branchmap,
     dispatch,
-    error,
     extensions,
     merge,
     phases,
-    repoview,
     revlog,
     scmutil,
     tags,
@@ -30,10 +28,8 @@ from mercurial import (
 from mercurial.extensions import wrapfunction
 from mercurial.node import bin, nullid, nullrev
 import errno
-import hashlib
 import os
 
-cachefile = repoview.cachefile
 testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
@@ -59,8 +55,6 @@ def extsetup(ui):
         wrapfunction(remotenames, 'saveremotenames', _saveremotenames)
     except KeyError:
         pass
-    if ui.config('perftweaks', 'fasthiddencache'):
-        repoview.filtertable['visible'] = _computehidden
 
 def reposetup(ui, repo):
     if repo.local() is not None:
@@ -273,82 +267,3 @@ def _tracksparseprofiles(runcommand, lui, repo, *args):
             lui.log('sparse_profiles', '',
                     active_profiles=','.join(sorted(profiles)))
     return res
-
-def _computehidden(repo):
-    """compute the set of hidden revision to filter
-
-    During most operation hidden should be filtered.
-    This function is similar to upstream function repoview.computehidden()
-    Main difference is in reading and writing hidden cache.
-    For example, it uses another _cachehash() function."""
-    assert not repo.changelog.filteredrevs
-
-    if not repo.obsstore:
-        return frozenset()
-    cachekey = _cachehash(repo)
-    hidden = repoview._readhiddencache(repo, cachefile, cachekey)
-    isbundlerepo = (util.safehasattr(repo, '_url') and
-                    repo._url.startswith('bundle'))
-    # bundlerepo may add new nodes that are already obsoleted but the cache
-    # key is the same. To avoid it let's not use cache for bundlerepo
-    if hidden is None or isbundlerepo:
-        repo.ui.debug('recomputing hidden cache\n')
-        hidden = frozenset(repoview._getstatichidden(repo))
-        if not isbundlerepo:
-            _trywritehiddencache(repo, cachekey, hidden)
-    else:
-        repo.ui.debug('using hidden cache\n')
-
-    # check if we have wd parents, bookmarks or tags pointing to hidden
-    # changesets and remove those.
-    # This part of code is almost identical to core mercurial
-    # repoview.computehidden().
-    dynamic = hidden & repoview.revealedrevs(repo)
-    if dynamic:
-        cl = repo.changelog
-        blocked = cl.ancestors(dynamic, inclusive=True)
-        hidden = frozenset(r for r in hidden if r not in blocked)
-    return hidden
-
-def _cachehash(repo):
-    h = hashlib.sha1()
-    for filename in ['phaseroots', '00changelog.i', 'obsstore', 'obsinhibit']:
-        size, mtime = _safegetsizemtime(repo, filename)
-        h.update(str(size))
-        h.update(str(mtime))
-    # changelog may delay update to the 00changelog.i file. In this case
-    # files' size + mtime is the same, but static hidden cache is different.
-    # Let's add delayed value to the cache key
-    h.update(str(repo.changelog._delayed))
-    return h.digest()
-
-def _safegetsizemtime(repo, filename):
-    if repo.svfs.exists(filename):
-        stat = repo.svfs.stat(filename)
-        return stat.st_size, stat.st_mtime
-    else:
-        return 0, 0
-
-def _trywritehiddencache(repo, newhash, hidden):
-    """write cache of hidden changesets to disk
-
-    Will not write the cache if a wlock cannot be obtained lazily.
-    The cache consists of a head of 22byte:
-       2 byte    version number of the cache
-      20 byte    sha1 to validate the cache
-     n*4 byte    hidden revs
-    """
-    wlock = fh = None
-    try:
-        wlock = repo.wlock(wait=False)
-        # write cache to file
-        fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
-        repoview._writehiddencache(fh, newhash, hidden)
-        fh.close()
-    except (IOError, OSError):
-        repo.ui.debug('error writing hidden changesets cache\n')
-    except error.LockHeld:
-        repo.ui.debug('cannot obtain lock to write hidden changesets cache\n')
-    finally:
-        if wlock:
-            wlock.release()
