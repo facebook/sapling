@@ -105,6 +105,7 @@ def wrapwithoutwarning(orig, ui, repo, *args, **kwargs):
 def uisetup(ui):
     """ Change ordering of extensions to ensure that directaccess extsetup comes
     after the one of the extensions in the loadsafter list """
+    # internal config: directaccess.loadsafter
     loadsafter = ui.configlist('directaccess', 'loadsafter')
     order = list(extensions._order)
     directaccesidx = order.index('directaccess')

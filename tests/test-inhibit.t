@@ -1,3 +1,4 @@
+  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > logtemplate = {rev}:{node|short} {desc}\n
@@ -7,10 +8,10 @@
   > [extensions]
   > rebase=
   > strip=
+  > evolve=
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
-  $ echo "evolve=$(echo $(dirname $TESTDIR))/hgext3rd/evolve/" >> $HGRCPATH
-  $ echo "directaccess=$(echo $(dirname $TESTDIR))/hgext3rd/evolve/hack/directaccess.py" >> $HGRCPATH
-  $ echo "inhibit=$(echo $(dirname $TESTDIR))/hgext3rd/evolve/hack/inhibit.py" >> $HGRCPATH
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -138,13 +139,9 @@ and no divergence
 check public revision got cleared
 (when adding the second inhibitor, the first one is removed because it is public)
 
-  $ wc -m .hg/store/obsinhibit | sed -e 's/^[ \t]*//'
-  20 .hg/store/obsinhibit
   $ hg strip 7
   1 changesets pruned
   $ hg debugobsinhibit --hidden 18214586bf78
-  $ wc -m .hg/store/obsinhibit | sed -e 's/^[ \t]*//'
-  20 .hg/store/obsinhibit
   $ hg log -G
   @  9:55c73a90e4b4 add cJ
   |
@@ -175,8 +172,6 @@ check public revision got cleared
   o  0:54ccbc537fc2 add cA
   
   $ hg debugobsinhibit --hidden 55c73a90e4b4
-  $ wc -m .hg/store/obsinhibit | sed -e 's/^[ \t]*//'
-  20 .hg/store/obsinhibit
   $ hg log -G
   o  9:55c73a90e4b4 add cJ
   |
@@ -430,7 +425,7 @@ With severals hidden sha, rebase of one hidden stack onto another one:
   |
   o  0:54ccbc537fc2 add cA
   
-  $ hg rebase -s 10 -d 3 
+  $ hg rebase -s 10 -d 3
   abort: hidden revision '3'!
   (use --hidden to access hidden revisions; pruned)
   [255]
@@ -673,7 +668,7 @@ We show the log before and after a log -G --hidden, they should be the same
   |
   o  0:54ccbc537fc2 add cA
   
- 
+
 check that pruning and inhibited node does not confuse anything
 
   $ hg up --hidden 210589181b14
@@ -728,7 +723,7 @@ check that pruning and inhibited node does not confuse anything
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > EOF
-  $ echo "inhibit=$(echo $(dirname $TESTDIR))/hgext3rd/evolve/hack/inhibit.py" >> $HGRCPATH
+  $ echo "inhibit=$TESTDIR/../hgext3rd/inhibit.py" >> $HGRCPATH
 
 Empty commit
   $ hg amend
@@ -781,14 +776,13 @@ Inhibit should not work without directaccess
   cannot use inhibit without the direct access extension
   (please enable it or inhibit won't work)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo "directaccess=$(echo $(dirname $TESTDIR))/hgext3rd/evolve/hack/directaccess.py" >> $HGRCPATH
+  $ echo "directaccess=$TESTDIR/../hgext3rd/directaccess.py" >> $HGRCPATH
   $ cd ..
 
 hg push should not allow directaccess unless forced with --hidden
 We copy the inhibhit repo to inhibit2 and make some changes to push to inhibit
 
-  $ cp -r inhibit inhibit2
-  $ pwd=$(pwd)
+  $ cp -R inhibit inhibit2
   $ cd inhibit
   $ mkcommit pk
   created new head
@@ -800,15 +794,15 @@ We copy the inhibhit repo to inhibit2 and make some changes to push to inhibit
   71eb4f100663 tip
 
 Hidden commits cannot be pushed without --hidden
-  $ hg push -r 003a4735afde $pwd/inhibit2
-  pushing to $TESTTMP/inhibit2
+  $ hg push -r 003a4735afde $TESTTMP/inhibit2
+  pushing to $TESTTMP/inhibit2 (glob)
   abort: hidden revision '003a4735afde'!
   (use --hidden to access hidden revisions; successor: 71eb4f100663)
   [255]
 
 Visible commits can still be pushed
-  $ hg push -fr 71eb4f100663 $pwd/inhibit2
-  pushing to $TESTTMP/inhibit2
+  $ hg push -fr 71eb4f100663 $TESTTMP/inhibit2
+  pushing to $TESTTMP/inhibit2 (glob)
   searching for changes
   adding changesets
   adding manifests
