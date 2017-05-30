@@ -884,8 +884,9 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     if dest:
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
+        tool = opts.pop('tool', '')
         ret = orig(ui, repo, source, **opts)
-        return ret or rebasemodule.rebase(ui, repo, dest=dest)
+        return ret or rebasemodule.rebase(ui, repo, dest=dest, tool=tool)
     else:
         return orig(ui, repo, source, **opts)
 

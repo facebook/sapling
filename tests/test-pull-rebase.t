@@ -151,3 +151,62 @@ Tests that there are no race condition between pulling changesets and remote boo
   $ hg -q pull
   $ hg log -l 1 --template="{desc} {remotenames}\n"
   between_pull default/bookmarkonremote default/default
+
+Test pull with --rebase and --tool
+  $ cd ../remoterepo
+  $ hg up bookmarkonremote -q
+  $ echo remotechanges > editedbyboth
+  $ hg add editedbyboth
+  $ mkcommit remotecommit
+  $ cd ../localrepo
+  $ hg book -t default/bookmarkonremote -r default/bookmarkonremote tracking2
+  $ hg update tracking2 -q
+  $ echo localchanges > editedbyboth
+  $ hg add editedbyboth
+  $ mkcommit somelocalchanges
+  $ printdag
+  @  somelocalchanges | tracking2 |
+  |
+  o  between_pull |  | default/bookmarkonremote
+  |
+  o  foo |  |
+  |
+  | o  localcommit | bmnottracking tracking |
+  | |
+  | o  untrackedremotecommit |  |
+  | |
+  o |  trackedremotecommit |  |
+  |/
+  o  root |  |
+  
+  $ hg pull --rebase --tool internal:union
+  pulling from $TESTTMP/remoterepo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  rebasing 6:1d01e32a0efb "somelocalchanges" (tracking2)
+  merging editedbyboth
+  saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/*-backup.hg (glob)
+  $ printdag
+  @  somelocalchanges | tracking2 |
+  |
+  o  remotecommit |  | default/bookmarkonremote
+  |
+  o  between_pull |  |
+  |
+  o  foo |  |
+  |
+  | o  localcommit | bmnottracking tracking |
+  | |
+  | o  untrackedremotecommit |  |
+  | |
+  o |  trackedremotecommit |  |
+  |/
+  o  root |  |
+  
+  $ cat editedbyboth
+  remotechanges
+  localchanges
