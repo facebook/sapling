@@ -76,9 +76,8 @@ def computehidden(repo):
         mutablephases = (phases.draft, phases.secret)
         mutable = repo._phasecache.getrevset(repo, mutablephases)
 
-        visible = set(mutable - hidden)
-        if visible:
-            _revealancestors(pfunc, hidden, visible)
+        visible = mutable - hidden
+        _revealancestors(pfunc, hidden, visible)
     return frozenset(hidden)
 
 def computeunserved(repo):
