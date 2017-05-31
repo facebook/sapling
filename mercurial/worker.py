@@ -26,7 +26,7 @@ def countcpus():
 
     # posix
     try:
-        n = int(os.sysconf('SC_NPROCESSORS_ONLN'))
+        n = int(os.sysconf(r'SC_NPROCESSORS_ONLN'))
         if n > 0:
             return n
     except (AttributeError, ValueError):
