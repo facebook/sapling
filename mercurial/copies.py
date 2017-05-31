@@ -419,8 +419,10 @@ def mergecopies(repo, c1, c2, base):
     for f in u2u:
         _checkcopies(c2, c1, f, base, tca, dirtyc2, limit, data2)
 
-    copy = dict(data1['copy'].items() + data2['copy'].items())
-    fullcopy = dict(data1['fullcopy'].items() + data2['fullcopy'].items())
+    copy = dict(data1['copy'])
+    copy.update(data2['copy'])
+    fullcopy = dict(data1['fullcopy'])
+    fullcopy.update(data2['fullcopy'])
 
     if dirtyc1:
         _combinecopies(data2['incomplete'], data1['incomplete'], copy, diverge,
