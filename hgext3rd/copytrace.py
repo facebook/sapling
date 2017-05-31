@@ -6,8 +6,11 @@
 # GNU General Public License version 2 or any later version.
 
 from functools import partial, update_wrapper
-from mercurial import commands, dispatch, extensions, filemerge
+from mercurial import commands, dispatch, extensions, filemerge, util
 from mercurial.i18n import _
+from mercurial.node import hex, wdirid
+
+import os
 
 _copytracinghint = ("hint: if this message is due to a moved file, you can " +
                     "ask mercurial to attempt to automatically resolve this " +
@@ -55,10 +58,23 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
 
 def _promptmerge(origfunc, repo, mynode, orig, fcd, fco, *args, **kwargs):
     ui = repo.ui
-    phases = sorted([_getctxfromfctx(fco).phase(),
-                     _getctxfromfctx(fcd).phase()])
-    if fco.isabsent() or fcd.isabsent():
-        ui.log("promptmerge", "", mergechangeddeleted=('%s' % phases))
+    try:
+        ctx1 = _getctxfromfctx(fco)
+        ctx2 = _getctxfromfctx(fcd)
+        msg = sorted([(ctx1.phase(), _gethex(ctx1)),
+                      (ctx2.phase(), _gethex(ctx2))])
+
+        reporoot = repo.origroot if util.safehasattr(repo, 'origroot') else ''
+        reponame = ui.config('paths', 'default', reporoot)
+        if reponame:
+            reponame = os.path.basename(reponame)
+        if fco.isabsent() or fcd.isabsent():
+            ui.log("promptmerge", "", mergechangeddeleted=('%s' % msg),
+                   reponame=reponame)
+    except Exception as e:
+        # since it's just a logging we don't want a error in this code to break
+        # clients
+        ui.log("promptmerge", "", failed='%s' % e)
     return origfunc(repo, mynode, orig, fcd, fco, *args, **kwargs)
 
 def _getctxfromfctx(fctx):
@@ -66,3 +82,7 @@ def _getctxfromfctx(fctx):
         return fctx._ctx
     else:
         return fctx._changectx
+
+def _gethex(ctx):
+    # for workingctx return p1 hex
+    return ctx.hex() if ctx.hex() != hex(wdirid) else ctx.p1().hex()
