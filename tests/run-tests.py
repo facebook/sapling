@@ -1767,6 +1767,8 @@ class TestSuite(unittest.TestSuite):
                 if not v:
                     channel = n
                     break
+            else:
+                raise ValueError('Could not find output channel')
             channels[channel] = "=" + test.name[5:].split(".")[0]
             try:
                 test(result)
