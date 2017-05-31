@@ -31,7 +31,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
 
     if callable(funcname):
         obj = funcname
-        funcname = obj.__module__ + "." + obj.__name__
+        funcname = pycompat.sysbytes(obj.__module__ + r"." + obj.__name__)
     else:
         d = funcname.rfind('.')
         if d == -1:
