@@ -268,6 +268,7 @@ def pull(orig, ui, repo, *args, **opts):
 
     if 'rebase' in opts:
         del opts['rebase']
+        tool = opts.pop('tool', '')
     if 'update' in opts:
         del opts['update']
     if 'dest' in opts:
@@ -278,7 +279,7 @@ def pull(orig, ui, repo, *args, **opts):
     # NB: we use rebase and not isrebase on the next line because
     # remotenames may have already handled the rebase.
     if dest and rebase:
-        ret = ret or rebasemodule.rebase(ui, repo, dest=dest)
+        ret = ret or rebasemodule.rebase(ui, repo, dest=dest, tool=tool)
     if dest and update:
         ret = ret or commands.update(ui, repo, node=dest, check=True)
 

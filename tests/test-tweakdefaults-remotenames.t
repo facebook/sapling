@@ -104,3 +104,34 @@ Test that setting a defaultdest allows --update and --rebase to work
   |
   o  8f0162e483d0  default/one
   
+Test that hg pull --rebase also works with a --tool argument
+  $ echo d created at remote > ../repo/d
+  $ hg -R ../repo update three -q
+  $ hg -R ../repo commit -qAm 'remote d'
+  $ hg pull --rebase --dest three --tool internal:union
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  rebasing 4:ba0f83735c95 "d"
+  merging d
+  saved backup bundle to $TESTTMP/clone/.hg/strip-backup/ba0f83735c95-ba455273-backup.hg (glob)
+  $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
+  @  d6553cf01770
+  |
+  o  e8aa3bc9f3f0  default/three default/default
+  |
+  | o  5413b62180b7 bm
+  |/
+  o  083f922fc4a9
+  |
+  o  301d76bdc3ae  default/two
+  |
+  o  8f0162e483d0  default/one
+  
+  $ cat d
+  d created at remote
+  d
