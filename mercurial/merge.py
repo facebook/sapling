@@ -807,9 +807,12 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
         ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete, dirmove = ret
 
+    boolbm = pycompat.bytestr(bool(branchmerge))
+    boolf = pycompat.bytestr(bool(force))
+    boolm = pycompat.bytestr(bool(matcher))
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
-                  % (bool(branchmerge), bool(force), bool(matcher)))
+                  % (boolbm, boolf, boolm))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
