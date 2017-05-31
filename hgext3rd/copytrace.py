@@ -61,8 +61,7 @@ def _promptmerge(origfunc, repo, mynode, orig, fcd, fco, *args, **kwargs):
     try:
         ctx1 = _getctxfromfctx(fco)
         ctx2 = _getctxfromfctx(fcd)
-        msg = sorted([(ctx1.phase(), _gethex(ctx1)),
-                      (ctx2.phase(), _gethex(ctx2))])
+        msg = [(ctx1.phase(), _gethex(ctx1)), (ctx2.phase(), _gethex(ctx2))]
 
         reporoot = repo.origroot if util.safehasattr(repo, 'origroot') else ''
         reponame = ui.config('paths', 'default', reporoot)
