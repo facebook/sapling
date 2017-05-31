@@ -26,7 +26,7 @@ to the user.
 from __future__ import absolute_import
 
 import contextlib
-import gdbm
+import anydbm
 from itertools import chain
 import re
 
@@ -67,8 +67,8 @@ logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
 def ancestorcache(path):
     # simple cache to speed up revlog.ancestors
     try:
-        db = gdbm.open(path, 'c')
-    except gdbm.error:
+        db = anydbm.open(path, 'c')
+    except anydbm.error:
         # database locked, fail gracefully
         yield
     else:
