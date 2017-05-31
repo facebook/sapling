@@ -340,6 +340,8 @@ pypats = [
     (r'^import pickle', "don't use pickle, use util.pickle"),
     (r'^import httplib', "don't use httplib, use util.httplib"),
     (r'^import BaseHTTPServer', "use util.httpserver instead"),
+    (r'^(from|import) mercurial\.(cext|pure|cffi)',
+     "use mercurial.policy.importmod instead"),
     (r'\.next\(\)', "don't use .next(), use next(...)"),
     (r'([a-z]*).revision\(\1\.node\(',
      "don't convert rev to node before passing to revision(nodeorrev)"),
