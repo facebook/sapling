@@ -1778,10 +1778,11 @@ class TestSuite(unittest.TestSuite):
             except: # re-raises
                 done.put(('!', test, 'run-test raised an error, see traceback'))
                 raise
-            try:
-                channels[channel] = ''
-            except IndexError:
-                pass
+            finally:
+                try:
+                    channels[channel] = ''
+                except IndexError:
+                    pass
 
         def stat():
             count = 0

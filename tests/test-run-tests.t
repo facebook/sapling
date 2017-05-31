@@ -903,6 +903,30 @@ support for bisecting failed tests automatically
 
   $ cd ..
 
+Test a broken #if statement doesn't break run-tests threading.
+==============================================================
+  $ mkdir broken
+  $ cd broken
+  $ cat > test-broken.t <<EOF
+  > true
+  > #if notarealhghavefeature
+  >   $ false
+  > #endif
+  > EOF
+  $ for f in 1 2 3 4 ; do
+  > cat > test-works-$f.t <<EOF
+  > This is test case $f
+  >   $ sleep 1
+  > EOF
+  > done
+  $ rt -j 2
+  ....
+  # Ran 5 tests, 0 skipped, 0 warned, 0 failed.
+  skipped: unknown feature: notarealhghavefeature
+  
+  $ cd ..
+  $ rm -rf broken
+
 Test cases in .t files
 ======================
   $ mkdir cases
