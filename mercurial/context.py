@@ -1405,6 +1405,9 @@ class committablectx(basectx):
     def __str__(self):
         return str(self._parents[0]) + r"+"
 
+    def __bytes__(self):
+        return bytes(self._parents[0]) + "+"
+
     def __nonzero__(self):
         return True
 
