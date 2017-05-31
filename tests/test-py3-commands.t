@@ -222,3 +222,10 @@ Prove the repo is valid using the Python 2 `hg`:
     "parents": ["0000000000000000000000000000000000000000"]
    }
   ]
+
+Show that update works now!
+
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg identify
+  71c96e924262
