@@ -100,7 +100,7 @@ Create second remote
   $ hg clone -q ssh://user@dummy/remoterepo secondremoterepo
   $ cd secondremoterepo
   $ hg up -q 0238718db2b1
-  $ hg book master
+  $ hg book master --force
   $ cd ..
 
 Add second remote repo path in localrepo
@@ -119,7 +119,7 @@ Add second remote repo path in localrepo
 
 Move bookmark in second remote, pull and make sure it doesn't move in local repo
   $ cd ../secondremoterepo
-  $ hg book secondbook
+  $ hg book secondbook --force
   $ echo aaa >> a
   $ hg commit -m 'Move bookmark in second remote'
   $ cd ../localrepo
