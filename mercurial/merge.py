@@ -801,7 +801,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
 
     # manifests fetched in order are going to be faster, so prime the caches
     [x.manifest() for x in
-     sorted(wctx.parents() + [p2, pa], key=lambda x: x.rev())]
+     sorted(wctx.parents() + [p2, pa], key=lambda x: x.rev() or -1)]
 
     if followcopies:
         ret = copies.mergecopies(repo, wctx, p2, pa)
