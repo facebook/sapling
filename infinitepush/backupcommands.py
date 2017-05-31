@@ -64,10 +64,12 @@ from mercurial import (
 )
 
 from collections import defaultdict, namedtuple
-from mercurial.cext import osutil
+from mercurial import policy
 from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev
 from mercurial.i18n import _
+
+osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
 command = registrar.command(cmdtable)

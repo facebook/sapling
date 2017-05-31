@@ -21,18 +21,25 @@ can fall back to copying things by setting sqldirstate.skipbackups to False.
 We commit sql transaction only when normal dirstate write would happen.
 """
 
+from __future__ import absolute_import
+
 from exceptions import RuntimeError
 import os
 import sqlite3
 
-from mercurial import dirstate, util
+from mercurial import (
+    dirstate,
+    policy,
+    util,
+)
 
-from mercurial.cext import parsers
 from mercurial.node import nullid, hex, bin
 from mercurial.util import propertycache
 
-from sqlmap import sqlmap
-from sqltrace import tracewrapsqlconn
+from .sqlmap import sqlmap
+from .sqltrace import tracewrapsqlconn
+
+parsers = policy.importmod(r'parsers')
 
 dirstatetuple = parsers.dirstatetuple
 

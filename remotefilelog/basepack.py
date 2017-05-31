@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+
 import errno, hashlib, mmap, os, struct, time
-from mercurial import util
-from mercurial.cext import osutil
+from mercurial import policy, util
 from mercurial.i18n import _
 from mercurial import vfs as vfsmod
 
-import shallowutil
+from . import shallowutil
+
+osutil = policy.importmod(r'osutil')
 
 # The pack version supported by this implementation. This will need to be
 # rev'd whenever the byte format changes. Ex: changing the fanout prefix,

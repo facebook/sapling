@@ -1,12 +1,27 @@
+from __future__ import absolute_import
+
 import os
 from collections import defaultdict
 from hgext3rd.extutil import runshellcommand
-from mercurial import error, extensions, mdiff, util
-from mercurial.cext import osutil
+from mercurial import (
+    error,
+    extensions,
+    mdiff,
+    policy,
+    util,
+)
 from mercurial.node import nullid
 from mercurial.i18n import _
-import constants, datapack, historypack, contentstore, metadatastore
-import shallowutil
+from . import (
+    constants,
+    contentstore,
+    datapack,
+    historypack,
+    metadatastore,
+    shallowutil,
+)
+
+osutil = policy.importmod(r'osutil')
 
 def backgroundrepack(repo, incremental=True):
     cmd = util.hgcmd() + ['-R', repo.origroot, 'repack']
