@@ -5,6 +5,7 @@ cpp_library(
   deps = [
     '@/eden/fs/model:model',
     '@/eden/fs/utils:utils',
+    '@/folly/experimental:experimental',
     '@/folly:folly',
   ],
 )

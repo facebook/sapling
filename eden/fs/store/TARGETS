@@ -6,6 +6,7 @@ cpp_library(
     '@/eden/fs/model:model',
     '@/eden/fs/model/git:git',
     '@/eden/fs/rocksdb:rocksdb',
+    '@/folly/experimental:experimental',
     '@/folly:folly',
     '@/rocksdb:rocksdb',
   ],
