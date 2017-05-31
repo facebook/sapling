@@ -77,7 +77,7 @@ class basectx(object):
         return self.rev()
 
     def __repr__(self):
-        return "<%s %s>" % (type(self).__name__, str(self))
+        return r"<%s %s>" % (type(self).__name__, str(self))
 
     def __eq__(self, other):
         try:
@@ -1403,7 +1403,7 @@ class committablectx(basectx):
             self._extra['branch'] = 'default'
 
     def __str__(self):
-        return str(self._parents[0]) + "+"
+        return str(self._parents[0]) + r"+"
 
     def __nonzero__(self):
         return True
