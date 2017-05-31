@@ -324,7 +324,7 @@ test flag processor and skipflags
   $ cd skipflags
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > flagprocesor=$RUNTESTDIR/flagprocessorext.py
+  > flagprocessor=$RUNTESTDIR/flagprocessorext.py
   > EOF
   $ echo '[BASE64]content' > base64
   $ hg commit -Aqm 'flag processor content' base64
