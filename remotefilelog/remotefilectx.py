@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import collections
+from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import context, util, error, ancestor, phases
 
@@ -251,14 +252,23 @@ class remotefilectx(context.filectx):
             # obsolescence markers to find a more-likely-correct linkrev.
             if not seenpublic and pc.phase(repo, ancrev) == phases.public:
                 seenpublic = True
-                repo.fileservice.prefetch([(path, hex(fnode))], force=True)
+                try:
+                    repo.fileservice.prefetch([(path, hex(fnode))], force=True)
 
-                # Now that we've downloaded a new blob from the server, we need
-                # to rebuild the ancestor map to recompute the linknodes.
-                self._ancestormap = None
-                linknode = self.ancestormap()[fnode][2] # 2 is linknode
-                if self._verifylinknode(revs, linknode):
-                    return linknode
+                    # Now that we've downloaded a new blob from the server,
+                    # we need to rebuild the ancestor map to recompute the
+                    # linknodes.
+                    self._ancestormap = None
+                    linknode = self.ancestormap()[fnode][2] # 2 is linknode
+                    if self._verifylinknode(revs, linknode):
+                        return linknode
+                except Exception as e:
+                    errormsg = ('warning: failed to prefetch filepath %s ' +
+                                'while adjusting linknode %s (%s)\n(this is ' +
+                                'generally benign but it may make ' +
+                                'this operation take longer to calculate ' +
+                                'things locally)')
+                    repo.ui.warn(_(errormsg) % (path, hex(linknode), e))
 
         return linknode
 
