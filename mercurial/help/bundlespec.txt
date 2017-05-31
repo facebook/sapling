@@ -74,7 +74,7 @@ Examples
     Produce a ``v2`` bundle using default options, including compression.
 
 ``none-v1``
-    Produce a ``v2`` bundle with no compression.
+    Produce a ``v1`` bundle with no compression.
 
 ``zstd-v2``
     Produce a ``v2`` bundle with zstandard compression using default
