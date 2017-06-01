@@ -151,6 +151,11 @@ Test weird unicode-vs-bytes stuff
   options ([+] can be repeated):
   (some details hidden, use --verbose to show complete help)
 
+  $ $PYTHON3 $HGBIN help -k notopic
+  abort: no matches
+  (try 'hg help' for a list of topics)
+  [255]
+
 Prove the repo is valid using the Python 2 `hg`:
   $ hg verify
   checking changesets
