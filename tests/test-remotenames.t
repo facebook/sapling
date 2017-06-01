@@ -134,6 +134,14 @@ make sure we can list remote bookmarks with --all
   no bookmarks set
      beta/babar                3:78f83396d79e
 
+  $ hg bookmarks --all -T json
+  [
+   {
+    "node": "78f83396d79eebd439e09cb900db376fadb4d580",
+    "remotebookmark": "beta/babar",
+    "rev": 3
+   }
+  ]
   $ hg bookmarks --remote
      beta/babar                3:78f83396d79e
 
