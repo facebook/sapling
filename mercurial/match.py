@@ -153,8 +153,7 @@ def match(root, cwd, patterns, include=None, exclude=None, default='glob',
                                listsubrepos=listsubrepos, badfn=badfn)
     else:
         # It's a little strange that no patterns means to match everything.
-        # Consider changing this to match nothing (probably adding a
-        # "nevermatcher").
+        # Consider changing this to match nothing (probably using nevermatcher).
         m = alwaysmatcher(root, cwd, badfn)
 
     if include:
@@ -345,18 +344,8 @@ class alwaysmatcher(basematcher):
 class nevermatcher(basematcher):
     '''Matches nothing.'''
 
-    def __init__(self, root, cwd, badfn=None, relativeuipath=False):
-        super(nevermatcher, self).__init__(root, cwd, badfn,
-                                           relativeuipath=relativeuipath)
-
-    def always(self):
-        return False
-
-    def matchfn(self, f):
-        return False
-
-    def visitdir(self, dir):
-        return False
+    def __init__(self, root, cwd, badfn=None):
+        super(nevermatcher, self).__init__(root, cwd, badfn)
 
     def __repr__(self):
         return '<nevermatcher>'
