@@ -244,7 +244,8 @@ def list_stdlib_modules():
         for top, dirs, files in os.walk(libpath):
             for i, d in reversed(list(enumerate(dirs))):
                 if (not os.path.exists(os.path.join(top, d, '__init__.py'))
-                    or top == libpath and d in ('hgext', 'mercurial')):
+                    or top == libpath and d in ('hgdemandimport', 'hgext',
+                                                'mercurial')):
                     del dirs[i]
             for name in files:
                 if not name.endswith(('.py', '.so', '.pyc', '.pyo', '.pyd')):
