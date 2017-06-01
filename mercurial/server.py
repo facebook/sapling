@@ -33,7 +33,7 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
             else:
                 mode = 'wb'
             fp = open(opts['pid_file'], mode)
-            fp.write(str(pid).encode('latin1') + '\n')
+            fp.write('%d\n' % pid)
             fp.close()
 
     if opts['daemon'] and not opts['daemon_postexec']:
