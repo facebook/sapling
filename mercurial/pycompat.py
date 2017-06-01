@@ -177,6 +177,14 @@ if ispy3:
         """Raise exception with the given traceback"""
         raise exc.with_traceback(tb)
 
+    def getdoc(obj):
+        """Get docstring as bytes; may be None so gettext() won't confuse it
+        with _('')"""
+        doc = getattr(obj, u'__doc__', None)
+        if doc is None:
+            return doc
+        return sysbytes(doc)
+
     def _wrapattrfunc(f):
         @functools.wraps(f)
         def w(object, name, *args):
@@ -254,6 +262,9 @@ else:
     # In Python 2, fsdecode() has a very chance to receive bytes. So it's
     # better not to touch Python 2 part as it's already working fine.
     fsdecode = identity
+
+    def getdoc(obj):
+        return getattr(obj, '__doc__', None)
 
     def getoptb(args, shortlist, namelist):
         return getopt.getopt(args, shortlist, namelist)

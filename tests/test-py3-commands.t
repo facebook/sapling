@@ -137,6 +137,20 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
   update: (current)
   phases: 2 draft
 
+Test weird unicode-vs-bytes stuff
+
+  $ $PYTHON3 $HGBIN help | egrep -v '^ |^$'
+  Mercurial Distributed SCM
+  list of commands:
+  additional help topics:
+  (use 'hg help -v' to show built-in aliases and global options)
+
+  $ $PYTHON3 $HGBIN help help | egrep -v '^ |^$'
+  hg help [-ecks] [TOPIC]
+  show help for a given topic or a help overview
+  options ([+] can be repeated):
+  (some details hidden, use --verbose to show complete help)
+
 Prove the repo is valid using the Python 2 `hg`:
   $ hg verify
   checking changesets
