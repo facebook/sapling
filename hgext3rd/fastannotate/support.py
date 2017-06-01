@@ -92,13 +92,15 @@ def _fctxannotate(orig, self, follow=False, linenumber=False, skiprevs=None,
                   diffopts=None):
     if skiprevs:
         # skiprevs is not supported yet
-        return orig(self, follow, linenumber, skiprevs, diffopts)
+        return orig(self, follow, linenumber, skiprevs=skiprevs,
+                    diffopts=diffopts)
     try:
         return _doannotate(self, follow, diffopts)
     except Exception as ex:
         self._repo.ui.debug('fastannotate: falling back to the vanilla '
                             'annotate: %r\n' % ex)
-        return orig(self, follow, linenumber, skiprevs, diffopts)
+        return orig(self, follow, linenumber, skiprevs=skiprevs,
+                    diffopts=diffopts)
 
 def _remotefctxannotate(orig, self, follow=False, linenumber=None,
                         skiprevs=None, diffopts=None, prefetchskip=None):
@@ -106,7 +108,7 @@ def _remotefctxannotate(orig, self, follow=False, linenumber=None,
     skipset = None
     with context.fctxannotatecontext(self, follow, diffopts) as ac:
         skipset = revmap.revmap(ac.revmappath)
-    return orig(self, follow, linenumber, skiprevs, diffopts,
+    return orig(self, follow, linenumber, skiprevs=skiprevs, diffopts=diffopts,
                 prefetchskip=skipset)
 
 def replacehgwebannotate():
