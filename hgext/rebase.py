@@ -427,8 +427,7 @@ class rebaseruntime(object):
                         mergemod.mergestate.clean(repo)
                 else:
                     # Skip commit if we are collapsing
-                    with repo.dirstate.parentchange():
-                        repo.setparents(repo[p1].node())
+                    repo.setparents(repo[p1].node())
                     newnode = None
                 # Update the state
                 if newnode is not None:
