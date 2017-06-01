@@ -1,6 +1,10 @@
   $ hg init ignorerepo
   $ cd ignorerepo
 
+debugignore with no hgignore should be deterministic:
+  $ hg debugignore
+  <nevermatcher>
+
 Issue562: .hgignore requires newline at end:
 
   $ touch foo

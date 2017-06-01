@@ -175,6 +175,9 @@ def exact(root, cwd, files, badfn=None):
 def always(root, cwd):
     return alwaysmatcher(root, cwd)
 
+def never(root, cwd):
+    return nevermatcher(root, cwd)
+
 def badmatch(match, badfn):
     """Make a copy of the given matcher, replacing its bad method with the given
     one.
@@ -338,6 +341,25 @@ class alwaysmatcher(basematcher):
 
     def __repr__(self):
         return '<alwaysmatcher>'
+
+class nevermatcher(basematcher):
+    '''Matches nothing.'''
+
+    def __init__(self, root, cwd, badfn=None, relativeuipath=False):
+        super(nevermatcher, self).__init__(root, cwd, badfn,
+                                           relativeuipath=relativeuipath)
+
+    def always(self):
+        return False
+
+    def matchfn(self, f):
+        return False
+
+    def visitdir(self, dir):
+        return False
+
+    def __repr__(self):
+        return '<nevermatcher>'
 
 class patternmatcher(basematcher):
 
