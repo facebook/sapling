@@ -23,11 +23,6 @@ or master bookmark, and any draft commits without bookmarks that you've made
 within the past 2 weeks. Any commits in the graph that are skipped are
 represented by '...'.
 
-We recommend also having an 'hg sl' alias that gives more concise output:
-
-    alias.sl=smartlog --template "{shortest(node)}  {author|user}  {bookmarks % '{ifeq(bookmark, current, label(\"yellow\", \" {bookmark}*\"), label(\"green\", \" {bookmark}\"))}'} {ifeq(branch, 'default', '', label(\"bold\", branch))}\n{desc|firstline}\n\n"
-
-
 githelp
 ==========
 
