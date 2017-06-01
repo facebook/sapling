@@ -777,6 +777,8 @@ def exclusivemarkers(repo, nodes):
         #  Markers "2,3" are exclusive to A1,A2
         #  Markers "1,2,3" are exclusive to A0,A1,A2
 
+        See test/test-obsolete-bundle-strip.t for more examples.
+
     An example usage is strip. When stripping a changeset, we also want to
     strip the markers exclusive to this changeset. Otherwise we would have
     "dangling"" obsolescence markers from its precursors: Obsolescence markers
