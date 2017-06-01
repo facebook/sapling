@@ -23,7 +23,7 @@ from . import (
     util,
 )
 
-def _bundle(repo, bases, heads, node, suffix, compress=True):
+def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     """create a bundle with the specified revisions as a backup"""
 
     backupdir = "strip-backup"
@@ -49,7 +49,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         bundletype = "HG10UN"
 
     outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
-    contentopts = {'cg.version': cgversion, 'obsolescence': True}
+    contentopts = {'cg.version': cgversion, 'obsolescence': obsolescence}
     return bundle2.writenewbundle(repo.ui, repo, 'strip', name, bundletype,
                                   outgoing, contentopts, vfs, compression=comp)
 
@@ -150,8 +150,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     tmpbundlefile = None
     if saveheads:
         # do not compress temporary bundle if we remove it from disk later
+        #
+        # We do not include obsolescence, it might re-introduce prune markers
+        # we are trying to strip.  This is harmless since the stripped markers
+        # are already backed up and we did not touched the markers for the
+        # saved changesets.
         tmpbundlefile = _bundle(repo, savebases, saveheads, node, 'temp',
-                            compress=False)
+                                compress=False, obsolescence=False)
 
     mfst = repo.manifestlog._revlog
 
