@@ -493,7 +493,7 @@ def logmessage(ui, opts):
                            'exclusive'))
     if not message and logfile:
         try:
-            if logfile == '-':
+            if isstdiofilename(logfile):
                 message = ui.fin.read()
             else:
                 message = '\n'.join(util.readfile(logfile).splitlines())
