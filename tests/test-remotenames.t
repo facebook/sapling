@@ -287,6 +287,8 @@ Test loading with hggit
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=" >> $HGRCPATH
+  $ echo "[devel]" >> $HGRCPATH
+  $ echo "all-warnings=no" >> $HGRCPATH
   $ hg help bookmarks  | grep -A 3 -- '--track'
    -t --track BOOKMARK track this bookmark or remote name
    -u --untrack        remove tracking for this bookmark
