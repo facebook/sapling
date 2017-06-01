@@ -1030,3 +1030,24 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
   # unbundling: (run 'hg update' to get a working copy)
+  $ testrevs 'desc("C-")'
+  ### Matched revisions###
+  9ac430e15fca: C-A
+  cefb651fc2fd: C-B
+  ### Relevant markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  # bundling: 2 changesets found
+  ### Bundled markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <bundled> ###
+  #################################
+  # stripping: saved backup bundle to $TESTTMP/lonely-prune/.hg/strip-backup/9ac430e15fca-b9855b02-backup.hg
+  ### Backup markers ###
+      cefb651fc2fdc7bb75e588781de5e432c134e8a5 0 {9ac430e15fca923b0ba027ca85d4d75c5c9cb73c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ### diff <relevant> <backed-up> ###
+  #################################
+  # unbundling: adding changesets
+  # unbundling: adding manifests
+  # unbundling: adding file changes
+  # unbundling: added 2 changesets with 2 changes to 2 files
+  # unbundling: (run 'hg update' to get a working copy)
