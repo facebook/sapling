@@ -118,6 +118,13 @@ Test bytes-ness of policy.policy with HGMODULEPOLICY
   $ $PYTHON3 $HGBIN add iota
   $ $PYTHON3 $HGBIN status
   A iota
+  $ hg diff --nodates --git
+  diff --git a/iota b/iota
+  new file mode 100644
+  --- /dev/null
+  +++ b/iota
+  @@ -0,0 +1,1 @@
+  +This is the file 'iota'.
   $ $PYTHON3 $HGBIN commit --message 'commit performed in Python 3'
   $ $PYTHON3 $HGBIN status
 
