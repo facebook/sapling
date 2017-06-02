@@ -13,6 +13,7 @@ import sys
 from .i18n import _
 from . import (
     demandimport,
+    encoding,
     error,
     extensions,
     pycompat,
@@ -97,7 +98,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
                          (hname, exc.args[0]))
         else:
             ui.warn(_('error: %s hook raised an exception: '
-                           '%s\n') % (hname, exc))
+                      '%s\n') % (hname, encoding.strtolocal(str(exc))))
         if throw:
             raise
         if not ui.tracebackflag:
