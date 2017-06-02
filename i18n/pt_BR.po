@@ -19398,7 +19398,7 @@ msgstr ""
 "================="
 
 msgid "The following bundle <type> strings are available:"
-msgstr "As seguintes strings de <tipo> estão disponíveis::"
+msgstr "As seguintes strings de <tipo> estão disponíveis:"
 
 msgid ""
 "v1\n"
