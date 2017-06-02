@@ -37,6 +37,13 @@ public:
     void addRepeatedValue(int64_t /*value*/, int64_t /*nsamples*/) {}
   };
 
+  class TLCounter {
+    public:
+      TLCounter(ThreadLocalStatsMap*, folly::StringPiece) {}
+      void incrementValue(int64_t) {}
+
+  };
+
   static ThreadCachedServiceData* get() {
     static ThreadCachedServiceData it;
     return &it;
