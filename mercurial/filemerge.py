@@ -628,7 +628,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         # normalize to new-style names (':merge' etc)
         tool = tool[len('internal'):]
     ui.debug("picked tool '%s' for %s (binary %s symlink %s changedelete %s)\n"
-             % (tool, fd, binary, symlink, changedelete))
+             % (tool, fd, pycompat.bytestr(binary), pycompat.bytestr(symlink),
+                    pycompat.bytestr(changedelete)))
 
     if tool in internals:
         func = internals[tool]
