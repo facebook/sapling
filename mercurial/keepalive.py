@@ -354,7 +354,8 @@ class HTTPResponse(httplib.HTTPResponse):
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         httplib.HTTPResponse.__init__(self, sock, debuglevel=debuglevel,
-                                      strict=True, method=method)
+                                      strict=True, method=method,
+                                      buffering=True)
         self.fileno = sock.fileno
         self.code = None
         self._rbuf = ''
