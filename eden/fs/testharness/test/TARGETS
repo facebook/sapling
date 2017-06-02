@@ -1,11 +1,11 @@
 cpp_unittest(
-  name = 'test',
-  srcs = glob(['*Test.cpp']),
-  deps = [
-    '@/eden/fs/testharness:testharness',
-    '@/eden/fs/utils/test:test_lib',
-  ],
-  external_deps = [
-    ('googletest', None, 'gtest'),
-  ],
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    deps = [
+        "@/eden/fs/testharness:testharness",
+        "@/eden/fs/utils/test:test_lib",
+    ],
+    external_deps = [
+        ("googletest", None, "gtest"),
+    ],
 )

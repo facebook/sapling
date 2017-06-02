@@ -1,9 +1,9 @@
 cpp_binary(
-    name = 'eden-fb303-collector',
-    srcs = ['EdenFB303Collector.cpp'],
+    name = "eden-fb303-collector",
+    srcs = ["EdenFB303Collector.cpp"],
     deps = [
-      '@/common/fb303/if:fb303-cpp2',
-      '@/common/init:init',
-      '@/common/network:util',
-    ]
+        "@/common/fb303/if:fb303-cpp2",
+        "@/common/init:init",
+        "@/common/network:util",
+    ],
 )

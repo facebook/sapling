@@ -1,30 +1,30 @@
-include_defs('//eden/DEFS')
+include_defs("//eden/DEFS")
 
 python_binary(
-  name = 'cli',
-  srcs = ['main.py'],
-  main_module = 'eden/cli/main',
-  deps = [
-    '@/eden/cli:lib',
-    '@/eden/fs/service:py-client',
-  ],
+    name = "cli",
+    srcs = ["main.py"],
+    main_module = "eden/cli/main",
+    deps = [
+        "@/eden/cli:lib",
+        "@/eden/fs/service:py-client",
+    ],
 )
 
 python_library(
-  name = 'lib',
-  srcs = [
-    'cmd_util.py',
-    'config.py',
-    'configinterpolator.py',
-    'debug.py',
-    'util.py',
-  ],
+    name = "lib",
+    srcs = [
+        "cmd_util.py",
+        "config.py",
+        "configinterpolator.py",
+        "debug.py",
+        "util.py",
+    ],
 )
 
 python_unittest(
-  name = 'test',
-  srcs = glob(['test/*.py']),
-  deps = [':lib']
+    name = "test",
+    srcs = glob(["test/*.py"]),
+    deps = [":lib"],
 )
 
 for build_target, suffix in get_daemon_versions():

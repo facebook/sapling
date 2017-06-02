@@ -1,13 +1,13 @@
 cpp_library(
-  name = 'store',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/model/git:git',
-    '@/eden/fs/rocksdb:rocksdb',
-    '@/folly/experimental:experimental',
-    '@/folly:folly',
-    '@/rocksdb:rocksdb',
-  ],
+    name = "store",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/model/git:git",
+        "@/eden/fs/rocksdb:rocksdb",
+        "@/folly:folly",
+        "@/folly/experimental:experimental",
+        "@/rocksdb:rocksdb",
+    ],
 )

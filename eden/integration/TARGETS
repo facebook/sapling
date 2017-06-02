@@ -1,4 +1,4 @@
-include_defs('//eden/DEFS')
+include_defs("//eden/DEFS")
 
 for daemon_target, suffix in get_daemon_versions():
     artifacts = get_test_env_and_deps(suffix)

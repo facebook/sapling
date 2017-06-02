@@ -3,34 +3,37 @@
 # rather than as a PAR file.  It needs to use the system python interpreter
 # in order to find the system's installed mercurial libraries.
 
-TESTER_SRCS = ['tester.cpp']
+TESTER_SRCS = ["tester.cpp"]
 
 cpp_library(
-  name = 'hg',
-  srcs = glob(['*.cpp'], excludes=TESTER_SRCS),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/model/git:git',
-    '@/eden/fs/store:store',
-    '@/eden/hg/datastorage:datapack',
-    '@/folly:array',
-    '@/folly:folly',
-    '@/folly:subprocess',
-    '@/folly/experimental:env_util',
-  ],
-  external_deps = [
-    'gflags',
-    'glog',
-    ('boost', None, 'boost_filesystem'),
-  ]
+    name = "hg",
+    srcs = glob(
+        ["*.cpp"],
+        excludes = TESTER_SRCS,
+    ),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/model/git:git",
+        "@/eden/fs/store:store",
+        "@/eden/hg/datastorage:datapack",
+        "@/folly:array",
+        "@/folly:folly",
+        "@/folly:subprocess",
+        "@/folly/experimental:env_util",
+    ],
+    external_deps = [
+        "gflags",
+        "glog",
+        ("boost", None, "boost_filesystem"),
+    ],
 )
 
 cpp_binary(
-  name = 'tester',
-  srcs = TESTER_SRCS,
-  deps = [
-    ':hg',
-    '@/folly/init:init',
-  ],
+    name = "tester",
+    srcs = TESTER_SRCS,
+    deps = [
+        ":hg",
+        "@/folly/init:init",
+    ],
 )

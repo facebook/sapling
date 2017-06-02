@@ -1,51 +1,51 @@
 thrift_library(
-  name = 'serialization',
-  thrift_args = ['--strict'],
-  thrift_srcs = {
-    'overlay.thrift': [],
-  },
-  languages = ['cpp2'],
-  deps = [
-    ':hgdirstate',
-  ]
+    name = "serialization",
+    languages = ["cpp2"],
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "overlay.thrift": [],
+    },
+    deps = [
+        ":hgdirstate",
+    ],
 )
 
 thrift_library(
-  name = 'hgdirstate',
-  thrift_args = ['--strict'],
-  thrift_srcs = {
-    'hgdirstate.thrift': None,
-  },
-  # Need to support .java and .py because eden.thrift depends on this file.
-  languages = [
-    'cpp2',
-    'java',
-    'py',
-  ],
-  py_base_module = 'facebook',
+    name = "hgdirstate",
+    # Need to support .java and .py because eden.thrift depends on this file.
+    languages = [
+        "cpp2",
+        "java",
+        "py",
+    ],
+    py_base_module = "facebook",
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "hgdirstate.thrift": None,
+    },
 )
 
 cpp_library(
-  name = 'inodes',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    ':serialization-cpp2',
-    ':hgdirstate-cpp2',
-    '@/eden/fs/config:config',
-    '@/eden/fs/fuse:fusell',
-    '@/eden/fs/journal:journal',
-    '@/eden/fs/model/git:gitignore',
-    '@/eden/fs/model:model',
-    '@/eden/fs/service:thrift_cpp',
-    '@/eden/fs/store:store',
-    '@/eden/fs/utils:utils',
-    '@/folly/experimental:experimental',
-    '@/folly:folly',
-  ],
-  external_deps = [
-    'gflags',
-    ('boost', 'any'),
-    ('boost', 'any', 'boost_filesystem'),
-  ],
+    name = "inodes",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        ":hgdirstate-cpp2",
+        ":serialization-cpp2",
+        "@/eden/fs/config:config",
+        "@/eden/fs/fuse:fusell",
+        "@/eden/fs/journal:journal",
+        "@/eden/fs/model:model",
+        "@/eden/fs/model/git:gitignore",
+        "@/eden/fs/service:thrift_cpp",
+        "@/eden/fs/store:store",
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+        "@/folly/experimental:experimental",
+    ],
+    external_deps = [
+        "gflags",
+        ("boost", "any"),
+        ("boost", "any", "boost_filesystem"),
+    ],
 )

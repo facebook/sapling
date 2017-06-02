@@ -1,18 +1,18 @@
-include_defs('//eden/DEFS')
+include_defs("//eden/DEFS")
 
 cpp_library(
-  name = 'fusell',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/fuse/privhelper:privhelper',
-    '@/eden/fs/utils:utils',
-    '@/folly:folly',
-    '@/folly:stats',
-    '@/folly:synchronized',
-    '@/wangle:wangle',
-  ] + ['@/common/stats:threadlocal'] if is_facebook_internal() else [],
-  external_deps = [
-    ('fuse', None, 'fuse'),
-  ],
+    name = "fusell",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = ([
+        "@/eden/fs/fuse/privhelper:privhelper",
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+        "@/folly:stats",
+        "@/folly:synchronized",
+        "@/wangle:wangle",
+    ] + ["@/common/stats:threadlocal"]) if is_facebook_internal() else [],
+    external_deps = [
+        ("fuse", None, "fuse"),
+    ],
 )

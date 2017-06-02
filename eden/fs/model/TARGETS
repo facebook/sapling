@@ -1,14 +1,14 @@
 cpp_library(
-  name = 'model',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/utils:utils',
-    '@/folly:folly',
-    '@/folly/ssl:openssl_hash',
-  ],
-  external_deps = [
-    ('boost', 'any'),
-    ('openssl', None, 'ssl'),
-  ],
+    name = "model",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+        "@/folly/ssl:openssl_hash",
+    ],
+    external_deps = [
+        ("boost", "any"),
+        ("openssl", None, "ssl"),
+    ],
 )

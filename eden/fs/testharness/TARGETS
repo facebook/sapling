@@ -1,15 +1,15 @@
 cpp_library(
-  name = 'testharness',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/config:config',
-    '@/eden/fs/inodes:inodes',
-    '@/eden/fs/model:model',
-    '@/eden/fs/store/hg:hg',
-    '@/eden/fs/fuse:fusell',
-    '@/eden/fs/utils:utils',
-    '@/folly:folly',
-    '@/folly/experimental:test_util',
-  ],
+    name = "testharness",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/config:config",
+        "@/eden/fs/fuse:fusell",
+        "@/eden/fs/inodes:inodes",
+        "@/eden/fs/model:model",
+        "@/eden/fs/store/hg:hg",
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+        "@/folly/experimental:test_util",
+    ],
 )

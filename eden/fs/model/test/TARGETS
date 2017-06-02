@@ -1,12 +1,12 @@
 cpp_unittest(
-  name = 'test',
-  srcs = glob(['*Test.cpp']),
-  deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/utils:utils',
-    '@/folly:array',
-  ],
-  external_deps = [
-    ('googletest', None, 'gtest'),
-  ],
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/utils:utils",
+        "@/folly:array",
+    ],
+    external_deps = [
+        ("googletest", None, "gtest"),
+    ],
 )

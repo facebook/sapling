@@ -1,26 +1,29 @@
 cpp_unittest(
-  name = 'test',
-  srcs = glob(['*Test.cpp']),
-  deps = [
-    ':test_lib',
-    '@/eden/fs/utils:utils',
-    '@/folly/experimental:test_util',
-  ],
-  external_deps = [
-    ('googletest', None, 'gmock'),
-    ('googletest', None, 'gtest'),
-  ],
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    deps = [
+        ":test_lib",
+        "@/eden/fs/utils:utils",
+        "@/folly/experimental:test_util",
+    ],
+    external_deps = [
+        ("googletest", None, "gmock"),
+        ("googletest", None, "gtest"),
+    ],
 )
 
 cpp_library(
-  name = 'test_lib',
-  headers = glob(['*.h']),
-  srcs = glob(['*.cpp'], excludes=['*Test.cpp']),
-  deps = [
-    '@/folly:conv',
-    '@/folly:exception_string',
-  ],
-  external_deps = [
-    ('googletest', None, 'gtest'),
-  ],
+    name = "test_lib",
+    srcs = glob(
+        ["*.cpp"],
+        excludes = ["*Test.cpp"],
+    ),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/folly:conv",
+        "@/folly:exception_string",
+    ],
+    external_deps = [
+        ("googletest", None, "gtest"),
+    ],
 )

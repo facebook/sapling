@@ -1,11 +1,12 @@
-include_defs('//eden/DEFS')
-include_defs('//eden/fs/service/DEFS')
+include_defs("//eden/DEFS")
+
+include_defs("//eden/fs/service/DEFS")
 
 create_eden_fs_rules(
-  suffix = get_oss_suffix(),
-  subdir = 'out.oss',
-  server_srcs = ['oss/RunServer.cpp'],
-  server_deps = [],
+    server_deps = [],
+    server_srcs = ["oss/RunServer.cpp"],
+    subdir = "out.oss",
+    suffix = get_oss_suffix(),
 )
 
 if is_facebook_internal():
@@ -23,19 +24,19 @@ if is_facebook_internal():
 
 cpp_library(
     name = "server",
-    headers = [
-        "EdenError.h",
-        "EdenServer.h",
-        "EdenServiceHandler.h",
-        "GlobNode.h",
-        "StreamingSubscriber.h",
-    ],
     srcs = [
         "EdenError.cpp",
         "EdenServer.cpp",
         "EdenServiceHandler.cpp",
         "GlobNode.cpp",
         "StreamingSubscriber.cpp",
+    ],
+    headers = [
+        "EdenError.h",
+        "EdenServer.h",
+        "EdenServiceHandler.h",
+        "GlobNode.h",
+        "StreamingSubscriber.h",
     ],
     deps = [
         ":thrift_cpp",
@@ -52,7 +53,7 @@ cpp_library(
         "@/thrift/lib/cpp2:server",
     ],
     external_deps = [
-      ("boost", None, "boost_filesystem"),
+        ("boost", None, "boost_filesystem"),
     ],
 )
 
@@ -63,17 +64,20 @@ cpp_library(
 # includes this thrift_library() plus some extra utility code for working with
 # the thrift C++ data structures.
 thrift_library(
-  name = 'thrift',
-  thrift_args = ['--strict'],
-  thrift_srcs = {
-    'eden.thrift': ['EdenService'],
-  },
-  py_base_module = 'facebook',
-  languages = ['java', 'py'],
-  deps = [
-    '@/common/fb303/if:fb303',
-    '@/eden/fs/inodes:hgdirstate',
-  ],
+    name = "thrift",
+    languages = [
+        "java",
+        "py",
+    ],
+    py_base_module = "facebook",
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "eden.thrift": ["EdenService"],
+    },
+    deps = [
+        "@/common/fb303/if:fb303",
+        "@/eden/fs/inodes:hgdirstate",
+    ],
 )
 
 # This includes EdenService that is also present in the :thrift
@@ -87,21 +91,21 @@ thrift_library(
 # mapping being ambiguous (the headers are present in both of
 # these thrift_library targets).
 thrift_library(
-  name = 'thrift-streaming',
-  thrift_args = ['--strict'],
-  thrift_srcs = {
-    'streamingeden.thrift': [
-      'StreamingEdenService',
+    name = "thrift-streaming",
+    languages = ["cpp2"],
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "streamingeden.thrift": [
+            "StreamingEdenService",
+        ],
+        "eden.thrift": [
+            "EdenService",
+        ],
+    },
+    deps = [
+        "@/common/fb303/if:fb303",
+        "@/eden/fs/inodes:hgdirstate",
     ],
-    'eden.thrift': [
-      'EdenService',
-    ],
-  },
-  languages = ['cpp2'],
-  deps = [
-    '@/common/fb303/if:fb303',
-    '@/eden/fs/inodes:hgdirstate',
-  ],
 )
 
 # A helper library for C++ that depends on the generated thrift stubs,
@@ -110,29 +114,29 @@ thrift_library(
 # Most C++ users should depend on this rule rather than directly using the
 # thrift or thrift-streaming rules above.
 cpp_library(
-  name = 'thrift_cpp',
-  headers = [
-    'PrettyPrinters.h',
-    'ThriftUtil.h',
-  ],
-  srcs = [
-    'PrettyPrinters.cpp',
-  ],
-  deps = [
-    ':thrift-streaming-cpp2',
-  ],
+    name = "thrift_cpp",
+    srcs = [
+        "PrettyPrinters.cpp",
+    ],
+    headers = [
+        "PrettyPrinters.h",
+        "ThriftUtil.h",
+    ],
+    deps = [
+        ":thrift-streaming-cpp2",
+    ],
 )
 
 python_library(
-  name = 'py-client',
-  srcs = [
-    '__init__.py',
-    'client.py',
-  ],
-  base_module = 'eden.thrift',
-  deps = [
-    ':thrift-py',
-  ],
+    name = "py-client",
+    srcs = [
+        "__init__.py",
+        "client.py",
+    ],
+    base_module = "eden.thrift",
+    deps = [
+        ":thrift-py",
+    ],
 )
 
 # JAVA BINDINGS FOR THRIFT ENDPOINT

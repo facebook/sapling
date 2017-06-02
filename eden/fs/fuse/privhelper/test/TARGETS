@@ -1,12 +1,12 @@
 cpp_unittest(
-  name = 'test',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/fuse/privhelper:privhelper',
-    '@/folly/experimental:test_util',
-  ],
-  external_deps = [
-    ('boost', 'any'),
-  ],
+    name = "test",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/fuse/privhelper:privhelper",
+        "@/folly/experimental:test_util",
+    ],
+    external_deps = [
+        ("boost", "any"),
+    ],
 )

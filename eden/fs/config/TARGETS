@@ -1,11 +1,11 @@
 cpp_library(
-  name = 'config',
-  srcs = glob(['*.cpp']),
-  headers = glob(['*.h']),
-  deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/utils:utils',
-    '@/folly/experimental:experimental',
-    '@/folly:folly',
-  ],
+    name = "config",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+        "@/folly/experimental:experimental",
+    ],
 )

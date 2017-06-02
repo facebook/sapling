@@ -1,51 +1,51 @@
 cpp_library(
-  name = 'git',
-  srcs = [
-    'GitBlob.cpp',
-    'GitTree.cpp',
-  ],
-  headers = [
-    'GitBlob.h',
-    'GitTree.h',
-  ],
-  deps = [
-    '@/eden/fs/model:model',
-    '@/folly:folly',
-    '@/folly/io:iobuf',
-  ],
-  external_deps = [
-    ('libgit2', None, 'git2'),
-  ],
+    name = "git",
+    srcs = [
+        "GitBlob.cpp",
+        "GitTree.cpp",
+    ],
+    headers = [
+        "GitBlob.h",
+        "GitTree.h",
+    ],
+    deps = [
+        "@/eden/fs/model:model",
+        "@/folly:folly",
+        "@/folly/io:iobuf",
+    ],
+    external_deps = [
+        ("libgit2", None, "git2"),
+    ],
 )
 
 cpp_library(
-  name = 'gitignore',
-  srcs = [
-    'GitIgnore.cpp',
-    'GitIgnorePattern.cpp',
-    'GitIgnoreStack.cpp',
-  ],
-  headers = [
-    'GitIgnore.h',
-    'GitIgnorePattern.h',
-    'GitIgnoreStack.h',
-  ],
-  deps = [
-    ':glob',
-    '@/eden/fs/utils:utils',
-    '@/folly:folly',
-  ],
+    name = "gitignore",
+    srcs = [
+        "GitIgnore.cpp",
+        "GitIgnorePattern.cpp",
+        "GitIgnoreStack.cpp",
+    ],
+    headers = [
+        "GitIgnore.h",
+        "GitIgnorePattern.h",
+        "GitIgnoreStack.h",
+    ],
+    deps = [
+        ":glob",
+        "@/eden/fs/utils:utils",
+        "@/folly:folly",
+    ],
 )
 
 cpp_library(
-  name = 'glob',
-  srcs = [
-    'GlobMatcher.cpp',
-  ],
-  headers = [
-    'GlobMatcher.h',
-  ],
-  deps = [
-    '@/folly:folly',
-  ],
+    name = "glob",
+    srcs = [
+        "GlobMatcher.cpp",
+    ],
+    headers = [
+        "GlobMatcher.h",
+    ],
+    deps = [
+        "@/folly:folly",
+    ],
 )

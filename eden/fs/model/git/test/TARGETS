@@ -1,19 +1,19 @@
-include_defs('//eden/DEFS')
+include_defs("//eden/DEFS")
 
 cpp_unittest(
-  name = 'test',
-  srcs = glob(['*Test.cpp']),
-  deps = [
-    '@/eden/fs/model:model',
-    '@/eden/fs/model/git:git',
-    '@/eden/fs/model/git:gitignore',
-    '@/folly:folly',
-  ],
-  external_deps = [
-    'glog',
-    ('googletest', None, 'gmock'),
-    ('googletest', None, 'gtest'),
-  ],
+    name = "test",
+    srcs = glob(["*Test.cpp"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/model/git:git",
+        "@/eden/fs/model/git:gitignore",
+        "@/folly:folly",
+    ],
+    external_deps = [
+        "glog",
+        ("googletest", None, "gmock"),
+        ("googletest", None, "gtest"),
+    ],
 )
 
 # This cpp_benchmark() rule depends on a library watchman.

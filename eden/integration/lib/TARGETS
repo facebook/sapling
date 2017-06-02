@@ -1,12 +1,12 @@
 python_library(
-  name = 'lib',
-  srcs = glob(['*.py']),
-  deps = [
-    '@/eden/cli:lib',
-    '@/eden/fs/service:py-client',
-    '@/eden/fs/service:thrift-py',
-  ],
-  external_deps = [
-    'py-hypothesis'
-  ],
+    name = "lib",
+    srcs = glob(["*.py"]),
+    deps = [
+        "@/eden/cli:lib",
+        "@/eden/fs/service:py-client",
+        "@/eden/fs/service:thrift-py",
+    ],
+    external_deps = [
+        "py-hypothesis",
+    ],
 )
