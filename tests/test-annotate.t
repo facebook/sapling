@@ -56,21 +56,18 @@ annotate (JSON)
   $ hg annotate -Tjson a
   [
    {
-    "line": "a\n",
-    "rev": 0
+    "abspath": "a",
+    "lines": [{"line": "a\n", "rev": 0}],
+    "path": "a"
    }
   ]
 
   $ hg annotate -Tjson -cdfnul a
   [
    {
-    "date": [1.0, 0],
-    "file": "a",
-    "line": "a\n",
-    "line_number": 1,
-    "node": "8435f90966e442695d2ded29fdade2bac5ad8065",
-    "rev": 0,
-    "user": "nobody"
+    "abspath": "a",
+    "lines": [{"date": [1.0, 0], "file": "a", "line": "a\n", "line_number": 1, "node": "8435f90966e442695d2ded29fdade2bac5ad8065", "rev": 0, "user": "nobody"}],
+    "path": "a"
    }
   ]
 
@@ -87,6 +84,37 @@ annotate (JSON)
   > b6
   > EOF
   $ hg ci -mb2 -d '2 0'
+
+annotate multiple files (JSON)
+
+  $ hg annotate -Tjson a b
+  [
+   {
+    "abspath": "a",
+    "lines": [{"line": "a\n", "rev": 0}, {"line": "a\n", "rev": 1}, {"line": "a\n", "rev": 1}],
+    "path": "a"
+   },
+   {
+    "abspath": "b",
+    "lines": [{"line": "a\n", "rev": 0}, {"line": "a\n", "rev": 1}, {"line": "a\n", "rev": 1}, {"line": "b4\n", "rev": 3}, {"line": "b5\n", "rev": 3}, {"line": "b6\n", "rev": 3}],
+    "path": "b"
+   }
+  ]
+
+annotate multiple files (template)
+
+  $ hg annotate -T'== {abspath} ==\n{lines % "{rev}: {line}"}' a b
+  == a ==
+  0: a
+  1: a
+  1: a
+  == b ==
+  0: a
+  1: a
+  1: a
+  3: b4
+  3: b5
+  3: b6
 
 annotate -n b
 
@@ -500,14 +528,9 @@ annotate modified file
   $ hg annotate -ncr "wdir()" -Tjson foo
   [
    {
-    "line": "foo\n",
-    "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd",
-    "rev": 11
-   },
-   {
-    "line": "foofoo\n",
-    "node": null,
-    "rev": null
+    "abspath": "foo",
+    "lines": [{"line": "foo\n", "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd", "rev": 11}, {"line": "foofoo\n", "node": null, "rev": null}],
+    "path": "foo"
    }
   ]
 
@@ -741,6 +764,28 @@ check error cases
   $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=a)'
   hg: parse error: descend argument must be a boolean
   [255]
+
+Test empty annotate output
+
+  $ printf '\0' > binary
+  $ touch empty
+  $ hg ci -qAm 'add binary and empty files'
+
+  $ hg annotate binary empty
+  binary: binary file
+
+  $ hg annotate -Tjson binary empty
+  [
+   {
+    "abspath": "binary",
+    "path": "binary"
+   },
+   {
+    "abspath": "empty",
+    "lines": [],
+    "path": "empty"
+   }
+  ]
 
 Test annotate with whitespace options
 

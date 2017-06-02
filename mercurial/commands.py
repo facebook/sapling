@@ -377,15 +377,18 @@ def annotate(ui, repo, *pats, **opts):
 
     for abs in ctx.walk(m):
         fctx = ctx[abs]
+        rootfm.startitem()
+        rootfm.data(abspath=abs, path=m.rel(abs))
         if not opts.get('text') and fctx.isbinary():
             rootfm.plain(_("%s: binary file\n")
                          % ((pats and m.rel(abs)) or abs))
             continue
 
-        fm = rootfm
+        fm = rootfm.nested('lines')
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
                               skiprevs=skiprevs, diffopts=diffopts)
         if not lines:
+            fm.end()
             continue
         formats = []
         pieces = []
@@ -407,6 +410,7 @@ def annotate(ui, repo, *pats, **opts):
 
         if not lines[-1][1].endswith('\n'):
             fm.plain('\n')
+        fm.end()
 
     rootfm.end()
 
