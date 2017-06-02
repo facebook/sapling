@@ -1,6 +1,8 @@
 #ifndef _HG_BITMANIPULATION_H_
 #define _HG_BITMANIPULATION_H_
 
+#include <string.h>
+
 #include "compat.h"
 
 static inline uint32_t getbe32(const char *c)
