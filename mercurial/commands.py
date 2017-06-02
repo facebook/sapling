@@ -299,7 +299,7 @@ def annotate(ui, repo, *pats, **opts):
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
 
-    fm = ui.formatter('annotate', opts)
+    rootfm = ui.formatter('annotate', opts)
     if ui.quiet:
         datefunc = util.shortdate
     else:
@@ -309,7 +309,7 @@ def annotate(ui, repo, *pats, **opts):
             if node is None:
                 return None
             else:
-                return fm.hexfunc(node)
+                return rootfm.hexfunc(node)
         if opts.get('changeset'):
             # omit "+" suffix which is appended to node hex
             def formatrev(rev):
@@ -325,11 +325,11 @@ def annotate(ui, repo, *pats, **opts):
                     return '%d ' % rev
         def formathex(hex):
             if hex is None:
-                return '%s+' % fm.hexfunc(ctx.p1().node())
+                return '%s+' % rootfm.hexfunc(ctx.p1().node())
             else:
                 return '%s ' % hex
     else:
-        hexfn = fm.hexfunc
+        hexfn = rootfm.hexfunc
         formatrev = formathex = str
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
@@ -351,7 +351,7 @@ def annotate(ui, repo, *pats, **opts):
 
     ui.pager('annotate')
 
-    if fm.isplain():
+    if rootfm.isplain():
         def makefunc(get, fmt):
             return lambda x: fmt(get(x))
     else:
@@ -378,9 +378,11 @@ def annotate(ui, repo, *pats, **opts):
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and fctx.isbinary():
-            fm.plain(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
+            rootfm.plain(_("%s: binary file\n")
+                         % ((pats and m.rel(abs)) or abs))
             continue
 
+        fm = rootfm
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
                               skiprevs=skiprevs, diffopts=diffopts)
         if not lines:
@@ -406,7 +408,7 @@ def annotate(ui, repo, *pats, **opts):
         if not lines[-1][1].endswith('\n'):
             fm.plain('\n')
 
-    fm.end()
+    rootfm.end()
 
 @command('archive',
     [('', 'no-decode', None, _('do not pass files through decoders')),
