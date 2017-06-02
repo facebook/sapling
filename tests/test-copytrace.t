@@ -4,6 +4,7 @@
   > [extensions]
   > copytrace=$extpath/hgext3rd/copytrace.py
   > rebase=
+  > shelve=
   > [experimental]
   > disablecopytrace=True
   > EOF
@@ -298,6 +299,296 @@ Too many move candidates
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Move a directory in draft branch
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ mkdir dir
+  $ echo a > dir/a
+  $ hg add dir/a
+  $ hg ci -qm initial
+  $ echo b > dir/a
+  $ hg ci -qm 'mod dir/a'
+  $ hg up -q ".^"
+  $ hg mv -q dir/ dir2
+  $ hg ci -qm 'mv dir/ dir2/'
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: a33d80b6e352591dfd82784e1ad6cdd86b25a239
+  |   desc: mv dir/ dir2/, phase: draft
+  | o  changeset: 6b2f4cece40fd320f41229f23821256ffc08efea
+  |/    desc: mod dir/a, phase: draft
+  o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
+      desc: initial, phase: draft
+
+  $ hg rebase -s . -d 1
+  rebasing 2:a33d80b6e352 "mv dir/ dir2/" (tip)
+  merging dir/a and dir2/a to dir2/a
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a33d80b6e352-fecb9ada-backup.hg (glob)
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Move file twice and rebase mod on top of moves
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ hg mv a b
+  $ hg ci -m 'mv a b'
+  $ hg mv b c
+  $ hg ci -m 'mv b c'
+  $ hg up -q 0
+  $ echo c > a
+  $ hg ci -m 'mod a'
+  created new head
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: d413169422167a3fa5275fc5d71f7dea9f5775f3
+  |   desc: mod a, phase: draft
+  | o  changeset: d3efd280421d24f9f229997c19e654761c942a71
+  | |   desc: mv b c, phase: draft
+  | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |/    desc: mv a b, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+  $ hg rebase -s . -d 2
+  rebasing 3:d41316942216 "mod a" (tip)
+  merging c and a to c
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d41316942216-2b5949bc-backup.hg (glob)
+
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Move file twice and rebase moves on top of mods
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ hg mv a b
+  $ hg ci -m 'mv a b'
+  $ hg mv b c
+  $ hg ci -m 'mv b c'
+  $ hg up -q 0
+  $ echo c > a
+  $ hg ci -m 'mod a'
+  created new head
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: d413169422167a3fa5275fc5d71f7dea9f5775f3
+  |   desc: mod a, phase: draft
+  | o  changeset: d3efd280421d24f9f229997c19e654761c942a71
+  | |   desc: mv b c, phase: draft
+  | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |/    desc: mv a b, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+  $ hg rebase -s 1 -d .
+  rebasing 1:472e38d57782 "mv a b"
+  merging a and b to b
+  rebasing 2:d3efd280421d "mv b c"
+  merging b and c to c
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/472e38d57782-ab8d3c58-backup.hg (glob)
+
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Move one file and add another file in the same folder in one branch, modify file in another branch
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ hg mv a b
+  $ hg ci -m 'mv a b'
+  $ echo c > c
+  $ hg add c
+  $ hg ci -m 'add c'
+  $ hg up -q 0
+  $ echo b > a
+  $ hg ci -m 'mod a'
+  created new head
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
+  |   desc: mod a, phase: draft
+  | o  changeset: b1a6187e79fbce851bb584eadcb0cc4a80290fd9
+  | |   desc: add c, phase: draft
+  | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |/    desc: mv a b, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+
+  $ hg rebase -s . -d 2
+  rebasing 3:ef716627c70b "mod a" (tip)
+  merging b and a to b
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/ef716627c70b-24681561-backup.hg (glob)
+  $ ls
+  b
+  c
+  $ cat b
+  b
+
+Merge test
+  $ hg init server
+  $ cd server
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ echo b > a
+  $ hg ci -m 'modify a'
+  $ hg up -q 0
+  $ hg mv a b
+  $ hg ci -m 'mv a b'
+  created new head
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
+  $ hg up -q 2
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |   desc: mv a b, phase: public
+  | o  changeset: b0357b07f79129a3d08a68621271ca1352ae8a09
+  |/    desc: modify a, phase: public
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: public
+
+  $ hg merge 1
+  merging b and a to b
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ ls
+  b
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Copy and move file
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ hg cp a c
+  $ hg mv a b
+  $ hg ci -m 'cp a c, mv a b'
+  $ hg up -q 0
+  $ echo b > a
+  $ hg ci -m 'mod a'
+  created new head
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
+  |   desc: mod a, phase: draft
+  | o  changeset: 4fc3fd13fbdb89ada6b75bfcef3911a689a0dde8
+  |/    desc: cp a c, mv a b, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+
+  $ hg rebase -s . -d 1
+  rebasing 2:ef716627c70b "mod a" (tip)
+  merging b and a to b
+  merging c and a to c
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/ef716627c70b-24681561-backup.hg (glob)
+  $ ls
+  b
+  c
+  $ cat b
+  b
+  $ cat c
+  b
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Do a merge commit with many consequent moves in one branch
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ echo b > a
+  $ hg ci -qm 'mod a'
+  $ hg up -q ".^"
+  $ hg mv a b
+  $ hg ci -qm 'mv a b'
+  $ hg mv b c
+  $ hg ci -qm 'mv b c'
+  $ hg up -q 1
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  o  changeset: d3efd280421d24f9f229997c19e654761c942a71
+  |   desc: mv b c, phase: draft
+  o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |   desc: mv a b, phase: draft
+  | @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
+  |/    desc: mod a, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+
+  $ hg merge 3
+  merging a and c to c
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -qm 'merge'
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @    changeset: cd29b0d08c0f39bfed4cde1b40e30f419db0c825
+  |\    desc: merge, phase: draft
+  | o  changeset: d3efd280421d24f9f229997c19e654761c942a71
+  | |   desc: mv b c, phase: draft
+  | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  | |   desc: mv a b, phase: draft
+  o |  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
+  |/    desc: mod a, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+  $ ls
+  c
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Test shelve/unshelve
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ echo b > a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg mv a b
+  $ hg ci -m 'mv a b'
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
+  @  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
+  |   desc: mv a b, phase: draft
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial, phase: draft
+  $ hg unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 2:45f63161acea "changes to: initial" (tip)
+  merging b and a to b
+  $ ls
+  b
+  $ cat b
+  b
   $ cd ..
   $ rm -rf server
   $ rm -rf repo

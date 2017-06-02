@@ -128,7 +128,7 @@ def _mergecopies(orig, repo, cdst, csrc, base):
 def _domergecopies(orig, repo, cdst, csrc, base):
     """ Fast copytracing using filename heuristics
 
-    Handle one case where we assume there are no moves or merge commits in
+    Handle one case where we assume there are no merge commits in
     "source branch". Source branch is commits from base up to csrc not
     including base.
     If these assumptions don't hold then we fallback to the
@@ -200,6 +200,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     changedfiles = set()
     sourcecommitnum = 0
     sourcecommitlimit = repo.ui.configint('copytrace', 'sourcecommitlimit', 100)
+    mdst = cdst.manifest()
     while ctx != base:
         if len(ctx.parents()) == 2:
             # To keep things simple let's not handle merges
@@ -209,9 +210,13 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         sourcecommitnum += 1
         if sourcecommitnum > sourcecommitlimit:
             return orig(repo, cdst, csrc, base)
-    m1 = cdst.manifest()
 
-    missingfiles = filter(lambda f: f not in m1, changedfiles)
+    cp = copiesmod._forwardcopies(base, csrc)
+    for dst, src in cp.iteritems():
+        if src in mdst:
+            copies[dst] = src
+
+    missingfiles = filter(lambda f: f not in mdst, changedfiles)
     if missingfiles:
         # Use the following file name heuristic to find moves: moves are
         # usually either directory moves or renames of the files in the
@@ -219,7 +224,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         # with either the same basename or the same dirname.
         basenametofilename = defaultdict(list)
         dirnametofilename = defaultdict(list)
-        for f in m1.filesnotin(base.manifest()):
+        for f in mdst.filesnotin(base.manifest()):
             basename = os.path.basename(f)
             dirname = os.path.dirname(f)
             basenametofilename[basename].append(f)
