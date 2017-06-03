@@ -254,3 +254,73 @@ Now add bullet points to sections having sub-sections
   -------------
   
   * Short summary of fix 3
+
+Multiple 'Other Changes' sub-sections for every section
+
+  $ hg init multiple-otherchanges
+  $ cd multiple-otherchanges
+
+  $ touch fix1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. fix:: Title of First Fix
+  > 
+  >    First paragraph of fix 1.
+  > EOF
+
+  $ touch feature1
+  $ hg -q commit -A -l - << EOF
+  > commit 2
+  > 
+  > .. feature:: Title of First Feature
+  > 
+  >    First paragraph of feature 1.
+  > EOF
+
+  $ touch feature2
+  $ hg -q commit -A -l - << EOF
+  > commit 3
+  > 
+  > .. feature::
+  > 
+  >    Short summary of feature 2.
+  > EOF
+
+  $ touch fix2
+  $ hg -q commit -A -l - << EOF
+  > commit 4
+  > 
+  > .. fix::
+  > 
+  >    Short summary of fix 2
+  > EOF
+
+  $ hg releasenotes -r 'all()' $TESTTMP/relnotes-multiple-otherchanges
+  $ cat $TESTTMP/relnotes-multiple-otherchanges
+  New Features
+  ============
+  
+  Title of First Feature
+  ----------------------
+  
+  First paragraph of feature 1.
+  
+  Other Changes
+  -------------
+  
+  * Short summary of feature 2.
+  
+  Bug Fixes
+  =========
+  
+  Title of First Fix
+  ------------------
+  
+  First paragraph of fix 1.
+  
+  Other Changes
+  -------------
+  
+  * Short summary of fix 2
+

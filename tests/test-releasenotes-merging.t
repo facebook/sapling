@@ -110,3 +110,54 @@ Doing it again won't add another section
   This describes a feature from a commit message.
 
   $ cd ..
+
+Bullets don't merge properly
+
+  $ hg init bullets
+  $ cd bullets
+  $ touch fix1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. fix::
+  > 
+  >    this is fix1.
+  > EOF
+
+  $ touch fix2
+  $ hg -q commit -A -l - << EOF
+  > commit 2
+  > 
+  > .. fix::
+  > 
+  >    this is fix2.
+  > EOF
+
+  $ hg releasenotes -r 'all()' $TESTTMP/relnotes-bullet-problem
+  $ cat $TESTTMP/relnotes-bullet-problem
+  Bug Fixes
+  =========
+  
+  * this is fix1.
+  
+  * this is fix2.
+  $ touch fix3
+  $ hg -q commit -A -l - << EOF
+  > commit 3
+  > 
+  > .. fix::
+  > 
+  >    this is fix3.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/relnotes-bullet-problem
+  $ cat $TESTTMP/relnotes-bullet-problem
+  Bug Fixes
+  =========
+  
+  * this is fix1.
+  
+    this is fix2.
+  
+  * this is fix3.
+
