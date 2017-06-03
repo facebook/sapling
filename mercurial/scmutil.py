@@ -376,9 +376,10 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                         newdirs.append(d)
             dirs[:] = newdirs
 
-def intrev(rev):
-    """Return integer for a given revision that can be used in comparison or
+def intrev(ctx):
+    """Return integer for a given basectx that can be used in comparison or
     arithmetic operation"""
+    rev = ctx.rev()
     if rev is None:
         return wdirrev
     return rev
@@ -466,7 +467,7 @@ def meaningfulparents(repo, ctx):
         return parents
     if repo.ui.debugflag:
         return [parents[0], repo['null']]
-    if parents[0].rev() >= intrev(ctx.rev()) - 1:
+    if parents[0].rev() >= intrev(ctx) - 1:
         return []
     return parents
 

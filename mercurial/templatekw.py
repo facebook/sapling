@@ -161,7 +161,7 @@ def _formatrevnode(ctx):
         hexnode = ctx.hex()
     else:
         hexnode = ctx.hex()[:12]
-    return '%d:%s' % (scmutil.intrev(ctx.rev()), hexnode)
+    return '%d:%s' % (scmutil.intrev(ctx), hexnode)
 
 def getfiles(repo, ctx, revcache):
     if 'files' not in revcache:
@@ -611,7 +611,7 @@ def showphaseidx(repo, ctx, templ, **args):
 @templatekeyword('rev')
 def showrev(repo, ctx, templ, **args):
     """Integer. The repository-local changeset revision number."""
-    return scmutil.intrev(ctx.rev())
+    return scmutil.intrev(ctx)
 
 def showrevslist(name, revs, **args):
     """helper to generate a list of revisions in which a mapped template will
