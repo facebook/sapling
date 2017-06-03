@@ -1277,12 +1277,10 @@ def clearobscaches(repo):
 @cachefor('obsolete')
 def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
-    obs = set()
     getnode = repo.changelog.node
     notpublic = repo._phasecache.getrevset(repo, (phases.draft, phases.secret))
-    for r in notpublic:
-        if getnode(r) in repo.obsstore.successors:
-            obs.add(r)
+    isobs = repo.obsstore.successors.__contains__
+    obs = set(r for r in notpublic if isobs(getnode(r)))
     return obs
 
 @cachefor('unstable')
