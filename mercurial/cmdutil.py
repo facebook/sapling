@@ -1140,7 +1140,7 @@ extraexport = []
 extraexportmap = {}
 
 def _exportsingle(repo, ctx, match, switch_parent, rev, seqno, write, diffopts):
-    node = ctx.node()
+    node = scmutil.binnode(ctx)
     parents = [p.node() for p in ctx.parents() if p]
     branch = ctx.branch()
     if switch_parent:

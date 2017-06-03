@@ -137,6 +137,28 @@ Exporting revision -2 to a file:
    foo-9
   +foo-10
 
+Exporting wdir revision:
+
+  $ echo "foo-wdir" >> foo
+  $ hg export 'wdir()'
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID ffffffffffffffffffffffffffffffffffffffff
+  # Parent  f3acbafac161ec68f1598af38f794f28847ca5d3
+  
+  
+  diff -r f3acbafac161 foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -10,3 +10,4 @@
+   foo-9
+   foo-10
+   foo-11
+  +foo-wdir
+  $ hg revert -q foo
+
 No filename should be printed if stdout is specified explicitly:
 
   $ hg export -v 1 -o -
