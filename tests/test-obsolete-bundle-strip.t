@@ -76,8 +76,8 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   >     echo '### Exclusive markers ###'
   >     cat "${exclufile}"
   >     # if the matched revs do not have children, we also check the result of strip
-  >     orphan=`hg log --hidden -T '.\n' --rev "(not (${revs})) and ((${revs})::)" | wc -l | sed -e 's/ //g'`
-  >     if [ $orphan -eq 0 ];
+  >     children=`hg log --hidden --rev "((${revs})::) - (${revs})"`
+  >     if [ -z "$children" ];
   >     then
   >         printf "# stripping: "
   >         prestripfile="${prefix}-pre-strip.txt"
