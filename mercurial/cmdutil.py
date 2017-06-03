@@ -15,7 +15,6 @@ import tempfile
 
 from .i18n import _
 from .node import (
-    bin,
     hex,
     nullid,
     nullrev,
@@ -1349,7 +1348,7 @@ class changeset_printer(object):
             hexfunc = short
         # as of now, wctx.node() and wctx.rev() return None, but we want to
         # show the same values as {node} and {rev} templatekw
-        revnode = (scmutil.intrev(ctx), hexfunc(bin(ctx.hex())))
+        revnode = (scmutil.intrev(ctx), hexfunc(scmutil.binnode(ctx)))
 
         if self.ui.quiet:
             self.ui.write("%d:%s\n" % revnode, label='log.node')

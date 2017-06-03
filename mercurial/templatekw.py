@@ -8,7 +8,12 @@
 from __future__ import absolute_import
 
 from .i18n import _
-from .node import hex, nullid
+from .node import (
+    hex,
+    nullid,
+    short,
+)
+
 from . import (
     encoding,
     error,
@@ -158,10 +163,10 @@ def _formatrevnode(ctx):
     template provided by cmdutil.changeset_templater"""
     repo = ctx.repo()
     if repo.ui.debugflag:
-        hexnode = ctx.hex()
+        hexfunc = hex
     else:
-        hexnode = ctx.hex()[:12]
-    return '%d:%s' % (scmutil.intrev(ctx), hexnode)
+        hexfunc = short
+    return '%d:%s' % (scmutil.intrev(ctx), hexfunc(scmutil.binnode(ctx)))
 
 def getfiles(repo, ctx, revcache):
     if 'files' not in revcache:

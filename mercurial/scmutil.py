@@ -15,7 +15,11 @@ import re
 import socket
 
 from .i18n import _
-from .node import wdirrev
+from .node import (
+    wdirid,
+    wdirrev,
+)
+
 from . import (
     encoding,
     error,
@@ -375,6 +379,13 @@ def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
                     else:
                         newdirs.append(d)
             dirs[:] = newdirs
+
+def binnode(ctx):
+    """Return binary node id for a given basectx"""
+    node = ctx.node()
+    if node is None:
+        return wdirid
+    return node
 
 def intrev(ctx):
     """Return integer for a given basectx that can be used in comparison or
