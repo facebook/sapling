@@ -71,6 +71,9 @@ urlerr = pycompat.urlerr
 urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
 
+# workaround for win32mbcs
+_filenamebytestr = pycompat.bytestr
+
 def isatty(fp):
     try:
         return fp.isatty()
@@ -1208,7 +1211,7 @@ def checkwinfilename(path):
     for n in path.replace('\\', '/').split('/'):
         if not n:
             continue
-        for c in pycompat.bytestr(n):
+        for c in _filenamebytestr(n):
             if c in _winreservedchars:
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c

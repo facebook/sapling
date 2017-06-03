@@ -27,9 +27,9 @@ See :hg:`help config.ui.color` for details.
 Mode
 ====
 
-Mercurial can use various system to display color. The supported modes are
+Mercurial can use various systems to display color. The supported modes are
 ``ansi``, ``win32``, and ``terminfo``.  See :hg:`help config.color` for details
-about how to control the mode
+about how to control the mode.
 
 Effects
 =======

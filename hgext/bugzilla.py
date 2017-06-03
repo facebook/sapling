@@ -54,7 +54,7 @@ works on all supported Bugzilla versions.
 
 Access via the REST-API needs either a Bugzilla username and password
 or an apikey specified in the configuration. Comments are made under
-the given username or the user assoicated with the apikey in Bugzilla.
+the given username or the user associated with the apikey in Bugzilla.
 
 Configuration items common to all access modes:
 

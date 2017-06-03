@@ -844,21 +844,22 @@ def _dispatch(req):
             for ui_ in uis:
                 ui_.setconfig('ui', 'interactive', 'off', '-y')
 
-        if util.parsebool(options['pager']):
-            ui.pager('internal-always-' + cmd)
-        elif options['pager'] != 'auto':
-            ui.disablepager()
-
         if cmdoptions.get('insecure', False):
             for ui_ in uis:
                 ui_.insecureconnections = True
 
-        # setup color handling
+        # setup color handling before pager, because setting up pager
+        # might cause incorrect console information
         coloropt = options['color']
         for ui_ in uis:
             if coloropt:
                 ui_.setconfig('ui', 'color', coloropt, '--color')
             color.setup(ui_)
+
+        if util.parsebool(options['pager']):
+            ui.pager('internal-always-' + cmd)
+        elif options['pager'] != 'auto':
+            ui.disablepager()
 
         if options['version']:
             return commands.version_(ui)

@@ -156,7 +156,7 @@ funcs = '''os.path.join os.path.split os.path.splitext
 # because they expects argument is local encoded string and cause
 # problem with unicode string.
 rfuncs = '''mercurial.encoding.upper mercurial.encoding.lower
- mercurial.pycompat.bytestr'''
+ mercurial.util._filenamebytestr'''
 
 # List of Windows specific functions to be wrapped.
 winfuncs = '''os.path.splitunc'''

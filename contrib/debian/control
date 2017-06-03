@@ -5,6 +5,7 @@ Maintainer: Mercurial Developers <mercurial-devel@mercurial-scm.org>
 Build-Depends:
  debhelper (>= 9),
  dh-python,
+ less,
  netbase,
  python-all,
  python-all-dev,
