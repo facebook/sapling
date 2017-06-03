@@ -1280,6 +1280,20 @@ For tests consistency
   $ log '(all() + wdir()) & last(. + wdir())'
   2147483647
 
+Test working-directory integer revision and node id
+(BUG: '0:wdir()' is still needed to populate wdir revision)
+
+  $ hg debugrevspec '0:wdir() & 2147483647'
+  2147483647
+  $ hg debugrevspec '0:wdir() & rev(2147483647)'
+  2147483647
+  $ hg debugrevspec '0:wdir() & ffffffffffffffffffffffffffffffffffffffff'
+  2147483647
+  $ hg debugrevspec '0:wdir() & id(ffffffffffffffffffffffffffffffffffffffff)'
+  2147483647
+  $ hg debugrevspec '0:wdir() & id(ffffffffffff)'
+BROKEN: should be '2147483647'
+
   $ log 'outgoing()'
   8
   9

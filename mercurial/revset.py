@@ -24,6 +24,7 @@ from . import (
     registrar,
     repoview,
     revsetlang,
+    scmutil,
     smartset,
     util,
 )
@@ -190,7 +191,7 @@ def _getrevsource(repo, r):
 # operator methods
 
 def stringset(repo, subset, x):
-    x = repo[x].rev()
+    x = scmutil.intrev(repo[x])
     if (x in subset
         or x == node.nullrev and isinstance(subset, fullreposet)):
         return baseset([x])
@@ -1297,13 +1298,18 @@ def node_(repo, subset, x):
     if len(n) == 40:
         try:
             rn = repo.changelog.rev(node.bin(n))
+        except error.WdirUnsupported:
+            rn = node.wdirrev
         except (LookupError, TypeError):
             rn = None
     else:
         rn = None
         pm = repo.changelog._partialmatch(n)
         if pm is not None:
-            rn = repo.changelog.rev(pm)
+            try:
+                rn = repo.changelog.rev(pm)
+            except error.WdirUnsupported:
+                rn = node.wdirrev
 
     if rn is None:
         return baseset()
@@ -1620,7 +1626,7 @@ def rev(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
-    if l not in repo.changelog and l != node.nullrev:
+    if l not in repo.changelog and l not in (node.nullrev, node.wdirrev):
         return baseset()
     return subset & baseset([l])
 
