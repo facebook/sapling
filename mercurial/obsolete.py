@@ -635,10 +635,11 @@ class obsstore(object):
         if self._readonly:
             raise error.Abort(_('creating obsolete markers is not enabled on '
                               'this repo'))
-        known = set(self._all)
+        known = set()
+        getsuccessors = self.successors.get
         new = []
         for m in markers:
-            if m not in known:
+            if m not in getsuccessors(m[0], ()) and m not in known:
                 known.add(m)
                 new.append(m)
         if new:
