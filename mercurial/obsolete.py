@@ -666,8 +666,12 @@ class obsstore(object):
         return self.add(transaction, markers)
 
     @propertycache
+    def _data(self):
+        return self.svfs.tryread('obsstore')
+
+    @propertycache
     def _all(self):
-        data = self.svfs.tryread('obsstore')
+        data = self._data
         if not data:
             return []
         self._version, markers = _readmarkers(data)
