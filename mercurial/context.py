@@ -1613,18 +1613,30 @@ class workingctx(committablectx):
     def _checklookup(self, files):
         # check for any possibly clean files
         if not files:
-            return [], []
+            return [], [], []
 
         modified = []
+        deleted = []
         fixup = []
         pctx = self._parents[0]
         # do a full compare of any files that might have changed
         for f in sorted(files):
-            if (f not in pctx or self.flags(f) != pctx.flags(f)
-                or pctx[f].cmp(self[f])):
-                modified.append(f)
-            else:
-                fixup.append(f)
+            try:
+                # This will return True for a file that got replaced by a
+                # directory in the interim, but fixing that is pretty hard.
+                if (f not in pctx or self.flags(f) != pctx.flags(f)
+                    or pctx[f].cmp(self[f])):
+                    modified.append(f)
+                else:
+                    fixup.append(f)
+            except (IOError, OSError):
+                # A file become inaccessible in between? Mark it as deleted,
+                # matching dirstate behavior (issue5584).
+                # The dirstate has more complex behavior around whether a
+                # missing file matches a directory, etc, but we don't need to
+                # bother with that: if f has made it to this point, we're sure
+                # it's in the dirstate.
+                deleted.append(f)
 
         # update dirstate for files that are actually clean
         if fixup:
@@ -1644,7 +1656,7 @@ class workingctx(committablectx):
                     self._repo.dirstate.write(self._repo.currenttransaction())
             except error.LockError:
                 pass
-        return modified, fixup
+        return modified, deleted, fixup
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
@@ -1659,8 +1671,9 @@ class workingctx(committablectx):
 
         # check for any possibly clean files
         if cmp:
-            modified2, fixup = self._checklookup(cmp)
+            modified2, deleted2, fixup = self._checklookup(cmp)
             s.modified.extend(modified2)
+            s.deleted.extend(deleted2)
 
             # update dirstate for files that are actually clean
             if fixup and listclean:
