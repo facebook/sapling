@@ -439,12 +439,14 @@ def _fm1readmarkers(data, off):
 formats = {_fm0version: (_fm0readmarkers, _fm0encodeonemarker),
            _fm1version: (_fm1readmarkers, _fm1encodeonemarker)}
 
+def _readmarkerversion(data):
+    return _unpack('>B', data[0:1])[0]
+
 @util.nogc
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
-    off = 0
-    diskversion = _unpack('>B', data[off:off + 1])[0]
-    off += 1
+    diskversion = _readmarkerversion(data)
+    off = 1
     if diskversion not in formats:
         msg = _('parsing obsolete marker: unknown version %r') % diskversion
         raise error.UnknownVersion(msg, version=diskversion)
