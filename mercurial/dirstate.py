@@ -470,6 +470,12 @@ class dirstate(object):
             self._pl = p
 
     def invalidate(self):
+        '''Causes the next access to reread the dirstate.
+
+        This is different from localrepo.invalidatedirstate() because it always
+        rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
+        check whether the dirstate has changed before rereading it.'''
+
         for a in ("_map", "_copymap", "_filefoldmap", "_dirfoldmap", "_branch",
                   "_pl", "_dirs", "_ignore", "_nonnormalset",
                   "_otherparentset"):
