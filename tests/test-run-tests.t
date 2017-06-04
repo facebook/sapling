@@ -9,7 +9,7 @@ Smoke test with install
 
   $ run-tests.py $HGTEST_RUN_TESTS_PURE -l
   
-  # Ran 0 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 0 tests, 0 skipped, 0 failed.
 
 Define a helper to avoid the install step
 =============
@@ -25,7 +25,7 @@ error paths
   $ run-tests.py --with-hg=./hg
   warning: --with-hg should specify an hg script
   
-  # Ran 0 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 0 tests, 0 skipped, 0 failed.
   $ rm hg
 #endif
 
@@ -58,7 +58,7 @@ an empty test
   $ touch test-empty.t
   $ rt
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
   $ rm test-empty.t
 
 a succesful test
@@ -91,7 +91,7 @@ a succesful test
 
   $ rt
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 failing test
 ==================
@@ -115,7 +115,7 @@ test churn with globs
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -162,7 +162,7 @@ basic failing test
   !
   Failed test-failure.t: output changed
   Failed test-failure-unicode.t: output changed
-  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
 
@@ -193,7 +193,7 @@ test --outputdir
   !
   Failed test-failure.t: output changed
   Failed test-failure-unicode.t: output changed
-  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
   $ ls -a output
@@ -229,7 +229,7 @@ test --xunit support
   !
   Failed test-failure.t: output changed
   Failed test-failure-unicode.t: output changed
-  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
   $ cat xunit.xml
@@ -339,7 +339,7 @@ test for --retest
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -362,7 +362,7 @@ test for --retest
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -373,12 +373,12 @@ successful
 
   $ rt test-success.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 success w/ keyword
   $ rt -k xyzzy
   .
-  # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 1 skipped, 0 failed.
 
 failed
 
@@ -397,7 +397,7 @@ failed
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -417,7 +417,7 @@ failure w/ keyword
   ERROR: test-failure.t output changed
   !
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -432,7 +432,7 @@ Verify that when a process fails to start we show a useful message
   ERROR: test-serve-fail.t output changed
   !
   Failed test-serve-fail.t: server failed to start (HGPORT=*) (glob)
-  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
   $ rm test-serve-fail.t
@@ -448,7 +448,7 @@ Verify that we can try other ports
   > EOF
   $ rt test-serve-inuse.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
   $ rm test-serve-inuse.t
   $ killdaemons.py $DAEMON_PIDS
   $ rm $DAEMON_PIDS
@@ -486,7 +486,7 @@ Running In Debug Mode
   + echo *SALT* 22 0 (glob)
   *SALT* 22 0 (glob)
   .
-  # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 0 skipped, 0 failed.
 
 Parallel runs
 ==============
@@ -498,7 +498,7 @@ Parallel runs
   !!
   Failed test-failure*.t: output changed (glob)
   Failed test-failure*.t: output changed (glob)
-  # Ran 2 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 2 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
 
@@ -520,7 +520,7 @@ failures in parallel with --first should only print one failure
   
   Failed test-failure*.t: output changed (glob)
   Failed test-nothing.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 2 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
 
@@ -552,7 +552,7 @@ Refuse the fix
   ERROR: test-failure.t output changed
   !.
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -576,7 +576,7 @@ Interactive with custom view
   ERROR: test-failure.t output changed
   !.
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -588,7 +588,7 @@ View the fix
   ERROR: test-failure.t output changed
   !.
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -621,7 +621,7 @@ Accept the fix
      saved backup bundle to $TESTTMP/foo.hg* (glob)
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
   Accept this change? [n] ..
-  # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 0 skipped, 0 failed.
 
   $ sed -e 's,(glob)$,&<,g' test-failure.t
     $ echo babar
@@ -650,7 +650,7 @@ No Diff
   $ rt --nodiff
   !.
   Failed test-failure.t: output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -660,7 +660,7 @@ test --tmpdir support
   Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t (glob)
   Keeping threadtmp dir: $TESTTMP/keep/child1  (glob)
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 timeouts
 ========
@@ -675,14 +675,14 @@ timeouts
   st
   Skipped test-slow-timeout.t: missing feature: allow slow tests (use --allow-slow-tests)
   Failed test-timeout.t: timed out
-  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
   $ rt --timeout=1 --slowtimeout=3 \
   > test-timeout.t test-slow-timeout.t --allow-slow-tests
   .t
   Failed test-timeout.t: timed out
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
   $ rm test-timeout.t test-slow-timeout.t
@@ -692,7 +692,7 @@ test for --time
 
   $ rt test-success.t --time
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
   # Producing time report
   start   end     cuser   csys    real      Test
   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   test-success.t (re)
@@ -702,7 +702,7 @@ test for --time with --job enabled
 
   $ rt test-success.t --time --jobs 2
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
   # Producing time report
   start   end     cuser   csys    real      Test
   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   \s*[\d\.]{5}   test-success.t (re)
@@ -717,21 +717,21 @@ Skips
   !.s
   Skipped test-skip.t: missing feature: nail clipper
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
   $ rt --keyword xyzzy
   .s
   Skipped test-skip.t: missing feature: nail clipper
-  # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 2 skipped, 0 failed.
 
 Skips with xml
   $ rt --keyword xyzzy \
   >  --xunit=xunit.xml
   .s
   Skipped test-skip.t: missing feature: nail clipper
-  # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 2 skipped, 0 failed.
   $ cat xunit.xml
   <?xml version="1.0" encoding="utf-8"?>
   <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="2">
@@ -749,7 +749,7 @@ Missing skips or blacklisted skips don't count as executed:
   ss
   Skipped test-bogus.t: Doesn't exist
   Skipped test-failure.t: blacklisted
-  # Ran 0 tests, 2 skipped, 0 warned, 0 failed.
+  # Ran 0 tests, 2 skipped, 0 failed.
   $ cat report.json
   testreport ={
       "test-bogus.t": {
@@ -779,7 +779,7 @@ Whitelist trumps blacklist
   !
   Skipped test-bogus.t: Doesn't exist
   Failed test-failure.t: output changed
-  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -802,7 +802,7 @@ test for --json
   !.s
   Skipped test-skip.t: missing feature: nail clipper
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -857,7 +857,7 @@ test for --json
   !.s
   Skipped test-skip.t: missing feature: nail clipper
   Failed test-failure.t: output changed
-  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 1 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
   $ f report.json
@@ -915,7 +915,7 @@ Test that failed test accepted through interactive are properly reported:
    pad pad pad pad............................................................
   Accept this change? [n] ..s
   Skipped test-skip.t: missing feature: nail clipper
-  # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
+  # Ran 2 tests, 1 skipped, 0 failed.
 
   $ cat report.json
   testreport ={
@@ -958,7 +958,7 @@ backslash on end of line with glob matching is handled properly
 
   $ rt test-glob-backslash.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
   $ rm -f test-glob-backslash.t
 
@@ -984,7 +984,7 @@ Mercurial source tree.
   > EOF
   $ rt test-hghave.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 test that RUNTESTDIR refers the directory, in which `run-tests.py` now
 running is placed.
@@ -1007,7 +1007,7 @@ running is placed.
   > EOF
   $ rt test-runtestdir.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 #if execbit
 
@@ -1024,7 +1024,7 @@ test that TESTDIR is referred in PATH
   > EOF
   $ rt test-testdir-path.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 #endif
 
@@ -1037,10 +1037,10 @@ test support for --allow-slow-tests
   $ rt test-very-slow-test.t
   s
   Skipped test-very-slow-test.t: missing feature: allow slow tests (use --allow-slow-tests)
-  # Ran 0 tests, 1 skipped, 0 warned, 0 failed.
+  # Ran 0 tests, 1 skipped, 0 failed.
   $ rt $HGTEST_RUN_TESTS_PURE --allow-slow-tests test-very-slow-test.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 support for running a test outside the current directory
   $ mkdir nonlocal
@@ -1050,7 +1050,7 @@ support for running a test outside the current directory
   > EOF
   $ rt nonlocal/test-is-not-here.t
   .
-  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 1 tests, 0 skipped, 0 failed.
 
 support for bisecting failed tests automatically
   $ hg init bisect
@@ -1081,7 +1081,7 @@ support for bisecting failed tests automatically
   !
   Failed test-bisect.t: output changed
   test-bisect.t broken by 72cbf122d116 (bad)
-  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -1105,7 +1105,7 @@ Test a broken #if statement doesn't break run-tests threading.
   > done
   $ rt -j 2
   ....
-  # Ran 5 tests, 0 skipped, 0 warned, 0 failed.
+  # Ran 5 tests, 0 skipped, 0 failed.
   skipped: unknown feature: notarealhghavefeature
   
   $ cd ..
@@ -1157,7 +1157,7 @@ Test cases in .t files
   ERROR: test-cases-abc.t (case B) output changed
   !.
   Failed test-cases-abc.t (case B): output changed
-  # Ran 3 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 3 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -1180,7 +1180,7 @@ Test cases in .t files
   ERROR: test-cases-abc.t (case B) output changed
   !.
   Failed test-cases-abc.t (case B): output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
 
@@ -1205,6 +1205,6 @@ Test cases in .t files
   ERROR: test-cases-abc.t (case B) output changed
   !.
   Failed test-cases-abc.t (case B): output changed
-  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]

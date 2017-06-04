@@ -1500,11 +1500,6 @@ class TestResult(unittest._TextTestResult):
         # sense to map it into skip some day.
         self.ignored = []
 
-        # We have a custom "warned" result that isn't present in any Python
-        # unittest implementation. It is very similar to failed. It may make
-        # sense to map it into fail some day.
-        self.warned = []
-
         self.times = []
         self._firststarttime = None
         # Data stored for the benefit of generating xunit reports.
@@ -1557,19 +1552,6 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('i')
                 else:
                     self.testsRun += 1
-                self.stream.flush()
-
-    def addWarn(self, test, reason):
-        self.warned.append((test, reason))
-
-        if self._options.first:
-            self.stop()
-
-        with iolock:
-            if self.showAll:
-                self.stream.writeln('warned %s' % reason)
-            else:
-                self.stream.write('~')
                 self.stream.flush()
 
     def addOutputMismatch(self, test, ret, got, expected):
@@ -1922,7 +1904,6 @@ class TextTestRunner(unittest.TextTestRunner):
         test(result)
 
         failed = len(result.failures)
-        warned = len(result.warned)
         skipped = len(result.skipped)
         ignored = len(result.ignored)
 
@@ -1932,8 +1913,6 @@ class TextTestRunner(unittest.TextTestRunner):
             if not self._runner.options.noskips:
                 for test, msg in result.skipped:
                     self.stream.writeln('Skipped %s: %s' % (test.name, msg))
-            for test, msg in result.warned:
-                self.stream.writeln('Warned %s: %s' % (test.name, msg))
             for test, msg in result.failures:
                 self.stream.writeln('Failed %s: %s' % (test.name, msg))
             for test, msg in result.errors:
@@ -1986,9 +1965,8 @@ class TextTestRunner(unittest.TextTestRunner):
                         '%s %s by %s (%s)' % (
                             test, verb, dat['node'], dat['summary']))
             self.stream.writeln(
-                '# Ran %d tests, %d skipped, %d warned, %d failed.'
-                % (result.testsRun,
-                   skipped + ignored, warned, failed))
+                '# Ran %d tests, %d skipped, %d failed.'
+                % (result.testsRun, skipped + ignored, failed))
             if failed:
                 self.stream.writeln('python hash seed: %s' %
                     os.environ['PYTHONHASHSEED'])
@@ -2402,7 +2380,6 @@ class TestRunner(object):
             tests = [self._gettest(d, i) for i, d in enumerate(testdescs)]
 
             failed = False
-            warned = False
             kws = self.options.keywords
             if kws is not None and PYTHON3:
                 kws = kws.encode('utf-8')
@@ -2438,8 +2415,6 @@ class TestRunner(object):
 
             if result.failures:
                 failed = True
-            if result.warned:
-                warned = True
 
             if self.options.anycoverage:
                 self._outputcoverage()
@@ -2449,8 +2424,6 @@ class TestRunner(object):
 
         if failed:
             return 1
-        if warned:
-            return 80
 
     def _getport(self, count):
         port = self._ports.get(count) # do we have a cached entry?
