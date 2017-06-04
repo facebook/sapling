@@ -717,8 +717,6 @@ class Test(unittest.TestCase):
                 # test we "ran", but we want to exclude skipped tests
                 # from those we count towards those run.
                 result.testsRun -= 1
-            except WarnTest as e:
-                result.addWarn(self, str(e))
             except ReportedTest as e:
                 pass
             except self.failureException as e:
@@ -788,7 +786,7 @@ class Test(unittest.TestCase):
         elif ret == 'timeout':
             self.fail('timed out')
         elif ret is False:
-            raise WarnTest('no result code from test')
+            self.fail('no result code from test')
         elif out != self._refout:
             # Diff generation may rely on written .err file.
             if (ret != 0 or out != self._refout) and not self._skipped \
@@ -1480,9 +1478,6 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 iolock = threading.RLock()
-
-class WarnTest(Exception):
-    """Raised to indicate that a test warned."""
 
 class ReportedTest(Exception):
     """Raised to indicate that a test already reported."""
