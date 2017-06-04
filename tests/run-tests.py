@@ -711,7 +711,7 @@ class Test(unittest.TestCase):
             except KeyboardInterrupt:
                 self._aborted = True
                 raise
-            except SkipTest as e:
+            except unittest.SkipTest as e:
                 result.addSkip(self, str(e))
                 # The base class will have already counted this as a
                 # test we "ran", but we want to exclude skipped tests
@@ -789,7 +789,7 @@ class Test(unittest.TestCase):
                 self.fail('hg have failed checking for %s' % failed[-1])
             else:
                 self._skipped = True
-                raise SkipTest(missing[-1])
+                raise unittest.SkipTest(missing[-1])
         elif ret == 'timeout':
             self.fail('timed out')
         elif ret is False:
@@ -847,7 +847,7 @@ class Test(unittest.TestCase):
 
     def _run(self, env):
         # This should be implemented in child classes to run tests.
-        raise SkipTest('unknown test type')
+        raise unittest.SkipTest('unknown test type')
 
     def abort(self):
         """Terminate execution of this test."""
@@ -1485,9 +1485,6 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 iolock = threading.RLock()
-
-class SkipTest(Exception):
-    """Raised to indicate that a test is to be skipped."""
 
 class IgnoreTest(Exception):
     """Raised to indicate that a test is to be ignored."""
