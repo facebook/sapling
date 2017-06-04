@@ -555,7 +555,7 @@ class obsstore(object):
         # caches for various obsolescence related cache
         self.caches = {}
         self.svfs = svfs
-        self._version = defaultformat
+        self._defaultformat = defaultformat
         self._readonly = readonly
 
     def __iter__(self):
@@ -668,6 +668,13 @@ class obsstore(object):
     @propertycache
     def _data(self):
         return self.svfs.tryread('obsstore')
+
+    @propertycache
+    def _version(self):
+        if len(self._data) >= 1:
+            return _readmarkerversion(self._data)
+        else:
+            return self._defaultformat
 
     @propertycache
     def _all(self):
