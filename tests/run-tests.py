@@ -717,8 +717,6 @@ class Test(unittest.TestCase):
                 # test we "ran", but we want to exclude skipped tests
                 # from those we count towards those run.
                 result.testsRun -= 1
-            except ReportedTest as e:
-                pass
             except self.failureException as e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
@@ -1479,9 +1477,6 @@ class TTest(Test):
 
 iolock = threading.RLock()
 
-class ReportedTest(Exception):
-    """Raised to indicate that a test already reported."""
-
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -1578,10 +1573,8 @@ class TestResult(unittest._TextTestResult):
                 servefail, lines = getdiff(expected, got,
                                            test.refpath, test.errpath)
                 if servefail:
-                    self.addFailure(
-                        test,
+                    raise test.failureException(
                         'server failed to start (HGPORT=%s)' % test._startport)
-                    raise ReportedTest('server failed to start')
                 else:
                     self.stream.write('\n')
                     for line in lines:
