@@ -452,12 +452,15 @@ def _readmarkers(data):
         raise error.UnknownVersion(msg, version=diskversion)
     return diskversion, formats[diskversion][0](data, off)
 
+def encodeheader(version=_fm0version):
+    return _pack('>B', version)
+
 def encodemarkers(markers, addheader=False, version=_fm0version):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
     encodeone = formats[version][1]
     if addheader:
-        yield _pack('>B', version)
+        yield encodeheader(version)
     for marker in markers:
         yield encodeone(marker)
 
