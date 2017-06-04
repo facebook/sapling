@@ -717,11 +717,6 @@ class Test(unittest.TestCase):
                 # test we "ran", but we want to exclude skipped tests
                 # from those we count towards those run.
                 result.testsRun -= 1
-            except IgnoreTest as e:
-                result.addIgnore(self, str(e))
-                # As with skips, ignores also should be excluded from
-                # the number of tests executed.
-                result.testsRun -= 1
             except WarnTest as e:
                 result.addWarn(self, str(e))
             except ReportedTest as e:
@@ -1485,9 +1480,6 @@ class TTest(Test):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
 iolock = threading.RLock()
-
-class IgnoreTest(Exception):
-    """Raised to indicate that a test is to be ignored."""
 
 class WarnTest(Exception):
     """Raised to indicate that a test warned."""
