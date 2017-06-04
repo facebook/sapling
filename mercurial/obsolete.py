@@ -607,8 +607,8 @@ class obsstore(object):
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 # offset == 0: new file - add the version header
-                for bytes in encodemarkers(new, offset == 0, self._version):
-                    f.write(bytes)
+                data = b''.join(encodemarkers(new, offset == 0, self._version))
+                f.write(data)
             finally:
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
                 # call 'filecacheentry.refresh()'  here
@@ -616,7 +616,7 @@ class obsstore(object):
             addedmarkers = transaction.changes.get('obsmarkers')
             if addedmarkers is not None:
                 addedmarkers.update(new)
-            self._addmarkers(new)
+            self._addmarkers(new, data)
             # new marker *may* have changed several set. invalidate the cache.
             self.caches.clear()
         # records the number of new markers for the transaction hooks
@@ -673,8 +673,9 @@ class obsstore(object):
     def _cached(self, attr):
         return attr in self.__dict__
 
-    def _addmarkers(self, markers):
+    def _addmarkers(self, markers, rawdata):
         markers = list(markers) # to allow repeated iteration
+        self._data = self._data + rawdata
         self._all.extend(markers)
         if self._cached('successors'):
             _addsuccessors(self.successors, markers)
