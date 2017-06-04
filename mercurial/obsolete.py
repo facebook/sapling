@@ -178,10 +178,9 @@ _fm0node = '20s'
 _fm0fsize = _calcsize(_fm0fixed)
 _fm0fnodesize = _calcsize(_fm0node)
 
-def _fm0readmarkers(data, off):
+def _fm0readmarkers(data, off, stop):
     # Loop on markers
-    l = len(data)
-    while off + _fm0fsize <= l:
+    while off < stop:
         # read fixed part
         cur = data[off:off + _fm0fsize]
         off += _fm0fsize
@@ -317,7 +316,7 @@ _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
 _fm1metapairsize = _calcsize('BB')
 
-def _fm1purereadmarkers(data, off):
+def _fm1purereadmarkers(data, off, stop):
     # make some global constants local for performance
     noneflag = _fm1parentnone
     sha2flag = usingsha256
@@ -331,10 +330,9 @@ def _fm1purereadmarkers(data, off):
     unpack = _unpack
 
     # Loop on markers
-    stop = len(data) - _fm1fsize
     ufixed = struct.Struct(_fm1fixed).unpack
 
-    while off <= stop:
+    while off < stop:
         # read fixed part
         o1 = off + fsize
         t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
@@ -428,11 +426,10 @@ def _fm1encodeonemarker(marker):
         data.append(value)
     return ''.join(data)
 
-def _fm1readmarkers(data, off):
+def _fm1readmarkers(data, off, stop):
     native = getattr(parsers, 'fm1readmarkers', None)
     if not native:
-        return _fm1purereadmarkers(data, off)
-    stop = len(data) - _fm1fsize
+        return _fm1purereadmarkers(data, off, stop)
     return native(data, off, stop)
 
 # mapping to read/write various marker formats
@@ -444,14 +441,17 @@ def _readmarkerversion(data):
     return _unpack('>B', data[0:1])[0]
 
 @util.nogc
-def _readmarkers(data):
+def _readmarkers(data, off=None, stop=None):
     """Read and enumerate markers from raw data"""
     diskversion = _readmarkerversion(data)
-    off = 1
+    if not off:
+        off = 1  # skip 1 byte version number
+    if stop is None:
+        stop = len(data)
     if diskversion not in formats:
         msg = _('parsing obsolete marker: unknown version %r') % diskversion
         raise error.UnknownVersion(msg, version=diskversion)
-    return diskversion, formats[diskversion][0](data, off)
+    return diskversion, formats[diskversion][0](data, off, stop)
 
 def encodeheader(version=_fm0version):
     return _pack('>B', version)
