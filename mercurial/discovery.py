@@ -248,11 +248,10 @@ def _headssummary(pushop):
 
     # If there are no obsstore, no post processing are needed.
     if repo.obsstore:
-        allmissing = set(outgoing.missing)
-        cctx = repo.set('%ld', outgoing.common)
-        allfuturecommon = set(c.rev() for c in cctx)
         torev = repo.changelog.rev
-        allfuturecommon.update(torev(m) for m in allmissing)
+        futureheads = set(torev(h) for h in outgoing.missingheads)
+        futureheads |= set(torev(h) for h in outgoing.commonheads)
+        allfuturecommon = repo.changelog.ancestors(futureheads, inclusive=True)
         for branch, heads in sorted(headssum.iteritems()):
             remoteheads, newheads, unsyncedheads, placeholder = heads
             result = _postprocessobsolete(pushop, allfuturecommon, newheads)
