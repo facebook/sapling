@@ -518,7 +518,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   rebasing 1:ec87889f5f90 "source"
   transaction abort!
   rollback completed
-  abort: Operation not permitted: '$TESTTMP/cornercases/foo/foo/foo/foo/file'
+  abort: (Is a directory|Operation not permitted): '\$TESTTMP/cornercases/foo/foo/foo/foo/file' (re)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
   [
