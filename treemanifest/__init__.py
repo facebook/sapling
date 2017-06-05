@@ -42,11 +42,18 @@ commits' manifests to be downloaded (if they aren't already).
     [treemanifest]
     pullprefetchcount = 0
 
+`treemanifest.pullprefetchrevs` specifies a revset of commits who's trees should
+be prefetched after a pull. Defaults to None.
+
+   [treemanifest]
+   pullprefetchrevs = master + stable
+
 Setting `treemanifest.sendtrees` to True will include tree packs in sent
 bundles.
 
     [treemanifest]
     sendtrees = False
+
 """
 
 from mercurial import (
@@ -728,31 +735,37 @@ def treeparthandler(op, part):
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
 
+    ctxs = []
+    mfstore = repo.svfs.manifestdatastore
+
     # prefetch if it's configured
     prefetchcount = ui.configint('treemanifest', 'pullprefetchcount', None)
     if prefetchcount:
-
-        mfstore = repo.svfs.manifestdatastore
-
         # Calculate what recent manifests are we missing
         firstrev = max(0, repo['tip'].rev() - prefetchcount + 1)
-        ctxs = list(repo.set('%s: & public()', firstrev))
-        mfnodes = (ctx.manifestnode() for ctx in ctxs)
-        missingnodes = mfstore.getmissing(('', n) for n in mfnodes)
+        ctxs.extend(repo.set('%s: & public()', firstrev))
+
+    # Prefetch specific commits
+    prefetchrevs = ui.config('treemanifest', 'pullprefetchrevs', None)
+    if prefetchrevs:
+        ctxs.extend(repo.set(prefetchrevs))
+
+    mfnodes = None
+    if ctxs:
+        missingnodes = mfstore.getmissing(('', c.manifestnode()) for c in ctxs)
         mfnodes = list(n for k, n in missingnodes)
 
-        if mfnodes:
-            ui.status(_("prefetching trees\n"))
-            # Calculate which parents we already have
-            ctxnodes = list(ctx.node() for ctx in ctxs)
-            parentctxs = repo.set('parents(%ln) - %ln',
-                                  ctxnodes, ctxnodes)
-            basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
-            missingbases = list(mfstore.getmissing(('', n) for n
-                                                   in basemfnodes))
-            basemfnodes.difference_update(n for k, n in missingbases)
+    if mfnodes:
+        ui.status(_("prefetching trees\n"))
+        # Calculate which parents we already have
+        ctxnodes = list(ctx.node() for ctx in ctxs)
+        parentctxs = repo.set('parents(%ln) - %ln',
+                              ctxnodes, ctxnodes)
+        basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
+        missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
+        basemfnodes.difference_update(n for k, n in missingbases)
 
-            _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
+        _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
     return result
 

@@ -245,3 +245,35 @@ Test auto prefetch during pull
   
   Node          Delta Base    Delta Length
   60a7f7acb6bb  000000000000  95
+
+Test prefetching certain revs during pull
+  $ cd ../master
+  $ echo x >> dir/x
+  $ hg commit -qm "modify dir/x a third time"
+  $ echo x >> dir/x
+  $ hg commit -qm "modify dir/x a fourth time"
+
+  $ cd ../client
+  $ rm -rf $CACHEDIR/master
+  $ hg pull --config treemanifest.pullprefetchrevs='tip~2'
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  (run 'hg update' to get a working copy)
+  prefetching trees
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  subdir
+  Node          Delta Base    Delta Length
+  ddb35f099a64  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
