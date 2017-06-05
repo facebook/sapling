@@ -681,6 +681,7 @@ check that pruning and inhibited node does not confuse anything
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
+  3 new obsolescence markers
   (run 'hg heads .' to see heads, 'hg merge' to merge)
 
  Only allow direct access and check that evolve works like before
