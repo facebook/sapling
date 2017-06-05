@@ -439,7 +439,7 @@ def blame(orig, ui, repo, *pats, **opts):
         append("{file}")
     if opts.get('line_number'):
         append("{pad(line_number, 5, ' ', True)}", sep=':')
-    opts['template'] = ptmpl[0] + ': {line}'
+    opts['template'] = '{lines % "' + ptmpl[0] + ': {line}"}'
     return orig(ui, repo, *pats, **opts)
 
 @command('histgrep', commands.table['grep'][1], commands.table['grep'][2])
