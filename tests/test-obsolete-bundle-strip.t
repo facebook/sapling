@@ -52,7 +52,7 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   $ testrevs () {
   >     revs="$1"
   >     testname=`basename \`pwd\``
-  >     revsname=`hg --hidden log -T '-{desc}\n' --rev "${revs}"`
+  >     revsname=`hg --hidden log -T '-{desc}' --rev "${revs}"`
   >     prefix="${TESTTMP}/${testname}${revsname}"
   >     markersfile="${prefix}-relevant-markers.txt"
   >     exclufile="${prefix}-exclusive-markers.txt"
