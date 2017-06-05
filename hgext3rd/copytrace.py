@@ -25,7 +25,6 @@
 '''
 
 from collections import defaultdict
-from functools import partial, update_wrapper
 from mercurial import (
     commands,
     copies as copiesmod,
@@ -35,7 +34,6 @@ from mercurial import (
     util,
 )
 from mercurial.i18n import _
-from mercurial.node import hex, wdirid
 
 import os
 import time
@@ -70,46 +68,28 @@ def extsetup(ui):
         "use (c)hanged version, leave (d)eleted, or leave (u)nresolved?"
         "$$ &Changed $$ &Deleted $$ &Unresolved")
 
-    origpromptmerge = filemerge.internals[':prompt']
-    wrapperpromptmerge = partial(_promptmerge, origpromptmerge)
-    update_wrapper(wrapperpromptmerge, origpromptmerge)
-    # wrap function everywhere as in filemerge.internaltool
-    filemerge.internals[':prompt'] = wrapperpromptmerge
-    filemerge.internalsdoc[':prompt'] = wrapperpromptmerge
-    filemerge.internals['internal:prompt'] = wrapperpromptmerge
+    extensions.wrapfunction(filemerge, '_filemerge', _filemerge)
     extensions.wrapfunction(copiesmod, 'mergecopies', _mergecopies)
+
+def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
+               labels=None, *args, **kwargs):
+    if premerge:
+        if orig != fco.path():
+            # copytracing was in action, let's record it
+            if not repo.ui.configbool("experimental", "disablecopytrace"):
+                msg = "success"
+            else:
+                msg = "success (fastcopytracing)"
+            repo.ui.log("copytrace", msg=msg,
+                        reponame=_getreponame(repo, repo.ui))
+    return origfunc(premerge, repo, mynode, orig, fcd, fco, fca, labels,
+                *args, **kwargs)
 
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     if "--tracecopies" in fullargs:
         ui.setconfig("experimental", "disablecopytrace",
                      False, "--tracecopies")
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
-
-def _promptmerge(origfunc, repo, mynode, orig, fcd, fco, *args, **kwargs):
-    ui = repo.ui
-    try:
-        ctx1 = _getctxfromfctx(fco)
-        ctx2 = _getctxfromfctx(fcd)
-        msg = [(ctx1.phase(), _gethex(ctx1)), (ctx2.phase(), _gethex(ctx2))]
-
-        if fco.isabsent() or fcd.isabsent():
-            ui.log("promptmerge", "", mergechangeddeleted=('%s' % msg),
-                   reponame=_getreponame(repo, ui))
-    except Exception as e:
-        # since it's just a logging we don't want a error in this code to break
-        # clients
-        ui.log("promptmerge", "", failed='%s' % e)
-    return origfunc(repo, mynode, orig, fcd, fco, *args, **kwargs)
-
-def _getctxfromfctx(fctx):
-    if fctx.isabsent():
-        return fctx._ctx
-    else:
-        return fctx._changectx
-
-def _gethex(ctx):
-    # for workingctx return p1 hex
-    return ctx.hex() if ctx.hex() != hex(wdirid) else ctx.p1().hex()
 
 def _mergecopies(orig, repo, cdst, csrc, base):
     start = time.time()
@@ -252,9 +232,9 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                         # of upstream copytracing
                         copies[candidate] = f
                 if len(movecandidates) > maxmovecandidatestocheck:
-                    repo.ui.log("copytrace", "",
-                                reponame=_getreponame(repo, repo.ui),
-                                toomanymovescandidates=len(movecandidates))
+                    msg = "too many moves candidates: %d" % len(movecandidates)
+                    repo.ui.log("copytrace", msg=msg,
+                                reponame=_getreponame(repo, repo.ui))
 
     return copies, {}, {}, {}, {}
 
