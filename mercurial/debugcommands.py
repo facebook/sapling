@@ -314,7 +314,10 @@ def _debugbundle2(ui, gen, all=None, **opts):
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_('not a bundle2 file'))
     ui.write(('Stream params: %s\n' % repr(gen.params)))
+    parttypes = opts.get('part_type', [])
     for part in gen.iterparts():
+        if parttypes and part.type not in parttypes:
+            continue
         ui.write('%s -- %r\n' % (part.type, repr(part.params)))
         if part.type == 'changegroup':
             version = part.params.get('version', '01')
@@ -325,6 +328,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
 
 @command('debugbundle',
         [('a', 'all', None, _('show all details')),
+         ('', 'part-type', [], _('show only the named part type')),
          ('', 'spec', None, _('print the bundlespec of the bundle'))],
         _('FILE'),
         norepo=True)

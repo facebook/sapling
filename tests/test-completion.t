@@ -247,7 +247,7 @@ Show all commands + options
   debugancestor: 
   debugapplystreamclonebundle: 
   debugbuilddag: mergeable-file, overwritten-file, new-file
-  debugbundle: all, spec
+  debugbundle: all, part-type, spec
   debugcheckstate: 
   debugcolor: style
   debugcommands: 

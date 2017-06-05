@@ -67,7 +67,7 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   >     cat "${markersfile}"
   >     printf "# bundling: "
   >     hg bundle --hidden --base "parents(roots(${revs}))" --rev "${revs}" "${bundlefile}"
-  >     hg debugbundle "${bundlefile}" | grep "obsmarkers --" -A 100 | sed 1,2d > "${contentfile}"
+  >     hg debugbundle --part-type obsmarkers "${bundlefile}" | sed 1,3d > "${contentfile}"
   >     echo '### Bundled markers ###'
   >     cat "${contentfile}"
   >     echo '### diff <relevant> <bundled> ###'
@@ -86,7 +86,7 @@ obsmarkers. It also check the obsmarkers backed up during strip.
   >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${prestripfile}"
   >         hg strip --hidden --rev "${revs}"
   >         hg debugobsolete --hidden | sort | sed 's/^/    /' > "${poststripfile}"
-  >         hg debugbundle .hg/strip-backup/* | grep "obsmarkers --" -A 100 | sed 1,2d > "${stripcontentfile}"
+  >         hg debugbundle --part-type obsmarkers .hg/strip-backup/* | sed 1,3d > "${stripcontentfile}"
   >         echo '### Backup markers ###'
   >         cat "${stripcontentfile}"
   >         echo '### diff <relevant> <backed-up> ###'
