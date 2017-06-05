@@ -443,8 +443,8 @@ def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
     public = phases.public
     getphase = unfi._phasecache.phase
     ispublic = (lambda r: getphase(unfi, r) == public)
-    hasoutmarker = functools.partial(pushingmarkerfor, unfi.obsstore,
-                                     futurecommon)
+    ispushed = (lambda n: n in futurecommon)
+    hasoutmarker = functools.partial(pushingmarkerfor, unfi.obsstore, ispushed)
     successorsmarkers = unfi.obsstore.successors
     newhs = set() # final set of new heads
     discarded = set() # new head of fully replaced branch
@@ -496,7 +496,7 @@ def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
     newhs |= unknownheads
     return newhs, discarded
 
-def pushingmarkerfor(obsstore, pushset, node):
+def pushingmarkerfor(obsstore, ispushed, node):
     """true if some markers are to be pushed for node
 
     We cannot just look in to the pushed obsmarkers from the pushop because
@@ -512,7 +512,7 @@ def pushingmarkerfor(obsstore, pushset, node):
     seen = set(stack)
     while stack:
         current = stack.pop()
-        if current in pushset:
+        if ispushed(current):
             return True
         markers = successorsmarkers.get(current, ())
         # markers fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
