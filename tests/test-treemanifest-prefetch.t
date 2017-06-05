@@ -277,3 +277,20 @@ Test prefetching certain revs during pull
   
   Node          Delta Base    Delta Length
   60a7f7acb6bb  000000000000  95
+
+- Test prefetching only the new tree parts for a commit who's parent tree is not
+- downloaded already. Note that subdir/z was not downloaded this time.
+  $ hg pull --config treemanifest.pullprefetchrevs='tip'
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+  prefetching trees
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
+  
+  dir
+  Node          Delta Base    Delta Length
+  bf22bc15398b  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  aa52a49be522  000000000000  95

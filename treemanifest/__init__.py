@@ -102,6 +102,10 @@ PACK_CATEGORY='manifests'
 TREEGROUP_PARTTYPE = 'b2x:treegroup'
 RECEIVEDNODE_RECORD = 'receivednodes'
 
+# When looking for a recent manifest to consider our base during tree
+# prefetches, this constant defines how far back we should search.
+BASENODESEARCHMAX = 25000
+
 def extsetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
                             _unpackmanifests)
@@ -734,6 +738,7 @@ def treeparthandler(op, part):
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
+    repo = repo.unfiltered()
 
     ctxs = []
     mfstore = repo.svfs.manifestdatastore
@@ -764,6 +769,21 @@ def pull(orig, ui, repo, *pats, **opts):
         basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
         missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
         basemfnodes.difference_update(n for k, n in missingbases)
+
+        # If we have no base nodes, scan the change log looking for a
+        # semi-recent manifest node to treat as the base.
+        if not basemfnodes:
+            cl = repo.changelog
+            phasecache = repo._phasecache
+            minrev = max(0, len(cl) - BASENODESEARCHMAX)
+            for rev in xrange(len(cl) - 1, minrev, -1):
+                if phasecache.phase(repo, rev) != phases.public:
+                    continue
+                mfnode = cl.changelogrevision(rev).manifest
+                missing = mfstore.getmissing([('', mfnode)])
+                if not missing:
+                    basemfnodes.add(mfnode)
+                    break
 
         _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
