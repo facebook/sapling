@@ -72,21 +72,18 @@ annotate (JSON)
   $ hg annotate -Tjson a
   [
    {
-    "line": "a\n",
-    "rev": 0
+    "abspath": "a",
+    "lines": [{"line": "a\n", "rev": 0}],
+    "path": "a"
    }
   ]
 
   $ hg annotate -Tjson -cdfnul a
   [
    {
-    "date": [1.0, 0],
-    "file": "a",
-    "line": "a\n",
-    "line_number": 1,
-    "node": "8435f90966e442695d2ded29fdade2bac5ad8065",
-    "rev": 0,
-    "user": "nobody"
+    "abspath": "a",
+    "lines": [{"date": [1.0, 0], "file": "a", "line": "a\n", "line_number": 1, "node": "8435f90966e442695d2ded29fdade2bac5ad8065", "rev": 0, "user": "nobody"}],
+    "path": "a"
    }
   ]
 
@@ -577,14 +574,9 @@ annotate modified file
   $ hg annotate -ncr "wdir()" -Tjson foo
   [
    {
-    "line": "foo\n",
-    "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd",
-    "rev": 11
-   },
-   {
-    "line": "foofoo\n",
-    "node": null,
-    "rev": null
+    "abspath": "foo",
+    "lines": [{"line": "foo\n", "node": "472b18db256d1e8282064eab4bfdaf48cbfe83cd", "rev": 11}, {"line": "foofoo\n", "node": null, "rev": null}],
+    "path": "foo"
    }
   ]
 
