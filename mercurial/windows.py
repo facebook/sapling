@@ -180,7 +180,6 @@ class winstdout(object):
         except IOError as inst:
             if inst.errno != errno.EINVAL:
                 raise
-            self.close()
             raise IOError(errno.EPIPE, 'Broken pipe')
 
 def _is_win_9x():
