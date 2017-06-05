@@ -731,7 +731,6 @@ def pull(orig, ui, repo, *pats, **opts):
     # prefetch if it's configured
     prefetchcount = ui.configint('treemanifest', 'pullprefetchcount', None)
     if prefetchcount:
-        ui.status(_("prefetching trees\n"))
 
         mfstore = repo.svfs.manifestdatastore
 
@@ -742,15 +741,18 @@ def pull(orig, ui, repo, *pats, **opts):
         missingnodes = mfstore.getmissing(('', n) for n in mfnodes)
         mfnodes = list(n for k, n in missingnodes)
 
-        # Calculate which parents we already have
-        ctxnodes = list(ctx.node() for ctx in ctxs)
-        parentctxs = repo.set('parents(%ln) - %ln',
-                              ctxnodes, ctxnodes)
-        basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
-        missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
-        basemfnodes.difference_update(n for k, n in missingbases)
+        if mfnodes:
+            ui.status(_("prefetching trees\n"))
+            # Calculate which parents we already have
+            ctxnodes = list(ctx.node() for ctx in ctxs)
+            parentctxs = repo.set('parents(%ln) - %ln',
+                                  ctxnodes, ctxnodes)
+            basemfnodes = set(ctx.manifestnode() for ctx in parentctxs)
+            missingbases = list(mfstore.getmissing(('', n) for n
+                                                   in basemfnodes))
+            basemfnodes.difference_update(n for k, n in missingbases)
 
-        _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
+            _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
     return result
 
