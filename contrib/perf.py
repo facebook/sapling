@@ -1309,8 +1309,10 @@ def perfvolatilesets(ui, repo, *names, **opts):
 @command('perfbranchmap',
          [('f', 'full', False,
            'Includes build time of subset'),
+          ('', 'clear-revbranch', False,
+           'purge the revbranch cache between computation'),
          ] + formatteropts)
-def perfbranchmap(ui, repo, full=False, **opts):
+def perfbranchmap(ui, repo, full=False, clear_revbranch=False, **opts):
     """benchmark the update of a branchmap
 
     This benchmarks the full repo.branchmap() call with read and write disabled
@@ -1323,6 +1325,8 @@ def perfbranchmap(ui, repo, full=False, **opts):
         else:
             view = repo.filtered(filtername)
         def d():
+            if clear_revbranch:
+                repo.revbranchcache()._clear()
             if full:
                 view._branchcaches.clear()
             else:
