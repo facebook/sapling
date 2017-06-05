@@ -1020,12 +1020,12 @@ Prepare a repo with subrepo
   $ hg cat sub/repo/foo
   test
   test
-  $ hg cat sub/repo/foo -Tjson
+  $ hg cat sub/repo/foo -Tjson | sed 's|\\\\|/|g'
   [
    {
     "abspath": "foo",
     "data": "test\ntest\n",
-    "path": "sub/repo/foo" (glob)
+    "path": "sub/repo/foo"
    }
   ]
   $ mkdir -p tmp/sub/repo

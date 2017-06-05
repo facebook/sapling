@@ -45,7 +45,7 @@ confused with a file with the exec bit set
 #endif
 
   $ hg add b dir1 d e
-  adding dir1/c
+  adding dir1/c (glob)
   $ hg commit -m test2
 
   $ cat >> $TESTTMP/dirstaterace.py << EOF
