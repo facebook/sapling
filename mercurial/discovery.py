@@ -250,8 +250,9 @@ def _headssummary(pushop):
     if repo.obsstore:
         allmissing = set(outgoing.missing)
         cctx = repo.set('%ld', outgoing.common)
-        allfuturecommon = set(c.node() for c in cctx)
-        allfuturecommon.update(allmissing)
+        allfuturecommon = set(c.rev() for c in cctx)
+        torev = repo.changelog.rev
+        allfuturecommon.update(torev(m) for m in allmissing)
         for branch, heads in sorted(headssum.iteritems()):
             remoteheads, newheads, unsyncedheads, placeholder = heads
             result = _postprocessobsolete(pushop, allfuturecommon, newheads)
@@ -443,7 +444,7 @@ def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
     public = phases.public
     getphase = unfi._phasecache.phase
     ispublic = (lambda r: getphase(unfi, r) == public)
-    ispushed = (lambda n: n in futurecommon)
+    ispushed = (lambda n: torev(n) in futurecommon)
     hasoutmarker = functools.partial(pushingmarkerfor, unfi.obsstore, ispushed)
     successorsmarkers = unfi.obsstore.successors
     newhs = set() # final set of new heads
@@ -469,7 +470,7 @@ def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
     while localcandidate:
         nh = localcandidate.pop()
         # run this check early to skip the evaluation of the whole branch
-        if (nh in futurecommon or ispublic(torev(nh))):
+        if (torev(nh) in futurecommon or ispublic(torev(nh))):
             newhs.add(nh)
             continue
 
@@ -484,7 +485,7 @@ def _postprocessobsolete(pushop, futurecommon, candidate_newhs):
         # * any part of it is considered part of the result by previous logic,
         # * if we have no markers to push to obsolete it.
         if (any(ispublic(r) for r in branchrevs)
-                or any(n in futurecommon for n in branchnodes)
+                or any(torev(n) in futurecommon for n in branchnodes)
                 or any(not hasoutmarker(n) for n in branchnodes)):
             newhs.add(nh)
         else:
