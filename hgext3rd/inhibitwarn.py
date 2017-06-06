@@ -54,8 +54,11 @@ def reposetup(ui, repo):
     if bypass:
         return
     cutoffdate = repo.ui.config('inhibit', 'cutoff') or '2015-05-18'
-    cutofftime = int(datetime.datetime.strptime(cutoffdate,
-                    '%Y-%m-%d').strftime("%s"))
+    # stftime('%s') is not actually supported by Python and does not
+    # work on Windows
+    delta = datetime.datetime.strptime(cutoffdate, '%Y-%m-%d') -\
+            datetime.datetime(1970, 1, 1)
+    cutofftime = int(delta.total_seconds())
     if repo.local():
         for marker in repo.obsstore._all:
             timestamp = marker[4][0]
