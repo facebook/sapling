@@ -263,6 +263,8 @@ def getparser():
         help="keep temporary directory after running tests")
     parser.add_option("-k", "--keywords",
         help="run tests matching keywords")
+    parser.add_option("--list-tests", action="store_true",
+        help="list tests instead of running them")
     parser.add_option("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg, "
              "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
@@ -1907,6 +1909,25 @@ class TextTestRunner(unittest.TextTestRunner):
 
         self._runner = runner
 
+    def listtests(self, test):
+        result = TestResult(self._runner.options, self.stream,
+                            self.descriptions, 0)
+        test = sorted(test, key=lambda t: t.name)
+        for t in test:
+            print(t.name)
+            result.addSuccess(t)
+
+        if self._runner.options.xunit:
+            with open(self._runner.options.xunit, "wb") as xuf:
+                self._writexunit(result, xuf)
+
+        if self._runner.options.json:
+            jsonpath = os.path.join(self._runner._testdir, b'report.json')
+            with open(jsonpath, 'w') as fp:
+                self._writejson(result, fp)
+
+        return result
+
     def run(self, test):
         result = TestResult(self._runner.options, self.stream,
                             self.descriptions, self.verbosity)
@@ -2384,16 +2405,19 @@ class TestRunner(object):
                 verbosity = 2
             runner = TextTestRunner(self, verbosity=verbosity)
 
-            if self._installdir:
-                self._installhg()
-                self._checkhglib("Testing")
+            if self.options.list_tests:
+                result = runner.listtests(suite)
             else:
-                self._usecorrectpython()
-            if self.options.chg:
-                assert self._installdir
-                self._installchg()
+                if self._installdir:
+                    self._installhg()
+                    self._checkhglib("Testing")
+                else:
+                    self._usecorrectpython()
+                if self.options.chg:
+                    assert self._installdir
+                    self._installchg()
 
-            result = runner.run(suite)
+                result = runner.run(suite)
 
             if result.failures:
                 failed = True

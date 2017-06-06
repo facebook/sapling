@@ -224,6 +224,60 @@ test --xunit support
   test-failure-unicode.t * (glob)
   test-failure.t * (glob)
   test-success.t * (glob)
+
+  $ rt --list-tests
+  test-failure-unicode.t
+  test-failure.t
+  test-success.t
+
+  $ rt --list-tests --json
+  test-failure-unicode.t
+  test-failure.t
+  test-success.t
+  $ cat report.json
+  testreport ={
+      "test-failure-unicode.t": {
+          "result": "success"
+      },
+      "test-failure.t": {
+          "result": "success"
+      },
+      "test-success.t": {
+          "result": "success"
+      }
+  } (no-eol)
+
+  $ rt --list-tests --xunit=xunit.xml
+  test-failure-unicode.t
+  test-failure.t
+  test-success.t
+  $ cat xunit.xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <testsuite errors="0" failures="0" name="run-tests" skipped="0" tests="0">
+    <testcase name="test-failure-unicode.t"/>
+    <testcase name="test-failure.t"/>
+    <testcase name="test-success.t"/>
+  </testsuite>
+
+  $ rt --list-tests test-failure* --json --xunit=xunit.xml
+  test-failure-unicode.t
+  test-failure.t
+  $ cat report.json
+  testreport ={
+      "test-failure-unicode.t": {
+          "result": "success"
+      },
+      "test-failure.t": {
+          "result": "success"
+      }
+  } (no-eol)
+  $ cat xunit.xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <testsuite errors="0" failures="0" name="run-tests" skipped="0" tests="0">
+    <testcase name="test-failure-unicode.t"/>
+    <testcase name="test-failure.t"/>
+  </testsuite>
+
   $ rm test-failure-unicode.t
 
 test for --retest
