@@ -469,6 +469,17 @@ class buildhgexe(build_ext):
         return os.path.join(self.build_temp, dir, 'hg.exe')
 
 class hginstall(install):
+
+    user_options = install.user_options + [
+        ('old-and-unmanageable', None,
+         'noop, present for eggless setuptools compat'),
+        ('single-version-externally-managed', None,
+         'noop, present for eggless setuptools compat'),
+    ]
+
+    # Also helps setuptools not be sad while we refuse to create eggs.
+    single_version_externally_managed = True
+
     def get_sub_commands(self):
         # Screen out egg related commands to prevent egg generation.  But allow
         # mercurial.egg-info generation, since that is part of modern
