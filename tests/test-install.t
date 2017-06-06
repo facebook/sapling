@@ -173,3 +173,40 @@ path variables are expanded (~ is the same as $TESTTMP)
   Not tracked:
 
 #endif
+
+#if virtualenv
+
+Verify that Mercurial is installable with pip. Note that this MUST be
+the last test in this file, because we do some nasty things to the
+shell environment in order to make the virtualenv work reliably.
+
+  $ cd $TESTTMP
+Note: --no-site-packages is deprecated, but some places have an
+ancient virtualenv from their linux distro or similar and it's not yet
+the default for them.
+  $ unset PYTHONPATH
+  $ $PYTHON -m virtualenv --no-site-packages installenv >> pip.log
+Note: we use this weird path to run pip and hg to avoid platform differences,
+since it's bin on most platforms but Scripts on Windows.
+  $ ./installenv/*/pip install $TESTDIR/.. >> pip.log
+  $ ./installenv/*/hg debuginstall || cat pip.log
+  checking encoding (ascii)...
+  checking Python executable (*) (glob)
+  checking Python version (2.*) (glob)
+  checking Python lib (*)... (glob)
+  checking Python security support (*) (glob)
+    TLS 1.2 not supported by Python install; network connections lack modern security (?)
+    SNI not supported by Python install; may have connectivity issues with some servers (?)
+  checking Mercurial version (*) (glob)
+  checking Mercurial custom build (*) (glob)
+  checking module policy (*) (glob)
+  checking installed modules (*/mercurial)... (glob)
+  checking registered compression engines (*) (glob)
+  checking available compression engines (*) (glob)
+  checking available compression engines for wire protocol (*) (glob)
+  checking templates ($TESTTMP/installenv/*/site-packages/mercurial/templates)... (glob)
+  checking default template ($TESTTMP/installenv/*/site-packages/mercurial/templates/map-cmdline.default) (glob)
+  checking commit editor... (*) (glob)
+  checking username (test)
+  no problems detected
+#endif
