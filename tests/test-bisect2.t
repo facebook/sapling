@@ -244,6 +244,7 @@ hg up -C
 
   $ hg up -C
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "d42e18c7bc9b: 18"
   3 other heads for branch "default"
 
 complex bisect test 1  # first bad rev is 9

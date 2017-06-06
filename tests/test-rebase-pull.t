@@ -347,6 +347,7 @@ pull --rebase update (no rebase) use proper update:
   added 1 changesets with 1 changes to 1 files (+1 heads)
   nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "65bc164c1d9b: R6"
   1 other heads for branch "default"
   $ hg tglog
   @  9: 'R6'

@@ -391,6 +391,9 @@ def _statusotherbranchheads(ui, repo):
                 ui.warn(_('(committing will reopen branch "%s")\n') %
                           (currentbranch))
         elif otherheads:
+            curhead = repo['.']
+            ui.status(_('updated to "%s: %s"\n') % (curhead,
+                                    curhead.description().split('\n')[0]))
             ui.status(_('%i other heads for branch "%s"\n') %
                       (len(otherheads), currentbranch))
 

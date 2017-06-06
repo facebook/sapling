@@ -680,6 +680,7 @@ update
   $ cd ../t
   $ hg up -C # discard our earlier merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "c373c8102e68: 12"
   2 other heads for branch "default"
   $ echo blah > t/t
   $ hg ci -m13
@@ -694,6 +695,7 @@ KeyError
 
   $ hg up -C # discard changes
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "925c17564ef8: 13"
   2 other heads for branch "default"
 
 pull
@@ -736,6 +738,7 @@ should pull t
   adding file changes
   added 1 changesets with 1 changes to 1 files
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "925c17564ef8: 13"
   2 other heads for branch "default"
   $ cat t/t
   blah
@@ -1212,6 +1215,7 @@ Check hg update --clean
   ? s/c
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "925c17564ef8: 13"
   2 other heads for branch "default"
   $ hg status -S
   ? s/b

@@ -419,6 +419,7 @@ transplant -c shouldn't use an old changeset
 
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "e8643552fde5: foobar"
   1 other heads for branch "default"
   $ rm added
   $ hg transplant --continue

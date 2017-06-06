@@ -287,6 +287,7 @@ after strip of merge parent
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "264128213d29: c"
   1 other heads for branch "default"
   $ hg log -G
   @  changeset:   4:264128213d29

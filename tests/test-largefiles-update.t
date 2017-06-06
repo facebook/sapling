@@ -71,6 +71,7 @@ we don't have to hash them again next time we update.
 
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "f74e50bd9e55: #2"
   1 other heads for branch "default"
   $ hg debugdirstate --large --nodate
   n 644          7 set                 large1
@@ -86,6 +87,7 @@ prevents unnecessary hashing of content - also after linear/noop update
   n 644         13 set                 large2
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "f74e50bd9e55: #2"
   1 other heads for branch "default"
   $ hg debugdirstate --large --nodate
   n 644          7 set                 large1
@@ -471,6 +473,7 @@ Test that the internal linear merging works correctly
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
   take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  updated to "d65e59e952a9: #5"
   1 other heads for branch "default"
 
   $ hg status -A large1
@@ -505,6 +508,7 @@ Test that the internal linear merging works correctly
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
   take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  updated to "d65e59e952a9: #5"
   1 other heads for branch "default"
 
   $ hg status -A large1

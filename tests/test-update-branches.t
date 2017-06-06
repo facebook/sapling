@@ -94,6 +94,7 @@ Cases are run as shown in that table, row by row.
 
   $ norevtest 'none clean same'   clean 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "bd10386d478c: 2"
   1 other heads for branch "default"
   parent=2
 
@@ -141,6 +142,7 @@ Cases are run as shown in that table, row by row.
 
   $ norevtest 'none dirty cross'  dirty 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "bd10386d478c: 2"
   1 other heads for branch "default"
   parent=2
   M foo
@@ -177,6 +179,7 @@ Cases are run as shown in that table, row by row.
 
   $ norevtest '-c clean same'   clean 2 -c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "bd10386d478c: 2"
   1 other heads for branch "default"
   parent=2
 

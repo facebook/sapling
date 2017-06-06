@@ -172,6 +172,7 @@ create a second head
   
   $ hg --debug up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "1e71731e6fbb: 2"
   1 other heads for branch "default"
 
 test conflicting untracked files

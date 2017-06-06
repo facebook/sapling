@@ -137,6 +137,7 @@ extension and python hooks - use the eol extension for a pythonhook
   $ hg update
   hooked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "d02f48003e62: c"
   1 other heads for branch "default"
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update

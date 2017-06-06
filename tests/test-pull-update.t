@@ -41,6 +41,7 @@ Should not update to the other topological branch:
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "800c91d5bfc1: m"
   1 other heads for branch "default"
 
   $ cd ../tt
@@ -55,6 +56,7 @@ Should not update to the other branch:
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to "107cefe13e42: m"
   1 other heads for branch "default"
 
   $ HGMERGE=true hg merge
