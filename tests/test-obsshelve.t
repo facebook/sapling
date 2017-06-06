@@ -1561,5 +1561,11 @@ Unshelving a stripped commit aborts with an explanatory message
   unshelving change 'default'
   abort: shelved node 3fbe6fbb0bef4b761af46e9a7456f02877469fa0 not found in repo
   [255]
+
+Enabling both shelve and obsshelve should not be allowed
+  $ hg --config extensions.obsshelve= --config extensions.shelve= log -r .
+  extension 'shelve' overrides commands: unshelve shelve
+  abort: shelve must be disabled when obsshelve is enabled
+  [255]
   $ cd ..
 

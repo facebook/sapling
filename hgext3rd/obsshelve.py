@@ -37,6 +37,7 @@ from mercurial import (
     cmdutil,
     error,
     exchange,
+    extensions,
     hg,
     lock as lockmod,
     mdiff,
@@ -1154,3 +1155,9 @@ def extsetup(ui):
          _("use 'hg unshelve --continue' or 'hg unshelve --abort'")])
     cmdutil.afterresolvedstates.append(
         [shelvedstate._filename, _('hg unshelve --continue')])
+
+def reposetup(ui, repo):
+    order = extensions._order
+    if 'shelve' in order:
+        raise error.Abort("shelve must be disabled when obsshelve is enabled")
+
