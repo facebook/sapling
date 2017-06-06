@@ -559,6 +559,8 @@ def email(ui, repo, *revs, **opts):
     if outgoing and bundle:
         raise error.Abort(_("--outgoing mode always on with --bundle;"
                            " do not re-specify --outgoing"))
+    if rev and bookmark:
+        raise error.Abort(_("-r and -B are mutually exclusive"))
 
     if outgoing or bundle:
         if len(revs) > 1:
