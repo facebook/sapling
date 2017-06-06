@@ -2016,12 +2016,16 @@ class TextTestRunner(unittest.TextTestRunner):
         for tc in result.successes:
             t = doc.createElement('testcase')
             t.setAttribute('name', tc.name)
-            t.setAttribute('time', '%.3f' % timesd[tc.name])
+            tctime = timesd.get(tc.name)
+            if tctime is not None:
+                t.setAttribute('time', '%.3f' % tctime)
             s.appendChild(t)
         for tc, err in sorted(result.faildata.items()):
             t = doc.createElement('testcase')
             t.setAttribute('name', tc)
-            t.setAttribute('time', '%.3f' % timesd[tc])
+            tctime = timesd.get(tc)
+            if tctime is not None:
+                t.setAttribute('time', '%.3f' % tctime)
             # createCDATASection expects a unicode or it will
             # convert using default conversion rules, which will
             # fail if string isn't ASCII.
