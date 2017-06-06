@@ -161,7 +161,8 @@
   > EOF
   $ echo 'this should fail' > file
   $ hg commit -Aqm 'add file'
-  abort: cannot register multiple processors on flag '0x8'.
+  *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
+  abort: missing processor for flag '0x1'!
   [255]
 
   $ cd ..

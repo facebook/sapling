@@ -1625,9 +1625,35 @@ Make sure a broken uisetup doesn't globally break hg:
   > baduisetup = $PWD/baduisetup.py
   > EOF
 
-Broken: an extension that triggers the import of bdiff during uisetup
-can't be easily debugged:
+Even though the extension fails during uisetup, hg is still basically usable:
   $ hg version
-  abort: No module named bdiff!
-  (did you forget to compile extensions?)
-  [255]
+  *** failed to set up extension baduisetup: No module named bdiff
+  Mercurial Distributed SCM (version *) (glob)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-2017 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+  $ hg version --traceback
+  Traceback (most recent call last):
+    File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
+      uisetup(ui)
+    File "$TESTTMP/baduisetup.py", line 10, in uisetup
+      extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+    File "*/mercurial/extensions.py", line *, in wrapfunction (glob)
+      origfn = getattr(container, funcname)
+    File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
+      self._load()
+    File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
+      mod = _hgextimport(_import, head, globals, locals, None, level)
+    File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
+      return importfunc(name, globals, *args, **kwargs)
+  ImportError: No module named bdiff
+  *** failed to set up extension baduisetup: No module named bdiff
+  Mercurial Distributed SCM (version *) (glob)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-2017 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

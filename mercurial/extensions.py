@@ -167,17 +167,31 @@ def load(ui, name, path):
 def _runuisetup(name, ui):
     uisetup = getattr(_extensions[name], 'uisetup', None)
     if uisetup:
-        uisetup(ui)
+        try:
+            uisetup(ui)
+        except Exception as inst:
+            ui.traceback()
+            msg = _forbytes(inst)
+            ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
+            return False
+    return True
 
 def _runextsetup(name, ui):
     extsetup = getattr(_extensions[name], 'extsetup', None)
     if extsetup:
         try:
-            extsetup(ui)
-        except TypeError:
-            if inspect.getargspec(extsetup).args:
-                raise
-            extsetup() # old extsetup with no ui argument
+            try:
+                extsetup(ui)
+            except TypeError:
+                if inspect.getargspec(extsetup).args:
+                    raise
+                extsetup() # old extsetup with no ui argument
+        except Exception as inst:
+            ui.traceback()
+            msg = _forbytes(inst)
+            ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
+            return False
+    return True
 
 def loadall(ui, whitelist=None):
     result = ui.configitems("extensions")
@@ -203,11 +217,19 @@ def loadall(ui, whitelist=None):
                 ui.warn(_("*** (%s)\n") % inst.hint)
             ui.traceback()
 
+    broken = set()
     for name in _order[newindex:]:
-        _runuisetup(name, ui)
+        if not _runuisetup(name, ui):
+            broken.add(name)
 
     for name in _order[newindex:]:
-        _runextsetup(name, ui)
+        if name in broken:
+            continue
+        if not _runextsetup(name, ui):
+            broken.add(name)
+
+    for name in broken:
+        _extensions[name] = None
 
     # Call aftercallbacks that were never met.
     for shortname in _aftercallbacks:
