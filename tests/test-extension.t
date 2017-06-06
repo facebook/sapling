@@ -1606,3 +1606,28 @@ Show deprecation warning for the use of cmdutil.command
   $ hg --config extensions.nonregistrar=`pwd`/nonregistrar.py version > /dev/null
   devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
   (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
+
+Make sure a broken uisetup doesn't globally break hg:
+  $ cat > baduisetup.py <<EOF
+  > from mercurial import (
+  >     bdiff,
+  >     extensions,
+  > )
+  > 
+  > def blockswrapper(orig, *args, **kwargs):
+  >     return orig(*args, **kwargs)
+  > 
+  > def uisetup(ui):
+  >     extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > baduisetup = $PWD/baduisetup.py
+  > EOF
+
+Broken: an extension that triggers the import of bdiff during uisetup
+can't be easily debugged:
+  $ hg version
+  abort: No module named bdiff!
+  (did you forget to compile extensions?)
+  [255]
