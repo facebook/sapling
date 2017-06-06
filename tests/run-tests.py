@@ -1938,36 +1938,7 @@ class TextTestRunner(unittest.TextTestRunner):
             if self._runner.options.json:
                 jsonpath = os.path.join(self._runner._testdir, b'report.json')
                 with open(jsonpath, 'w') as fp:
-                    timesd = {}
-                    for tdata in result.times:
-                        test = tdata[0]
-                        timesd[test] = tdata[1:]
-
-                    outcome = {}
-                    groups = [('success', ((tc, None)
-                               for tc in result.successes)),
-                              ('failure', result.failures),
-                              ('skip', result.skipped)]
-                    for res, testcases in groups:
-                        for tc, __ in testcases:
-                            if tc.name in timesd:
-                                diff = result.faildata.get(tc.name, b'')
-                                tres = {'result': res,
-                                        'time': ('%0.3f' % timesd[tc.name][2]),
-                                        'cuser': ('%0.3f' % timesd[tc.name][0]),
-                                        'csys': ('%0.3f' % timesd[tc.name][1]),
-                                        'start': ('%0.3f' % timesd[tc.name][3]),
-                                        'end': ('%0.3f' % timesd[tc.name][4]),
-                                        'diff': diff.decode('unicode_escape'),
-                                        }
-                            else:
-                                # blacklisted test
-                                tres = {'result': res}
-
-                            outcome[tc.name] = tres
-                    jsonout = json.dumps(outcome, sort_keys=True, indent=4,
-                                         separators=(',', ': '))
-                    fp.writelines(("testreport =", jsonout))
+                    self._writejson(result, fp)
 
             self._runner._checkhglib('Tested')
 
@@ -2059,6 +2030,39 @@ class TextTestRunner(unittest.TextTestRunner):
             t.appendChild(cd)
             s.appendChild(t)
         outf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
+
+    @staticmethod
+    def _writejson(result, outf):
+        timesd = {}
+        for tdata in result.times:
+            test = tdata[0]
+            timesd[test] = tdata[1:]
+
+        outcome = {}
+        groups = [('success', ((tc, None)
+                   for tc in result.successes)),
+                  ('failure', result.failures),
+                  ('skip', result.skipped)]
+        for res, testcases in groups:
+            for tc, __ in testcases:
+                if tc.name in timesd:
+                    diff = result.faildata.get(tc.name, b'')
+                    tres = {'result': res,
+                            'time': ('%0.3f' % timesd[tc.name][2]),
+                            'cuser': ('%0.3f' % timesd[tc.name][0]),
+                            'csys': ('%0.3f' % timesd[tc.name][1]),
+                            'start': ('%0.3f' % timesd[tc.name][3]),
+                            'end': ('%0.3f' % timesd[tc.name][4]),
+                            'diff': diff.decode('unicode_escape'),
+                            }
+                else:
+                    # blacklisted test
+                    tres = {'result': res}
+
+                outcome[tc.name] = tres
+        jsonout = json.dumps(outcome, sort_keys=True, indent=4,
+                             separators=(',', ': '))
+        outf.writelines(("testreport =", jsonout))
 
 class TestRunner(object):
     """Holds context for executing tests.
