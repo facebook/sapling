@@ -1932,33 +1932,8 @@ class TextTestRunner(unittest.TextTestRunner):
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
             if self._runner.options.xunit:
-                with open(self._runner.options.xunit, 'wb') as xuf:
-                    timesd = dict((t[0], t[3]) for t in result.times)
-                    doc = minidom.Document()
-                    s = doc.createElement('testsuite')
-                    s.setAttribute('name', 'run-tests')
-                    s.setAttribute('tests', str(result.testsRun))
-                    s.setAttribute('errors', "0") # TODO
-                    s.setAttribute('failures', str(failed))
-                    s.setAttribute('skipped', str(skipped + ignored))
-                    doc.appendChild(s)
-                    for tc in result.successes:
-                        t = doc.createElement('testcase')
-                        t.setAttribute('name', tc.name)
-                        t.setAttribute('time', '%.3f' % timesd[tc.name])
-                        s.appendChild(t)
-                    for tc, err in sorted(result.faildata.items()):
-                        t = doc.createElement('testcase')
-                        t.setAttribute('name', tc)
-                        t.setAttribute('time', '%.3f' % timesd[tc])
-                        # createCDATASection expects a unicode or it will
-                        # convert using default conversion rules, which will
-                        # fail if string isn't ASCII.
-                        err = cdatasafe(err).decode('utf-8', 'replace')
-                        cd = doc.createCDATASection(err)
-                        t.appendChild(cd)
-                        s.appendChild(t)
-                    xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
+                with open(self._runner.options.xunit, "wb") as xuf:
+                    self._writexunit(result, xuf)
 
             if self._runner.options.json:
                 jsonpath = os.path.join(self._runner._testdir, b'report.json')
@@ -2054,6 +2029,36 @@ class TextTestRunner(unittest.TextTestRunner):
             test = tdata[0]
             cuser, csys, real, start, end = tdata[1:6]
             self.stream.writeln(cols % (start, end, cuser, csys, real, test))
+
+    @staticmethod
+    def _writexunit(result, outf):
+        timesd = dict((t[0], t[3]) for t in result.times)
+        doc = minidom.Document()
+        s = doc.createElement('testsuite')
+        s.setAttribute('name', 'run-tests')
+        s.setAttribute('tests', str(result.testsRun))
+        s.setAttribute('errors', "0") # TODO
+        s.setAttribute('failures', str(len(result.failures)))
+        s.setAttribute('skipped', str(len(result.skipped) +
+                                      len(result.ignored)))
+        doc.appendChild(s)
+        for tc in result.successes:
+            t = doc.createElement('testcase')
+            t.setAttribute('name', tc.name)
+            t.setAttribute('time', '%.3f' % timesd[tc.name])
+            s.appendChild(t)
+        for tc, err in sorted(result.faildata.items()):
+            t = doc.createElement('testcase')
+            t.setAttribute('name', tc)
+            t.setAttribute('time', '%.3f' % timesd[tc])
+            # createCDATASection expects a unicode or it will
+            # convert using default conversion rules, which will
+            # fail if string isn't ASCII.
+            err = cdatasafe(err).decode('utf-8', 'replace')
+            cd = doc.createCDATASection(err)
+            t.appendChild(cd)
+            s.appendChild(t)
+        outf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 
 class TestRunner(object):
     """Holds context for executing tests.
