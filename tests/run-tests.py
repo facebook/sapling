@@ -2346,15 +2346,6 @@ class TestRunner(object):
             return self._gettest(desc, i)
 
         try:
-            if self._installdir:
-                self._installhg()
-                self._checkhglib("Testing")
-            else:
-                self._usecorrectpython()
-            if self.options.chg:
-                assert self._installdir
-                self._installchg()
-
             if self.options.restart:
                 orig = list(testdescs)
                 while testdescs:
@@ -2392,6 +2383,16 @@ class TestRunner(object):
             if self.options.verbose:
                 verbosity = 2
             runner = TextTestRunner(self, verbosity=verbosity)
+
+            if self._installdir:
+                self._installhg()
+                self._checkhglib("Testing")
+            else:
+                self._usecorrectpython()
+            if self.options.chg:
+                assert self._installdir
+                self._installchg()
+
             result = runner.run(suite)
 
             if result.failures:
