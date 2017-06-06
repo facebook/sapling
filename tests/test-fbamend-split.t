@@ -232,6 +232,10 @@ Split using revset.
   o  12 add a1 and a2
   |
   o  11 add a1 and a2
+  
+  o  10 add d1 and d2
+  |
+  o  0 add a1 and a2
 
 Test that command aborts when given multiple commits.
   $ hg split 11 12
@@ -265,6 +269,10 @@ Test --norebase flag.
   o  12 add a1 and a2
   |
   o  11 add a1 and a2
+  
+  o  10 add d1 and d2
+  |
+  o  0 add a1 and a2
   $ hg split --norebase << EOF
   > y
   > y
@@ -311,6 +319,10 @@ Test --norebase flag.
   o  12 add a1 and a2
   |
   o  11 add a1 and a2
+  
+  o  10 add d1 and d2
+  |
+  o  0 add a1 and a2
 
 Test that bookmarks are correctly moved.
   $ reset
