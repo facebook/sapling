@@ -159,6 +159,12 @@ make sure we can list remote bookmarks with --all
   alpha/stable                   2:95cb4ab9fe1d
   alpha/default                  1:7c3bad9141dc
 
+Verify missing node doesnt break remotenames
+
+  $ echo "18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo" >> .hg/remotenames
+  $ hg book --remote --config remotenames.resolvenodes=False
+     beta/babar                3:78f83396d79e
+
 make sure bogus revisions in .hg/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
   > .hg/remotenames

@@ -506,7 +506,7 @@ def reposetup(ui, repo):
             colorname='remotebookmark',
             listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
             namemap=lambda repo, name:
-                repo._remotenames.mark2nodes().get(name, None),
+                repo._remotenames.mark2nodes().get(name, []),
             nodemap=lambda repo, node:
                 repo._remotenames.node2marks().get(node, []))
         repo.names.addnamespace(remotebookmarkns)
@@ -522,7 +522,7 @@ def reposetup(ui, repo):
                 listnames = lambda repo:
                     repo._remotenames.hoist2nodes(hoist).keys(),
                 namemap = lambda repo, name:
-                    repo._remotenames.hoist2nodes(hoist).get(name, None),
+                    repo._remotenames.hoist2nodes(hoist).get(name, []),
                 nodemap = lambda repo, node:
                     repo._remotenames.node2hoists(hoist).get(node, []))
             repo.names.addnamespace(hoistednamens)
@@ -535,7 +535,7 @@ def reposetup(ui, repo):
             colorname='remotebranch',
             listnames = lambda repo: repo._remotenames.branch2nodes().keys(),
             namemap = lambda repo, name:
-                repo._remotenames.branch2nodes().get(name, None),
+                repo._remotenames.branch2nodes().get(name, []),
             nodemap = lambda repo, node:
                 repo._remotenames.node2branch().get(node, []))
         repo.names.addnamespace(remotebranchns)
@@ -1255,7 +1255,11 @@ def displayremotebookmarks(ui, repo, opts, fm):
     useformatted = repo.ui.formatted()
 
     for name in sorted(ns.listnames(repo)):
-        node = ns.nodes(repo, name)[0]
+        nodes = ns.nodes(repo, name)
+        if not nodes:
+            continue
+
+        node = nodes[0]
         ctx = repo[node]
         fm.startitem()
 
