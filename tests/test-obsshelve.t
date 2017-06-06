@@ -1564,8 +1564,36 @@ Unshelving a stripped commit aborts with an explanatory message
 
 Enabling both shelve and obsshelve should not be allowed
   $ hg --config extensions.obsshelve= --config extensions.shelve= log -r .
-  extension 'shelve' overrides commands: unshelve shelve
+  extension 'shelve' overrides commands: * (glob)
   abort: shelve must be disabled when obsshelve is enabled
   [255]
+  $ cd ..
+
+Obsshelve knows how to unshelve traditional shelves
+  $ hg init tradshelves && cd tradshelves
+  $ echo root > root && hg ci -Am root
+  adding root
+  $ echo something >> root
+  $ hg diff
+  diff --git a/root b/root
+  --- a/root
+  +++ b/root
+  @@ -1,1 +1,2 @@
+   root
+  +something
+  $ hg shelve --config extensions.obsshelve=! --config extensions.shelve=
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls .hg/shelved/default.hg  # .hg extension indicates a traditional shelve
+  .hg/shelved/default.hg
+  $ hg unshelve --keep
+  unshelving change 'default'
+  $ hg diff
+  diff --git a/root b/root
+  --- a/root
+  +++ b/root
+  @@ -1,1 +1,2 @@
+   root
+  +something
   $ cd ..
 
