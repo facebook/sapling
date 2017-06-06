@@ -634,3 +634,12 @@ def has_zstd():
 @check("devfull", "/dev/full special file")
 def has_dev_full():
     return os.path.exists('/dev/full')
+
+@check("virtualenv", "Python virtualenv support")
+def has_virtualenv():
+    try:
+        import virtualenv
+        virtualenv.ACTIVATE_SH
+        return True
+    except ImportError:
+        return False
