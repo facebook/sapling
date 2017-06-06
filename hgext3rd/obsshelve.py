@@ -71,18 +71,6 @@ patchextension = 'patch'
 # generic user for all shelve operations
 shelveuser = 'shelve@localhost'
 
-def isobsshelve(repo, ui):
-    """Check whether obsolescense-based shelve is enabled"""
-    obsshelve = ui.configbool('experimental', 'obsshelve')
-    if not obsshelve:
-        return False
-    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
-        w = _('ignoring experimental.obsshelve because createmarkers option '
-              'is disabled')
-        ui.warn(w)
-        return False
-    return True
-
 class shelvedfile(object):
     """Helper for the file storing a single shelve
 
@@ -425,13 +413,9 @@ def _nothingtoshelvemessaging(ui, repo, pats, opts):
         ui.status(_("nothing changed\n"))
 
 def _shelvecreatedcommit(ui, repo, node, name, tr):
-    if isobsshelve(repo, ui):
-        shelvedfile(repo, name, 'oshelve').writeobsshelveinfo({
-            'node': nodemod.hex(node)
-        })
-    else:
-        bases = list(mutableancestors(repo[node]))
-        shelvedfile(repo, name, 'hg').writebundle(bases, node)
+    shelvedfile(repo, name, 'oshelve').writeobsshelveinfo({
+        'node': nodemod.hex(node)
+    })
     cmdutil.export(repo.unfiltered(), [node],
                    fp=shelvedfile(repo, name, patchextension).opener('wb'),
                    opts=mdiff.diffopts(git=True))
@@ -446,12 +430,9 @@ def _includeunknownfiles(repo, pats, opts, extra):
 def _finishshelve(ui, repo, tr, node, activebookmark):
     if activebookmark:
         bookmarks.activate(repo, activebookmark)
-    if isobsshelve(repo, ui):
-        obsolete.createmarkers(repo, [(repo.unfiltered()[node], ())])
-        tr.close()
-        tr.release()
-    else:
-        _aborttransaction(repo)
+    obsolete.createmarkers(repo, [(repo.unfiltered()[node], ())])
+    tr.close()
+    tr.release()
 
 def _docreatecmd(ui, repo, pats, opts):
     wctx = repo[None]
@@ -477,7 +458,7 @@ def _docreatecmd(ui, repo, pats, opts):
         # obsolescense-based, we either abort or commit this
         # transaction in the end. If we abort it, we don't
         # want to print anything to stderr
-        report = None if isobsshelve(repo, ui) else (lambda x: None)
+        report = None
         tr = repo.transaction('commit', report=report)
 
         interactive = opts.get('interactive', False)
@@ -1002,9 +983,9 @@ def _dounshelve(ui, repo, *shelved, **opts):
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
     lock = tr = None
-    obsshelve = isobsshelve(repo, ui)
+    obsshelve = True
     obsshelvedfile = shelvedfile(repo, basename, 'oshelve')
-    if obsshelve and not obsshelvedfile.exists():
+    if not obsshelvedfile.exists():
         # although we can unshelve a obs-based shelve technically,
         # this particular shelve was created using a traditional way
         obsshelve = False
