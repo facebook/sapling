@@ -398,8 +398,13 @@ fixed in 86c35b7ae300:
   > unrandomsample = $TESTTMP/unrandomsample.py
   > EOF
 
-  $ hg -R r1 outgoing r2 -T'{rev} '
+  $ hg -R r1 outgoing r2 -T'{rev} ' --config extensions.blackbox=
   comparing with r2
   searching for changes
   101 102 103 104 105 106 107 108 109 110  (no-eol)
+  $ hg -R r1 --config extensions.blackbox= blackbox
+  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> outgoing r2 '-T{rev} ' (glob)
+  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> found 101 common and 101 missing heads, 2 roundtrips in *.????s (glob)
+  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> -R r1 outgoing r2 '-T{rev} ' --config 'extensions.blackbox=' exited 0 after *.?? seconds (glob)
+  * @5d0b986a083e0d91f116de4691e2aaa54d5bbec0 (*)> blackbox (glob)
   $ cd ..
