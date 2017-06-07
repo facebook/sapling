@@ -83,7 +83,7 @@ Many new:
   taking initial sample
   searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: bebd167eb94d
   
   % -- b -> a tree
@@ -99,9 +99,8 @@ Many new:
   taking initial sample
   searching: 2 queries
   query 2; still undecided: 2, sample size is: 2
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: bebd167eb94d
-
 
 Both sides many new with stub:
 
@@ -122,7 +121,7 @@ Both sides many new with stub:
   taking initial sample
   searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
   
   % -- b -> a tree
@@ -138,7 +137,7 @@ Both sides many new with stub:
   taking initial sample
   searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
 
 
@@ -161,7 +160,7 @@ Both many new:
   taking quick initial sample
   searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
   % -- b -> a tree
@@ -177,7 +176,7 @@ Both many new:
   taking quick initial sample
   searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
 
 
@@ -200,7 +199,7 @@ Both many new skewed:
   taking quick initial sample
   searching: 2 queries
   query 2; still undecided: 51, sample size is: 51
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
   % -- b -> a tree
@@ -216,7 +215,7 @@ Both many new skewed:
   taking quick initial sample
   searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
-  2 total queries
+  2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
 
 
@@ -242,7 +241,7 @@ Both many new on top of long history:
   sampling from both directions
   searching: 3 queries
   query 3; still undecided: 31, sample size is: 31
-  3 total queries
+  3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
   
   % -- b -> a tree
@@ -261,7 +260,7 @@ Both many new on top of long history:
   sampling from both directions
   searching: 3 queries
   query 3; still undecided: 15, sample size is: 15
-  3 total queries
+  3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
 
 
@@ -324,7 +323,7 @@ One with >200 heads, which used to use up all of the sample:
   sampling from both directions
   searching: 6 queries
   query 6; still undecided: \d+, sample size is: \d+ (re)
-  6 total queries
+  6 total queries in *.????s (glob)
   common heads: 3ee37d65064a
 
 Test actual protocol when pulling one new head in addition to common heads

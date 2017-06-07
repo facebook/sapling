@@ -143,7 +143,7 @@ client only pulls down 1 changeset
   searching for changes
   taking quick initial sample
   query 2; still undecided: 2, sample size is: 2
-  2 total queries
+  2 total queries in *.????s (glob)
   1 changesets found
   list of changesets:
   bec0734cd68e84477ba7fc1d13e6cff53ab70129

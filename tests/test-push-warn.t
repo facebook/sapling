@@ -41,7 +41,7 @@ Specifying a revset that evaluates to null will abort
   searching for changes
   taking quick initial sample
   query 2; still undecided: 1, sample size is: 1
-  2 total queries
+  2 total queries in *.????s (glob)
   listing keys for "phases"
   checking for updated bookmarks
   listing keys for "bookmarks"
