@@ -181,6 +181,8 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                               copied=copied)
 
         meta.mapbranch(extra)
+        if 'branch' not in extra:
+            extra['branch'] = 'default'
         current_ctx = context.memctx(meta.repo,
                                      parents,
                                      meta.getmessage(rev),
