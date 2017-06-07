@@ -2024,6 +2024,7 @@ class TextTestRunner(unittest.TextTestRunner):
 
     @staticmethod
     def _writexunit(result, outf):
+        # See http://llg.cubic.org/docs/junit/ for a reference.
         timesd = dict((t[0], t[3]) for t in result.times)
         doc = minidom.Document()
         s = doc.createElement('testsuite')
@@ -2052,7 +2053,13 @@ class TextTestRunner(unittest.TextTestRunner):
             # fail if string isn't ASCII.
             err = cdatasafe(err).decode('utf-8', 'replace')
             cd = doc.createCDATASection(err)
-            t.appendChild(cd)
+            # Use 'failure' here instead of 'error' to match errors = 0,
+            # failures = len(result.failures) in the testsuite element.
+            failelem = doc.createElement('failure')
+            failelem.setAttribute('message', 'output changed')
+            failelem.setAttribute('type', 'output-mismatch')
+            failelem.appendChild(cd)
+            t.appendChild(failelem)
             s.appendChild(t)
         outf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 

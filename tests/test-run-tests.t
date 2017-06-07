@@ -200,14 +200,17 @@ test --xunit support
   <testsuite errors="0" failures="2" name="run-tests" skipped="0" tests="3">
     <testcase name="test-success.t" time="*"/> (glob)
     <testcase name="test-failure-unicode.t" time="*"> (glob)
+      <failure message="output changed" type="output-mismatch">
   <![CDATA[--- $TESTTMP/test-failure-unicode.t
   +++ $TESTTMP/test-failure-unicode.t.err
   @@ -1,2 +1,2 @@
      $ echo babar\xce\xb1 (esc)
   -  l\xce\xb5\xce\xb5t (esc)
   +  babar\xce\xb1 (esc)
-  ]]>  </testcase>
+  ]]>    </failure>
+    </testcase>
     <testcase name="test-failure.t" time="*"> (glob)
+      <failure message="output changed" type="output-mismatch">
   <![CDATA[--- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
   @@ -1,5 +1,5 @@
@@ -217,7 +220,8 @@ test --xunit support
    This is a noop statement so that
    this test is still more bytes than success.
    pad pad pad pad............................................................
-  ]]>  </testcase>
+  ]]>    </failure>
+    </testcase>
   </testsuite>
 
   $ cat .testtimes
