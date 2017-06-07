@@ -2061,6 +2061,17 @@ class TextTestRunner(unittest.TextTestRunner):
             failelem.appendChild(cd)
             t.appendChild(failelem)
             s.appendChild(t)
+        for tc, message in result.skipped:
+            # According to the schema, 'skipped' has no attributes. So store
+            # the skip message as a text node instead.
+            t = doc.createElement('testcase')
+            t.setAttribute('name', tc.name)
+            message = cdatasafe(message).decode('utf-8', 'replace')
+            cd = doc.createCDATASection(message)
+            skipelem = doc.createElement('skipped')
+            skipelem.appendChild(cd)
+            t.appendChild(skipelem)
+            s.appendChild(t)
         outf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 
     @staticmethod

@@ -676,6 +676,10 @@ Skips with xml
   <?xml version="1.0" encoding="utf-8"?>
   <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="2">
     <testcase name="test-success.t" time="*"/> (glob)
+    <testcase name="test-skip.t">
+      <skipped>
+  <![CDATA[missing feature: nail clipper]]>    </skipped>
+    </testcase>
   </testsuite>
 
 Missing skips or blacklisted skips don't count as executed:
