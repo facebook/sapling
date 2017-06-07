@@ -52,6 +52,7 @@ class bmstore(dict):
         self._repo = repo
         nm = repo.changelog.nodemap
         tonode = bin # force local lookup
+        setitem = dict.__setitem__
         try:
             bkfile = _getbkfile(repo)
             for line in bkfile:
@@ -63,7 +64,7 @@ class bmstore(dict):
                     node = tonode(sha)
                     if node in nm:
                         refspec = encoding.tolocal(refspec)
-                        self[refspec] = node
+                        setitem(self, refspec, node)
                 except (TypeError, ValueError):
                     # - bin(...) can raise TypeError
                     # - node in nm can raise ValueError for non-20-bytes entry
