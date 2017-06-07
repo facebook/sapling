@@ -31,6 +31,11 @@
     # Nodes that should not be backed up. Ancestors of these nodes won't be
     # backed up either
     dontbackupnodes = []
+
+    # Special option that may be used to trigger re-backuping. For example,
+    # if there was a bug in infinitepush backups, then changing the value of
+    # this option will force all clients to make a "clean" backup
+    backupgeneration = 0
 """
 
 from __future__ import absolute_import
@@ -332,6 +337,13 @@ def _dobackup(ui, repo, dest, **opts):
     maybesharedrepo = repo
     # to handle multiple working copies correctly
     repo = _getsrcrepo(repo)
+    currentbkpgenerationvalue = _readbackupgenerationfile(repo.vfs)
+    newbkpgenerationvalue = ui.configint('infinitepushbackup',
+                                         'backupgeneration', 0)
+    if currentbkpgenerationvalue != newbkpgenerationvalue:
+        # Unlinking local backup state will trigger re-backuping
+        _deletebackupstate(repo)
+        _writebackupgenerationfile(repo.vfs, newbkpgenerationvalue)
     bkpstate = _readlocalbackupstate(ui, repo)
 
     maxheadstobackup = ui.configint('infinitepushbackup',
@@ -440,6 +452,7 @@ def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
         return False
 
 _backupstatefile = 'infinitepushbackupstate'
+_backupgenerationfile = 'infinitepushbackupgeneration'
 
 # Common helper functions
 
@@ -672,6 +685,17 @@ def _readlocalbackupstate(ui, repo):
 def _writelocalbackupstate(vfs, heads, bookmarks):
     with vfs(_backupstatefile, 'w') as f:
         f.write(json.dumps({'heads': list(heads), 'bookmarks': bookmarks}))
+
+def _readbackupgenerationfile(vfs):
+    try:
+        with vfs(_backupgenerationfile) as f:
+            return int(f.read())
+    except (IOError, OSError, ValueError):
+        return 0
+
+def _writebackupgenerationfile(vfs, backupgenerationvalue):
+    with vfs(_backupgenerationfile, 'w', atomictemp=True) as f:
+        f.write(str(backupgenerationvalue))
 
 # Restore helper functions
 def _parsebackupbookmark(username, backupbookmark):

@@ -447,3 +447,30 @@ Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
   1 changesets pruned
   $ hg isbackedup -r 6c4f4b30ae4c2dd928d551836c70c741ee836650
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
+
+Test backupgeneration config option. If this config option value changes then
+new full backup should be made.
+  $ hg pushbackup
+  starting backup .* (re)
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg pushbackup --config infinitepushbackup.backupgeneration=1
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     cf2adfba1469  headone
+  finished in \d+\.(\d+)? seconds (re)
+
+Next backup with the same backup generation value should not trigger full backup
+  $ hg pushbackup --config infinitepushbackup.backupgeneration=1
+  starting backup .* (re)
+  nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
+  $ cat .hg/infinitepushbackupgeneration
+  1 (no-eol)
+
+Print garbage to infinitepushbackupgeneration file, make sure backup works fine
+  $ echo 'garbage' > .hg/infinitepushbackupgeneration
+  $ hg pushbackup
+  starting backup .* (re)
+  nothing to backup
+  finished in \d+\.(\d+)? seconds (re)
