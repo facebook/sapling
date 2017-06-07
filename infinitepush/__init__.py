@@ -703,7 +703,8 @@ def _readscratchremotebookmarks(ui, repo, other):
             if path == remotepath and _scratchbranchmatcher(bookname):
                 nodes = repo.names['remotebookmarks'].nodes(repo,
                                                             remotebookmark)
-                result[bookname] = hex(nodes[0])
+                if nodes:
+                    result[bookname] = hex(nodes[0])
         return result
     else:
         return {}
