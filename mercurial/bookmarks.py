@@ -50,6 +50,8 @@ class bmstore(dict):
     def __init__(self, repo):
         dict.__init__(self)
         self._repo = repo
+        self._clean = True
+        self._aclean = True
         nm = repo.changelog.nodemap
         tonode = bin # force local lookup
         setitem = dict.__setitem__
@@ -74,9 +76,7 @@ class bmstore(dict):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-        self._clean = True
         self._active = _readactive(repo, self)
-        self._aclean = True
 
     @property
     def active(self):
