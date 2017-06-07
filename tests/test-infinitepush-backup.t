@@ -474,3 +474,17 @@ Print garbage to infinitepushbackupgeneration file, make sure backup works fine
   starting backup .* (re)
   nothing to backup
   finished in \d+\.(\d+)? seconds (re)
+
+Test hostname option
+  $ rm .hg/infinitepushbackupstate
+  $ hg pushbackup --config infinitepushbackup.hostname=hostname
+  starting backup * (glob)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     cf2adfba1469  headone
+  finished in \d+\.(\d+)? seconds (re)
+  $ scratchbookmarks
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110 (re)
+  infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846 (re)
+  infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
+  infinitepush/backups/test/hostname$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846

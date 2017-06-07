@@ -36,6 +36,10 @@
     # if there was a bug in infinitepush backups, then changing the value of
     # this option will force all clients to make a "clean" backup
     backupgeneration = 0
+
+    # Hostname value to use. If not specified then socket.gethostname() will
+    # be used
+    hostname = ''
 """
 
 from __future__ import absolute_import
@@ -526,6 +530,10 @@ class BackupBookmarkNamingManager(object):
             username = util.shortuser(ui.username())
         self.username = username
 
+        self.hostname = self.ui.config('infinitepushbackup', 'hostname')
+        if not self.hostname:
+            self.hostname = socket.gethostname()
+
     def getcommonuserprefix(self):
         return '/'.join((self._getcommonuserprefix(), '*'))
 
@@ -555,10 +563,9 @@ class BackupBookmarkNamingManager(object):
         return '/'.join(('infinitepush', 'backups', self.username))
 
     def _getcommonprefix(self):
-        hostname = socket.gethostname()
         reporoot = self.repo.origroot
 
-        result = '/'.join((self._getcommonuserprefix(), hostname))
+        result = '/'.join((self._getcommonuserprefix(), self.hostname))
         if not reporoot.startswith('/'):
             result += '/'
         result += reporoot
