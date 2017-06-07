@@ -357,6 +357,14 @@ def repocleartagscachefunc(repo):
     # - perf.py itself has been available since 1.1 (or eb240755386d)
     raise error.Abort(("tags API of this hg command is unknown"))
 
+# utilities to clear cache
+
+def clearfilecache(repo, attrname):
+    unfi = repo.unfiltered()
+    if attrname in vars(unfi):
+        delattr(unfi, attrname)
+    unfi._filecache.pop(attrname, None)
+
 # perf commands
 
 @command('perfwalk', formatteropts)
@@ -1259,12 +1267,6 @@ def perfrevset(ui, repo, expr, clear=False, contexts=False, **opts):
     timer(d)
     fm.end()
 
-def _clearobsstore(repo):
-    unfi = repo.unfiltered()
-    if 'obsstore' in vars(unfi):
-        del unfi.obsstore
-        del unfi._filecache['obsstore']
-
 @command('perfvolatilesets',
          [('', 'clear-obsstore', False, 'drop obsstore between each call.'),
          ] + formatteropts)
@@ -1279,7 +1281,7 @@ def perfvolatilesets(ui, repo, *names, **opts):
         def d():
             repo.invalidatevolatilesets()
             if opts['clear_obsstore']:
-                _clearobsstore(repo)
+                clearfilecache(repo, 'obsstore')
             obsolete.getrevs(repo, name)
         return d
 
@@ -1294,7 +1296,7 @@ def perfvolatilesets(ui, repo, *names, **opts):
         def d():
             repo.invalidatevolatilesets()
             if opts['clear_obsstore']:
-                _clearobsstore(repo)
+                clearfilecache(repo, 'obsstore')
             repoview.filterrevs(repo, name)
         return d
 
