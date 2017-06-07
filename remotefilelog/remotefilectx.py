@@ -300,8 +300,13 @@ class remotefilectx(context.filectx):
     def ancestors(self, followfirst=False):
         ancestors = []
         queue = collections.deque((self,))
+        seen = set()
         while queue:
             current = queue.pop()
+            if current.filenode() in seen:
+                continue
+            seen.add(current.filenode())
+
             ancestors.append(current)
 
             parents = current.parents()
