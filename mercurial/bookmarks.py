@@ -50,6 +50,7 @@ class bmstore(dict):
     def __init__(self, repo):
         dict.__init__(self)
         self._repo = repo
+        lookup = repo.changelog.lookup
         try:
             bkfile = _getbkfile(repo)
             for line in bkfile:
@@ -63,7 +64,7 @@ class bmstore(dict):
                 sha, refspec = line.split(' ', 1)
                 refspec = encoding.tolocal(refspec)
                 try:
-                    self[refspec] = repo.changelog.lookup(sha)
+                    self[refspec] = lookup(sha)
                 except LookupError:
                     pass
         except IOError as inst:
