@@ -467,6 +467,16 @@ def perfancestorset(ui, repo, revset, **opts):
     timer(d)
     fm.end()
 
+@command('perfbookmarks', formatteropts)
+def perfbookmarks(ui, repo, **opts):
+    """benchmark parsing bookmarks from disk to memory"""
+    timer, fm = gettimer(ui, opts)
+    def d():
+        clearfilecache(repo, '_bookmarks')
+        repo._bookmarks
+    timer(d)
+    fm.end()
+
 @command('perfchangegroupchangelog', formatteropts +
          [('', 'version', '02', 'changegroup version'),
           ('r', 'rev', '', 'revisions to add to changegroup')])
