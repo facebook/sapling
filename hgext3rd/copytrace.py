@@ -196,7 +196,12 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         if src in mdst:
             copies[dst] = src
 
-    missingfiles = filter(lambda f: f not in mdst, changedfiles)
+    # file is missing if it isn't present in the destination, but is present in
+    # the base and present in the source.
+    # Presence in the base is important to exclude added files, presence in the
+    # source is important to exclude removed files.
+    missingfiles = filter(lambda f: f not in mdst and f in base and f in csrc,
+                          changedfiles)
     if missingfiles:
         # Use the following file name heuristic to find moves: moves are
         # usually either directory moves or renames of the files in the
@@ -220,21 +225,20 @@ def _domergecopies(orig, repo, cdst, csrc, base):
             samebasename = basenametofilename[basename]
             samedirname = dirnametofilename[dirname]
             movecandidates = samebasename + samedirname
-            # if file "f" is not present in csrc that means that it was deleted
-            # in cdst and csrc. Ignore "f" in that case
-            if f in csrc:
-                f2 = csrc.filectx(f)
-                for candidate in movecandidates[:maxmovecandidatestocheck]:
-                    f1 = cdst.filectx(candidate)
-                    if copiesmod._related(f1, f2, anc.rev()):
-                        # if there are a few related copies then we'll merge
-                        # changes into all of them. This matches the behaviour
-                        # of upstream copytracing
-                        copies[candidate] = f
-                if len(movecandidates) > maxmovecandidatestocheck:
-                    msg = "too many moves candidates: %d" % len(movecandidates)
-                    repo.ui.log("copytrace", msg=msg,
-                                reponame=_getreponame(repo, repo.ui))
+            # f is guaranteed to be present in csrc, that's why
+            # csrc.filectx(f) won't fail
+            f2 = csrc.filectx(f)
+            for candidate in movecandidates[:maxmovecandidatestocheck]:
+                f1 = cdst.filectx(candidate)
+                if copiesmod._related(f1, f2, anc.rev()):
+                    # if there are a few related copies then we'll merge
+                    # changes into all of them. This matches the behaviour
+                    # of upstream copytracing
+                    copies[candidate] = f
+            if len(movecandidates) > maxmovecandidatestocheck:
+                msg = "too many moves candidates: %d" % len(movecandidates)
+                repo.ui.log("copytrace", msg=msg,
+                            reponame=_getreponame(repo, repo.ui))
 
     return copies, {}, {}, {}, {}
 
