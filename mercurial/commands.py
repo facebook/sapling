@@ -2880,12 +2880,13 @@ def identify(ui, repo, source=None, rev=None,
                   ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
             if num:
                 output.append("%s%s" %
-                  ('+'.join([str(p.rev()) for p in parents]), changed))
+                  ('+'.join([pycompat.bytestr(p.rev()) for p in parents]),
+                                                                    changed))
         else:
             if default or id:
                 output = [hexfunc(ctx.node())]
             if num:
-                output.append(str(ctx.rev()))
+                output.append(pycompat.bytestr(ctx.rev()))
             taglist = ctx.tags()
 
         if default and not ui.quiet:
