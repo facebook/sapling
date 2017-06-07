@@ -58,12 +58,8 @@ class bmstore(dict):
                 line = line.strip()
                 if not line:
                     continue
-                if ' ' not in line:
-                    repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
-                                 % line)
-                    continue
-                sha, refspec = line.split(' ', 1)
                 try:
+                    sha, refspec = line.split(' ', 1)
                     node = tonode(sha)
                     if node in nm:
                         refspec = encoding.tolocal(refspec)
@@ -71,6 +67,7 @@ class bmstore(dict):
                 except (TypeError, ValueError):
                     # - bin(...) can raise TypeError
                     # - node in nm can raise ValueError for non-20-bytes entry
+                    # - split(...) can raise ValueError for string without ' '
                     repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
                                  % line)
         except IOError as inst:
