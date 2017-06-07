@@ -202,10 +202,9 @@ def restore(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = opts.get('user') or util.shortuser(ui.username())
-
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, username)
+                                           sourcehostname, namingmgr)
     if len(allbackupstates) == 0:
         ui.warn(_('no backups found!'))
         return 1
@@ -241,10 +240,10 @@ def getavailablebackups(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = opts.get('user') or ui.shortuser(ui.username())
 
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, username)
+                                           sourcehostname, namingmgr)
 
     if opts.get('json'):
         jsondict = defaultdict(list)
@@ -256,10 +255,10 @@ def getavailablebackups(ui, repo, dest=None, **opts):
         ui.write('%s\n' % json.dumps(jsondict))
     else:
         if not allbackupstates:
-            ui.write(_('no backups available for %s\n') % username)
+            ui.write(_('no backups available for %s\n') % namingmgr.username)
 
         ui.write(_('user %s has %d available backups:\n') %
-                 (username, len(allbackupstates)))
+                 (namingmgr.username, len(allbackupstates)))
 
         for hostname, reporoot in sorted(allbackupstates.keys()):
             ui.write(_('%s on %s\n') % (reporoot, hostname))
@@ -276,11 +275,11 @@ def checkbackup(ui, repo, dest=None, **opts):
 
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
-    username = opts.get('user') or util.shortuser(ui.username())
 
     other = _getremote(repo, ui, dest, **opts)
+    namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
     allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, username)
+                                           sourcehostname, namingmgr)
     if not opts.get('all'):
         _checkbackupstates(allbackupstates)
 
@@ -333,7 +332,6 @@ def isbackedup(ui, repo, **opts):
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
-    username = util.shortuser(ui.username())
     maybesharedrepo = repo
     # to handle multiple working copies correctly
     repo = _getsrcrepo(repo)
@@ -376,9 +374,10 @@ def _dobackup(ui, repo, dest, **opts):
     newbookmarks = _dictdiff(afterbackuplocalbooks, bkpstate.localbookmarks)
     removedbookmarks = _dictdiff(bkpstate.localbookmarks, afterbackuplocalbooks)
 
+    namingmgr = BackupBookmarkNamingManager(ui, repo)
     bookmarkstobackup = _getbookmarkstobackup(
-        username, repo, newbookmarks, removedbookmarks,
-        newheads, removedheads)
+        repo, newbookmarks, removedbookmarks,
+        newheads, removedheads, namingmgr)
 
     if maybesharedrepo.origroot != repo.origroot:
         if (ui.config('infinitepushbackup', 'tempcleanworkingcopiesbackups') and
@@ -387,16 +386,17 @@ def _dobackup(ui, repo, dest, **opts):
             # made multiple backups for the same repo if pushbackup was called
             # from different working copies. Let's delete bookmarks for the
             # same working copy
-            bookmarkprefixtodelete = '/'.join(
-                (_getcommonprefix(username, maybesharedrepo.origroot), '*'))
+            sharedreponamingmgr = BackupBookmarkNamingManager(
+                ui, maybesharedrepo)
+            bookmarkprefixtodelete = sharedreponamingmgr.getcommonprefix()
             bookmarkstobackup[bookmarkprefixtodelete] = ''
             _deletebackupstate(maybesharedrepo)
 
     # Special case if backup state is empty. Clean all backup bookmarks from the
     # server.
     if bkpstate.empty():
-        bookmarkstobackup[_getbackupheadprefix(username, repo) + '/*'] = ''
-        bookmarkstobackup[_getbackupbookmarkprefix(username, repo) + '/*'] = ''
+        bookmarkstobackup[namingmgr.getbackupheadprefix()] = ''
+        bookmarkstobackup[namingmgr.getbackupbookmarkprefix()] = ''
 
     # Wrap deltaparent function to make sure that bundle takes less space
     # See _deltaparent comments for details
@@ -479,12 +479,12 @@ def _filterbookmarks(localbookmarks, repo, headstobackup):
             filteredbooks[bookmark] = hexnode
     return filteredbooks
 
-def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, username):
-    pattern = _getcommonuserprefix(username) + '/*'
+def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
+    pattern = namingmgr.getcommonuserprefix()
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
     allbackupstates = defaultdict(backupstate)
     for book, hexnode in fetchedbookmarks.iteritems():
-        parsed = _parsebackupbookmark(username, book)
+        parsed = _parsebackupbookmark(book, namingmgr)
         if parsed:
             if sourcereporoot and sourcereporoot != parsed.reporoot:
                 continue
@@ -518,22 +518,53 @@ def _checkbackupstates(allbackupstates):
             _('ambiguous repo root to restore: %s') % sorted(reporoots),
             hint=_('set --reporoot to disambiguate'))
 
-def _getcommonuserprefix(username):
-    return '/'.join(('infinitepush', 'backups', username))
+class BackupBookmarkNamingManager(object):
+    def __init__(self, ui, repo, username=None):
+        self.ui = ui
+        self.repo = repo
+        if not username:
+            username = util.shortuser(ui.username())
+        self.username = username
 
-def _getcommonprefix(username, reporoot):
-    hostname = socket.gethostname()
+    def getcommonuserprefix(self):
+        return '/'.join((self._getcommonuserprefix(), '*'))
 
-    result = '/'.join((_getcommonuserprefix(username), hostname))
-    if not reporoot.startswith('/'):
-        result += '/'
-    result += reporoot
-    if result.endswith('/'):
-        result = result[:-1]
-    return result
+    def getcommonprefix(self):
+        return '/'.join((self._getcommonprefix(), '*'))
 
-def _getbackupbookmarkprefix(username, repo):
-    return '/'.join((_getcommonprefix(username, repo.origroot), 'bookmarks'))
+    def getbackupbookmarkprefix(self):
+        return '/'.join((self._getbackupbookmarkprefix(), '*'))
+
+    def getbackupbookmarkname(self, bookmark):
+        bookmark = _escapebookmark(bookmark)
+        return '/'.join((self._getbackupbookmarkprefix(), bookmark))
+
+    def getbackupheadprefix(self):
+        return '/'.join((self._getbackupheadprefix(), '*'))
+
+    def getbackupheadname(self, hexhead):
+        return '/'.join((self._getbackupheadprefix(), hexhead))
+
+    def _getbackupbookmarkprefix(self):
+        return '/'.join((self._getcommonprefix(), 'bookmarks'))
+
+    def _getbackupheadprefix(self):
+        return '/'.join((self._getcommonprefix(), 'heads'))
+
+    def _getcommonuserprefix(self):
+        return '/'.join(('infinitepush', 'backups', self.username))
+
+    def _getcommonprefix(self):
+        hostname = socket.gethostname()
+        reporoot = self.repo.origroot
+
+        result = '/'.join((self._getcommonuserprefix(), hostname))
+        if not reporoot.startswith('/'):
+            result += '/'
+        result += reporoot
+        if result.endswith('/'):
+            result = result[:-1]
+        return result
 
 def _escapebookmark(bookmark):
     '''
@@ -548,16 +579,6 @@ def _escapebookmark(bookmark):
 def _unescapebookmark(bookmark):
     bookmark = encoding.tolocal(bookmark)
     return bookmark.replace('bookmarksbookmarks', 'bookmarks')
-
-def _getbackupbookmarkname(username, bookmark, repo):
-    bookmark = _escapebookmark(bookmark)
-    return '/'.join((_getbackupbookmarkprefix(username, repo), bookmark))
-
-def _getbackupheadprefix(username, repo):
-    return '/'.join((_getcommonprefix(username, repo.origroot), 'heads'))
-
-def _getbackupheadname(username, hexhead, repo):
-    return '/'.join((_getbackupheadprefix(username, repo), hexhead))
 
 def _getremote(repo, ui, dest, **opts):
     path = ui.paths.getpath(dest, default=('infinitepush', 'default'))
@@ -582,24 +603,24 @@ def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
         return nullrev
     return p1
 
-def _getbookmarkstobackup(username, repo, newbookmarks, removedbookmarks,
-                          newheads, removedheads):
+def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,
+                          newheads, removedheads, namingmgr):
     bookmarkstobackup = {}
 
     for bookmark, hexnode in removedbookmarks.items():
-        backupbookmark = _getbackupbookmarkname(username, bookmark, repo)
+        backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
         bookmarkstobackup[backupbookmark] = ''
 
     for bookmark, hexnode in newbookmarks.items():
-        backupbookmark = _getbackupbookmarkname(username, bookmark, repo)
+        backupbookmark = namingmgr.getbackupbookmarkname(bookmark)
         bookmarkstobackup[backupbookmark] = hexnode
 
     for hexhead in removedheads:
-        headbookmarksname = _getbackupheadname(username, hexhead, repo)
+        headbookmarksname = namingmgr.getbackupheadname(hexhead)
         bookmarkstobackup[headbookmarksname] = ''
 
     for hexhead in newheads:
-        headbookmarksname = _getbackupheadname(username, hexhead, repo)
+        headbookmarksname = namingmgr.getbackupheadname(hexhead)
         bookmarkstobackup[headbookmarksname] = hexhead
 
     return bookmarkstobackup
@@ -698,7 +719,7 @@ def _writebackupgenerationfile(vfs, backupgenerationvalue):
         f.write(str(backupgenerationvalue))
 
 # Restore helper functions
-def _parsebackupbookmark(username, backupbookmark):
+def _parsebackupbookmark(backupbookmark, namingmgr):
     '''Parses backup bookmark and returns info about it
 
     Backup bookmark may represent either a local bookmark or a head.
@@ -709,7 +730,7 @@ def _parsebackupbookmark(username, backupbookmark):
     represents a local bookmark and None otherwise.
     '''
 
-    backupbookmarkprefix = _getcommonuserprefix(username)
+    backupbookmarkprefix = namingmgr._getcommonuserprefix()
     commonre = '^{0}/([-\w.]+)(/.*)'.format(re.escape(backupbookmarkprefix))
     bookmarkre = commonre + '/bookmarks/(.*)$'
     headsre = commonre + '/heads/[a-f0-9]{40}$'
