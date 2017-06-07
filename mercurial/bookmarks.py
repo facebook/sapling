@@ -50,7 +50,8 @@ class bmstore(dict):
     def __init__(self, repo):
         dict.__init__(self)
         self._repo = repo
-        lookup = repo.changelog.lookup
+        nm = repo.changelog.nodemap
+        tonode = bin # force local lookup
         try:
             bkfile = _getbkfile(repo)
             for line in bkfile:
@@ -62,11 +63,16 @@ class bmstore(dict):
                                  % line)
                     continue
                 sha, refspec = line.split(' ', 1)
-                refspec = encoding.tolocal(refspec)
                 try:
-                    self[refspec] = lookup(sha)
-                except LookupError:
-                    pass
+                    node = tonode(sha)
+                    if node in nm:
+                        refspec = encoding.tolocal(refspec)
+                        self[refspec] = node
+                except (TypeError, ValueError):
+                    # - bin(...) can raise TypeError
+                    # - node in nm can raise ValueError for non-20-bytes entry
+                    repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
+                                 % line)
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise

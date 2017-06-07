@@ -700,7 +700,7 @@ test wrongly formated bookmark
 
 test missing revisions
 
-  $ echo "925d80f479bc z" > .hg/bookmarks
+  $ echo "925d80f479b925d80f479bc925d80f479bccabab z" > .hg/bookmarks
   $ hg book
   no bookmarks set
 
