@@ -10,6 +10,26 @@ import time
 if os.name =='nt':
     import ctypes
 
+    _BOOL = ctypes.c_long
+    _DWORD = ctypes.c_ulong
+    _UINT = ctypes.c_uint
+    _HANDLE = ctypes.c_void_p
+
+    ctypes.windll.kernel32.CloseHandle.argtypes = [_HANDLE]
+    ctypes.windll.kernel32.CloseHandle.restype = _BOOL
+
+    ctypes.windll.kernel32.GetLastError.argtypes = []
+    ctypes.windll.kernel32.GetLastError.restype = _DWORD
+
+    ctypes.windll.kernel32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
+    ctypes.windll.kernel32.OpenProcess.restype = _HANDLE
+
+    ctypes.windll.kernel32.TerminateProcess.argtypes = [_HANDLE, _UINT]
+    ctypes.windll.kernel32.TerminateProcess.restype = _BOOL
+
+    ctypes.windll.kernel32.WaitForSingleObject.argtypes = [_HANDLE, _DWORD]
+    ctypes.windll.kernel32.WaitForSingleObject.restype = _DWORD
+
     def _check(ret, expectederr=None):
         if ret == 0:
             winerrno = ctypes.GetLastError()
@@ -27,7 +47,7 @@ if os.name =='nt':
         handle = ctypes.windll.kernel32.OpenProcess(
                 PROCESS_TERMINATE|SYNCHRONIZE|PROCESS_QUERY_INFORMATION,
                 False, pid)
-        if handle == 0:
+        if handle is None:
             _check(0, 87) # err 87 when process not found
             return # process not found, already finished
         try:
