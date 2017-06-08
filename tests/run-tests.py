@@ -1866,10 +1866,10 @@ class TestSuite(unittest.TestSuite):
 # alphabetically, while times for each test are listed from oldest to
 # newest.
 
-def loadtimes(testdir):
+def loadtimes(outputdir):
     times = []
     try:
-        with open(os.path.join(testdir, b'.testtimes-')) as fp:
+        with open(os.path.join(outputdir, b'.testtimes-')) as fp:
             for line in fp:
                 ts = line.split()
                 times.append((ts[0], [float(t) for t in ts[1:]]))
@@ -1878,8 +1878,8 @@ def loadtimes(testdir):
             raise
     return times
 
-def savetimes(testdir, result):
-    saved = dict(loadtimes(testdir))
+def savetimes(outputdir, result):
+    saved = dict(loadtimes(outputdir))
     maxruns = 5
     skipped = set([str(t[0]) for t in result.skipped])
     for tdata in result.times:
@@ -1890,11 +1890,11 @@ def savetimes(testdir, result):
             ts[:] = ts[-maxruns:]
 
     fd, tmpname = tempfile.mkstemp(prefix=b'.testtimes',
-                                   dir=testdir, text=True)
+                                   dir=outputdir, text=True)
     with os.fdopen(fd, 'w') as fp:
         for name, ts in sorted(saved.items()):
             fp.write('%s %s\n' % (name, ' '.join(['%.3f' % (t,) for t in ts])))
-    timepath = os.path.join(testdir, b'.testtimes')
+    timepath = os.path.join(outputdir, b'.testtimes')
     try:
         os.unlink(timepath)
     except OSError:
@@ -1966,7 +1966,7 @@ class TextTestRunner(unittest.TextTestRunner):
 
             self._runner._checkhglib('Tested')
 
-            savetimes(self._runner._testdir, result)
+            savetimes(self._runner._outputdir, result)
 
             if failed and self._runner.options.known_good_rev:
                 def nooutput(args):

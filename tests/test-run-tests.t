@@ -199,6 +199,7 @@ test --outputdir
   $ ls -a output
   .
   ..
+  .testtimes
   test-failure-unicode.t.err
   test-failure.t.err
 
