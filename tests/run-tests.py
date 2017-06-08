@@ -2754,10 +2754,10 @@ class TestRunner(object):
         cov.report(ignore_errors=True, omit=omit)
 
         if self.options.htmlcov:
-            htmldir = os.path.join(self._testdir, 'htmlcov')
+            htmldir = os.path.join(self._outputdir, 'htmlcov')
             cov.html_report(directory=htmldir, omit=omit)
         if self.options.annotate:
-            adir = os.path.join(self._testdir, 'annotated')
+            adir = os.path.join(self._outputdir, 'annotated')
             if not os.path.isdir(adir):
                 os.mkdir(adir)
             cov.annotate(directory=adir, omit=omit)
