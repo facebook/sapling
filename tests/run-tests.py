@@ -1925,7 +1925,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 self._writexunit(result, xuf)
 
         if self._runner.options.json:
-            jsonpath = os.path.join(self._runner._testdir, b'report.json')
+            jsonpath = os.path.join(self._runner._outputdir, b'report.json')
             with open(jsonpath, 'w') as fp:
                 self._writejson(result, fp)
 
@@ -1960,7 +1960,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     self._writexunit(result, xuf)
 
             if self._runner.options.json:
-                jsonpath = os.path.join(self._runner._testdir, b'report.json')
+                jsonpath = os.path.join(self._runner._outputdir, b'report.json')
                 with open(jsonpath, 'w') as fp:
                     self._writejson(result, fp)
 

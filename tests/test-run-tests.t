@@ -300,10 +300,10 @@ test --xunit support
     <testcase name="test-success.t"/>
   </testsuite>
 
-  $ rt --list-tests test-failure* --json --xunit=xunit.xml
+  $ rt --list-tests test-failure* --json --xunit=xunit.xml --outputdir output
   test-failure-unicode.t
   test-failure.t
-  $ cat report.json
+  $ cat output/report.json
   testreport ={
       "test-failure-unicode.t": {
           "result": "success"
@@ -836,6 +836,68 @@ test for --json
           "time": "\s*[\d\.]{4,5}" (re)
       }
   } (no-eol)
+--json with --outputdir
+
+  $ rm report.json
+  $ rm -r output
+  $ mkdir output
+  $ rt --json --outputdir output
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/output/test-failure.t.err
+  @@ -1,5 +1,5 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+   pad pad pad pad............................................................
+  
+  ERROR: test-failure.t output changed
+  !.s
+  Skipped test-skip.t: missing feature: nail clipper
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+  $ f report.json
+  report.json: file not found
+  $ cat output/report.json
+  testreport ={
+      "test-failure.t": [\{] (re)
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "diff": "---.+\+\+\+.+", ? (re)
+          "end": "\s*[\d\.]{4,5}", ? (re)
+          "result": "failure", ? (re)
+          "start": "\s*[\d\.]{4,5}", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
+      "test-skip.t": {
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "diff": "", ? (re)
+          "end": "\s*[\d\.]{4,5}", ? (re)
+          "result": "skip", ? (re)
+          "start": "\s*[\d\.]{4,5}", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }, ? (re)
+      "test-success.t": [\{] (re)
+          "csys": "\s*[\d\.]{4,5}", ? (re)
+          "cuser": "\s*[\d\.]{4,5}", ? (re)
+          "diff": "", ? (re)
+          "end": "\s*[\d\.]{4,5}", ? (re)
+          "result": "success", ? (re)
+          "start": "\s*[\d\.]{4,5}", ? (re)
+          "time": "\s*[\d\.]{4,5}" (re)
+      }
+  } (no-eol)
+  $ ls -a output
+  .
+  ..
+  .testtimes
+  report.json
+  test-failure.t.err
 
 Test that failed test accepted through interactive are properly reported:
 
