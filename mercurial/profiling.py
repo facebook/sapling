@@ -141,35 +141,41 @@ def statprofile(ui, fp):
 
         statprof.display(fp, data=data, format=displayformat, **kwargs)
 
-@contextlib.contextmanager
-def profile(ui):
+class profile(object):
     """Start profiling.
 
     Profiling is active when the context manager is active. When the context
     manager exits, profiling results will be written to the configured output.
     """
-    profiler = encoding.environ.get('HGPROF')
-    proffn = None
-    if profiler is None:
-        profiler = ui.config('profiling', 'type', default='stat')
-    if profiler not in ('ls', 'stat', 'flame'):
-        # try load profiler from extension with the same name
-        proffn = _loadprofiler(ui, profiler)
-        if proffn is None:
-            ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
-            profiler = 'stat'
+    def __init__(self, ui):
+        self._ui = ui
+        self._output = None
+        self._fp = None
+        self._profiler = None
 
-    output = ui.config('profiling', 'output')
+    def __enter__(self):
+        profiler = encoding.environ.get('HGPROF')
+        proffn = None
+        if profiler is None:
+            profiler = self._ui.config('profiling', 'type', default='stat')
+        if profiler not in ('ls', 'stat', 'flame'):
+            # try load profiler from extension with the same name
+            proffn = _loadprofiler(self._ui, profiler)
+            if proffn is None:
+                self._ui.warn(_("unrecognized profiler '%s' - ignored\n")
+                              % profiler)
+                profiler = 'stat'
 
-    if output == 'blackbox':
-        fp = util.stringio()
-    elif output:
-        path = ui.expandpath(output)
-        fp = open(path, 'wb')
-    else:
-        fp = ui.ferr
+        self._output = self._ui.config('profiling', 'output')
 
-    try:
+        if self._output == 'blackbox':
+            self._fp = util.stringio()
+        elif self._output:
+            path = self._ui.expandpath(self._output)
+            self._fp = open(path, 'wb')
+        else:
+            self._fp = self._ui.ferr
+
         if proffn is not None:
             pass
         elif profiler == 'ls':
@@ -179,18 +185,21 @@ def profile(ui):
         else:
             proffn = statprofile
 
-        with proffn(ui, fp):
-            yield
+        self._profiler = proffn(self._ui, self._fp)
+        self._profiler.__enter__()
 
-    finally:
-        if output:
-            if output == 'blackbox':
-                val = 'Profile:\n%s' % fp.getvalue()
+    def __exit__(self, exception_type, exception_value, traceback):
+        if self._profiler is None:
+            return
+        self._profiler.__exit__(exception_type, exception_value, traceback)
+        if self._output:
+            if self._output == 'blackbox':
+                val = 'Profile:\n%s' % self._fp.getvalue()
                 # ui.log treats the input as a format string,
                 # so we need to escape any % signs.
                 val = val.replace('%', '%%')
-                ui.log('profile', val)
-            fp.close()
+                self._ui.log('profile', val)
+            self._fp.close()
 
 @contextlib.contextmanager
 def maybeprofile(ui):
