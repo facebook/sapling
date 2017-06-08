@@ -274,6 +274,8 @@ def getparser():
         help="run each test N times (default=1)", default=1)
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
+    parser.add_option("--outputdir", type="string",
+        help="directory to write error logs to (default=test directory)")
     parser.add_option("-p", "--port", type="int",
         help="port on which servers should listen"
              " (default: $%s or %d)" % defaults['port'])
@@ -564,7 +566,7 @@ class Test(unittest.TestCase):
     # Status code reserved for skipped tests (used by hghave).
     SKIPPED_STATUS = 80
 
-    def __init__(self, path, tmpdir, keeptmpdir=False,
+    def __init__(self, path, outputdir, tmpdir, keeptmpdir=False,
                  debug=False,
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
@@ -605,8 +607,9 @@ class Test(unittest.TestCase):
         self.bname = os.path.basename(path)
         self.name = _strpath(self.bname)
         self._testdir = os.path.dirname(path)
+        self._outputdir = outputdir
         self._tmpname = os.path.basename(path)
-        self.errpath = os.path.join(self._testdir, b'%s.err' % self.bname)
+        self.errpath = os.path.join(self._outputdir, b'%s.err' % self.bname)
 
         self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
@@ -2133,6 +2136,7 @@ class TestRunner(object):
         self.options = None
         self._hgroot = None
         self._testdir = None
+        self._outputdir = None
         self._hgtmp = None
         self._installdir = None
         self._bindir = None
@@ -2212,6 +2216,10 @@ class TestRunner(object):
 
         self._testdir = osenvironb[b'TESTDIR'] = getattr(
             os, 'getcwdb', os.getcwd)()
+        if self.options.outputdir:
+            self._outputdir = canonpath(_bytespath(self.options.outputdir))
+        else:
+            self._outputdir = self._testdir
 
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
@@ -2336,6 +2344,7 @@ class TestRunner(object):
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
         vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
+        vlog("# Writing to directory", self._outputdir)
 
         try:
             return self._runtests(testdescs) or 0
@@ -2491,7 +2500,7 @@ class TestRunner(object):
         # extra keyword parameters. 'case' is used by .t tests
         kwds = dict((k, testdesc[k]) for k in ['case'] if k in testdesc)
 
-        t = testcls(refpath, tmpdir,
+        t = testcls(refpath, self._outputdir, tmpdir,
                     keeptmpdir=self.options.keep_tmpdir,
                     debug=self.options.debug,
                     timeout=self.options.timeout,

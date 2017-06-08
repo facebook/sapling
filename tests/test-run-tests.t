@@ -166,6 +166,42 @@ basic failing test
   python hash seed: * (glob)
   [1]
 
+test --outputdir
+  $ mkdir output
+  $ rt --outputdir output
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/output/test-failure.t.err
+  @@ -1,5 +1,5 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+   pad pad pad pad............................................................
+  
+  ERROR: test-failure.t output changed
+  !.
+  --- $TESTTMP/test-failure-unicode.t
+  +++ $TESTTMP/output/test-failure-unicode.t.err
+  @@ -1,2 +1,2 @@
+     $ echo babar\xce\xb1 (esc)
+  -  l\xce\xb5\xce\xb5t (esc)
+  +  babar\xce\xb1 (esc)
+  
+  ERROR: test-failure-unicode.t output changed
+  !
+  Failed test-failure.t: output changed
+  Failed test-failure-unicode.t: output changed
+  # Ran 3 tests, 0 skipped, 0 warned, 2 failed.
+  python hash seed: * (glob)
+  [1]
+  $ ls -a output
+  .
+  ..
+  test-failure-unicode.t.err
+  test-failure.t.err
+
 test --xunit support
   $ rt --xunit=xunit.xml
   
@@ -291,6 +327,29 @@ test for --retest
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
+  @@ -1,5 +1,5 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+   pad pad pad pad............................................................
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+--retest works with --outputdir
+  $ rm -r output
+  $ mkdir output
+  $ mv test-failure.t.err output
+  $ rt --retest --outputdir output
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/output/test-failure.t.err
   @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
