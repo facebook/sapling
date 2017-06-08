@@ -2397,10 +2397,12 @@ class TestRunner(object):
                 orig = list(testdescs)
                 while testdescs:
                     desc = testdescs[0]
+                    # desc['path'] is a relative path
                     if 'case' in desc:
                         errpath = b'%s.%s.err' % (desc['path'], desc['case'])
                     else:
                         errpath = b'%s.err' % desc['path']
+                    errpath = os.path.join(self._outputdir, errpath)
                     if os.path.exists(errpath):
                         break
                     testdescs.pop(0)

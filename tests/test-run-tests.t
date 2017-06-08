@@ -1183,3 +1183,28 @@ Test cases in .t files
   # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
+
+--restart works with outputdir
+
+  $ mkdir output
+  $ mv test-cases-abc.t.B.err output
+  $ rt --restart --outputdir output
+  
+  --- $TESTTMP/anothertests/cases/test-cases-abc.t
+  +++ $TESTTMP/anothertests/cases/output/test-cases-abc.t.B.err
+  @@ -7,7 +7,7 @@
+     $ V=C
+   #endif
+     $ echo $V | sed 's/A/C/'
+  -  C
+  +  B
+   #if C
+     $ [ $V = C ]
+   #endif
+  
+  ERROR: test-cases-abc.t (case B) output changed
+  !.
+  Failed test-cases-abc.t (case B): output changed
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
