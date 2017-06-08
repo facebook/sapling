@@ -561,7 +561,8 @@ def wrapdirstate(orig, self):
     return ds
 
 def extsetup(ui):
-    wrapfilecache(localrepo.localrepository, 'dirstate', wrapdirstate)
+    extensions.wrapfilecache(
+        localrepo.localrepository, 'dirstate', wrapdirstate)
     if pycompat.sysplatform == 'darwin':
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
@@ -709,21 +710,3 @@ def reposetup(ui, repo):
                 return overridestatus(orig, self, *args, **kwargs)
 
         repo.__class__ = fsmonitorrepo
-
-def wrapfilecache(cls, propname, wrapper):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    assert callable(wrapper)
-    for currcls in cls.__mro__:
-        if propname in currcls.__dict__:
-            origfn = currcls.__dict__[propname].func
-            assert callable(origfn)
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-            currcls.__dict__[propname].func = wrap
-            break
-
-    if currcls is object:
-        raise AttributeError(
-            _("type '%s' has no property '%s'") % (cls, propname))

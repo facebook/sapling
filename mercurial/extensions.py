@@ -308,6 +308,25 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     table[key] = tuple(newentry)
     return entry
 
+def wrapfilecache(cls, propname, wrapper):
+    """Wraps a filecache property.
+
+    These can't be wrapped using the normal wrapfunction.
+    """
+    assert callable(wrapper)
+    for currcls in cls.__mro__:
+        if propname in currcls.__dict__:
+            origfn = currcls.__dict__[propname].func
+            assert callable(origfn)
+            def wrap(*args, **kwargs):
+                return wrapper(origfn, *args, **kwargs)
+            currcls.__dict__[propname].func = wrap
+            break
+
+    if currcls is object:
+        raise AttributeError(
+            _("type '%s' has no property '%s'") % (cls, propname))
+
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
 
