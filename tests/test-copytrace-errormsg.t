@@ -34,13 +34,3 @@
   rebasing 1:812796267395 "2"
   merging 2 and 1 to 2
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/812796267395-81e11405-backup.hg (glob)
-
-Make sure prompt merge tool docs are still available
-  $ hg help merge-tools | grep -A 2 ":prompt"
-      ":prompt"
-        Asks the user which of the local 'p1()' or the other 'p2()' version to
-        keep as the merged version.
-  --
-      8. Otherwise, ":prompt" is used.
-  
-      Note:
