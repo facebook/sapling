@@ -599,7 +599,8 @@ Do not warn about new head when the new head is a successors of a remote one
   $ hg up -q 'desc(n3w_3_c)'
   $ mkcommit obsolete_e
   created new head
-  $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'`
+  $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'` \
+  > -u 'test <test@example.net>'
   $ hg outgoing ../tmpf # parasite hg outgoing testin
   comparing with ../tmpf
   searching for changes
@@ -647,7 +648,7 @@ List of all markers
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test <test@example.net>'} (glob)
 
 List of changesets with no chain
 
@@ -656,7 +657,7 @@ List of changesets with no chain
 List of changesets that are included on marker chain
 
   $ hg debugobsolete --hidden --rev 6
-  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test <test@example.net>'} (glob)
 
 List of changesets with a longer chain, (including a pruned children)
 
@@ -678,7 +679,7 @@ List of both
   5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 (Thu Jan 01 00:22:18 1970 +0000) {'user': 'test'}
-  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test'} (glob)
+  cda648ca50f50482b7055c0b0c4c117bba6733d9 3de5eca88c00aa039da7399a220f4a5221faa585 0 (*) {'user': 'test <test@example.net>'} (glob)
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
 
 List of all markers in JSON
@@ -738,7 +739,7 @@ List of all markers in JSON
    {
     "date": *, (glob)
     "flag": 0,
-    "metadata": {"user": "test"},
+    "metadata": {"user": "test \u003ctest@example.net\u003e"},
     "precnode": "cda648ca50f50482b7055c0b0c4c117bba6733d9",
     "succnodes": ["3de5eca88c00aa039da7399a220f4a5221faa585"]
    }
@@ -749,11 +750,11 @@ Template keywords
   $ hg debugobsolete -r6 -T '{succnodes % "{node|short}"} {date|shortdate}\n'
   3de5eca88c00 ????-??-?? (glob)
   $ hg debugobsolete -r6 -T '{join(metadata % "{key}={value}", " ")}\n'
-  user=test
+  user=test <test@example.net>
   $ hg debugobsolete -r6 -T '{metadata}\n'
-  'user': 'test'
+  'user': 'test <test@example.net>'
   $ hg debugobsolete -r6 -T '{flag} {get(metadata, "user")}\n'
-  0 test
+  0 test <test@example.net>
 
 Test the debug output for exchange
 ----------------------------------
