@@ -10,10 +10,10 @@
 <div class="page_header">
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / changelog
-{searchform}
 </div>
 
 <div class="page_nav">
+<div>
 <a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url|urlescape}shortlog/{symrev}{sessionvars%urlparameter}">shortlog</a> |
 changelog |
@@ -25,6 +25,8 @@ changelog |
 <a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 {changenav%nav}<br/>
+</div>
+{searchform}
 </div>
 
 {entries%changelogentry}

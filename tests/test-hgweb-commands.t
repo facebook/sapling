@@ -1533,16 +1533,10 @@ Overviews
   <div class="page_header">
   <a href="https://mercurial-scm.org/" title="Mercurial" style="float: right;">Mercurial</a>
   <a href="/">Mercurial</a>  / summary
-  
-  <form action="/log">
-  <input type="hidden" name="style" value="gitweb" />
-  <div class="search">
-  <input type="text" name="rev" value="" />
-  </div>
-  </form>
   </div>
   
   <div class="page_nav">
+  <div>
   summary |
   <a href="/shortlog?style=gitweb">shortlog</a> |
   <a href="/log?style=gitweb">changelog</a> |
@@ -1552,7 +1546,16 @@ Overviews
   <a href="/branches?style=gitweb">branches</a> |
   <a href="/file?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
-  <br/>
+  </div>
+  
+  <div class="search">
+  <form id="searchform" action="/log">
+  <input type="hidden" name="style" value="gitweb" />
+  <input name="rev" type="text" value="" size="40" />
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  </div>
   </div>
   
   <div class="title">&nbsp;</div>
@@ -1733,16 +1736,10 @@ Overviews
   <div class="page_header">
   <a href="https://mercurial-scm.org/" title="Mercurial" style="float: right;">Mercurial</a>
   <a href="/">Mercurial</a>  / graph
-  
-  <form action="/log">
-  <input type="hidden" name="style" value="gitweb" />
-  <div class="search">
-  <input type="text" name="rev" value="" />
-  </div>
-  </form>
   </div>
   
   <div class="page_nav">
+  <div>
   <a href="/summary?style=gitweb">summary</a> |
   <a href="/shortlog/tip?style=gitweb">shortlog</a> |
   <a href="/log/tip?style=gitweb">changelog</a> |
@@ -1755,7 +1752,17 @@ Overviews
   <br/>
   <a href="/graph/tip?revcount=30&style=gitweb">less</a>
   <a href="/graph/tip?revcount=120&style=gitweb">more</a>
-  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
+  </div>
+  
+  <div class="search">
+  <form id="searchform" action="/log">
+  <input type="hidden" name="style" value="gitweb" />
+  <input name="rev" type="text" value="" size="40" />
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  </div>
   </div>
   
   <div class="title">&nbsp;</div>

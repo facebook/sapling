@@ -405,16 +405,10 @@ manifest with descending (gitweb)
   <div class="page_header">
   <a href="https://mercurial-scm.org/" title="Mercurial" style="float: right;">Mercurial</a>
   <a href="/">Mercurial</a>  / files
-  
-  <form action="/log">
-  <input type="hidden" name="style" value="gitweb" />
-  <div class="search">
-  <input type="text" name="rev" value="" />
-  </div>
-  </form>
   </div>
   
   <div class="page_nav">
+  <div>
   <a href="/summary?style=gitweb">summary</a> |
   <a href="/shortlog?style=gitweb">shortlog</a> |
   <a href="/log?style=gitweb">changelog</a> |
@@ -425,7 +419,16 @@ manifest with descending (gitweb)
   files |
   <a href="/rev/tip?style=gitweb">changeset</a>  |
   <a href="/help?style=gitweb">help</a>
-  <br/>
+  </div>
+  
+  <div class="search">
+  <form id="searchform" action="/log">
+  <input type="hidden" name="style" value="gitweb" />
+  <input name="rev" type="text" value="" size="40" />
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  </div>
   </div>
   
   <div class="title">/ <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></div>

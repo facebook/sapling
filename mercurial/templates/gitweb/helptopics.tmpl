@@ -10,10 +10,10 @@
 <div class="page_header">
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / help
-{searchform}
 </div>
 
 <div class="page_nav">
+<div>
 <a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
@@ -26,7 +26,8 @@
   '<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>',
   'help'
 )}
-<br/>
+</div>
+{searchform}
 </div>
 
 <div class="title">&nbsp;</div>

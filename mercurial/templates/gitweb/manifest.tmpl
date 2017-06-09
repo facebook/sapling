@@ -10,10 +10,10 @@
 <div class="page_header">
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / files
-{searchform}
 </div>
 
 <div class="page_nav">
+<div>
 <a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
@@ -24,7 +24,8 @@
 files |
 <a href="{url|urlescape}rev/{symrev}{sessionvars%urlparameter}">changeset</a> {archives%archiveentry} |
 <a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
-<br/>
+</div>
+{searchform}
 </div>
 
 <div class="title">{path|escape} <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span></div>

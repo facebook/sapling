@@ -482,7 +482,7 @@ Set up the repo
   <a href="/file/tip?style=gitweb">files</a> |
   <a href="/graph/tip?revcount=30&style=gitweb">less</a>
   <a href="/graph/tip?revcount=120&style=gitweb">more</a>
-  | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+  | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
   <a href="/graph/tip?revcount=30&style=gitweb">less</a>
   <a href="/graph/tip?revcount=120&style=gitweb">more</a>
   | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
@@ -572,7 +572,7 @@ Set up the repo
   <a href="/file/xyzzy?style=gitweb">files</a> |
   <a href="/graph/xyzzy?revcount=30&style=gitweb">less</a>
   <a href="/graph/xyzzy?revcount=120&style=gitweb">more</a>
-  | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+  | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
   <a href="/graph/xyzzy?revcount=30&style=gitweb">less</a>
   <a href="/graph/xyzzy?revcount=120&style=gitweb">more</a>
   | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 

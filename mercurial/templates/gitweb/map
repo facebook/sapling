@@ -325,9 +325,12 @@ hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
 
 searchform = '
-  <form action="{url|urlescape}log">
-    {sessionvars%hiddenformentry}
-    <div class="search">
-      <input type="text" name="rev" value="{query|escape}" />
-    </div>
-  </form>'
+  <div class="search">
+    <form id="searchform" action="{url|urlescape}log">
+      {sessionvars%hiddenformentry}
+      <input name="rev" type="text" value="{query|escape}" size="40" />
+      <div id="hint">{searchhint}</div>
+    </form>
+  </div>'
+searchhint = 'Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="{url|urlescape}help/revsets">revset expression</a>.'

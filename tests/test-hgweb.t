@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 8012
+  content-length: 8265
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -349,7 +349,12 @@ static file
   div.page_header { height:25px; padding:8px; font-size:18px; font-weight:bold; background-color:#d9d8d1; }
   div.page_header a:visited { color:#0000cc; }
   div.page_header a:hover { color:#880000; }
-  div.page_nav { padding:8px; }
+  div.page_nav {
+      padding:8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+  }
   div.page_nav a:visited { color:#0000cc; }
   div.page_path { padding:8px; border:solid #d9d8d1; border-width:0px 0px 1px}
   div.page_footer { padding:4px 8px; background-color: #d9d8d1; }
@@ -397,7 +402,23 @@ static file
   div.pre { font-family:monospace; font-size:12px; white-space:pre; }
   div.diff_info { font-family:monospace; color:#000099; background-color:#edece6; font-style:italic; }
   div.index_include { border:solid #d9d8d1; border-width:0px 0px 1px; padding:12px 8px; }
-  div.search { margin:4px 8px; position:absolute; top:56px; right:12px }
+  
+  .search {
+      margin-right: 8px;
+  }
+  
+  div#hint {
+    position: absolute;
+    display: none;
+    width: 250px;
+    padding: 5px;
+    background: #ffc;
+    border: 1px solid yellow;
+    border-radius: 5px;
+  }
+  
+  #searchform:hover div#hint { display: block; }
+  
   tr.thisrev a { color:#999999; text-decoration: none; }
   tr.thisrev pre { color:#009900; }
   td.annotate {

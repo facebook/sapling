@@ -10,10 +10,10 @@
 <div class="page_header">
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / error
-{searchform}
 </div>
 
 <div class="page_nav">
+<div>
 <a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
 <a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
@@ -22,7 +22,8 @@
 <a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
 <a href="{url|urlescape}file{sessionvars%urlparameter}">files</a> |
 <a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
-<br/>
+</div>
+{searchform}
 </div>
 
 <div class="page_body">
