@@ -524,21 +524,7 @@ class localrepository(object):
 
     @storecache('obsstore')
     def obsstore(self):
-        # read default format for new obsstore.
-        # developer config: format.obsstore-version
-        defaultformat = self.ui.configint('format', 'obsstore-version', None)
-        # rely on obsstore class default when possible.
-        kwargs = {}
-        if defaultformat is not None:
-            kwargs['defaultformat'] = defaultformat
-        readonly = not obsolete.isenabled(self, obsolete.createmarkersopt)
-        store = obsolete.obsstore(self.svfs, readonly=readonly,
-                                  **kwargs)
-        if store and readonly:
-            self.ui.warn(
-                _('obsolete feature not enabled but %i markers found!\n')
-                % len(list(store)))
-        return store
+        return obsolete.makestore(self.ui, self)
 
     @storecache('00changelog.i')
     def changelog(self):

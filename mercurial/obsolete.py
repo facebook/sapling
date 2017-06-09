@@ -753,6 +753,22 @@ class obsstore(object):
             seennodes |= pendingnodes
         return seenmarkers
 
+def makestore(ui, repo):
+    """Create an obsstore instance from a repo."""
+    # read default format for new obsstore.
+    # developer config: format.obsstore-version
+    defaultformat = ui.configint('format', 'obsstore-version', None)
+    # rely on obsstore class default when possible.
+    kwargs = {}
+    if defaultformat is not None:
+        kwargs['defaultformat'] = defaultformat
+    readonly = not isenabled(repo, createmarkersopt)
+    store = obsstore(repo.svfs, readonly=readonly, **kwargs)
+    if store and readonly:
+        ui.warn(_('obsolete feature not enabled but %i markers found!\n')
+                % len(list(store)))
+    return store
+
 def _filterprunes(markers):
     """return a set with no prune markers"""
     return set(m for m in markers if m[1])
