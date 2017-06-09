@@ -981,6 +981,8 @@ class GitHandler(object):
         # if named branch, add to extra
         if hg_branch:
             extra['branch'] = hg_branch
+        else:
+            extra['branch'] = 'default'
 
         # if committer is different than author, add it to extra
         if commit.author != commit.committer \
