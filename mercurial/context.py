@@ -301,8 +301,6 @@ class basectx(object):
 
     def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
-        if pats is None:
-            pats = []
         r = self._repo
         return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
@@ -1701,8 +1699,6 @@ class workingctx(committablectx):
 
     def match(self, pats=None, include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
-        if pats is None:
-            pats = []
         r = self._repo
 
         # Only a case insensitive filesystem needs magic to translate user input

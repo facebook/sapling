@@ -85,7 +85,7 @@ def _kindpatsalwaysmatch(kindpats):
             return False
     return True
 
-def match(root, cwd, patterns, include=None, exclude=None, default='glob',
+def match(root, cwd, patterns=None, include=None, exclude=None, default='glob',
           exact=False, auditor=None, ctx=None, listsubrepos=False, warn=None,
           badfn=None, icasefs=False):
     """build an object to match a set of file patterns
