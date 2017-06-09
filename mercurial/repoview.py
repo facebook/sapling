@@ -243,10 +243,3 @@ class repoview(object):
 
     def __delattr__(self, attr):
         return delattr(self._unfilteredrepo, attr)
-
-    # The `requirements` attribute is initialized during __init__. But
-    # __getattr__ won't be called as it also exists on the class. We need
-    # explicit forwarding to main repo here
-    @property
-    def requirements(self):
-        return self._unfilteredrepo.requirements
