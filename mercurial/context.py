@@ -2060,6 +2060,22 @@ def memfilefromctx(ctx):
 
     return getfilectx
 
+def memfilefrompatch(patchstore):
+    """Given a patch (e.g. patchstore object) return a memfilectx
+
+    This is a convenience method for building a memctx based on a patchstore.
+    """
+    def getfilectx(repo, memctx, path):
+        data, mode, copied = patchstore.getfile(path)
+        if data is None:
+            return None
+        islink, isexec = mode
+        return memfilectx(repo, path, data, islink=islink,
+                          isexec=isexec, copied=copied,
+                          memctx=memctx)
+
+    return getfilectx
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
