@@ -1525,6 +1525,10 @@ class filestat(object):
                     self.stat.st_ctime == old.stat.st_ctime and
                     self.stat.st_mtime == old.stat.st_mtime)
         except AttributeError:
+            pass
+        try:
+            return self.stat is None and old.stat is None
+        except AttributeError:
             return False
 
     def isambig(self, old):
