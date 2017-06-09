@@ -9,13 +9,7 @@
     <div class="page-header">
         <h1 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb} / file revision</h1>
 
-        <form action="{url|urlescape}log">
-            {sessionvars%hiddenformentry}
-            <dl class="search">
-                <dt><label>Search: </label></dt>
-                <dd><input type="text" name="rev" /></dd>
-            </dl>
-        </form>
+        {searchform}
 
         <ul class="page-nav">
             <li><a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a></li>

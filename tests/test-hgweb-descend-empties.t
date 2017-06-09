@@ -289,13 +289,14 @@ manifest with descending (monoblue)
       <div class="page-header">
           <h1 class="breadcrumb"><a href="/">Mercurial</a>  / files</h1>
   
-          <form action="/log">
-              <input type="hidden" name="style" value="monoblue" />
-              <dl class="search">
-                  <dt><label>Search: </label></dt>
-                  <dd><input type="text" name="rev" /></dd>
-              </dl>
-          </form>
+          
+  <form action="/log">
+  <input type="hidden" name="style" value="monoblue" />
+  <dl class="search">
+  <dt><label>Search: </label></dt>
+  <dd><input type="text" name="rev" value="" /></dd>
+  </dl>
+  </form>
   
           <ul class="page-nav">
               <li><a href="/summary?style=monoblue">summary</a></li>

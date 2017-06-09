@@ -279,3 +279,12 @@ urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 graph = graph.tmpl
 breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
+
+searchform = '
+  <form action="{url|urlescape}log">
+    {sessionvars%hiddenformentry}
+    <dl class="search">
+      <dt><label>Search: </label></dt>
+      <dd><input type="text" name="rev" value="{query|escape}" /></dd>
+    </dl>
+  </form>'
