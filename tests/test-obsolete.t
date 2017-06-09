@@ -739,7 +739,7 @@ List of all markers in JSON
    {
     "date": *, (glob)
     "flag": 0,
-    "metadata": {"user": "test \u003ctest@example.net\u003e"},
+    "metadata": {"user": "test <test@example.net>"},
     "precnode": "cda648ca50f50482b7055c0b0c4c117bba6733d9",
     "succnodes": ["3de5eca88c00aa039da7399a220f4a5221faa585"]
    }
