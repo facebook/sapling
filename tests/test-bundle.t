@@ -302,6 +302,20 @@ generaldelta requirement is not listed in stream clone bundles unless used
   $ hg debugbundle --spec packednongd.hg
   none-packed1;requirements%3Drevlogv1
 
+Warning emitted when packed bundles contain secret changesets
+
+  $ hg init testsecret
+  $ cd testsecret
+  $ touch foo
+  $ hg -q commit -A -m initial
+  $ hg phase --force --secret -r .
+  $ cd ..
+
+  $ hg -R testsecret debugcreatestreamclonebundle packedsecret.hg
+  (warning: stream clone bundle will contain secret revisions)
+  writing 301 bytes for 3 files
+  bundle requirements: generaldelta, revlogv1
+
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
 
   $ hg init packed

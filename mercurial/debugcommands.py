@@ -47,6 +47,7 @@ from . import (
     lock as lockmod,
     merge as mergemod,
     obsolete,
+    phases,
     policy,
     pvec,
     pycompat,
@@ -421,6 +422,12 @@ def debugcreatestreamclonebundle(ui, repo, fname):
     Stream bundles are special bundles that are essentially archives of
     revlog files. They are commonly used for cloning very quickly.
     """
+    # TODO we may want to turn this into an abort when this functionality
+    # is moved into `hg bundle`.
+    if phases.hassecret(repo):
+        ui.warn(_('(warning: stream clone bundle will contain secret '
+                  'revisions)\n'))
+
     requirements, gen = streamclone.generatebundlev1(repo)
     changegroup.writechunks(ui, gen, fname)
 
