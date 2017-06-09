@@ -4,9 +4,23 @@ test --time
   $ hg init a
   $ cd a
 
-#if lsprof
 
 test --profile
+
+  $ hg st --profile 2>&1 | grep Sample
+  Sample count: \d+ (re)
+
+Abreviated version
+
+  $ hg st --prof 2>&1 | grep Sample
+  Sample count: \d+ (re)
+
+In alias
+
+  $ hg --config "alias.profst=status --profile" profst 2>&1 | grep Sample
+  Sample count: \d+ (re)
+
+#if lsprof
 
   $ prof='hg --config profiling.type=ls --profile'
 
