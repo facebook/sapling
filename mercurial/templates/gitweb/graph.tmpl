@@ -13,12 +13,8 @@
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / graph
 </div>
 
-<form action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<div class="search">
-<input type="text" name="rev"  />
-</div>
-</form>
+{searchform}
+
 <div class="page_nav">
 <a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
 <a href="{url|urlescape}shortlog/{symrev}{sessionvars%urlparameter}">shortlog</a> |

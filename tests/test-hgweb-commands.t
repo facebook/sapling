@@ -1533,12 +1533,15 @@ Overviews
   <div class="page_header">
   <a href="https://mercurial-scm.org/" title="Mercurial" style="float: right;">Mercurial</a>
   <a href="/">Mercurial</a>  / summary
+  
+  
   <form action="/log">
   <input type="hidden" name="style" value="gitweb" />
   <div class="search">
-  <input type="text" name="rev"  />
+  <input type="text" name="rev" value="" />
   </div>
   </form>
+  
   </div>
   
   <div class="page_nav">
@@ -1734,12 +1737,14 @@ Overviews
   <a href="/">Mercurial</a>  / graph
   </div>
   
+  
   <form action="/log">
   <input type="hidden" name="style" value="gitweb" />
   <div class="search">
-  <input type="text" name="rev"  />
+  <input type="text" name="rev" value="" />
   </div>
   </form>
+  
   <div class="page_nav">
   <a href="/summary?style=gitweb">summary</a> |
   <a href="/shortlog/tip?style=gitweb">shortlog</a> |

@@ -323,3 +323,11 @@ index = index.tmpl
 urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
+
+searchform = '
+  <form action="{url|urlescape}log">
+    {sessionvars%hiddenformentry}
+    <div class="search">
+      <input type="text" name="rev" value="{query|escape}" />
+    </div>
+  </form>'

@@ -11,12 +11,8 @@
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / search
 
-<form action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<div class="search">
-<input type="text" name="rev" value="{query|escape}" />
-</div>
-</form>
+{searchform}
+
 </div>
 
 <div class="page_nav">
