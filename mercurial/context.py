@@ -2041,6 +2041,25 @@ def makecachingfilectxfn(func):
 
     return getfilectx
 
+def memfilefromctx(ctx):
+    """Given a context return a memfilectx for ctx[path]
+
+    This is a convenience method for building a memctx based on another
+    context.
+    """
+    def getfilectx(repo, memctx, path):
+        fctx = ctx[path]
+        # this is weird but apparently we only keep track of one parent
+        # (why not only store that instead of a tuple?)
+        copied = fctx.renamed()
+        if copied:
+            copied = copied[0]
+        return memfilectx(repo, path, fctx.data(),
+                          islink=fctx.islink(), isexec=fctx.isexec(),
+                          copied=copied, memctx=memctx)
+
+    return getfilectx
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
@@ -2088,17 +2107,7 @@ class memctx(committablectx):
 
         # if store is not callable, wrap it in a function
         if not callable(filectxfn):
-            def getfilectx(repo, memctx, path):
-                fctx = filectxfn[path]
-                # this is weird but apparently we only keep track of one parent
-                # (why not only store that instead of a tuple?)
-                copied = fctx.renamed()
-                if copied:
-                    copied = copied[0]
-                return memfilectx(repo, path, fctx.data(),
-                                  islink=fctx.islink(), isexec=fctx.isexec(),
-                                  copied=copied, memctx=memctx)
-            self._filectxfn = getfilectx
+            self._filectxfn = memfilefromctx(filectxfn)
         else:
             # memoizing increases performance for e.g. vcs convert scenarios.
             self._filectxfn = makecachingfilectxfn(filectxfn)
