@@ -159,6 +159,11 @@ class dirstate(object):
         return self._copymap
 
     @propertycache
+    def _identity(self):
+        self._read()
+        return self._identity
+
+    @propertycache
     def _nonnormalset(self):
         nonnorm, otherparents = nonnormalentries(self._map)
         self._otherparentset = otherparents
@@ -426,6 +431,8 @@ class dirstate(object):
     def _read(self):
         self._map = {}
         self._copymap = {}
+        # ignore HG_PENDING because identity is used only for writing
+        self._identity = util.filestat(self._opener.join(self._filename))
         try:
             fp = self._opendirstatefile()
             try:
@@ -476,7 +483,8 @@ class dirstate(object):
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it.'''
 
-        for a in ("_map", "_copymap", "_filefoldmap", "_dirfoldmap", "_branch",
+        for a in ("_map", "_copymap", "_identity",
+                  "_filefoldmap", "_dirfoldmap", "_branch",
                   "_pl", "_dirs", "_ignore", "_nonnormalset",
                   "_otherparentset"):
             if a in self.__dict__:
@@ -740,6 +748,14 @@ class dirstate(object):
                 self.drop(f)
 
         self._dirty = True
+
+    def identity(self):
+        '''Return identity of dirstate itself to detect changing in storage
+
+        If identity of previous dirstate is equal to this, writing
+        changes based on the former dirstate out can keep consistency.
+        '''
+        return self._identity
 
     def write(self, tr):
         if not self._dirty:
