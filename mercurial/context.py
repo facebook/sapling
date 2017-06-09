@@ -1759,19 +1759,30 @@ class workingctx(committablectx):
         # update dirstate for files that are actually clean
         if fixup:
             try:
+                oldid = self._repo.dirstate.identity()
+
                 # updating the dirstate is optional
                 # so we don't wait on the lock
                 # wlock can invalidate the dirstate, so cache normal _after_
                 # taking the lock
                 with self._repo.wlock(False):
-                    normal = self._repo.dirstate.normal
-                    for f in fixup:
-                        normal(f)
-                    # write changes out explicitly, because nesting
-                    # wlock at runtime may prevent 'wlock.release()'
-                    # after this block from doing so for subsequent
-                    # changing files
-                    self._repo.dirstate.write(self._repo.currenttransaction())
+                    if self._repo.dirstate.identity() == oldid:
+                        normal = self._repo.dirstate.normal
+                        for f in fixup:
+                            normal(f)
+                        # write changes out explicitly, because nesting
+                        # wlock at runtime may prevent 'wlock.release()'
+                        # after this block from doing so for subsequent
+                        # changing files
+                        tr = self._repo.currenttransaction()
+                        self._repo.dirstate.write(tr)
+                    else:
+                        # in this case, writing changes out breaks
+                        # consistency, because .hg/dirstate was
+                        # already changed simultaneously after last
+                        # caching (see also issue5584 for detail)
+                        self._repo.ui.debug('skip updating dirstate: '
+                                            'identity mismatch\n')
             except error.LockError:
                 pass
         return modified, deleted, fixup

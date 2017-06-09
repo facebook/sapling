@@ -95,3 +95,65 @@ anyway.
   ! d
   ! dir1/c
   ! e
+
+  $ rmdir d e
+  $ hg update -C -q .
+
+Test that dirstate changes aren't written out at the end of "hg
+status", if .hg/dirstate is already changed simultaneously before
+acquisition of wlock in workingctx._checklookup().
+
+This avoidance is important to keep consistency of dirstate in race
+condition (see issue5584 for detail).
+
+  $ hg parents -q
+  1:* (glob)
+
+  $ hg debugrebuilddirstate
+  $ hg debugdirstate
+  n   0         -1 unset               a
+  n   0         -1 unset               b
+  n   0         -1 unset               d
+  n   0         -1 unset               dir1/c
+  n   0         -1 unset               e
+
+  $ cat > $TESTTMP/dirstaterace.sh <<EOF
+  > # This script assumes timetable of typical issue5584 case below:
+  > #
+  > # 1. "hg status" loads .hg/dirstate
+  > # 2. "hg status" confirms clean-ness of FILE
+  > # 3. "hg update -C 0" updates the working directory simultaneously
+  > #    (FILE is removed, and FILE is dropped from .hg/dirstate)
+  > # 4. "hg status" acquires wlock
+  > #    (.hg/dirstate is re-loaded = no FILE entry in dirstate)
+  > # 5. "hg status" marks FILE in dirstate as clean
+  > #    (FILE entry is added to in-memory dirstate)
+  > # 6. "hg status" writes dirstate changes into .hg/dirstate
+  > #    (FILE entry is written into .hg/dirstate)
+  > #
+  > # To reproduce similar situation easily and certainly, #2 and #3
+  > # are swapped.  "hg cat" below ensures #2 on "hg status" side.
+  > 
+  > hg update -q -C 0
+  > hg cat -r 1 b > b
+  > EOF
+
+"hg status" below should excludes "e", of which exec flag is set, for
+portability of test scenario, because unsure but missing "e" is
+treated differently in _checklookup() according to runtime platform.
+
+- "missing(!)" on POSIX, "pctx[f].cmp(self[f])" raises ENOENT
+- "modified(M)" on Windows, "self.flags(f) != pctx.flags(f)" is True
+
+  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug -X path:e
+  skip updating dirstate: identity mismatch
+  M a
+  ! d
+  ! dir1/c
+
+  $ hg parents -q
+  0:* (glob)
+  $ hg files
+  a
+  $ hg debugdirstate
+  n * * * a (glob)
