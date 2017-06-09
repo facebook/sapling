@@ -24,12 +24,7 @@
 <div class="main">
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>Help: {topic}</h3>
-
-<form class="search" action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" /></p>
-<div id="hint">{searchhint}</div>
-</form>
+{searchform}
 <div id="doc">
 {rstdoc(doc, "html")}
 </div>

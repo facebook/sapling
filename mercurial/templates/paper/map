@@ -243,5 +243,11 @@ urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
 
+searchform = '
+  <form class="search" action="{url|urlescape}log">
+    {sessionvars%hiddenformentry}
+    <p><input name="rev" id="search1" type="text" size="30" value="{query|escape}" /></p>
+    <div id="hint">{searchhint}</div>
+  </form>'
 searchhint = 'Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="{url|urlescape}help/revsets">revset expression</a>.'

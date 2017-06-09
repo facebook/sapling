@@ -34,11 +34,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>tags</h3>
 
-<form class="search" action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" /></p>
-<div id="hint">{searchhint}</div>
-</form>
+{searchform}
 
 <table class="bigtable">
 <thead>

@@ -65,9 +65,10 @@ revision
    <span class="tag">tip</span> 
   </h3>
   
+  
   <form class="search" action="/log">
   
-  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
   <div id="hint">Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
@@ -192,9 +193,10 @@ diff removed file
    <span class="tag">tip</span> 
   </h3>
   
+  
   <form class="search" action="/log">
-  <p></p>
-  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  
+  <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
   <div id="hint">Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>

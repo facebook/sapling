@@ -59,6 +59,7 @@ Some tests for hgweb in an empty repository
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>log</h3>
   
+  
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
@@ -169,6 +170,7 @@ Some tests for hgweb in an empty repository
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>log</h3>
   
+  
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
@@ -275,9 +277,10 @@ Some tests for hgweb in an empty repository
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>graph</h3>
   
+  
   <form class="search" action="/log">
   
-  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
   <div id="hint">Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
@@ -424,9 +427,10 @@ Some tests for hgweb in an empty repository
    <span class="tag">tip</span> 
   </h3>
   
+  
   <form class="search" action="/log">
   
-  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <p><input name="rev" id="search1" type="text" size="30" value="" /></p>
   <div id="hint">Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>

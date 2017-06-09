@@ -41,11 +41,7 @@
  {branch%changelogbranchname}{tags%changelogtag}{bookmarks%changelogtag}
 </h3>
 
-<form class="search" action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" /></p>
-<div id="hint">{searchhint}</div>
-</form>
+{searchform}
 
 <div class="description">{desc|strip|escape|websub|nonempty}</div>
 

@@ -26,11 +26,7 @@
 
 <div class="main">
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
-<form class="search" action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" /></p>
-<div id="hint">{searchhint}</div>
-</form>
+{searchform}
 <table class="bigtable">
 <tr><td colspan="2"><h2><a name="topics" href="#topics">Topics</a></h2></td></tr>
 {topics % helpentry}

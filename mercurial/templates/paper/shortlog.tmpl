@@ -41,11 +41,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>log</h3>
 
-<form class="search" action="{url|urlescape}log">
-{sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" value="{query|escape}" /></p>
-<div id="hint">{searchhint}</div>
-</form>
+{searchform}
 
 <div class="navigate">
 <a href="{url|urlescape}shortlog/{symrev}{lessvars%urlparameter}">less</a>
