@@ -57,7 +57,8 @@ confused with a file with the exec bit set
   >     extensions.wrapfunction(context.workingctx, '_checklookup', overridechecklookup)
   > def overridechecklookup(orig, self, files):
   >     # make an update that changes the dirstate from underneath
-  >     self._repo.ui.system(self._repo.ui.config('dirstaterace', 'command'), cwd=self._repo.root)
+  >     self._repo.ui.system(r"sh '$TESTTMP/dirstaterace.sh'",
+  >                          cwd=self._repo.root)
   >     return orig(self, files)
   > EOF
 
@@ -73,8 +74,11 @@ XXX Note that this returns M for files that got replaced by directories. This is
 definitely a bug, but the fix for that is hard and the next status run is fine
 anyway.
 
-  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py \
-  >   --config dirstaterace.command='rm b && rm -r dir1 && rm d && mkdir d && rm e && mkdir e'
+  $ cat > $TESTTMP/dirstaterace.sh <<EOF
+  > rm b && rm -r dir1 && rm d && mkdir d && rm e && mkdir e
+  > EOF
+
+  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py
   M d
   M e
   ! b
