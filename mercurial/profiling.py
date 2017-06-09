@@ -152,8 +152,24 @@ class profile(object):
         self._output = None
         self._fp = None
         self._profiler = None
+        self._entered = False
+        self._started = False
 
     def __enter__(self):
+        self._entered = True
+        self.start()
+
+    def start(self):
+        """Start profiling.
+
+        The profiling will stop at the context exit.
+
+        If the profiler was already started, this has no effect."""
+        if not self._entered:
+            raise error.ProgrammingError()
+        if self._started:
+            return
+        self._started = True
         profiler = encoding.environ.get('HGPROF')
         proffn = None
         if profiler is None:
