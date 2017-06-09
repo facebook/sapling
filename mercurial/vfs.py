@@ -177,11 +177,14 @@ class abstractvfs(object):
         dstpath = self.join(dst)
         oldstat = checkambig and util.filestat(dstpath)
         if oldstat and oldstat.stat:
-            ret = util.rename(self.join(src), dstpath)
-            newstat = util.filestat(dstpath)
-            if newstat.isambig(oldstat):
-                # stat of renamed file is ambiguous to original one
-                newstat.avoidambig(dstpath, oldstat)
+            def dorename(spath, dpath):
+                ret = util.rename(spath, dpath)
+                newstat = util.filestat(dpath)
+                if newstat.isambig(oldstat):
+                    # stat of renamed file is ambiguous to original one
+                    return ret, newstat.avoidambig(dpath, oldstat)
+                return ret, True
+            ret, avoided = dorename(self.join(src), dstpath)
             return ret
         return util.rename(self.join(src), dstpath)
 
