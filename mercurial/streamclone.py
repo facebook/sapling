@@ -13,6 +13,7 @@ from .i18n import _
 from . import (
     branchmap,
     error,
+    phases,
     store,
     util,
 )
@@ -162,9 +163,18 @@ def maybeperformlegacystreamclone(pullop):
 
         repo.invalidate()
 
-def allowservergeneration(ui):
+def allowservergeneration(repo):
     """Whether streaming clones are allowed from the server."""
-    return ui.configbool('server', 'uncompressed', True, untrusted=True)
+    if not repo.ui.configbool('server', 'uncompressed', True, untrusted=True):
+        return False
+
+    # The way stream clone works makes it impossible to hide secret changesets.
+    # So don't allow this by default.
+    secret = phases.hassecret(repo)
+    if secret:
+        return repo.ui.configbool('server', 'uncompressedallowsecret', False)
+
+    return True
 
 # This is it's own function so extensions can override it.
 def _walkstreamfiles(repo):

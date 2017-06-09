@@ -1658,6 +1658,10 @@ Controls generic server settings.
     the write lock while determining what data to transfer.
     (default: True)
 
+``uncompressedallowsecret``
+    Whether to allow stream clones when the repository contains secret
+    changesets. (default: False)
+
 ``preferuncompressed``
     When set, clients will try to use the uncompressed streaming
     protocol. (default: False)
