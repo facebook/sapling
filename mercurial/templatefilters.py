@@ -1,4 +1,4 @@
-# template-filters.py - common template expansion filters
+# templatefilters.py - common template expansion filters
 #
 # Copyright 2005-2008 Matt Mackall <mpm@selenic.com>
 #
