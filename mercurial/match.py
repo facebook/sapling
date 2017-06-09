@@ -358,9 +358,8 @@ class patternmatcher(basematcher):
 
         self._files = _explicitfiles(kindpats)
         self._anypats = _anypats(kindpats)
-        self.patternspat, pm = _buildmatch(ctx, kindpats, '$', listsubrepos,
-                                           root)
-        self.matchfn = pm
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, '$', listsubrepos,
+                                               root)
 
     @propertycache
     def _dirs(self):
@@ -379,7 +378,7 @@ class patternmatcher(basematcher):
         return self._anypats
 
     def __repr__(self):
-        return ('<patternmatcher patterns=%r>' % self.patternspat)
+        return ('<patternmatcher patterns=%r>' % self._pats)
 
 class includematcher(basematcher):
 
@@ -387,15 +386,14 @@ class includematcher(basematcher):
                  badfn=None):
         super(includematcher, self).__init__(root, cwd, badfn)
 
-        self.includepat, im = _buildmatch(ctx, kindpats, '(?:/|$)',
-                                          listsubrepos, root)
+        self._pats, self.matchfn = _buildmatch(ctx, kindpats, '(?:/|$)',
+                                               listsubrepos, root)
         self._anypats = _anypats(kindpats)
         roots, dirs = _rootsanddirs(kindpats)
         # roots are directories which are recursively included.
         self._roots = set(roots)
         # dirs are directories which are non-recursively included.
         self._dirs = set(dirs)
-        self.matchfn = im
 
     def visitdir(self, dir):
         if not self._anypats and dir in self._roots:
@@ -411,7 +409,7 @@ class includematcher(basematcher):
         return True
 
     def __repr__(self):
-        return ('<includematcher includes=%r>' % self.includepat)
+        return ('<includematcher includes=%r>' % self._pats)
 
 class exactmatcher(basematcher):
     '''Matches the input files exactly. They are interpreted as paths, not
