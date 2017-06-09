@@ -174,6 +174,7 @@ class abstractvfs(object):
         only if destination file is guarded by any lock
         (e.g. repo.lock or repo.wlock).
         """
+        srcpath = self.join(src)
         dstpath = self.join(dst)
         oldstat = checkambig and util.filestat(dstpath)
         if oldstat and oldstat.stat:
@@ -184,9 +185,13 @@ class abstractvfs(object):
                     # stat of renamed file is ambiguous to original one
                     return ret, newstat.avoidambig(dpath, oldstat)
                 return ret, True
-            ret, avoided = dorename(self.join(src), dstpath)
+            ret, avoided = dorename(srcpath, dstpath)
+            if not avoided:
+                # simply copy to change owner of srcpath (see issue5418)
+                util.copyfile(dstpath, srcpath)
+                ret, avoided = dorename(srcpath, dstpath)
             return ret
-        return util.rename(self.join(src), dstpath)
+        return util.rename(srcpath, dstpath)
 
     def readlink(self, path):
         return os.readlink(self.join(path))
