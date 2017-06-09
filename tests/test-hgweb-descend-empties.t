@@ -405,6 +405,13 @@ manifest with descending (gitweb)
   <div class="page_header">
   <a href="https://mercurial-scm.org/" title="Mercurial" style="float: right;">Mercurial</a>
   <a href="/">Mercurial</a>  / files
+  
+  <form action="/log">
+  <input type="hidden" name="style" value="gitweb" />
+  <div class="search">
+  <input type="text" name="rev" value="" />
+  </div>
+  </form>
   </div>
   
   <div class="page_nav">
