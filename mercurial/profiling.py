@@ -160,6 +160,7 @@ class profile(object):
         self._entered = True
         if self._enabled:
             self.start()
+        return self
 
     def start(self):
         """Start profiling.
@@ -230,5 +231,5 @@ def maybeprofile(ui):
     just use a single code path for calling into code you may want to profile
     and this function determines whether to start profiling.
     """
-    with profile(ui, enabled=ui.configbool('profiling', 'enabled')):
-        yield
+    with profile(ui, enabled=ui.configbool('profiling', 'enabled')) as p:
+        yield p
