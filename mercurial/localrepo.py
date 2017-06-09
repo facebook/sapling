@@ -270,7 +270,6 @@ class localrepository(object):
         'treemanifest',
         'manifestv2',
     }
-    filtername = None
 
     # a list of (ui, featureset) functions.
     # only functions defined in module of enabled extensions are invoked
@@ -278,6 +277,7 @@ class localrepository(object):
 
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
+        self.filtername = None
         # wvfs: rooted at the repository root, used to access the working copy
         self.wvfs = vfsmod.vfs(path, expandpath=True, realpath=True)
         # vfs: rooted at .hg, used to access repo files outside of .hg/store
