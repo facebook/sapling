@@ -311,7 +311,8 @@ class hgweb(object):
         should be using instances of this class as the WSGI application.
         """
         with self._obtainrepo() as repo:
-            with profiling.maybeprofile(repo.ui):
+            profile = repo.ui.configbool('profiling', 'enabled')
+            with profiling.profile(repo.ui, enabled=profile):
                 for r in self._runwsgi(req, repo):
                     yield r
 

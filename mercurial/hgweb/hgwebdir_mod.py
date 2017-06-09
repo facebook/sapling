@@ -220,7 +220,8 @@ class hgwebdir(object):
         return False
 
     def run_wsgi(self, req):
-        with profiling.maybeprofile(self.ui):
+        profile = self.ui.configbool('profiling', 'enabled')
+        with profiling.profile(self.ui, enabled=profile):
             for r in self._runwsgi(req):
                 yield r
 

@@ -764,7 +764,8 @@ def _dispatch(req):
         for ui_ in uis:
             ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
-    with profiling.maybeprofile(lui) as profiler:
+    profile = lui.configbool('profiling', 'enabled')
+    with profiling.profile(lui, enabled=profile) as profiler:
         # Configure extensions in phases: uisetup, extsetup, cmdtable, and
         # reposetup. Programs like TortoiseHg will call _dispatch several
         # times so we keep track of configured extensions in _loaded.
