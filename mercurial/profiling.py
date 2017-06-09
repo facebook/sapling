@@ -147,17 +147,19 @@ class profile(object):
     Profiling is active when the context manager is active. When the context
     manager exits, profiling results will be written to the configured output.
     """
-    def __init__(self, ui):
+    def __init__(self, ui, enabled=True):
         self._ui = ui
         self._output = None
         self._fp = None
         self._profiler = None
+        self._enabled = enabled
         self._entered = False
         self._started = False
 
     def __enter__(self):
         self._entered = True
-        self.start()
+        if self._enabled:
+            self.start()
 
     def start(self):
         """Start profiling.
@@ -228,8 +230,5 @@ def maybeprofile(ui):
     just use a single code path for calling into code you may want to profile
     and this function determines whether to start profiling.
     """
-    if ui.configbool('profiling', 'enabled'):
-        with profile(ui):
-            yield
-    else:
+    with profile(ui, enabled=ui.configbool('profiling', 'enabled')):
         yield
