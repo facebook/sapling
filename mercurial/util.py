@@ -1568,7 +1568,10 @@ class filestat(object):
         'old' should be previous filestat of 'path'.
 
         This skips avoiding ambiguity, if a process doesn't have
-        appropriate privileges for 'path'.
+        appropriate privileges for 'path'. This returns False in this
+        case.
+
+        Otherwise, this returns True, as "ambiguity is avoided".
         """
         advanced = (old.stat.st_mtime + 1) & 0x7fffffff
         try:
@@ -1577,8 +1580,9 @@ class filestat(object):
             if inst.errno == errno.EPERM:
                 # utime() on the file created by another user causes EPERM,
                 # if a process doesn't have appropriate privileges
-                return
+                return False
             raise
+        return True
 
     def __ne__(self, other):
         return not self == other
