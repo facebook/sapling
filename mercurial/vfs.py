@@ -176,11 +176,11 @@ class abstractvfs(object):
         """
         srcpath = self.join(src)
         dstpath = self.join(dst)
-        oldstat = checkambig and util.filestat(dstpath)
+        oldstat = checkambig and util.filestat.frompath(dstpath)
         if oldstat and oldstat.stat:
             def dorename(spath, dpath):
                 ret = util.rename(spath, dpath)
-                newstat = util.filestat(dpath)
+                newstat = util.filestat.frompath(dpath)
                 if newstat.isambig(oldstat):
                     # stat of renamed file is ambiguous to original one
                     return ret, newstat.avoidambig(dpath, oldstat)
@@ -625,12 +625,12 @@ class checkambigatclosing(closewrapbase):
     """
     def __init__(self, fh):
         super(checkambigatclosing, self).__init__(fh)
-        object.__setattr__(self, r'_oldstat', util.filestat(fh.name))
+        object.__setattr__(self, r'_oldstat', util.filestat.frompath(fh.name))
 
     def _checkambig(self):
         oldstat = self._oldstat
         if oldstat.stat:
-            newstat = util.filestat(self._origfh.name)
+            newstat = util.filestat.frompath(self._origfh.name)
             if newstat.isambig(oldstat):
                 # stat of changed file is ambiguous to original one
                 newstat.avoidambig(self._origfh.name, oldstat)

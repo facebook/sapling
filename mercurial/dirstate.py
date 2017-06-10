@@ -432,7 +432,8 @@ class dirstate(object):
         self._map = {}
         self._copymap = {}
         # ignore HG_PENDING because identity is used only for writing
-        self._identity = util.filestat(self._opener.join(self._filename))
+        self._identity = util.filestat.frompath(
+            self._opener.join(self._filename))
         try:
             fp = self._opendirstatefile()
             try:

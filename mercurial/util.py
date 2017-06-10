@@ -1098,7 +1098,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     oldstat = None
     if os.path.lexists(dest):
         if checkambig:
-            oldstat = checkambig and filestat(dest)
+            oldstat = checkambig and filestat.frompath(dest)
         unlink(dest)
     if hardlink:
         # Hardlinks are problematic on CIFS (issue4546), do not allow hardlinks
@@ -1128,7 +1128,7 @@ def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
             else:
                 shutil.copymode(src, dest)
                 if oldstat and oldstat.stat:
-                    newstat = filestat(dest)
+                    newstat = filestat.frompath(dest)
                     if newstat.isambig(oldstat):
                         # stat of copied file is ambiguous to original one
                         advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
@@ -1506,13 +1506,18 @@ class filestat(object):
     exists. Otherwise, it is None. This can avoid preparative
     'exists()' examination on client side of this class.
     """
-    def __init__(self, path):
+    def __init__(self, stat):
+        self.stat = stat
+
+    @classmethod
+    def frompath(cls, path):
         try:
-            self.stat = os.stat(path)
+            stat = os.stat(path)
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
-            self.stat = None
+            stat = None
+        return cls(stat)
 
     __hash__ = object.__hash__
 
@@ -1622,10 +1627,10 @@ class atomictempfile(object):
         if not self._fp.closed:
             self._fp.close()
             filename = localpath(self.__name)
-            oldstat = self._checkambig and filestat(filename)
+            oldstat = self._checkambig and filestat.frompath(filename)
             if oldstat and oldstat.stat:
                 rename(self._tempname, filename)
-                newstat = filestat(filename)
+                newstat = filestat.frompath(filename)
                 if newstat.isambig(oldstat):
                     # stat of changed file is ambiguous to original one
                     advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
