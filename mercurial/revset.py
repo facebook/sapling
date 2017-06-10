@@ -884,11 +884,11 @@ def filelog(repo, subset, x):
 
     return subset & s
 
-@predicate('first(set, [n])', safe=True)
-def first(repo, subset, x):
+@predicate('first(set, [n])', safe=True, takeorder=True)
+def first(repo, subset, x, order):
     """An alias for limit().
     """
-    return limit(repo, subset, x)
+    return limit(repo, subset, x, order)
 
 def _follow(repo, subset, x, name, followfirst=False):
     l = getargs(x, 0, 2, _("%s takes no arguments or a pattern "
@@ -1152,8 +1152,8 @@ def keyword(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<keyword %r>', kw))
 
-@predicate('limit(set[, n[, offset]])', safe=True)
-def limit(repo, subset, x):
+@predicate('limit(set[, n[, offset]])', safe=True, takeorder=True)
+def limit(repo, subset, x, order):
     """First n members of set, defaulting to 1, starting from offset.
     """
     args = getargsdict(x, 'limit', 'set n offset')
@@ -1181,10 +1181,12 @@ def limit(repo, subset, x):
             break
         result.append(y)
     ls = baseset(result, datarepr=('<limit n=%d, offset=%d, %r>', lim, ofs, os))
+    if order == followorder and lim > 1:
+        return subset & ls
     return ls & subset
 
-@predicate('last(set, [n])', safe=True)
-def last(repo, subset, x):
+@predicate('last(set, [n])', safe=True, takeorder=True)
+def last(repo, subset, x, order):
     """Last n members of set, defaulting to 1.
     """
     # i18n: "last" is a keyword
@@ -1205,6 +1207,8 @@ def last(repo, subset, x):
             break
         result.append(y)
     ls = baseset(result, datarepr=('<last n=%d, %r>', lim, os))
+    if order == followorder and lim > 1:
+        return subset & ls
     ls.reverse()
     return ls & subset
 

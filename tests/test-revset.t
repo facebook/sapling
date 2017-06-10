@@ -1031,13 +1031,12 @@ Test order of first/last revisions
   $ hg debugrevspec -s '3: & first(4:0, 3)'
   * set:
   <filteredset
+    <spanset+ 3:9>,
     <baseset
       <limit n=3, offset=0,
-        <spanset- 0:4>>>,
-    <spanset+ 3:9>>
-  4
+        <spanset- 0:4>>>>
   3
-BROKEN: should be '3 4'
+  4
 
   $ hg debugrevspec -s 'last(4:0, 3) & :1'
   * set:
@@ -1052,13 +1051,12 @@ BROKEN: should be '3 4'
   $ hg debugrevspec -s ':1 & last(4:0, 3)'
   * set:
   <filteredset
+    <spanset+ 0:1>,
     <baseset
       <last n=3,
-        <spanset+ 0:4>>>,
-    <spanset+ 0:1>>
-  1
+        <spanset+ 0:4>>>>
   0
-BROKEN: should be '0 1'
+  1
 
 Test matching
 
