@@ -643,3 +643,7 @@ def has_virtualenv():
         return True
     except ImportError:
         return False
+
+@check("fsmonitor", "running tests with fsmonitor")
+def has_fsmonitor():
+    return 'HGFSMONITOR_TESTS' in os.environ
