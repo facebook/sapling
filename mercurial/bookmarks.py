@@ -68,9 +68,11 @@ class bmstore(dict):
                         refspec = encoding.tolocal(refspec)
                         setitem(self, refspec, node)
                 except (TypeError, ValueError):
-                    # - bin(...) can raise TypeError
-                    # - node in nm can raise ValueError for non-20-bytes entry
-                    # - split(...) can raise ValueError for string without ' '
+                    # TypeError:
+                    # - bin(...)
+                    # ValueError:
+                    # - node in nm, for non-20-bytes entry
+                    # - split(...), for string without ' '
                     repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
                                  % line)
         except IOError as inst:
