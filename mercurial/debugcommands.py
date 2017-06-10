@@ -1901,6 +1901,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
 @command('debugrevspec',
     [('', 'optimize', None,
       _('print parsed tree after optimizing (DEPRECATED)')),
+     ('', 'show-revs', True, _('print list of result revisions (default)')),
      ('s', 'show-set', None, _('print internal representation of result set')),
      ('p', 'show-stage', [],
       _('print parsed tree at the given stage'), _('NAME')),
@@ -1913,6 +1914,9 @@ def debugrevspec(ui, repo, expr, **opts):
 
     Use -p/--show-stage option to print the parsed tree at the given stages.
     Use -p all to print tree at every stage.
+
+    Use --no-show-revs option with -s or -p to print only the set
+    representation or the parsed tree respectively.
 
     Use --verify-optimized to compare the optimized result with the unoptimized
     one. Returns 1 if the optimized result differs.
@@ -1989,6 +1993,8 @@ def debugrevspec(ui, repo, expr, **opts):
     revs = func(repo)
     if opts['show_set'] or (opts['show_set'] is None and ui.verbose):
         ui.write(("* set:\n"), smartset.prettyformat(revs), "\n")
+    if not opts['show_revs']:
+        return
     for c in revs:
         ui.write("%s\n" % c)
 
