@@ -156,4 +156,4 @@ treated differently in _checklookup() according to runtime platform.
   $ hg files
   a
   $ hg debugdirstate
-  n * * * a (glob)
+  n 644          2 unset               a
