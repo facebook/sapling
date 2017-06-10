@@ -611,3 +611,51 @@ Changeset in the bad:good range is obsolete
   date:        Thu Jan 01 00:00:26 1970 +0000
   summary:     msg 26
   
+Test the validation message when exclusive options are used:
+
+  $ hg bisect -r
+  $ hg bisect -b -c false
+  abort: --bad and --command are incompatible
+  [255]
+  $ hg bisect -b -e
+  abort: --bad and --extend are incompatible
+  [255]
+  $ hg bisect -b -g
+  abort: --bad and --good are incompatible
+  [255]
+  $ hg bisect -b -r
+  abort: --bad and --reset are incompatible
+  [255]
+  $ hg bisect -b -s
+  abort: --bad and --skip are incompatible
+  [255]
+  $ hg bisect -c false -e
+  abort: --command and --extend are incompatible
+  [255]
+  $ hg bisect -c false -g
+  abort: --command and --good are incompatible
+  [255]
+  $ hg bisect -c false -r
+  abort: --command and --reset are incompatible
+  [255]
+  $ hg bisect -c false -s
+  abort: --command and --skip are incompatible
+  [255]
+  $ hg bisect -e -g
+  abort: --extend and --good are incompatible
+  [255]
+  $ hg bisect -e -r
+  abort: --extend and --reset are incompatible
+  [255]
+  $ hg bisect -e -s
+  abort: --extend and --skip are incompatible
+  [255]
+  $ hg bisect -g -r
+  abort: --good and --reset are incompatible
+  [255]
+  $ hg bisect -g -s
+  abort: --good and --skip are incompatible
+  [255]
+  $ hg bisect -r -s
+  abort: --reset and --skip are incompatible
+  [255]

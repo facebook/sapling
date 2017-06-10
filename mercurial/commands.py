@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import difflib
 import errno
+import itertools
 import os
 import re
 import sys
@@ -768,8 +769,21 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             bad = True
         else:
             reset = True
-    elif extra or good + bad + skip + reset + extend + bool(command) > 1:
+    elif extra:
         raise error.Abort(_('incompatible arguments'))
+
+    incompatibles = {
+        '--bad': bad,
+        '--command': bool(command),
+        '--extend': extend,
+        '--good': good,
+        '--reset': reset,
+        '--skip': skip,
+    }
+
+    for left, right in itertools.combinations(sorted(incompatibles), 2):
+        if incompatibles[left] and incompatibles[right]:
+            raise error.Abort(_('%s and %s are incompatible') % (left, right))
 
     if reset:
         hbisect.resetstate(repo)
