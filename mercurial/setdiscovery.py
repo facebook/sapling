@@ -241,8 +241,10 @@ def findcommonheads(ui, local, remote,
     elapsed = util.timer() - start
     ui.progress(_('searching'), None)
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
-    msg = 'found %d common and %d missing heads, %d roundtrips in %.4fs\n'
-    ui.log('discovery', msg, len(result), len(srvheadhashes), roundtrips,
+    msg = ('found %d common and %d unknown server heads,'
+           ' %d roundtrips in %.4fs\n')
+    missing = set(result) - set(srvheads)
+    ui.log('discovery', msg, len(result), len(missing), roundtrips,
            elapsed)
 
     if not result and srvheadhashes != [nullid]:
