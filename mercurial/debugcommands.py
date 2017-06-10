@@ -1901,6 +1901,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
 @command('debugrevspec',
     [('', 'optimize', None,
       _('print parsed tree after optimizing (DEPRECATED)')),
+     ('s', 'show-set', None, _('print internal representation of result set')),
      ('p', 'show-stage', [],
       _('print parsed tree at the given stage'), _('NAME')),
      ('', 'no-optimized', False, _('evaluate tree without optimization')),
@@ -1962,9 +1963,9 @@ def debugrevspec(ui, repo, expr, **opts):
     if opts['verify_optimized']:
         arevs = revset.makematcher(treebystage['analyzed'])(repo)
         brevs = revset.makematcher(treebystage['optimized'])(repo)
-        if ui.verbose:
-            ui.note(("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
-            ui.note(("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
+        if opts['show_set'] or (opts['show_set'] is None and ui.verbose):
+            ui.write(("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
+            ui.write(("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
         arevs = list(arevs)
         brevs = list(brevs)
         if arevs == brevs:
@@ -1986,8 +1987,8 @@ def debugrevspec(ui, repo, expr, **opts):
 
     func = revset.makematcher(tree)
     revs = func(repo)
-    if ui.verbose:
-        ui.note(("* set:\n"), smartset.prettyformat(revs), "\n")
+    if opts['show_set'] or (opts['show_set'] is None and ui.verbose):
+        ui.write(("* set:\n"), smartset.prettyformat(revs), "\n")
     for c in revs:
         ui.write("%s\n" % c)
 

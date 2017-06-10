@@ -281,7 +281,7 @@ Show all commands + options
   debugrebuildfncache: 
   debugrename: rev
   debugrevlog: changelog, manifest, dir, dump
-  debugrevspec: optimize, show-stage, no-optimized, verify-optimized
+  debugrevspec: optimize, show-set, show-stage, no-optimized, verify-optimized
   debugsetparents: 
   debugsub: rev
   debugsuccessorssets: 
