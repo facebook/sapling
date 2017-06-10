@@ -276,7 +276,8 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
 
 
   $ hg -R r4 up 12
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved (execbit !)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved (no-execbit !)
 
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
@@ -313,7 +314,8 @@ Update back to revision 12 in r4 should break hardlink of file f1 and f3:
   2 r4/d1/data1
   2 r4/d1/f2
   1 r4/f1
-  1 r4/f3
+  1 r4/f3 (execbit !)
+  2 r4/f3 (no-execbit !)
 
 #if hardlink-whitelisted
   $ nlinksdir r4/.hg/undo.backup.dirstate r4/.hg/undo.dirstate
