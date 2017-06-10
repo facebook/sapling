@@ -1016,6 +1016,50 @@ Test first (=limit) and last
   8
   9
 
+Test order of first/last revisions
+
+  $ hg debugrevspec -s 'first(4:0, 3) & 3:'
+  * set:
+  <filteredset
+    <baseset
+      <limit n=3, offset=0,
+        <spanset- 0:4>>>,
+    <spanset+ 3:9>>
+  4
+  3
+
+  $ hg debugrevspec -s '3: & first(4:0, 3)'
+  * set:
+  <filteredset
+    <baseset
+      <limit n=3, offset=0,
+        <spanset- 0:4>>>,
+    <spanset+ 3:9>>
+  4
+  3
+BROKEN: should be '3 4'
+
+  $ hg debugrevspec -s 'last(4:0, 3) & :1'
+  * set:
+  <filteredset
+    <baseset
+      <last n=3,
+        <spanset+ 0:4>>>,
+    <spanset+ 0:1>>
+  1
+  0
+
+  $ hg debugrevspec -s ':1 & last(4:0, 3)'
+  * set:
+  <filteredset
+    <baseset
+      <last n=3,
+        <spanset+ 0:4>>>,
+    <spanset+ 0:1>>
+  1
+  0
+BROKEN: should be '0 1'
+
 Test matching
 
   $ log 'matching(6)'
@@ -1230,10 +1274,10 @@ Test null revision
   $ log 'reverse(null:)' | tail -2
   0
   -1
-BROKEN: should be '-1'
   $ log 'first(null:)'
-BROKEN: should be '-1'
+  -1
   $ log 'min(null:)'
+BROKEN: should be '-1'
   $ log 'tip:null and all()' | tail -2
   1
   0
@@ -1295,9 +1339,9 @@ For tests consistency
   9
   $ log '(all() + wdir()) & max(. + wdir())'
   2147483647
-  $ log '(all() + wdir()) & first(wdir() + .)'
+  $ log 'first(wdir() + .)'
   2147483647
-  $ log '(all() + wdir()) & last(. + wdir())'
+  $ log 'last(. + wdir())'
   2147483647
 
 Test working-directory integer revision and node id
@@ -1907,10 +1951,11 @@ ordering defined by it.
       follow)
     define)
   * set:
-  <baseset
-    <limit n=1, offset=0,
-      <spanset- 0:2>,
-      <baseset [1, 0, 2]>>>
+  <filteredset
+    <baseset
+      <limit n=1, offset=0,
+        <baseset [1, 0, 2]>>>,
+    <spanset- 0:2>>
   1
 
   $ try --optimize '2:0 & not last(0 + 2 + 1)'
@@ -1946,7 +1991,6 @@ ordering defined by it.
     <not
       <baseset
         <last n=1,
-          <fullreposet+ 0:9>,
           <baseset [1, 2, 0]>>>>>
   2
   0
@@ -3573,7 +3617,6 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <limit n=2, offset=0,
-        <fullreposet+ 0:9>,
         <baseset [1, 2, 3]>>>,
     <not
       <baseset [2]>>>
@@ -3630,7 +3673,6 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <last n=1,
-        <fullreposet+ 0:9>,
         <baseset [2, 1]>>>,
     <not
       <baseset [2]>>>

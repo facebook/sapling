@@ -1179,10 +1179,9 @@ def limit(repo, subset, x):
         y = next(it, None)
         if y is None:
             break
-        elif y in subset:
-            result.append(y)
-    return baseset(result, datarepr=('<limit n=%d, offset=%d, %r, %r>',
-                                     lim, ofs, subset, os))
+        result.append(y)
+    ls = baseset(result, datarepr=('<limit n=%d, offset=%d, %r>', lim, ofs, os))
+    return ls & subset
 
 @predicate('last(set, [n])', safe=True)
 def last(repo, subset, x):
@@ -1204,10 +1203,10 @@ def last(repo, subset, x):
         y = next(it, None)
         if y is None:
             break
-        elif y in subset:
-            result.append(y)
-    return baseset(result[::-1], datarepr=('<last n=%d, %r, %r>',
-                                           lim, subset, os))
+        result.append(y)
+    ls = baseset(result, datarepr=('<last n=%d, %r>', lim, os))
+    ls.reverse()
+    return ls & subset
 
 @predicate('max(set)', safe=True)
 def maxrev(repo, subset, x):
