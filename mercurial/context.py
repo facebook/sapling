@@ -2106,13 +2106,13 @@ class memctx(committablectx):
         self.substate = {}
 
         if isinstance(filectxfn, patch.filestore):
-            self._filectxfn = memfilefrompatch(filectxfn)
+            filectxfn = memfilefrompatch(filectxfn)
         elif not callable(filectxfn):
             # if store is not callable, wrap it in a function
-            self._filectxfn = memfilefromctx(filectxfn)
-        else:
-            # memoizing increases performance for e.g. vcs convert scenarios.
-            self._filectxfn = makecachingfilectxfn(filectxfn)
+            filectxfn = memfilefromctx(filectxfn)
+
+        # memoizing increases performance for e.g. vcs convert scenarios.
+        self._filectxfn = makecachingfilectxfn(filectxfn)
 
         if editor:
             self._text = editor(self._repo, self, [])
