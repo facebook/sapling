@@ -181,8 +181,8 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     where "original_branch_name" is the name of the branch in the
     source repository, and "new_branch_name" is the name of the branch
-    is the destination repository. No whitespace is allowed in the
-    branch names. This can be used to (for instance) move code in one
+    is the destination repository. No whitespace is allowed in the new
+    branch name. This can be used to (for instance) move code in one
     repository from "default" to a named branch.
 
     Mercurial Source

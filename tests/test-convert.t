@@ -125,9 +125,9 @@
   
       where "original_branch_name" is the name of the branch in the source
       repository, and "new_branch_name" is the name of the branch is the
-      destination repository. No whitespace is allowed in the branch names. This
-      can be used to (for instance) move code in one repository from "default"
-      to a named branch.
+      destination repository. No whitespace is allowed in the new branch name.
+      This can be used to (for instance) move code in one repository from
+      "default" to a named branch.
   
       Mercurial Source
       ################
@@ -581,3 +581,30 @@ test specifying a sourcename
   branch=default
   convert_revision=a3bc6100aa8ec03e00aaf271f1f50046fb432072
   convert_source=mysource
+
+  $ cat > branchmap.txt << EOF
+  > old branch new_branch
+  > EOF
+
+  $ hg -R a branch -q 'old branch'
+  $ echo gg > a/g
+  $ hg -R a ci -m 'branch name with spaces'
+  $ hg convert --branchmap branchmap.txt a d
+  initializing destination d repository
+  scanning source...
+  sorting...
+  converting...
+  6 a
+  5 b
+  4 c
+  3 d
+  2 e
+  1 g
+  0 branch name with spaces
+
+  $ hg -R a branches
+  old branch                     6:a24a66ade009
+  default                        5:a3bc6100aa8e (inactive)
+  $ hg -R d branches
+  new_branch                     6:64ed208b732b
+  default                        5:a3bc6100aa8e (inactive)
