@@ -136,7 +136,7 @@ REQUIRESNI
 Manifests can contain multiple entries. Assuming metadata is defined, clients
 will filter entries from the manifest that they don't support. The remaining
 entries are optionally sorted by client preferences
-(``experimental.clonebundleprefers`` config option). The client then attempts
+(``ui.clonebundleprefers`` config option). The client then attempts
 to fetch the bundle at the first URL in the remaining list.
 
 **Errors when downloading a bundle will fail the entire clone operation:
