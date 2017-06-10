@@ -1021,7 +1021,7 @@ class spanset(abstractsmartset):
     def __repr__(self):
         d = {False: '-', True: '+'}[self._ascending]
         return '<%s%s %d:%d>' % (type(self).__name__, d,
-                                 self._start, self._end - 1)
+                                 self._start, self._end)
 
 class fullreposet(spanset):
     """a set containing all revisions in the repo

@@ -157,7 +157,7 @@ trivial
     ('symbol', '0')
     ('symbol', '1'))
   * set:
-  <spanset+ 0:1>
+  <spanset+ 0:2>
   0
   1
   $ try --optimize :
@@ -168,7 +168,7 @@ trivial
     None
     define)
   * set:
-  <spanset+ 0:9>
+  <spanset+ 0:10>
   0
   1
   2
@@ -266,7 +266,7 @@ names that should be caught by fallback mechanism
   (rangepost
     ('symbol', '+a+b+c+'))
   * set:
-  <spanset+ 3:9>
+  <spanset+ 3:10>
   3
   4
   5
@@ -278,7 +278,7 @@ names that should be caught by fallback mechanism
   (rangepre
     ('symbol', '+a+b+c+'))
   * set:
-  <spanset+ 0:3>
+  <spanset+ 0:4>
   0
   1
   2
@@ -288,7 +288,7 @@ names that should be caught by fallback mechanism
     ('symbol', '-a-b-c-')
     ('symbol', '+a+b+c+'))
   * set:
-  <spanset- 3:4>
+  <spanset- 3:5>
   4
   3
   $ log '-a-b-c-:+a+b+c+'
@@ -626,7 +626,7 @@ may be hidden (issue5385)
     None
     define)
   * set:
-  <spanset+ 0:9>
+  <spanset+ 0:10>
   0
   1
   2
@@ -643,7 +643,7 @@ may be hidden (issue5385)
     ('symbol', '1')
     define)
   * set:
-  <spanset+ 0:1>
+  <spanset+ 0:2>
   0
   1
   $ try -p analyzed ':(1|2)'
@@ -656,7 +656,7 @@ may be hidden (issue5385)
       define)
     define)
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -681,7 +681,7 @@ infix/suffix resolution of ^ operator (issue2884):
       ('symbol', '1'))
     ('symbol', '2'))
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -702,7 +702,7 @@ infix/suffix resolution of ^ operator (issue2884):
     (parentpost
       ('symbol', '9')))
   * set:
-  <spanset+ 8:9>
+  <spanset+ 8:10>
   8
   9
 
@@ -727,7 +727,7 @@ infix/suffix resolution of ^ operator (issue2884):
         ('symbol', '1'))
       ('symbol', '2')))
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -742,7 +742,7 @@ infix/suffix resolution of ^ operator (issue2884):
           ('symbol', '4'))))
     ('symbol', '2'))
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -770,7 +770,7 @@ infix/suffix resolution of ^ operator (issue2884):
           (parentpost
             ('symbol', '9'))))))
   * set:
-  <spanset+ 4:9>
+  <spanset+ 4:10>
   4
   5
   6
@@ -788,7 +788,7 @@ infix/suffix resolution of ^ operator (issue2884):
       ('symbol', '1'))
     ('symbol', '2'))
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -803,7 +803,7 @@ infix/suffix resolution of ^ operator (issue2884):
       ('symbol', '1'))
     ('symbol', '2'))
   * set:
-  <spanset+ 0:2>
+  <spanset+ 0:3>
   0
   1
   2
@@ -957,7 +957,7 @@ test ancestors
     ('string', '\x08issue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ 0:9>,
+    <fullreposet+ 0:10>,
     <grep '\x08issue\\d+'>>
   $ try 'grep(r"\bissue\d+")'
   (func
@@ -965,7 +965,7 @@ test ancestors
     ('string', '\\bissue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ 0:9>,
+    <fullreposet+ 0:10>,
     <grep '\\bissue\\d+'>>
   6
   $ try 'grep(r"\")'
@@ -1023,18 +1023,18 @@ Test order of first/last revisions
   <filteredset
     <baseset
       <limit n=3, offset=0,
-        <spanset- 0:4>>>,
-    <spanset+ 3:9>>
+        <spanset- 0:5>>>,
+    <spanset+ 3:10>>
   4
   3
 
   $ hg debugrevspec -s '3: & first(4:0, 3)'
   * set:
   <filteredset
-    <spanset+ 3:9>,
+    <spanset+ 3:10>,
     <baseset
       <limit n=3, offset=0,
-        <spanset- 0:4>>>>
+        <spanset- 0:5>>>>
   3
   4
 
@@ -1043,18 +1043,18 @@ Test order of first/last revisions
   <filteredset
     <baseset
       <last n=3,
-        <spanset+ 0:4>>>,
-    <spanset+ 0:1>>
+        <spanset+ 0:5>>>,
+    <spanset+ 0:2>>
   1
   0
 
   $ hg debugrevspec -s ':1 & last(4:0, 3)'
   * set:
   <filteredset
-    <spanset+ 0:1>,
+    <spanset+ 0:2>,
     <baseset
       <last n=3,
-        <spanset+ 0:4>>>>
+        <spanset+ 0:5>>>>
   0
   1
 
@@ -1550,10 +1550,10 @@ ordering defined by it.
   * set:
   <filteredset
     <filteredset
-      <spanset- 0:3>,
-      <spanset+ 0:3>>,
+      <spanset- 0:4>,
+      <spanset+ 0:4>>,
     <not
-      <spanset+ 1:2>>>
+      <spanset+ 1:3>>>
   3
   0
 
@@ -1584,7 +1584,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <baseset [0, 1, 2]>>
   2
   1
@@ -1621,10 +1621,10 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <addset
       <baseset [2]>,
-      <spanset+ 0:1>>>
+      <spanset+ 0:2>>>
   2
   1
   0
@@ -1652,7 +1652,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <baseset+ [0, 1, 2]>>
   2
   1
@@ -1680,7 +1680,7 @@ ordering defined by it.
   * set:
   <filteredset
     <baseset [0, 2, 1]>,
-    <spanset- 0:2>>
+    <spanset- 0:3>>
   0
   2
   1
@@ -1708,7 +1708,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <baseset [0, 1, 2]>>
   2
   1
@@ -1756,7 +1756,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <not
       <baseset [0, 1]>>>
   2
@@ -1781,7 +1781,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <not
       <baseset [0, 1]>>>
   2
@@ -1832,7 +1832,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <baseset [0, 1, 2]>>
   2
   1
@@ -1866,8 +1866,8 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset+ 0:2>,
-    <spanset+ 0:9>>
+    <spanset+ 0:3>,
+    <spanset+ 0:10>>
   0
   1
   2
@@ -1905,8 +1905,8 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset+ 0:2>,
-    <spanset+ 0:9>>
+    <spanset+ 0:3>,
+    <spanset+ 0:10>>
   0
   1
   2
@@ -1953,7 +1953,7 @@ ordering defined by it.
     <baseset
       <limit n=1, offset=0,
         <baseset [1, 0, 2]>>>,
-    <spanset- 0:2>>
+    <spanset- 0:3>>
   1
 
   $ try --optimize '2:0 & not last(0 + 2 + 1)'
@@ -1985,7 +1985,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <not
       <baseset
         <last n=1,
@@ -2032,7 +2032,7 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset- 0:3>,
     <baseset [1]>>
   1
 
@@ -2133,11 +2133,11 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset+ 0:2>,
+    <spanset+ 0:3>,
     <addset
       <baseset [2]>,
       <filteredset
-        <fullreposet+ 0:9>,
+        <fullreposet+ 0:10>,
         <contains 'a'>>>>
   0
   1
@@ -2165,7 +2165,7 @@ ordering defined by it.
   * set:
   <addset
     <filteredset
-      <spanset- 0:2>,
+      <spanset- 0:3>,
       <contains 'a'>>,
     <baseset [2]>>
   1
@@ -2590,7 +2590,7 @@ test optimization of trivial `or` operation
   * set:
   <addset
     <baseset [0, 1]>,
-    <spanset+ 2:3>>
+    <spanset+ 2:4>>
   0
   1
   2
@@ -2628,10 +2628,10 @@ test optimization of trivial `or` operation
   * set:
   <addset
     <addset
-      <spanset+ 0:1>,
+      <spanset+ 0:2>,
       <baseset [2]>>,
     <addset
-      <spanset+ 3:4>,
+      <spanset+ 3:5>,
       <baseset [5, 6]>>>
   0
   1
@@ -2746,13 +2746,13 @@ test that chained `or` operations make balanced addsets
   * set:
   <addset
     <addset
-      <spanset+ 0:1>,
-      <spanset+ 1:2>>,
+      <spanset+ 0:2>,
+      <spanset+ 1:3>>,
     <addset
-      <spanset+ 2:3>,
+      <spanset+ 2:4>,
       <addset
-        <spanset+ 3:4>,
-        <spanset+ 4:5>>>>
+        <spanset+ 3:5>,
+        <spanset+ 4:6>>>>
   0
   1
   2
@@ -3169,7 +3169,7 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:9>,
+    <fullreposet+ 0:10>,
     <merge>>
   6
 
@@ -3190,7 +3190,7 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:9>,
+    <fullreposet+ 0:10>,
     <merge>>
   6
 
@@ -3248,7 +3248,7 @@ test alias recursion
   * set:
   <addset+
     <filteredset
-      <fullreposet+ 0:9>,
+      <fullreposet+ 0:10>,
       <merge>>,
     <generatorset+>>
   6
@@ -3311,8 +3311,8 @@ test nesting and variable passing
   * set:
   <baseset
     <max
-      <fullreposet+ 0:9>,
-      <spanset+ 2:5>>>
+      <fullreposet+ 0:10>,
+      <spanset+ 2:6>>>
   5
 
 test chained `or` operations are flattened at parsing phase
@@ -3345,10 +3345,10 @@ test chained `or` operations are flattened at parsing phase
         ('symbol', '3'))))
   * set:
   <addset
-    <spanset+ 0:1>,
+    <spanset+ 0:2>,
     <addset
-      <spanset+ 1:2>,
-      <spanset+ 2:3>>>
+      <spanset+ 1:3>,
+      <spanset+ 2:4>>>
   0
   1
   2
@@ -3393,7 +3393,7 @@ but 'all()' should never be substituted to '0()'.
   * set:
   <filteredset
     <baseset [0]>,
-    <spanset+ 0:9>>
+    <spanset+ 0:10>>
   0
 
 test unknown reference:
@@ -3442,7 +3442,7 @@ test unknown reference:
   <addset
     <baseset [9]>,
     <filteredset
-      <fullreposet+ 0:9>,
+      <fullreposet+ 0:10>,
       <desc '$1'>>>
   9
 
@@ -3633,7 +3633,7 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <max
-        <fullreposet+ 0:9>,
+        <fullreposet+ 0:10>,
         <baseset [1, 2]>>>,
     <not
       <baseset [2]>>>
@@ -3651,7 +3651,7 @@ issue2549 - correct optimizations
   <filteredset
     <baseset
       <min
-        <fullreposet+ 0:9>,
+        <fullreposet+ 0:10>,
         <baseset [1, 2]>>>,
     <not
       <baseset [1]>>>
