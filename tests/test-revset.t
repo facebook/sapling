@@ -986,6 +986,9 @@ test ancestors
   $ log 'keyword(issue)'
   6
   $ log 'keyword("test a")'
+
+Test first (=limit) and last
+
   $ log 'limit(head(), 1)'
   0
   $ log 'limit(author("re:bob|test"), 3, 5)'
@@ -998,6 +1001,16 @@ test ancestors
   $ log 'limit(all(), 1, -1)'
   hg: parse error: negative offset
   [255]
+
+  $ log 'last(all(), 0)'
+  $ log 'last(all(), 1)'
+  9
+  $ log 'last(all(), 2)'
+  8
+  9
+
+Test matching
+
   $ log 'matching(6)'
   6
   $ log 'matching(6:7, "phase parents user date branch summary files description substate")'

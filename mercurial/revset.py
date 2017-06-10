@@ -1202,7 +1202,8 @@ def last(repo, subset, x):
             break
         elif y in subset:
             result.append(y)
-    return baseset(result, datarepr=('<last n=%d, %r, %r>', lim, subset, os))
+    return baseset(result[::-1], datarepr=('<last n=%d, %r, %r>',
+                                           lim, subset, os))
 
 @predicate('max(set)', safe=True)
 def maxrev(repo, subset, x):
