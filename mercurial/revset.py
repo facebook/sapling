@@ -1162,6 +1162,8 @@ def limit(repo, subset, x):
         raise error.ParseError(_("limit requires one to three arguments"))
     # i18n: "limit" is a keyword
     lim = getinteger(args.get('n'), _("limit expects a number"), default=1)
+    if lim < 0:
+        raise error.ParseError(_("negative number to select"))
     # i18n: "limit" is a keyword
     ofs = getinteger(args.get('offset'), _("limit expects a number"), default=0)
     if ofs < 0:
@@ -1192,6 +1194,8 @@ def last(repo, subset, x):
     if len(l) == 2:
         # i18n: "last" is a keyword
         lim = getinteger(l[1], _("last expects a number"))
+    if lim < 0:
+        raise error.ParseError(_("negative number to select"))
     os = getset(repo, fullreposet(repo), l[0])
     os.reverse()
     result = []

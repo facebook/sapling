@@ -1001,7 +1001,14 @@ Test first (=limit) and last
   $ log 'limit(all(), 1, -1)'
   hg: parse error: negative offset
   [255]
+  $ log 'limit(all(), -1)'
+  hg: parse error: negative number to select
+  [255]
+  $ log 'limit(all(), 0)'
 
+  $ log 'last(all(), -1)'
+  hg: parse error: negative number to select
+  [255]
   $ log 'last(all(), 0)'
   $ log 'last(all(), 1)'
   9
