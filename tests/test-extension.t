@@ -1608,7 +1608,7 @@ Show deprecation warning for the use of cmdutil.command
   (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
 
 Make sure a broken uisetup doesn't globally break hg:
-  $ cat > baduisetup.py <<EOF
+  $ cat > $TESTTMP/baduisetup.py <<EOF
   > from mercurial import (
   >     bdiff,
   >     extensions,
@@ -1622,7 +1622,7 @@ Make sure a broken uisetup doesn't globally break hg:
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > baduisetup = $PWD/baduisetup.py
+  > baduisetup = $TESTTMP/baduisetup.py
   > EOF
 
 Even though the extension fails during uisetup, hg is still basically usable:
