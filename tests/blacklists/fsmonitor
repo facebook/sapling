@@ -1,7 +1,5 @@
 # Blacklist for a full testsuite run with fsmonitor enabled.
-# Use with
-#     run-tests --blacklist=blacklists/fsmonitor \
-#         --extra-config="extensions.fsmonitor="
+# Used by fsmonitor-run-tests.
 # The following tests all fail because they either use extensions that conflict
 # with fsmonitor, use subrepositories, or don't anticipate the extra file in
 # the .hg directory that fsmonitor adds.
