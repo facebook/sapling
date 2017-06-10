@@ -256,11 +256,13 @@ annotate after rename merge with -l
   3 b:5: b5
   7 b:7: d
 
---skip a modified line
+--skip a modified line. Note a slight behavior difference in pure - this is
+because the pure code comes up with slightly different deltas internally.
 
   $ hg annotate -nlf b --skip 6
   0 a:1: a
-  1 a:2: z
+  1 a:2: z (no-pure !)
+  0 a:1: z (pure !)
   1 a:3: a
   3 b:4: b4
   4 b:5: c
