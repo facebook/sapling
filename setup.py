@@ -704,6 +704,23 @@ except ImportError:
     class HackedMingw32CCompiler(object):
         pass
 
+if os.name == 'nt':
+    # Allow compiler/linker flags to be added to Visual Studio builds.  Passing
+    # extra_link_args to distutils.extensions.Extension() doesn't have any
+    # effect.
+    from distutils import msvccompiler
+
+    compiler = msvccompiler.MSVCCompiler
+
+    class HackedMSVCCompiler(msvccompiler.MSVCCompiler):
+        def initialize(self):
+            compiler.initialize(self)
+            # "warning LNK4197: export 'func' specified multiple times"
+            self.ldflags_shared.append('/ignore:4197')
+            self.ldflags_shared_debug.append('/ignore:4197')
+
+    msvccompiler.MSVCCompiler = HackedMSVCCompiler
+
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
                              'help/*.txt',
                              'help/internals/*.txt',
