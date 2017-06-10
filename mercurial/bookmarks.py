@@ -56,25 +56,25 @@ class bmstore(dict):
         tonode = bin # force local lookup
         setitem = dict.__setitem__
         try:
-            bkfile = _getbkfile(repo)
-            for line in bkfile:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    sha, refspec = line.split(' ', 1)
-                    node = tonode(sha)
-                    if node in nm:
-                        refspec = encoding.tolocal(refspec)
-                        setitem(self, refspec, node)
-                except (TypeError, ValueError):
-                    # TypeError:
-                    # - bin(...)
-                    # ValueError:
-                    # - node in nm, for non-20-bytes entry
-                    # - split(...), for string without ' '
-                    repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
-                                 % line)
+            with _getbkfile(repo) as bkfile:
+                for line in bkfile:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        sha, refspec = line.split(' ', 1)
+                        node = tonode(sha)
+                        if node in nm:
+                            refspec = encoding.tolocal(refspec)
+                            setitem(self, refspec, node)
+                    except (TypeError, ValueError):
+                        # TypeError:
+                        # - bin(...)
+                        # ValueError:
+                        # - node in nm, for non-20-bytes entry
+                        # - split(...), for string without ' '
+                        repo.ui.warn(_('malformed line in .hg/bookmarks: %r\n')
+                                     % line)
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
