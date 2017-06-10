@@ -1108,11 +1108,13 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     editor = None
                 else:
                     editor = getcommiteditor(editform='import.bypass')
-                memctx = context.makememctx(repo, (p1.node(), p2.node()),
+                memctx = context.memctx(repo, (p1.node(), p2.node()),
                                             message,
-                                            user,
-                                            date,
-                                            branch, files, store,
+                                            files=files,
+                                            filectxfn=store,
+                                            user=user,
+                                            date=date,
+                                            branch=branch,
                                             editor=editor)
                 n = memctx.commit()
             finally:

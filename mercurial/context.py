@@ -385,24 +385,6 @@ class basectx(object):
 
         return r
 
-
-def makememctx(repo, parents, text, user, date, branch, files, store,
-               editor=None, extra=None):
-    def getfilectx(repo, memctx, path):
-        data, mode, copied = store.getfile(path)
-        if data is None:
-            return None
-        islink, isexec = mode
-        return memfilectx(repo, path, data, islink=islink, isexec=isexec,
-                                  copied=copied, memctx=memctx)
-    if extra is None:
-        extra = {}
-    if branch:
-        extra['branch'] = encoding.fromlocal(branch)
-    ctx = memctx(repo, parents, text, files, getfilectx, user,
-                 date, extra, editor)
-    return ctx
-
 def _filterederror(repo, changeid):
     """build an exception to be raised about a filtered changeid
 
@@ -2110,7 +2092,7 @@ class memctx(committablectx):
     _returnnoneformissingfiles = True
 
     def __init__(self, repo, parents, text, files, filectxfn, user=None,
-                 date=None, extra=None, editor=False):
+                 date=None, extra=None, branch=None, editor=False):
         super(memctx, self).__init__(repo, text, user, date, extra)
         self._rev = None
         self._node = None
@@ -2119,10 +2101,14 @@ class memctx(committablectx):
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
         files = sorted(set(files))
         self._files = files
+        if branch is not None:
+            self._extra['branch'] = encoding.fromlocal(branch)
         self.substate = {}
 
-        # if store is not callable, wrap it in a function
-        if not callable(filectxfn):
+        if isinstance(filectxfn, patch.filestore):
+            self._filectxfn = memfilefrompatch(filectxfn)
+        elif not callable(filectxfn):
+            # if store is not callable, wrap it in a function
             self._filectxfn = memfilefromctx(filectxfn)
         else:
             # memoizing increases performance for e.g. vcs convert scenarios.
