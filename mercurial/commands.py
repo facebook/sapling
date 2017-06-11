@@ -957,14 +957,6 @@ def bookmark(ui, repo, *names, **opts):
     rename = opts.get('rename')
     inactive = opts.get('inactive')
 
-    def checkformat(mark):
-        mark = mark.strip()
-        if not mark:
-            raise error.Abort(_("bookmark names cannot consist entirely of "
-                               "whitespace"))
-        scmutil.checknewlabel(repo, mark, 'bookmark')
-        return mark
-
     def checkconflict(repo, mark, cur, force=False, target=None):
         if mark in marks and not force:
             if target:
@@ -1039,7 +1031,7 @@ def bookmark(ui, repo, *names, **opts):
                     raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
                     raise error.Abort(_("only one new bookmark name allowed"))
-                mark = checkformat(names[0])
+                mark = bookmarks.checkformat(repo, names[0])
                 if rename not in marks:
                     raise error.Abort(_("bookmark '%s' does not exist")
                                       % rename)
@@ -1052,7 +1044,7 @@ def bookmark(ui, repo, *names, **opts):
                 tr = repo.transaction('bookmark')
                 newact = None
                 for mark in names:
-                    mark = checkformat(mark)
+                    mark = bookmarks.checkformat(repo, mark)
                     if newact is None:
                         newact = mark
                     if inactive and mark == repo._activebookmark:

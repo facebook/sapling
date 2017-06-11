@@ -19,6 +19,7 @@ from . import (
     error,
     lock as lockmod,
     obsolete,
+    scmutil,
     txnutil,
     util,
 )
@@ -622,3 +623,15 @@ def validdest(repo, old, new):
     else:
         # still an independent clause as it is lazier (and therefore faster)
         return old.descendant(new)
+
+def checkformat(repo, mark):
+    """return a valid version of a potential bookmark name
+
+    Raises an abort error if the bookmark name is not valid.
+    """
+    mark = mark.strip()
+    if not mark:
+        raise error.Abort(_("bookmark names cannot consist entirely of "
+                            "whitespace"))
+    scmutil.checknewlabel(repo, mark, 'bookmark')
+    return mark
