@@ -14,7 +14,7 @@ gethgversion() {
 
     $HG version > /dev/null || { echo 'abort: hg version failed!'; exit 1 ; }
 
-    hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
+    hgversion=`LANGUAGE=C $HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
 
     if echo $hgversion | grep + > /dev/null 2>&1 ; then
         tmp=`echo $hgversion | cut -d+ -f 2`
