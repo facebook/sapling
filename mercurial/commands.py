@@ -957,48 +957,6 @@ def bookmark(ui, repo, *names, **opts):
     rename = opts.get('rename')
     inactive = opts.get('inactive')
 
-    def checkconflict(repo, mark, cur, force=False, target=None):
-        if mark in marks and not force:
-            if target:
-                if marks[mark] == target and target == cur:
-                    # re-activating a bookmark
-                    return
-                anc = repo.changelog.ancestors([repo[target].rev()])
-                bmctx = repo[marks[mark]]
-                divs = [repo[b].node() for b in marks
-                        if b.split('@', 1)[0] == mark.split('@', 1)[0]]
-
-                # allow resolving a single divergent bookmark even if moving
-                # the bookmark across branches when a revision is specified
-                # that contains a divergent bookmark
-                if bmctx.rev() not in anc and target in divs:
-                    bookmarks.deletedivergent(repo, [target], mark)
-                    return
-
-                deletefrom = [b for b in divs
-                              if repo[b].rev() in anc or b == target]
-                bookmarks.deletedivergent(repo, deletefrom, mark)
-                if bookmarks.validdest(repo, bmctx, repo[target]):
-                    ui.status(_("moving bookmark '%s' forward from %s\n") %
-                              (mark, short(bmctx.node())))
-                    return
-            raise error.Abort(_("bookmark '%s' already exists "
-                               "(use -f to force)") % mark)
-        if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
-            and not force):
-            raise error.Abort(
-                _("a bookmark cannot have the name of an existing branch"))
-        if len(mark) > 3 and not force:
-            try:
-                shadowhash = (mark in repo)
-            except error.LookupError: # ambiguous identifier
-                shadowhash = False
-            if shadowhash:
-                repo.ui.warn(
-                    _("bookmark %s matches a changeset hash\n"
-                      "(did you leave a -r out of an 'hg bookmark' command?)\n")
-                    % mark)
-
     if delete and rename:
         raise error.Abort(_("--delete and --rename are incompatible"))
     if delete and rev:
@@ -1035,7 +993,7 @@ def bookmark(ui, repo, *names, **opts):
                 if rename not in marks:
                     raise error.Abort(_("bookmark '%s' does not exist")
                                       % rename)
-                checkconflict(repo, mark, cur, force)
+                marks.checkconflict(mark, force)
                 marks[mark] = marks[rename]
                 if repo._activebookmark == rename and not inactive:
                     bookmarks.activate(repo, mark)
@@ -1053,7 +1011,7 @@ def bookmark(ui, repo, *names, **opts):
                     tgt = cur
                     if rev:
                         tgt = scmutil.revsingle(repo, rev).node()
-                    checkconflict(repo, mark, cur, force, tgt)
+                    marks.checkconflict(mark, force, tgt)
                     marks[mark] = tgt
                 if not inactive and cur == marks[newact] and not rev:
                     bookmarks.activate(repo, newact)

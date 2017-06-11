@@ -13,6 +13,7 @@ from .i18n import _
 from .node import (
     bin,
     hex,
+    short,
 )
 from . import (
     encoding,
@@ -155,6 +156,61 @@ class bmstore(dict):
             else:
                 raise error.Abort(_("no active bookmark"))
         return bname
+
+    def checkconflict(self, mark, force=False, target=None):
+        """check repo for a potential clash of mark with an existing bookmark,
+        branch, or hash
+
+        If target is supplied, then check that we are moving the bookmark
+        forward.
+
+        If force is supplied, then forcibly move the bookmark to a new commit
+        regardless if it is a move forward.
+        """
+        cur = self._repo.changectx('.').node()
+        if mark in self and not force:
+            if target:
+                if self[mark] == target and target == cur:
+                    # re-activating a bookmark
+                    return
+                rev = self._repo[target].rev()
+                anc = self._repo.changelog.ancestors([rev])
+                bmctx = self._repo[self[mark]]
+                divs = [self._repo[b].node() for b in self
+                        if b.split('@', 1)[0] == mark.split('@', 1)[0]]
+
+                # allow resolving a single divergent bookmark even if moving
+                # the bookmark across branches when a revision is specified
+                # that contains a divergent bookmark
+                if bmctx.rev() not in anc and target in divs:
+                    deletedivergent(self._repo, [target], mark)
+                    return
+
+                deletefrom = [b for b in divs
+                              if self._repo[b].rev() in anc or b == target]
+                deletedivergent(self._repo, deletefrom, mark)
+                if validdest(self._repo, bmctx, self._repo[target]):
+                    self._repo.ui.status(
+                        _("moving bookmark '%s' forward from %s\n") %
+                        (mark, short(bmctx.node())))
+                    return
+            raise error.Abort(_("bookmark '%s' already exists "
+                                "(use -f to force)") % mark)
+        if ((mark in self._repo.branchmap() or
+             mark == self._repo.dirstate.branch()) and not force):
+            raise error.Abort(
+                _("a bookmark cannot have the name of an existing branch"))
+        if len(mark) > 3 and not force:
+            try:
+                shadowhash = (mark in self._repo)
+            except error.LookupError:  # ambiguous identifier
+                shadowhash = False
+            if shadowhash:
+                self._repo.ui.warn(
+                    _("bookmark %s matches a changeset hash\n"
+                      "(did you leave a -r out of an 'hg bookmark' "
+                      "command?)\n")
+                    % mark)
 
 def _readactive(repo, marks):
     """
