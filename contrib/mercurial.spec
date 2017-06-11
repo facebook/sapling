@@ -153,9 +153,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/%{pythonhg}
 %{hgpyprefix}
 %else
-%if "%{?pythonver}" != "2.4"
 %{_libdir}/python%{pythonver}/site-packages/%{name}-*-py%{pythonver}.egg-info
-%endif
 %{_libdir}/python%{pythonver}/site-packages/%{name}
 %{_libdir}/python%{pythonver}/site-packages/hgext
 %{_libdir}/python%{pythonver}/site-packages/hgext3rd
