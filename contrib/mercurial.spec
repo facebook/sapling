@@ -157,4 +157,5 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/python%{pythonver}/site-packages/%{name}
 %{_libdir}/python%{pythonver}/site-packages/hgext
 %{_libdir}/python%{pythonver}/site-packages/hgext3rd
+%{_libdir}/python%{pythonver}/site-packages/hgdemandimport
 %endif
