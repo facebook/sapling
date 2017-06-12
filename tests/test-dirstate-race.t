@@ -101,7 +101,7 @@ anyway.
 
 Test that dirstate changes aren't written out at the end of "hg
 status", if .hg/dirstate is already changed simultaneously before
-acquisition of wlock in workingctx._checklookup().
+acquisition of wlock in workingctx._poststatusfixup().
 
 This avoidance is important to keep consistency of dirstate in race
 condition (see issue5584 for detail).

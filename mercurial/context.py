@@ -1738,7 +1738,10 @@ class workingctx(committablectx):
                 # it's in the dirstate.
                 deleted.append(f)
 
-        # update dirstate for files that are actually clean
+        return modified, deleted, fixup
+
+    def _poststatusfixup(self, fixup):
+        """update dirstate for files that are actually clean"""
         if fixup:
             try:
                 oldid = self._repo.dirstate.identity()
@@ -1767,7 +1770,6 @@ class workingctx(committablectx):
                                             'identity mismatch\n')
             except error.LockError:
                 pass
-        return modified, deleted, fixup
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):
@@ -1781,14 +1783,16 @@ class workingctx(committablectx):
                                             listclean, listunknown)
 
         # check for any possibly clean files
+        fixup = []
         if cmp:
             modified2, deleted2, fixup = self._checklookup(cmp)
             s.modified.extend(modified2)
             s.deleted.extend(deleted2)
 
-            # update dirstate for files that are actually clean
             if fixup and listclean:
                 s.clean.extend(fixup)
+
+        self._poststatusfixup(fixup)
 
         if match.always():
             # cache for performance

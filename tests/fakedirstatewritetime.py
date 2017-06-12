@@ -2,7 +2,7 @@
 # specified by '[fakedirstatewritetime] fakenow', only when
 # 'dirstate.write()' is invoked via functions below:
 #
-#   - 'workingctx._checklookup()' (= 'repo.status()')
+#   - 'workingctx._poststatusfixup()' (= 'repo.status()')
 #   - 'committablectx.markcommitted()'
 
 from __future__ import absolute_import
@@ -55,16 +55,16 @@ def fakewrite(ui, func):
         parsers.pack_dirstate = orig_pack_dirstate
         dirstate._getfsnow = orig_dirstate_getfsnow
 
-def _checklookup(orig, workingctx, files):
+def _poststatusfixup(orig, workingctx, fixup):
     ui = workingctx.repo().ui
-    return fakewrite(ui, lambda : orig(workingctx, files))
+    return fakewrite(ui, lambda : orig(workingctx, fixup))
 
 def markcommitted(orig, committablectx, node):
     ui = committablectx.repo().ui
     return fakewrite(ui, lambda : orig(committablectx, node))
 
 def extsetup(ui):
-    extensions.wrapfunction(context.workingctx, '_checklookup',
-                            _checklookup)
+    extensions.wrapfunction(context.workingctx, '_poststatusfixup',
+                            _poststatusfixup)
     extensions.wrapfunction(context.committablectx, 'markcommitted',
                             markcommitted)
