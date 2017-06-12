@@ -214,15 +214,14 @@ class profile(object):
             raise
 
     def __exit__(self, exception_type, exception_value, traceback):
-        if self._profiler is None:
-            return
-        self._profiler.__exit__(exception_type, exception_value, traceback)
-        if self._output == 'blackbox':
-            val = 'Profile:\n%s' % self._fp.getvalue()
-            # ui.log treats the input as a format string,
-            # so we need to escape any % signs.
-            val = val.replace('%', '%%')
-            self._ui.log('profile', val)
+        if self._profiler is not None:
+            self._profiler.__exit__(exception_type, exception_value, traceback)
+            if self._output == 'blackbox':
+                val = 'Profile:\n%s' % self._fp.getvalue()
+                # ui.log treats the input as a format string,
+                # so we need to escape any % signs.
+                val = val.replace('%', '%%')
+                self._ui.log('profile', val)
         self._closefp()
 
     def _closefp(self):
