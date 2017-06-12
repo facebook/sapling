@@ -160,6 +160,34 @@ treated differently in _checklookup() according to runtime platform.
 
   $ rm b
 
+#if fsmonitor
+
+Create fsmonitor state.
+
+  $ hg status
+  $ f --type .hg/fsmonitor.state
+  .hg/fsmonitor.state: file
+
+Test that invalidating fsmonitor state in the middle (which doesn't require the
+wlock) causes the fsmonitor update to be skipped.
+hg debugrebuilddirstate ensures that the dirstaterace hook will be called, but
+it also invalidates the fsmonitor state. So back it up and restore it.
+
+  $ mv .hg/fsmonitor.state .hg/fsmonitor.state.tmp
+  $ hg debugrebuilddirstate
+  $ mv .hg/fsmonitor.state.tmp .hg/fsmonitor.state
+
+  $ cat > $TESTTMP/dirstaterace.sh <<EOF
+  > rm .hg/fsmonitor.state
+  > EOF
+
+  $ hg status --config extensions.dirstaterace=$TESTTMP/dirstaterace.py --debug
+  skip updating fsmonitor.state: identity mismatch
+  $ f .hg/fsmonitor.state
+  .hg/fsmonitor.state: file not found
+
+#endif
+
 Set up a rebase situation for issue5581.
 
   $ echo c2 > a

@@ -1519,6 +1519,11 @@ class filestat(object):
             stat = None
         return cls(stat)
 
+    @classmethod
+    def fromfp(cls, fp):
+        stat = os.fstat(fp.fileno())
+        return cls(stat)
+
     __hash__ = object.__hash__
 
     def __eq__(self, old):
