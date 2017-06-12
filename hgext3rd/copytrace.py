@@ -31,6 +31,7 @@ from mercurial import (
     dispatch,
     extensions,
     filemerge,
+    node,
     util,
 )
 from mercurial.i18n import _
@@ -80,8 +81,20 @@ def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
                 msg = "success"
             else:
                 msg = "success (fastcopytracing)"
+
+            try:
+                destctx = _getctxfromfctx(fcd)
+                srcctx = _getctxfromfctx(fco)
+                hexes = '%s, %s' % (_gethex(destctx), _gethex(srcctx))
+                paths = '%s, %s' % (orig, fco.path())
+                msg = "%s (%s; %s)" % (msg, hexes, paths)
+            except Exception as e:
+                # we don't expect any exceptions to happen, but to be 100%
+                # sure we don't break hg let's catch everything and log it
+                msg = 'failed to log: %s' % (e,)
             repo.ui.log("copytrace", msg=msg,
                         reponame=_getreponame(repo, repo.ui))
+
     return origfunc(premerge, repo, mynode, orig, fcd, fco, fca, labels,
                 *args, **kwargs)
 
@@ -251,3 +264,13 @@ def _getreponame(repo, ui):
     if reponame:
         reponame = os.path.basename(reponame)
     return reponame
+
+def _getctxfromfctx(fctx):
+    if fctx.isabsent():
+        return fctx._ctx
+    else:
+        return fctx._changectx
+
+def _gethex(ctx):
+    # for workingctx return p1 hex
+    return ctx.hex() if ctx.node() != node.wdirid else ctx.p1().hex()
