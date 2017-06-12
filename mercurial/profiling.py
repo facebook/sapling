@@ -188,7 +188,7 @@ class profile(object):
 
         self._output = self._ui.config('profiling', 'output')
 
-        if True:
+        try:
             if self._output == 'blackbox':
                 self._fp = util.stringio()
             elif self._output:
@@ -209,6 +209,9 @@ class profile(object):
 
             self._profiler = proffn(self._ui, self._fp)
             self._profiler.__enter__()
+        except: # re-raises
+            self._closefp()
+            raise
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self._profiler is None:
