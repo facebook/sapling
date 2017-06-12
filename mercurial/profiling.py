@@ -218,4 +218,7 @@ class profile(object):
                 # so we need to escape any % signs.
                 val = val.replace('%', '%%')
                 self._ui.log('profile', val)
-            self._fp.close()
+            self._closefp()
+
+    def _closefp(self):
+        self._fp.close()
