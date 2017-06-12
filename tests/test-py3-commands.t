@@ -183,7 +183,7 @@ Prove the repo is valid using the Python 2 `hg`:
   summary:     commit performed in Python 3
   
 
-  $ hg log -G
+  $ $PYTHON3 $HGBIN log -G
   @  changeset:   1:e1e9167203d4
   |  tag:         tip
   |  user:        test
@@ -195,7 +195,7 @@ Prove the repo is valid using the Python 2 `hg`:
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     commit performed in Python 3
   
-  $ hg log -Tjson
+  $ $PYTHON3 $HGBIN log -Tjson
   [
    {
     "rev": 1,
@@ -225,7 +225,7 @@ Prove the repo is valid using the Python 2 `hg`:
 
 Show that update works now!
 
-  $ hg up 0
+  $ $PYTHON3 $HGBIN up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg identify
+  $ $PYTHON3 $HGBIN identify
   71c96e924262
