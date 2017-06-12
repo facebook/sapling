@@ -214,8 +214,10 @@ class profile(object):
             raise
 
     def __exit__(self, exception_type, exception_value, traceback):
+        propagate = None
         if self._profiler is not None:
-            self._profiler.__exit__(exception_type, exception_value, traceback)
+            propagate = self._profiler.__exit__(exception_type, exception_value,
+                                                traceback)
             if self._output == 'blackbox':
                 val = 'Profile:\n%s' % self._fp.getvalue()
                 # ui.log treats the input as a format string,
@@ -223,6 +225,7 @@ class profile(object):
                 val = val.replace('%', '%%')
                 self._ui.log('profile', val)
         self._closefp()
+        return propagate
 
     def _closefp(self):
         if self._fpdoclose and self._fp is not None:
