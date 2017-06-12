@@ -1740,7 +1740,7 @@ class workingctx(committablectx):
 
         return modified, deleted, fixup
 
-    def _poststatusfixup(self, fixup):
+    def _poststatusfixup(self, status, fixup):
         """update dirstate for files that are actually clean"""
         if fixup:
             try:
@@ -1792,7 +1792,7 @@ class workingctx(committablectx):
             if fixup and listclean:
                 s.clean.extend(fixup)
 
-        self._poststatusfixup(fixup)
+        self._poststatusfixup(s, fixup)
 
         if match.always():
             # cache for performance

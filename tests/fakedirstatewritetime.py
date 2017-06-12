@@ -55,9 +55,9 @@ def fakewrite(ui, func):
         parsers.pack_dirstate = orig_pack_dirstate
         dirstate._getfsnow = orig_dirstate_getfsnow
 
-def _poststatusfixup(orig, workingctx, fixup):
+def _poststatusfixup(orig, workingctx, status, fixup):
     ui = workingctx.repo().ui
-    return fakewrite(ui, lambda : orig(workingctx, fixup))
+    return fakewrite(ui, lambda : orig(workingctx, status, fixup))
 
 def markcommitted(orig, committablectx, node):
     ui = committablectx.repo().ui
