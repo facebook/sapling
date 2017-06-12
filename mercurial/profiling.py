@@ -188,26 +188,27 @@ class profile(object):
 
         self._output = self._ui.config('profiling', 'output')
 
-        if self._output == 'blackbox':
-            self._fp = util.stringio()
-        elif self._output:
-            path = self._ui.expandpath(self._output)
-            self._fp = open(path, 'wb')
-        else:
-            self._fpdoclose = False
-            self._fp = self._ui.ferr
+        if True:
+            if self._output == 'blackbox':
+                self._fp = util.stringio()
+            elif self._output:
+                path = self._ui.expandpath(self._output)
+                self._fp = open(path, 'wb')
+            else:
+                self._fpdoclose = False
+                self._fp = self._ui.ferr
 
-        if proffn is not None:
-            pass
-        elif profiler == 'ls':
-            proffn = lsprofile
-        elif profiler == 'flame':
-            proffn = flameprofile
-        else:
-            proffn = statprofile
+            if proffn is not None:
+                pass
+            elif profiler == 'ls':
+                proffn = lsprofile
+            elif profiler == 'flame':
+                proffn = flameprofile
+            else:
+                proffn = statprofile
 
-        self._profiler = proffn(self._ui, self._fp)
-        self._profiler.__enter__()
+            self._profiler = proffn(self._ui, self._fp)
+            self._profiler.__enter__()
 
     def __exit__(self, exception_type, exception_value, traceback):
         if self._profiler is None:
