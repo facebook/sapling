@@ -151,6 +151,7 @@ class profile(object):
         self._ui = ui
         self._output = None
         self._fp = None
+        self._fpdoclose = True
         self._profiler = None
         self._enabled = enabled
         self._entered = False
@@ -193,6 +194,7 @@ class profile(object):
             path = self._ui.expandpath(self._output)
             self._fp = open(path, 'wb')
         else:
+            self._fpdoclose = False
             self._fp = self._ui.ferr
 
         if proffn is not None:
@@ -221,4 +223,5 @@ class profile(object):
             self._closefp()
 
     def _closefp(self):
-        self._fp.close()
+        if self._fpdoclose and self._fp is not None:
+            self._fp.close()
