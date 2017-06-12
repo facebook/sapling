@@ -423,12 +423,12 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         if currentphase == oldphase and newphase < oldphase:
             with repo.transaction('pushkey-phase') as tr:
                 advanceboundary(repo, tr, newphase, [bin(nhex)])
-            return 1
+            return True
         elif currentphase == newphase:
             # raced, but got correct result
-            return 1
+            return True
         else:
-            return 0
+            return False
 
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict

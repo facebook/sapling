@@ -944,10 +944,10 @@ def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
     if not key.startswith('dump'):
         repo.ui.warn(_('unknown key: %r') % key)
-        return 0
+        return False
     if old:
         repo.ui.warn(_('unexpected old value for %r') % key)
-        return 0
+        return False
     data = util.b85decode(new)
     lock = repo.lock()
     try:
@@ -956,7 +956,7 @@ def pushmarker(repo, key, old, new):
             repo.obsstore.mergemarkers(tr, data)
             repo.invalidatevolatilesets()
             tr.close()
-            return 1
+            return True
         finally:
             tr.release()
     finally:
