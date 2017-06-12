@@ -1742,7 +1742,8 @@ class workingctx(committablectx):
 
     def _poststatusfixup(self, status, fixup):
         """update dirstate for files that are actually clean"""
-        if fixup:
+        poststatus = self._repo.postdsstatus()
+        if fixup or poststatus:
             try:
                 oldid = self._repo.dirstate.identity()
 
@@ -1752,15 +1753,20 @@ class workingctx(committablectx):
                 # taking the lock
                 with self._repo.wlock(False):
                     if self._repo.dirstate.identity() == oldid:
-                        normal = self._repo.dirstate.normal
-                        for f in fixup:
-                            normal(f)
-                        # write changes out explicitly, because nesting
-                        # wlock at runtime may prevent 'wlock.release()'
-                        # after this block from doing so for subsequent
-                        # changing files
-                        tr = self._repo.currenttransaction()
-                        self._repo.dirstate.write(tr)
+                        if fixup:
+                            normal = self._repo.dirstate.normal
+                            for f in fixup:
+                                normal(f)
+                            # write changes out explicitly, because nesting
+                            # wlock at runtime may prevent 'wlock.release()'
+                            # after this block from doing so for subsequent
+                            # changing files
+                            tr = self._repo.currenttransaction()
+                            self._repo.dirstate.write(tr)
+
+                        if poststatus:
+                            for ps in poststatus:
+                                ps(self, status)
                     else:
                         # in this case, writing changes out breaks
                         # consistency, because .hg/dirstate was
@@ -1770,6 +1776,9 @@ class workingctx(committablectx):
                                             'identity mismatch\n')
             except error.LockError:
                 pass
+            finally:
+                # Even if the wlock couldn't be grabbed, clear out the list.
+                self._repo.clearpostdsstatus()
 
     def _dirstatestatus(self, match=None, ignored=False, clean=False,
                         unknown=False):

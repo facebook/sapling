@@ -400,6 +400,9 @@ class localrepository(object):
         # - bookmark changes
         self.filteredrevcache = {}
 
+        # post-dirstate-status hooks
+        self._postdsstatus = []
+
         # generic mapping between names and nodes
         self.names = namespaces.namespaces()
 
@@ -1883,6 +1886,36 @@ class localrepository(object):
         '''a convenience method that calls node1.status(node2)'''
         return self[node1].status(node2, match, ignored, clean, unknown,
                                   listsubrepos)
+
+    def addpostdsstatus(self, ps):
+        """Add a callback to run within the wlock, at the point at which status
+        fixups happen.
+
+        On status completion, callback(wctx, status) will be called with the
+        wlock held, unless the dirstate has changed from underneath or the wlock
+        couldn't be grabbed.
+
+        Callbacks should not capture and use a cached copy of the dirstate --
+        it might change in the meanwhile. Instead, they should access the
+        dirstate via wctx.repo().dirstate.
+
+        This list is emptied out after each status run -- extensions should
+        make sure it adds to this list each time dirstate.status is called.
+        Extensions should also make sure they don't call this for statuses
+        that don't involve the dirstate.
+        """
+
+        # The list is located here for uniqueness reasons -- it is actually
+        # managed by the workingctx, but that isn't unique per-repo.
+        self._postdsstatus.append(ps)
+
+    def postdsstatus(self):
+        """Used by workingctx to get the list of post-dirstate-status hooks."""
+        return self._postdsstatus
+
+    def clearpostdsstatus(self):
+        """Used by workingctx to clear post-dirstate-status hooks."""
+        del self._postdsstatus[:]
 
     def heads(self, start=None):
         if start is None:
