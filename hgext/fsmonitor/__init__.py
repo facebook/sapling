@@ -485,16 +485,13 @@ def overridestatus(
     else:
         stateunknown = listunknown
 
+    if updatestate:
+        ps = poststatus(startclock)
+        self.addpostdsstatus(ps)
+
     r = orig(node1, node2, match, listignored, listclean, stateunknown,
              listsubrepos)
     modified, added, removed, deleted, unknown, ignored, clean = r
-
-    if updatestate:
-        notefiles = modified + added + removed + deleted + unknown
-        self._fsmonitorstate.set(
-            self._fsmonitorstate.getlastclock() or startclock,
-            _hashignore(self.dirstate._ignore),
-            notefiles)
 
     if not listunknown:
         unknown = []
@@ -527,6 +524,17 @@ def overridestatus(
 
     return scmutil.status(
         modified, added, removed, deleted, unknown, ignored, clean)
+
+class poststatus(object):
+    def __init__(self, startclock):
+        self._startclock = startclock
+
+    def __call__(self, wctx, status):
+        clock = wctx.repo()._fsmonitorstate.getlastclock() or self._startclock
+        hashignore = _hashignore(wctx.repo().dirstate._ignore)
+        notefiles = (status.modified + status.added + status.removed +
+                     status.deleted + status.unknown)
+        wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
 
 def makedirstate(cls):
     class fsmonitordirstate(cls):

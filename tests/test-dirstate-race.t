@@ -157,3 +157,50 @@ treated differently in _checklookup() according to runtime platform.
   a
   $ hg debugdirstate
   n * * * a (glob)
+
+  $ rm b
+
+Set up a rebase situation for issue5581.
+
+  $ echo c2 > a
+  $ echo c2 > b
+  $ hg add b
+  $ hg commit -m c2
+  created new head
+  $ echo c3 >> a
+  $ hg commit -m c3
+  $ hg update 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c4 >> a
+  $ echo c4 >> b
+  $ hg commit -m c4
+  created new head
+
+Configure a merge tool that runs status in the middle of the rebase.
+
+  $ cat >> $TESTTMP/mergetool-race.sh << EOF
+  > echo "custom merge tool"
+  > printf "c2\nc3\nc4\n" > \$1
+  > hg --cwd $TESTTMP/repo status
+  > echo "custom merge tool end"
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > rebase =
+  > [merge-tools]
+  > test.executable=sh
+  > test.args=$TESTTMP/mergetool-race.sh \$output
+  > EOF
+
+  $ hg rebase -s . -d 3 --tool test
+  rebasing 4:b08445fd6b2a "c4" (tip)
+  merging a
+  custom merge tool
+  M a
+  ? a.orig
+  custom merge tool end
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/* (glob)
+
+This hg status should be empty, whether or not fsmonitor is enabled (issue5581).
+
+  $ hg status
