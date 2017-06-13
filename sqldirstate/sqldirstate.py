@@ -390,7 +390,8 @@ def makedirstate(cls):
             self._sqlmigration()
 
         def _read(self):
-            pass
+            self._identity = util.filestat.frompath(
+                self._opener.join(self._filename))
 
         @propertycache
         def _pl(self):
