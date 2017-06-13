@@ -25,7 +25,6 @@ will not load them for you
 """
 
 from mercurial import extensions
-from mercurial import error
 try:
     from mercurial import chgserver
 except ImportError:
@@ -33,6 +32,16 @@ except ImportError:
 chgserver._configsections.append('extorder')
 
 testedwith = 'ships-with-fb-hgext'
+
+class MercurialExtOrderException(BaseException):
+    '''Special exception to bypass upstream exception catching
+
+    Upstream mercurial catches all Exception from uisetup or extsetup - see
+    ea1c2eb7abd341c84422f489af75bccb02622671. We need to throw something that is
+    subclass of BaseException to actually abort the program if extension order
+    is incorrect. That's why this class exists.
+    '''
+    pass
 
 def uisetup(ui):
 
@@ -59,7 +68,8 @@ def uisetup(ui):
 
     def visit(n):
         if n in temp:
-            raise error.Abort("extorder: conflicting extension order")
+            raise MercurialExtOrderException(
+                "extorder: conflicting extension order")
         elif n in unvisited:
             temp.add(n)
             for m in deps.get(n, []):

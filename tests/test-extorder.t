@@ -35,6 +35,7 @@ Simple Dependency
 Conflicting deps
 
   $ echo "dummyext2 = dummyext1" >> .hg/hgrc
-  $ hg id
-  abort: extorder: conflicting extension order
-  [255]
+  $ hg id > out.txt 2>&1
+  [1]
+  $ grep MercurialExtOrderException < out.txt
+  hgext_extorder.MercurialExtOrderException: extorder: conflicting extension order
