@@ -75,7 +75,13 @@ def extsetup(ui):
 def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
                labels=None, *args, **kwargs):
     if premerge:
-        if orig != fco.path():
+        # copytracing worked if files to merge have different file names
+        # and filelog contents are different (fco.cmp(fcd) returns True if
+        # they are different). If filelog contents are the same then the file
+        # was moved in the rebase/graft/merge source, but wasn't changed in the
+        # rebase/graft/merge destination. This case mercurial would've handled
+        # even with disabled copytracing, so we don't want to log it.
+        if orig != fco.path() and fco.cmp(fcd):
             # copytracing was in action, let's record it
             if not repo.ui.configbool("experimental", "disablecopytrace"):
                 msg = "success"
