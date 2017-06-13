@@ -114,7 +114,7 @@ Stack of non-conflicting commits should be accepted
   taking quick initial sample
   query 2; still undecided: 2, sample size is: 2
   sending known command
-  2 total queries
+  2 total queries in *s (glob)
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 58 bytes
