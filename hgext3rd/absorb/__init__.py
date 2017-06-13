@@ -191,7 +191,7 @@ def getfilestack(stack, path, seenfctxs=set()):
     # remove uniq and find a different way to identify fctxs.
     return uniq(fctxs), fctxmap
 
-class overlaystore(object):
+class overlaystore(patch.filestore):
     """read-only, hybrid store based on a dict and ctx.
     memworkingcopy: {path: content}, overrides file contents.
     """
@@ -226,8 +226,10 @@ def overlaycontext(memworkingcopy, ctx, parents=None, extra=None):
     user = ctx.user()
     files = set(ctx.files()).union(memworkingcopy.iterkeys())
     store = overlaystore(ctx, memworkingcopy)
-    return context.makememctx(ctx.repo(), parents, desc, user, date, None,
-                              files, store, extra=extra)
+    return context.memctx(
+        repo=ctx.repo(), parents=parents, text=desc,
+        files=files, filectxfn=store, user=user, date=date,
+        branch=None, extra=extra)
 
 class filefixupstate(object):
     """state needed to apply fixups to a single file
