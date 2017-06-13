@@ -982,15 +982,7 @@ def bookmark(ui, repo, *names, **opts):
                     raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
                     raise error.Abort(_("only one new bookmark name allowed"))
-                mark = bookmarks.checkformat(repo, names[0])
-                if rename not in marks:
-                    raise error.Abort(_("bookmark '%s' does not exist")
-                                      % rename)
-                marks.checkconflict(mark, force)
-                marks[mark] = marks[rename]
-                if repo._activebookmark == rename and not inactive:
-                    bookmarks.activate(repo, mark)
-                del marks[rename]
+                bookmarks.rename(repo, tr, rename, names[0], force, inactive)
             elif names:
                 tr = repo.transaction('bookmark')
                 newact = None

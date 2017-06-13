@@ -705,3 +705,24 @@ def delete(repo, tr, names):
             deactivate(repo)
         del marks[mark]
     marks.recordchange(tr)
+
+def rename(repo, tr, old, new, force=False, inactive=False):
+    """rename a bookmark from old to new
+
+    If force is specified, then the new name can overwrite an existing
+    bookmark.
+
+    If inactive is specified, then do not activate the new bookmark.
+
+    Raises an abort error if old is not in the bookmark store.
+    """
+    marks = repo._bookmarks
+    mark = checkformat(repo, new)
+    if old not in marks:
+        raise error.Abort(_("bookmark '%s' does not exist") % old)
+    marks.checkconflict(mark, force)
+    marks[mark] = marks[old]
+    if repo._activebookmark == old and not inactive:
+        activate(repo, mark)
+    del marks[old]
+    marks.recordchange(tr)
