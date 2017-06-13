@@ -112,10 +112,10 @@ def _addpullheader(seq, ctx):
     # experimental config: patchbomb.publicurl
     # waiting for some logic that check that the changeset are available on the
     # destination before patchbombing anything.
-    pullurl = repo.ui.config('patchbomb', 'publicurl')
-    if pullurl is not None:
+    publicurl = repo.ui.config('patchbomb', 'publicurl')
+    if publicurl is not None:
         return ('Available At %s\n'
-                '#              hg pull %s -r %s' % (pullurl, pullurl, ctx))
+                '#              hg pull %s -r %s' % (publicurl, publicurl, ctx))
     return None
 
 def uisetup(ui):
