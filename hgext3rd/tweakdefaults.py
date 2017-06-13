@@ -59,6 +59,7 @@ from mercurial import (
     extensions,
     hg,
     obsolete,
+    patch,
     registrar,
     scmutil,
     templater,
@@ -66,7 +67,13 @@ from mercurial import (
 )
 
 from hgext import rebase
-import inspect, re, shlex, stat, subprocess, time
+import inspect
+import json
+import re
+import shlex
+import subprocess
+import stat
+import time
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -175,6 +182,12 @@ def extsetup(ui):
             # otherwise wrap the bookmarks command
             wrapcommand(commands.table, 'bookmarks', unfilteredcmd)
     extensions.afterloaded('remotenames', afterloaded)
+
+    entry = wrapcommand(commands.table, 'diff', diffcmd)
+    options = entry[1]
+    options.append(
+        ('', 'per-file-stat-json', None,
+         _('show diff stat per file in json (ADVANCED)')))
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -765,6 +778,25 @@ def unfilteredcmd(orig, *args, **opts):
             args[i] = args[i].unfiltered()
             args = tuple(args)
     return orig(*args, **opts)
+
+def diffcmd(orig, ui, repo, *args, **opts):
+    if not opts.get('per_file_stat_json'):
+        return orig(ui, repo, *args, **opts)
+
+    ui.pushbuffer()
+    res = orig(ui, repo, *args, **opts)
+    buffer = ui.popbuffer()
+    difflines = util.iterlines([buffer])
+    diffstat = patch.diffstatdata(difflines)
+    output = {}
+    for filename, adds, removes, isbinary in diffstat:
+        # use special encoding that allows non-utf8 filenames
+        filename = encoding.jsonescape(filename, paranoid=True)
+        output[filename] = {
+            'adds': adds, 'removes': removes, 'isbinary': isbinary,
+        }
+    ui.write('%s\n' % (json.dumps(output, sort_keys=True)))
+    return res
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):

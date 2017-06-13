@@ -529,3 +529,23 @@ Test that we allow pure prune rebases
   1 changesets pruned
   $ hg rebase -r 4 -d 3 --hidden
   rebasing 4:31aefaa21905 "d"
+
+Test diff --per-file-stat
+  $ echo a >> a
+  $ echo b > b
+  $ hg add a b
+  $ hg ci -m A
+  created new head
+  $ hg diff -r ".^" -r .
+  diff -r 1e4be0697311 -r d17770b7624d a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  diff -r 1e4be0697311 -r d17770b7624d b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  $ hg diff -r ".^" -r . --per-file-stat-json
+  {"a": {"adds": 1, "isbinary": false, "removes": 0}, "b": {"adds": 1, "isbinary": false, "removes": 0}}
