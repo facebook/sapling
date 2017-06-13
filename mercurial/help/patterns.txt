@@ -58,7 +58,8 @@ Glob examples::
   *.c            any name ending in ".c" in the current directory
   **.c           any name ending in ".c" in any subdirectory of the
                  current directory including itself.
-  foo/*          any file in directory foo plus all its subdirectories,
+  foo/*          any file in directory foo
+  foo/**         any file in directory foo plus all its subdirectories,
                  recursively
   foo/*.c        any name ending in ".c" in the directory foo
   foo/**.c       any name ending in ".c" in any subdirectory of foo
