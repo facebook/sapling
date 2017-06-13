@@ -618,12 +618,17 @@ def bundle2rebase(op, part):
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
         bundle = repository(op.repo.ui, bundlepath)
 
+        prelockonto = resolveonto(op.repo,
+                                  params.get('onto', donotrebasemarker))
+        prelockontonode = prelockonto.hex() if prelockonto else None
+
         # Allow running hooks on the new commits before we take the lock
         prelockrebaseargs = op.hookargs.copy()
         prelockrebaseargs['source'] = 'push'
         prelockrebaseargs['bundle2'] = '1'
         prelockrebaseargs['node'] = scmutil.revsingle(bundle,
                                                       'min(bundle())').hex()
+        prelockrebaseargs['node_onto'] = prelockontonode
         prelockrebaseargs['hook_bundlepath'] = bundlefile
         op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 

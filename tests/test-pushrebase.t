@@ -616,7 +616,7 @@ Test that hooks are fired with the correct variables
   $ hg push --to master -B master
   pushing to $TESTTMP/hookserver (glob)
   searching for changes
-  prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
+  prepushrebase hook: HG_BUNDLE2=1 HG_HOOKNAME=prepushrebase HG_HOOKTYPE=prepushrebase HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE_ONTO=e95be919ac60f0c114075e32a0a4301afabadb60 HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=prechangegroup HG_HOOKTYPE=prechangegroup HG_SOURCE=push HG_TXNID=TXN:* HG_URL=file:$TESTTMP/hookserver (glob)
   pushing 1 changset:
       4fcee35c508c  first
