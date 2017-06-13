@@ -975,14 +975,7 @@ def bookmark(ui, repo, *names, **opts):
             marks = repo._bookmarks
             if delete:
                 tr = repo.transaction('bookmark')
-                for mark in names:
-                    if mark not in marks:
-                        raise error.Abort(_("bookmark '%s' does not exist") %
-                                         mark)
-                    if mark == repo._activebookmark:
-                        bookmarks.deactivate(repo)
-                    del marks[mark]
-
+                bookmarks.delete(repo, tr, names)
             elif rename:
                 tr = repo.transaction('bookmark')
                 if not names:

@@ -691,3 +691,17 @@ def checkformat(repo, mark):
                             "whitespace"))
     scmutil.checknewlabel(repo, mark, 'bookmark')
     return mark
+
+def delete(repo, tr, names):
+    """remove a mark from the bookmark store
+
+    Raises an abort error if mark does not exist.
+    """
+    marks = repo._bookmarks
+    for mark in names:
+        if mark not in marks:
+            raise error.Abort(_("bookmark '%s' does not exist") % mark)
+        if mark == repo._activebookmark:
+            deactivate(repo)
+        del marks[mark]
+    marks.recordchange(tr)
