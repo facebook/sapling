@@ -71,6 +71,8 @@ class remotefilelog(object):
 
         data += "%s%s%s%s%s\0" % (node, realp1, p2, linknode, copyfrom)
 
+        visited = set()
+
         pancestors = {}
         queue = []
         if realp1 != nullid:
@@ -80,17 +82,17 @@ class remotefilelog(object):
 
             pancestors.update(p1flog.ancestormap(realp1))
             queue.append(realp1)
+            visited.add(realp1)
         if p2 != nullid:
             pancestors.update(self.ancestormap(p2))
             queue.append(p2)
+            visited.add(p2)
 
-        visited = set()
         ancestortext = ""
 
         # add the ancestors in topological order
         while queue:
             c = queue.pop(0)
-            visited.add(c)
             pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
 
             pacopyfrom = pacopyfrom or ''
@@ -99,8 +101,10 @@ class remotefilelog(object):
 
             if pa1 != nullid and pa1 not in visited:
                 queue.append(pa1)
+                visited.add(pa1)
             if pa2 != nullid and pa2 not in visited:
                 queue.append(pa2)
+                visited.add(pa2)
 
         data += ancestortext
 
