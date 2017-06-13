@@ -113,7 +113,7 @@ def _addpullheader(seq, ctx):
     # waiting for some logic that check that the changeset are available on the
     # destination before patchbombing anything.
     publicurl = repo.ui.config('patchbomb', 'publicurl')
-    if publicurl is not None:
+    if publicurl:
         return ('Available At %s\n'
                 '#              hg pull %s -r %s' % (publicurl, publicurl, ctx))
     return None
@@ -588,7 +588,7 @@ def email(ui, repo, *revs, **opts):
 
     # check if revision exist on the public destination
     publicurl = repo.ui.config('patchbomb', 'publicurl')
-    if publicurl is not None:
+    if publicurl:
         repo.ui.debug('checking that revision exist in the public repo')
         try:
             publicpeer = hg.peer(repo, {}, publicurl)
