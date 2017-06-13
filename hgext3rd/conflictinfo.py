@@ -152,7 +152,8 @@ def _summarize(repo, workingfilectx, otherctx, basectx):
 
     output = flags(workingfilectx)
 
-    filestat = util.filestat(origfile) if origfile is not None else None
+    filestat = (util.filestat.frompath(origfile) if origfile is not None
+                else None)
     if origfile and filestat.stat:
         # Since you can start a merge with a dirty working copy (either via
         # `up` or `merge -f`), "local" must reflect that, not the underlying
