@@ -660,15 +660,17 @@ def email(ui, repo, *revs, **opts):
         if addr:
             showaddrs.append('%s: %s' % (header, addr))
             return mail.addrlistencode(ui, [addr], _charsets, opts.get('test'))
-        else:
-            return default
+        elif default:
+            return mail.addrlistencode(
+                ui, [default], _charsets, opts.get('test'))
+        return []
 
     to = getaddrs('To', ask=True)
     if not to:
         # we can get here in non-interactive mode
         raise error.Abort(_('no recipient addresses provided'))
-    cc = getaddrs('Cc', ask=True, default='') or []
-    bcc = getaddrs('Bcc') or []
+    cc = getaddrs('Cc', ask=True, default='')
+    bcc = getaddrs('Bcc')
     replyto = getaddrs('Reply-To')
 
     confirm = ui.configbool('patchbomb', 'confirm')
