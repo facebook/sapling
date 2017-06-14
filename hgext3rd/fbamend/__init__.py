@@ -49,13 +49,14 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.node import hex, nullrev, short
+from mercurial.node import hex
 from mercurial import lock as lockmod
 from mercurial.i18n import _
-from collections import defaultdict, deque
-from itertools import count
+from collections import deque
 
 from . import (
+    common,
+    movement,
     unamend,
 )
 
@@ -63,6 +64,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 cmdtable.update(unamend.cmdtable)
+cmdtable.update(movement.cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -81,6 +83,7 @@ def uisetup(ui):
     except KeyError:
         ui.warn(_("no rebase extension detected - disabling fbamend"))
         return
+    common.detectinhibit()
 
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
@@ -118,60 +121,11 @@ def uisetup(ui):
 
         evolvemod = extensions.find('evolve')
 
-        # Wrap `hg previous`.
-        preventry = extensions.wrapcommand(
-            evolvemod.cmdtable,
-            'previous',
-            wrapprevious,
-            synopsis=" [NUM_STEPS]"
-        )
-        _hideopts(preventry, set(['no-topic', 'dry-run']))
-        preventry[1].extend([
-            ('', 'newest', False,
-                _('always pick the newest parent when a changeset has '
-                  'multiple parents')
-            ),
-            ('', 'bottom', False,
-                _('update to the lowest non-public ancestor of the '
-                  'current changeset')
-            ),
-            ('', 'bookmark', False,
-                _('update to the first ancestor with a bookmark')
-            ),
-            ('', 'no-activate-bookmark', False,
-                _('do not activate the bookmark on the destination changeset')
-            ),
-        ])
-
-        # Wrap `hg next`.
-        nextentry = extensions.wrapcommand(
-            evolvemod.cmdtable,
-            'next',
-            wrapnext,
-            synopsis=" [NUM_STEPS]",
-        )
-        _hideopts(nextentry, set(['evolve', 'no-topic', 'dry-run']))
-        nextentry[1].extend([
-            ('', 'newest', False,
-                _('always pick the newest child when a changeset has '
-                  'multiple children')
-            ),
-            ('', 'rebase', False,
-                _('rebase each changeset if necessary')
-            ),
-            ('', 'top', False,
-                _('update to the head of the current stack')
-            ),
-            ('', 'bookmark', False,
-                _('update to the first changeset with a bookmark')
-            ),
-            ('', 'no-activate-bookmark', False,
-                _('do not activate the bookmark on the destination changeset')
-            ),
-            ('', 'towards', "",
-                _('move linearly towards the specified head')
-            ),
-        ])
+        # Remove `hg previous`, `hg next` from evolve.
+        table = evolvemod.cmdtable
+        todelete = [k for k in table if 'prev' in k or 'next' in k]
+        for k in todelete:
+            del table[k]
 
         # Wrap `hg split`.
         splitentry = extensions.wrapcommand(
@@ -376,7 +330,7 @@ def fixupamend(ui, repo):
         if ui.configbool('fbamend', 'userestack'):
             with repo.transaction('fixupamend') as tr:
                 try:
-                    _restackonce(ui, repo, current.rev())
+                    common.restackonce(ui, repo, current.rev())
                 except error.InterventionRequired:
                     tr.close()
                     raise
@@ -457,7 +411,7 @@ def wrapsplit(orig, ui, repo, *args, **opts):
             with repo.lock():
                 with repo.transaction('splitrebase'):
                     top = repo.revs('allsuccessors(%d)', rev).last()
-                    _restackonce(ui, repo, top)
+                    common.restackonce(ui, repo, top)
                 # The rebasestate file is incorrectly left behind, so cleanup.
                 # See the earlier comment on util.unlinkpath for more details.
                 util.unlinkpath(repo.vfs.join("rebasestate"),
@@ -492,14 +446,14 @@ def wrapfold(orig, ui, repo, *args, **opts):
             with repo.transaction('foldrebase'):
                 if not opts['norebase'] and torebase:
                     folded = repo.revs('allsuccessors(%ld)', revs).last()
-                    _restackonce(ui, repo, folded)
+                    common.restackonce(ui, repo, folded)
                 else:
                     # If there's nothing to rebase, deinhibit the folded
                     # changesets so that they get correctly marked as
                     # hidden if needed. For some reason inhibit's
                     # post-transaction hook misses this changeset.
                     visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
-                    _deinhibit(repo, (repo[r] for r in visible))
+                    common.deinhibit(repo, (repo[r] for r in visible))
             # The rebasestate file is incorrectly left behind, so cleanup.
             # See the earlier comment on util.unlinkpath for more details.
             util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
@@ -508,275 +462,6 @@ def wrapfold(orig, ui, repo, *args, **opts):
     _fixbookmarks(repo, revs)
 
     return ret
-
-def wrapprevious(orig, ui, repo, *args, **opts):
-    """Replacement for `hg previous` from the evolve extension."""
-    _moverelative(ui, repo, args, opts, reverse=True)
-
-def wrapnext(orig, ui, repo, *args, **opts):
-    """Replacement for `hg next` from the evolve extension."""
-    _moverelative(ui, repo, args, opts, reverse=False)
-
-def _moverelative(ui, repo, args, opts, reverse=False):
-    """Update to a changeset relative to the current changeset.
-       Implements both `hg previous` and `hg next`.
-
-       Takes in a list of positional arguments and a dict of command line
-       options. (See help for `hg previous` and `hg next` to see which
-       arguments and flags are supported.)
-
-       Moves forward through history by default -- the behavior of `hg next`.
-       Setting reverse=True will change the behavior to that of `hg previous`.
-    """
-    # Parse positional argument.
-    try:
-        n = int(args[0]) if args else 1
-    except ValueError:
-        raise error.Abort(_("argument must be an integer"))
-    if n <= 0:
-        return
-
-    if ui.configbool('fbamend', 'alwaysnewest'):
-        opts['newest'] = True
-
-    # Check that the given combination of arguments is valid.
-    if args:
-        if opts.get('bookmark', False):
-            raise error.Abort(_("cannot use both number and --bookmark"))
-        if opts.get('top', False):
-            raise error.Abort(_("cannot use both number and --top"))
-        if opts.get('bottom', False):
-            raise error.Abort(_("cannot use both number and --bottom"))
-    if opts.get('bookmark', False):
-        if opts.get('top', False):
-            raise error.Abort(_("cannot use both --top and --bookmark"))
-        if opts.get('bottom', False):
-            raise error.Abort(_("cannot use both --bottom and --bookmark"))
-    if opts.get('towards', False) and opts.get('top', False):
-            raise error.Abort(_("cannot use both --top and --towards"))
-
-    # Check if there is an outstanding operation or uncommited changes.
-    cmdutil.checkunfinished(repo)
-    if not opts.get('merge', False):
-        try:
-            cmdutil.bailifchanged(repo)
-        except error.Abort as e:
-            e.hint = _("use --merge to bring along uncommitted changes")
-            raise
-    elif opts.get('rebase', False):
-        raise error.Abort(_("cannot use both --merge and --rebase"))
-
-    with repo.wlock():
-        with repo.lock():
-            # Record the active bookmark, if any.
-            bookmark = bmactive(repo)
-            noactivate = opts.get('no_activate_bookmark', False)
-            movebookmark = opts.get('move_bookmark', False)
-
-            with repo.transaction('moverelative') as tr:
-                # Find the desired changeset. May potentially perform rebase.
-                try:
-                    target = _findtarget(ui, repo, n, opts, reverse)
-                except error.InterventionRequired:
-                    # Rebase failed. Need to manually close transaction to allow
-                    # `hg rebase --continue` to work correctly.
-                    tr.close()
-                    raise
-
-                # Move the active bookmark if neccesary. Needs to happen before
-                # we update to avoid getting a 'leaving bookmark X' message.
-                if movebookmark and bookmark is not None:
-                    _setbookmark(repo, tr, bookmark, target)
-
-                # Update to the target changeset.
-                commands.update(ui, repo, rev=target)
-
-                # Print out the changeset we landed on.
-                _showchangesets(ui, repo, revs=[target])
-
-                # Activate the bookmark on the new changeset.
-                if not noactivate and not movebookmark:
-                    _activate(ui, repo, target)
-
-                # Clear cached 'visible' set so that the post-transaction hook
-                # set by the inhibit extension will see a correct view of
-                # the repository. The cached contents of the visible set are
-                # after a rebase operation show the old stack as visible,
-                # which will cause the inhibit extension to always inhibit
-                # the stack even if it is entirely obsolete and hidden.
-                repo.invalidatevolatilesets()
-            # The rebasestate file is incorrectly left behind, so cleanup.
-            # See the earlier comment on util.unlinkpath for more details.
-            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
-
-def _findtarget(ui, repo, n, opts, reverse):
-    """Find the appropriate target changeset for `hg previous` and
-       `hg next` based on the provided options. May rebase the traversed
-       changesets if the rebase option is given in the opts dict.
-    """
-    towards = opts.get('towards')
-    newest = opts.get('newest', False)
-    bookmark = opts.get('bookmark', False)
-    rebase = opts.get('rebase', False)
-    top = opts.get('top', False)
-    bottom = opts.get('bottom', False)
-
-    if top and not rebase:
-        # If we're not rebasing, jump directly to the top instead of
-        # walking up the stack.
-        return _findstacktop(ui, repo, newest)
-    elif bottom:
-        return _findstackbottom(ui, repo)
-    elif reverse:
-        return _findprevtarget(ui, repo, n, bookmark, newest)
-    else:
-        return _findnexttarget(ui, repo, n, bookmark, newest, rebase, top,
-                               towards)
-
-def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
-    """Get the revision n levels down the stack from the current revision.
-       If newest is True, if a changeset has multiple parents the newest
-       will always be chosen. Otherwise, throws an exception.
-    """
-    ctx = repo['.']
-
-    # The caller must specify a stopping condition -- either a number
-    # of steps to walk or a bookmark to search for.
-    if not n and not bookmark:
-        raise error.Abort(_("no stop condition specified"))
-
-    for i in count(0):
-        # Loop until we're gone the desired number of steps, or we reach a
-        # node with a bookmark if the bookmark option was specified.
-        if bookmark:
-            if i > 0 and ctx.bookmarks():
-                break
-        elif i >= n:
-            break
-
-        parents = ctx.parents()
-
-        # Is this the root of the current branch?
-        if not parents or parents[0].rev() == nullrev:
-            if ctx.rev() == repo['.'].rev():
-                raise error.Abort(_("current changeset has no parents"))
-            ui.status(_('reached root changeset\n'))
-            break
-
-        # Are there multiple parents?
-        if len(parents) > 1 and not newest:
-            ui.status(_("changeset %s has multiple parents, namely:\n")
-                      % short(ctx.node()))
-            _showchangesets(ui, repo, contexts=parents)
-            raise error.Abort(_("ambiguous previous changeset"),
-                              hint=_("use the --newest flag to always "
-                                     "pick the newest parent at each step"))
-
-        # Get the parent with the highest revision number.
-        ctx = max(parents, key=lambda x: x.rev())
-
-    return ctx.rev()
-
-def _findnexttarget(ui, repo, n=None, bookmark=False, newest=False,
-                    rebase=False, top=False, towards=None):
-    """Get the revision n levels up the stack from the current revision.
-       If newest is True, if a changeset has multiple children the newest
-       will always be chosen. Otherwise, throws an exception. If the rebase
-       option is specified, potentially rebase unstable children as we
-       walk up the stack.
-    """
-    rev = repo['.'].rev()
-
-    # The caller must specify a stopping condition -- either a number
-    # of steps to walk, a bookmark to search for, or --top.
-    if not n and not bookmark and not top:
-        raise error.Abort(_("no stop condition specified"))
-
-    # Precompute child relationships to avoid expensive ctx.children() calls.
-    if not rebase:
-        childrenof = _getchildrelationships(repo, [rev])
-
-    # If we're moving towards a rev, get the chain of revs up to that rev.
-    line = set()
-    if towards:
-        towardsrevs = scmutil.revrange(repo, [towards])
-        if len(towardsrevs) > 1:
-            raise error.Abort(_("'%s' refers to multiple changesets")
-                              % towards)
-        towardsrev = towardsrevs.first()
-        line = set(repo.revs('.::%d', towardsrev))
-        if not line:
-            raise error.Abort(
-                _("the current changeset is not an ancestor of '%s'")
-                % towards)
-
-    for i in count(0):
-        # Loop until we're gone the desired number of steps, or we reach a
-        # node with a bookmark if the bookmark option was specified.
-        # If top is specified, loop until we reach a head.
-        if bookmark:
-            if i > 0 and repo[rev].bookmarks():
-                break
-        elif i >= n and not top:
-            break
-
-        # If the rebase flag is present, rebase any unstable children.
-        # This means we can't rely on precomputed child relationships.
-        if rebase:
-            _restackonce(ui, repo, rev, childrenonly=True)
-            children = set(c.rev() for c in repo[rev].children())
-        else:
-            children = childrenof[rev]
-
-        # Remove children not along the specified line.
-        children = (children & line) or children
-
-        # Have we reached a head?
-        if not children:
-            if rev == repo['.'].rev():
-                raise error.Abort(_("current changeset has no children"))
-            if not top:
-                ui.status(_('reached head changeset\n'))
-            break
-
-        # Are there multiple children?
-        if len(children) > 1 and not newest:
-            ui.status(_("changeset %s has multiple children, namely:\n")
-                      % short(repo[rev].node()))
-            _showchangesets(ui, repo, revs=children)
-            raise error.Abort(_("ambiguous next changeset"),
-                              hint=_("use the --newest or --towards flags "
-                                     "to specify which child to pick"))
-
-        # Get the child with the highest revision number.
-        rev = max(children)
-
-    return rev
-
-def _findstacktop(ui, repo, newest=False):
-    """Find the head of the current stack."""
-    heads = repo.revs('heads(.::)')
-    if len(heads) > 1:
-        if newest:
-            # We can't simply return heads.max() since this might give
-            # a different answer from walking up the stack as in
-            # _findnexttarget(), which picks the child with the greatest
-            # revision number at each step. This would be confusing, since
-            # it would mean that `hg next --top` and `hg next --top --rebase`
-            # would result in different destination changesets.
-            return _findnexttarget(ui, repo, newest=True, top=True)
-        ui.warn(_("current stack has multiple heads, namely:\n"))
-        _showchangesets(ui, repo, revs=heads)
-        raise error.Abort(_("ambiguous next changeset"),
-                          hint=_("use the --newest flag to always "
-                                 "pick the newest child at each step"))
-    return heads.first()
-
-def _findstackbottom(ui, repo):
-    """Find the lowest non-public ancestor of the current changeset."""
-    if repo['.'].phase() == phases.public:
-        raise error.Abort(_("current changeset is public"))
-    return repo.revs("::. & draft()").first()
 
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
@@ -857,7 +542,7 @@ def restack(ui, repo, rebaseopts=None):
                 # rebasing) descendants of base.
                 for rev in targets:
                     try:
-                        _restackonce(ui, repo, rev, rebaseopts)
+                        common.restackonce(ui, repo, rev, rebaseopts)
                     except error.InterventionRequired:
                         tr.close()
                         raise
@@ -883,60 +568,6 @@ def restack(ui, repo, rebaseopts=None):
             # See the earlier comment on util.unlinkpath for more details.
             util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
 
-def _restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
-    """Rebase all descendants of precursors of rev onto rev, thereby
-       stabilzing any non-obsolete descendants of those precursors.
-       Takes in an optional dict of options for the rebase command.
-       If childrenonly is True, only rebases direct children of precursors
-       of rev rather than all descendants of those precursors.
-    """
-    # Get visible descendants of precusors of rev.
-    allprecursors = repo.revs('allprecursors(%d)', rev)
-    fmt = '%s(%%ld) - %%ld' % ('children' if childrenonly else 'descendants')
-    descendants = repo.revs(fmt, allprecursors, allprecursors)
-
-    # Nothing to do if there are no descendants.
-    if not descendants:
-        return
-
-    # Overwrite source and destination, leave all other options.
-    if rebaseopts is None:
-        rebaseopts = {}
-    rebaseopts['rev'] = descendants
-    rebaseopts['dest'] = rev
-
-    # We need to ensure that the 'operation' field in the obsmarker metadata
-    # is always set to 'rebase', regardless of the current command so that
-    # the restacked commits will appear as 'rebased' in smartlog.
-    overrides = {}
-    try:
-        tweakdefaults = extensions.find('tweakdefaults')
-    except KeyError:
-        # No tweakdefaults extension -- skip this since there is no wrapper
-        # to set the metadata.
-        pass
-    else:
-        overrides[(tweakdefaults.globaldata,
-                   tweakdefaults.createmarkersoperation)] = 'rebase'
-
-    # Perform rebase.
-    with repo.ui.configoverride(overrides, 'restack'):
-        rebasemod.rebase(ui, repo, **rebaseopts)
-
-    # Remove any preamend bookmarks on precursors.
-    _clearpreamend(repo, allprecursors)
-
-    # Deinhibit the precursors so that they will be correctly shown as
-    # obsolete. Also deinhibit their ancestors to handle the situation
-    # where _restackonce() is being used across several transactions
-    # (such as calls to `hg next --rebase`), because each transaction
-    # close will result in the ancestors being re-inhibited if they have
-    # unrebased (and therefore unstable) descendants. As such, the final
-    # call to _restackonce() at the top of the stack should deinhibit the
-    # entire stack.
-    ancestors = repo.set('%ld %% %d', allprecursors, rev)
-    _deinhibit(repo, ancestors)
-
 def _findrestacktargets(repo, base):
     """Starting from the given base revision, do a BFS forwards through
        history, looking for changesets with unstable descendants on their
@@ -944,7 +575,7 @@ def _findrestacktargets(repo, base):
        ordering that will allow all of the descendants of their precursors
        to be correctly rebased.
     """
-    childrenof = _getchildrelationships(repo,
+    childrenof = common.getchildrelationships(repo,
         repo.revs('%d + allprecursors(%d)', base, base))
 
     # Perform BFS starting from base.
@@ -990,19 +621,6 @@ def _findrestacktargets(repo, base):
     # at higher levels.
     return reversed(targets)
 
-def _getchildrelationships(repo, revs):
-    """Build a defaultdict of child relationships between all descendants of
-       revs. This information will prevent us from having to repeatedly
-       perform children that reconstruct these relationships each time.
-    """
-    cl = repo.changelog
-    children = defaultdict(set)
-    for rev in repo.revs('(%ld)::', revs):
-        for parent in cl.parentrevs(rev):
-            if parent != nullrev:
-                children[parent].add(rev)
-    return children
-
 def _latest(repo, rev):
     """Find the "latest version" of the given revision -- either the
        latest visible successor, or the revision itself if it has no
@@ -1010,61 +628,6 @@ def _latest(repo, rev):
     """
     latest = repo.revs('allsuccessors(%d)', rev).last()
     return latest if latest is not None else rev
-
-def _clearpreamend(repo, revs):
-    """Remove any preamend bookmarks on the given revisions."""
-    # Use unfiltered repo in case the given revs are hidden. This should
-    # ordinarily never happen due to the inhibit extension but it's better
-    # to be resilient to this case.
-    repo = repo.unfiltered()
-    cl = repo.changelog
-    for rev in revs:
-        for bookmark in repo.nodebookmarks(cl.node(rev)):
-            if bookmark.endswith('.preamend'):
-                repo._bookmarks.pop(bookmark, None)
-
-def _deinhibit(repo, contexts):
-    """Remove any inhibit markers on the given change contexts."""
-    if inhibitmod:
-        inhibitmod._deinhibitmarkers(repo, (ctx.node() for ctx in contexts))
-
-def _hideopts(entry, opts):
-    """Remove the given set of options from the given command entry.
-       Destructively modifies the entry.
-    """
-    # Each command entry is a tuple, and thus immutable. As such we need
-    # to delete each option from the original list, rather than building
-    # a new, filtered list. Iterate backwards to prevent indicies from changing
-    # as we delete entries.
-    for i, opt in reversed(list(enumerate(entry[1]))):
-        if opt[1] in opts:
-            del entry[1][i]
-
-def _activate(ui, repo, rev):
-    """Activate the bookmark on the given revision if it
-       only has one bookmark.
-    """
-    ctx = repo[rev]
-    bookmarks = repo.nodebookmarks(ctx.node())
-    if len(bookmarks) == 1:
-        ui.status(_("(activating bookmark %s)\n") % bookmarks[0])
-        bmactivate(repo, bookmarks[0])
-
-def _showchangesets(ui, repo, contexts=None, revs=None):
-    """Pretty print a list of changesets. Can take either a list of
-       change contexts or a list of revision numbers.
-    """
-    if contexts is None:
-        contexts = []
-    if revs is not None:
-        contexts.extend(repo[r] for r in revs)
-    showopts = {
-        'template': '[{shortest(node, 6)}] {if(bookmarks, "({bookmarks}) ")}'
-                    '{desc|firstline}\n'
-    }
-    displayer = cmdutil.show_changeset(ui, repo, showopts)
-    for ctx in contexts:
-        displayer.show(ctx)
 
 def _preamendname(repo, node):
     suffix = '.preamend'
@@ -1083,12 +646,6 @@ def _usereducation(ui):
     education = ui.config('fbamend', 'education')
     if education:
         ui.warn(education + "\n")
-
-def _setbookmark(repo, tr, bookmark, rev):
-    """Make the given bookmark point to the given revision."""
-    node = repo.changelog.node(rev)
-    repo._bookmarks[bookmark] = node
-    repo._bookmarks.recordchange(tr)
 
 def _fixbookmarks(repo, revs):
     """Make any bookmarks pointing to the given revisions point to the

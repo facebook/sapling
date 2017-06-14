@@ -1,16 +1,12 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh evolve
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = previous next split fold
   > EOF
   $ showgraph() {
   >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
@@ -19,18 +15,12 @@ Set up test environment.
 
 Check help text for new options and removal of unsupported options.
   $ hg next --help
-  hg next [OPTION]... [NUM_STEPS]
+  hg next [OPTIONS]... [STEPS]
   
-  update to next child revision
-  
-      Use the "--evolve" flag to evolve unstable children on demand.
-  
-      Displays the summary line of the destination for clarity.
+  update to child changeset
   
   options:
   
-   -B --move-bookmark        move active bookmark after update
-      --merge                bring uncommitted change along
       --newest               always pick the newest child when a changeset has
                              multiple children
       --rebase               rebase each changeset if necessary
@@ -39,6 +29,8 @@ Check help text for new options and removal of unsupported options.
       --no-activate-bookmark do not activate the bookmark on the destination
                              changeset
       --towards VALUE        move linearly towards the specified head
+   -B --move-bookmark        move active bookmark
+      --merge                merge uncommitted changes
   
   (some details hidden, use --verbose to show complete help)
 
@@ -153,7 +145,7 @@ Test dirty working copy and --merge.
   A test
   $ hg next
   abort: uncommitted changes
-  (use --merge to bring along uncommitted changes)
+  (use --merge to merge uncommitted changes)
   [255]
   $ hg next --merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
