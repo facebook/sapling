@@ -708,9 +708,6 @@ def bundle2rebase(op, part):
         # Seed the mapping with oldonto->onto
         mapping[oldonto.node()] = onto.node()
 
-        replacements = {}
-        added = []
-
         # Notify the user of what is being pushed
         plural = 's' if len(revs) > 1 else ''
         op.repo.ui.warn(_("pushing %s changset%s:\n") % (len(revs), plural))
@@ -730,6 +727,9 @@ def bundle2rebase(op, part):
         if preontocache:
             op.repo.manifestlog._revlog._cache = preontocache
             onto.manifest()
+
+        replacements = {}
+        added = []
 
         lastdestnode = None
         for rev in revs:
