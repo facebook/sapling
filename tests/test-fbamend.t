@@ -1,11 +1,8 @@
 Test functionality is present
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTTMP/fbamend.py
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
   > EOF
   $ mkcommit() {
@@ -202,7 +199,7 @@ Test that unbookmarked re-amends work well
 Test interaction with histedit
 
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "fbhistedit=$TESTTMP/fbhistedit.py" >> $HGRCPATH
+  $ echo "fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py" >> $HGRCPATH
   $ echo "histedit=" >> $HGRCPATH
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -314,7 +311,7 @@ noisy warning during amend
   - drop the `fbamend=` line from the `[extensions]` section
   or disable it for a specific repo:
   - type `hg config --local --edit`
-  - add a `fbamend=!$TESTTMP/fbamend.py` line in the `[extensions]` section
+  - add a `fbamend=!` line in the `[extensions]` section
   nothing changed
 
 no warning if only obsolete markers are enabled

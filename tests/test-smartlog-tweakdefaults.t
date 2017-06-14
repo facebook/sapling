@@ -1,13 +1,12 @@
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/smartlog.py $TESTTMP # use $TESTTMP substitution in message
   $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP
-  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
   > smartlog=$TESTTMP/smartlog.py
   > tweakdefaults=$TESTTMP/tweakdefaults.py
-  > fbamend=$TESTTMP/fbamend.py
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
   > allowdivergence=on

@@ -1,13 +1,12 @@
 Set up test environment.
   $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > allowunstable=
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > evolve=
-  > fbamend=$TESTTMP/fbamend.py
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]

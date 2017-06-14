@@ -1,11 +1,10 @@
 Set up test environment.
   $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > evolve=
-  > fbamend=$TESTTMP/fbamend.py
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
   > [experimental]
   > evolution = createmarkers

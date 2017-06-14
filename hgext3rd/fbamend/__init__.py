@@ -288,8 +288,7 @@ def amend(ui, repo, *pats, **opts):
                '- drop the `fbamend=` line from the `[extensions]` section\n'
                'or disable it for a specific repo:\n'
                '- type `hg config --local --edit`\n'
-               '- add a `fbamend=!%s` line in the `[extensions]` section\n')
-        msg %= ui.config('extensions', 'fbamend')
+               '- add a `fbamend=!` line in the `[extensions]` section\n')
         ui.write_err(msg)
     rebase = opts.get('rebase')
 
