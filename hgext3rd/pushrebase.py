@@ -748,10 +748,6 @@ def bundle2rebase(op, part):
             if not lastdestnode or oldnode == lastdestnode:
                 lastdestnode = newnode
 
-            if 'node' not in tr.hookargs:
-                tr.hookargs['node'] = hex(newnode)
-            hookargs['node'] = hex(newnode)
-
         markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
     finally:
         try:
@@ -763,6 +759,9 @@ def bundle2rebase(op, part):
         if bundle:
             bundle.close()
 
+    hookargs['node'] = tr.hookargs['node'] = hex(added[0])
+    hookargs['node_last'] = hex(added[-1])
+
     publishing = op.repo.ui.configbool('phases', 'publish', True)
     if publishing:
         phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
@@ -772,8 +771,8 @@ def bundle2rebase(op, part):
 
     def runhooks():
         args = hookargs.copy()
-        args['node'] = hex(added[0])
-        op.repo.hook("changegroup", **args)
+        op.repo.hook("changegroup", **hookargs)
+        args.pop('node_last')
         for n in added:
             args = hookargs.copy()
             args['node'] = hex(n)
