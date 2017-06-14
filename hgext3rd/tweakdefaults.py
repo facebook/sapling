@@ -99,9 +99,10 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, 'update', update)
     options = entry[1]
     # try to put in alphabetical order
+    options.insert(3, ('', 'inactive', None,
+        _('update without activating bookmarks')))
     options.insert(3, ('n', 'nocheck', None,
         _('update even with outstanding changes')))
-
     wrapblame()
 
     entry = wrapcommand(commands.table, 'commit', commitcmd)
@@ -341,13 +342,15 @@ def commitcmd(orig, ui, repo, *pats, **opts):
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
+    #  Note if you want to change this:
+    # --inactive requires arg checkout of
+    # updatetotally not to be none
     if not node and not rev and not kwargs['date']:
         raise error.Abort(
             'You must specify a destination to update to,' +
             ' for example "hg update master".',
             hint='If you\'re trying to move a bookmark forward, try ' +
                  '"hg rebase -d <destination>".')
-
 
     # By default, never update when there are local changes unless updating to
     # the current rev. This is useful for, eg, arc feature when the only
@@ -361,7 +364,31 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
     if 'nocheck' in kwargs:
         del kwargs['nocheck']
 
-    return orig(ui, repo, node=node, rev=rev, **kwargs)
+    # Doesn't activate inactive bookmarks with this flag
+    # In order to avoid submitting to upstream:
+    #   assumes checkout not to be none
+    #   assumes whitespace to be illegal bookmark char
+    # Wrapping bookmarks' active with pass will
+    # give you the same behavior without the assumptions
+    # but will print wrong output
+    inactive = kwargs.pop('inactive')
+    if inactive:
+        wrapfunction(hg, 'updatetotally', _wrapupdatetotally)
+
+    result = orig(ui, repo, node=node, rev=rev, **kwargs)
+
+    if inactive:
+        extensions.unwrapfunction(hg, 'updatetotally', _wrapupdatetotally)
+
+    return result
+
+def _wrapupdatetotally(orig, ui, repo, checkout, brev, *args, **kwargs):
+    # set brev to invalidbookmark to prevent bookmark update
+    invalidbookmark = ' '
+    assert checkout is not None
+    assert invalidbookmark not in repo._bookmarks
+    # assert invalidbookmark is not None
+    orig(ui, repo, checkout, invalidbookmark, *args, **kwargs)
 
 def wrapblame():
     entry = wrapcommand(commands.table, 'annotate', blame)
