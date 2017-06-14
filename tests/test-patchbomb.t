@@ -70,6 +70,45 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   +a
   
 
+If --to is specified on the command line, it should override any
+email.to config setting. Same for --cc:
+
+  $ hg email --date '1970-1-1 0:1' -n -f quux --to foo --cc bar -r tip \
+  >   --config email.to=bob@example.com --config email.cc=alice@example.com
+  this patch series consists of 1 patches.
+  
+  
+  displaying [PATCH] a ...
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Subject: [PATCH] a
+  X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  X-Mercurial-Series-Index: 1
+  X-Mercurial-Series-Total: 1
+  Message-Id: <*@*> (glob)
+  X-Mercurial-Series-Id: <*@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:00 +0000
+  From: quux
+  To: foo
+  Cc: bar
+  
+  # HG changeset patch
+  # User test
+  # Date 1 0
+  #      Thu Jan 01 00:00:01 1970 +0000
+  # Node ID 8580ff50825a50c8f716709acdf8de0deddcd6ab
+  # Parent  0000000000000000000000000000000000000000
+  a
+  
+  diff -r 000000000000 -r 8580ff50825a a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:01 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  
+
   $ hg --config ui.interactive=1 email --confirm -n -f quux -t foo -c bar -r tip<<EOF
   > n
   > EOF
