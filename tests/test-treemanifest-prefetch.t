@@ -156,12 +156,37 @@ Test auto prefetch during normal access
   $ ls $CACHEDIR/master/packs/manifests
   148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
   148e9eb32f473ea522c591c95be0f9e772be9675.datapack
-  214f2046312905a44188b27497625a36ffaa4c3d.histidx
-  214f2046312905a44188b27497625a36ffaa4c3d.histpack
-  4ee15de76c068ec1c80e3e61f2c3c476a779078a.dataidx
-  4ee15de76c068ec1c80e3e61f2c3c476a779078a.datapack
+  3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
+  3fb59713808147bda39cbd97b9cd862406f5865c.datapack
+  524ab81400c6bc8449e3e720d81f836ebacec539.histidx
+  524ab81400c6bc8449e3e720d81f836ebacec539.histpack
   e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histidx
   e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histpack
+
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675
+  
+  dir
+  Node          Delta Base    Delta Length
+  bc0c2c938b92  000000000000  43
+  
+  subdir
+  Node          Delta Base    Delta Length
+  ddb35f099a64  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  1be4ab2126dd  000000000000  95
+
+- Note that subdir/ is not downloaded again
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c
+  
+  dir
+  Node          Delta Base    Delta Length
+  a18d21674e76  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  60a7f7acb6bb  000000000000  95
 
 Test auto prefetch during pull
 

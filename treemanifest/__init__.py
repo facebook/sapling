@@ -773,21 +773,26 @@ def pull(orig, ui, repo, *pats, **opts):
         # If we have no base nodes, scan the change log looking for a
         # semi-recent manifest node to treat as the base.
         if not basemfnodes:
-            cl = repo.changelog
-            phasecache = repo._phasecache
-            minrev = max(0, len(cl) - BASENODESEARCHMAX)
-            for rev in xrange(len(cl) - 1, minrev, -1):
-                if phasecache.phase(repo, rev) != phases.public:
-                    continue
-                mfnode = cl.changelogrevision(rev).manifest
-                missing = mfstore.getmissing([('', mfnode)])
-                if not missing:
-                    basemfnodes.add(mfnode)
-                    break
+            basemfnodes = _findrecenttree(repo, len(repo.changelog) - 1)
 
         _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
     return result
+
+def _findrecenttree(repo, startrev):
+    cl = repo.changelog
+    mfstore = repo.svfs.manifestdatastore
+    phasecache = repo._phasecache
+    minrev = max(0, startrev - BASENODESEARCHMAX)
+    for rev in xrange(startrev, minrev, -1):
+        if phasecache.phase(repo, rev) != phases.public:
+            continue
+        mfnode = cl.changelogrevision(rev).manifest
+        missing = mfstore.getmissing([('', mfnode)])
+        if not missing:
+            return [mfnode]
+
+    return []
 
 def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
     opts = {}
@@ -961,6 +966,7 @@ class remotetreedatastore(object):
 
     def get(self, name, node):
         # Only look at the server if not root or is public
+        basemfnodes = []
         if name == '':
             mfrevlog = self._repo.manifestlog._revlog
             rev = mfrevlog.rev(node)
@@ -968,7 +974,10 @@ class remotetreedatastore(object):
             if self._repo[linkrev].phase() != phases.public:
                 raise KeyError((name, node))
 
-        _prefetchtrees(self._repo, name, [node], [], [])
+            # Find a recent tree that we already have
+            basemfnodes = _findrecenttree(self._repo, rev)
+
+        _prefetchtrees(self._repo, name, [node], basemfnodes, [])
         self._shared.markforrefresh()
         return self._shared.get(name, node)
 
