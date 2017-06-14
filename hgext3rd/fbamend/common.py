@@ -108,3 +108,10 @@ def _clearpreamend(repo, revs):
             if bookmark.endswith('.preamend'):
                 repo._bookmarks.pop(bookmark, None)
 
+def latest(repo, rev):
+    """Find the "latest version" of the given revision -- either the
+       latest visible successor, or the revision itself if it has no
+       visible successors.
+    """
+    latest = repo.revs('allsuccessors(%d)', rev).last()
+    return latest if latest is not None else rev
