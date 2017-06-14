@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import difflib
 import errno
-import itertools
 import os
 import re
 import sys
@@ -781,9 +780,11 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         '--skip': skip,
     }
 
-    for left, right in itertools.combinations(sorted(incompatibles), 2):
-        if incompatibles[left] and incompatibles[right]:
-            raise error.Abort(_('%s and %s are incompatible') % (left, right))
+    enabled = [x for x in incompatibles if incompatibles[x]]
+
+    if len(enabled) > 1:
+        raise error.Abort(_('%s and %s are incompatible') %
+                          tuple(sorted(enabled)[0:2]))
 
     if reset:
         hbisect.resetstate(repo)
