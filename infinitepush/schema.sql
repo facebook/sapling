@@ -28,5 +28,6 @@ CREATE TABLE `nodesmetadata` (
   `author_date` bigint(20) NOT NULL,
   `committer_date` bigint(20) DEFAULT NULL,
   `reponame` varbinary(255) NOT NULL,
+  `optional_json_metadata` mediumblob,
   PRIMARY KEY (`reponame`,`node`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
