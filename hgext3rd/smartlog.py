@@ -436,22 +436,26 @@ def _masterrev(repo, masterrevset):
     return None
 
 def smartlogrevset(repo, subset, x):
-    """``smartlog([scope, [master]])``
-    Revisions included by default in the smartlog extension
+    """``smartlog([master], [recentdays=N])``
+    Changesets relevent to you.
+
+    'master' is the head of the public branch.
+    Unnamed heads will be hidden unless it's within 'recentdays'.
     """
 
-    args = revset.getargs(x, 0, 2, _('smartlog takes up to 2 arguments'))
-    if len(args) > 0:
-        scope = revset.getstring(args[0],
-                                 _('scope must be either "all" or "recent"'))
-        if scope not in ('all', 'recent'):
-            raise error.Abort(_('scope must be either "all" or "recent"'))
-    else:
-        scope = 'recent'
-    if len(args) > 1:
-        masterstring = revset.getstring(args[1], _('master must be a string'))
+    args = revset.getargsdict(x, 'smartlogrevset', 'master recentdays')
+    if 'master' in args:
+        masterstring = revsetlang.getstring(args['master'],
+                _('master must be a string'))
     else:
         masterstring = ''
+
+    # TODO(quark): remove this after changing Nuclide's smartlog query
+    if masterstring == 'all':
+            masterstring = ''
+
+    recentdays = revsetlang.getinteger(args.get('recentdays'),
+            _("recentdays should be int"), -1)
 
     revs = set()
     heads = set()
@@ -491,12 +495,14 @@ def smartlogrevset(repo, subset, x):
         headquery = 'draft() &' + headquery
 
     allheads = set(repo.revs(headquery))
-    if scope == 'all':
-        heads.update(allheads)
+    if recentdays >= 0:
+        recentquery = revsetlang.formatspec('%r & date(-%d)',
+                headquery, recentdays)
+        recentrevs = set(repo.revs(recentquery))
+        hiddenchanges += len(allheads - heads) - len(recentrevs - heads)
+        heads.update(recentrevs)
     else:
-        recent = set(repo.revs(headquery + ' & date(-14)'))
-        hiddenchanges += len(allheads - heads) - len(recent - heads)
-        heads.update(recent)
+        heads.update(allheads)
 
     branches = set()
     for head in heads:
@@ -601,11 +607,11 @@ def _smartlog(ui, repo, *pats, **opts):
 
     if not opts.get('rev'):
         if opts.get('all'):
-            scope = 'all'
+            recentdays = -1
         else:
-            scope = 'recent'
-        revstring = revsetlang.formatspec('smartlog(%s, %s)', scope,
-                                          masterrevset)
+            recentdays = 14
+        revstring = revsetlang.formatspec('smartlog(%s, %s)', masterrevset,
+                                          recentdays)
         revs.update(scmutil.revrange(repo, [revstring]))
         masterrev = _masterrev(repo, masterrevset)
     else:

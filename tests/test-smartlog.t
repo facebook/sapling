@@ -441,6 +441,42 @@ Add other draft stacks
   |    r1
   |
 
+Recent arg select days correctly
+  $ echo 1 >> b
+  $ myday=`$PYTHON -c 'import time; print(int(time.time()) - 24 * 3600 * 20)'`
+  $ hg commit --date "$myday 0" -m test2
+  $ hg update 0 -q
+  $ hg log -Gr 'smartlog("master", recentdays=15)' -T compact
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+  @  0   1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r0
+  |
+  o  -1[curr]   000000000000   1970-01-01 00:00 +0000
+  
+  
+
+  $ hg log -Gr 'smartlog("master", recentdays=25)' -T compact
+  o  7[tip] * (glob)
+  |    test2
+  |
+  o  6:2   401cd6213b51   1970-01-01 00:00 +0000   test
+  |    b
+  |
+  o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
+  |    r2
+  |
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+  @  0   1ea73414a91b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r0
+  |
+  o  -1[curr]   000000000000   1970-01-01 00:00 +0000
+  
+  
+
 Make sure the template keywords are documented correctly
   $ hg help templates | grep -A1 successor
       amendsuccessors
