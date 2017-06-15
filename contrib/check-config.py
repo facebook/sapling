@@ -24,6 +24,16 @@ configre = re.compile(r'''
         (?:default=)?(?P<default>\S+?))?
     \)''', re.VERBOSE | re.MULTILINE)
 
+configwithre = re.compile('''
+    ui\.config(?P<ctype>with)\(
+        # First argument is callback function. This doesn't parse robustly
+        # if it is e.g. a function call.
+        [^,]+,\s*
+        ['"](?P<section>\S+)['"],\s*
+        ['"](?P<option>\S+)['"](,\s+
+        (?:default=)?(?P<default>\S+?))?
+    \)''', re.VERBOSE | re.MULTILINE)
+
 configpartialre = (r"""ui\.config""")
 
 def main(args):
@@ -79,7 +89,7 @@ def main(args):
 
             # look for code-like bits
             line = carryover + l
-            m = configre.search(line)
+            m = configre.search(line) or configwithre.search(line)
             if m:
                 ctype = m.group('ctype')
                 if not ctype:
