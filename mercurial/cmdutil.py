@@ -452,7 +452,7 @@ def findcmd(cmd, table, strict=True):
         raise error.AmbiguousCommand(cmd, clist)
 
     if choice:
-        return choice.values()[0]
+        return list(choice.values())[0]
 
     raise error.UnknownCommand(cmd, allcmds)
 
