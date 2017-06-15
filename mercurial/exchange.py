@@ -1734,7 +1734,8 @@ def unbundle(repo, cg, heads, source, url):
         # push can proceed
         if not isinstance(cg, bundle2.unbundle20):
             # legacy case: bundle1 (changegroup 01)
-            with repo.lock():
+            txnname = "\n".join([source, util.hidepassword(url)])
+            with repo.lock(), repo.transaction(txnname):
                 r = cg.apply(repo, source, url)
         else:
             r = None
