@@ -1856,7 +1856,6 @@ class revlog(object):
 
         # track the base of the current delta log
         content = []
-        node = None
 
         r = len(self)
         end = 0
