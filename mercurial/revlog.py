@@ -1854,7 +1854,6 @@ class revlog(object):
         this revlog and the node that was added.
         """
 
-        # track the base of the current delta log
         content = []
 
         r = len(self)
