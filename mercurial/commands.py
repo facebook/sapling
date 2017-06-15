@@ -5317,20 +5317,17 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             f = hg.openpath(ui, fname)
             gen = exchange.readbundle(ui, f, fname)
             if isinstance(gen, bundle2.unbundle20):
-                tr = repo.transaction('unbundle')
-                try:
-                    op = bundle2.applybundle(repo, gen, tr, source='unbundle',
-                                             url='bundle:' + fname)
-                    tr.close()
-                except error.BundleUnknownFeatureError as exc:
-                    raise error.Abort(_('%s: unknown bundle feature, %s')
-                                      % (fname, exc),
-                                      hint=_("see https://mercurial-scm.org/"
-                                             "wiki/BundleFeature for more "
-                                             "information"))
-                finally:
-                    if tr:
-                        tr.release()
+                with repo.transaction('unbundle') as tr:
+                    try:
+                        op = bundle2.applybundle(repo, gen, tr,
+                                                 source='unbundle',
+                                                 url='bundle:' + fname)
+                    except error.BundleUnknownFeatureError as exc:
+                        raise error.Abort(
+                            _('%s: unknown bundle feature, %s') % (fname, exc),
+                            hint=_("see https://mercurial-scm.org/"
+                                   "wiki/BundleFeature for more "
+                                   "information"))
                 changes = [r.get('return', 0)
                            for r in op.records['changegroup']]
                 modheads = changegroup.combineresults(changes)
