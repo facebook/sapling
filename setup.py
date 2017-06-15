@@ -1,10 +1,11 @@
+from distutils.version import LooseVersion
 from distutils.cmd import Command
 from distutils.core import setup, Extension
 import distutils
 import fnmatch
 from glob import glob
 
-import os, sys
+import os, shutil, sys
 
 iswindows = os.name == 'nt'
 WERROR = "/WX" if iswindows else "-Werror"
@@ -18,6 +19,19 @@ PEDANTIC = "" if iswindows else "-pedantic"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
 OPTIMIZATION = "" if iswindows else "-O2"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
+
+# whether to use Cython to recompile .pyx to .c/.cpp at build time.
+# if False, fallback to .c/.cpp in the repo and .pyx files are ignored.
+# if True, re-compile .c/.cpp from .pyx files, require cython at build time.
+if 'USECYTHON' in os.environ:
+    USECYTHON = int(os.environ['USECYTHON'])
+else:
+    try:
+        import Cython
+    except ImportError:
+        USECYTHON = False
+    else:
+        USECYTHON = (LooseVersion(Cython.__version__) >= LooseVersion('0.22'))
 
 # --component allows the caller to specify what components they want. We can't
 # use argparse like normal, because setup() at the bottom has it's own argument
@@ -206,7 +220,7 @@ if iswindows:
     availableextmodules = {
         'linelog' : [
             Extension('linelog',
-                sources=['linelog/pyext/linelog.pyx'],
+                sources=['linelog/pyext/linelog.%s'],
                 extra_compile_args=filter(None, [
                     STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
                 ]),
@@ -336,19 +350,45 @@ else:
         'patchrmdir',
         'traceprof',
     ]
-for cythonmodule in cythonmodules:
-    if cythonmodule in components:
-        module = availableextmodules[cythonmodule]
-        try:
-            from Cython.Build import cythonize
-            availableextmodules[cythonmodule] = cythonize(module)
-        except Exception: # ImportError or Cython.Compiler.Errors.CompileError
-            sys.stderr.write(
-                '+------------------------------------------------+\n'
-                '| Failed to run cythonize.                       |\n'
-                '| Make sure you have Cython >= 0.21.1 installed. |\n'
-                '+------------------------------------------------+\n')
-            raise SystemExit(255)
+
+if USECYTHON:
+    # see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
+    compileroptions = {
+        'unraisable_tracebacks': False,
+        'c_string_type': 'bytes',
+    }
+    for cythonmodule in cythonmodules:
+        if cythonmodule in components:
+            module = availableextmodules[cythonmodule]
+            try:
+                from Cython.Build import cythonize
+                availableextmodules[cythonmodule] = cythonize(
+                    module,
+                    compiler_directives=compileroptions,
+                )
+            except Exception:
+                # ImportError or Cython.Compiler.Errors.CompileError
+                sys.stderr.write(
+                    '+------------------------------------------------+\n'
+                    '| Failed to run cythonize.                       |\n'
+                    '| Make sure you have Cython >= 0.21.1 installed. |\n'
+                    '+------------------------------------------------+\n')
+                raise SystemExit(255)
+else:
+    # use prebuilt files under prebuilt/cython
+    # change module sources from .pyx to .c or .cpp files
+    for cythonmodule in cythonmodules:
+        for m in availableextmodules[cythonmodule]:
+            sources = m.sources
+            iscpp = 'c++' in open(sources[0]).readline()
+            ext = iscpp and '.cpp' or '.c'
+            dstpaths = []
+            for src in sources:
+                dst = src.replace('.pyx', ext)
+                dstpaths.append(dst)
+                shutil.copy(os.path.join('prebuilt', 'cython',
+                                         os.path.basename(dst)), dst)
+            m.sources = dstpaths
 
 packages = []
 for package in availablepackages:
