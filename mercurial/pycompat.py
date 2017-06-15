@@ -32,6 +32,9 @@ else:
     import socketserver
     import xmlrpc.client as xmlrpclib
 
+empty = _queue.Empty
+queue = _queue.Queue
+
 def identity(a):
     return a
 
@@ -308,9 +311,6 @@ else:
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
     maplist = map
-
-empty = _queue.Empty
-queue = _queue.Queue
 
 class _pycompatstub(object):
     def __init__(self):
