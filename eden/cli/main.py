@@ -16,6 +16,7 @@ import sys
 
 from . import config as config_mod
 from . import debug as debug_mod
+from . import rage as rage_mod
 from . import util
 from .cmd_util import create_config
 from facebook.eden import EdenService
@@ -205,6 +206,12 @@ def do_daemon(args):
     print('Started edenfs (pid {}). Logs available at {}'.format(
         health_info.pid, config.get_log_path()))
     return 0
+
+
+def do_rage(args):
+    rage = rage_mod.Rage(args)
+    rage.check_diagnostic_info()
+    return 1
 
 
 def _find_default_daemon_binary():
@@ -404,6 +411,10 @@ def create_parser():
     # output instead.)
     debug_parser = subparsers.add_parser('debug')
     debug_mod.setup_argparse(debug_parser)
+
+    rage_parser = subparsers.add_parser(
+        'rage', help='Prints the diagnostic information about eden')
+    rage_parser.set_defaults(func=do_rage)
 
     return parser, subparsers
 

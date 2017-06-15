@@ -17,6 +17,7 @@ python_library(
         "config.py",
         "configinterpolator.py",
         "debug.py",
+        "rage.py",
         "util.py",
     ],
 )
