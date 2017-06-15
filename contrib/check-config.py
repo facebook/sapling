@@ -14,8 +14,16 @@ import sys
 foundopts = {}
 documented = {}
 
-configre = (r"""ui\.config(|int|bool|list)\(['"](\S+)['"],\s*"""
-            r"""['"](\S+)['"](,\s+(?:default=)?(\S+?))?\)""")
+configre = re.compile(r'''
+    # Function call
+    ui\.config(|int|bool|list)\(
+        # First argument.
+        ['"](\S+)['"],\s*
+        # Second argument
+        ['"](\S+)['"](,\s+
+        (?:default=)?(\S+?))?
+    \)''', re.VERBOSE | re.MULTILINE)
+
 configpartialre = (r"""ui\.config""")
 
 def main(args):
@@ -71,7 +79,7 @@ def main(args):
 
             # look for code-like bits
             line = carryover + l
-            m = re.search(configre, line, re.MULTILINE)
+            m = configre.search(line)
             if m:
                 ctype = m.group(1)
                 if not ctype:
