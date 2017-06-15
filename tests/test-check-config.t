@@ -33,5 +33,3 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   python contrib/check-config.py
-  undocumented: profiling.showmax (with) [0.999]
-  undocumented: profiling.showmin (with) [0.005]

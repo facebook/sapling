@@ -1573,6 +1573,27 @@ profiling is done using lsprof.
     Specific to the ``ls`` instrumenting profiler.
     (default: 5)
 
+``showmin``
+    Minimum fraction of samples an entry must have for it to be displayed.
+    Can be specified as a float between ``0.0`` and ``1.0`` or can have a
+    ``%`` afterwards to allow values up to ``100``. e.g. ``5%``.
+
+    Only used by the ``stat`` profiler.
+
+    For the ``chrome`` format, default is ``0.005``.
+
+    The option is unused on other formats.
+
+``showmax``
+    Maximum fraction of samples an entry can have before it is ignored in
+    display. Values format is the same as ``showmin``.
+
+    Only used by the ``stat`` profiler.
+
+    For the ``chrome`` format, default is ``0.999``.
+
+    The option is unused on other formats.
+
 ``progress``
 ------------
 
