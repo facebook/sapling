@@ -2093,6 +2093,15 @@ User interface controls.
     on all exceptions, even those recognized by Mercurial (such as
     IOError or MemoryError). (default: False)
 
+``tweakdefaults``
+
+    By default Mercurial's behavior changes very little from release
+    to release, but over time the recommended config settings
+    shift. Enable this config to opt in to get automatic tweaks to
+    Mercurial's behavior over time. This config setting will have no
+    effet if ``HGPLAIN` is set or ``HGPLAINEXCEPT`` is set and does
+    not include ``tweakdefaults``. (default: False)
+
 ``username``
     The committer of a changeset created when running "commit".
     Typically a person's name and email address, e.g. ``Fred Widget

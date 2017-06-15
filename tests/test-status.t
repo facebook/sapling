@@ -107,6 +107,29 @@ combining patterns with root and patterns without a root works
   ? a/in_a
   ? b/in_b
 
+tweaking defaults works
+  $ hg status --cwd a --config ui.tweakdefaults=yes
+  ? 1/in_a_1
+  ? in_a
+  ? ../b/1/in_b_1
+  ? ../b/2/in_b_2
+  ? ../b/in_b
+  ? ../in_root
+  $ HGPLAIN=1 hg status --cwd a --config ui.tweakdefaults=yes
+  ? a/1/in_a_1 (glob)
+  ? a/in_a (glob)
+  ? b/1/in_b_1 (glob)
+  ? b/2/in_b_2 (glob)
+  ? b/in_b (glob)
+  ? in_root
+  $ HGPLAINEXCEPT=tweakdefaults hg status --cwd a --config ui.tweakdefaults=yes
+  ? 1/in_a_1
+  ? in_a
+  ? ../b/1/in_b_1
+  ? ../b/2/in_b_2
+  ? ../b/in_b
+  ? ../in_root
+
 relative paths can be requested
 
   $ cat >> $HGRCPATH <<EOF
@@ -121,6 +144,19 @@ relative paths can be requested
   ? ../b/in_b
   ? ../in_root
   $ HGPLAIN=1 hg status --cwd a
+  ? a/1/in_a_1 (glob)
+  ? a/in_a (glob)
+  ? b/1/in_b_1 (glob)
+  ? b/2/in_b_2 (glob)
+  ? b/in_b (glob)
+  ? in_root
+
+if relative paths are explicitly off, tweakdefaults doesn't change it
+  $ cat >> $HGRCPATH <<EOF
+  > [commands]
+  > status.relative = False
+  > EOF
+  $ hg status --cwd a --config ui.tweakdefaults=yes
   ? a/1/in_a_1 (glob)
   ? a/in_a (glob)
   ? b/1/in_b_1 (glob)
