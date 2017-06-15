@@ -212,9 +212,6 @@ class localpeer(peer.peerrepository):
     def lock(self):
         return self._repo.lock()
 
-    def addchangegroup(self, cg, source, url):
-        return cg.apply(self._repo, source, url)
-
     def pushkey(self, namespace, key, old, new):
         return self._repo.pushkey(namespace, key, old, new)
 
