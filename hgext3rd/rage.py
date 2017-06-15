@@ -1,7 +1,13 @@
 # Copyright 2014 Facebook Inc.
 #
-"""upload useful diagnostics and give instructions for asking for help"""
+"""upload useful diagnostics and give instructions for asking for help
 
+    [rage]
+    # Name of the rpm binary
+    rpmbin = rpm
+"""
+
+from functools import partial
 from mercurial.i18n import _
 from mercurial import (
     bookmarks,
@@ -126,14 +132,15 @@ def usechginfo():
         result.append('%s: %s' % (name, value))
     return '\n'.join(result)
 
-def rpminfo():
+def rpminfo(ui):
     """FBONLY: Information about RPM packages"""
     result = set()
+    rpmbin = ui.config('rage', 'rpmbin', 'rpm')
     for name in ['hg', 'hg.real']:
         path = which(name)
         if not path:
             continue
-        result.add(shcmd('rpm -qf %s' % path, check=False))
+        result.add(shcmd('%s -qf %s' % (rpmbin, path), check=False))
     return ''.join(result)
 
 @command('^rage', rageopts , _('hg rage'))
@@ -203,7 +210,7 @@ def rage(ui, repo, *pats, **opts):
                     refresh=False, reset=False, import_rules=False,
                     clear_rules=False))),
         ('usechg', _failsafe(usechginfo)),
-        ('rpm info', _failsafe(rpminfo)),
+        ('rpm info', _failsafe(partial(rpminfo, ui))),
         ('klist', _failsafe(lambda: shcmd('klist', check=False))),
         ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
         ('airport', _failsafe(

@@ -76,7 +76,11 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
   Skipping ctreemanifest/treemanifest.h it has no-che?k-code (glob)
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
+  tests/test-rage.t:10:
+   >   $ echo "rpmbin = /bin/rpm" >> .hg/hgrc
+   don't use explicit paths for tools
   Skipping tests/test-remotefilelog-bad-configs.t it has no-che?k-code (glob)
+  [1]
 
 Check foreign extensions are only used after checks
 
