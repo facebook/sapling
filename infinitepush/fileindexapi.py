@@ -29,6 +29,7 @@ class fileindexapi(indexapi):
 
         self._nodemap = os.path.join(root, 'nodemap')
         self._bookmarkmap = os.path.join(root, 'bookmarkmap')
+        self._metadatamap = os.path.join(root, 'nodemetadatamap')
 
     def addbundle(self, bundleid, nodesctx):
         for node in nodesctx:
@@ -59,6 +60,10 @@ class fileindexapi(indexapi):
 
     def getbookmarks(self, query):
         return dict(self._listbookmarks(query))
+
+    def saveoptionaljsonmetadata(self, node, jsonmetadata):
+        vfs = self._repo.vfs
+        vfs.write(os.path.join(self._metadatamap, node), jsonmetadata)
 
     def _listbookmarks(self, pattern):
         if pattern.endswith('*'):

@@ -710,3 +710,15 @@ Strip commit and pull it using hg update with bookmark name
   (activating bookmark scratch/mybranch)
   $ hg log -r scratch/mybranch -T '{node}'
   d8fde0ddfc962183977f92d2bc52d303b8840f9d (no-eol)
+
+Test debugfillinfinitepushmetadata
+  $ cd ../repo
+  $ hg debugfillinfinitepushmetadata
+  abort: node is not specified
+  [255]
+  $ hg debugfillinfinitepushmetadata --node randomnode
+  abort: node randomnode is not found
+  [255]
+  $ hg debugfillinfinitepushmetadata --node d8fde0ddfc962183977f92d2bc52d303b8840f9d
+  $ cat .hg/scratchbranches/index/nodemetadatamap/d8fde0ddfc962183977f92d2bc52d303b8840f9d
+  {"changed_files": {"testpullbycommithash2": {"adds": 1, "isbinary": false, "removes": 0}}} (no-eol)

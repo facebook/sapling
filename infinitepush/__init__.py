@@ -91,13 +91,15 @@ import sys
 import tempfile
 import time
 
-from . import backupcommands
 from .bundleparts import (
     getscratchbranchpart,
     scratchbookmarksparttype,
     scratchbranchparttype,
 )
-from .common import isremotebooksenabled
+from . import (
+    infinitepushcommands,
+    common,
+)
 from collections import defaultdict
 from functools import partial
 from mercurial import (
@@ -124,9 +126,6 @@ from mercurial.i18n import _
 from mercurial.peer import batchable, future
 from mercurial.wireproto import encodelist, decodelist
 
-
-cmdtable = backupcommands.cmdtable
-
 pushrebaseparttype = 'b2x:rebase'
 experimental = 'experimental'
 configbookmark = 'server-bundlestore-bookmark'
@@ -134,6 +133,7 @@ configcreate = 'server-bundlestore-create'
 configscratchpush = 'infinitepush-scratchpush'
 confignonforwardmove = 'non-forward-move'
 
+cmdtable = infinitepushcommands.cmdtable
 _scratchbranchmatcher = lambda x: False
 _maybehash = re.compile(r'^[a-f0-9]+$').search
 
@@ -398,15 +398,6 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
 
     return newcaps
 
-def downloadbundle(repo, unknownhead):
-    index = repo.bundlestore.index
-    store = repo.bundlestore.store
-    bundleid = index.getbundle(hex(unknownhead))
-    if bundleid is None:
-        raise error.Abort('%s head is not known' % hex(unknownhead))
-    bundleraw = store.read(bundleid)
-    return _makebundlefromraw(bundleraw)
-
 def _rebundle(bundlerepo, bundleroots, unknownhead, version):
     '''
     Bundle may include more revision then user requested. For example,
@@ -478,7 +469,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
         for head in heads:
             if head not in repo.changelog.nodemap:
                 if head not in nodestobundle:
-                    newbundlefile = downloadbundle(repo, head)
+                    newbundlefile = common.downloadbundle(repo, head)
                     bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
                     bundlerepo = repository(repo.ui, bundlepath)
 
@@ -677,7 +668,7 @@ def _pull(orig, ui, repo, source="default", **opts):
         # TODO(stash): race condition is possible
         # if scratch bookmarks was updated right after orig.
         # But that's unlikely and shouldn't be harmful.
-        if isremotebooksenabled(ui):
+        if common.isremotebooksenabled(ui):
             remotescratchbookmarks.update(scratchbookmarks)
             _saveremotebookmarks(repo, remotescratchbookmarks, source)
         else:
@@ -688,7 +679,7 @@ def _pull(orig, ui, repo, source="default", **opts):
             unwrapfunction(discovery, 'findcommonincoming')
 
 def _readscratchremotebookmarks(ui, repo, other):
-    if isremotebooksenabled(ui):
+    if common.isremotebooksenabled(ui):
         remotenamesext = extensions.find('remotenames')
         remotepath = remotenamesext.activepath(repo.ui, other)
         result = {}
@@ -793,7 +784,7 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
         # know about them. Let's save it before push and restore after
         remotescratchbookmarks = _readscratchremotebookmarks(ui, repo, destpath)
         result = orig(ui, repo, dest, *args, **opts)
-        if isremotebooksenabled(ui):
+        if common.isremotebooksenabled(ui):
             if bookmark and scratchpush:
                 other = hg.peer(repo, opts, destpath)
                 fetchedbookmarks = other.listkeyspatterns('bookmarks',
@@ -866,25 +857,6 @@ def _makebundlefile(ui, part, cgversion):
             bundler.addpart(cgpart)
             buf = util.chunkbuffer(bundler.getchunks())
             fp.write(buf.read())
-        finally:
-            fp.close()
-    except Exception:
-        try:
-            os.unlink(bundlefile)
-        except Exception:
-            # we would rather see the original exception
-            pass
-        raise
-
-    return bundlefile
-
-def _makebundlefromraw(data):
-    fp = None
-    fd, bundlefile = tempfile.mkstemp()
-    try:  # guards bundlefile
-        try:  # guards fp
-            fp = os.fdopen(fd, 'wb')
-            fp.write(data)
         finally:
             fp.close()
     except Exception:

@@ -62,5 +62,9 @@ class indexapi(object):
         """Returns bookmarks that match the query"""
         raise NotImplementedError()
 
+    def saveoptionaljsonmetadata(self, node, jsonmetadata):
+        """Saves optional metadata for a given node"""
+        raise NotImplementedError()
+
 class indexexception(Exception):
     pass
