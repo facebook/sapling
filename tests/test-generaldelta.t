@@ -157,5 +157,7 @@ Test that strip bundle use bundle2
   Stream params: sortdict([('Compression', 'BZ')])
   changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
       1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9
+  phase-heads -- 'sortdict()'
+      1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9 draft
 
   $ cd ..

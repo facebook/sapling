@@ -170,6 +170,32 @@ to see that secret becomes draft, but public remains public.
   |
   o  A public
   
+Unbundling change in the middle of a stack does not affect later changes
+  $ hg strip --no-backup E
+  $ hg phase --secret --force D
+  $ hg log -G -T '{desc} {phase}\n'
+  o  D secret
+  |
+  o  C draft
+  |
+  o  B draft
+  |
+  o  A public
+  
+  $ hg bundle --base A -r B bundle
+  1 changesets found
+  $ hg unbundle -q bundle
+  $ rm bundle
+  $ hg log -G -T '{desc} {phase}\n'
+  o  D secret
+  |
+  o  C draft
+  |
+  o  B draft
+  |
+  o  A public
+  
+
   $ cd ..
 
 Set up repo with non-linear history

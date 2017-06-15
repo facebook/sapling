@@ -1239,6 +1239,8 @@ Test ability to pull changeset with locally applying obsolescence markers
   obsmarkers -- 'sortdict()'
       version: 1 (70 bytes)
       f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  phase-heads -- 'sortdict()'
+      f27abbcc1f77fb409cf9160482fe619541e2d605 draft
 
   $ hg pull .hg/strip-backup/e008cf283490-*-backup.hg
   pulling from .hg/strip-backup/e008cf283490-39c978dc-backup.hg
@@ -1283,6 +1285,8 @@ Testing that strip remove markers:
       version: 1 (139 bytes)
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
       f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  phase-heads -- 'sortdict()'
+      b0551702f918510f01ae838ab03a463054c67b46 draft
 
   $ hg unbundle .hg/strip-backup/e016b03fd86f-*-backup.hg
   adding changesets

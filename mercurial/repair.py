@@ -49,7 +49,11 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
         bundletype = "HG10UN"
 
     outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
-    contentopts = {'cg.version': cgversion, 'obsolescence': obsolescence}
+    contentopts = {
+        'cg.version': cgversion,
+        'obsolescence': obsolescence,
+        'phases': True,
+    }
     return bundle2.writenewbundle(repo.ui, repo, 'strip', name, bundletype,
                                   outgoing, contentopts, vfs, compression=comp)
 
@@ -194,6 +198,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             deleteobsmarkers(repo.obsstore, stripobsidx)
             del repo.obsstore
 
+        repo._phasecache.filterunknown(repo)
         if tmpbundlefile:
             ui.note(_("adding branch\n"))
             f = vfs.open(tmpbundlefile, "rb")
