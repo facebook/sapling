@@ -279,4 +279,4 @@ def _getctxfromfctx(fctx):
 
 def _gethex(ctx):
     # for workingctx return p1 hex
-    return ctx.hex() if ctx.node() != node.wdirid else ctx.p1().hex()
+    return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
