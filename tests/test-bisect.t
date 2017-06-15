@@ -453,7 +453,7 @@ assuming that the shell returns 127 if command not found ...
 test bisecting command
 
   $ cat > script.py <<EOF
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > import sys
   > from mercurial import ui, hg
   > repo = hg.repository(ui.ui.load(), '.')

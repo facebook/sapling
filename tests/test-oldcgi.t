@@ -4,7 +4,7 @@ This tests if CGI files from before d0db3462d568 still work.
 
   $ hg init test
   $ cat >hgweb.cgi <<HGWEB
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to use hgweb, edit as necessary
   > 
@@ -26,7 +26,7 @@ This tests if CGI files from before d0db3462d568 still work.
   > HGWEBDIRCONF
 
   $ cat >hgwebdir.cgi <<HGWEBDIR
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to export multiple hgweb repos, edit as necessary
   > 

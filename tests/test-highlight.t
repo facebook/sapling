@@ -956,7 +956,7 @@ We attempt to highlight unknown files by default
   > EOF
 
   $ cat > unknownfile << EOF
-  > #!/usr/bin/python
+  > #!$PYTHON
   > def foo():
   >    pass
   > EOF

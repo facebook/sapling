@@ -249,7 +249,7 @@ Edit with extdiff -p:
 Prepare custom diff/edit tool:
 
   $ cat > 'diff tool.py' << EOT
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > import time
   > time.sleep(1) # avoid unchanged-timestamp problems
   > file('a/a', 'ab').write('edited\n')

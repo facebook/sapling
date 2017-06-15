@@ -1,5 +1,5 @@
   $ cat > echo.py <<EOF
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > import os, sys
   > try:
   >     import msvcrt

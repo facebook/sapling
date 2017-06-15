@@ -5,7 +5,7 @@ before d74fc8dec2b4 still work.
 
   $ hg init test
   $ cat >hgweb.cgi <<HGWEB
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to use hgweb, edit as necessary
   > 
@@ -31,7 +31,7 @@ before d74fc8dec2b4 still work.
   > HGWEBDIRCONF
 
   $ cat >hgwebdir.cgi <<HGWEBDIR
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to export multiple hgweb repos, edit as necessary
   > 

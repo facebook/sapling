@@ -5,7 +5,7 @@ This is a rudimentary test of the CGI files as of d74fc8dec2b4.
   $ hg init test
 
   $ cat >hgweb.cgi <<HGWEB
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to use hgweb, edit as necessary
   > 
@@ -28,7 +28,7 @@ This is a rudimentary test of the CGI files as of d74fc8dec2b4.
   > HGWEBDIRCONF
 
   $ cat >hgwebdir.cgi <<HGWEBDIR
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > #
   > # An example CGI script to export multiple hgweb repos, edit as necessary
   > 

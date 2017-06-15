@@ -98,7 +98,7 @@ Command with no output, we just want to see the extensions loaded:
 Check hgweb's load order:
 
   $ cat > hgweb.cgi <<EOF
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > from mercurial import demandimport; demandimport.enable()
   > from mercurial.hgweb import hgweb
   > from mercurial.hgweb import wsgicgi

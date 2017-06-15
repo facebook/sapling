@@ -215,7 +215,7 @@ Test display of largefiles in hgweb
 Test largefiles can be loaded in hgweb (wrapcommand() shouldn't fail)
 
   $ cat <<EOF > "$TESTTMP/hgweb.cgi"
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > from mercurial import demandimport; demandimport.enable()
   > from mercurial.hgweb import hgweb
   > from mercurial.hgweb import wsgicgi

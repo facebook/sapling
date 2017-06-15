@@ -93,7 +93,7 @@ Verify that largefiles from pulled branchheads are fetched, also to an empty rep
 Portable way to print file permissions:
 
   $ cat > ls-l.py <<EOF
-  > #!/usr/bin/env python
+  > #!$PYTHON
   > import sys, os
   > path = sys.argv[1]
   > print '%03o' % (os.lstat(path).st_mode & 0777)
