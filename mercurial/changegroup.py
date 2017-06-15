@@ -315,11 +315,11 @@ class cg1unpacker(object):
                     efiles.update(cl.readfiles(node))
 
                 self.changelogheader()
-                srccontent = cl.addgroup(self, csmap, trp,
-                                         addrevisioncb=onchangelog)
+                cgnodes = cl.addgroup(self, csmap, trp,
+                                      addrevisioncb=onchangelog)
                 efiles = len(efiles)
 
-                if not (srccontent or emptyok):
+                if not (cgnodes or emptyok):
                     raise error.Abort(_("received changelog group is empty"))
                 clend = len(cl)
                 changesets = clend - clstart
@@ -338,7 +338,7 @@ class cg1unpacker(object):
                     for cset in xrange(clstart, clend):
                         mfnode = cl.changelogrevision(cset).manifest
                         mfest = ml[mfnode].readdelta()
-                        # store file nodes we must see
+                        # store file cgnodes we must see
                         for f, n in mfest.iteritems():
                             needfiles.setdefault(f, set()).add(n)
 
@@ -386,15 +386,13 @@ class cg1unpacker(object):
                     # We should not use added here but the list of all change in
                     # the bundle
                     if publishing:
-                        phases.advanceboundary(repo, tr, phases.public,
-                                               srccontent)
+                        phases.advanceboundary(repo, tr, phases.public, cgnodes)
                     else:
                         # Those changesets have been pushed from the
                         # outside, their phases are going to be pushed
                         # alongside. Therefor `targetphase` is
                         # ignored.
-                        phases.advanceboundary(repo, tr, phases.draft,
-                                               srccontent)
+                        phases.advanceboundary(repo, tr, phases.draft, cgnodes)
                         phases.retractboundary(repo, tr, phases.draft, added)
                 elif srctype != 'strip':
                     # publishing only alter behavior during push
