@@ -2093,13 +2093,17 @@ class TextTestRunner(unittest.TextTestRunner):
             for tc, __ in testcases:
                 if tc.name in timesd:
                     diff = result.faildata.get(tc.name, b'')
+                    try:
+                        diff = diff.decode('unicode_escape')
+                    except UnicodeDecodeError as e:
+                        diff = '%r decoding diff, sorry' % e
                     tres = {'result': res,
                             'time': ('%0.3f' % timesd[tc.name][2]),
                             'cuser': ('%0.3f' % timesd[tc.name][0]),
                             'csys': ('%0.3f' % timesd[tc.name][1]),
                             'start': ('%0.3f' % timesd[tc.name][3]),
                             'end': ('%0.3f' % timesd[tc.name][4]),
-                            'diff': diff.decode('unicode_escape'),
+                            'diff': diff,
                             }
                 else:
                     # blacklisted test
