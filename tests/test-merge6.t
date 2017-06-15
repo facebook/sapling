@@ -1,6 +1,6 @@
   $ cat <<EOF > merge
   > import sys, os
-  > print "merging for", os.path.basename(sys.argv[1])
+  > print("merging for", os.path.basename(sys.argv[1]))
   > EOF
   $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 

@@ -75,13 +75,13 @@ Check that extensions are loaded in phases:
   $ cat > foo.py <<EOF
   > import os
   > name = os.path.basename(__file__).rsplit('.', 1)[0]
-  > print "1) %s imported" % name
+  > print("1) %s imported" % name)
   > def uisetup(ui):
-  >     print "2) %s uisetup" % name
+  >     print("2) %s uisetup" % name)
   > def extsetup():
-  >     print "3) %s extsetup" % name
+  >     print("3) %s extsetup" % name)
   > def reposetup(ui, repo):
-  >    print "4) %s reposetup" % name
+  >    print("4) %s reposetup" % name)
   > 
   > # custom predicate to check registration of functions at loading
   > from mercurial import (
@@ -172,7 +172,7 @@ Check "from __future__ import absolute_import" support for external libraries
   $ cat > loadabs.py <<EOF
   > import mod.ambigabs as ambigabs
   > def extsetup():
-  >     print 'ambigabs.s=%s' % ambigabs.s
+  >     print('ambigabs.s=%s' % ambigabs.s)
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
   ambigabs.s=libroot/ambig.py
@@ -186,7 +186,7 @@ Check "from __future__ import absolute_import" support for external libraries
   $ cat > loadrel.py <<EOF
   > import mod.ambigrel as ambigrel
   > def extsetup():
-  >     print 'ambigrel.s=%s' % ambigrel.s
+  >     print('ambigrel.s=%s' % ambigrel.s)
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py root)
   ambigrel.s=libroot/mod/ambig.py

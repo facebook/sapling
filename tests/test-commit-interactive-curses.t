@@ -345,7 +345,7 @@ The default interface is text
   > $PYTHON <<EOF
   > from mercurial import hg, ui;\
   > repo = hg.repository(ui.ui.load(), ".");\
-  > print repo.ui.interface("chunkselector")
+  > print(repo.ui.interface("chunkselector"))
   > EOF
   > }
   $ chunkselectorinterface

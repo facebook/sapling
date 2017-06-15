@@ -12,10 +12,10 @@
   $ echo "convert = " >> $HGRCPATH
   $ cat > cvshooks.py <<EOF
   > def cvslog(ui,repo,hooktype,log):
-  >     print "%s hook: %d entries"%(hooktype,len(log))
+  >     print("%s hook: %d entries"%(hooktype,len(log)))
   > 
   > def cvschangesets(ui,repo,hooktype,changesets):
-  >     print "%s hook: %d changesets"%(hooktype,len(changesets))
+  >     print("%s hook: %d changesets"%(hooktype,len(changesets)))
   > EOF
   $ hookpath=`pwd`
   $ cat <<EOF >> $HGRCPATH

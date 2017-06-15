@@ -1,4 +1,5 @@
   $ cat <<EOF > merge
+  > from __future__ import print_function
   > import sys, os
   > 
   > try:
@@ -8,7 +9,7 @@
   > except ImportError:
   >     pass
   > 
-  > print "merging for", os.path.basename(sys.argv[1])
+  > print("merging for", os.path.basename(sys.argv[1]))
   > EOF
   $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 

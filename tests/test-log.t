@@ -1793,7 +1793,7 @@ test -u/-k for problematic encoding
   $ cd problematicencoding
 
   $ $PYTHON > setup.sh <<EOF
-  > print u'''
+  > print(u'''
   > echo a > text
   > hg add text
   > hg --encoding utf-8 commit -u '\u30A2' -m none
@@ -1803,13 +1803,13 @@ test -u/-k for problematic encoding
   > hg --encoding utf-8 commit -u none -m '\u30A2'
   > echo d > text
   > hg --encoding utf-8 commit -u none -m '\u30C2'
-  > '''.encode('utf-8')
+  > '''.encode('utf-8'))
   > EOF
   $ sh < setup.sh
 
 test in problematic encoding
   $ $PYTHON > test.sh <<EOF
-  > print u'''
+  > print(u'''
   > hg --encoding cp932 log --template '{rev}\\n' -u '\u30A2'
   > echo ====
   > hg --encoding cp932 log --template '{rev}\\n' -u '\u30C2'
@@ -1817,7 +1817,7 @@ test in problematic encoding
   > hg --encoding cp932 log --template '{rev}\\n' -k '\u30A2'
   > echo ====
   > hg --encoding cp932 log --template '{rev}\\n' -k '\u30C2'
-  > '''.encode('cp932')
+  > '''.encode('cp932'))
   > EOF
   $ sh < test.sh
   0

@@ -1,11 +1,12 @@
 #require hardlink
 
   $ cat > nlinks.py <<EOF
+  > from __future__ import print_function
   > import sys
   > from mercurial import util
   > for f in sorted(sys.stdin.readlines()):
   >     f = f[:-1]
-  >     print util.nlinks(f), f
+  >     print(util.nlinks(f), f)
   > EOF
 
   $ nlinksdir()

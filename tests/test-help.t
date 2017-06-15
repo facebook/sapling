@@ -1709,7 +1709,7 @@ such str.lower().
 
   $ $PYTHON <<EOF | sh
   > upper = "\x8bL\x98^"
-  > print "hg --encoding cp932 help -e ambiguous.%s" % upper
+  > print("hg --encoding cp932 help -e ambiguous.%s" % upper)
   > EOF
   \x8bL\x98^ (esc)
   ----
@@ -1719,7 +1719,7 @@ such str.lower().
 
   $ $PYTHON <<EOF | sh
   > lower = "\x8bl\x98^"
-  > print "hg --encoding cp932 help -e ambiguous.%s" % lower
+  > print("hg --encoding cp932 help -e ambiguous.%s" % lower)
   > EOF
   \x8bl\x98^ (esc)
   ----

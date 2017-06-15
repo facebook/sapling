@@ -90,7 +90,7 @@ now test that we fixed the bug for all scripts/extensions
   >     f.close()
   > 
   > def printfiles(repo, rev):
-  >     print "revision %s files: %s" % (rev, repo[rev].files())
+  >     print("revision %s files: %s" % (rev, repo[rev].files()))
   > 
   > repo = hg.repository(ui.ui.load(), '.')
   > assert len(repo) == 6, \
@@ -99,14 +99,14 @@ now test that we fixed the bug for all scripts/extensions
   > replacebyte("bugfix", "u")
   > sleep(2)
   > try:
-  >     print "PRE: len(repo): %d" % len(repo)
+  >     print("PRE: len(repo): %d" % len(repo))
   >     wlock = repo.wlock()
   >     lock = repo.lock()
   >     replacebyte("file1", "x")
   >     repo.commit(text="x", user="test", date=(0, 0))
   >     replacebyte("file1", "y")
   >     repo.commit(text="y", user="test", date=(0, 0))
-  >     print "POST: len(repo): %d" % len(repo)
+  >     print("POST: len(repo): %d" % len(repo))
   > finally:
   >     lock.release()
   >     wlock.release()

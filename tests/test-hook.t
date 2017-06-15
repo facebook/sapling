@@ -409,6 +409,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   $ cd "$TESTTMP/b"
 
   $ cat > hooktests.py <<EOF
+  > from __future__ import print_function
   > from mercurial import error
   > 
   > uncallable = 0
@@ -418,9 +419,9 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     args.pop('repo', None)
   >     a = list(args.items())
   >     a.sort()
-  >     print 'hook args:'
+  >     print('hook args:')
   >     for k, v in a:
-  >        print ' ', k, v
+  >        print(' ', k, v)
   > 
   > def passhook(**args):
   >     printargs(args)
@@ -445,7 +446,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     ui.note('verbose output from hook\n')
   > 
   > def printtags(ui, repo, **args):
-  >     print sorted(repo.tags())
+  >     print(sorted(repo.tags()))
   > 
   > class container:
   >     unreachable = 1
@@ -630,7 +631,7 @@ make sure --traceback works
 
   $ cat > hookext.py <<EOF
   > def autohook(**args):
-  >     print "Automatically installed hook"
+  >     print("Automatically installed hook")
   > 
   > def reposetup(ui, repo):
   >     repo.ui.setconfig("hooks", "commit.auto", autohook)
@@ -667,7 +668,7 @@ test python hook configured with python:[file]:[hook] syntax
   $ cd hooks
   $ cat > testhooks.py <<EOF
   > def testhook(**args):
-  >     print 'hook works'
+  >     print('hook works')
   > EOF
   $ echo '[hooks]' > ../repo/.hg/hgrc
   $ echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc

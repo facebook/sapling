@@ -39,7 +39,7 @@ commit
 push
 
   $ hg --traceback --cwd b push ../a 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   pushing to ../a
   searching for changes
   adding changesets
@@ -92,7 +92,7 @@ unbundle with unrelated source
 unbundle with correct source
 
   $ hg --config notify.sources=unbundle --cwd a unbundle ../test.hg 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   adding changesets
   adding manifests
   adding file changes
@@ -167,7 +167,7 @@ merge as a different user
 push
 
   $ hg --traceback --cwd b --config notify.fromauthor=True push ../a 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   pushing to ../a
   searching for changes
   adding changesets

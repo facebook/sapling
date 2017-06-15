@@ -25,13 +25,13 @@ just in case somebody has a strange $TMPDIR
   > allnames.sort()
   > for name in allnames:
   >     suffix = name in isdir and '/' or ''
-  >     print '%05o %s%s' % (os.lstat(name).st_mode & 07777, name, suffix)
+  >     print('%05o %s%s' % (os.lstat(name).st_mode & 07777, name, suffix))
   > EOF
 
   $ cat >mode.py <<EOF
   > import sys
   > import os
-  > print '%05o' % os.lstat(sys.argv[1]).st_mode
+  > print('%05o' % os.lstat(sys.argv[1]).st_mode)
   > EOF
 
   $ umask 077

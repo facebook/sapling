@@ -2,8 +2,9 @@ This test makes sure that we don't mark a file as merged with its ancestor
 when we do a merge.
 
   $ cat <<EOF > merge
+  > from __future__ import print_function
   > import sys, os
-  > print "merging for", os.path.basename(sys.argv[1])
+  > print("merging for", os.path.basename(sys.argv[1]))
   > EOF
   $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 

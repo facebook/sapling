@@ -33,7 +33,7 @@ Test interactions between mq and patch.eol
   > for line in file(sys.argv[1], 'rb'):
   >     line = line.replace('\r', '<CR>')
   >     line = line.replace('\n', '<LF>')
-  >     print line
+  >     print(line)
   > EOF
 
   $ hg init repo

@@ -16,7 +16,7 @@ Set up helpers
   > except ImportError:
   >     pass
   > (old, new) = sys.argv[1] == 'LF' and ('\n', '\r\n') or ('\r\n', '\n')
-  > print "%% switching encoding from %r to %r" % (old, new)
+  > print("%% switching encoding from %r to %r" % (old, new))
   > for path in sys.argv[2:]:
   >     data = file(path, 'rb').read()
   >     data = data.replace(old, new)
