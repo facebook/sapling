@@ -13,9 +13,14 @@ from mercurial import (
     ancestor,
     debugcommands,
     hg,
+    pycompat,
     ui as uimod,
     util,
 )
+
+if pycompat.ispy3:
+    long = int
+    xrange = range
 
 def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
     '''nodes: total number of nodes in the graph
