@@ -1,0 +1,10 @@
+test-check-execute.t
+test-check-shbang.t
+test-contrib-check-code.t
+test-contrib-check-commit.t
+test-ctxmanager.py
+test-doctest.py
+test-lrucachedict.py
+test-run-tests.py
+test-unified-test.t
+test-xdg.t
