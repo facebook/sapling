@@ -43,7 +43,6 @@ if ispy3:
 
     fsencode = os.fsencode
     fsdecode = os.fsdecode
-    # A bytes version of os.name.
     oslinesep = os.linesep.encode('ascii')
     osname = os.name.encode('ascii')
     ospathsep = os.pathsep.encode('ascii')
@@ -210,10 +209,13 @@ if ispy3:
     def open(name, mode='r', buffering=-1):
         return builtins.open(name, sysstr(mode), buffering)
 
-    # getopt.getopt() on Python 3 deals with unicodes internally so we cannot
-    # pass bytes there. Passing unicodes will result in unicodes as return
-    # values which we need to convert again to bytes.
     def getoptb(args, shortlist, namelist):
+        """
+        Takes bytes arguments, converts them to unicode, pass them to
+        getopt.getopt(), convert the returned values back to bytes and then
+        return them for Python 3 compatibility as getopt.getopt() don't accepts
+        bytes on Python 3.
+        """
         args = [a.decode('latin-1') for a in args]
         shortlist = shortlist.decode('latin-1')
         namelist = [a.decode('latin-1') for a in namelist]
@@ -223,24 +225,30 @@ if ispy3:
         args = [a.encode('latin-1') for a in args]
         return opts, args
 
-    # keys of keyword arguments in Python need to be strings which are unicodes
-    # Python 3. This function takes keyword arguments, convert the keys to str.
     def strkwargs(dic):
+        """
+        Converts the keys of a python dictonary to str i.e. unicodes so that
+        they can be passed as keyword arguments as dictonaries with bytes keys
+        can't be passed as keyword arguments to functions on Python 3.
+        """
         dic = dict((k.decode('latin-1'), v) for k, v in dic.iteritems())
         return dic
 
-    # keys of keyword arguments need to be unicode while passing into
-    # a function. This function helps us to convert those keys back to bytes
-    # again as we need to deal with bytes.
     def byteskwargs(dic):
+        """
+        Converts keys of python dictonaries to bytes as they were converted to
+        str to pass that dictonary as a keyword argument on Python 3.
+        """
         dic = dict((k.encode('latin-1'), v) for k, v in dic.iteritems())
         return dic
 
-    # shlex.split() accepts unicodes on Python 3. This function takes bytes
-    # argument, convert it into unicodes, pass into shlex.split(), convert the
-    # returned value to bytes and return that.
     # TODO: handle shlex.shlex().
     def shlexsplit(s):
+        """
+        Takes bytes argument, convert it to str i.e. unicodes, pass that into
+        shlex.split(), convert the returned value to bytes and return that for
+        Python 3 compatibility as shelx.split() don't accept bytes on Python 3.
+        """
         ret = shlex.split(s.decode('latin-1'))
         return [a.encode('latin-1') for a in ret]
 
@@ -259,10 +267,12 @@ else:
     exec('def raisewithtb(exc, tb):\n'
          '    raise exc, None, tb\n')
 
-    # Partial backport from os.py in Python 3, which only accepts bytes.
-    # In Python 2, our paths should only ever be bytes, a unicode path
-    # indicates a bug.
     def fsencode(filename):
+        """
+        Partial backport from os.py in Python 3, which only accepts bytes.
+        In Python 2, our paths should only ever be bytes, a unicode path
+        indicates a bug.
+        """
         if isinstance(filename, str):
             return filename
         else:
