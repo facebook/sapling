@@ -16,12 +16,12 @@ documented = {}
 
 configre = re.compile(r'''
     # Function call
-    ui\.config(|int|bool|list)\(
+    ui\.config(?P<ctype>|int|bool|list)\(
         # First argument.
-        ['"](\S+)['"],\s*
+        ['"](?P<section>\S+)['"],\s*
         # Second argument
-        ['"](\S+)['"](,\s+
-        (?:default=)?(\S+?))?
+        ['"](?P<option>\S+)['"](,\s+
+        (?:default=)?(?P<default>\S+?))?
     \)''', re.VERBOSE | re.MULTILINE)
 
 configpartialre = (r"""ui\.config""")
@@ -81,11 +81,11 @@ def main(args):
             line = carryover + l
             m = configre.search(line)
             if m:
-                ctype = m.group(1)
+                ctype = m.group('ctype')
                 if not ctype:
                     ctype = 'str'
-                name = m.group(2) + "." + m.group(3)
-                default = m.group(5)
+                name = m.group('section') + "." + m.group('option')
+                default = m.group('default')
                 if default in (None, 'False', 'None', '0', '[]', '""', "''"):
                     default = ''
                 if re.match('[a-z.]+$', default):
