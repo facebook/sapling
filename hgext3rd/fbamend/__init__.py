@@ -123,9 +123,12 @@ def uisetup(ui):
 
         # Remove `hg previous`, `hg next` from evolve.
         table = evolvemod.cmdtable
-        todelete = [k for k in table if 'prev' in k or 'next' in k]
-        for k in todelete:
-            del table[k]
+        for name in ['prev', 'next']:
+            todelete = [k for k in table if name in k]
+            for k in todelete:
+                oldentry = table[k]
+                table['debugevolve%s' % name] = oldentry
+                del table[k]
 
         # Wrap `hg split`.
         splitentry = extensions.wrapcommand(
