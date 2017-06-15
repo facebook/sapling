@@ -1580,6 +1580,7 @@ profiling is done using lsprof.
 
     Only used by the ``stat`` profiler.
 
+    For the ``hotpath`` format, default is ``0.05``.
     For the ``chrome`` format, default is ``0.005``.
 
     The option is unused on other formats.

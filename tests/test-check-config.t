@@ -33,3 +33,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   python contrib/check-config.py
+              limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
+  
+  conflict on profiling.showmin: ('with', '0.05') != ('with', '0.005')

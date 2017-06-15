@@ -138,6 +138,9 @@ def statprofile(ui, fp):
             showmin = ui.configwith(fraction, 'profiling', 'showmin', 0.005)
             showmax = ui.configwith(fraction, 'profiling', 'showmax', 0.999)
             kwargs.update(minthreshold=showmin, maxthreshold=showmax)
+        elif profformat == 'hotpath':
+            limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
+            kwargs['limit'] = limit
 
         statprof.display(fp, data=data, format=displayformat, **kwargs)
 
