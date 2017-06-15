@@ -18,6 +18,7 @@ from . import (
     encoding,
     error,
     hbisect,
+    obsutil,
     patch,
     registrar,
     scmutil,
@@ -559,6 +560,16 @@ def showobsolete(repo, ctx, templ, **args):
     if ctx.obsolete():
         return 'obsolete'
     return ''
+
+@templatekeyword("predecessors")
+def showpredecessors(repo, ctx, **args):
+    """Returns the list if the closest visible successors
+    """
+    predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
+    predecessors = map(hex, predecessors)
+
+    return _hybrid(None, predecessors, lambda x: {'predecessor': x},
+                   lambda d: d['predecessor'][:12])
 
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
