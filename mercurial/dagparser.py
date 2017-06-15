@@ -156,7 +156,7 @@ def parsedag(desc):
     Error:
 
         >>> try: list(parsedag('+1 bad'))
-        ... except Exception, e: print e
+        ... except Exception, e: print(e)
         invalid character in dag description: bad...
 
     '''
