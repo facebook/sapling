@@ -349,16 +349,16 @@ class cg1unpacker(object):
                 revisions += newrevs
                 files += newfiles
 
-                dh = 0
+                deltaheads = 0
                 if oldheads:
                     heads = cl.heads()
-                    dh = len(heads) - len(oldheads)
+                    deltaheads = len(heads) - len(oldheads)
                     for h in heads:
                         if h not in oldheads and repo[h].closesbranch():
-                            dh -= 1
+                            deltaheads -= 1
                 htext = ""
-                if dh:
-                    htext = _(" (%+d heads)") % dh
+                if deltaheads:
+                    htext = _(" (%+d heads)") % deltaheads
 
                 repo.ui.status(_("added %d changesets"
                                  " with %d changes to %d files%s\n")
@@ -429,10 +429,10 @@ class cg1unpacker(object):
         finally:
             repo.ui.flush()
         # never return 0 here:
-        if dh < 0:
-            return dh - 1
+        if deltaheads < 0:
+            return deltaheads - 1
         else:
-            return dh + 1
+            return deltaheads + 1
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.
