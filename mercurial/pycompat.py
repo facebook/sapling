@@ -177,6 +177,10 @@ if ispy3:
         """Converts a bytes url back to str"""
         return url.decode(u'ascii')
 
+    def bytesurl(url):
+        """Converts a str url to bytes by encoding in ascii"""
+        return url.encode(u'ascii')
+
     def raisewithtb(exc, tb):
         """Raise exception with the given traceback"""
         raise exc.with_traceback(tb)
@@ -249,6 +253,7 @@ else:
     sysbytes = identity
     sysstr = identity
     strurl = identity
+    bytesurl = identity
 
     # this can't be parsed on Python 3
     exec('def raisewithtb(exc, tb):\n'
