@@ -838,7 +838,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
         for copykey, copyvalue in copy.iteritems():
             if copyvalue in relevantfiles:
                 relevantfiles.add(copykey)
-        for movedirkey in movewithdir.iterkeys():
+        for movedirkey in movewithdir:
             relevantfiles.add(movedirkey)
         filesmatcher = scmutil.matchfiles(repo, relevantfiles)
         matcher = matchmod.intersectmatchers(matcher, filesmatcher)
