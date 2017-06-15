@@ -559,8 +559,7 @@ def _lookupwrap(orig):
                 return "%s %s\n" % (0, 'scratch branch %s not found' % localkey)
         else:
             try:
-                c = repo[localkey]
-                r = c.hex()
+                r = hex(repo.lookup(localkey))
                 return "%s %s\n" % (1, r)
             except Exception as inst:
                 if repo.bundlestore.index.getbundle(localkey):
