@@ -1854,7 +1854,7 @@ class revlog(object):
         this revlog and the node that was added.
         """
 
-        content = []
+        nodes = []
 
         r = len(self)
         end = 0
@@ -1885,7 +1885,7 @@ class revlog(object):
                 delta = chunkdata['delta']
                 flags = chunkdata['flags'] or REVIDX_DEFAULT_FLAGS
 
-                content.append(node)
+                nodes.append(node)
 
                 link = linkmapper(cs)
                 if node in self.nodemap:
@@ -1944,7 +1944,7 @@ class revlog(object):
                 dfh.close()
             ifh.close()
 
-        return content
+        return nodes
 
     def iscensored(self, rev):
         """Check if a file revision is censored."""
