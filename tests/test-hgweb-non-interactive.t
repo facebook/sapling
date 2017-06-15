@@ -41,11 +41,11 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > output = stringio()
   > 
   > def startrsp(status, headers):
-  >     print '---- STATUS'
-  >     print status
-  >     print '---- HEADERS'
-  >     print [i for i in headers if i[0] != 'ETag']
-  >     print '---- DATA'
+  >     print('---- STATUS')
+  >     print(status)
+  >     print('---- HEADERS')
+  >     print([i for i in headers if i[0] != 'ETag'])
+  >     print('---- DATA')
   >     return output.write
   > 
   > env = {
@@ -68,13 +68,13 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > i = hgweb('.')
   > for c in i(env, startrsp):
   >     pass
-  > print '---- ERRORS'
-  > print errors.getvalue()
-  > print '---- OS.ENVIRON wsgi variables'
-  > print sorted([x for x in os.environ if x.startswith('wsgi')])
-  > print '---- request.ENVIRON wsgi variables'
+  > print('---- ERRORS')
+  > print(errors.getvalue())
+  > print('---- OS.ENVIRON wsgi variables')
+  > print(sorted([x for x in os.environ if x.startswith('wsgi')]))
+  > print('---- request.ENVIRON wsgi variables')
   > with i._obtainrepo() as repo:
-  >     print sorted([x for x in repo.ui.environ if x.startswith('wsgi')])
+  >     print(sorted([x for x in repo.ui.environ if x.startswith('wsgi')]))
   > EOF
   $ $PYTHON request.py
   ---- STATUS
