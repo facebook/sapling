@@ -209,7 +209,7 @@ Configure a merge tool that runs status in the middle of the rebase.
   $ cat >> $TESTTMP/mergetool-race.sh << EOF
   > echo "custom merge tool"
   > printf "c2\nc3\nc4\n" > \$1
-  > hg --cwd $TESTTMP/repo status
+  > hg --cwd "$TESTTMP/repo" status
   > echo "custom merge tool end"
   > EOF
   $ cat >> $HGRCPATH << EOF
