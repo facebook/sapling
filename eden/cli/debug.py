@@ -35,7 +35,10 @@ def get_mount_path(path: str) -> Tuple[str, str]:
         # the eden mount point.  This doesn't handle bind mounts inside the
         # eden mount, but that's fine for now.
         if os.path.ismount(current_path):
-            return (current_path, os.path.normpath(rel_path))
+            rel_path = os.path.normpath(rel_path)
+            if rel_path == '.':
+                rel_path = ''
+            return (current_path, rel_path)
 
         parent, basename = os.path.split(current_path)
         if parent == current_path:
@@ -166,7 +169,6 @@ def _print_inode_info(inode_info):
 def do_inode(args: argparse.Namespace):
     config = cmd_util.create_config(args)
     mount, rel_path = get_mount_path(args.path)
-
     with config.get_thrift_client() as client:
         results = client.debugInodeStatus(mount, rel_path)
 
