@@ -1137,6 +1137,8 @@ make sure we show changed files, rather than changed subtrees
   ? s/foobar.orig
   ? s/snake.python.orig
 
+#if git19
+
 test for Git CVE-2016-3068
   $ hg init malicious-subrepository
   $ cd malicious-subrepository
@@ -1178,3 +1180,5 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   [255]
   $ f -Dq pwned.txt
   pwned: you asked for it
+
+#endif
