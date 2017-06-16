@@ -1474,12 +1474,7 @@ def handlechangegroup(op, inpart):
     This is a very early implementation that will massive rework before being
     inflicted to any end-user.
     """
-    # Make sure we trigger a transaction creation
-    #
-    # The addchangegroup function will get a transaction object by itself, but
-    # we need to make sure we trigger the creation of a transaction object used
-    # for the whole processing scope.
-    op.gettransaction()
+    tr = op.gettransaction()
     unpackerversion = inpart.params.get('version', '01')
     # We should raise an appropriate exception here
     cg = changegroup.getunbundler(unpackerversion, inpart, None)
@@ -1497,7 +1492,8 @@ def handlechangegroup(op, inpart):
         op.repo.requirements.add('treemanifest')
         op.repo._applyopenerreqs()
         op.repo._writerequirements()
-    ret = cg.apply(op.repo, 'bundle2', 'bundle2', expectedtotal=nbchangesets)
+    ret = cg.apply(op.repo, tr, 'bundle2', 'bundle2',
+                   expectedtotal=nbchangesets)
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
         # This is definitely not the final form of this
@@ -1555,18 +1551,13 @@ def handleremotechangegroup(op, inpart):
 
     real_part = util.digestchecker(url.open(op.ui, raw_url), size, digests)
 
-    # Make sure we trigger a transaction creation
-    #
-    # The addchangegroup function will get a transaction object by itself, but
-    # we need to make sure we trigger the creation of a transaction object used
-    # for the whole processing scope.
-    op.gettransaction()
+    tr = op.gettransaction()
     from . import exchange
     cg = exchange.readbundle(op.repo.ui, real_part, raw_url)
     if not isinstance(cg, changegroup.cg1unpacker):
         raise error.Abort(_('%s: not a bundle version 1.0') %
             util.hidepassword(raw_url))
-    ret = cg.apply(op.repo, 'bundle2', 'bundle2')
+    ret = cg.apply(op.repo, tr, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
         # This is definitely not the final form of this

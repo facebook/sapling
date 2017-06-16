@@ -208,8 +208,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                                         url=tmpbundleurl)
             else:
                 txnname = "strip\n%s" % util.hidepassword(tmpbundleurl)
-                with repo.transaction(txnname):
-                    gen.apply(repo, 'strip', tmpbundleurl, True)
+                with repo.transaction(txnname) as tr:
+                    gen.apply(repo, tr, 'strip', tmpbundleurl, True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()

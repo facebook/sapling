@@ -5339,8 +5339,8 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 modheads = changegroup.combineresults(changes)
             else:
                 txnname = 'unbundle\n%s' % util.hidepassword(url)
-                with repo.transaction(txnname):
-                    modheads = gen.apply(repo, 'unbundle', url)
+                with repo.transaction(txnname) as tr:
+                    modheads = gen.apply(repo, tr, 'unbundle', url)
 
     return postincoming(ui, repo, modheads, opts.get(r'update'), None, None)
 

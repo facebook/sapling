@@ -1199,7 +1199,7 @@ def _aborthistedit(ui, repo, state):
             gen = exchange.readbundle(ui, f, backupfile)
             with repo.transaction('histedit.abort') as tr:
                 if not isinstance(gen, bundle2.unbundle20):
-                    gen.apply(repo, 'histedit', 'bundle:' + backupfile)
+                    gen.apply(repo, tr, 'histedit', 'bundle:' + backupfile)
                 else:
                     bundle2.applybundle(repo, gen, tr,
                                         source='histedit',

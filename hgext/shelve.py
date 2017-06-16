@@ -127,7 +127,7 @@ class shelvedfile(object):
         try:
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
             if not isinstance(gen, bundle2.unbundle20):
-                gen.apply(self.repo, 'unshelve',
+                gen.apply(self.repo, self.repo.currenttransaction(), 'unshelve',
                           'bundle:' + self.vfs.join(self.fname),
                           targetphase=phases.secret)
             else:

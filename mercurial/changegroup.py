@@ -256,7 +256,7 @@ class cg1unpacker(object):
         repo.ui.progress(_('manifests'), None)
         self.callback = None
 
-    def apply(self, repo, srctype, url, emptyok=False,
+    def apply(self, repo, tr, srctype, url, emptyok=False,
               targetphase=phases.draft, expectedtotal=None):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
@@ -279,12 +279,11 @@ class cg1unpacker(object):
         changesets = files = revisions = 0
 
         try:
-            with repo.transaction("\n".join([srctype,
-                                             util.hidepassword(url)])) as tr:
-                # The transaction could have been created before and already
-                # carries source information. In this case we use the top
-                # level data. We overwrite the argument because we need to use
-                # the top level value (if they exist) in this function.
+            if True:
+                # The transaction may already carry source information. In this
+                # case we use the top level data. We overwrite the argument
+                # because we need to use the top level value (if they exist)
+                # in this function.
                 srctype = tr.hookargs.setdefault('source', srctype)
                 url = tr.hookargs.setdefault('url', url)
                 repo.hook('prechangegroup', throw=True, **tr.hookargs)

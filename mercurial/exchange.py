@@ -1430,7 +1430,7 @@ def _pullchangeset(pullop):
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
         return
-    pullop.gettransaction()
+    tr = pullop.gettransaction()
     if pullop.heads is None and list(pullop.common) == [nullid]:
         pullop.repo.ui.status(_("requesting all changes\n"))
     elif pullop.heads is None and pullop.remote.capable('changegroupsubset'):
@@ -1449,7 +1449,7 @@ def _pullchangeset(pullop):
                            "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    pullop.cgresult = cg.apply(pullop.repo, 'pull', pullop.remote.url())
+    pullop.cgresult = cg.apply(pullop.repo, tr, 'pull', pullop.remote.url())
 
 def _pullphase(pullop):
     # Get remote phases data from remote
@@ -1735,8 +1735,8 @@ def unbundle(repo, cg, heads, source, url):
         if not isinstance(cg, bundle2.unbundle20):
             # legacy case: bundle1 (changegroup 01)
             txnname = "\n".join([source, util.hidepassword(url)])
-            with repo.lock(), repo.transaction(txnname):
-                r = cg.apply(repo, source, url)
+            with repo.lock(), repo.transaction(txnname) as tr:
+                r = cg.apply(repo, tr, source, url)
         else:
             r = None
             try:
@@ -2001,7 +2001,7 @@ def trypullbundlefromurl(ui, repo, url):
             elif isinstance(cg, streamclone.streamcloneapplier):
                 cg.apply(repo)
             else:
-                cg.apply(repo, 'clonebundles', url)
+                cg.apply(repo, tr, 'clonebundles', url)
             return True
         except urlerr.httperror as e:
             ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
