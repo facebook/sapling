@@ -42,12 +42,16 @@ def getchildrelationships(repo, revs):
                 children[parent].add(rev)
     return children
 
-def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
+def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False,
+                inhibithack=False):
     """Rebase all descendants of precursors of rev onto rev, thereby
        stabilzing any non-obsolete descendants of those precursors.
        Takes in an optional dict of options for the rebase command.
        If childrenonly is True, only rebases direct children of precursors
        of rev rather than all descendants of those precursors.
+
+       inhibithack: temporarily, make deinhibit override inhibit transaction
+       handling. useful to make things obsoleted inside a transaction.
     """
     # Get visible descendants of precusors of rev.
     allprecursors = repo.revs('allprecursors(%d)', rev)
@@ -80,6 +84,9 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
 
     # Perform rebase.
     with repo.ui.configoverride(overrides, 'restack'):
+        # hack: make rebase obsolete commits
+        if inhibithack and inhibitmod:
+            inhibitmod.deinhibittransaction = True
         rebase.rebase(ui, repo, **rebaseopts)
 
     # Remove any preamend bookmarks on precursors.
@@ -95,6 +102,8 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     # entire stack.
     ancestors = repo.set('%ld %% %d', allprecursors, rev)
     deinhibit(repo, ancestors)
+    if inhibithack and inhibitmod:
+        inhibitmod.deinhibittransaction = False
 
 def _clearpreamend(repo, revs):
     """Remove any preamend bookmarks on the given revisions."""
