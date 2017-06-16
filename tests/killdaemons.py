@@ -44,6 +44,7 @@ if os.name =='nt':
         SYNCHRONIZE = 0x00100000
         WAIT_OBJECT_0 = 0
         WAIT_TIMEOUT = 258
+        WAIT_FAILED = _DWORD(0xFFFFFFFF).value
         handle = ctypes.windll.kernel32.OpenProcess(
                 PROCESS_TERMINATE|SYNCHRONIZE|PROCESS_QUERY_INFORMATION,
                 False, pid)
@@ -56,8 +57,8 @@ if os.name =='nt':
                 pass # terminated, but process handle still available
             elif r == WAIT_TIMEOUT:
                 _check(ctypes.windll.kernel32.TerminateProcess(handle, -1))
-            else:
-                _check(r)
+            elif r == WAIT_FAILED:
+                _check(0)  # err stored in GetLastError()
 
             # TODO?: forcefully kill when timeout
             #        and ?shorter waiting time? when tryhard==True
@@ -67,8 +68,8 @@ if os.name =='nt':
                 pass # process is terminated
             elif r == WAIT_TIMEOUT:
                 logfn('# Daemon process %d is stuck')
-            else:
-                _check(r) # any error
+            elif r == WAIT_FAILED:
+                _check(0)  # err stored in GetLastError()
         except: #re-raises
             ctypes.windll.kernel32.CloseHandle(handle) # no _check, keep error
             raise
