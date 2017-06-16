@@ -411,7 +411,7 @@ class wirepeer(peer.peerrepository):
         remote server as a bundle.
 
         When pushing a bundle10 stream, return an integer indicating the
-        result of the push (see localrepository.addchangegroup()).
+        result of the push (see changegroup.apply()).
 
         When pushing a bundle20 stream, return a bundle20 stream.
 
