@@ -21,6 +21,9 @@ Configs::
 
     # size of a file to make it use LFS
     threshold = 10M
+
+    # how many times to retry before giving up on transferring an object
+    retry = 5
 """
 
 from __future__ import absolute_import

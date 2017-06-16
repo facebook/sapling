@@ -90,6 +90,7 @@ class _gitlfsremote(object):
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip('/')
         self.urlopener = urlmod.opener(ui, authinfo)
+        self.retry = ui.configint('lfs', 'retry', 5)
 
     def writebatch(self, pointers, fromstore):
         """Batch upload from local to remote blobstore."""
@@ -223,7 +224,23 @@ class _gitlfsremote(object):
                 elif action == 'upload':
                     msg = _('lfs: uploading %s (%s)\n')
                 self.ui.write(msg % (obj.get('oid'), util.bytecount(objsize)))
-            self._basictransfer(obj, action, localstore, progress=progress)
+            origrunningsize = prunningsize[0]
+            retry = self.retry
+            while True:
+                prunningsize[0] = origrunningsize
+                try:
+                    self._basictransfer(obj, action, localstore,
+                                        progress=progress)
+                    break
+                except Exception as ex:
+                    if retry > 0:
+                        if self.ui.verbose:
+                            self.ui.write(
+                                _('lfs: failed: %r (remaining retry %d)\n')
+                                % (ex, retry))
+                        retry -= 1
+                        continue
+                    raise
 
         self.ui.progress(topic, pos=None, total=total)
 
