@@ -5,9 +5,7 @@
 This file is backported from mercurial/tests/test-check-execute.t.
 It differs slightly to fix paths.
 
-  $ . "$RUNTESTDIR/helpers-testrepo.sh"
-  $ cd "$TESTDIR"/..
-  $ unset HGRCPATH
+  $ . "$TESTDIR/helper-testrepo.sh"
 
 look for python scripts without the execute bit
 

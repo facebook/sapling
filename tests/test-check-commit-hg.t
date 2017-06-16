@@ -10,7 +10,7 @@ It differs slightly to fix paths and prevent bypassing.
 
 Enable obsolescence to avoid the warning issue when obsmarker are found
 
-  $ . "$RUNTESTDIR/helpers-testrepo.sh"
+  $ . "$TESTDIR/helper-testrepo.sh"
 
 Go back in the current repo (fb-hgext)
 

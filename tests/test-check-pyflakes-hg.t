@@ -5,9 +5,7 @@
 This file is backported from mercurial/tests/test-check-pyflakes.t.
 It differs slightly to fix paths.
 
-  $ . "$RUNTESTDIR/helpers-testrepo.sh"
-  $ cd "$TESTDIR"/..
-  $ unset HGRCPATH
+  $ . "$TESTDIR/helper-testrepo.sh"
 
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
