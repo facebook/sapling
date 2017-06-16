@@ -278,6 +278,17 @@ def has_gettext():
 def has_git():
     return matchoutput('git --version 2>&1', br'^git version')
 
+def getgitversion():
+    m = matchoutput('git --version 2>&1', br'git version (\d+)\.(\d+)')
+    if not m:
+        return (0, 0)
+    return (int(m.group(1)), int(m.group(2)))
+
+@checkvers("git", "git client (with ext::sh support) version >= %s", (1.9,))
+def has_git_range(v):
+    major, minor = v.split('.')[0:2]
+    return getgitversion() >= (int(major), int(minor))
+
 @check("docutils", "Docutils text processing library")
 def has_docutils():
     try:
