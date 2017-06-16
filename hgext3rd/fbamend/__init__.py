@@ -57,8 +57,11 @@ from . import (
     common,
     movement,
     restack,
+    revsets,
     unamend,
 )
+
+revsetpredicate = revsets.revsetpredicate
 
 cmdtable = {}
 command = registrar.command(cmdtable)
