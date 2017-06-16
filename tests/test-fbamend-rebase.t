@@ -1,17 +1,13 @@
 Set up test environment.
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP
-  $ cp $extpath/hgext3rd/debuginhibit.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > allowunstable=$TESTTMP/allowunstable.py
-  > debuginhibit=$TESTTMP/debuginhibit.py
+  > debuginhibit=$TESTDIR/../hgext3rd/debuginhibit.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
-  > evolution = createmarkers
+  > evolution = createmarkers, allowunstable
   > EOF
   $ showgraph() {
   >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d

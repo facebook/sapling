@@ -1,19 +1,14 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP
-  $ cp $extpath/hgext3rd/smartlog.py $TESTTMP
-  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > allowunstable=$TESTTMP/allowunstable.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > histedit=
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
-  > smartlog=$TESTTMP/smartlog.py
-  > tweakdefaults=$TESTTMP/tweakdefaults.py
+  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > [experimental]
-  > evolution = createmarkers
+  > evolution = createmarkers, allowunstable
   > allowdivergence = on
   > [ui]
   > interactive = true
