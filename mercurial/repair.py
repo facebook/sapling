@@ -204,8 +204,6 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 repo.ui.pushbuffer()
             if isinstance(gen, bundle2.unbundle20):
                 with repo.transaction('strip') as tr:
-                    tr.hookargs = {'source': 'strip',
-                                   'url': 'bundle:' + vfs.join(tmpbundlefile)}
                     bundle2.applybundle(repo, gen, tr, source='strip',
                                         url='bundle:' + vfs.join(tmpbundlefile))
             else:
