@@ -177,6 +177,14 @@ def do_inode(args: argparse.Namespace):
         _print_inode_info(inode_info)
 
 
+def do_unload_inodes(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    mount, rel_path = get_mount_path(args.path)
+
+    with config.get_thrift_client() as client:
+        client.unloadInodeForPath(mount, rel_path)
+    print('Unloaded Free Inodes under the directory : %s' % args.path)
+
 def setup_argparse(parser: argparse.ArgumentParser):
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -216,3 +224,12 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'a mount point is specified, only data about inodes under the '
         'specified subdirectory will be reported.')
     parser.set_defaults(func=do_inode)
+
+    parser = subparsers.add_parser(
+        'unload', help='Unload unused inodes')
+    parser.add_argument(
+        'path',
+        help='The path to the eden mount point path.  If a subdirectory inside '
+        'a mount point is specified, only inodes under the '
+        'specified subdirectory will be unloaded.')
+    parser.set_defaults(func=do_unload_inodes)

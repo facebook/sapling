@@ -428,4 +428,13 @@ service EdenService extends fb303.FacebookService {
     1: string mountPoint,
     2: string path,
   ) throws (1: EdenError ex)
+
+  /**
+  * Unloads unused Inodes of a tree Node
+  */
+  void unloadInodeForPath(
+    1: string mountPoint,
+    2: string path,
+  ) throws (1: EdenError ex)
+
 }

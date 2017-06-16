@@ -589,6 +589,20 @@ void EdenServiceHandler::debugInodeStatus(
 
   inode->getDebugStatus(inodeInfo);
 }
+void EdenServiceHandler::unloadInodeForPath(
+    unique_ptr<string> mountPoint,
+    std::unique_ptr<std::string> path) {
+  auto edenMount = server_->getMount(*mountPoint);
+
+  TreeInodePtr inode;
+  if (path->empty()) {
+    inode = edenMount->getRootInode();
+  } else {
+    inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
+  }
+
+  inode->unloadChildrenNow();
+}
 
 void EdenServiceHandler::shutdown() {
   server_->stop();
