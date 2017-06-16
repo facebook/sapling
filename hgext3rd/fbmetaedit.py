@@ -157,6 +157,7 @@ def extsetup(ui):
             finally:
                 lockmod.release(lock, wlock)
 
-        wrapcommand(evolve.cmdtable, 'metaedit', _metaedit)
+        if '^metaedit' in evolve.cmdtable:
+            wrapcommand(evolve.cmdtable, 'metaedit', _metaedit)
     except KeyError:
         pass # evolve not found
