@@ -58,6 +58,7 @@ from . import (
     movement,
     restack,
     revsets,
+    split,
     unamend,
 )
 
@@ -66,8 +67,9 @@ revsetpredicate = revsets.revsetpredicate
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-cmdtable.update(unamend.cmdtable)
 cmdtable.update(movement.cmdtable)
+cmdtable.update(split.cmdtable)
+cmdtable.update(unamend.cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -124,24 +126,14 @@ def uisetup(ui):
 
         evolvemod = extensions.find('evolve')
 
-        # Remove `hg previous`, `hg next` from evolve.
+        # Remove conflicted commands from evolve.
         table = evolvemod.cmdtable
-        for name in ['prev', 'next']:
+        for name in ['prev', 'next', 'split']:
             todelete = [k for k in table if name in k]
             for k in todelete:
                 oldentry = table[k]
                 table['debugevolve%s' % name] = oldentry
                 del table[k]
-
-        # Wrap `hg split`.
-        splitentry = extensions.wrapcommand(
-            evolvemod.cmdtable,
-            'split',
-            wrapsplit,
-        )
-        splitentry[1].append(
-            ('', 'norebase', False, _("don't rebase children after split"))
-        )
 
         # Wrap `hg fold`.
         foldentry = extensions.wrapcommand(
@@ -394,39 +386,6 @@ def fixupamend(ui, repo):
             bmactivate(repo, active)
     finally:
         lockmod.release(wlock, lock, tr)
-
-def wrapsplit(orig, ui, repo, *args, **opts):
-    """Automatically rebase unstable descendants after split."""
-    # Find the rev number of the changeset to split. This needs to happen
-    # before splitting in case the input revset is relative to the working
-    # copy parent, since `hg split` may update to a new changeset.
-    revs = (list(args) + opts.get('rev', [])) or ['.']
-    rev = scmutil.revsingle(repo, revs[0]).rev()
-    torebase = repo.revs('descendants(%d) - (%d)', rev, rev)
-
-    # Perform split.
-    ret = orig(ui, repo, *args, **opts)
-
-    # Return early if split failed.
-    if ret:
-        return ret
-
-    # Fix up stack.
-    if not opts['norebase'] and torebase:
-        with repo.wlock():
-            with repo.lock():
-                with repo.transaction('splitrebase'):
-                    top = repo.revs('allsuccessors(%d)', rev).last()
-                    common.restackonce(ui, repo, top)
-                # The rebasestate file is incorrectly left behind, so cleanup.
-                # See the earlier comment on util.unlinkpath for more details.
-                util.unlinkpath(repo.vfs.join("rebasestate"),
-                                ignoremissing=True)
-
-    # Fix up bookmarks, if any.
-    _fixbookmarks(repo, [rev])
-
-    return ret
 
 def wrapfold(orig, ui, repo, *args, **opts):
     """Automatically rebase unstable descendants after fold."""

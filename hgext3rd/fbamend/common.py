@@ -124,3 +124,18 @@ def latest(repo, rev):
     """
     latest = repo.revs('allsuccessors(%d)', rev).last()
     return latest if latest is not None else rev
+
+def bookmarksupdater(repo, oldid, tr):
+    """Return a callable update(newid) updating the current bookmark
+    and bookmarks bound to oldid to newid.
+    """
+    def updatebookmarks(newid):
+        dirty = False
+        oldbookmarks = repo.nodebookmarks(oldid)
+        if oldbookmarks:
+            for b in oldbookmarks:
+                repo._bookmarks[b] = newid
+            dirty = True
+        if dirty:
+            repo._bookmarks.recordchange(tr)
+    return updatebookmarks

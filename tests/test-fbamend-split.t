@@ -1,19 +1,13 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh evolve
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > allowunstable=$TESTTMP/allowunstable.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > strip=
   > [experimental]
-  > evolution = createmarkers
-  > evolutioncommands = prev next fold split
+  > evolution = createmarkers, allowunstable
   > [ui]
   > interactive = true
   > EOF
@@ -117,7 +111,7 @@ Split in the middle of a stack.
   created new head
   Done splitting? [yN] y
   rebasing 4:* "add d1 and d2" (glob)
-  rebasing 5:* "add d1 and d2" (glob)
+  rebasing 5:* "add d1 and d2"* (glob)
 
   $ showgraph
   o  9 add d1 and d2
@@ -165,7 +159,7 @@ Split with multiple children and using hash.
   rebasing 7:* "add c1 and c2" (glob)
   rebasing 8:* "add d1 and d2" (glob)
   rebasing 9:* "add d1 and d2" (glob)
-  rebasing 10:* "add d1 and d2" (glob)
+  rebasing 10:* "add d1 and d2"* (glob)
 
   $ showgraph
   o  18 add d1 and d2
@@ -213,7 +207,7 @@ Split using revset.
   rebasing 14:* "add c1 and c2" (glob)
   rebasing 15:* "add c1 and c2" (glob)
   rebasing 16:* "add d1 and d2" (glob)
-  rebasing 17:* "add d1 and d2" (glob)
+  rebasing 17:* "add d1 and d2"* (glob)
 
   $ showgraph
   o  23 add d1 and d2
@@ -242,7 +236,7 @@ Test that command aborts when given multiple commits.
   (use either `hg split <rs>` or `hg split --rev <rs>`, not both)
   [255]
 
-Test --norebase flag.
+Test --no-rebase flag.
   $ mkcommit e
   created new head
   $ hg rebase -s 20 -d .
@@ -272,7 +266,7 @@ Test --norebase flag.
   o  10 add d1 and d2
   |
   o  0 add a1 and a2
-  $ hg split --norebase << EOF
+  $ hg split --no-rebase << EOF
   > y
   > y
   > n
