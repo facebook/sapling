@@ -1033,28 +1033,20 @@ def system(cmd, environ=None, cwd=None, out=None):
     except Exception:
         pass
     cmd = quotecommand(cmd)
-    if pycompat.sysplatform == 'plan9' and (sys.version_info[0] == 2
-                                    and sys.version_info[1] < 7):
-        # subprocess kludge to work around issues in half-baked Python
-        # ports, notably bichued/python:
-        if not cwd is None:
-            os.chdir(cwd)
-        rc = os.system(cmd)
+    env = shellenviron(environ)
+    if out is None or _isstdout(out):
+        rc = subprocess.call(cmd, shell=True, close_fds=closefds,
+                             env=env, cwd=cwd)
     else:
-        env = shellenviron(environ)
-        if out is None or _isstdout(out):
-            rc = subprocess.call(cmd, shell=True, close_fds=closefds,
-                                 env=env, cwd=cwd)
-        else:
-            proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
-                                    env=env, cwd=cwd, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            for line in iter(proc.stdout.readline, ''):
-                out.write(line)
-            proc.wait()
-            rc = proc.returncode
-        if pycompat.sysplatform == 'OpenVMS' and rc & 1:
-            rc = 0
+        proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+                                env=env, cwd=cwd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        for line in iter(proc.stdout.readline, ''):
+            out.write(line)
+        proc.wait()
+        rc = proc.returncode
+    if pycompat.sysplatform == 'OpenVMS' and rc & 1:
+        rc = 0
     return rc
 
 def checksignature(func):
