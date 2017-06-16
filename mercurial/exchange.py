@@ -1733,8 +1733,8 @@ def unbundle(repo, cg, heads, source, url):
         # push can proceed
         if not util.safehasattr(cg, 'params'):
             # legacy case: bundle1 (changegroup 01)
-            lockandtr[1] = repo.lock()
-            r = cg.apply(repo, source, url)
+            with repo.lock():
+                r = cg.apply(repo, source, url)
         else:
             r = None
             try:
