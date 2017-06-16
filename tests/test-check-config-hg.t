@@ -45,9 +45,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbhistedit.exec_in_user_shell (str)
   undocumented: format.sqldirstate (bool)
   undocumented: grep.command (str) ['grep']
-  undocumented: inhibit.bypass-warning (bool)
-  undocumented: inhibit.cutoff (str)
-  undocumented: inhibitwarn.education (str)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.cachenoderevs (bool) [True]
