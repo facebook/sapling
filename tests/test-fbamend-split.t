@@ -10,6 +10,8 @@ Set up test environment.
   > evolution = createmarkers, allowunstable
   > [ui]
   > interactive = true
+  > [fbamend]
+  > safestrip = false
   > EOF
   $ mkcommit() {
   >    echo "${1}1" > "${1}1"

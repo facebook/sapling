@@ -57,6 +57,7 @@ from . import (
     fold,
     metaedit,
     movement,
+    prune,
     restack,
     revsets,
     split,
@@ -71,6 +72,7 @@ command = registrar.command(cmdtable)
 cmdtable.update(fold.cmdtable)
 cmdtable.update(metaedit.cmdtable)
 cmdtable.update(movement.cmdtable)
+cmdtable.update(prune.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
 
@@ -85,6 +87,7 @@ amendopts = [
 ]
 
 def uisetup(ui):
+    prune.uisetup(ui)
     global rebasemod
     try:
         rebasemod = extensions.find('rebase')
@@ -131,7 +134,7 @@ def uisetup(ui):
 
         # Remove conflicted commands from evolve.
         table = evolvemod.cmdtable
-        for name in ['prev', 'next', 'split', 'fold', 'metaedit']:
+        for name in ['prev', 'next', 'split', 'fold', 'metaedit', 'prune']:
             todelete = [k for k in table if name in k]
             for k in todelete:
                 oldentry = table[k]
