@@ -1449,7 +1449,8 @@ def _pullchangeset(pullop):
                            "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    pullop.cgresult = cg.apply(pullop.repo, tr, 'pull', pullop.remote.url())
+    pullop.cgresult, addednodes = cg.apply(pullop.repo, tr, 'pull',
+                                           pullop.remote.url())
 
 def _pullphase(pullop):
     # Get remote phases data from remote
@@ -1737,7 +1738,7 @@ def unbundle(repo, cg, heads, source, url):
             # legacy case: bundle1 (changegroup 01)
             txnname = "\n".join([source, util.hidepassword(url)])
             with repo.lock(), repo.transaction(txnname) as tr:
-                r = cg.apply(repo, tr, source, url)
+                r, addednodes = cg.apply(repo, tr, source, url)
         else:
             r = None
             try:

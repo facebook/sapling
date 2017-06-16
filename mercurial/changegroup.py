@@ -426,9 +426,10 @@ class cg1unpacker(object):
             repo.ui.flush()
         # never return 0 here:
         if deltaheads < 0:
-            return deltaheads - 1
+            ret = deltaheads - 1
         else:
-            return deltaheads + 1
+            ret = deltaheads + 1
+        return ret, added
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.

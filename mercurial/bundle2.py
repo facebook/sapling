@@ -1492,9 +1492,12 @@ def handlechangegroup(op, inpart):
         op.repo.requirements.add('treemanifest')
         op.repo._applyopenerreqs()
         op.repo._writerequirements()
-    ret = cg.apply(op.repo, tr, 'bundle2', 'bundle2',
-                   expectedtotal=nbchangesets)
-    op.records.add('changegroup', {'return': ret})
+    ret, addednodes = cg.apply(op.repo, tr, 'bundle2', 'bundle2',
+                               expectedtotal=nbchangesets)
+    op.records.add('changegroup', {
+        'return': ret,
+        'addednodes': addednodes,
+    })
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
@@ -1557,8 +1560,11 @@ def handleremotechangegroup(op, inpart):
     if not isinstance(cg, changegroup.cg1unpacker):
         raise error.Abort(_('%s: not a bundle version 1.0') %
             util.hidepassword(raw_url))
-    ret = cg.apply(op.repo, tr, 'bundle2', 'bundle2')
-    op.records.add('changegroup', {'return': ret})
+    ret, addednodes = cg.apply(op.repo, tr, 'bundle2', 'bundle2')
+    op.records.add('changegroup', {
+        'return': ret,
+        'addednodes': addednodes,
+    })
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
