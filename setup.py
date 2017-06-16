@@ -220,7 +220,7 @@ if iswindows:
     availableextmodules = {
         'linelog' : [
             Extension('linelog',
-                sources=['linelog/pyext/linelog.%s'],
+                sources=['linelog/pyext/linelog.pyx'],
                 extra_compile_args=filter(None, [
                     STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
                 ]),
