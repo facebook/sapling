@@ -55,6 +55,7 @@ from mercurial.i18n import _
 from . import (
     common,
     fold,
+    metaedit,
     movement,
     restack,
     revsets,
@@ -68,6 +69,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 cmdtable.update(fold.cmdtable)
+cmdtable.update(metaedit.cmdtable)
 cmdtable.update(movement.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
@@ -129,7 +131,7 @@ def uisetup(ui):
 
         # Remove conflicted commands from evolve.
         table = evolvemod.cmdtable
-        for name in ['prev', 'next', 'split', 'fold']:
+        for name in ['prev', 'next', 'split', 'fold', 'metaedit']:
             todelete = [k for k in table if name in k]
             for k in todelete:
                 oldentry = table[k]
