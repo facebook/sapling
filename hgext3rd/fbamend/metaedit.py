@@ -105,7 +105,6 @@ def metaedit(ui, repo, *revs, **opts):
         try:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
-            targetphase = max(c.phase() for c in allctx)
 
             if commitopts.get('message') or commitopts.get('logfile'):
                 commitopts['edit'] = False
@@ -120,21 +119,68 @@ def metaedit(ui, repo, *revs, **opts):
                 commitopts['message'] = "\n".join(msgs)
                 commitopts['edit'] = True
 
-            # TODO: if the author and message are the same, don't create a new
-            # hash. Right now we create a new hash because the date can be
-            # different.
-            newid, created = common.rewrite(
-                repo, root, allctx, head, [root.p1().node(), root.p2().node()],
-                commitopts=commitopts)
-            if created:
-                if p1.rev() in revs:
-                    newp1 = newid
-                phases.retractboundary(repo, tr, targetphase, [newid])
-                obsolete.createmarkers(repo, [(ctx, (repo[newid],))
-                                              for ctx in allctx])
+            if root == head:
+                # fast path: use metarewrite
+                replacemap = {}
+                # we need topological order
+                allctx = sorted(allctx, key=lambda c: c.rev())
+                # all descendats that can be safely rewritten
+                newunstable = common.newunstable(repo, revs)
+                newunstablectx = sorted([repo[r] for r in newunstable],
+                                        key=lambda c: c.rev())
+
+                def _rewritesingle(c, _commitopts):
+                    if _commitopts.get('edit', False):
+                        _commitopts['message'] = \
+                            "HG: Commit message of changeset %s\n%s" %\
+                            (str(c), c.description())
+                    bases = [
+                        replacemap.get(c.p1().node(), c.p1().node()),
+                        replacemap.get(c.p2().node(), c.p2().node()),
+                    ]
+                    newid, created = common.metarewrite(repo, c, bases,
+                                                        commitopts=_commitopts)
+                    if created:
+                        replacemap[c.node()] = newid
+                for c in allctx:
+                    _rewritesingle(c, commitopts)
+                for c in newunstablectx:
+                    _rewritesingle(c,
+                                   {'date': commitopts.get('date') or None})
+
+                if p1.node() in replacemap:
+                    repo.setparents(replacemap[p1.node()])
+                if len(replacemap) > 0:
+                    obsolete.createmarkers(
+                        repo,
+                        [(repo[old], (repo[new],))
+                            for old, new in replacemap.iteritems()],
+                    )
+                    # TODO: set poroper phase boundaries (affects secret
+                    # phase only)
+                else:
+                    ui.status(_("nothing changed\n"))
+                    return 1
             else:
-                ui.status(_("nothing changed\n"))
-                return 1
+                # slow path: create a new commit
+                targetphase = max(c.phase() for c in allctx)
+
+                # TODO: if the author and message are the same, don't create a
+                # new hash. Right now we create a new hash because the date can
+                # be different.
+                newid, created = common.rewrite(
+                    repo, root, allctx, head,
+                    [root.p1().node(), root.p2().node()],
+                    commitopts=commitopts)
+                if created:
+                    if p1.rev() in revs:
+                        newp1 = newid
+                    phases.retractboundary(repo, tr, targetphase, [newid])
+                    obsolete.createmarkers(repo, [(ctx, (repo[newid],))
+                                                  for ctx in allctx])
+                else:
+                    ui.status(_("nothing changed\n"))
+                    return 1
             tr.close()
         finally:
             tr.release()

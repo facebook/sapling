@@ -115,7 +115,6 @@ Test
   [255]
 
   $ hg metaedit --user foobar
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --template '{rev}: {author}\n' -r 'desc(F):' --hidden
   5: test
   6: test
@@ -159,6 +158,7 @@ TODO: support this
 
 no new commit is created here because the date is the same
   $ HGEDITOR=cat hg metaedit
+  HG: Commit message of changeset a08d35fd7d9d
   E
   
   
@@ -187,7 +187,6 @@ old commit (we add a default date with a value to show that metaedit is taking
 the current date to generate the hash, this way we still have a stable hash
 but highlight the bug)
   $ hg metaedit --config defaults.metaedit= --config devel.default-date="42 0"
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r '.^::.' --template '{rev}: {desc|firstline}\n'
   3: C
   11: E
@@ -207,3 +206,39 @@ but highlight the bug)
   1 changesets folded
   $ hg log -r "tip" --template '{rev}: {author}\n'
   13: foobar3
+
+metaedit a commit in the middle of the stack:
+
+  $ cd $TESTTMP
+  $ hg init metaedit2
+  $ cd metaedit2
+  $ hg debugbuilddag '+5'
+  $ hg update tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ glog -r 'all()'
+  @  4:bebd167eb94d@default(draft) r4
+  |
+  o  3:2dc09a01254d@default(draft) r3
+  |
+  o  2:01241442b3c2@default(draft) r2
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  
+  $ hg metaedit -m "metaedit" -r 2
+  $ glog -r 'all()'
+  @  7:8c1f124031e7@default(draft) r4
+  |
+  o  6:af1447d6a312@default(draft) r3
+  |
+  o  5:1aed0f31debd@default(draft) metaedit
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  
+  $ hg metaedit -m "metaedit" -r 1aed0f31debd
+  nothing changed
+  [1]
