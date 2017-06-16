@@ -1989,29 +1989,21 @@ def sortclonebundleentries(ui, entries):
 
 def trypullbundlefromurl(ui, repo, url):
     """Attempt to apply a bundle from a URL."""
-    lock = repo.lock()
-    try:
-        tr = repo.transaction('bundleurl')
+    with repo.lock(), repo.transaction('bundleurl') as tr:
         try:
-            try:
-                fh = urlmod.open(ui, url)
-                cg = readbundle(ui, fh, 'stream')
+            fh = urlmod.open(ui, url)
+            cg = readbundle(ui, fh, 'stream')
 
-                if isinstance(cg, bundle2.unbundle20):
-                    bundle2.processbundle(repo, cg, lambda: tr)
-                elif isinstance(cg, streamclone.streamcloneapplier):
-                    cg.apply(repo)
-                else:
-                    cg.apply(repo, 'clonebundles', url)
-                tr.close()
-                return True
-            except urlerr.httperror as e:
-                ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
-            except urlerr.urlerror as e:
-                ui.warn(_('error fetching bundle: %s\n') % e.reason)
+            if isinstance(cg, bundle2.unbundle20):
+                bundle2.processbundle(repo, cg, lambda: tr)
+            elif isinstance(cg, streamclone.streamcloneapplier):
+                cg.apply(repo)
+            else:
+                cg.apply(repo, 'clonebundles', url)
+            return True
+        except urlerr.httperror as e:
+            ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
+        except urlerr.urlerror as e:
+            ui.warn(_('error fetching bundle: %s\n') % e.reason)
 
-            return False
-        finally:
-            tr.release()
-    finally:
-        lock.release()
+        return False
