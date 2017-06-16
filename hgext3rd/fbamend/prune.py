@@ -238,7 +238,8 @@ def prune(ui, repo, *revs, **opts):
             _deletebookmark(repo, repomarks, bookmarks)
 
         # create markers
-        obsolete.createmarkers(repo, relations, metadata=metadata)
+        obsolete.createmarkers(repo, relations, metadata=metadata,
+                               operation='prune')
 
         # informs that changeset have been pruned
         ui.status(_('%i changesets pruned\n') % len(precs))

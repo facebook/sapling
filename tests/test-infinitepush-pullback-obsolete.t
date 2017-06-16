@@ -1,12 +1,10 @@
 
-  $ . $TESTDIR/require-ext.sh evolve
-  $ setupevolve() {
+  $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
-  > evolutioncommands=obsolete
   > EOF
   > }
 
@@ -23,7 +21,7 @@ Setup server
 Setup backupsource
   $ hg clone ssh://user@dummy/repo backupsource -q
   $ cd backupsource
-  $ setupevolve
+  $ setup
 
 Do a normal backup
   $ mkcommit first

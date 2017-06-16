@@ -1,12 +1,10 @@
 
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > cleanobsstore=$TESTDIR/../hgext3rd/cleanobsstore.py
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
-  > evolutioncommands=obsolete
   > EOF
 
   $ hg init repo

@@ -14,11 +14,8 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
 
-def _isevolverepo(repo):
-    try:
-        return extensions.find('evolve')
-    except KeyError:
-        return None
+def _isobsstoreenabled(repo):
+    return obsolete.isenabled(repo, obsolete.createmarkersopt)
 
 def _isahash(rev):
     try:
@@ -100,25 +97,7 @@ def _touch(repo, rev):
     """Touch the given rev and any of its ancestors to bring it back into the
     repository.
     """
-    unfi = repo.unfiltered()
-    evolve = _isevolverepo(repo.ui)
-    if evolve:
-        needtouch = unfi.revs('::%d & obsolete()', rev)
-        opts = {
-            # Use 'duplicate' to avoid divergence. We may want something better
-            # later.
-            'allowdivergence': False,
-            'duplicate': True,
-            'rev': [],
-        }
-        evolve.touch(repo.ui, unfi, *needtouch, **opts)
-        # Return the newly revived version of rev.
-        # Use tip, since it's guaranteed to be the latest commit in the
-        # repo, since it will have been the last commit revived.
-        return repo['tip']
-    else:
-        raise error.Abort("unable to revive '%s' because it is hidden and "
-                         "evolve is disabled" % rev)
+    raise error.Abort("unable to revive '%s' - feature not implemented yet")
 
 def _pullbundle(repo, rev):
     """Find the given rev in a backup bundle and pull it back into the
@@ -235,7 +214,7 @@ def _deleteunreachable(repo, ctx):
         lock = None
         try:
             lock = repo.lock()
-            if _isevolverepo(repo.ui):
+            if _isobsstoreenabled(repo):
                 markers = []
                 for rev in hiderevs:
                     markers.append((repo[rev], ()))

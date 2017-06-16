@@ -13,7 +13,6 @@ Set up test environment.
   > record=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = fold split
   > [ui]
   > interactive = true
   > EOF

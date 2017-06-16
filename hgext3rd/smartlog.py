@@ -156,7 +156,7 @@ def uisetup(ui):
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
 
-    extensions.afterloaded('evolve', wrapshowgraphnode)
+    extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
 
 templatekeyword = registrar.templatekeyword()
 
@@ -212,17 +212,10 @@ def showgraphnode(orig, repo, ctx, **args):
     char = orig(repo, ctx, **args)
     if char != 'o' or ctx.node() == '...':
         return char
-    return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
-
-def wrapshowgraphnode(loaded):
-    """Ensure that evolve is loaded before wrapping showgraph() because
-       the wrapper functions uses the 'allsuccessors' revset symbol,
-       which is provided by the evolve extension.
-    """
-    if loaded:
-        # Some callers directly call showgraphnode(), so wrap the original
-        # function in addition to updating templatekw.keywords.
-        extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
+    try:
+        return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
+    except error.UnknownIdentifier:
+        return char
 
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result

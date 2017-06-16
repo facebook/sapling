@@ -1,17 +1,14 @@
-  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/smartlog.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > smartlog=$TESTTMP/smartlog.py
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next split fold
   > EOF
 
 Test that changesets with visible precursors are rendered as x's, even

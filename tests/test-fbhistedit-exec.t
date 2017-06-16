@@ -1,11 +1,9 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > EOF
 
   $ initrepo ()
@@ -257,16 +255,18 @@ test 'execr' executing in the current directory
   added short
   $ cd ..
 
-Test that we can recover exec with evolve on
-  $ . $TESTDIR/require-ext.sh evolve
+Test that we can recover exec with fbamend on
+
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > [experimental]
+  > evolution=createmarkers, allowunstable
   > EOF
 
   $ hg up -q tip
 
-Test continue a stopped evolve histedit
+Test continue a stopped histedit
 
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  652413bf663e f
@@ -355,7 +355,7 @@ Test continue a stopped evolve histedit
   o  cb9a9f314b8b a
   
 
-Test abort a stopped evolve histedit
+Test abort a stopped histedit with obsmarkers
 
   $ hg histedit d8249471110a --commands - 2>&1 << EOF
   > pick 8800a5180f91 d
@@ -421,7 +421,8 @@ Test amend inside exec rule:
   > pick 0d9a4961b100 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 new unstable changesets
+  warning: the changeset's children were left behind
+  (this is okay since a histedit is in progress)
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  5aeafddb5246 f

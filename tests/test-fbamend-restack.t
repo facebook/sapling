@@ -1,16 +1,13 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next split fold
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"

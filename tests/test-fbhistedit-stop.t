@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh evolve
   $ . "$TESTDIR/histedit-helpers.sh"
 
 Setup
@@ -11,7 +10,7 @@ Setup
   > histedit=
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > fbamend=
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbhistedit=

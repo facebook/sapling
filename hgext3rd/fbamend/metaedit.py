@@ -155,6 +155,7 @@ def metaedit(ui, repo, *revs, **opts):
                         repo,
                         [(repo[old], (repo[new],))
                             for old, new in replacemap.iteritems()],
+                        operation='metaedit',
                     )
                     # TODO: set poroper phase boundaries (affects secret
                     # phase only)
@@ -177,7 +178,8 @@ def metaedit(ui, repo, *revs, **opts):
                         newp1 = newid
                     phases.retractboundary(repo, tr, targetphase, [newid])
                     obsolete.createmarkers(repo, [(ctx, (repo[newid],))
-                                                  for ctx in allctx])
+                                                  for ctx in allctx],
+                                           operation='metaedit')
                 else:
                     ui.status(_("nothing changed\n"))
                     return 1

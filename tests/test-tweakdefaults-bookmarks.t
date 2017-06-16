@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh evolve
 
 Set up
   $ extpath=`dirname $TESTDIR`
@@ -7,7 +6,7 @@ Set up
   > [experimental]
   > evolution=all
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > tweakdefaults=$TESTTMP/tweakdefaults.py
   > EOF
 

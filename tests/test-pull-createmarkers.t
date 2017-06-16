@@ -1,4 +1,4 @@
-  $ . $TESTDIR/require-ext.sh evolve remotenames
+  $ . $TESTDIR/require-ext.sh remotenames
 
 Setup
 
@@ -16,7 +16,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   > [extensions]
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > strip=
   > rebase=
   > remotenames =
@@ -25,6 +25,8 @@ Test that hg pull creates obsolescence markers for landed diffs
   > pullcreatemarkers= $TESTDIR/../hgext3rd/pullcreatemarkers.py
   > [remotenames]
   > allownonfastforward=True
+  > [fbamend]
+  > safestrip=false
   > EOF
   $ hg init server
   $ mkcommit() {

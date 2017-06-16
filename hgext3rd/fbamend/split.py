@@ -110,7 +110,8 @@ def split(ui, repo, *revs, **opts):
             bmupdate(tip.node())
             if bookactive is not None:
                 bookmarks.activate(repo, bookactive)
-            obsolete.createmarkers(repo, [(repo[r], newcommits)])
+            obsolete.createmarkers(repo, [(repo[r], newcommits)],
+                                   operation='split')
 
             if torebase:
                 top = repo.revs('allsuccessors(%d)', rev).last()

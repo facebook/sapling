@@ -6,16 +6,14 @@
   > }
 
   $ extpath=`dirname $TESTDIR`
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fastpartialmatch=$extpath/hgext3rd/fastpartialmatch.py
   > strip=
   > histedit=
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
-  > evolutioncommands=obsolete
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"
   > EOF

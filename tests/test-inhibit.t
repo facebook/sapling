@@ -1,14 +1,12 @@
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > logtemplate = {rev}:{node|short} {desc}\n
   > [experimental]
-  > prunestrip=True
   > evolution=createmarkers
   > [extensions]
   > rebase=
   > strip=
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
@@ -262,11 +260,11 @@ Bookmark should inhibit all related unstable commits
   o  0:54ccbc537fc2 add cA
   
 
-Removing a bookmark with bookmark -D should prune the changes underneath
+Removing a bookmark with prune -B should prune the changes underneath
 that are not reachable from another bookmark or head
 
   $ hg bookmark -r 1 book2
-  $ hg bookmark -D book1  --config experimental.evolution=createmarkers #--config to make sure prune is not registered as a command.
+  $ hg prune -B book1  --config experimental.evolution=createmarkers #--config to make sure prune is not registered as a command.
   bookmark 'book1' deleted
   1 changesets pruned
   $ hg log -G
@@ -284,7 +282,7 @@ that are not reachable from another bookmark or head
   |/
   o  0:54ccbc537fc2 add cA
   
-  $ hg bookmark -D book2
+  $ hg prune -B book2
   bookmark 'book2' deleted
   1 changesets pruned
   $ hg log -G
@@ -300,15 +298,6 @@ that are not reachable from another bookmark or head
   |
   o  0:54ccbc537fc2 add cA
   
-Test edge cases of bookmark -D
-  $ hg book -D book2 -m hello
-  abort: Cannot use both -m and -D
-  [255]
-
-  $ hg book -Draster-fix
-  abort: Error, please check your command
-  (make sure to put a space between -D and your bookmark name)
-  [255]
 
 Test that direct access make changesets visible
 
@@ -359,7 +348,7 @@ But only with hash
 
   $ hg export 1 3
   abort: hidden revision '1'!
-  (use --hidden to access hidden revisions; pruned)
+  (use --hidden to access hidden revisions)
   [255]
 
 
@@ -427,7 +416,7 @@ With severals hidden sha, rebase of one hidden stack onto another one:
   
   $ hg rebase -s 10 -d 3
   abort: hidden revision '3'!
-  (use --hidden to access hidden revisions; pruned)
+  (use --hidden to access hidden revisions)
   [255]
   $ hg rebase -r ad78ff7d621f -r 53a94305e133 -d  2db36d8066ff --config experimental.rebaseskipobsolete=0
   Warning: accessing hidden changesets 2db36d8066ff for write operation
@@ -510,6 +499,8 @@ have createmarkers as we are creating instability
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "mmm" >> cM
   $ hg amend
+  warning: the changeset's children were left behind
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg log -G
   @  18:210589181b14 add cM
   |
@@ -580,7 +571,7 @@ Test prunestrip
   $ hg log -r 14:: -G -T '{rev}:{node|short} {desc|firstline} {bookmarks}\n'
   o  16:a438c045eb37 add cN
   |
-  o  15:2d66e189f5b5 add cM
+  o  15:2d66e189f5b5 add cM 210589181b14.preamend
   |
   @  14:d66ccb8c5871 add cL foo
   |
@@ -673,19 +664,8 @@ check that pruning and inhibited node does not confuse anything
 
   $ hg up --hidden 210589181b14
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg strip --bundle 210589181b14
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/inhibit/.hg/strip-backup/210589181b14-e09c7b88-backup.hg (glob)
-  $ hg unbundle .hg/strip-backup/210589181b14-e09c7b88-backup.hg # restore state
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
-  3 new obsolescence markers
-  (run 'hg heads .' to see heads, 'hg merge' to merge)
 
- Only allow direct access and check that evolve works like before
-(also disable evolve commands to avoid hint about using evolve)
+ Only allow direct access
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > inhibit=!
@@ -695,13 +675,14 @@ check that pruning and inhibited node does not confuse anything
 
   $ hg up 15
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  working directory parent is obsolete! (2d66e189f5b5)
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
   > evolution=all
   > EOF
   $ echo "CM" > cM
   $ hg amend
+  warning: the changeset's children were left behind
+  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
   $ hg log -G
   @  21:721c3c279519 add cM
   |
@@ -737,7 +718,7 @@ despite inhibit
   $ hg up a438c045eb37
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -r 15:: -d 21 --config experimental.rebaseskipobsolete=True
-  note: not rebasing 15:2d66e189f5b5 "add cM", already in destination as 21:721c3c279519 "add cM"
+  note: not rebasing 15:2d66e189f5b5 "add cM" (721c3c279519.preamend), already in destination as 21:721c3c279519 "add cM"
   rebasing 16:a438c045eb37 "add cN"
   $ hg up -q 2d66e189f5b5 # To inhibit it as the rest of test depends on it
   $ hg up -q 21
@@ -755,8 +736,8 @@ With no extension specified:
   > testextension=$TESTTMP/test_extension.py
   > EOF
   $ hg id
-  ['rebase', 'strip', 'evolve', 'directaccess', 'inhibit', 'testextension']
-  721c3c279519
+  ['rebase', 'strip', 'fbamend', 'directaccess', 'inhibit', 'testextension']
+  721c3c279519 210589181b14.preamend/721c3c279519.preamend
 
 With test_extension specified:
   $ cat >> $HGRCPATH << EOF
@@ -764,8 +745,8 @@ With test_extension specified:
   > loadsafter=testextension
   > EOF
   $ hg id
-  ['rebase', 'strip', 'evolve', 'inhibit', 'testextension', 'directaccess']
-  721c3c279519
+  ['rebase', 'strip', 'fbamend', 'inhibit', 'testextension', 'directaccess']
+  721c3c279519 210589181b14.preamend/721c3c279519.preamend
 
 Inhibit should not work without directaccess
   $ cat >> $HGRCPATH <<EOF
@@ -798,7 +779,7 @@ Hidden commits cannot be pushed without --hidden
   $ hg push -r 003a4735afde $TESTTMP/inhibit2
   pushing to $TESTTMP/inhibit2 (glob)
   abort: hidden revision '003a4735afde'!
-  (use --hidden to access hidden revisions; successor: 71eb4f100663)
+  (use --hidden to access hidden revisions)
   [255]
 
 Visible commits can still be pushed
@@ -823,7 +804,7 @@ it. We expect to not see the stack at the end of the rebase.
   $ hg prune 22 -s 25
   1 changesets pruned
   $ hg rebase -s 22 -d 25 --config experimental.rebaseskipobsolete=True
-  note: not rebasing 22:46cb6daad392 "add cN", already in destination as 25:71eb4f100663 "add pk"
+  note: not rebasing 22:46cb6daad392 "add cN"*, already in destination as 25:71eb4f100663 "add pk" (glob)
   rebasing 26:7ad60e760c7b "add Dk" (tip)
   $ hg log -G  -r "25::"
   @  27:1192fa9fbc68 add Dk
@@ -901,7 +882,7 @@ Pulling from a inhibit repo to a non-inhibit repo should work
   > [extensions]
   > inhibit=!
   > directaccess=!
-  > evolve=!
+  > fbamend=!
   > EOF
   $ cd not-inhibit
   $ hg book -d foo
@@ -910,16 +891,3 @@ Pulling from a inhibit repo to a non-inhibit repo should work
   searching for changes
   no changes found
   adding remote bookmark foo
-
-Test that bookmark -D can take multiple branch names
-  $ cd ../inhibit
-  $ hg bookmark book2 book1 book3
-  $ touch foo && hg add foo && hg ci -m "add foo"
-  created new head
-  $ hg up book1
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark book1)
-  $ hg bookmark -D book2 book3
-  bookmark 'book2' deleted
-  bookmark 'book3' deleted
-  1 changesets pruned

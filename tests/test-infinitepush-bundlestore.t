@@ -416,15 +416,13 @@ Push to svn server should fail
   [255]
 
 Scratch pull of pruned commits
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > [experimental]
   > evolution=createmarkers
-  > evolutioncommands=obsolete
   > EOF
   $ hg prune -r scratch/mybranch
   1 changesets pruned

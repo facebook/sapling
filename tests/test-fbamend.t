@@ -280,12 +280,14 @@ Test that --message is respected
 
   $ hg amend
   nothing changed
+  [1]
   $ hg amend --message foo
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f83a9508203-7d2a99ee-amend-backup.hg (glob)
   $ hg amend -m bar
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/29272a1da891-35a82ce4-amend-backup.hg (glob)
   $ hg amend
   nothing changed
+  [1]
 
 Test that --addremove/-A works
 
@@ -296,23 +298,16 @@ Test that --addremove/-A works
 
 Test that the extension disables itself when evolution is enabled
 
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > EOF
 
 noisy warning during amend
 
   $ hg amend 2>&1
-  fbamend and evolve extension are incompatible, fbamend deactivated.
-  You can either disable it globally:
-  - type `hg config --edit`
-  - drop the `fbamend=` line from the `[extensions]` section
-  or disable it for a specific repo:
-  - type `hg config --local --edit`
-  - add a `fbamend=!` line in the `[extensions]` section
   nothing changed
+  [1]
 
 no warning if only obsolete markers are enabled
 
@@ -323,6 +318,7 @@ no warning if only obsolete markers are enabled
 
   $ hg amend
   nothing changed
+  [1]
 
 Fbamend respects the createmarkers option
 
@@ -423,7 +419,6 @@ test hg commit -i --amend works in a stack
   > EOF
   $ hg commit -i --amend --config "fbamend.education=" -q -m 'a commit msg'
   warning: the changeset's children were left behind
-  1 new unstable changesets
 preamend bookmark exists
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   | x  039ee914a5fd.preamend
@@ -538,7 +533,7 @@ Prepare a repo for unamend testing
   $ cd unamendrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
   > EOF

@@ -1,4 +1,3 @@
-  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP
   $ cp $extpath/hgext3rd/smartlog.py $TESTTMP
@@ -7,7 +6,6 @@
   > [extensions]
   > allowunstable=$TESTTMP/allowunstable.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > histedit=
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
@@ -16,7 +14,6 @@
   > tweakdefaults=$TESTTMP/tweakdefaults.py
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next fold split
   > allowdivergence = on
   > [ui]
   > interactive = true

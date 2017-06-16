@@ -1,14 +1,11 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh evolve
   $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
   > [experimental]
   > evolution = createmarkers
-  > evolutioncommands = prev next split fold
   > EOF
   $ hg init repo && cd repo
 

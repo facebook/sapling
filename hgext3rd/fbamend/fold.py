@@ -140,7 +140,7 @@ def fold(ui, repo, *revs, **opts):
             phases.retractboundary(repo, tr, targetphase, [newid])
 
             obsolete.createmarkers(repo, [(ctx, (repo[newid],))
-                                   for ctx in allctx])
+                                   for ctx in allctx], operation='fold')
 
             ui.status(_('%i changesets folded\n') % len(revs))
             if repo['.'].rev() in revs:

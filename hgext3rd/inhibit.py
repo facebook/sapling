@@ -16,7 +16,6 @@ incompatible with sharing mutable history.
 """
 from mercurial import bookmarks
 from mercurial import commands
-from mercurial import error
 from mercurial import extensions
 from mercurial import localrepo
 from mercurial import lock as lockmod
@@ -66,8 +65,6 @@ def _update(orig, ui, repo, *args, **kwargs):
     """
     wlock = None
     try:
-        # Evolve is running a hook on lock release to display a warning message
-        # if the workind dir's parent is obsolete.
         # We take the lock here to make sure that we inhibit the parent before
         # that hook get a chance to run.
         wlock = repo.wlock()
@@ -84,29 +81,6 @@ def _bookmarkchanged(orig, bkmstoreinst, *args, **kwargs):
     bkmstorenodes = [repo[v].node() for v in bkmstoreinst.values()]
     _inhibitmarkers(repo, bkmstorenodes)
     return orig(bkmstoreinst, *args, **kwargs)
-
-def _bookmark(orig, ui, repo, *bookmarks, **opts):
-    """ Add a -D option to the bookmark command, map it to prune -B """
-    haspruneopt = opts.get('prune', False)
-    if not haspruneopt:
-        return orig(ui, repo, *bookmarks, **opts)
-    elif opts.get('rename'):
-        raise error.Abort('Cannot use both -m and -D')
-    elif len(bookmarks) == 0:
-        hint = _('make sure to put a space between -D and your bookmark name')
-        raise error.Abort(_('Error, please check your command'), hint=hint)
-
-    # Call prune -B
-    evolve = extensions.find('evolve')
-    optsdict = {
-        'new': [],
-        'succ': [],
-        'rev': [],
-        'bookmark': bookmarks,
-        'keep': None,
-        'biject': False,
-    }
-    evolve.cmdprune(ui, repo, **optsdict)
 
 # obsolescence inhibitor
 ########################
@@ -317,10 +291,6 @@ def extsetup(ui):
     extensions.wrapfunction(bookmarks.bmstore, 'recordchange', _bookmarkchanged)
     if getattr(bookmarks.bmstore, 'write', None) is not None:# mercurial < 3.9
         extensions.wrapfunction(bookmarks.bmstore, 'write', _bookmarkchanged)
-    # Add bookmark -D option
-    entry = extensions.wrapcommand(commands.table, 'bookmark', _bookmark)
-    entry[1].append(('D', 'prune', None,
-                    _('delete the bookmark and prune the commits underneath')))
 
 @command('debugobsinhibit', [], '')
 def cmddebugobsinhibit(ui, repo, *revs):

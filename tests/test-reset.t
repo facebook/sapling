@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > reset=$TESTTMP/reset.py
+  > reset=$TESTDIR/../hgext3rd/reset.py
   > EOF
 
   $ hg init repo
@@ -148,13 +146,14 @@ Verify file status after reset
   $ hg reset -C 66ee28d0328c
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-c2a02721-backup.hg (glob)
 
-Reset + Evolve tests
+Reset + Obsolete tests
 
-  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
+  > [experimental]
+  > evolution=all
   > EOF
   $ touch a
   $ hg commit -Aqm a
@@ -172,31 +171,29 @@ Reset prunes commits
   2 changesets pruned
   $ hg log -r 66ee28d0328c
   abort: hidden revision '66ee28d0328c'!
-  (use --hidden to access hidden revisions; pruned)
+  (use --hidden to access hidden revisions)
   [255]
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
 Reset touches commits to revive, when inhibit is not enabled it creates
-a new hash for them
+a new hash for them (not working for now - blocked by hash-preserving obsstore)
 
   $ hg reset -C 7f3a02b3e388
+  abort: unable to revive '%s' - feature not implemented yet
+  [255]
   $ hg log -r 7f3a02b3e388
   abort: hidden revision '7f3a02b3e388'!
-  (use --hidden to access hidden revisions; pruned)
+  (use --hidden to access hidden revisions)
   [255]
   $ hg log -G -T '{rev} {bookmarks}\n'
-  @  4 foo
-  |
-  o  3
-  |
-  o  0
+  @  0 foo
   
 Reset + Inhibit tests, with inhibit reset revives the same commit
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > rebase=
@@ -204,7 +201,6 @@ Reset + Inhibit tests, with inhibit reset revives the same commit
 
   $ hg reset -C 7f3a02b3e388
   Warning: accessing hidden changesets 7f3a02b3e388 for write operation
-  2 changesets pruned
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  7f3a02b3e388 foo
   |

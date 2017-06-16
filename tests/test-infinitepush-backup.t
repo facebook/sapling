@@ -1,12 +1,10 @@
 
-  $ . $TESTDIR/require-ext.sh evolve
-  $ setupevolve() {
+  $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > evolve=
+  > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
-  > evolutioncommands=obsolete
   > EOF
   > }
   $ . "$TESTDIR/library.sh"
@@ -22,7 +20,7 @@ Setup server
 Backup empty repo
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
-  $ setupevolve
+  $ setup
   $ hg pushbackup
   starting backup .* (re)
   finished in \d+\.(\d+)? seconds (re)
@@ -46,7 +44,7 @@ Re-clone the client
   $ cd client
 
 Setup client
-  $ setupevolve
+  $ setup
 
 Make commit and backup it. Use lockfail.py to make sure lock is not taken during
 pushbackup
@@ -91,9 +89,7 @@ Create obsoleted commit
 Make obsoleted commit non-extinct by committing on top of it
   $ hg --hidden up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  working directory parent is obsolete! (361e89f06232)
   $ mkcommit ontopofobsoleted
-  1 new unstable changesets
 
 Backup both of them
   $ hg pushbackup
@@ -348,7 +344,7 @@ Clean client and repo
   $ cd ..
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
-  $ setupevolve
+  $ setup
 
 Create public commit
   $ mkcommit initial

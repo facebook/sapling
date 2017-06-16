@@ -52,6 +52,8 @@ from mercurial.node import hex
 from mercurial import lock as lockmod
 from mercurial.i18n import _
 
+from hgext import rebase as rebasemod
+
 from . import (
     common,
     fold,
@@ -78,9 +80,6 @@ cmdtable.update(unamend.cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 
-rebasemod = None
-inhibitmod = None
-
 amendopts = [
     ('', 'rebase', None, _('rebases children after the amend')),
     ('', 'fixup', None, _('rebase children from a previous amend')),
@@ -88,14 +87,7 @@ amendopts = [
 
 def uisetup(ui):
     prune.uisetup(ui)
-    global rebasemod
-    try:
-        rebasemod = extensions.find('rebase')
-    except KeyError:
-        ui.warn(_("no rebase extension detected - disabling fbamend"))
-        return
     common.detectinhibit()
-
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
@@ -123,12 +115,6 @@ def uisetup(ui):
     def evolveloaded(loaded):
         if not loaded:
             return
-
-        global inhibitmod
-        try:
-            inhibitmod = extensions.find('inhibit')
-        except KeyError:
-            pass
 
         evolvemod = extensions.find('evolve')
 
@@ -172,16 +158,6 @@ def commit(orig, ui, repo, *pats, **opts):
 def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
     '''
-    if obsolete.isenabled(repo, 'allnewcommands'):
-        msg = ('fbamend and evolve extension are incompatible, '
-               'fbamend deactivated.\n'
-               'You can either disable it globally:\n'
-               '- type `hg config --edit`\n'
-               '- drop the `fbamend=` line from the `[extensions]` section\n'
-               'or disable it for a specific repo:\n'
-               '- type `hg config --local --edit`\n'
-               '- add a `fbamend=!` line in the `[extensions]` section\n')
-        ui.write_err(msg)
     rebase = opts.get('rebase')
 
     if rebase and _histediting(repo):
@@ -267,7 +243,7 @@ def amend(ui, repo, *pats, **opts):
 
         if node == old.node():
             ui.status(_("nothing changed\n"))
-            return 0
+            return 1
 
         if haschildren and not rebase:
             msg = _("warning: the changeset's children were left behind\n")
