@@ -161,6 +161,8 @@ def _inhibitmarkers(repo, nodes):
         finally:
             lockmod.release(tr, lock)
 
+deinhibittransaction = False
+
 def _deinhibitmarkers(repo, nodes):
     """lift obsolescence inhibition on a set of nodes
 
@@ -169,6 +171,14 @@ def _deinhibitmarkers(repo, nodes):
     """
     if not _inhibitenabled(repo):
         return
+
+    # record nodes so transactioncallback will not inhibit them
+    if deinhibittransaction:
+        tr = repo.currenttransaction()
+        if tr:
+            trnodes = getattr(tr, '_deinhibitnodes', set())
+            trnodes.update(nodes)
+            tr._deinhibitnodes = trnodes
 
     deinhibited = repo._obsinhibit & set(nodes)
     if deinhibited:
@@ -214,8 +224,11 @@ def transactioncallback(orig, repo, desc, *args, **kwargs):
         ignoreset = set(getattr(repo, '_rebaseset', []))
         ignoreset |= set(getattr(repo, '_obsoletenotrebased', []))
         visibleobsolete = list(r for r in visibleobsolete if r not in ignoreset)
+        excludenodes = getattr(transaction, '_deinhibitnodes', set())
         if visibleobsolete:
-            _inhibitmarkers(repo, [repo[r].node() for r in visibleobsolete])
+            nodes = [repo[r].node() for r in visibleobsolete]
+            nodes = [n for n in nodes if n not in excludenodes]
+            _inhibitmarkers(repo, nodes)
     transaction = orig(repo, desc, *args, **kwargs)
     if desc != 'strip' and _inhibitenabled(repo):
         transaction.addpostclose('inhibitposttransaction',
