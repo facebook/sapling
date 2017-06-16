@@ -310,6 +310,10 @@ def _notransaction():
     to be created"""
     raise TransactionUnavailable()
 
+def applybundle1(repo, cg, tr, source, url, **kwargs):
+    ret, addednodes = cg.apply(repo, tr, source, url, **kwargs)
+    return ret
+
 def applybundle(repo, unbundler, tr, source=None, url=None):
     # transform me into unbundler.apply() as soon as the freeze is lifted
     tr.hookargs['bundle2'] = '1'

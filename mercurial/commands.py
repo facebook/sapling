@@ -5218,7 +5218,9 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             else:
                 txnname = 'unbundle\n%s' % util.hidepassword(url)
                 with repo.transaction(txnname) as tr:
-                    modheads, addednodes = gen.apply(repo, tr, 'unbundle', url)
+                    modheads = bundle2.applybundle1(repo, gen, tr,
+                                                    source='unbundle',
+                                                    url=url)
 
     return postincoming(ui, repo, modheads, opts.get(r'update'), None, None)
 

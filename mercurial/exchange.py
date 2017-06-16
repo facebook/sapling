@@ -1448,7 +1448,7 @@ def _pullchangeset(pullop):
                            "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    pullop.cgresult, addednodes = cg.apply(pullop.repo, tr, 'pull',
+    pullop.cgresult = bundle2.applybundle1(pullop.repo, cg, tr, 'pull',
                                            pullop.remote.url())
 
 def _pullphase(pullop):
@@ -1737,7 +1737,7 @@ def unbundle(repo, cg, heads, source, url):
             # legacy case: bundle1 (changegroup 01)
             txnname = "\n".join([source, util.hidepassword(url)])
             with repo.lock(), repo.transaction(txnname) as tr:
-                r, addednodes = cg.apply(repo, tr, source, url)
+                r = bundle2.applybundle1(repo, cg, tr, source, url)
         else:
             r = None
             try:
@@ -2002,7 +2002,7 @@ def trypullbundlefromurl(ui, repo, url):
             elif isinstance(cg, streamclone.streamcloneapplier):
                 cg.apply(repo)
             else:
-                cg.apply(repo, tr, 'clonebundles', url)
+                bundle2.applybundle1(repo, cg, tr, 'clonebundles', url)
             return True
         except urlerr.httperror as e:
             ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
