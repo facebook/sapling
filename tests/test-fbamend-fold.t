@@ -1,18 +1,12 @@
 Set up test environment.
-  $ . $TESTDIR/require-ext.sh evolve
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/allowunstable.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > allowunstable=$TESTTMP/allowunstable.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > evolve=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
-  > evolution = createmarkers
-  > evolutioncommands = prev next fold split
+  > evolution = createmarkers, allowunstable
   > EOF
   $ showgraph() {
   >   hg log --graph -T "{rev} {desc|firstline}" | sed \$d
@@ -198,17 +192,17 @@ Also test that using node hashes instead of rev numbers works.
   |
   o  0 r0
 
-Test --norebase flag.
-  $ hg fold --norebase --exact 6 7
+Test --no-rebase flag.
+  $ hg fold --no-rebase --exact 6 7
   2 changesets folded
   $ showgraph
   o  9 r1
   |
   | o  8 r5
   | |
-  | o  7 r4
+  | x  7 r4
   | |
-  | o  6 r1
+  | x  6 r1
   |/
   o  0 r0
 
@@ -224,6 +218,8 @@ manually inhibit any visible obsolete commits in the old stack.
   @  10 r4
   |
   | o  9 r1
+  | |
+  +---o  7 r4
   | |
   o |  6 r1
   |/

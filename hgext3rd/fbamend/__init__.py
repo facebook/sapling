@@ -46,7 +46,6 @@ from mercurial import (
     phases,
     registrar,
     repair,
-    scmutil,
     util,
 )
 from mercurial.node import hex
@@ -55,6 +54,7 @@ from mercurial.i18n import _
 
 from . import (
     common,
+    fold,
     movement,
     restack,
     revsets,
@@ -67,6 +67,7 @@ revsetpredicate = revsets.revsetpredicate
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+cmdtable.update(fold.cmdtable)
 cmdtable.update(movement.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
@@ -128,22 +129,12 @@ def uisetup(ui):
 
         # Remove conflicted commands from evolve.
         table = evolvemod.cmdtable
-        for name in ['prev', 'next', 'split']:
+        for name in ['prev', 'next', 'split', 'fold']:
             todelete = [k for k in table if name in k]
             for k in todelete:
                 oldentry = table[k]
                 table['debugevolve%s' % name] = oldentry
                 del table[k]
-
-        # Wrap `hg fold`.
-        foldentry = extensions.wrapcommand(
-            evolvemod.cmdtable,
-            'fold',
-            wrapfold,
-        )
-        foldentry[1].append(
-            ('', 'norebase', False, _("don't rebase children after fold"))
-        )
 
     extensions.afterloaded('evolve', evolveloaded)
 
@@ -386,47 +377,6 @@ def fixupamend(ui, repo):
             bmactivate(repo, active)
     finally:
         lockmod.release(wlock, lock, tr)
-
-def wrapfold(orig, ui, repo, *args, **opts):
-    """Automatically rebase unstable descendants after fold."""
-    # Find the rev numbers of the changesets that will be folded. This needs
-    # to happen before folding in case the input revset is relative to the
-    # working copy parent, since `hg fold` may update to a new changeset.
-    revs = list(args) + opts.get('rev', [])
-    revs = scmutil.revrange(repo, revs)
-    if not opts['exact']:
-        revs = repo.revs('(%ld::.) or (.::%ld)', revs, revs)
-    torebase = repo.revs('descendants(%ld) - (%ld)', revs, revs)
-
-    # Perform fold.
-    ret = orig(ui, repo, *args, **opts)
-
-    # Return early if fold failed.
-    if ret:
-        return ret
-
-    # Fix up stack.
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('foldrebase'):
-                if not opts['norebase'] and torebase:
-                    folded = repo.revs('allsuccessors(%ld)', revs).last()
-                    common.restackonce(ui, repo, folded)
-                else:
-                    # If there's nothing to rebase, deinhibit the folded
-                    # changesets so that they get correctly marked as
-                    # hidden if needed. For some reason inhibit's
-                    # post-transaction hook misses this changeset.
-                    visible = repo.unfiltered().revs('(%ld) - hidden()', revs)
-                    common.deinhibit(repo, (repo[r] for r in visible))
-            # The rebasestate file is incorrectly left behind, so cleanup.
-            # See the earlier comment on util.unlinkpath for more details.
-            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
-
-    # Fix up bookmarks, if any.
-    _fixbookmarks(repo, revs)
-
-    return ret
 
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
