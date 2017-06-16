@@ -130,7 +130,7 @@ class shelvedfile(object):
                 gen.apply(self.repo, 'unshelve',
                           'bundle:' + self.vfs.join(self.fname),
                           targetphase=phases.secret)
-            if isinstance(gen, bundle2.unbundle20):
+            else:
                 bundle2.applybundle(self.repo, gen,
                                     self.repo.currenttransaction(),
                                     source='unshelve',

@@ -1200,7 +1200,7 @@ def _aborthistedit(ui, repo, state):
             with repo.transaction('histedit.abort') as tr:
                 if not isinstance(gen, bundle2.unbundle20):
                     gen.apply(repo, 'histedit', 'bundle:' + backupfile)
-                if isinstance(gen, bundle2.unbundle20):
+                else:
                     bundle2.applybundle(repo, gen, tr,
                                         source='histedit',
                                         url='bundle:' + backupfile)
