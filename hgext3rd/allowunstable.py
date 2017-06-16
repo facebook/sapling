@@ -38,12 +38,14 @@ def extsetup(ui):
     except KeyError:
         pass
     else:
-        extensions.wrapcommand(evolve.cmdtable, 'split', allowunstable)
-        extensions.wrapcommand(evolve.cmdtable, 'split',
-                               setcreatemarkersop('split'))
-        extensions.wrapcommand(evolve.cmdtable, 'fold', allowunstable)
-        extensions.wrapcommand(evolve.cmdtable, 'fold',
-                               setcreatemarkersop('fold'))
+        if '^split' in evolve.cmdtable:
+            extensions.wrapcommand(evolve.cmdtable, 'split', allowunstable)
+            extensions.wrapcommand(evolve.cmdtable, 'split',
+                                   setcreatemarkersop('split'))
+        if '^fold|squash' in evolve.cmdtable:
+            extensions.wrapcommand(evolve.cmdtable, 'fold', allowunstable)
+            extensions.wrapcommand(evolve.cmdtable, 'fold',
+                                   setcreatemarkersop('fold'))
 
     # Allow the creation of unstable changesets during record.
     try:
