@@ -5321,12 +5321,13 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                         _('packed bundles cannot be applied with '
                           '"hg unbundle"'),
                         hint=_('use "hg debugapplystreamclonebundle"'))
+            url = 'bundle:' + fname
             if isinstance(gen, bundle2.unbundle20):
                 with repo.transaction('unbundle') as tr:
                     try:
                         op = bundle2.applybundle(repo, gen, tr,
                                                  source='unbundle',
-                                                 url='bundle:' + fname)
+                                                 url=url)
                     except error.BundleUnknownFeatureError as exc:
                         raise error.Abort(
                             _('%s: unknown bundle feature, %s') % (fname, exc),
@@ -5337,7 +5338,9 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                            for r in op.records['changegroup']]
                 modheads = changegroup.combineresults(changes)
             else:
-                modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
+                txnname = 'unbundle\n%s' % util.hidepassword(url)
+                with repo.transaction(txnname):
+                    modheads = gen.apply(repo, 'unbundle', url)
 
     return postincoming(ui, repo, modheads, opts.get(r'update'), None, None)
 
