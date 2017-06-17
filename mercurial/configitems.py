@@ -13,6 +13,11 @@ from . import (
     error,
 )
 
+def loadconfigtable(ui, extname, configtable):
+    """update config item known to the ui with the extension ones"""
+    for section, items in configtable.items():
+        ui._knownconfig.setdefault(section, {}).update(items)
+
 class configitem(object):
     """represent a known config item
 

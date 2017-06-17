@@ -18,6 +18,7 @@ from .i18n import (
 
 from . import (
     cmdutil,
+    configitems,
     encoding,
     error,
     pycompat,
@@ -263,6 +264,7 @@ def loadall(ui, whitelist=None):
     extraloaders = [
         ('cmdtable', commands, 'loadcmdtable'),
         ('colortable', color, 'loadcolortable'),
+        ('configtable', configitems, 'loadconfigtable'),
         ('filesetpredicate', fileset, 'loadpredicate'),
         ('revsetpredicate', revset, 'loadpredicate'),
         ('templatefilter', templatefilters, 'loadfilter'),

@@ -5,6 +5,9 @@ Test basic extension support
   > from mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > configitem('tests', 'foo', default="Foo")
   > def uisetup(ui):
   >     ui.write("uisetup called\\n")
   >     ui.flush()
@@ -14,7 +17,9 @@ Test basic extension support
   >     ui.flush()
   > @command(b'foo', [], 'hg foo')
   > def foo(ui, *args, **kwargs):
-  >     ui.write("Foo\\n")
+  >     foo = ui.config('tests', 'foo')
+  >     ui.write(foo)
+  >     ui.write("\\n")
   > @command(b'bar', [], 'hg bar', norepo=True)
   > def bar(ui, *args, **kwargs):
   >     ui.write("Bar\\n")
