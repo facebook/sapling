@@ -1,11 +1,9 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > EOF
 
 Enable obsolete

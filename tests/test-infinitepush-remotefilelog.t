@@ -1,7 +1,5 @@
   $ . "$TESTDIR/library.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp -R $extpath/infinitepush $TESTTMP
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -13,7 +11,7 @@ Create server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
+  > infinitepush=$TESTDIR/../infinitepush
   > [remotefilelog]
   > server=True
   > [infinitepush]
@@ -35,7 +33,7 @@ Create first client
   $ cd shallow1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
+  > infinitepush=$TESTDIR/../infinitepush
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+
@@ -47,7 +45,7 @@ Create second client
   $ cd shallow2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
+  > infinitepush=$TESTDIR/../infinitepush
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+

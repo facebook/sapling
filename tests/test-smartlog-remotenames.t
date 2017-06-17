@@ -1,9 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/smartlog.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > smartlog=$TESTTMP/smartlog.py
+  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
   > remotenames=
   > EOF
 

@@ -1,12 +1,10 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > histedit=
   > sqldirstate=$(dirname $TESTDIR)/sqldirstate
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > [shelve]
   > EOF
 

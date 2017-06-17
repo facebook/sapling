@@ -2,8 +2,6 @@
 Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/library-infinitepush.sh"
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/pushrebase.py $TESTTMP # use $TESTTMP substitution in message
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ setupcommon
   $ hg init repo
@@ -214,8 +212,8 @@ Test with pushrebase
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > pushrebase=$TESTTMP/pushrebase.py
-  > infinitepush=$TESTTMP/infinitepush
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > infinitepush=$TESTDIR/../infinitepush
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]
@@ -245,8 +243,8 @@ Change the order of pushrebase and infinitepush
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
-  > pushrebase=$TESTTMP/pushrebase.py
+  > infinitepush=$TESTDIR/../infinitepush
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]

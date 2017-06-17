@@ -11,13 +11,9 @@ scratchbookmarks() {
 }
 
 setupcommon() {
-  extpath=`dirname $TESTDIR`
-  cp -R $extpath/infinitepush $TESTTMP
-  cp -R $extpath/infinitepush $TESTTMP
-
   cat >> $HGRCPATH << EOF
 [extensions]
-infinitepush=$TESTTMP/infinitepush
+infinitepush=$TESTDIR/../infinitepush
 [ui]
 ssh = python "$TESTDIR/dummyssh"
 [infinitepush]
@@ -40,7 +36,7 @@ cat << EOF > .hg/hgrc
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [extensions]
-infinitepush=$TESTTMP/infinitepush
+infinitepush=$TESTDIR/../infinitepush
 [infinitepush]
 branchpattern=re:scratch/.+
 server=False
@@ -54,7 +50,7 @@ cat << EOF > .hg/hgrc
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [extensions]
-infinitepush=$TESTTMP/infinitepush
+infinitepush=$TESTDIR/../infinitepush
 [infinitepush]
 branchpattern=re:scratch/.+
 server=True

@@ -1,5 +1,4 @@
 Set up test environment.
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend

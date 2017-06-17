@@ -1,5 +1,4 @@
 Set up test environment.
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py

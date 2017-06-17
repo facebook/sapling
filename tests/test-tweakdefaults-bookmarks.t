@@ -1,13 +1,11 @@
 
 Set up
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > evolution=all
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > tweakdefaults=$TESTTMP/tweakdefaults.py
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > EOF
 
 Test hg bookmark works with hidden commits

@@ -1,9 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > reset=$TESTTMP/reset.py
+  > reset=$TESTDIR/../hgext3rd/reset.py
   > remotenames=
   > EOF
 

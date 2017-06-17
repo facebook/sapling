@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/mergedriver.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > mergedriver=$TESTTMP/mergedriver.py
+  > mergedriver=$TESTDIR/../hgext3rd/mergedriver.py
   > EOF
 
 basic merge driver: just lists out files and contents, doesn't resolve any files

@@ -1,5 +1,3 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/errorredirect.py $TESTTMP
   $ cat > $TESTTMP/crash.py << EOF
   > from mercurial import registrar
   > cmdtable = {}
@@ -10,7 +8,7 @@
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > errorredirect=$TESTTMP/errorredirect.py
+  > errorredirect=$TESTDIR/../hgext3rd/errorredirect.py
   > crash=$TESTTMP/crash.py
   > EOF
 

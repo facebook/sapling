@@ -1,9 +1,7 @@
 Set up test environment.
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/debuginhibit.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > debuginhibit=$TESTTMP/debuginhibit.py
+  > debuginhibit=$TESTDIR/../hgext3rd/debuginhibit.py
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py

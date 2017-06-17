@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/dirsync.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > dirsync=$TESTTMP/dirsync.py
+  > dirsync=$TESTDIR/../hgext3rd/dirsync.py
   > EOF
 
   $ hg init repo

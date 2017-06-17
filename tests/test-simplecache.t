@@ -2,11 +2,9 @@
 
 Setup the extension
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/simplecache.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > simplecache=$TESTTMP/simplecache.py
+  > simplecache=$TESTDIR/../hgext3rd/simplecache.py
   > [simplecache]
   > cachedir=$TESTTMP/hgsimplecache
   > caches=memcache

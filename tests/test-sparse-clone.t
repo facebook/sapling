@@ -1,13 +1,11 @@
 test sparse
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/sparse.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
   > username = nobody <no.reply@fb.com>
   > [extensions]
-  > sparse=$TESTTMP/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/sparse.py
   > purge=
   > strip=
   > rebase=

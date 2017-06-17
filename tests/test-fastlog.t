@@ -1,9 +1,8 @@
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$extpath/hgext3rd/tweakdefaults.py
-  > fastlog=$extpath/hgext3rd/fastlog.py
-  > fbconduit=$extpath/hgext3rd/fbconduit.py
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > fastlog=$TESTDIR/../hgext3rd/fastlog.py
+  > fbconduit=$TESTDIR/../hgext3rd/fbconduit.py
   > [fbconduit]
   > host=our.intern.facebook.com
   > protocol=http

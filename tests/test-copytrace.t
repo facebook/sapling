@@ -1,8 +1,7 @@
   $ . "$TESTDIR/copytrace.sh"
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > copytrace=$extpath/hgext3rd/copytrace.py
+  > copytrace=$TESTDIR/../hgext3rd/copytrace.py
   > rebase=
   > shelve=
   > [experimental]

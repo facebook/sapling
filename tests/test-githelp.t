@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/githelp.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > githelp=$TESTTMP/githelp.py
+  > githelp=$TESTDIR/../hgext3rd/githelp.py
   > EOF
 
   $ hg init repo

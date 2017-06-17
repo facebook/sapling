@@ -1,11 +1,9 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > EOF
 
 Enable obsolete
@@ -237,7 +235,7 @@ amend should just work fine
   
 amend should just work fine when sqldirstate is loaded but disabled
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "sqldirstate=$extpath/sqldirstate" >> .hg/hgrc
+  $ echo "sqldirstate=$TESTDIR/../sqldirstate" >> .hg/hgrc
   $ echo "[sqldirstate]" >> .hg/hgrc
   $ echo "enabled=False" >> .hg/hgrc
 

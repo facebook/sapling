@@ -1,10 +1,9 @@
   $ PYTHONPATH=$TESTDIR/../:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > absorb=$extpath/hgext3rd/absorb
+  > absorb=$TESTDIR/../hgext3rd/absorb
   > EOF
 
   $ sedi() { # workaround check-code

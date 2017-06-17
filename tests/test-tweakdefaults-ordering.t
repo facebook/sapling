@@ -2,13 +2,11 @@ Skip test if remotenames not present
   $ . $TESTDIR/require-ext.sh remotenames
 
 Set up extensions (order is important here, we must test tweakdefaults loading last)
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
   > remotenames=
-  > tweakdefaults=$TESTTMP/tweakdefaults.py
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > EOF
 
 Run test

@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/fbshow.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > show=$TESTTMP/fbshow.py
+  > show=$TESTDIR/../hgext3rd/fbshow.py
   > EOF
 
 We assume that log basically works (it has its own tests). This just covers uses

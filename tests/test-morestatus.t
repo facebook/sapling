@@ -1,15 +1,11 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/morestatus.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [morestatus]
   > show=True
   > [extensions]
-  > morestatus=$TESTTMP/morestatus.py
+  > morestatus=$TESTDIR/../hgext3rd/morestatus.py
   > histedit=
-  > reset=$TESTTMP/reset.py
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > reset=$TESTDIR/../hgext3rd/reset.py
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > EOF
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys

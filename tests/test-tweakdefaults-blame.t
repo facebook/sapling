@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTTMP/tweakdefaults.py
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > EOF
 
 Test wrapped blame to be able to handle the usual command line attributes

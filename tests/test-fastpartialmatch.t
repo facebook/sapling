@@ -5,10 +5,9 @@
   >  hg ci -m "$1"
   > }
 
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastpartialmatch=$extpath/hgext3rd/fastpartialmatch.py
+  > fastpartialmatch=$TESTDIR/../hgext3rd/fastpartialmatch.py
   > strip=
   > histedit=
   > [ui]

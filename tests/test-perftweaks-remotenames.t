@@ -1,12 +1,10 @@
   $ . $TESTDIR/require-ext.sh remotenames
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/perftweaks.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > [extensions]
-  > perftweaks=$TESTTMP/perftweaks.py
+  > perftweaks=$TESTDIR/../hgext3rd/perftweaks.py
   > remotenames=
   > EOF
 

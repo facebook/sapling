@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/hiddenerror.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > hiddenerror=$TESTTMP/hiddenerror.py
+  > hiddenerror=$TESTDIR/../hgext3rd/hiddenerror.py
   > [experimental]
   > evolution=all
   > EOF

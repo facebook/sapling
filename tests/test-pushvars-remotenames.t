@@ -5,14 +5,12 @@ Setup
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ extpath=`dirname $TESTDIR`
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/bash
   > env | grep -E "^HG_USERVAR"
   > exit 0
   > EOF
   $ chmod +x $TESTTMP/pretxnchangegroup.sh
-  $ cp $extpath/hgext3rd/pushvars.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > bundle2hooks=

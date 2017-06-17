@@ -1,8 +1,6 @@
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/hgext3rd/commitextras.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > commitextras=$TESTTMP/commitextras.py
+  > commitextras=$TESTDIR/../hgext3rd/commitextras.py
   > EOF
 
 Test stuff

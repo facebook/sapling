@@ -1,9 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
-  $ extpath=`dirname $TESTDIR`
-  $ cp -R $extpath/infinitepush $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > infinitepush=$TESTTMP/infinitepush
+  > infinitepush=$TESTDIR/../infinitepush
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]

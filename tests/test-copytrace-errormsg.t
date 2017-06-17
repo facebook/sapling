@@ -1,9 +1,8 @@
 
-  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
-  > copytrace=$extpath/hgext3rd/copytrace.py
+  > copytrace=$TESTDIR/../hgext3rd/copytrace.py
   > [experimental]
   > disablecopytrace=True
   > EOF
