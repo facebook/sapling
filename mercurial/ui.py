@@ -445,11 +445,17 @@ class ui(object):
             if default is _unset:
                 default = None
         else:
+            item = self._knownconfig.get(section, {}).get(name)
             if default is _unset:
                 default = None
-                item = self._knownconfig.get(section, {}).get(name)
                 if item is not None:
                     default = item.default
+            elif item is not None:
+                msg = ("specifying a default value for a registered "
+                       "config item: '%s.%s' '%s'")
+                msg %= (section, name, default)
+                self.develwarn(msg, 1, 'warn-config-default')
+
             alternates = [name]
 
         for n in alternates:

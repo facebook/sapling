@@ -193,4 +193,23 @@ Old style deprecation warning
 
   $ HGEMITWARNINGS= hg nouiwarning
 
+Test warning on config option access and registration
+
+  $ cat << EOF > ${TESTTMP}/buggyconfig.py
+  > """A small extension that tests our developer warnings for config"""
+  > 
+  > from mercurial import registrar
+  > 
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > 
+  > @command('buggyconfig')
+  > def cmdbuggyconfig(ui, repo):
+  >     repo.ui.config('ui', 'quiet', False)
+  >     repo.ui.config('ui', 'interactive', None)
+  > EOF
+
+  $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
+  devel-warn: specifying a default value for a registered config item: 'ui.quiet' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+
   $ cd ..
