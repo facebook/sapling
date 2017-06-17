@@ -37,15 +37,15 @@ def _genrevancestors(repo, revs, followfirst):
     if inputrev is not None:
         heapq.heappush(pendingheap, -inputrev)
 
-    seen = set()
+    lastrev = None
     while pendingheap:
         currev = -heapq.heappop(pendingheap)
         if currev == inputrev:
             inputrev = next(irevs, None)
             if inputrev is not None:
                 heapq.heappush(pendingheap, -inputrev)
-        if currev not in seen:
-            seen.add(currev)
+        if currev != lastrev:
+            lastrev = currev
             yield currev
             try:
                 for prev in cl.parentrevs(currev)[:cut]:
