@@ -238,23 +238,33 @@ def ancestor(repo, subset, x):
         return baseset([anc.rev()])
     return baseset()
 
-def _ancestors(repo, subset, x, followfirst=False):
+def _ancestors(repo, subset, x, followfirst=False, stopdepth=None):
     heads = getset(repo, fullreposet(repo), x)
     if not heads:
         return baseset()
-    s = dagop.revancestors(repo, heads, followfirst)
+    s = dagop.revancestors(repo, heads, followfirst, stopdepth)
     return subset & s
 
-@predicate('ancestors(set)', safe=True)
+@predicate('ancestors(set[, depth])', safe=True)
 def ancestors(repo, subset, x):
     """Changesets that are ancestors of changesets in set, including the
     given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified generation.
     """
-    args = getargsdict(x, 'ancestors', 'set')
+    args = getargsdict(x, 'ancestors', 'set depth')
     if 'set' not in args:
         # i18n: "ancestors" is a keyword
         raise error.ParseError(_('ancestors takes at least 1 argument'))
-    return _ancestors(repo, subset, args['set'])
+    stopdepth = None
+    if 'depth' in args:
+        # i18n: "ancestors" is a keyword
+        n = getinteger(args['depth'], _("ancestors expects an integer depth"))
+        if n < 0:
+            raise error.ParseError(_("negative depth"))
+        stopdepth = n + 1
+    return _ancestors(repo, subset, args['set'], stopdepth=stopdepth)
 
 @predicate('_firstancestors', safe=True)
 def _firstancestors(repo, subset, x):

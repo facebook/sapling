@@ -842,6 +842,20 @@ ancestor can accept 0 or more arguments
 
 test ancestors
 
+  $ hg log -G -T '{rev}\n' --config experimental.graphshorten=True
+  @  9
+  o  8
+  | o  7
+  | o  6
+  |/|
+  | o  5
+  o |  4
+  | o  3
+  o |  2
+  |/
+  o  1
+  o  0
+
   $ log 'ancestors(5)'
   0
   1
@@ -854,6 +868,51 @@ test ancestors
   1
   2
   3
+
+test ancestors with depth limit
+
+ (depth=0 selects the node itself)
+
+  $ log 'reverse(ancestors(9, depth=0))'
+  9
+
+ (interleaved: '4' would be missing if heap queue were higher depth first)
+
+  $ log 'reverse(ancestors(8:9, depth=1))'
+  9
+  8
+  4
+
+ (interleaved: '2' would be missing if heap queue were higher depth first)
+
+  $ log 'reverse(ancestors(7+8, depth=2))'
+  8
+  7
+  6
+  5
+  4
+  2
+
+ (walk example above by separate queries)
+
+  $ log 'reverse(ancestors(8, depth=2)) + reverse(ancestors(7, depth=2))'
+  8
+  4
+  2
+  7
+  6
+  5
+
+test bad arguments passed to ancestors()
+
+  $ log 'ancestors(., depth=-1)'
+  hg: parse error: negative depth
+  [255]
+  $ log 'ancestors(., depth=foo)'
+  hg: parse error: ancestors expects an integer depth
+  [255]
+
+test author
 
   $ log 'author(bob)'
   2
@@ -2996,8 +3055,11 @@ optimization to only() works only if ancestors() takes only one argument
         ('symbol', '1'))
       any)
     define)
-  hg: parse error: ancestors takes at most 1 positional arguments
-  [255]
+  0
+  1
+  3
+  5
+  6
   $ hg debugrevspec -p optimized 'ancestors(6, 1) - ancestors(4)'
   * optimized:
   (difference
@@ -3012,8 +3074,8 @@ optimization to only() works only if ancestors() takes only one argument
       ('symbol', '4')
       any)
     define)
-  hg: parse error: ancestors takes at most 1 positional arguments
-  [255]
+  5
+  6
 
 optimization disabled if keyword arguments passed (because we're too lazy
 to support it)

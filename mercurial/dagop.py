@@ -20,11 +20,19 @@ from . import (
 baseset = smartset.baseset
 generatorset = smartset.generatorset
 
-def _genrevancestors(repo, revs, followfirst):
+# possible maximum depth between null and wdir()
+_maxlogdepth = 0x80000000
+
+def _genrevancestors(repo, revs, followfirst, stopdepth):
     if followfirst:
         cut = 1
     else:
         cut = None
+    if stopdepth is None:
+        stopdepth = _maxlogdepth
+    if stopdepth <= 0:
+        return
+
     cl = repo.changelog
 
     # load input revs lazily to heap so earlier revisions can be yielded
@@ -45,10 +53,12 @@ def _genrevancestors(repo, revs, followfirst):
             inputrev = next(irevs, None)
             if inputrev is not None:
                 heapq.heappush(pendingheap, (-inputrev, 0))
-        if currev != lastrev:
+        foundnew = (currev != lastrev)
+        if foundnew:
             lastrev = currev
             yield currev
-            pdepth = curdepth + 1
+        pdepth = curdepth + 1
+        if foundnew and pdepth < stopdepth:
             try:
                 for prev in cl.parentrevs(currev)[:cut]:
                     if prev != node.nullrev:
@@ -58,9 +68,13 @@ def _genrevancestors(repo, revs, followfirst):
                     if pctx.rev() != node.nullrev:
                         heapq.heappush(pendingheap, (-pctx.rev(), pdepth))
 
-def revancestors(repo, revs, followfirst):
-    """Like revlog.ancestors(), but supports followfirst."""
-    gen = _genrevancestors(repo, revs, followfirst)
+def revancestors(repo, revs, followfirst, stopdepth=None):
+    """Like revlog.ancestors(), but supports additional options, includes
+    the given revs themselves, and returns a smartset
+
+    Scan ends at the stopdepth (exlusive) if specified.
+    """
+    gen = _genrevancestors(repo, revs, followfirst, stopdepth)
     return generatorset(gen, iterasc=False)
 
 def revdescendants(repo, revs, followfirst):
