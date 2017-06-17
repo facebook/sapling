@@ -574,7 +574,7 @@ class ui(object):
             raise error.ConfigError(_("%s.%s is not a valid %s ('%s')")
                                     % (section, name, desc, v))
 
-    def configint(self, section, name, default=None, untrusted=False):
+    def configint(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as an integer
 
         >>> u = ui(); s = 'foo'
