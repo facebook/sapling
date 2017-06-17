@@ -154,6 +154,10 @@ class httppasswordmgrdbproxy(object):
 def _catchterm(*args):
     raise error.SignalInterrupt
 
+# unique object used to detect no default value has been provided when
+# retrieving configuration value.
+_unset = object()
+
 class ui(object):
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
@@ -432,7 +436,9 @@ class ui(object):
     def configsource(self, section, name, untrusted=False):
         return self._data(untrusted).source(section, name)
 
-    def config(self, section, name, default=None, untrusted=False):
+    def config(self, section, name, default=_unset, untrusted=False):
+        if default is _unset:
+            default = None
         if isinstance(name, list):
             alternates = name
         else:
