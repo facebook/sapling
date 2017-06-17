@@ -460,7 +460,7 @@ class ui(object):
                                "%s.%s = %s\n" % (section, n, uvalue))
         return value
 
-    def configsuboptions(self, section, name, default=None, untrusted=False):
+    def configsuboptions(self, section, name, default=_unset, untrusted=False):
         """Get a config option and all sub-options.
 
         Some config options have sub-options that are declared with the
