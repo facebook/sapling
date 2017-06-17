@@ -1980,7 +1980,7 @@ class clonebundleentry(object):
         return self._cmp(other) != 0
 
 def sortclonebundleentries(ui, entries):
-    prefers = ui.configlist('ui', 'clonebundleprefers', default=[])
+    prefers = ui.configlist('ui', 'clonebundleprefers')
     if not prefers:
         return list(entries)
 

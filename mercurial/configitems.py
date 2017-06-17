@@ -39,6 +39,9 @@ def coreconfigitem(*args, **kwargs):
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
+coreconfigitem('ui', 'clonebundleprefers',
+    default=[],
+)
 coreconfigitem('ui', 'quiet',
     default=False,
 )
