@@ -439,11 +439,17 @@ class ui(object):
         return self._data(untrusted).source(section, name)
 
     def config(self, section, name, default=_unset, untrusted=False):
-        if default is _unset:
-            default = None
         if isinstance(name, list):
             alternates = name
+            # let us ignore the config items in the alternates case for now
+            if default is _unset:
+                default = None
         else:
+            if default is _unset:
+                default = None
+                item = self._knownconfig.get(section, {}).get(name)
+                if item is not None:
+                    default = item.default
             alternates = [name]
 
         for n in alternates:
