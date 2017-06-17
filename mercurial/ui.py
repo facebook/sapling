@@ -631,7 +631,7 @@ class ui(object):
             raise error.ConfigError(_("%s.%s is not a byte quantity ('%s')")
                                     % (section, name, value))
 
-    def configlist(self, section, name, default=None, untrusted=False):
+    def configlist(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a list of comma/space separated
         strings
 
@@ -641,10 +641,13 @@ class ui(object):
         ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
-        if isinstance(default, bytes):
-            default = config.parselist(default)
-        return self.configwith(config.parselist, section, name, default or [],
+        v = self.configwith(config.parselist, section, name, default,
                                'list', untrusted)
+        if isinstance(v, bytes):
+            return config.parselist(v)
+        elif v is None:
+            return []
+        return v
 
     def configdate(self, section, name, default=None, untrusted=False):
         """parse a configuration element as a tuple of ints
