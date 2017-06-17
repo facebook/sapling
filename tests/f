@@ -51,7 +51,7 @@ def visit(opts, filenames, outfile):
             if opts.type:
                 facts.append('file')
             if opts.hexdump or opts.dump or opts.md5:
-                content = file(f, 'rb').read()
+                content = open(f, 'rb').read()
         elif islink:
             if opts.type:
                 facts.append('link')
