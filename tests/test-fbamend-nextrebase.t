@@ -1,13 +1,12 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > allowunstable=
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
-  > evolution = createmarkers
+  > evolution = createmarkers, allowunstable
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"
