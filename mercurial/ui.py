@@ -493,7 +493,7 @@ class ui(object):
 
         return main, sub
 
-    def configpath(self, section, name, default=None, untrusted=False):
+    def configpath(self, section, name, default=_unset, untrusted=False):
         'get a path config item, expanded relative to repo root or config file'
         v = self.config(section, name, default, untrusted)
         if v is None:
