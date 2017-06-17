@@ -568,8 +568,8 @@ def showpredecessors(repo, ctx, **args):
     predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
     predecessors = map(hex, predecessors)
 
-    return _hybrid(None, predecessors, lambda x: {'predecessor': x},
-                   lambda d: d['predecessor'][:12])
+    return _hybrid(None, predecessors, lambda x: {'node': x},
+                   lambda d: d['node'][:12])
 
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):

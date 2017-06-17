@@ -15,7 +15,8 @@ Global setup
   > tlog = log -G -T '{node|short}\
   >     {if(predecessors, "\n  Predecessors: {predecessors}")}\
   >     {if(predecessors, "\n  semi-colon: {join(predecessors, "; ")}")}\
-  >     {if(predecessors, "\n  json: {predecessors|json}")}\n'
+  >     {if(predecessors, "\n  json: {predecessors|json}")}\
+  >     {if(predecessors, "\n  map: {join(predecessors % "{node}", " ")}")}\n'
   > EOF
 
 Test templates on amended commit
@@ -72,6 +73,7 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -85,6 +87,7 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: a468dc9b3633
   |    semi-colon: a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
+  |    map: a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
   |/
   o  ea207398892e
@@ -96,10 +99,12 @@ with --hidden
   |    Predecessors: a468dc9b3633
   |    semi-colon: a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
+  |    map: a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
   |/     Predecessors: 471f378eab4c
   |      semi-colon: 471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |      map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  f137d23bb3e1
   | |
   | x  471f378eab4c
@@ -121,10 +126,12 @@ visible.
   |    Predecessors: a468dc9b3633
   |    semi-colon: a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
+  |    map: a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | x  a468dc9b3633
   |/     Predecessors: 471f378eab4c
   |      semi-colon: 471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |      map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  f137d23bb3e1
   | |
   | x  471f378eab4c
@@ -202,10 +209,12 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471597cad322
   |    semi-colon: 471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
+  |    map: 471597cad322d1f659bb169751be9133dad92ef3
   o  337fec4d2edc
   |    Predecessors: 471597cad322
   |    semi-colon: 471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
+  |    map: 471597cad322d1f659bb169751be9133dad92ef3
   | @  471597cad322
   |/
   o  ea207398892e
@@ -229,10 +238,12 @@ with --hidden
   |    Predecessors: 471597cad322
   |    semi-colon: 471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
+  |    map: 471597cad322d1f659bb169751be9133dad92ef3
   o  337fec4d2edc
   |    Predecessors: 471597cad322
   |    semi-colon: 471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
+  |    map: 471597cad322d1f659bb169751be9133dad92ef3
   | x  471597cad322
   |/
   o  ea207398892e
@@ -312,6 +323,7 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -326,6 +338,7 @@ displayed
   |    Predecessors: 0dec01379d3b 471f378eab4c
   |    semi-colon: 0dec01379d3b; 471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  0dec01379d3b
   | |
   | x  471f378eab4c
@@ -349,6 +362,7 @@ with --hidden
   |    Predecessors: 0dec01379d3b 471f378eab4c
   |    semi-colon: 0dec01379d3b; 471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  0dec01379d3b
   | |
   | x  471f378eab4c
@@ -460,10 +474,12 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | o  fdf9bde5129a
   |/     Predecessors: 471f378eab4c
   |      semi-colon: 471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |      map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -487,14 +503,17 @@ Predecessors template should the predecessors as we force their display with
   |    Predecessors: 65b757b745b9
   |    semi-colon: 65b757b745b9
   |    json: ["65b757b745b935093c87a2bccd877521cccffcbd"]
+  |    map: 65b757b745b935093c87a2bccd877521cccffcbd
   | x  65b757b745b9
   |/     Predecessors: 471f378eab4c
   |      semi-colon: 471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |      map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  fdf9bde5129a
   |/     Predecessors: 471f378eab4c
   |      semi-colon: 471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |      map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
   |/
   o  ea207398892e
@@ -588,6 +607,7 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -601,6 +621,7 @@ Predecessors template should both predecessors as they are visible
   |    Predecessors: 0dec01379d3b 471f378eab4c
   |    semi-colon: 0dec01379d3b; 471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  0dec01379d3b
   | |
   | x  471f378eab4c
@@ -616,6 +637,7 @@ Predecessors template should both predecessors as they are visible
   |    Predecessors: 471f378eab4c b7ea6d14e664
   |    semi-colon: 471f378eab4c; b7ea6d14e664
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874", "b7ea6d14e664bdc8922221f7992631b50da3fb07"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874 b7ea6d14e664bdc8922221f7992631b50da3fb07
   | @  b7ea6d14e664
   | |
   | x  471f378eab4c
@@ -638,10 +660,12 @@ with --hidden
   |    Predecessors: 471f378eab4c b7ea6d14e664
   |    semi-colon: 471f378eab4c; b7ea6d14e664
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874", "b7ea6d14e664bdc8922221f7992631b50da3fb07"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874 b7ea6d14e664bdc8922221f7992631b50da3fb07
   | x  b7ea6d14e664
   | |    Predecessors: 0dec01379d3b
   | |    semi-colon: 0dec01379d3b
   | |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  | |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | | x  0dec01379d3b
   | |/
   | x  471f378eab4c
@@ -744,6 +768,7 @@ Predecessors template should show current revision as it is the working copy
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -764,6 +789,7 @@ with --hidden
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
   |/
   o  ea207398892e
@@ -807,14 +833,17 @@ Check templates
   |    Predecessors: 0dec01379d3b
   |    semi-colon: 0dec01379d3b
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | @  0dec01379d3b
   | |    Predecessors: 471f378eab4c
   | |    semi-colon: 471f378eab4c
   | |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  | |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
   |/     Predecessors: 0dec01379d3b
   |      semi-colon: 0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |      map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   o  ea207398892e
   
 
@@ -825,6 +854,7 @@ Check templates
   |    Predecessors: 471f378eab4c
   |    semi-colon: 471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
   |/
   o  ea207398892e
@@ -843,13 +873,16 @@ Check templates
   |    Predecessors: 0dec01379d3b
   |    semi-colon: 0dec01379d3b
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |    map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | x  0dec01379d3b
   | |    Predecessors: 471f378eab4c
   | |    semi-colon: 471f378eab4c
   | |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  | |    map: 471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
   |/     Predecessors: 0dec01379d3b
   |      semi-colon: 0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |      map: 0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   @  ea207398892e
   
