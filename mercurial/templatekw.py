@@ -570,7 +570,7 @@ def showpredecessors(repo, ctx, **args):
 
     return _hybrid(None, predecessors,
                    lambda x: {'ctx': repo[x], 'revcache': {}},
-                   lambda d: short(scmutil.binnode(d['ctx'])))
+                   lambda d: _formatrevnode(d['ctx']))
 
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):

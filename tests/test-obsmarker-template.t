@@ -70,8 +70,8 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  d004c8f274b9
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -84,8 +84,8 @@ Predecessors template should show current revision as it is the working copy
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  d004c8f274b9
-  |    Predecessors: a468dc9b3633
-  |    semi-colon: a468dc9b3633
+  |    Predecessors: 3:a468dc9b3633
+  |    semi-colon: 3:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
   |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
@@ -96,13 +96,13 @@ Predecessors template should show all the predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   o  d004c8f274b9
-  |    Predecessors: a468dc9b3633
-  |    semi-colon: a468dc9b3633
+  |    Predecessors: 3:a468dc9b3633
+  |    semi-colon: 3:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
   |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
-  |/     Predecessors: 471f378eab4c
-  |      semi-colon: 471f378eab4c
+  |/     Predecessors: 1:471f378eab4c
+  |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  f137d23bb3e1
@@ -123,13 +123,13 @@ visible.
   
   $ hg tlog --hidden
   @  d004c8f274b9
-  |    Predecessors: a468dc9b3633
-  |    semi-colon: a468dc9b3633
+  |    Predecessors: 3:a468dc9b3633
+  |    semi-colon: 3:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
   |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | x  a468dc9b3633
-  |/     Predecessors: 471f378eab4c
-  |      semi-colon: 471f378eab4c
+  |/     Predecessors: 1:471f378eab4c
+  |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  f137d23bb3e1
@@ -206,13 +206,13 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  f257fde29c7a
-  |    Predecessors: 471597cad322
-  |    semi-colon: 471597cad322
+  |    Predecessors: 1:471597cad322
+  |    semi-colon: 1:471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
   |    map: 1:471597cad322d1f659bb169751be9133dad92ef3
   o  337fec4d2edc
-  |    Predecessors: 471597cad322
-  |    semi-colon: 471597cad322
+  |    Predecessors: 1:471597cad322
+  |    semi-colon: 1:471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
   |    map: 1:471597cad322d1f659bb169751be9133dad92ef3
   | @  471597cad322
@@ -235,13 +235,13 @@ Predecessors template should show both predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   @  f257fde29c7a
-  |    Predecessors: 471597cad322
-  |    semi-colon: 471597cad322
+  |    Predecessors: 1:471597cad322
+  |    semi-colon: 1:471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
   |    map: 1:471597cad322d1f659bb169751be9133dad92ef3
   o  337fec4d2edc
-  |    Predecessors: 471597cad322
-  |    semi-colon: 471597cad322
+  |    Predecessors: 1:471597cad322
+  |    semi-colon: 1:471597cad322
   |    json: ["471597cad322d1f659bb169751be9133dad92ef3"]
   |    map: 1:471597cad322d1f659bb169751be9133dad92ef3
   | x  471597cad322
@@ -320,8 +320,8 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  eb5a0daa2192
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -335,8 +335,8 @@ Predecessors template should show both predecessors as they should be both
 displayed
   $ hg tlog
   o  eb5a0daa2192
-  |    Predecessors: 0dec01379d3b 471f378eab4c
-  |    semi-colon: 0dec01379d3b; 471f378eab4c
+  |    Predecessors: 2:0dec01379d3b 1:471f378eab4c
+  |    semi-colon: 2:0dec01379d3b; 1:471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  0dec01379d3b
@@ -359,8 +359,8 @@ Predecessors template should show both predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   @  eb5a0daa2192
-  |    Predecessors: 0dec01379d3b 471f378eab4c
-  |    semi-colon: 0dec01379d3b; 471f378eab4c
+  |    Predecessors: 2:0dec01379d3b 1:471f378eab4c
+  |    semi-colon: 2:0dec01379d3b; 1:471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  0dec01379d3b
@@ -471,13 +471,13 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  019fadeab383
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | o  fdf9bde5129a
-  |/     Predecessors: 471f378eab4c
-  |      semi-colon: 471f378eab4c
+  |/     Predecessors: 1:471f378eab4c
+  |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -500,18 +500,18 @@ Predecessors template should the predecessors as we force their display with
 --hidden
   $ hg tlog --hidden
   o  019fadeab383
-  |    Predecessors: 65b757b745b9
-  |    semi-colon: 65b757b745b9
+  |    Predecessors: 3:65b757b745b9
+  |    semi-colon: 3:65b757b745b9
   |    json: ["65b757b745b935093c87a2bccd877521cccffcbd"]
   |    map: 3:65b757b745b935093c87a2bccd877521cccffcbd
   | x  65b757b745b9
-  |/     Predecessors: 471f378eab4c
-  |      semi-colon: 471f378eab4c
+  |/     Predecessors: 1:471f378eab4c
+  |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  fdf9bde5129a
-  |/     Predecessors: 471f378eab4c
-  |      semi-colon: 471f378eab4c
+  |/     Predecessors: 1:471f378eab4c
+  |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
@@ -604,8 +604,8 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  eb5a0daa2192
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -618,8 +618,8 @@ Predecessors template should show current revision as it is the working copy
 Predecessors template should both predecessors as they are visible
   $ hg tlog
   o  eb5a0daa2192
-  |    Predecessors: 0dec01379d3b 471f378eab4c
-  |    semi-colon: 0dec01379d3b; 471f378eab4c
+  |    Predecessors: 2:0dec01379d3b 1:471f378eab4c
+  |    semi-colon: 2:0dec01379d3b; 1:471f378eab4c
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", "471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  0dec01379d3b
@@ -634,8 +634,8 @@ Predecessors template should both predecessors as they are visible
 Predecessors template should both predecessors as they are visible
   $ hg tlog
   o  eb5a0daa2192
-  |    Predecessors: 471f378eab4c b7ea6d14e664
-  |    semi-colon: 471f378eab4c; b7ea6d14e664
+  |    Predecessors: 1:471f378eab4c 3:b7ea6d14e664
+  |    semi-colon: 1:471f378eab4c; 3:b7ea6d14e664
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874", "b7ea6d14e664bdc8922221f7992631b50da3fb07"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874 3:b7ea6d14e664bdc8922221f7992631b50da3fb07
   | @  b7ea6d14e664
@@ -657,13 +657,13 @@ Predecessors template should show all predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   @  eb5a0daa2192
-  |    Predecessors: 471f378eab4c b7ea6d14e664
-  |    semi-colon: 471f378eab4c; b7ea6d14e664
+  |    Predecessors: 1:471f378eab4c 3:b7ea6d14e664
+  |    semi-colon: 1:471f378eab4c; 3:b7ea6d14e664
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874", "b7ea6d14e664bdc8922221f7992631b50da3fb07"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874 3:b7ea6d14e664bdc8922221f7992631b50da3fb07
   | x  b7ea6d14e664
-  | |    Predecessors: 0dec01379d3b
-  | |    semi-colon: 0dec01379d3b
+  | |    Predecessors: 2:0dec01379d3b
+  | |    semi-colon: 2:0dec01379d3b
   | |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   | |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | | x  0dec01379d3b
@@ -765,8 +765,8 @@ Check templates
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  7a230b46bf61
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -786,8 +786,8 @@ Predecessors template should show all predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   @  7a230b46bf61
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
@@ -830,18 +830,18 @@ Check templates
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg tlog
   o  f897c6137566
-  |    Predecessors: 0dec01379d3b
-  |    semi-colon: 0dec01379d3b
+  |    Predecessors: 2:0dec01379d3b
+  |    semi-colon: 2:0dec01379d3b
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | @  0dec01379d3b
-  | |    Predecessors: 471f378eab4c
-  | |    semi-colon: 471f378eab4c
+  | |    Predecessors: 1:471f378eab4c
+  | |    semi-colon: 1:471f378eab4c
   | |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   | |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
-  |/     Predecessors: 0dec01379d3b
-  |      semi-colon: 0dec01379d3b
+  |/     Predecessors: 2:0dec01379d3b
+  |      semi-colon: 2:0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   o  ea207398892e
@@ -851,8 +851,8 @@ Check templates
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg tlog
   o  f897c6137566
-  |    Predecessors: 471f378eab4c
-  |    semi-colon: 471f378eab4c
+  |    Predecessors: 1:471f378eab4c
+  |    semi-colon: 1:471f378eab4c
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
@@ -870,18 +870,18 @@ Check templates
 
   $ hg tlog --hidden
   o  f897c6137566
-  |    Predecessors: 0dec01379d3b
-  |    semi-colon: 0dec01379d3b
+  |    Predecessors: 2:0dec01379d3b
+  |    semi-colon: 2:0dec01379d3b
   |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   | x  0dec01379d3b
-  | |    Predecessors: 471f378eab4c
-  | |    semi-colon: 471f378eab4c
+  | |    Predecessors: 1:471f378eab4c
+  | |    semi-colon: 1:471f378eab4c
   | |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   | |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | x  471f378eab4c
-  |/     Predecessors: 0dec01379d3b
-  |      semi-colon: 0dec01379d3b
+  |/     Predecessors: 2:0dec01379d3b
+  |      semi-colon: 2:0dec01379d3b
   |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   @  ea207398892e
