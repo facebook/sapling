@@ -49,13 +49,15 @@ from mercurial import (
     util,
 )
 
-cmdtable = {}
-command = registrar.command(cmdtable)
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+cmdtable = {}
+command = registrar.command(cmdtable)
+
 lastui = None
 
 filehandles = {}
