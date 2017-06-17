@@ -36,6 +36,9 @@ def coreconfigitem(*args, **kwargs):
 
 # Registering actual config items
 
+coreconfigitem('patch', 'fuzz',
+    default=2,
+)
 coreconfigitem('ui', 'quiet',
     default=False,
 )
