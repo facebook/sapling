@@ -649,7 +649,7 @@ class ui(object):
             return []
         return v
 
-    def configdate(self, section, name, default=None, untrusted=False):
+    def configdate(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a tuple of ints
 
         >>> u = ui(); s = 'foo'
@@ -660,6 +660,8 @@ class ui(object):
         if self.config(section, name, default, untrusted):
             return self.configwith(util.parsedate, section, name, default,
                                    'date', untrusted)
+        if default is _unset:
+            return None
         return default
 
     def hasconfig(self, section, name, untrusted=False):
