@@ -1174,11 +1174,11 @@ class localrepository(object):
             oldtip = oldlen - 1
 
             if detail and ui.verbose:
-                msg = (_('repository tip rolled back to revision %s'
+                msg = (_('repository tip rolled back to revision %d'
                          ' (undo %s: %s)\n')
                        % (oldtip, desc, detail))
             else:
-                msg = (_('repository tip rolled back to revision %s'
+                msg = (_('repository tip rolled back to revision %d'
                          ' (undo %s)\n')
                        % (oldtip, desc))
         except IOError:
