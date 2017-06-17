@@ -400,6 +400,178 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
     return commit(ui, repo, recordinwlock, pats, opts)
 
+def tersestatus(root, statlist, status, ignorefn, ignore):
+    """
+    Returns a list of statuses with directory collapsed if all the files in the
+    directory has the same status.
+    """
+
+    def numfiles(dirname):
+        """
+        Calculates the number of tracked files in a given directory which also
+        includes files which were removed or deleted. Considers ignored files
+        if ignore argument is True or 'i' is present in status argument.
+        """
+        if lencache.get(dirname):
+            return lencache[dirname]
+        if 'i' in status or ignore:
+            def match(localpath):
+                absolutepath = os.path.join(root, localpath)
+                if os.path.isdir(absolutepath) and isemptydir(absolutepath):
+                    return True
+                return False
+        else:
+            def match(localpath):
+                # there can be directory whose all the files are ignored and
+                # hence the drectory should also be ignored while counting
+                # number of files or subdirs in it's parent directory. This
+                # checks the same.
+                # XXX: We need a better logic here.
+                if os.path.isdir(os.path.join(root, localpath)):
+                    return isignoreddir(localpath)
+                else:
+                    # XXX: there can be files which have the ignored pattern but
+                    # are not ignored. That leads to bug in counting number of
+                    # tracked files in the directory.
+                    return ignorefn(localpath)
+        lendir = 0
+        abspath = os.path.join(root, dirname)
+        # There might be cases when a directory does not exists as the whole
+        # directory can be removed and/or deleted.
+        try:
+            for f in os.listdir(abspath):
+                localpath = os.path.join(dirname, f)
+                if not match(localpath):
+                    lendir += 1
+        except OSError:
+            pass
+        lendir += len(absentdir.get(dirname, []))
+        lencache[dirname] = lendir
+        return lendir
+
+    def isemptydir(abspath):
+        """
+        Check whether a directory is empty or not, i.e. there is no files in the
+        directory and all its subdirectories.
+        """
+        for f in os.listdir(abspath):
+            fullpath = os.path.join(abspath, f)
+            if os.path.isdir(fullpath):
+                # recursion here
+                ret = isemptydir(fullpath)
+                if not ret:
+                    return False
+            else:
+                return False
+        return True
+
+    def isignoreddir(localpath):
+        """
+        This function checks whether the directory contains only ignored files
+        and hence should the directory be considered ignored. Returns True, if
+        that should be ignored otherwise False.
+        """
+        dirpath = os.path.join(root, localpath)
+        for f in os.listdir(dirpath):
+            filepath = os.path.join(dirpath, f)
+            if os.path.isdir(filepath):
+                # recursion here
+                ret = isignoreddir(os.path.join(localpath, f))
+                if not ret:
+                    return False
+            else:
+                if not ignorefn(os.path.join(localpath, f)):
+                    return False
+        return True
+
+    def absentones(removedfiles, missingfiles):
+        """
+        Returns a dictionary of directories with files in it which are either
+        removed or missing (deleted) in them.
+        """
+        absentdir = {}
+        absentfiles = removedfiles + missingfiles
+        while absentfiles:
+            f = absentfiles.pop()
+            par = os.path.dirname(f)
+            if par == '':
+                continue
+            # we need to store files rather than number of files as some files
+            # or subdirectories in a directory can be counted twice. This is
+            # also we have used sets here.
+            try:
+                absentdir[par].add(f)
+            except KeyError:
+                absentdir[par] = set([f])
+            absentfiles.append(par)
+        return absentdir
+
+    indexes = {'m': 0, 'a': 1, 'r': 2, 'd': 3, 'u': 4, 'i': 5, 'c': 6}
+    # get a dictonary of directories and files which are missing as os.listdir()
+    # won't be able to list them.
+    absentdir = absentones(statlist[2], statlist[3])
+    finalrs = [[]] * len(indexes)
+    didsomethingchanged = False
+    # dictionary to store number of files and subdir in a directory so that we
+    # don't compute that again.
+    lencache = {}
+
+    for st in pycompat.bytestr(status):
+
+        try:
+            ind = indexes[st]
+        except KeyError:
+            # TODO: Need a better error message here
+            raise error.Abort("'%s' not recognized" % st)
+
+        sfiles = statlist[ind]
+        if not sfiles:
+            continue
+        pardict = {}
+        for a in sfiles:
+            par = os.path.dirname(a)
+            pardict.setdefault(par, []).append(a)
+
+        rs = []
+        newls = []
+        for par, files in pardict.iteritems():
+            lenpar = numfiles(par)
+            if lenpar == len(files):
+                newls.append(par)
+
+        if not newls:
+            continue
+
+        while newls:
+            newel = newls.pop()
+            if newel == '':
+                continue
+            parn = os.path.dirname(newel)
+            pardict[newel] = []
+            # Adding pycompat.ossep as newel is a directory.
+            pardict.setdefault(parn, []).append(newel + pycompat.ossep)
+            lenpar = numfiles(parn)
+            if lenpar == len(pardict[parn]):
+                newls.append(parn)
+
+        # dict.values() for Py3 compatibility
+        for files in pardict.values():
+            rs.extend(files)
+
+        rs.sort()
+        finalrs[ind] = rs
+        didsomethingchanged = True
+
+    # If nothing is changed, make sure the order of files is preserved.
+    if not didsomethingchanged:
+        return statlist
+
+    for x in xrange(len(indexes)):
+        if not finalrs[x]:
+            finalrs[x] = statlist[x]
+
+    return finalrs
+
 def findpossible(cmd, table, strict=False):
     """
     Return cmd -> (aliases, command table entry)

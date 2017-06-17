@@ -4617,6 +4617,7 @@ def serve(ui, repo, **opts):
     ('u', 'unknown', None, _('show only unknown (not tracked) files')),
     ('i', 'ignored', None, _('show only ignored files')),
     ('n', 'no-status', None, _('hide status prefix')),
+    ('t', 'terse', '', _('show the terse output (EXPERIMENTAL)')),
     ('C', 'copies', None, _('show source of copied files')),
     ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
     ('', 'rev', [], _('show difference from revision'), _('REV')),
@@ -4662,6 +4663,16 @@ def status(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
+      The -t/--terse option abbreviates the output by showing directory name
+      if all the files in it share the same status. The option expects a value
+      which can be a string formed by using 'm', 'a', 'r', 'd', 'u', 'i', 'c'
+      where, 'm' stands for 'modified', 'a' for 'added', 'r' for 'removed',
+      'd' for 'deleted', 'u' for 'unknown', 'i' for 'ignored' and 'c' for clean.
+
+      It terses the output of only those status which are passed. The ignored
+      files are not considered while tersing until 'i' is there in --terse value
+      or the --ignored option is used.
+
       Examples:
 
       - show changes in the working directory relative to a
@@ -4688,9 +4699,13 @@ def status(ui, repo, *pats, **opts):
     opts = pycompat.byteskwargs(opts)
     revs = opts.get('rev')
     change = opts.get('change')
+    terse = opts.get('terse')
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
+        raise error.Abort(msg)
+    elif revs and terse:
+        msg = _('cannot use --terse with --rev')
         raise error.Abort(msg)
     elif change:
         node2 = scmutil.revsingle(repo, change, None).node()
@@ -4712,6 +4727,7 @@ def status(ui, repo, *pats, **opts):
     show = [k for k in states if opts.get(k)]
     if opts.get('all'):
         show += ui.quiet and (states[:4] + ['clean']) or states
+
     if not show:
         if ui.quiet:
             show = states[:4]
@@ -4722,6 +4738,9 @@ def status(ui, repo, *pats, **opts):
     stat = repo.status(node1, node2, m,
                        'ignored' in show, 'clean' in show, 'unknown' in show,
                        opts.get('subrepos'))
+    if terse:
+        stat = cmdutil.tersestatus(repo.root, stat, terse,
+                                    repo.dirstate._ignore, opts.get('ignored'))
     changestates = zip(states, pycompat.iterbytestr('MAR!?IC'), stat)
 
     if (opts.get('all') or opts.get('copies')
