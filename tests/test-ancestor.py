@@ -42,7 +42,7 @@ def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
                 p1 = i - 1
             else:
                 p1 = rng.randrange(i - 1)
-            p2 = rng.choice(range(0, p1) + range(p1 + 1, i))
+            p2 = rng.choice(list(range(0, p1)) + list(range(p1 + 1, i)))
             graph[i] = [p1, p2]
         elif rng.random() < prevprob:
             graph[i] = [i - 1]
