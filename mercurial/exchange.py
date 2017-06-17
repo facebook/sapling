@@ -1731,7 +1731,7 @@ def unbundle(repo, cg, heads, source, url):
         # 'check_heads' call wil be a no-op
         check_heads(repo, heads, 'uploading changes')
         # push can proceed
-        if not util.safehasattr(cg, 'params'):
+        if not isinstance(cg, bundle2.unbundle20):
             # legacy case: bundle1 (changegroup 01)
             with repo.lock():
                 r = cg.apply(repo, source, url)
