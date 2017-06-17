@@ -225,7 +225,7 @@ dagtests = [
 def test_gca():
     u = uimod.ui.load()
     for i, dag in enumerate(dagtests):
-        repo = hg.repository(u, 'gca%d' % i, create=1)
+        repo = hg.repository(u, b'gca%d' % i, create=1)
         cl = repo.changelog
         if not util.safehasattr(cl.index, 'ancestors'):
             # C version not available
