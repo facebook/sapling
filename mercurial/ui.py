@@ -539,7 +539,7 @@ class ui(object):
                                     % (section, name, v))
         return b
 
-    def configwith(self, convert, section, name, default=None,
+    def configwith(self, convert, section, name, default=_unset,
                    desc=None, untrusted=False):
         """parse a configuration element with a conversion function
 
@@ -551,7 +551,7 @@ class ui(object):
         >>> u.configwith(float, s, 'float2')
         -4.25
         >>> u.configwith(float, s, 'unknown', 7)
-        7
+        7.0
         >>> u.setconfig(s, 'invalid', 'somevalue')
         >>> u.configwith(float, s, 'invalid')
         Traceback (most recent call last):
@@ -563,9 +563,9 @@ class ui(object):
         ConfigError: foo.invalid is not a valid womble ('somevalue')
         """
 
-        v = self.config(section, name, None, untrusted)
+        v = self.config(section, name, default, untrusted)
         if v is None:
-            return default
+            return v # do not attempt to convert None
         try:
             return convert(v)
         except (ValueError, error.ParseError):
