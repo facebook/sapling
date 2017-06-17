@@ -596,7 +596,7 @@ class ui(object):
         return self.configwith(int, section, name, default, 'integer',
                                untrusted)
 
-    def configbytes(self, section, name, default=0, untrusted=False):
+    def configbytes(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a quantity in bytes
 
         Units can be specified as b (bytes), k or kb (kilobytes), m or
@@ -618,11 +618,13 @@ class ui(object):
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
         """
 
-        value = self.config(section, name, None, untrusted)
+        value = self.config(section, name, default, untrusted)
         if value is None:
-            if not isinstance(default, str):
-                return default
+            if default is _unset:
+                default = 0
             value = default
+        if not isinstance(value, str):
+            return value
         try:
             return util.sizetoint(value)
         except error.ParseError:
