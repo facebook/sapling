@@ -33,3 +33,9 @@ def coreconfigitem(*args, **kwargs):
         msg = "duplicated config item registration for '%s.%s'"
         raise error.ProgrammingError(msg % (item.section, item.name))
     section[item.name] = item
+
+# Registering actual config items
+
+coreconfigitem('ui', 'quiet',
+    default=False,
+)
