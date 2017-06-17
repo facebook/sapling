@@ -31,30 +31,32 @@ def _genrevancestors(repo, revs, followfirst):
     # without fully computing the input revs
     revs.sort(reverse=True)
     irevs = iter(revs)
-    pendingheap = []
+    pendingheap = []  # [(-rev, depth), ...] (i.e. lower depth first)
 
     inputrev = next(irevs, None)
     if inputrev is not None:
-        heapq.heappush(pendingheap, -inputrev)
+        heapq.heappush(pendingheap, (-inputrev, 0))
 
     lastrev = None
     while pendingheap:
-        currev = -heapq.heappop(pendingheap)
+        currev, curdepth = heapq.heappop(pendingheap)
+        currev = -currev
         if currev == inputrev:
             inputrev = next(irevs, None)
             if inputrev is not None:
-                heapq.heappush(pendingheap, -inputrev)
+                heapq.heappush(pendingheap, (-inputrev, 0))
         if currev != lastrev:
             lastrev = currev
             yield currev
+            pdepth = curdepth + 1
             try:
                 for prev in cl.parentrevs(currev)[:cut]:
                     if prev != node.nullrev:
-                        heapq.heappush(pendingheap, -prev)
+                        heapq.heappush(pendingheap, (-prev, pdepth))
             except error.WdirUnsupported:
                 for pctx in repo[currev].parents()[:cut]:
                     if pctx.rev() != node.nullrev:
-                        heapq.heappush(pendingheap, -pctx.rev())
+                        heapq.heappush(pendingheap, (-pctx.rev(), pdepth))
 
 def revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
