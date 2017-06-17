@@ -58,6 +58,13 @@ testedwith = 'ships-with-hg-core'
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('blackbox', 'maxsize',
+    default=1048576,
+)
+
 lastui = None
 
 filehandles = {}
@@ -120,7 +127,7 @@ def wrapui(ui):
                                    (newpath, oldpath, err.strerror))
 
             fp = _openlog(self._bbvfs)
-            maxsize = self.configbytes('blackbox', 'maxsize', 1048576)
+            maxsize = self.configbytes('blackbox', 'maxsize')
             if maxsize > 0:
                 st = self._bbvfs.fstat(fp)
                 if st.st_size >= maxsize:
