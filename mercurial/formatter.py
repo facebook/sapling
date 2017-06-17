@@ -354,6 +354,7 @@ class templateformatter(baseformatter):
         self._cache = {}  # for templatekw/funcs to store reusable data
     def context(self, **ctxs):
         '''insert context objects to be used to render template keywords'''
+        ctxs = pycompat.byteskwargs(ctxs)
         assert all(k == 'ctx' for k in ctxs)
         self._item.update(ctxs)
     def _showitem(self):

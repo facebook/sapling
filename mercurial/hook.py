@@ -205,6 +205,7 @@ def hook(ui, repo, htype, throw=False, **args):
     return r
 
 def runhooks(ui, repo, htype, hooks, throw=False, **args):
+    args = pycompat.byteskwargs(args)
     res = {}
     oldstdout = -1
 

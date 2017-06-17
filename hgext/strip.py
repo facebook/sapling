@@ -14,6 +14,7 @@ from mercurial import (
     lock as lockmod,
     merge,
     node as nodemod,
+    pycompat,
     registrar,
     repair,
     scmutil,
@@ -133,6 +134,7 @@ def stripcmd(ui, repo, *revs, **opts):
 
     Return 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     backup = True
     if opts.get('no_backup') or opts.get('nobackup'):
         backup = False
