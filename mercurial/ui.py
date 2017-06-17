@@ -505,7 +505,7 @@ class ui(object):
                 v = os.path.join(base, os.path.expanduser(v))
         return v
 
-    def configbool(self, section, name, default=False, untrusted=False):
+    def configbool(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a boolean
 
         >>> u = ui(); s = 'foo'
@@ -526,8 +526,10 @@ class ui(object):
         ConfigError: foo.invalid is not a boolean ('somevalue')
         """
 
-        v = self.config(section, name, None, untrusted)
+        v = self.config(section, name, default, untrusted=untrusted)
         if v is None:
+            if default is _unset:
+                return False
             return default
         if isinstance(v, bool):
             return v
