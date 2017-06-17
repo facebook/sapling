@@ -470,14 +470,8 @@ class ui(object):
         Returns a 2-tuple of ``(option, sub-options)``, where `sub-options``
         is a dict of defined sub-options where keys and values are strings.
         """
+        main = self.config(section, name, default, untrusted=untrusted)
         data = self._data(untrusted)
-        main = data.get(section, name, default)
-        if self.debugflag and not untrusted and self._reportuntrusted:
-            uvalue = self._ucfg.get(section, name)
-            if uvalue is not None and uvalue != main:
-                self.debug('ignoring untrusted configuration option '
-                           '%s.%s = %s\n' % (section, name, uvalue))
-
         sub = {}
         prefix = '%s:' % name
         for k, v in data.items(section):
