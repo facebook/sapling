@@ -17,12 +17,6 @@ Go back in the current repo (fb-hgext)
   $ cd $TESTDIR/..
   $ unset BYPASS
 
-Clear the test HGRCPATH setting, to use the normal hg config path.  Trying
-to run hg commands in the normal repository probably will not work without
-the normal system hg configs.
-
-  $ unset HGRCPATH
-
   $ for node in `hg log --rev 'not public() and ::.' --template '{node|short}\n'`; do
   >    hg export $node | $RUNTESTDIR/../contrib/check-commit > ${TESTTMP}/check-commit.out
   >    if [ $? -ne 0 ]; then
