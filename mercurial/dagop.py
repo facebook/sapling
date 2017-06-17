@@ -20,43 +20,43 @@ from . import (
 baseset = smartset.baseset
 generatorset = smartset.generatorset
 
-def revancestors(repo, revs, followfirst):
-    """Like revlog.ancestors(), but supports followfirst."""
+def _genrevancestors(repo, revs, followfirst):
     if followfirst:
         cut = 1
     else:
         cut = None
     cl = repo.changelog
+    revs.sort(reverse=True)
+    irevs = iter(revs)
+    h = []
 
-    def iterate():
-        revs.sort(reverse=True)
-        irevs = iter(revs)
-        h = []
+    inputrev = next(irevs, None)
+    if inputrev is not None:
+        heapq.heappush(h, -inputrev)
 
-        inputrev = next(irevs, None)
-        if inputrev is not None:
-            heapq.heappush(h, -inputrev)
+    seen = set()
+    while h:
+        current = -heapq.heappop(h)
+        if current == inputrev:
+            inputrev = next(irevs, None)
+            if inputrev is not None:
+                heapq.heappush(h, -inputrev)
+        if current not in seen:
+            seen.add(current)
+            yield current
+            try:
+                for parent in cl.parentrevs(current)[:cut]:
+                    if parent != node.nullrev:
+                        heapq.heappush(h, -parent)
+            except error.WdirUnsupported:
+                for parent in repo[current].parents()[:cut]:
+                    if parent.rev() != node.nullrev:
+                        heapq.heappush(h, -parent.rev())
 
-        seen = set()
-        while h:
-            current = -heapq.heappop(h)
-            if current == inputrev:
-                inputrev = next(irevs, None)
-                if inputrev is not None:
-                    heapq.heappush(h, -inputrev)
-            if current not in seen:
-                seen.add(current)
-                yield current
-                try:
-                    for parent in cl.parentrevs(current)[:cut]:
-                        if parent != node.nullrev:
-                            heapq.heappush(h, -parent)
-                except error.WdirUnsupported:
-                    for parent in repo[current].parents()[:cut]:
-                        if parent.rev() != node.nullrev:
-                            heapq.heappush(h, -parent.rev())
-
-    return generatorset(iterate(), iterasc=False)
+def revancestors(repo, revs, followfirst):
+    """Like revlog.ancestors(), but supports followfirst."""
+    gen = _genrevancestors(repo, revs, followfirst)
+    return generatorset(gen, iterasc=False)
 
 def revdescendants(repo, revs, followfirst):
     """Like revlog.descendants() but supports followfirst."""
