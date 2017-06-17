@@ -176,9 +176,8 @@ env = {'HGMODULEPOLICY': 'py',
 if 'LD_LIBRARY_PATH' in os.environ:
     env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
 if 'SystemRoot' in os.environ:
-    # Copy SystemRoot into the custom environment for Python 2.6
-    # under Windows. Otherwise, the subprocess will fail with
-    # error 0xc0150004. See: http://bugs.python.org/issue3440
+    # SystemRoot is required by Windows to load various DLLs.  See:
+    # https://bugs.python.org/issue13524#msg148850
     env['SystemRoot'] = os.environ['SystemRoot']
 
 if os.path.isdir('.hg'):
