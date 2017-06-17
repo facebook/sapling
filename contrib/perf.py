@@ -661,7 +661,7 @@ def perfstartup(ui, repo, **opts):
         if os.name != 'nt':
             os.system("HGRCPATH= %s version -q > /dev/null" % cmd)
         else:
-            os.environ['HGRCPATH'] = ''
+            os.environ['HGRCPATH'] = ' '
             os.system("%s version -q > NUL" % cmd)
     timer(d)
     fm.end()
