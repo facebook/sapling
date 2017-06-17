@@ -25,6 +25,7 @@ from . import (
     obsolete,
     phases,
     pushkey,
+    pycompat,
     scmutil,
     sslutil,
     streamclone,
@@ -1386,7 +1387,7 @@ def _pullbundle2(pullop):
             kwargs['obsmarkers'] = True
             pullop.stepsdone.add('obsmarkers')
     _pullbundle2extraprepare(pullop, kwargs)
-    bundle = pullop.remote.getbundle('pull', **kwargs)
+    bundle = pullop.remote.getbundle('pull', **pycompat.strkwargs(kwargs))
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
     except bundle2.AbortFromPart as exc:

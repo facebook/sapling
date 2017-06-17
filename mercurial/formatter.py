@@ -371,6 +371,7 @@ class templateformatter(baseformatter):
             props['templ'] = self._t
             props['repo'] = props['ctx'].repo()
             props['revcache'] = {}
+        props = pycompat.strkwargs(props)
         g = self._t(self._tref, ui=self._ui, cache=self._cache, **props)
         self._out.write(templater.stringify(g))
 
