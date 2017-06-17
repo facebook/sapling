@@ -27,6 +27,7 @@ from .node import hex
 from . import (
     color,
     config,
+    configitems,
     encoding,
     error,
     formatter,
@@ -178,6 +179,7 @@ class ui(object):
         self._bufferapplylabels = None
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._reportuntrusted = True
+        self._knownconfig = configitems.coreitems
         self._ocfg = config.config() # overlay
         self._tcfg = config.config() # trusted
         self._ucfg = config.config() # untrusted

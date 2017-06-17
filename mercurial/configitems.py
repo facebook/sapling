@@ -7,6 +7,10 @@
 
 from __future__ import absolute_import
 
+from . import (
+    error,
+)
+
 class configitem(object):
     """represent a known config item
 
@@ -19,3 +23,13 @@ class configitem(object):
         self.section = section
         self.name = name
         self.default = default
+
+coreitems = {}
+
+def coreconfigitem(*args, **kwargs):
+    item = configitem(*args, **kwargs)
+    section = coreitems.setdefault(item.section, {})
+    if item.name in section:
+        msg = "duplicated config item registration for '%s.%s'"
+        raise error.ProgrammingError(msg % (item.section, item.name))
+    section[item.name] = item
