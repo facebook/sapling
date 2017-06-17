@@ -903,6 +903,29 @@ test ancestors with depth limit
   6
   5
 
+ (walk 2nd and 3rd ancestors)
+
+  $ log 'reverse(ancestors(7, depth=3, startdepth=2))'
+  5
+  4
+  3
+  2
+
+ (interleaved: '4' would be missing if higher-depth ancestors weren't scanned)
+
+  $ log 'reverse(ancestors(7+8, depth=2, startdepth=2))'
+  5
+  4
+  2
+
+ (note that 'ancestors(x, depth=y, startdepth=z)' does not identical to
+ 'ancestors(x, depth=y) - ancestors(x, depth=z-1)' because a node may have
+ multiple depths)
+
+  $ log 'reverse(ancestors(7+8, depth=2) - ancestors(7+8, depth=1))'
+  5
+  2
+
 test bad arguments passed to ancestors()
 
   $ log 'ancestors(., depth=-1)'

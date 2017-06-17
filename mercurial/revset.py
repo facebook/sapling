@@ -238,11 +238,12 @@ def ancestor(repo, subset, x):
         return baseset([anc.rev()])
     return baseset()
 
-def _ancestors(repo, subset, x, followfirst=False, stopdepth=None):
+def _ancestors(repo, subset, x, followfirst=False, startdepth=None,
+               stopdepth=None):
     heads = getset(repo, fullreposet(repo), x)
     if not heads:
         return baseset()
-    s = dagop.revancestors(repo, heads, followfirst, stopdepth)
+    s = dagop.revancestors(repo, heads, followfirst, startdepth, stopdepth)
     return subset & s
 
 @predicate('ancestors(set[, depth])', safe=True)
@@ -253,18 +254,26 @@ def ancestors(repo, subset, x):
     If depth is specified, the result only includes changesets up to
     the specified generation.
     """
-    args = getargsdict(x, 'ancestors', 'set depth')
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, 'ancestors', 'set depth startdepth')
     if 'set' not in args:
         # i18n: "ancestors" is a keyword
         raise error.ParseError(_('ancestors takes at least 1 argument'))
-    stopdepth = None
+    startdepth = stopdepth = None
+    if 'startdepth' in args:
+        n = getinteger(args['startdepth'],
+                       "ancestors expects an integer startdepth")
+        if n < 0:
+            raise error.ParseError("negative startdepth")
+        startdepth = n
     if 'depth' in args:
         # i18n: "ancestors" is a keyword
         n = getinteger(args['depth'], _("ancestors expects an integer depth"))
         if n < 0:
             raise error.ParseError(_("negative depth"))
         stopdepth = n + 1
-    return _ancestors(repo, subset, args['set'], stopdepth=stopdepth)
+    return _ancestors(repo, subset, args['set'],
+                      startdepth=startdepth, stopdepth=stopdepth)
 
 @predicate('_firstancestors', safe=True)
 def _firstancestors(repo, subset, x):
