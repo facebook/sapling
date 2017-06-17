@@ -1587,7 +1587,8 @@ class changeset_templater(changeset_printer):
         self._tref = tmplspec.ref
         self._parts = {'header': '', 'footer': '',
                        tmplspec.ref: tmplspec.ref,
-                       'docheader': '', 'docfooter': ''}
+                       'docheader': '', 'docfooter': '',
+                       'separator': ''}
         if tmplspec.mapfile:
             # find correct templates for current mode, for backward
             # compatibility with 'log -v/-q/--debug' using a mapfile
@@ -1621,10 +1622,16 @@ class changeset_templater(changeset_printer):
         props['ctx'] = ctx
         props['repo'] = self.repo
         props['ui'] = self.repo.ui
-        props['index'] = next(self._counter)
+        props['index'] = index = next(self._counter)
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
         props = pycompat.strkwargs(props)
+
+        # write separator, which wouldn't work well with the header part below
+        # since there's inherently a conflict between header (across items) and
+        # separator (per item)
+        if self._parts['separator'] and index > 0:
+            self.ui.write(templater.stringify(self.t(self._parts['separator'])))
 
         # write header
         if self._parts['header']:

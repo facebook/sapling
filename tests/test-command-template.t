@@ -257,6 +257,20 @@ Test template map inheritance
   summary:     third
   
 
+Test docheader, docfooter and separator in template map
+
+  $ cat <<'EOF' > map-myjson
+  > docheader = '\{\n'
+  > docfooter = '\n}\n'
+  > separator = ',\n'
+  > changeset = ' {dict(rev, node|short)|json}'
+  > EOF
+  $ hg log -l2 -T./map-myjson
+  {
+   {"node": "95c24699272e", "rev": 8},
+   {"node": "29114dbae42b", "rev": 7}
+  }
+
 Template should precede style option
 
   $ hg log -l1 --style default -T '{rev}\n'
