@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import functools
+
 from . import (
     error,
 )
@@ -26,15 +28,20 @@ class configitem(object):
 
 coreitems = {}
 
-def coreconfigitem(*args, **kwargs):
+def _register(configtable, *args, **kwargs):
     item = configitem(*args, **kwargs)
-    section = coreitems.setdefault(item.section, {})
+    section = configtable.setdefault(item.section, {})
     if item.name in section:
         msg = "duplicated config item registration for '%s.%s'"
         raise error.ProgrammingError(msg % (item.section, item.name))
     section[item.name] = item
 
 # Registering actual config items
+
+def getitemregister(configtable):
+    return functools.partial(_register, configtable)
+
+coreconfigitem = getitemregister(coreitems)
 
 coreconfigitem('patch', 'fuzz',
     default=2,
