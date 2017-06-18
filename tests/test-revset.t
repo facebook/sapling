@@ -3131,9 +3131,11 @@ parentrevspec
   $ log 'merge()^^^'
   1
 
-  $ log '(merge() | 0)~-1'
-  7
+  $ hg debugrevspec -s '(merge() | 0)~-1'
+  * set:
+  <baseset+ [1, 7]>
   1
+  7
   $ log 'merge()~-1'
   7
   $ log 'tip~-1'

@@ -392,7 +392,7 @@ def _childrenspec(repo, subset, x, n, order):
             if len(c) > 1:
                 raise error.RepoLookupError(
                     _("revision in set has more than one child"))
-            r = c[0]
+            r = c[0].rev()
         else:
             cs.add(r)
     return subset & cs
