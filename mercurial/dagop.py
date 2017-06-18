@@ -26,6 +26,9 @@ def _genrevancestors(repo, revs, followfirst):
     else:
         cut = None
     cl = repo.changelog
+
+    # load input revs lazily to heap so earlier revisions can be yielded
+    # without fully computing the input revs
     revs.sort(reverse=True)
     irevs = iter(revs)
     h = []
