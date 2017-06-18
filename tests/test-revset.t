@@ -2980,6 +2980,65 @@ no crash by empty group "()" while optimizing to "only()"
   hg: parse error: missing argument
   [255]
 
+optimization to only() works only if ancestors() takes only one argument
+
+  $ hg debugrevspec -p optimized 'ancestors(6) - ancestors(4, 1)'
+  * optimized:
+  (difference
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '6')
+      define)
+    (func
+      ('symbol', 'ancestors')
+      (list
+        ('symbol', '4')
+        ('symbol', '1'))
+      any)
+    define)
+  hg: parse error: can't use a list in this context
+  (see hg help "revsets.x or y")
+  [255]
+  $ hg debugrevspec -p optimized 'ancestors(6, 1) - ancestors(4)'
+  * optimized:
+  (difference
+    (func
+      ('symbol', 'ancestors')
+      (list
+        ('symbol', '6')
+        ('symbol', '1'))
+      define)
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '4')
+      any)
+    define)
+  hg: parse error: can't use a list in this context
+  (see hg help "revsets.x or y")
+  [255]
+
+optimization disabled if keyword arguments passed (because we're too lazy
+to support it)
+
+  $ hg debugrevspec -p optimized 'ancestors(set=6) - ancestors(set=4)'
+  * optimized:
+  (difference
+    (func
+      ('symbol', 'ancestors')
+      (keyvalue
+        ('symbol', 'set')
+        ('symbol', '6'))
+      define)
+    (func
+      ('symbol', 'ancestors')
+      (keyvalue
+        ('symbol', 'set')
+        ('symbol', '4'))
+      any)
+    define)
+  hg: parse error: can't use a key-value pair in this context
+  [255]
+
 invalid function call should not be optimized to only()
 
   $ log '"ancestors"(6) and not ancestors(4)'

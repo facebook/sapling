@@ -240,6 +240,11 @@ def _isnamedfunc(x, funcname):
     """Check if given tree matches named function"""
     return x and x[0] == 'func' and getsymbol(x[1]) == funcname
 
+def _isposargs(x, n):
+    """Check if given tree is n-length list of positional arguments"""
+    l = getlist(x)
+    return len(l) == n and all(y and y[0] != 'keyvalue' for y in l)
+
 def _matchnamedfunc(x, funcname):
     """Return args tree if given tree matches named function; otherwise None
 
@@ -302,7 +307,7 @@ def _matchonly(revs, bases):
     """
     ta = _matchnamedfunc(revs, 'ancestors')
     tb = bases and bases[0] == 'not' and _matchnamedfunc(bases[1], 'ancestors')
-    if ta and tb:
+    if _isposargs(ta, 1) and _isposargs(tb, 1):
         return ('list', ta, tb)
 
 def _fixops(x):
