@@ -247,7 +247,8 @@ def _ancestors(repo, subset, x, followfirst=False):
 
 @predicate('ancestors(set)', safe=True)
 def ancestors(repo, subset, x):
-    """Changesets that are ancestors of a changeset in set.
+    """Changesets that are ancestors of changesets in set, including the
+    given changesets themselves.
     """
     return _ancestors(repo, subset, x)
 
@@ -592,7 +593,8 @@ def _descendants(repo, subset, x, followfirst=False):
 
 @predicate('descendants(set)', safe=True)
 def descendants(repo, subset, x):
-    """Changesets which are descendants of changesets in set.
+    """Changesets which are descendants of changesets in set, including the
+    given changesets themselves.
     """
     return _descendants(repo, subset, x)
 
