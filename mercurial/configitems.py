@@ -16,7 +16,15 @@ from . import (
 def loadconfigtable(ui, extname, configtable):
     """update config item known to the ui with the extension ones"""
     for section, items in configtable.items():
-        ui._knownconfig.setdefault(section, {}).update(items)
+        knownitems = ui._knownconfig.setdefault(section, {})
+        knownkeys = set(knownitems)
+        newkeys = set(items)
+        for key in sorted(knownkeys & newkeys):
+            msg = "extension '%s' overwrite config item '%s.%s'"
+            msg %= (extname, section, key)
+            ui.develwarn(msg, config='warn-config')
+
+        knownitems.update(items)
 
 class configitem(object):
     """represent a known config item

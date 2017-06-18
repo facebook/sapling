@@ -203,14 +203,26 @@ Test warning on config option access and registration
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > 
+  > configitem('test', 'some', default='foo')
+  > # overwrite a core config
+  > configitem('ui', 'quiet', default=False)
+  > configitem('ui', 'interactive', default=None)
+  > 
   > @command(b'buggyconfig')
   > def cmdbuggyconfig(ui, repo):
   >     repo.ui.config('ui', 'quiet', False)
   >     repo.ui.config('ui', 'interactive', None)
+  >     repo.ui.config('test', 'some', 'foo')
   > EOF
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at: */mercurial/extensions.py:* (loadall) (glob)
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at: */mercurial/extensions.py:* (loadall) (glob)
   devel-warn: specifying a default value for a registered config item: 'ui.quiet' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a default value for a registered config item: 'ui.interactive' 'None' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a default value for a registered config item: 'test.some' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..
