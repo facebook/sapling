@@ -681,7 +681,7 @@ def unshelvecontinue(ui, repo, state, opts):
             raise
 
         shelvectx = repo['tip']
-        if not shelvectx in state.pendingctx.children():
+        if state.pendingctx not in shelvectx.parents():
             # rebase was a no-op, so it produced no child commit
             shelvectx = state.pendingctx
         else:
@@ -758,7 +758,7 @@ def _rebaserestoredcommit(ui, repo, opts, tr, oldtiprev, basename, pctx,
     # refresh ctx after rebase completes
     shelvectx = repo['tip']
 
-    if not shelvectx in tmpwctx.children():
+    if tmpwctx not in shelvectx.parents():
         # rebase was a no-op, so it produced no child commit
         shelvectx = tmpwctx
     return shelvectx
