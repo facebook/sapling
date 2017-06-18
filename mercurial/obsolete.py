@@ -1325,16 +1325,18 @@ def _computeobsoleteset(repo):
 @cachefor('unstable')
 def _computeunstableset(repo):
     """the set of non obsolete revisions with obsolete parents"""
-    revs = [(ctx.rev(), ctx) for ctx in
-            repo.set('(not public()) and (not obsolete())')]
-    revs.sort(key=lambda x:x[0])
+    pfunc = repo.changelog.parentrevs
+    mutable = _mutablerevs(repo)
+    obsolete = getrevs(repo, 'obsolete')
+    others = mutable - obsolete
     unstable = set()
-    for rev, ctx in revs:
+    for r in sorted(others):
         # A rev is unstable if one of its parent is obsolete or unstable
         # this works since we traverse following growing rev order
-        if any((x.obsolete() or (x.rev() in unstable))
-                for x in ctx.parents()):
-            unstable.add(rev)
+        for p in pfunc(r):
+            if p in obsolete or p in unstable:
+                unstable.add(r)
+                break
     return unstable
 
 @cachefor('suspended')
