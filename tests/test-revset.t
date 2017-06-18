@@ -2996,8 +2996,7 @@ optimization to only() works only if ancestors() takes only one argument
         ('symbol', '1'))
       any)
     define)
-  hg: parse error: can't use a list in this context
-  (see hg help "revsets.x or y")
+  hg: parse error: ancestors takes at most 1 positional arguments
   [255]
   $ hg debugrevspec -p optimized 'ancestors(6, 1) - ancestors(4)'
   * optimized:
@@ -3013,8 +3012,7 @@ optimization to only() works only if ancestors() takes only one argument
       ('symbol', '4')
       any)
     define)
-  hg: parse error: can't use a list in this context
-  (see hg help "revsets.x or y")
+  hg: parse error: ancestors takes at most 1 positional arguments
   [255]
 
 optimization disabled if keyword arguments passed (because we're too lazy
@@ -3036,8 +3034,9 @@ to support it)
         ('symbol', '4'))
       any)
     define)
-  hg: parse error: can't use a key-value pair in this context
-  [255]
+  3
+  5
+  6
 
 invalid function call should not be optimized to only()
 

@@ -250,7 +250,11 @@ def ancestors(repo, subset, x):
     """Changesets that are ancestors of changesets in set, including the
     given changesets themselves.
     """
-    return _ancestors(repo, subset, x)
+    args = getargsdict(x, 'ancestors', 'set')
+    if 'set' not in args:
+        # i18n: "ancestors" is a keyword
+        raise error.ParseError(_('ancestors takes at least 1 argument'))
+    return _ancestors(repo, subset, args['set'])
 
 @predicate('_firstancestors', safe=True)
 def _firstancestors(repo, subset, x):
@@ -596,7 +600,11 @@ def descendants(repo, subset, x):
     """Changesets which are descendants of changesets in set, including the
     given changesets themselves.
     """
-    return _descendants(repo, subset, x)
+    args = getargsdict(x, 'descendants', 'set')
+    if 'set' not in args:
+        # i18n: "descendants" is a keyword
+        raise error.ParseError(_('descendants takes at least 1 argument'))
+    return _descendants(repo, subset, args['set'])
 
 @predicate('_firstdescendants', safe=True)
 def _firstdescendants(repo, subset, x):
