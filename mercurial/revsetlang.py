@@ -236,6 +236,20 @@ def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, parser.splitargspec(keys),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
+def _isnamedfunc(x, funcname):
+    """Check if given tree matches named function"""
+    return x and x[0] == 'func' and getsymbol(x[1]) == funcname
+
+def _matchnamedfunc(x, funcname):
+    """Return args tree if given tree matches named function; otherwise None
+
+    This can't be used for testing a nullary function since its args tree
+    is also None. Use _isnamedfunc() instead.
+    """
+    if not _isnamedfunc(x, funcname):
+        return
+    return x[2]
+
 # Constants for ordering requirement, used in _analyze():
 #
 # If 'define', any nested functions and operations can change the ordering of
@@ -286,14 +300,10 @@ def _matchonly(revs, bases):
     >>> f('ancestors(A)', 'not ancestors(B)')
     ('list', ('symbol', 'A'), ('symbol', 'B'))
     """
-    if (revs is not None
-        and revs[0] == 'func'
-        and getsymbol(revs[1]) == 'ancestors'
-        and bases is not None
-        and bases[0] == 'not'
-        and bases[1][0] == 'func'
-        and getsymbol(bases[1][1]) == 'ancestors'):
-        return ('list', revs[2], bases[1][2])
+    ta = _matchnamedfunc(revs, 'ancestors')
+    tb = bases and bases[0] == 'not' and _matchnamedfunc(bases[1], 'ancestors')
+    if ta and tb:
+        return ('list', ta, tb)
 
 def _fixops(x):
     """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
