@@ -62,7 +62,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem('blackbox', 'maxsize',
-    default=1048576,
+    default='1 MB',
 )
 
 lastui = None
