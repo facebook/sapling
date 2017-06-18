@@ -1265,7 +1265,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
                 samebranch = root.branch() == wctx.branch()
             else:
                 samebranch = root.branch() == dest.branch()
-            if not collapse and samebranch and root in dest.children():
+            if not collapse and samebranch and dest in root.parents():
                 # mark the revision as done by setting its new revision
                 # equal to its old (current) revisions
                 state[root.rev()] = root.rev()
