@@ -84,34 +84,35 @@ def revancestors(repo, revs, followfirst, startdepth=None, stopdepth=None):
     gen = _genrevancestors(repo, revs, followfirst, startdepth, stopdepth)
     return generatorset(gen, iterasc=False)
 
-def revdescendants(repo, revs, followfirst):
-    """Like revlog.descendants() but supports followfirst."""
+def _genrevdescendants(repo, revs, followfirst):
     if followfirst:
         cut = 1
     else:
         cut = None
 
-    def iterate():
-        cl = repo.changelog
-        # XXX this should be 'parentset.min()' assuming 'parentset' is a
-        # smartset (and if it is not, it should.)
-        first = min(revs)
-        nullrev = node.nullrev
-        if first == nullrev:
-            # Are there nodes with a null first parent and a non-null
-            # second one? Maybe. Do we care? Probably not.
-            for i in cl:
-                yield i
-        else:
-            seen = set(revs)
-            for i in cl.revs(first + 1):
-                for x in cl.parentrevs(i)[:cut]:
-                    if x != nullrev and x in seen:
-                        seen.add(i)
-                        yield i
-                        break
+    cl = repo.changelog
+    # XXX this should be 'parentset.min()' assuming 'parentset' is a
+    # smartset (and if it is not, it should.)
+    first = min(revs)
+    nullrev = node.nullrev
+    if first == nullrev:
+        # Are there nodes with a null first parent and a non-null
+        # second one? Maybe. Do we care? Probably not.
+        for i in cl:
+            yield i
+    else:
+        seen = set(revs)
+        for i in cl.revs(first + 1):
+            for x in cl.parentrevs(i)[:cut]:
+                if x != nullrev and x in seen:
+                    seen.add(i)
+                    yield i
+                    break
 
-    return generatorset(iterate(), iterasc=True)
+def revdescendants(repo, revs, followfirst):
+    """Like revlog.descendants() but supports followfirst."""
+    gen = _genrevdescendants(repo, revs, followfirst)
+    return generatorset(gen, iterasc=True)
 
 def _reachablerootspure(repo, minroot, roots, heads, includepath):
     """return (heads(::<roots> and ::<heads>))
