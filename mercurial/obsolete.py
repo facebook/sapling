@@ -1309,11 +1309,15 @@ def clearobscaches(repo):
     if 'obsstore' in repo._filecache:
         repo.obsstore.caches.clear()
 
+def _mutablerevs(repo):
+    """the set of mutable revision in the repository"""
+    return repo._phasecache.getrevset(repo, (phases.draft, phases.secret))
+
 @cachefor('obsolete')
 def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
     getnode = repo.changelog.node
-    notpublic = repo._phasecache.getrevset(repo, (phases.draft, phases.secret))
+    notpublic = _mutablerevs(repo)
     isobs = repo.obsstore.successors.__contains__
     obs = set(r for r in notpublic if isobs(getnode(r)))
     return obs
