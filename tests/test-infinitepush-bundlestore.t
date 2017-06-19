@@ -710,7 +710,7 @@ Strip commit and pull it using hg update with bookmark name
 Test debugfillinfinitepushmetadata
   $ cd ../repo
   $ hg debugfillinfinitepushmetadata
-  abort: node is not specified
+  abort: nodes are not specified
   [255]
   $ hg debugfillinfinitepushmetadata --node randomnode
   abort: node randomnode is not found
@@ -751,8 +751,7 @@ Test debugfillinfinitepushmetadata
   remote:     3edfe7e9089a  add and rm files
   remote:     c7ac39f638c6  cpfile and mvfile
   $ cd ../repo
-  $ hg debugfillinfinitepushmetadata --node 3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239
-  $ hg debugfillinfinitepushmetadata --node c7ac39f638c6b39bcdacf868fa21b6195670f8ae
+  $ hg debugfillinfinitepushmetadata --node 3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239 --node c7ac39f638c6b39bcdacf868fa21b6195670f8ae
   $ cat .hg/scratchbranches/index/nodemetadatamap/3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239
   {"changed_files": {"file": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}, "testpullbycommithash2": {"adds": 0, "isbinary": false, "removes": 1, "status": "removed"}}} (no-eol)
   $ cat .hg/scratchbranches/index/nodemetadatamap/c7ac39f638c6b39bcdacf868fa21b6195670f8ae

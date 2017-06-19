@@ -28,51 +28,59 @@ cmdtable = backupcmdtable
 command = registrar.command(cmdtable)
 
 @command('debugfillinfinitepushmetadata',
-         [('', 'node', '', 'node to fill metadata for')])
-def debugfillinfinitepushmetadata(ui, repo, node):
+         [('', 'node', [], 'node to fill metadata for')])
+def debugfillinfinitepushmetadata(ui, repo, **opts):
     '''Special command that fills infinitepush metadata for a node
     '''
 
-    if not node:
-        raise error.Abort(_('node is not specified'))
+    nodes = opts['node']
+    if not nodes:
+        raise error.Abort(_('nodes are not specified'))
 
-    index = repo.bundlestore.index
-    if not bool(index.getbundle(node)):
-        raise error.Abort(_('node %s is not found') % node)
+    nodesmetadata = {}
+    for node in nodes:
+        index = repo.bundlestore.index
+        if not bool(index.getbundle(node)):
+            raise error.Abort(_('node %s is not found') % node)
 
-    newbundlefile = downloadbundle(repo, bin(node))
-    bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
-    bundlerepo = hg.repository(repo.ui, bundlepath)
-    repo = bundlerepo
+        if node not in repo:
+            newbundlefile = downloadbundle(repo, bin(node))
+            bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
+            bundlerepo = hg.repository(ui, bundlepath)
+            repo = bundlerepo
 
-    p1 = repo[node].p1().node()
-    diffopts = patch.diffallopts(ui, {})
-    match = scmutil.matchall(repo)
-    chunks = patch.diff(repo, p1, node, match, None, diffopts, relroot='')
-    difflines = util.iterlines(chunks)
+        p1 = repo[node].p1().node()
+        diffopts = patch.diffallopts(ui, {})
+        match = scmutil.matchall(repo)
+        chunks = patch.diff(repo, p1, node, match, None, diffopts, relroot='')
+        difflines = util.iterlines(chunks)
 
-    states = 'modified added removed deleted unknown ignored clean'.split()
-    status = repo.status(p1, node)
-    status = zip(states, status)
+        states = 'modified added removed deleted unknown ignored clean'.split()
+        status = repo.status(p1, node)
+        status = zip(states, status)
 
-    filestatus = {}
-    for state, files in status:
-        for f in files:
-            filestatus[f] = state
+        filestatus = {}
+        for state, files in status:
+            for f in files:
+                filestatus[f] = state
 
-    diffstat = patch.diffstatdata(difflines)
-    changed_files = {}
-    copies = copiesmod.pathcopies(repo[p1], repo[node])
-    for filename, adds, removes, isbinary in diffstat:
-        # use special encoding that allows non-utf8 filenames
-        filename = encoding.jsonescape(filename, paranoid=True)
-        changed_files[filename] = {
-            'adds': adds, 'removes': removes, 'isbinary': isbinary,
-            'status': filestatus.get(filename, 'unknown')
-        }
-        if filename in copies:
-            changed_files[filename]['copies'] = copies[filename]
-    output = {}
-    output['changed_files'] = changed_files
+        diffstat = patch.diffstatdata(difflines)
+        changed_files = {}
+        copies = copiesmod.pathcopies(repo[p1], repo[node])
+        for filename, adds, removes, isbinary in diffstat:
+            # use special encoding that allows non-utf8 filenames
+            filename = encoding.jsonescape(filename, paranoid=True)
+            changed_files[filename] = {
+                'adds': adds, 'removes': removes, 'isbinary': isbinary,
+                'status': filestatus.get(filename, 'unknown')
+            }
+            if filename in copies:
+                changed_files[filename]['copies'] = copies[filename]
+        output = {}
+        output['changed_files'] = changed_files
+        nodesmetadata[node] = output
+
     with index:
-        index.saveoptionaljsonmetadata(node, json.dumps(output, sort_keys=True))
+        for node, metadata in nodesmetadata.iteritems():
+            dumped = json.dumps(metadata, sort_keys=True)
+            index.saveoptionaljsonmetadata(node, dumped)
