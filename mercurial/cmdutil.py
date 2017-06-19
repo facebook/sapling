@@ -30,7 +30,6 @@ from . import (
     error,
     formatter,
     graphmod,
-    lock as lockmod,
     match as matchmod,
     obsolete,
     patch,
@@ -2730,10 +2729,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     base = old.p1()
     createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
-    wlock = lock = newid = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
+    newid = None
+    with repo.wlock(), repo.lock():
         with repo.transaction('amend') as tr:
             # See if we got a message from -m or -l, if not, open the editor
             # with the message of the changeset to amend
@@ -2896,8 +2893,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 ui.note(_('stripping intermediate changeset %s\n') % ctx)
             ui.note(_('stripping amended changeset %s\n') % old)
             repair.strip(ui, repo, old.node(), topic='amend-backup')
-    finally:
-        lockmod.release(lock, wlock)
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):
