@@ -185,7 +185,7 @@ Note: --no-site-packages is deprecated, but some places have an
 ancient virtualenv from their linux distro or similar and it's not yet
 the default for them.
   $ unset PYTHONPATH
-  $ $PYTHON -m virtualenv --no-site-packages installenv >> pip.log
+  $ $PYTHON -m virtualenv --no-site-packages --never-download installenv >> pip.log
 Note: we use this weird path to run pip and hg to avoid platform differences,
 since it's bin on most platforms but Scripts on Windows.
   $ ./installenv/*/pip install $TESTDIR/.. >> pip.log
