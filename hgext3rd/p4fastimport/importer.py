@@ -17,6 +17,10 @@ from mercurial import (
 from . import p4
 from .util import caseconflict, localpath
 
+KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
+                "Date|Change|File|" + \
+                "Revision|Author).*?\$"
+
 class ImportSet(object):
     def __init__(self, repo, client, changelists, filelist, storagepath):
         self.repo = repo
@@ -335,8 +339,7 @@ class FileImporter(object):
             if self._p4filelog.issymlink(c.cl):
                 fileflags[c.cl] = 'l'
             if self._p4filelog.iskeyworded(c.cl):
-                # Replace keyword expansion
-                pass
+                text = re.sub(KEYWORD_REGEX, r'$\1$', text)
 
             node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
             self._ui.debug(

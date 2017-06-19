@@ -5,6 +5,7 @@ import collections
 import contextlib
 import json
 import marshal
+import re
 import time
 
 from .util import runworker
@@ -247,7 +248,8 @@ class P4Filelog(object):
 
     def iskeyworded(self, clnum):
         t = self._data[clnum]['type']
-        return '+k' in t
+        return (re.compile('kx?text').match(t) or
+            re.compile('\+kx?').search(t)) is not None
 
 ACTION_EDIT = ['edit', 'integrate']
 ACTION_ADD = ['add', 'branch', 'move/add']
