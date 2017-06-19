@@ -106,7 +106,7 @@ RECEIVEDNODE_RECORD = 'receivednodes'
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
 
-def extsetup(ui):
+def uisetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
                             _unpackmanifests)
     extensions.wrapfunction(revlog.revlog, 'checkhash', _checkhash)
@@ -121,6 +121,7 @@ def extsetup(ui):
     wireproto.wirepeer.gettreepack = clientgettreepack
 
     extensions.wrapfunction(repair, 'striptrees', striptrees)
+    _registerbundle2parts()
 
 def reposetup(ui, repo):
     wraprepo(repo)
@@ -713,28 +714,56 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 
-@bundle2.parthandler(TREEGROUP_PARTTYPE, ('version', 'treecache'))
-def treeparthandler(op, part):
-    """Handles received tree packs. If `treecache` is True, the received data
-    goes in to the shared pack cache. Otherwise, the received data goes into the
-    permanent repo local data.
-    """
-    repo = op.repo
+def _registerbundle2parts():
+    @bundle2.parthandler(TREEGROUP_PARTTYPE, ('version', 'treecache'))
+    def treeparthandler(op, part):
+        """Handles received tree packs. If `treecache` is True, the received
+        data goes in to the shared pack cache. Otherwise, the received data
+        goes into the permanent repo local data.
+        """
+        repo = op.repo
 
-    version = part.params.get('version')
-    if version != '1':
-        raise error.Abort(_("unknown treegroup bundle2 part version: %s") %
-                          version)
+        version = part.params.get('version')
+        if version != '1':
+            raise error.Abort(
+                _("unknown treegroup bundle2 part version: %s") % version)
 
-    if part.params.get('treecache', 'False') == 'True':
-        packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
-    else:
-        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
-                                                PACK_CATEGORY)
-    receivedhistory, receiveddata = wirepack.receivepack(repo.ui, part,
-                                                         packpath)
+        if part.params.get('treecache', 'False') == 'True':
+            packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+        else:
+            packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
+                                                    PACK_CATEGORY)
+        receivedhistory, receiveddata = wirepack.receivepack(repo.ui, part,
+                                                             packpath)
 
-    op.records.add(RECEIVEDNODE_RECORD, receiveddata)
+        op.records.add(RECEIVEDNODE_RECORD, receiveddata)
+
+    @exchange.b2partsgenerator('treepack')
+    def gettreepackpart(pushop, bundler):
+        """add parts containing trees being pushed"""
+        if ('treepack' in pushop.stepsdone or
+            not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
+            return
+        pushop.stepsdone.add('treepack')
+
+        rootdir = ''
+        mfnodes = []
+        basemfnodes = []
+        directories = []
+
+        outgoing = pushop.outgoing
+        for node in outgoing.missing:
+            mfnode = pushop.repo[node].manifestnode()
+            mfnodes.append(mfnode)
+        basectxs = pushop.repo.set('parents(roots(%ln))', outgoing.missing)
+        for basectx in basectxs:
+            basemfnodes.append(basectx.manifestnode())
+
+        packstream = generatepackstream(pushop.repo, rootdir, mfnodes,
+                                        basemfnodes, directories)
+        part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
+        part.addparam('version', '1')
+        part.addparam('treecache', 'False')
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
@@ -1019,33 +1048,6 @@ def serverrepack(repo, incremental=False):
         revlogstore.setrepackstartlinkrev(latestpackedlinkrev + 1)
 
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
-
-@exchange.b2partsgenerator('treepack')
-def gettreepackpart(pushop, bundler):
-    """add parts containing trees being pushed"""
-    if ('treepack' in pushop.stepsdone or
-        not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
-        return
-    pushop.stepsdone.add('treepack')
-
-    rootdir = ''
-    mfnodes = []
-    basemfnodes = []
-    directories = []
-
-    outgoing = pushop.outgoing
-    for node in outgoing.missing:
-        mfnode = pushop.repo[node].manifestnode()
-        mfnodes.append(mfnode)
-    basectxs = pushop.repo.set('parents(roots(%ln))', outgoing.missing)
-    for basectx in basectxs:
-        basemfnodes.append(basectx.manifestnode())
-
-    packstream = generatepackstream(pushop.repo, rootdir, mfnodes,
-                                    basemfnodes, directories)
-    part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
-    part.addparam('version', '1')
-    part.addparam('treecache', 'False')
 
 def striptrees(orig, repo, tr, striprev, files):
     if repo.ui.configbool('treemanifest', 'server'):
