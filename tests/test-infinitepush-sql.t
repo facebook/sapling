@@ -71,4 +71,9 @@ Pull scratch commit from the second client
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e 'select * from nodesmetadata'
   node	message	p1	p2	author	committer	author_date	committer_date	reponame	optional_json_metadata
   2d9cfa7512136a84a6edb6a7c288145229c2ef7f	scratchcommit	0000000000000000000000000000000000000000	0000000000000000000000000000000000000000	test	test	0	0	babar	NULL
+  $ cd ../server
+  $ hg debugfillinfinitepushmetadata --node 2d9cfa7512136a84a6edb6a7c288145229c2ef7f
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e 'select * from nodesmetadata'
+  node	message	p1	p2	author	committer	author_date	committer_date	reponame	optional_json_metadata
+  2d9cfa7512136a84a6edb6a7c288145229c2ef7f	scratchcommit	0000000000000000000000000000000000000000	0000000000000000000000000000000000000000	test	test	0	0	babar	{"changed_files": {"scratchcommit": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}}}
 #endif

@@ -74,4 +74,5 @@ def debugfillinfinitepushmetadata(ui, repo, node):
             changed_files[filename]['copies'] = copies[filename]
     output = {}
     output['changed_files'] = changed_files
-    index.saveoptionaljsonmetadata(node, json.dumps(output, sort_keys=True))
+    with index:
+        index.saveoptionaljsonmetadata(node, json.dumps(output, sort_keys=True))

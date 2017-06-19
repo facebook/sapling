@@ -231,6 +231,18 @@ class sqlindexapi(indexapi):
             bookmarks[row[0]] = row[1]
         return bookmarks
 
+    def saveoptionaljsonmetadata(self, node, jsonmetadata):
+        if not self._connected:
+            self.sqlconnect()
+        self.log.info(
+            ("INSERT METADATA, QUERY BOOKMARKS reponame: %r " +
+             "node: %r, jsonmetadata: %s") %
+            (self.reponame, node, jsonmetadata))
+
+        self.sqlcursor.execute(
+            "UPDATE nodesmetadata SET optional_json_metadata=%s WHERE node=%s",
+            params=(jsonmetadata, node))
+
 class CustomConverter(mysql.connector.conversion.MySQLConverter):
     """Ensure that all values being returned are returned as python string
     (versus the default byte arrays)."""
