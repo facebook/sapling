@@ -2010,6 +2010,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     os.environ['PYTHONHASHSEED'])
             if self._runner.options.time:
                 self.printtimes(result.times)
+            self.stream.flush()
 
         return result
 
