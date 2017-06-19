@@ -108,7 +108,6 @@
   $ hg add a
   $ hg commit -m a
   $ hg stripintr 2>&1 | egrep -v '^(\*\*|  )'
-  saved backup bundle to $TESTTMP/lock-checker/.hg/strip-backup/*-backup.hg (glob)
   Traceback (most recent call last):
   mercurial.error.ProgrammingError: cannot strip from inside a transaction
 

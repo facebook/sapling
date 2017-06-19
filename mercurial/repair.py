@@ -79,6 +79,9 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # This function requires the caller to lock the repo, but it operates
     # within a transaction of its own, and thus requires there to be no current
     # transaction when it is called.
+    if repo.currenttransaction() is not None:
+        raise error.ProgrammingError('cannot strip from inside a transaction')
+
     # Simple way to maintain backwards compatibility for this
     # argument.
     if backup in ['none', 'strip']:
@@ -167,9 +170,6 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                                 compress=False, obsolescence=False)
 
     mfst = repo.manifestlog._revlog
-
-    if repo.currenttransaction() is not None:
-        raise error.ProgrammingError('cannot strip from inside a transaction')
 
     try:
         with repo.transaction("strip") as tr:
