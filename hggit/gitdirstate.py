@@ -156,7 +156,10 @@ class gitdirstate(dirstate.dirstate):
         matchalways = match.always()
         matchtdir = match.traversedir
         dmap = self._map
-        listdir = osutil.listdir
+        try:
+            listdir = util.listdir
+        except AttributeError:
+            listdir = osutil.listdir
         lstat = os.lstat
         dirkind = stat.S_IFDIR
         regkind = stat.S_IFREG
