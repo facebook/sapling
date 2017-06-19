@@ -2,6 +2,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""
+Config::
+
+    [infinitepush]
+    # limit number of files in the node metadata. This is to make sure we don't
+    # waste too much space on huge codemod commits.
+    metadatafilelimit = 100
+"""
 
 from __future__ import absolute_import
 
@@ -37,6 +45,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
     if not nodes:
         raise error.Abort(_('nodes are not specified'))
 
+    filelimit = ui.configint('infinitepush', 'metadatafilelimit', 100)
     nodesmetadata = {}
     for node in nodes:
         index = repo.bundlestore.index
@@ -67,7 +76,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
         diffstat = patch.diffstatdata(difflines)
         changed_files = {}
         copies = copiesmod.pathcopies(repo[p1], repo[node])
-        for filename, adds, removes, isbinary in diffstat:
+        for filename, adds, removes, isbinary in diffstat[:filelimit]:
             # use special encoding that allows non-utf8 filenames
             filename = encoding.jsonescape(filename, paranoid=True)
             changed_files[filename] = {
@@ -76,8 +85,11 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
             }
             if filename in copies:
                 changed_files[filename]['copies'] = copies[filename]
+
         output = {}
         output['changed_files'] = changed_files
+        if len(diffstat) > filelimit:
+            output['changed_files_truncated'] = True
         nodesmetadata[node] = output
 
     with index:

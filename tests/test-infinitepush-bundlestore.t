@@ -756,3 +756,29 @@ Test debugfillinfinitepushmetadata
   {"changed_files": {"file": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}, "testpullbycommithash2": {"adds": 0, "isbinary": false, "removes": 1, "status": "removed"}}} (no-eol)
   $ cat .hg/scratchbranches/index/nodemetadatamap/c7ac39f638c6b39bcdacf868fa21b6195670f8ae
   {"changed_files": {"cpfile": {"adds": 1, "copies": "file", "isbinary": false, "removes": 0, "status": "added"}, "file": {"adds": 0, "isbinary": false, "removes": 1, "status": "removed"}, "mvfile": {"adds": 1, "copies": "file", "isbinary": false, "removes": 0, "status": "added"}}} (no-eol)
+
+Test infinitepush.metadatafilelimit number
+  $ cd ../client
+  $ echo file > file
+  $ hg add file
+  $ echo file1 > file1
+  $ hg add file1
+  $ echo file2 > file2
+  $ hg add file2
+  $ hg ci -m 'add many files'
+  $ hg log -r . -T '{node}'
+  09904fb20c53ff351bd3b1d47681f569a4dab7e5 (no-eol)
+  $ hg push -r . --bundle-store
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 5 commits:
+  remote:     33910bfe6ffe  testpullbycommithash1
+  remote:     d8fde0ddfc96  testpullbycommithash2
+  remote:     3edfe7e9089a  add and rm files
+  remote:     c7ac39f638c6  cpfile and mvfile
+  remote:     09904fb20c53  add many files
+
+  $ cd ../repo
+  $ hg debugfillinfinitepushmetadata --node 09904fb20c53ff351bd3b1d47681f569a4dab7e5 --config infinitepush.metadatafilelimit=2
+  $ cat .hg/scratchbranches/index/nodemetadatamap/09904fb20c53ff351bd3b1d47681f569a4dab7e5
+  {"changed_files": {"file": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}, "file1": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}}, "changed_files_truncated": true} (no-eol)
