@@ -393,6 +393,44 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   |
   @  cb9a
   
+Test push --to with remotenames but without pushrebase to a remote repository
+that requires pushrebase.
+
+  $ cd ..
+  $ hg init pushrebaseserver
+  $ cd pushrebaseserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > remotenames =
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > [experimental]
+  > bundle2-exp=True
+  > [pushrebase]
+  > blocknonpushrebase = True
+  > EOF
+  $ echo a > a && hg commit -Aqm a
+  $ hg book serverfeature
+  $ cd ..
+  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/pushrebaseserver remotenamesonlyclient
+  $ cd remotenamesonlyclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=!
+  > remotenames =
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
+  $ hg book clientfeature -t default/serverfeature
+  $ echo b > b && hg commit -Aqm b
+  $ hg push --to serverfeature
+  pushing rev d2ae7f538514 to destination ssh://user@dummy/pushrebaseserver bookmark serverfeature
+  searching for changes
+  remote: error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  remote: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  abort: push failed on remote
+  [255]
 
 Remotenames are turned off and bundle1 is enabled
   $ cd ..

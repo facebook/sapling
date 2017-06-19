@@ -80,8 +80,9 @@ def reposetup(ui, repo):
 
 def blocknonpushrebase(ui, repo, **kwargs):
     if not repo.ui.configbool('pushrebase', pushrebasemarker):
-        raise error.Abort("this repository requires that you push using "
-                         "'hg push --to'")
+        raise error.Abort(_("this repository requires that you enable the "
+                            "pushrebase extension and push using "
+                            "'hg push --to'"))
 
 def _peerorrepo(orig, ui, path, create=False, **kwargs):
     # Force hooks to use a bundle repo

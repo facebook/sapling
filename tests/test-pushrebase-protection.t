@@ -35,22 +35,22 @@ Non-pushrebase pushes should be rejected
   $ hg push
   pushing to $TESTTMP/server (glob)
   searching for changes
-  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
-  abort: this repository requires that you push using 'hg push --to'
+  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
   $ hg push -f
   pushing to $TESTTMP/server (glob)
   searching for changes
-  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
-  abort: this repository requires that you push using 'hg push --to'
+  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
   $ hg push -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
-  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
-  abort: this repository requires that you push using 'hg push --to'
+  error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
 Pushrebase pushes should be allowed
