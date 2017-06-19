@@ -10,7 +10,7 @@ import json
 from .backupcommands import cmdtable as backupcmdtable
 
 from mercurial import (
-    # cmdutil,
+    copies as copiesmod,
     encoding,
     error,
     hg,
@@ -51,14 +51,27 @@ def debugfillinfinitepushmetadata(ui, repo, node):
     chunks = patch.diff(repo, p1, node, match, None, diffopts, relroot='')
     difflines = util.iterlines(chunks)
 
+    states = 'modified added removed deleted unknown ignored clean'.split()
+    status = repo.status(p1, node)
+    status = zip(states, status)
+
+    filestatus = {}
+    for state, files in status:
+        for f in files:
+            filestatus[f] = state
+
     diffstat = patch.diffstatdata(difflines)
     changed_files = {}
+    copies = copiesmod.pathcopies(repo[p1], repo[node])
     for filename, adds, removes, isbinary in diffstat:
         # use special encoding that allows non-utf8 filenames
         filename = encoding.jsonescape(filename, paranoid=True)
         changed_files[filename] = {
             'adds': adds, 'removes': removes, 'isbinary': isbinary,
+            'status': filestatus.get(filename, 'unknown')
         }
+        if filename in copies:
+            changed_files[filename]['copies'] = copies[filename]
     output = {}
     output['changed_files'] = changed_files
     index.saveoptionaljsonmetadata(node, json.dumps(output, sort_keys=True))

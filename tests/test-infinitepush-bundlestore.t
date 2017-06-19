@@ -717,4 +717,43 @@ Test debugfillinfinitepushmetadata
   [255]
   $ hg debugfillinfinitepushmetadata --node d8fde0ddfc962183977f92d2bc52d303b8840f9d
   $ cat .hg/scratchbranches/index/nodemetadatamap/d8fde0ddfc962183977f92d2bc52d303b8840f9d
-  {"changed_files": {"testpullbycommithash2": {"adds": 1, "isbinary": false, "removes": 0}}} (no-eol)
+  {"changed_files": {"testpullbycommithash2": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}}} (no-eol)
+
+  $ cd ../client
+  $ hg up d8fde0ddfc962183977f92d2bc52d303b8840f9d
+  'd8fde0ddfc962183977f92d2bc52d303b8840f9d' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  'd8fde0ddfc962183977f92d2bc52d303b8840f9d' found remotely
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo file > file
+  $ hg add file
+  $ hg rm testpullbycommithash2
+  $ hg ci -m 'add and rm files'
+  $ hg log -r . -T '{node}\n'
+  3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239
+  $ hg cp file cpfile
+  $ hg mv file mvfile
+  $ hg ci -m 'cpfile and mvfile'
+  $ hg log -r . -T '{node}\n'
+  c7ac39f638c6b39bcdacf868fa21b6195670f8ae
+  $ hg push -r . --bundle-store
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 4 commits:
+  remote:     33910bfe6ffe  testpullbycommithash1
+  remote:     d8fde0ddfc96  testpullbycommithash2
+  remote:     3edfe7e9089a  add and rm files
+  remote:     c7ac39f638c6  cpfile and mvfile
+  $ cd ../repo
+  $ hg debugfillinfinitepushmetadata --node 3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239
+  $ hg debugfillinfinitepushmetadata --node c7ac39f638c6b39bcdacf868fa21b6195670f8ae
+  $ cat .hg/scratchbranches/index/nodemetadatamap/3edfe7e9089ab9f728eb8e0d0c62a5d18cf19239
+  {"changed_files": {"file": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}, "testpullbycommithash2": {"adds": 0, "isbinary": false, "removes": 1, "status": "removed"}}} (no-eol)
+  $ cat .hg/scratchbranches/index/nodemetadatamap/c7ac39f638c6b39bcdacf868fa21b6195670f8ae
+  {"changed_files": {"cpfile": {"adds": 1, "copies": "file", "isbinary": false, "removes": 0, "status": "added"}, "file": {"adds": 0, "isbinary": false, "removes": 1, "status": "removed"}, "mvfile": {"adds": 1, "copies": "file", "isbinary": false, "removes": 0, "status": "added"}}} (no-eol)
