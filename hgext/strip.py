@@ -156,18 +156,12 @@ def stripcmd(ui, repo, *revs, **opts):
                     rsrevs = repair.stripbmrevset(repo, marks[0])
                     revs.update(set(rsrevs))
             if not revs:
-                lock = tr = None
-                try:
-                    lock = repo.lock()
-                    tr = repo.transaction('bookmark')
+                with repo.lock(), repo.transaction('bookmark') as tr:
                     for bookmark in bookmarks:
                         del repomarks[bookmark]
                     repomarks.recordchange(tr)
-                    tr.close()
-                    for bookmark in sorted(bookmarks):
-                        ui.write(_("bookmark '%s' deleted\n") % bookmark)
-                finally:
-                    release(lock, tr)
+                for bookmark in sorted(bookmarks):
+                    ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
         if not revs:
             raise error.Abort(_('empty revision set'))
