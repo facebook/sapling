@@ -683,11 +683,7 @@ def rebase(ui, repo, **opts):
     """
     rbsrt = rebaseruntime(repo, ui, opts)
 
-    lock = wlock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-
+    with repo.wlock(), repo.lock():
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
         srcf = opts.get('source', None)
@@ -753,8 +749,6 @@ def rebase(ui, repo, **opts):
                 release(dsguard)
                 raise
         rbsrt._finishrebase()
-    finally:
-        release(lock, wlock)
 
 def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
                 destspace=None):
