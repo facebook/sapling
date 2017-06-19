@@ -31,6 +31,13 @@ the following config option::
     [fbamend]
     alwaysnewest = true
 
+To automatically update the commit date, enable the following config option::
+
+    [fbamend]
+    date = implicitupdate
+
+Note that if --date is specified on the command line, it takes precedence.
+
 """
 
 from __future__ import absolute_import
@@ -193,7 +200,12 @@ def amend(ui, repo, *pats, **opts):
         opts['message'] = old.description()
 
     tempnode = []
-    commitdate = old.date() if not opts.get('date') else opts.get('date')
+    commitdate = opts.get('date')
+    if not commitdate:
+        if ui.config('fbamend', 'date') == 'implicitupdate':
+            commitdate = 'now'
+        else:
+            commitdate = old.date()
     commituser = old.user() if not opts.get('user') else opts.get('user')
     def commitfunc(ui, repo, message, match, opts):
         e = cmdutil.commiteditor
