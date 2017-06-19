@@ -1378,10 +1378,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
             hint = _('use hg pull followed by hg rebase -d DEST')
             raise error.Abort(msg, hint=hint)
 
-        wlock = lock = None
-        try:
-            wlock = repo.wlock()
-            lock = repo.lock()
+        with repo.wlock(), repo.lock():
             if opts.get('update'):
                 del opts['update']
                 ui.debug('--update and --rebase are not compatible, ignoring '
@@ -1425,8 +1422,6 @@ def pullrebase(orig, ui, repo, *args, **opts):
                         # not passing argument to get the bare update behavior
                         # with warning and trumpets
                         commands.update(ui, repo)
-        finally:
-            release(lock, wlock)
     else:
         if opts.get('tool'):
             raise error.Abort(_('--tool can only be used with --rebase'))
