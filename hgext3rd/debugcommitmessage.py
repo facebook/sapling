@@ -32,10 +32,11 @@ def debugcommitmessage(ui, repo, *args):
     forms = [e for e in editform.split('.') if e]
     forms.insert(0, 'changeset')
     while forms:
-        tmpl = repo.ui.config('committemplate', '.'.join(forms))
+        ref = '.'.join(forms)
+        tmpl = repo.ui.config('committemplate', ref)
         if tmpl:
             committext = cmdutil.buildcommittemplate(
-                    repo, ctx, subs, extramsg, tmpl)
+                    repo, ctx, subs, extramsg, ref)
             break
         forms.pop()
     else:
