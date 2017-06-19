@@ -53,6 +53,8 @@ class ProxyHandler (httpserver.basehttprequesthandler):
         self.log_message('"%s" %s %s%s',
                          self.requestline, str(code), str(size),
                          ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+        # Flush for Windows, so output isn't lost on TerminateProcess()
+        sys.stderr.flush()
 
     def _connect_to(self, netloc, soc):
         i = netloc.find(':')
