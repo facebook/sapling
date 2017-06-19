@@ -106,7 +106,8 @@ def uisetup(ui):
              _('mark new/missing files as added/removed before committing')),
            ('e', 'edit', None, _('prompt to edit the commit message')),
            ('i', 'interactive', None, _('use interactive mode')),
-       ] + amendopts + commands.walkopts + commands.commitopts + commands.commitopts2,
+       ] + amendopts + commands.walkopts + commands.commitopts
+        + commands.commitopts2,
        _('hg amend [OPTION]...'))(amend)
 
     def has_automv(loaded):
