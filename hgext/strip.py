@@ -59,10 +59,7 @@ def checklocalchanges(repo, force=False, excsuffix=''):
     return s
 
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
-    wlock = lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
+    with repo.wlock(), repo.lock():
 
         if update:
             checklocalchanges(repo, force=force)
@@ -86,9 +83,6 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
                 repomarks.recordchange(tr)
             for bookmark in sorted(bookmarks):
                 ui.write(_("bookmark '%s' deleted\n") % bookmark)
-    finally:
-        release(lock, wlock)
-
 
 @command("strip",
          [
