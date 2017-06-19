@@ -124,11 +124,6 @@ Test
   $ hg log --template '{rev}: {author}\n' -r .
   9: foobar
 
-TODO: support this
-  $ hg metaedit '.^::.'
-  abort: editing multiple revisions without --fold is not currently supported
-  [255]
-
   $ HGEDITOR=cat hg metaedit '.^::.' --fold
   HG: This is a fold of 2 changesets.
   HG: Commit message of changeset 7.
@@ -242,3 +237,17 @@ metaedit a commit in the middle of the stack:
   $ hg metaedit -m "metaedit" -r 1aed0f31debd
   nothing changed
   [1]
+
+metaedit more than one commit at once without --fold
+  $ hg metaedit -m "metaedit" -r 5::
+  $ glog -r 'all()'
+  @  9:972f190d63f3@default(draft) metaedit
+  |
+  o  8:a1c80e4c2636@default(draft) metaedit
+  |
+  o  5:1aed0f31debd@default(draft) metaedit
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  

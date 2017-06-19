@@ -78,17 +78,6 @@ def metaedit(ui, repo, *revs, **opts):
         lock = repo.lock()
 
         revs = scmutil.revrange(repo, revs)
-        if not opts['fold'] and len(revs) > 1:
-            # TODO: handle multiple revisions. This is somewhat tricky because
-            # if we want to edit a series of commits:
-            #
-            #   a ---- b ---- c
-            #
-            # we need to rewrite a first, then directly rewrite b on top of the
-            # new a, then rewrite c on top of the new b. So we need to handle
-            # revisions in topological order.
-            raise error.Abort(_('editing multiple revisions without --fold is '
-                                'not currently supported'))
 
         if opts['fold']:
             root, head = fold._foldcheck(repo, revs)
