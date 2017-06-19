@@ -99,7 +99,7 @@ def uisetup(ui):
              _('mark new/missing files as added/removed before committing')),
            ('e', 'edit', None, _('prompt to edit the commit message')),
            ('i', 'interactive', None, _('use interactive mode')),
-       ] + amendopts + commands.walkopts + commands.commitopts,
+       ] + amendopts + commands.walkopts + commands.commitopts + commands.commitopts2,
        _('hg amend [OPTION]...'))(amend)
 
     def has_automv(loaded):
@@ -194,10 +194,11 @@ def amend(ui, repo, *pats, **opts):
 
     tempnode = []
     commitdate = old.date() if not opts.get('date') else opts.get('date')
+    commituser = old.user() if not opts.get('user') else opts.get('user')
     def commitfunc(ui, repo, message, match, opts):
         e = cmdutil.commiteditor
         noderesult = repo.commit(message,
-                           old.user(),
+                           commituser,
                            commitdate,
                            match,
                            editor=e,
