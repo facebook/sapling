@@ -168,9 +168,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 
     mfst = repo.manifestlog._revlog
 
-    curtr = repo.currenttransaction()
-    if curtr is not None:
-        del curtr  # avoid carrying reference to transaction for nothing
+    if repo.currenttransaction() is not None:
         raise error.ProgrammingError('cannot strip from inside a transaction')
 
     try:
