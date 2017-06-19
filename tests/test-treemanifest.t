@@ -18,8 +18,8 @@
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=
-  > treemanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > usefastdatapack=True

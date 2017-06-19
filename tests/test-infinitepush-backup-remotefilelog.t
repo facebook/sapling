@@ -1,5 +1,4 @@
 
-  $ . $TESTDIR/require-ext.sh remotefilelog
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/library-infinitepush.sh"
   $ setupcommon

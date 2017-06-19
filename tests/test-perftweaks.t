@@ -132,7 +132,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > key.sparse_profiles=sparse_profiles
   > filepath = $LOGDIR/samplingpath.txt
   > [extensions]
-  > sampling=
+  > sampling=$TESTDIR/../hgext3rd/sampling.py
   > EOF
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
@@ -148,7 +148,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   dirstate_size: 1
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > sparse=
+  > sparse=$TESTDIR/../hgext3rd/sparse.py
   > EOF
   $ cat >> profile_base << EOF
   > [include]

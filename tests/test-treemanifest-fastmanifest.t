@@ -32,9 +32,9 @@
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
   > flatcheck=$TESTTMP/flatcheck.py
-  > treemanifest=
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > usefastdatapack=True

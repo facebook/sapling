@@ -13,7 +13,7 @@
   $ hg commit -qAm 'modify x'
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > name=master

@@ -2,7 +2,7 @@
   > [extensions]
   > mq =
   > shelve =
-  > sqldirstate=$(dirname $TESTDIR)/sqldirstate
+  > sqldirstate=$TESTDIR/../sqldirstate
   > [defaults]
   > diff = --nodates --git
   > qnew = --date '0 0'

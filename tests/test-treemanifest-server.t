@@ -7,9 +7,9 @@
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=
-  > pushrebase=
-  > treemanifest=
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > treemanifest=$TESTDIR/../treemanifest
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -48,7 +48,7 @@ Test pushing without pushrebase fails
 Test pushing with pushrebase creates trees on the server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg push --to mybook
   pushing to ssh://user@dummy/master

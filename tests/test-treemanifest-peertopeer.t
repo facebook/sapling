@@ -8,8 +8,8 @@
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=
-  > treemanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > reponame=master
@@ -29,8 +29,8 @@
   $ hg init ../client2
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=
-  > treemanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > reponame=master

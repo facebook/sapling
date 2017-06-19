@@ -6,7 +6,7 @@ Set up test environment.
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > strip=
-  > tweakdefaults=
+  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > [experimental]
   > evolution = createmarkers
   > [fbamend]

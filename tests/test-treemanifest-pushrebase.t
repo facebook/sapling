@@ -11,8 +11,8 @@
   > [paths]
   > default=ssh://user@dummy/master
   > [extensions]
-  > fastmanifest=
-  > treemanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=$TESTDIR/../treemanifest
   > [fastmanifest]
   > usetree=True
   > usecache=False
@@ -36,8 +36,8 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > bundle2hooks=
-  > pushrebase=
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [experimental]
   > bundle2lazylocking=True
   > [remotefilelog]
@@ -50,7 +50,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../treemanifest
   > [treemanifest]
   > server=True
   > # Sleep gives all the hg serve processes time to load the original repo

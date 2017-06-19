@@ -11,11 +11,13 @@ to queue hook arguments on the bundle2 operation object.
 
 '''
 
+from __future__ import absolute_import
+
 from mercurial import bundle2
 from mercurial import error
 from mercurial.i18n import _
 
-from extutil import replaceclass
+from hgext3rd.extutil import replaceclass
 
 def reposetup(ui, repo):
     @replaceclass(bundle2, 'bundleoperation')

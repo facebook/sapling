@@ -16,7 +16,7 @@
   $ hg commit -Am 'modify x'
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=
+  > treemanifest=$TESTDIR/../treemanifest
   > 
   > [remotefilelog]
   > name=master
@@ -47,8 +47,8 @@
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest =
-  > fastmanifest = 
+  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=$TESTDIR/../fastmanifest
   > [remotefilelog]
   > reponame = master
   > cachepath = $CACHEDIR

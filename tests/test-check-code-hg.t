@@ -86,9 +86,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-remotefilelog-bad-configs.t it has no-che?k-code (glob)
   [1]
 
-Check foreign extensions are only used after checks
+Check extensions usage
 
-  $ hg locate 'test-*.t' | xargs $TESTDIR/check-foreignext.py
+  $ hg locate 'test-*.t' | xargs $TESTDIR/check-ext.py
 
 No files with home directory committed
 

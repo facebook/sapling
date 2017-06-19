@@ -20,7 +20,7 @@ Check diagnosis, debugging information
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fastmanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
   > blackbox=
   > [blackbox]
   > maxfiles=1

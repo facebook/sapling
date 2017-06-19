@@ -470,7 +470,6 @@ Test hg amend works with a logfile
   $ rm alogfile
 
 Test fbamend with inhibit
-  $ . $TESTDIR/require-ext.sh inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py

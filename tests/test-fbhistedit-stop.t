@@ -9,11 +9,10 @@ Setup
   > [extensions]
   > histedit=
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > fbamend=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > fbhistedit=
+  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > [experimental]
   > evolution = createmarkers
   > EOF

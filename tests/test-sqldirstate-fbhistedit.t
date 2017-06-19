@@ -3,7 +3,7 @@
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > histedit=
-  > sqldirstate=$(dirname $TESTDIR)/sqldirstate
+  > sqldirstate=$TESTDIR/../sqldirstate
   > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > [shelve]
   > EOF

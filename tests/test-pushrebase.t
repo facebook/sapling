@@ -529,8 +529,8 @@ Test that the prepushrebase hook can run against the bundle repo
   > [hooks]
   > prepushrebase = $TESTTMP/prerebase.sh
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [experimental]
   > bundle2lazylocking = True
   > EOF
@@ -549,8 +549,8 @@ Test that the prepushrebase hook can run against the bundle repo
   $ cd prepushrebaseclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ touch b && hg add b && hg commit -qm b
   $ hg push --to master
@@ -587,8 +587,8 @@ Test that hooks are fired with the correct variables
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ touch file && hg ci -Aqm initial
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -606,8 +606,8 @@ Test that hooks are fired with the correct variables
   $ cd hookclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg update master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -644,8 +644,8 @@ Test date rewriting
   $ cd rewritedate
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [pushrebase]
   > rewritedates = True
   > EOF
@@ -660,8 +660,8 @@ Test date rewriting
   $ cd rewritedateclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -731,8 +731,8 @@ Test pushrebase on merge commit where master is on the p2 side
   $ cd p2mergeserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo a >> a && hg commit -Aqm 'add a'
   $ hg bookmark master
@@ -742,7 +742,7 @@ Test pushrebase on merge commit where master is on the p2 side
   $ cd p2mergeclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase =
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg up -q null
   $ echo b >> b && hg commit -Aqm 'add b'
@@ -786,8 +786,8 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ cd ..
@@ -801,8 +801,8 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks =
-  > pushrebase =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -840,7 +840,7 @@ phase is updated correctly with the marker information.
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > bundle2hooks =
+  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > [experimental]
   > evolution =
   > EOF
@@ -850,7 +850,7 @@ phase is updated correctly with the marker information.
   $ cd server1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase =
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo a > a
   $ hg commit -m a -A a -q

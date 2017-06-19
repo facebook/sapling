@@ -2,7 +2,7 @@ Init repo
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
-  > sqldirstate=$(dirname $TESTDIR)/sqldirstate
+  > sqldirstate=$TESTDIR/../sqldirstate
   > EOF
   $ hg init repo
   $ cd repo

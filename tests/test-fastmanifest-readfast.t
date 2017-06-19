@@ -3,7 +3,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastmanifest=
+  > fastmanifest=$TESTDIR/../fastmanifest
   > EOF
 
   $ hg init repo

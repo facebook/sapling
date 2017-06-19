@@ -4,7 +4,7 @@ Test whereami
   $ cd repo1
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > whereami=$(dirname $TESTDIR)/hgext3rd/whereami.py
+  > whereami=$TESTDIR/../hgext3rd/whereami.py
   > EOF
 
   $ hg whereami
