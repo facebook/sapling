@@ -413,17 +413,26 @@ def onetimeclientsetup(ui):
     wrapfunction(remotefilelog.remotefilelog, 'addrawrevision', addrawrevision)
 
     def changelogadd(orig, self, *args):
+        oldlen = len(self)
         node = orig(self, *args)
-        for oldargs in pendingfilecommits:
-            log, rt, tr, link, p1, p2, n, fl, c, m = oldargs
-            linknode = self.node(link)
-            if linknode == node:
-                log.addrawrevision(rt, tr, linknode, p1, p2, n, fl, c, m)
-            else:
+        newlen = len(self)
+        if oldlen != newlen:
+            for oldargs in pendingfilecommits:
+                log, rt, tr, link, p1, p2, n, fl, c, m = oldargs
+                linknode = self.node(link)
+                if linknode == node:
+                    log.addrawrevision(rt, tr, linknode, p1, p2, n, fl, c, m)
+                else:
+                    raise error.ProgrammingError(
+                        'pending multiple integer revisions are not supported')
+        else:
+            # "link" is actually wrong here (it is set to len(changelog))
+            # if changelog remains unchanged, skip writing file revisions
+            # but still do a sanity check about pending multiple revisions
+            if len(set(x[3] for x in pendingfilecommits)) > 1:
                 raise error.ProgrammingError(
                     'pending multiple integer revisions are not supported')
-
-        del pendingfilecommits[0:len(pendingfilecommits)]
+        del pendingfilecommits[:]
         return node
     wrapfunction(changelog.changelog, 'add', changelogadd)
 

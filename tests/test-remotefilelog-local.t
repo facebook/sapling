@@ -188,3 +188,19 @@
   (branch merge, don't forget to commit)
   $ hg commit -m merge
   $ hg strip -q -r ".^"
+
+# commit without producing new node
+
+  $ cd $TESTTMP
+  $ hgcloneshallow ssh://user@dummy/master shallow3 -q
+  $ cd shallow3
+  $ echo 1 > A
+  $ hg commit -m foo -A A
+  $ hg log -r . -T '{node}\n'
+  383ce605500277f879b7460a16ba620eb6930b7f
+  $ hg update -r '.^' -q
+  $ echo 1 > A
+  $ hg commit -m foo -A A
+  $ hg log -r . -T '{node}\n'
+  383ce605500277f879b7460a16ba620eb6930b7f
+
