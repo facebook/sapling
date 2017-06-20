@@ -729,7 +729,7 @@ With no extension specified:
   $ cat >$TESTTMP/test_extension.py  << EOF
   > from mercurial import extensions
   > def uisetup(ui):
-  >   print extensions._order
+  >   print [name for name in extensions._order if name != 'modcheck']
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]

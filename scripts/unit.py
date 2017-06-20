@@ -99,7 +99,9 @@ def runtests(tests=None):
     exitcode will be 0 on success, and non-zero on failure
     report is a dictionary of test results.
     """
-    args = ['-l', '--json']
+    modcheckpath = os.path.join(reporoot, 'tests', 'modcheck.py')
+    args = ['-l', '--json',
+            '--extra-config-opt=extensions.modcheck=%s' % modcheckpath]
     if tests:
         args += tests
 

@@ -27,23 +27,23 @@ test sparse
 
 Import a rules file against a 'blank' sparse profile
 
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > [include]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import
+  $ hg sparse --import-rules $TESTTMP/rules_to_import
   $ ls
   data.py
 
   $ hg sparse --reset
   $ rm .hg/sparse
 
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > %include base.sparse
   > [include]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import
+  $ hg sparse --import-rules $TESTTMP/rules_to_import
   $ ls
   base.sparse
   data.py
@@ -56,7 +56,7 @@ Start against an existing profile; rules *already active* should be ignored
 
   $ hg sparse --enable-profile webpage.sparse
   $ hg sparse --include *.py
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > %include base.sparse
   > [include]
   > *.html
@@ -64,7 +64,7 @@ Start against an existing profile; rules *already active* should be ignored
   > [exclude]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import
+  $ hg sparse --import-rules $TESTTMP/rules_to_import
   $ ls
   base.sparse
   index.html
@@ -83,11 +83,11 @@ Start against an existing profile; rules *already active* should be ignored
 
 Same tests, with -Tjson enabled to output summaries
 
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > [include]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  $ hg sparse --import-rules $TESTTMP/rules_to_import -Tjson
   [
    {
     "exclude_rules_added": 0,
@@ -102,12 +102,12 @@ Same tests, with -Tjson enabled to output summaries
   $ hg sparse --reset
   $ rm .hg/sparse
 
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > %include base.sparse
   > [include]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  $ hg sparse --import-rules $TESTTMP/rules_to_import -Tjson
   [
    {
     "exclude_rules_added": 0,
@@ -124,7 +124,7 @@ Same tests, with -Tjson enabled to output summaries
 
   $ hg sparse --enable-profile webpage.sparse
   $ hg sparse --include *.py
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > %include base.sparse
   > [include]
   > *.html
@@ -132,7 +132,7 @@ Same tests, with -Tjson enabled to output summaries
   > [exclude]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import -Tjson
+  $ hg sparse --import-rules $TESTTMP/rules_to_import -Tjson
   [
    {
     "exclude_rules_added": 1,
@@ -146,7 +146,7 @@ Same tests, with -Tjson enabled to output summaries
 
 If importing results in no new rules being added, no refresh should take place!
 
-  $ cat > $HGTMP/trap_sparse_refresh.py <<EOF
+  $ cat > $TESTTMP/trap_sparse_refresh.py <<EOF
   > from mercurial import error, extensions
   > def extsetup(ui):
   >     def abort_refresh(ui, *args):
@@ -160,21 +160,21 @@ If importing results in no new rules being added, no refresh should take place!
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > trap_sparse_refresh=$HGTMP/trap_sparse_refresh.py
+  > trap_sparse_refresh=$TESTTMP/trap_sparse_refresh.py
   > EOF
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > [include]
   > *.py
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import
+  $ hg sparse --import-rules $TESTTMP/rules_to_import
 
 If an exception is raised during refresh, restore the existing rules again.
 
-  $ cat > $HGTMP/rules_to_import <<EOF
+  $ cat > $TESTTMP/rules_to_import <<EOF
   > [exclude]
   > *.html
   > EOF
-  $ hg sparse --import-rules $HGTMP/rules_to_import
+  $ hg sparse --import-rules $TESTTMP/rules_to_import
   abort: sparse._refresh called!
   [255]
   $ cat .hg/sparse
