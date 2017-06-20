@@ -622,7 +622,8 @@ def showparents(**args):
     repo = args['repo']
     ctx = args['ctx']
     pctxs = scmutil.meaningfulparents(repo, ctx)
-    prevs = [str(p.rev()) for p in pctxs]  # ifcontains() needs a list of str
+    # ifcontains() needs a list of str
+    prevs = [pycompat.bytestr(p.rev()) for p in pctxs]
     parents = [[('rev', p.rev()),
                 ('node', p.hex()),
                 ('phase', p.phasestr())]
@@ -651,7 +652,8 @@ def showrevslist(name, revs, **args):
     be evaluated"""
     args = pycompat.byteskwargs(args)
     repo = args['ctx'].repo()
-    revs = [str(r) for r in revs]  # ifcontains() needs a list of str
+    # ifcontains() needs a list of str
+    revs = [pycompat.bytestr(r) for r in revs]
     f = _showlist(name, revs, args)
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},

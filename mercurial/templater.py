@@ -1106,7 +1106,7 @@ def _flatten(thing):
     elif thing is None:
         pass
     elif not util.safehasattr(thing, '__iter__'):
-        yield str(thing)
+        yield pycompat.bytestr(thing)
     else:
         for i in thing:
             i = templatekw.unwraphybrid(i)
@@ -1115,7 +1115,7 @@ def _flatten(thing):
             elif i is None:
                 pass
             elif not util.safehasattr(i, '__iter__'):
-                yield str(i)
+                yield pycompat.bytestr(i)
             else:
                 for j in _flatten(i):
                     yield j
