@@ -782,3 +782,30 @@ Test infinitepush.metadatafilelimit number
   $ hg debugfillinfinitepushmetadata --node 09904fb20c53ff351bd3b1d47681f569a4dab7e5 --config infinitepush.metadatafilelimit=2
   $ cat .hg/scratchbranches/index/nodemetadatamap/09904fb20c53ff351bd3b1d47681f569a4dab7e5
   {"changed_files": {"file": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}, "file1": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}}, "changed_files_truncated": true} (no-eol)
+
+Test infinitepush.fillmetadatabranchpattern
+  $ cd ../repo
+  $ cat >> .hg/hgrc << EOF
+  > [infinitepush]
+  > fillmetadatabranchpattern=re:scratch/fillmetadata/.*
+  > EOF
+  $ cd ../client
+  $ mkcommit tofillmetadata
+  $ hg log -r . -T '{node}\n'
+  d2b0410d4da084bc534b1d90df0de9eb21583496
+  $ hg push -r . --to scratch/fillmetadata/fill --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  remote: pushing 6 commits:
+  remote:     33910bfe6ffe  testpullbycommithash1
+  remote:     d8fde0ddfc96  testpullbycommithash2
+  remote:     3edfe7e9089a  add and rm files
+  remote:     c7ac39f638c6  cpfile and mvfile
+  remote:     09904fb20c53  add many files
+  remote:     d2b0410d4da0  tofillmetadata
+
+Make sure background process finished
+  $ sleep 3
+  $ cd ../repo
+  $ cat .hg/scratchbranches/index/nodemetadatamap/d2b0410d4da084bc534b1d90df0de9eb21583496
+  {"changed_files": {"tofillmetadata": {"adds": 1, "isbinary": false, "removes": 0, "status": "added"}}} (no-eol)

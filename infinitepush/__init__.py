@@ -70,6 +70,12 @@
     # patterns to list if no patterns are specified.
     defaultremotepatterns = ['*']
 
+    # Server-side option. If bookmark that was pushed matches
+    # `fillmetadatabranchpattern` then background
+    # `hg debugfillinfinitepushmetadata` process will save metadata
+    # in infinitepush index for nodes that are ancestor of the bookmark.
+    fillmetadatabranchpattern = ''
+
     [remotenames]
     # Client-side option
     # This option should be set only if remotenames extension is enabled.
@@ -87,6 +93,7 @@ import random
 import re
 import socket
 import struct
+import subprocess
 import sys
 import tempfile
 import time
@@ -1006,6 +1013,14 @@ def bundle2scratchbranch(op, part):
                                           bookprevnode, params)
         log(scratchbranchparttype, eventtype='success',
             elapsed=time.time() - parthandlerstart)
+
+        fillmetadatabranchpattern = op.repo.ui.config(
+            'infinitepush', 'fillmetadatabranchpattern', '')
+        if bookmark and fillmetadatabranchpattern:
+            __, __, matcher = util.stringmatcher(fillmetadatabranchpattern)
+            if matcher(bookmark):
+                _asyncsavemetadata(op.repo.root,
+                                   [ctx.hex() for ctx in nodesctx])
     except Exception as e:
         log(scratchbranchparttype, eventtype='failure',
             elapsed=time.time() - parthandlerstart,
@@ -1064,3 +1079,24 @@ def bundle2pushkey(orig, op, part):
         return 1
 
     return orig(op, part)
+
+def _asyncsavemetadata(root, nodes):
+    '''starts a separate process that fills metadata for the nodes
+
+    This function creates a separate process and doesn't wait for it's
+    completion. This was done to avoid slowing down pushes
+    '''
+
+    maxnodes = 50
+    if len(nodes) > maxnodes:
+        return
+    nodesargs = []
+    for node in nodes:
+        nodesargs.append('--node')
+        nodesargs.append(node)
+    with open(os.devnull, 'w+b') as devnull:
+        cmdline = [util.hgexecutable(), 'debugfillinfinitepushmetadata',
+                   '-R', root] + nodesargs
+        # Process will run in background. We don't care about the return code
+        subprocess.Popen(cmdline, close_fds=True, shell=False,
+                         stdin=devnull, stdout=devnull, stderr=devnull)
