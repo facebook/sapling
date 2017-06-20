@@ -20,6 +20,7 @@ from . import (
     hbisect,
     obsutil,
     patch,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -293,6 +294,7 @@ def showbranches(**args):
     changeset was committed. Will be empty if the branch name was
     default. (DEPRECATED)
     """
+    args = pycompat.byteskwargs(args)
     branch = args['ctx'].branch()
     if branch != 'default':
         return showlist('branch', [branch], args, plural='branches')
@@ -303,6 +305,7 @@ def showbookmarks(**args):
     """List of strings. Any bookmarks associated with the
     changeset. Also sets 'active', the name of the active bookmark.
     """
+    args = pycompat.byteskwargs(args)
     repo = args['ctx']._repo
     bookmarks = args['ctx'].bookmarks()
     active = repo._activebookmark
@@ -313,6 +316,7 @@ def showbookmarks(**args):
 @templatekeyword('children')
 def showchildren(**args):
     """List of strings. The children of the changeset."""
+    args = pycompat.byteskwargs(args)
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
     return showlist('children', childrevs, args, element='child')
@@ -360,6 +364,7 @@ def showdiffstat(repo, ctx, templ, **args):
 @templatekeyword('envvars')
 def showenvvars(repo, **args):
     """A dictionary of environment variables. (EXPERIMENTAL)"""
+    args = pycompat.byteskwargs(args)
     env = repo.ui.exportableenviron()
     env = util.sortdict((k, env[k]) for k in sorted(env))
     return showdict('envvar', env, args, plural='envvars')
@@ -368,6 +373,7 @@ def showenvvars(repo, **args):
 def showextras(**args):
     """List of dicts with key, value entries of the 'extras'
     field of this changeset."""
+    args = pycompat.byteskwargs(args)
     extras = args['ctx'].extra()
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
     makemap = lambda k: {'key': k, 'value': extras[k]}
@@ -379,6 +385,7 @@ def showextras(**args):
 @templatekeyword('file_adds')
 def showfileadds(**args):
     """List of strings. Files added by this changeset."""
+    args = pycompat.byteskwargs(args)
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_add', getfiles(repo, ctx, revcache)[1], args,
                     element='file')
@@ -388,6 +395,7 @@ def showfilecopies(**args):
     """List of strings. Files copied in this changeset with
     their sources.
     """
+    args = pycompat.byteskwargs(args)
     cache, ctx = args['cache'], args['ctx']
     copies = args['revcache'].get('copies')
     if copies is None:
@@ -412,6 +420,7 @@ def showfilecopiesswitch(**args):
     """List of strings. Like "file_copies" but displayed
     only if the --copied switch is set.
     """
+    args = pycompat.byteskwargs(args)
     copies = args['revcache'].get('copies') or []
     copies = util.sortdict(copies)
     return showdict('file_copy', copies, args, plural='file_copies',
@@ -420,6 +429,7 @@ def showfilecopiesswitch(**args):
 @templatekeyword('file_dels')
 def showfiledels(**args):
     """List of strings. Files removed by this changeset."""
+    args = pycompat.byteskwargs(args)
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_del', getfiles(repo, ctx, revcache)[2], args,
                     element='file')
@@ -427,6 +437,7 @@ def showfiledels(**args):
 @templatekeyword('file_mods')
 def showfilemods(**args):
     """List of strings. Files modified by this changeset."""
+    args = pycompat.byteskwargs(args)
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_mod', getfiles(repo, ctx, revcache)[0], args,
                     element='file')
@@ -436,6 +447,7 @@ def showfiles(**args):
     """List of strings. All files modified, added, or removed by this
     changeset.
     """
+    args = pycompat.byteskwargs(args)
     return showlist('file', args['ctx'].files(), args)
 
 @templatekeyword('graphnode')
@@ -470,6 +482,7 @@ def showlatesttag(**args):
 
 def showlatesttags(pattern, **args):
     """helper method for the latesttag keyword and function"""
+    args = pycompat.byteskwargs(args)
     repo, ctx = args['repo'], args['ctx']
     cache = args['cache']
     latesttags = getlatesttags(repo, ctx, cache, pattern)
@@ -526,6 +539,7 @@ def showmanifest(**args):
 
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
+    args = pycompat.byteskwargs(args)
     ctx = args['ctx']
     repo = ctx.repo()
     ns = repo.names[namespace]
@@ -536,6 +550,7 @@ def shownames(namespace, **args):
 def shownamespaces(**args):
     """Dict of lists. Names attached to this changeset per
     namespace."""
+    args = pycompat.byteskwargs(args)
     ctx = args['ctx']
     repo = ctx.repo()
     namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
@@ -603,6 +618,7 @@ def showparents(**args):
     """List of strings. The parents of the changeset in "rev:node"
     format. If the changeset has only one "natural" parent (the predecessor
     revision) nothing is shown."""
+    args = pycompat.byteskwargs(args)
     repo = args['repo']
     ctx = args['ctx']
     pctxs = scmutil.meaningfulparents(repo, ctx)
@@ -633,6 +649,7 @@ def showrev(repo, ctx, templ, **args):
 def showrevslist(name, revs, **args):
     """helper to generate a list of revisions in which a mapped template will
     be evaluated"""
+    args = pycompat.byteskwargs(args)
     repo = args['ctx'].repo()
     revs = [str(r) for r in revs]  # ifcontains() needs a list of str
     f = _showlist(name, revs, args)
@@ -643,6 +660,7 @@ def showrevslist(name, revs, **args):
 @templatekeyword('subrepos')
 def showsubrepos(**args):
     """List of strings. Updated subrepositories in the changeset."""
+    args = pycompat.byteskwargs(args)
     ctx = args['ctx']
     substate = ctx.substate
     if not substate:
@@ -682,6 +700,7 @@ def showtroubles(**args):
 
     (EXPERIMENTAL)
     """
+    args = pycompat.byteskwargs(args)
     return showlist('trouble', args['ctx'].troubles(), args)
 
 # tell hggettext to extract docstrings from these functions:
