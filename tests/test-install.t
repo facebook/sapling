@@ -188,7 +188,7 @@ the default for them.
   $ $PYTHON -m virtualenv --no-site-packages --never-download installenv >> pip.log
 Note: we use this weird path to run pip and hg to avoid platform differences,
 since it's bin on most platforms but Scripts on Windows.
-  $ ./installenv/*/pip install $TESTDIR/.. >> pip.log
+  $ ./installenv/*/pip install --no-index $TESTDIR/.. >> pip.log
   $ ./installenv/*/hg debuginstall || cat pip.log
   checking encoding (ascii)...
   checking Python executable (*) (glob)
