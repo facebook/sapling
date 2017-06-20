@@ -286,7 +286,7 @@ def showbranch(**args):
     """String. The name of the branch on which the changeset was
     committed.
     """
-    return args['ctx'].branch()
+    return args[r'ctx'].branch()
 
 @templatekeyword('branches')
 def showbranches(**args):
@@ -332,8 +332,8 @@ def showcurrentbookmark(**args):
 def showactivebookmark(**args):
     """String. The active bookmark, if it is
     associated with the changeset"""
-    active = args['repo']._activebookmark
-    if active and active in args['ctx'].bookmarks():
+    active = args[r'repo']._activebookmark
+    if active and active in args[r'ctx'].bookmarks():
         return active
     return ''
 
@@ -516,7 +516,7 @@ def showchangessincelatesttag(repo, ctx, templ, cache, **args):
 def _showchangessincetag(repo, ctx, **args):
     offset = 0
     revs = [ctx.rev()]
-    tag = args['tag']
+    tag = args[r'tag']
 
     # The only() revset doesn't currently support wdir()
     if ctx.rev() is None:
@@ -527,14 +527,14 @@ def _showchangessincetag(repo, ctx, **args):
 
 @templatekeyword('manifest')
 def showmanifest(**args):
-    repo, ctx, templ = args['repo'], args['ctx'], args['templ']
+    repo, ctx, templ = args[r'repo'], args[r'ctx'], args[r'templ']
     mnode = ctx.manifestnode()
     if mnode is None:
         # just avoid crash, we might want to use the 'ff...' hash in future
         return
     args = args.copy()
-    args.update({'rev': repo.manifestlog._revlog.rev(mnode),
-                 'node': hex(mnode)})
+    args.update({r'rev': repo.manifestlog._revlog.rev(mnode),
+                 r'node': hex(mnode)})
     return templ('manifest', **args)
 
 def shownames(namespace, **args):
