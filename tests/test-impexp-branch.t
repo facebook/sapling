@@ -30,12 +30,12 @@
   $ hg export 1 > ../r1.patch
   $ cd ..
 
-  $ if python findbranch.py < r0.patch; then
+  $ if $PYTHON findbranch.py < r0.patch; then
   >     echo "Export of default branch revision has Branch header" 1>&2
   >     exit 1
   > fi
 
-  $ if python findbranch.py < r1.patch; then
+  $ if $PYTHON findbranch.py < r1.patch; then
   >     :  # Do nothing
   > else
   >     echo "Export of branch revision is missing Branch header" 1>&2

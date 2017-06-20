@@ -19,7 +19,7 @@ Issue562: .hgignore requires newline at end:
   > f.close()
   > EOF
 
-  $ python makeignore.py
+  $ $PYTHON makeignore.py
 
 Should display baz only:
 

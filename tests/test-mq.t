@@ -1137,9 +1137,9 @@ create a git binary patch
   > path = sys.argv[1]
   > open(path, 'wb').write('BIN\x00ARY')
   > EOF
-  $ python writebin.py bucephalus
+  $ $PYTHON writebin.py bucephalus
 
-  $ python "$TESTDIR/md5sum.py" bucephalus
+  $ $PYTHON "$TESTDIR/md5sum.py" bucephalus
   8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
   $ hg add bucephalus
   $ hg qnew -f --git addbucephalus
@@ -1158,7 +1158,7 @@ check binary patches can be popped and pushed
   applying addbucephalus
   now at: addbucephalus
   $ test -f bucephalus
-  $ python "$TESTDIR/md5sum.py" bucephalus
+  $ $PYTHON "$TESTDIR/md5sum.py" bucephalus
   8ba2a2f3e77b55d03051ff9c24ad65e7  bucephalus
 
 

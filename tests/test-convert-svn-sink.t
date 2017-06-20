@@ -10,7 +10,7 @@
   >        if [ $2 -gt 0 ]; then
   >            limit="--limit=$2"
   >        fi
-  >        svn log --xml -v $limit | python "$TESTDIR/svnxml.py"
+  >        svn log --xml -v $limit | $PYTHON "$TESTDIR/svnxml.py"
   >     )
   > }
 

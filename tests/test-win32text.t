@@ -28,7 +28,7 @@ commit should succeed
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cp .hg/hgrc ../zoz/.hg
-  $ python unix2dos.py f
+  $ $PYTHON unix2dos.py f
 
 commit should fail
 
@@ -102,7 +102,7 @@ and now for something completely different
 
   $ mkdir d
   $ echo hello > d/f2
-  $ python unix2dos.py d/f2
+  $ $PYTHON unix2dos.py d/f2
   $ hg add d/f2
   $ hg ci -m 3
   attempt to commit or push text file(s) using CRLF line endings
@@ -181,7 +181,7 @@ and now for something completely different
   adding dupe/b (glob)
   adding dupe/c (glob)
   adding dupe/d (glob)
-  $ python unix2dos.py dupe/b dupe/c dupe/d
+  $ $PYTHON unix2dos.py dupe/b dupe/c dupe/d
   $ hg -R dupe ci -m a dupe/a
   $ hg -R dupe ci -m b/c dupe/[bc]
   $ hg -R dupe ci -m d dupe/d

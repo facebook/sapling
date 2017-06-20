@@ -124,7 +124,7 @@ Run additional tests for the import checker
   > from mercurial.node import hex
   > EOF
 
-  $ python "$import_checker" testpackage*/*.py testpackage/subpackage/*.py
+  $ $PYTHON "$import_checker" testpackage*/*.py testpackage/subpackage/*.py
   testpackage/importalias.py:2: ui module must be "as" aliased to uimod
   testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
   testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted

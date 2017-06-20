@@ -8,7 +8,7 @@ Test document extraction
   $ { echo C; ls "$TESTDIR/../i18n"/*.po | sort; } | while read PO; do
   >     LOCALE=`basename "$PO" .po`
   >     echo "% extracting documentation from $LOCALE"
-  >     LANGUAGE=$LOCALE python "$TESTDIR/../doc/gendoc.py" >> gendoc-$LOCALE.txt 2> /dev/null || exit
+  >     LANGUAGE=$LOCALE $PYTHON "$TESTDIR/../doc/gendoc.py" >> gendoc-$LOCALE.txt 2> /dev/null || exit
   > 
   >     if [ $LOCALE != C ]; then
   >         if [ ! -f $TESTDIR/test-gendoc-$LOCALE.t ]; then

@@ -909,7 +909,7 @@ This tests that translated help message is lower()-ed correctly.
   >     sys.stdout.write(''.join(escape(c) for c in l))
   > EOF
 
-  $ hg commit -i --encoding cp932 2>&1 <<EOF | python $TESTTMP/escape.py | grep '^y - '
+  $ hg commit -i --encoding cp932 2>&1 <<EOF | $PYTHON $TESTTMP/escape.py | grep '^y - '
   > ?
   > q
   > EOF

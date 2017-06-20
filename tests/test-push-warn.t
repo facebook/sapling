@@ -418,7 +418,7 @@ multiple new heads but also doesn't report too many heads:
   adding c
   created new head
 
-  $ for i in `python $TESTDIR/seq.py 3`; do hg -R h up -q 0; echo $i > h/b; hg -R h ci -qAm$i; done
+  $ for i in `$PYTHON $TESTDIR/seq.py 3`; do hg -R h up -q 0; echo $i > h/b; hg -R h ci -qAm$i; done
 
   $ hg -R i push h
   pushing to h

@@ -57,7 +57,7 @@ comparing two empty files caused ZeroDivisionError in the past
 
 should be sorted by path for stable result
 
-  $ for i in `python $TESTDIR/seq.py 0 9`; do
+  $ for i in `$PYTHON $TESTDIR/seq.py 0 9`; do
   >     cp small-file $i
   > done
   $ rm small-file
@@ -88,7 +88,7 @@ should be sorted by path for stable result
 pick one from many identical files
 
   $ cp 0 a
-  $ rm `python $TESTDIR/seq.py 0 9`
+  $ rm `$PYTHON $TESTDIR/seq.py 0 9`
   $ hg addremove
   removing 0
   removing 1
@@ -107,11 +107,11 @@ pick one from many identical files
 pick one from many similar files
 
   $ cp 0 a
-  $ for i in `python $TESTDIR/seq.py 0 9`; do
+  $ for i in `$PYTHON $TESTDIR/seq.py 0 9`; do
   >     echo $i >> $i
   > done
   $ hg commit -m 'make them slightly different'
-  $ rm `python $TESTDIR/seq.py 0 9`
+  $ rm `$PYTHON $TESTDIR/seq.py 0 9`
   $ hg addremove -s50
   removing 0
   removing 1

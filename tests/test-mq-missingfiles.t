@@ -23,11 +23,11 @@ future qrefresh.
 
   $ hg init normal
   $ cd normal
-  $ python ../writelines.py b 10 'a\n'
+  $ $PYTHON ../writelines.py b 10 'a\n'
   $ hg ci -Am addb
   adding b
   $ echo a > a
-  $ python ../writelines.py b 2 'b\n' 10 'a\n' 2 'c\n'
+  $ $PYTHON ../writelines.py b 2 'b\n' 10 'a\n' 2 'c\n'
   $ echo c > c
   $ hg add a c
   $ hg qnew -f changeb
@@ -82,7 +82,7 @@ Test missing renamed file
   $ hg up -qC 0
   $ echo a > a
   $ hg mv b bb
-  $ python ../writelines.py bb 2 'b\n' 10 'a\n' 2 'c\n'
+  $ $PYTHON ../writelines.py bb 2 'b\n' 10 'a\n' 2 'c\n'
   $ echo c > c
   $ hg add a c
   $ hg qnew changebb
@@ -129,11 +129,11 @@ Test missing renamed file
 
   $ hg init git
   $ cd git
-  $ python ../writelines.py b 1 '\x00'
+  $ $PYTHON ../writelines.py b 1 '\x00'
   $ hg ci -Am addb
   adding b
   $ echo a > a
-  $ python ../writelines.py b 1 '\x01' 1 '\x00'
+  $ $PYTHON ../writelines.py b 1 '\x01' 1 '\x00'
   $ echo c > c
   $ hg add a c
   $ hg qnew -f changeb

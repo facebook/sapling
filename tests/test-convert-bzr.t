@@ -129,10 +129,10 @@ merge
   $ bzr branch -q source source-improve
   $ cd source
   $ echo more >> a
-  $ python ../helper.py 'Editing a' 100
+  $ $PYTHON ../helper.py 'Editing a' 100
   $ cd ../source-improve
   $ echo content3 >> b
-  $ python ../helper.py 'Editing b' 200
+  $ $PYTHON ../helper.py 'Editing b' 200
   $ cd ../source
   $ bzr merge -q ../source-improve
   $ bzr commit -q -m 'Merged improve branch'

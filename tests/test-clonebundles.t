@@ -69,7 +69,7 @@ Server is not running aborts
 
 Server returns 404
 
-  $ python $TESTDIR/dumbhttp.py -p $HGPORT1 --pid http.pid
+  $ $PYTHON $TESTDIR/dumbhttp.py -p $HGPORT1 --pid http.pid
   $ cat http.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT running-404
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg

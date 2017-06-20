@@ -5,7 +5,7 @@ Set up SMTP server:
   $ CERTSDIR="$TESTDIR/sslcerts"
   $ cat "$CERTSDIR/priv.pem" "$CERTSDIR/pub.pem" >> server.pem
 
-  $ python "$TESTDIR/dummysmtpd.py" -p $HGPORT --pid-file a.pid -d \
+  $ $PYTHON "$TESTDIR/dummysmtpd.py" -p $HGPORT --pid-file a.pid -d \
   > --tls smtps --certificate `pwd`/server.pem
   listening at localhost:$HGPORT (?)
   $ cat a.pid >> $DAEMON_PIDS

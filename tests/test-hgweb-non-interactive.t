@@ -76,7 +76,7 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > with i._obtainrepo() as repo:
   >     print sorted([x for x in repo.ui.environ if x.startswith('wsgi')])
   > EOF
-  $ python request.py
+  $ $PYTHON request.py
   ---- STATUS
   200 Script output follows
   ---- HEADERS

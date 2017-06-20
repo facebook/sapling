@@ -21,7 +21,7 @@ ghost revisions
   $ bzr add -q somefile
   $ bzr commit -q -m 'Initial layout setup'
   $ echo morecontent >> somefile
-  $ python ../../ghostcreator.py 'Commit with ghost revision' ghostrev
+  $ $PYTHON ../../ghostcreator.py 'Commit with ghost revision' ghostrev
   $ cd ..
   $ hg convert source source-hg
   initializing destination source-hg repository

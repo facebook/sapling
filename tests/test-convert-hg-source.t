@@ -130,7 +130,7 @@ check shamap LF and CRLF handling
   >          for i, l in enumerate(file(sys.argv[1]))]
   > file(sys.argv[1], 'wb').write(''.join(lines))
   > EOF
-  $ python rewrite.py new/.hg/shamap
+  $ $PYTHON rewrite.py new/.hg/shamap
   $ cd orig
   $ hg up -qC 1
   $ echo foo >> foo

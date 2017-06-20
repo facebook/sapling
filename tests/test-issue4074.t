@@ -16,12 +16,12 @@ A script to generate nasty diff worst-case scenarios:
 
 Check in a big file:
 
-  $ python ../s.py > a
+  $ $PYTHON ../s.py > a
   $ hg ci -qAm0
 
 Modify it:
 
-  $ python ../s.py > a
+  $ $PYTHON ../s.py > a
 
 Time a check-in, should never take more than 10 seconds user time:
 

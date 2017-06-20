@@ -40,7 +40,7 @@ Miss perl... sometimes
 convert
 
   $ hg convert -v --config convert.hg.clonebranches=1 source dest |
-  >     python filter.py
+  >     $PYTHON filter.py
   3 adda
   2 changea
   1 addb
@@ -73,7 +73,7 @@ Add a merge with both parents and child in different branches
 incremental conversion
 
   $ hg convert -v --config convert.hg.clonebranches=1 source dest |
-  >     python filter.py
+  >     $PYTHON filter.py
   2 c1
   pulling from branch0 into branch1
   4 changesets found

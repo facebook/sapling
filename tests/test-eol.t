@@ -69,7 +69,7 @@ Set up helpers
   >     echo '% a.txt'
   >     cat a.txt
   >     hg diff
-  >     python ../switch-eol.py $1 a.txt
+  >     $PYTHON ../switch-eol.py $1 a.txt
   >     echo '% hg diff only reports a single changed line:'
   >     hg diff
   >     echo "% reverting back to $1 format"

@@ -81,7 +81,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   > env['QUERY_STRING'] = 'style=raw'
   > process(hgwebdir({'repo': '.'}))
   > EOF
-  $ python request.py
+  $ $PYTHON request.py
   ---- STATUS
   200 Script output follows
   ---- HEADERS

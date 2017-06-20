@@ -48,7 +48,7 @@ Test different --eol values
   $ hg ci -Am adda
   adding .hgignore
   adding a
-  $ python ../makepatch.py
+  $ $PYTHON ../makepatch.py
   $ hg qimport eol.diff
   adding eol.diff to series file
 
@@ -85,7 +85,7 @@ force LF
   applying eol.diff
   now at: eol.diff
   $ hg qrefresh
-  $ python ../cateol.py .hg/patches/eol.diff
+  $ $PYTHON ../cateol.py .hg/patches/eol.diff
   # HG changeset patch<LF>
   # Parent  0d0bf99a8b7a3842c6f8ef09e34f69156c4bd9d0<LF>
   test message<LF>
@@ -106,7 +106,7 @@ force LF
   +d<CR><LF>
   +z<LF>
   \ No newline at end of file<LF>
-  $ python ../cateol.py a
+  $ $PYTHON ../cateol.py a
   a<CR><LF>
   y<CR><LF>
   c<CR><LF>
@@ -121,7 +121,7 @@ push again forcing LF and compare revisions
   $ hg --config patch.eol='CRLF' qpush
   applying eol.diff
   now at: eol.diff
-  $ python ../cateol.py a
+  $ $PYTHON ../cateol.py a
   a<CR><LF>
   y<CR><LF>
   c<CR><LF>
@@ -136,7 +136,7 @@ push again without LF and compare revisions
   $ hg qpush
   applying eol.diff
   now at: eol.diff
-  $ python ../cateol.py a
+  $ $PYTHON ../cateol.py a
   a<CR><LF>
   y<CR><LF>
   c<CR><LF>

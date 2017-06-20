@@ -89,7 +89,7 @@ enable pager extension globally, but spawns the master server with no tty:
   > [extensions]
   > pager =
   > [pager]
-  > pager = python $TESTTMP/fakepager.py
+  > pager = $PYTHON $TESTTMP/fakepager.py
   > EOF
   $ chg version > /dev/null
   $ touch foo

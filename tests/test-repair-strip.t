@@ -21,7 +21,7 @@
   >   hg verify
   >   echo % journal contents
   >   if [ -f .hg/store/journal ]; then
-  >       cat .hg/store/journal | python $TESTTMP/dumpjournal.py
+  >       cat .hg/store/journal | $PYTHON $TESTTMP/dumpjournal.py
   >   else
   >       echo "(no journal)"
   >   fi

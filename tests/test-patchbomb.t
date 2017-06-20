@@ -22,7 +22,7 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   >     skipblank = False
   >     print l,
   > EOF
-  $ FILTERBOUNDARY="python `pwd`/prune-blank-after-boundary.py"
+  $ FILTERBOUNDARY="$PYTHON `pwd`/prune-blank-after-boundary.py"
   $ echo "[format]" >> $HGRCPATH
   $ echo "usegeneraldelta=yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH

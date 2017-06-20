@@ -24,7 +24,7 @@
   $ hg add f
   $ hg ci -m 1
 
-  $ python unix2mac.py f
+  $ $PYTHON unix2mac.py f
   $ hg ci -m 2
   attempt to commit or push text file(s) using CR line endings
   in dea860dc51ec: f
@@ -32,7 +32,7 @@
   rollback completed
   abort: pretxncommit.cr hook failed
   [255]
-  $ hg cat f | python print.py
+  $ hg cat f | $PYTHON print.py
   hello<LF>
-  $ cat f | python print.py
+  $ cat f | $PYTHON print.py
   hello<CR>

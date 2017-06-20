@@ -64,7 +64,7 @@ regardless of the commit message in the patch)
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ HGEDITOR=cat hg --config ui.patch='python ../dummypatch.py' --cwd b import --edit ../exported-tip.patch
+  $ HGEDITOR=cat hg --config ui.patch='$PYTHON ../dummypatch.py' --cwd b import --edit ../exported-tip.patch
   applying ../exported-tip.patch
   second change
   
@@ -294,7 +294,7 @@ plain diff in email, subject, message body
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg.py diffed-tip.patch msg.patch
+  $ $PYTHON mkmsg.py diffed-tip.patch msg.patch
   $ hg --cwd b import ../msg.patch
   applying ../msg.patch
   $ hg --cwd b tip | grep email
@@ -356,7 +356,7 @@ hg export in email, should use patch header
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg.py exported-tip.patch msg.patch
+  $ $PYTHON mkmsg.py exported-tip.patch msg.patch
   $ cat msg.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip | grep second
@@ -387,7 +387,7 @@ plain diff in email, [PATCH] subject, message body with subject
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg2.py diffed-tip.patch msg.patch
+  $ $PYTHON mkmsg2.py diffed-tip.patch msg.patch
   $ cat msg.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip --template '{desc}\n'

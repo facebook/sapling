@@ -16,7 +16,7 @@ pager was running.
   > formatted = yes
   > color = no
   > [pager]
-  > pager = python $TESTTMP/fakepager.py
+  > pager = $PYTHON $TESTTMP/fakepager.py
   > EOF
 
   $ hg init repo
@@ -24,7 +24,7 @@ pager was running.
   $ echo a >> a
   $ hg add a
   $ hg ci -m 'add a'
-  $ for x in `python $TESTDIR/seq.py 1 10`; do
+  $ for x in `$PYTHON $TESTDIR/seq.py 1 10`; do
   >   echo a $x >> a
   >   hg ci -m "modify a $x"
   > done

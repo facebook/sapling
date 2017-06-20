@@ -3,7 +3,7 @@
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
 
-  $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
+  $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON contrib/check-py3-compat.py
   contrib/python-zstandard/setup.py not using absolute_import
   contrib/python-zstandard/setup_zstd.py not using absolute_import
   contrib/python-zstandard/tests/common.py not using absolute_import

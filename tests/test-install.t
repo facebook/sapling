@@ -159,7 +159,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   >     print('  %s' % f)
   > EOF
 
-  $ python wixxml.py help
+  $ $PYTHON wixxml.py help
   Not installed:
     help/common.txt
     help/hg-ssh.8.txt
@@ -168,7 +168,7 @@ path variables are expanded (~ is the same as $TESTTMP)
     help/hgrc.5.txt
   Not tracked:
 
-  $ python wixxml.py templates
+  $ $PYTHON wixxml.py templates
   Not installed:
   Not tracked:
 

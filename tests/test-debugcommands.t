@@ -142,7 +142,7 @@ Test internal debugstacktrace command
   >     dst('hi ...\\nfrom h hidden in g', 1, depth=2)
   > f()
   > EOF
-  $ python debugstacktrace.py
+  $ $PYTHON debugstacktrace.py
   stacktrace at:
    debugstacktrace.py:10 in * (glob)
    debugstacktrace.py:3  in f

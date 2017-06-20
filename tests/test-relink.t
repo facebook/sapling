@@ -93,8 +93,8 @@ relink
 
 check hardlinks
 
-  $ python arelinked.py repo/.hg/store/data/a.i clone/.hg/store/data/a.i
+  $ $PYTHON arelinked.py repo/.hg/store/data/a.i clone/.hg/store/data/a.i
   repo/.hg/store/data/a.i == clone/.hg/store/data/a.i
-  $ python arelinked.py repo/.hg/store/data/b.i clone/.hg/store/data/b.i
+  $ $PYTHON arelinked.py repo/.hg/store/data/b.i clone/.hg/store/data/b.i
   repo/.hg/store/data/b.i != clone/.hg/store/data/b.i
 

@@ -45,6 +45,6 @@ Check Mercurial specific translation problems in each *.po files, and
 tool itself by doctest
 
   $ cd "$TESTDIR"/../i18n
-  $ python check-translation.py *.po
-  $ python check-translation.py --doctest
+  $ $PYTHON check-translation.py *.po
+  $ $PYTHON check-translation.py --doctest
   $ cd $TESTTMP

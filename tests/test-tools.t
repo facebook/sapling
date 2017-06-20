@@ -44,10 +44,10 @@ Tests of the file helper tool
 #endif
 
 #if no-windows
-  $ python $TESTDIR/seq.py 10 > bar
+  $ $PYTHON $TESTDIR/seq.py 10 > bar
 #else
 Convert CRLF -> LF for consistency
-  $ python $TESTDIR/seq.py 10 | sed "s/$//" > bar
+  $ $PYTHON $TESTDIR/seq.py 10 | sed "s/$//" > bar
 #endif
 
 #if unix-permissions symlink

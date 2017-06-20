@@ -23,7 +23,7 @@ Sanity check check-config.py
 
   $ cd "$TESTDIR"/..
 
-  $ python contrib/check-config.py < $TESTTMP/files
+  $ $PYTHON contrib/check-config.py < $TESTTMP/files
   undocumented: ui.doesnotexist (str)
   undocumented: ui.missingbool1 (bool) [True]
   undocumented: ui.missingbool2 (bool)
@@ -32,7 +32,7 @@ Sanity check check-config.py
 New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
-  >   python contrib/check-config.py
+  >   $PYTHON contrib/check-config.py
               limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
   
   conflict on profiling.showmin: ('with', '0.05') != ('with', '0.005')

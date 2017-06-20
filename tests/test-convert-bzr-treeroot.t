@@ -20,7 +20,7 @@ change the id of the tree root
   $ echo content > file
   $ bzr add -q file
   $ bzr commit -q -m 'Initial add'
-  $ python ../../treeset.py 'Changed root' new
+  $ $PYTHON ../../treeset.py 'Changed root' new
   $ cd ..
   $ hg convert source source-hg
   initializing destination source-hg repository

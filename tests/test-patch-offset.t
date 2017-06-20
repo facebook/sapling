@@ -23,7 +23,7 @@ the patch.  So all the patch hunks need to be applied to a constant offset
 within this file.  If the offset isn't tracked then the hunks can be
 applied to the wrong lines of this file.
 
-  $ python ../writepatterns.py a 34X 10A 1B 10A 1C 10A 1B 10A 1D 10A 1B 10A 1E 10A 1B 10A
+  $ $PYTHON ../writepatterns.py a 34X 10A 1B 10A 1C 10A 1B 10A 1D 10A 1B 10A 1E 10A 1B 10A
   $ hg commit -Am adda
   adding a
 
@@ -76,7 +76,7 @@ import patch
 
 compare imported changes against reference file
 
-  $ python ../writepatterns.py aref 34X 10A 1B 1a 9A 1C 10A 1B 10A 1D 10A 1B 1a 9A 1E 10A 1B 1a 9A
+  $ $PYTHON ../writepatterns.py aref 34X 10A 1B 1a 9A 1C 10A 1B 10A 1D 10A 1B 1a 9A 1E 10A 1B 1a 9A
   $ diff aref a
 
   $ cd ..

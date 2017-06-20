@@ -29,7 +29,7 @@ Test different --eol values
   $ hg ci -Am adda
   adding .hgignore
   adding a
-  $ python ../makepatch.py
+  $ $PYTHON ../makepatch.py
 
 
 invalid eol

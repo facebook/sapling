@@ -83,7 +83,7 @@ Test text mode with extended git-style diff format
   > path = sys.argv[1]
   > open(path, 'wb').write('\x00\x01\x02\x03')
   > EOF
-  $ python writebin.py binfile.bin
+  $ $PYTHON writebin.py binfile.bin
   $ hg add binfile.bin
   $ hg ci -m 'add binfile.bin'
 

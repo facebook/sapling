@@ -524,7 +524,7 @@ iterable in addbranchrevs()
   > hg.clone(myui, {}, repo, dest="ua")
   > EOF
 
-  $ python simpleclone.py
+  $ $PYTHON simpleclone.py
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -538,7 +538,7 @@ iterable in addbranchrevs()
   > hg.clone(myui, {}, repo, dest="ua", branch=["stable",])
   > EOF
 
-  $ python branchclone.py
+  $ $PYTHON branchclone.py
   adding changesets
   adding manifests
   adding file changes

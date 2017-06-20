@@ -77,7 +77,7 @@ update with worker processes
   > [worker]
   > numcpus = 4
   > EOF
-  $ for i in `python $TESTDIR/seq.py 1 100`; do
+  $ for i in `$PYTHON $TESTDIR/seq.py 1 100`; do
   >   echo $i > $i
   > done
   $ hg ci -qAm 'add 100 files'
