@@ -827,14 +827,27 @@ def _findrecenttree(repo, startrev):
     cl = repo.changelog
     mfstore = repo.svfs.manifestdatastore
     phasecache = repo._phasecache
+    maxrev = min(len(cl) - 1, startrev + BASENODESEARCHMAX)
     minrev = max(0, startrev - BASENODESEARCHMAX)
-    for rev in xrange(startrev, minrev, -1):
-        if phasecache.phase(repo, rev) != phases.public:
-            continue
-        mfnode = cl.changelogrevision(rev).manifest
-        missing = mfstore.getmissing([('', mfnode)])
-        if not missing:
-            return [mfnode]
+
+    # Look up and down from the given rev
+    phase = phasecache.phase
+    walksize = max(maxrev - startrev, startrev - minrev) + 1
+    for offset in xrange(0, walksize):
+        revs = []
+        uprev = startrev + offset
+        downrev = startrev - offset
+        if uprev <= maxrev:
+            revs.append(uprev)
+        if downrev >= minrev:
+            revs.append(downrev)
+        for rev in revs:
+            if phase(repo, rev) != phases.public:
+                continue
+            mfnode = cl.changelogrevision(rev).manifest
+            missing = mfstore.getmissing([('', mfnode)])
+            if not missing:
+                return [mfnode]
 
     return []
 
@@ -1019,7 +1032,7 @@ class remotetreedatastore(object):
                 raise KeyError((name, node))
 
             # Find a recent tree that we already have
-            basemfnodes = _findrecenttree(self._repo, rev)
+            basemfnodes = _findrecenttree(self._repo, linkrev)
 
         _prefetchtrees(self._repo, name, [node], basemfnodes, [])
         self._shared.markforrefresh()

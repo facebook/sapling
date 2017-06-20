@@ -192,6 +192,17 @@ Test auto prefetch during normal access
   Node          Delta Base    Delta Length
   60a7f7acb6bb  000000000000  95
 
+Test that auto prefetch scans up the changelog for base trees
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetchtrees -r 'tip^'
+  3 trees fetched over * (glob)
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetchtrees -r tip
+  3 trees fetched over * (glob)
+- Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
+  $ hg log -r tip --stat --pager=off > /dev/null
+  2 trees fetched over * (glob)
+
 Test auto prefetch during pull
 
 - Prefetch everything
