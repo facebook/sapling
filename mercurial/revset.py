@@ -600,19 +600,7 @@ def _descendants(repo, subset, x, followfirst=False):
     if not roots:
         return baseset()
     s = dagop.revdescendants(repo, roots, followfirst)
-
-    # Both sets need to be ascending in order to lazily return the union
-    # in the correct order.
-    base = subset & roots
-    desc = subset & s
-    result = base + desc
-    if subset.isascending():
-        result.sort()
-    elif subset.isdescending():
-        result.sort(reverse=True)
-    else:
-        result = subset & result
-    return result
+    return subset & s
 
 @predicate('descendants(set)', safe=True)
 def descendants(repo, subset, x):

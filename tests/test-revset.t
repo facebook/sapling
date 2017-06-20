@@ -3530,11 +3530,7 @@ test alias recursion
       ('symbol', 'merge')
       None))
   * set:
-  <addset+
-    <filteredset
-      <fullreposet+ 0:10>,
-      <merge>>,
-    <generatorset+>>
+  <generatorset+>
   6
   7
 

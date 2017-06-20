@@ -98,11 +98,15 @@ def _genrevdescendants(repo, revs, followfirst):
     if first == nullrev:
         # Are there nodes with a null first parent and a non-null
         # second one? Maybe. Do we care? Probably not.
+        yield first
         for i in cl:
             yield i
     else:
         seen = set(revs)
-        for i in cl.revs(first + 1):
+        for i in cl.revs(first):
+            if i in seen:
+                yield i
+                continue
             for x in cl.parentrevs(i)[:cut]:
                 if x != nullrev and x in seen:
                     seen.add(i)
@@ -110,7 +114,8 @@ def _genrevdescendants(repo, revs, followfirst):
                     break
 
 def revdescendants(repo, revs, followfirst):
-    """Like revlog.descendants() but supports followfirst."""
+    """Like revlog.descendants() but supports additional options, includes
+    the given revs themselves, and returns a smartset"""
     gen = _genrevdescendants(repo, revs, followfirst)
     return generatorset(gen, iterasc=True)
 
