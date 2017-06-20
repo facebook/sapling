@@ -477,7 +477,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     remote's path/URL. Defaults to "identity."
     """
 
-    if isinstance(source, str):
+    if isinstance(source, bytes):
         origsource = ui.expandpath(source)
         source, branch = parseurl(origsource, branch)
         srcpeer = peer(ui, peeropts, source)

@@ -126,7 +126,7 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
             yield templ(noname, **mapping)
         return
     if name not in templ:
-        if isinstance(values[0], str):
+        if isinstance(values[0], bytes):
             yield separator.join(values)
         else:
             for v in values:
