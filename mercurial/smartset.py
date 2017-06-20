@@ -871,7 +871,10 @@ class generatorset(abstractsmartset):
                 if i < _len(genlist):
                     yield genlist[i]
                 else:
-                    yield _next(nextgen)
+                    try:
+                        yield _next(nextgen)
+                    except StopIteration:
+                        return
                 i += 1
         return gen()
 
