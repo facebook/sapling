@@ -935,6 +935,51 @@ test bad arguments passed to ancestors()
   hg: parse error: ancestors expects an integer depth
   [255]
 
+test descendants
+
+  $ hg log -G -T '{rev}\n' --config experimental.graphshorten=True
+  @  9
+  o  8
+  | o  7
+  | o  6
+  |/|
+  | o  5
+  o |  4
+  | o  3
+  o |  2
+  |/
+  o  1
+  o  0
+
+ (null is ultimate root and has optimized path)
+
+  $ log 'null:4 & descendants(null)'
+  -1
+  0
+  1
+  2
+  3
+  4
+
+ (including merge)
+
+  $ log ':8 & descendants(2)'
+  2
+  4
+  6
+  7
+  8
+
+ (multiple roots)
+
+  $ log ':8 & descendants(2+5)'
+  2
+  4
+  5
+  6
+  7
+  8
+
 test author
 
   $ log 'author(bob)'
