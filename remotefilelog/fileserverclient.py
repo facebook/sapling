@@ -7,12 +7,16 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
-from mercurial import util, sshpeer, hg, error, util, wireproto, httppeer
-from mercurial import extensions
+from mercurial import util, sshpeer, error, util, wireproto, httppeer
 import hashlib, os, time, io, struct
 import itertools
 
-import constants, shallowutil, wirepack
+from . import (
+    connectionpool,
+    constants,
+    shallowutil,
+    wirepack,
+)
 from lz4wrapper import lz4decompress
 
 # Statistics for debugging
@@ -204,6 +208,7 @@ def _getfilesbatch(
 
 def _getfiles(
     remote, receivemissing, progresstick, missed, idmap, step):
+    remote._callstream("getfiles")
     i = 0
     while i < len(missed):
         # issue a batch of requests
@@ -225,6 +230,10 @@ def _getfiles(
             receivemissing(remote.pipei, file, versionid)
             progresstick()
 
+    # End the command
+    remote.pipeo.write('\n')
+    remote.pipeo.flush()
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -245,7 +254,7 @@ class fileserverclient(object):
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.remotecache = cacheconnection()
-        self.remoteserver = None
+        self.connpool = connectionpool.connectionpool(repo)
 
     def setstore(self, datastore, historystore, writedata, writehistory):
         self.datastore = datastore
@@ -254,33 +263,7 @@ class fileserverclient(object):
         self.writehistory = writehistory
 
     def _connect(self):
-        fallbackpath = self.repo.fallbackpath
-        needcreate = False
-        if not self.remoteserver:
-            if not fallbackpath:
-                raise error.Abort("no remotefilelog server "
-                    "configured - is your .hg/hgrc trusted?")
-            needcreate = True
-        elif (isinstance(self.remoteserver, sshpeer.sshpeer) and
-                 self.remoteserver.subprocess.poll() is not None):
-            # The ssh connection died, so recreate it.
-            needcreate = True
-
-        def _cleanup(orig):
-            # close pipee first so peer.cleanup reading it won't deadlock, if
-            # there are other processes with pipeo open (i.e. us).
-            peer = orig.im_self
-            if util.safehasattr(peer, 'pipee'):
-                peer.pipee.close()
-            return orig()
-
-        if needcreate:
-            peer = hg.peer(self.ui, {}, fallbackpath)
-            if util.safehasattr(peer, 'cleanup'):
-                extensions.wrapfunction(peer, 'cleanup', _cleanup)
-            self.remoteserver = peer
-
-        return self.remoteserver
+        return self.connpool.get(self.repo.fallbackpath)
 
     def request(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
@@ -359,31 +342,31 @@ class fileserverclient(object):
                 verbose = self.ui.verbose
                 self.ui.verbose = False
                 try:
-                    remote = self._connect()
-
-                    # TODO: deduplicate this with the constant in shallowrepo
-                    if remote.capable("remotefilelog"):
-                        if not isinstance(remote, sshpeer.sshpeer):
-                            raise error.Abort('remotefilelog requires ssh '
-                                              'servers')
-                        # If it's a new connection, issue the getfiles command
-                        if not getattr(remote, '_getfilescalled', False):
-                            remote._callstream("getfiles")
-                            remote._getfilescalled = True
-                        step = self.ui.configint('remotefilelog',
-                                                 'getfilesstep', 10000)
-                        _getfiles(remote, self.receivemissing, progresstick,
-                                  missed, idmap, step)
-                    elif remote.capable("getfile"):
-                        batchdefault = 100 if remote.capable('batch') else 10
-                        batchsize = self.ui.configint(
-                            'remotefilelog', 'batchsize', batchdefault)
-                        _getfilesbatch(
-                            remote, self.receivemissing, progresstick, missed,
-                            idmap, batchsize)
-                    else:
-                        raise error.Abort("configured remotefilelog server"
-                                         " does not support remotefilelog")
+                    with self._connect() as conn:
+                        remote = conn.peer
+                        # TODO: deduplicate this with the constant in
+                        #       shallowrepo
+                        if remote.capable("remotefilelog"):
+                            if not isinstance(remote, sshpeer.sshpeer):
+                                raise error.Abort('remotefilelog requires ssh '
+                                                  'servers')
+                            step = self.ui.configint('remotefilelog',
+                                                     'getfilesstep', 10000)
+                            _getfiles(remote, self.receivemissing, progresstick,
+                                      missed, idmap, step)
+                        elif remote.capable("getfile"):
+                            if remote.capable('batch'):
+                                batchdefault = 100
+                            else:
+                                batchdefault = 10
+                            batchsize = self.ui.configint(
+                                'remotefilelog', 'batchsize', batchdefault)
+                            _getfilesbatch(
+                                remote, self.receivemissing, progresstick,
+                                missed, idmap, batchsize)
+                        else:
+                            raise error.Abort("configured remotefilelog server"
+                                             " does not support remotefilelog")
                 finally:
                     self.ui.verbose = verbose
                 # send to memcache
@@ -399,20 +382,6 @@ class fileserverclient(object):
             os.umask(oldumask)
 
         return missing
-
-    def endrequest(self):
-        """End the getfiles request loop.
-
-        It's useful if we want to run other commands using the same sshpeer.
-        """
-        remote = self.remoteserver
-        if remote is None:
-            return
-        if not getattr(remote, '_getfilescalled', False):
-            return
-        remote.pipeo.write('\n')
-        remote.pipeo.flush()
-        remote._getfilescalled = False
 
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]
@@ -434,16 +403,17 @@ class fileserverclient(object):
 
         See `remotefilelogserver.getpack` for the file format.
         """
-        remote = self._connect()
-        remote._callstream("getpackv1")
+        with self._connect() as conn:
+            remote = conn.peer
+            remote._callstream("getpackv1")
 
-        self._sendpackrequest(remote, fileids)
+            self._sendpackrequest(remote, fileids)
 
-        packpath = shallowutil.getcachepackpath(self.repo,
-                                                constants.FILEPACK_CATEGORY)
-        receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
-                                                             remote.pipei,
-                                                             packpath)
+            packpath = shallowutil.getcachepackpath(self.repo,
+                                                    constants.FILEPACK_CATEGORY)
+            receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
+                                                                 remote.pipei,
+                                                                 packpath)
 
     def _sendpackrequest(self, remote, fileids):
         """Formats and writes the given fileids to the remote as part of a
@@ -517,9 +487,7 @@ class fileserverclient(object):
         if self.remotecache.connected:
             self.remotecache.close()
 
-        if self.remoteserver and util.safehasattr(self.remoteserver, 'cleanup'):
-            self.remoteserver.cleanup()
-            self.remoteserver = None
+        self.connpool.close()
 
     def prefetch(self, fileids, force=False, fetchdata=True,
                  fetchhistory=False):

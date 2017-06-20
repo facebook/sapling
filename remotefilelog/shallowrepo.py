@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
-from mercurial import localrepo, util, match, scmutil
+from mercurial import error, localrepo, util, match, scmutil
 from . import remotefilelog, remotefilectx, fileserverclient
 import constants, shallowutil
 from contentstore import remotefilelogcontentstore, unioncontentstore
@@ -111,10 +111,15 @@ def wraprepo(repo):
 
         @util.propertycache
         def fallbackpath(self):
-            return repo.ui.config("remotefilelog", "fallbackpath",
-                    # fallbackrepo is the old, deprecated name
+            path = repo.ui.config("remotefilelog", "fallbackpath",
+                     # fallbackrepo is the old, deprecated name
                      repo.ui.config("remotefilelog", "fallbackrepo",
                        repo.ui.config("paths", "default")))
+            if not path:
+                raise error.Abort("no remotefilelog server "
+                    "configured - is your .hg/hgrc trusted?")
+
+            return path
 
         def maybesparsematch(self, *revs, **kwargs):
             '''

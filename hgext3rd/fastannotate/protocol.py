@@ -11,7 +11,6 @@ from mercurial import (
     hg,
     localrepo,
     scmutil,
-    sshpeer,
     wireproto,
 )
 from mercurial.i18n import _
@@ -135,13 +134,12 @@ def annotatepeer(repo):
 
     # fileservice belongs to remotefilelog
     fileservice = getattr(repo, 'fileservice', None)
-    remoteserver = getattr(fileservice, 'remoteserver', None)
     sharepeer = ui.configbool('fastannotate', 'clientsharepeer', True)
 
-    if sharepeer and remoteserver:
-        ui.debug('fastannotate: stealing peer from remotefilelog\n')
-        fileservice.endrequest()
-        peer = fileservice.remoteserver
+    if sharepeer and fileservice:
+        ui.debug('fastannotate: using remotefilelog connection pool\n')
+        conn = fileservice.connpool.get(repo.fallbackpath)
+        peer = conn.peer
         stolen = True
     else:
         remotepath = ui.expandpath(
@@ -157,13 +155,10 @@ def annotatepeer(repo):
         yield peer
     finally:
         if not stolen:
-            if (sharepeer and fileservice and remoteserver is None
-                and isinstance(peer, sshpeer.sshpeer)):
-                ui.debug('fastannotate: donating sshpeer to remotefilelog\n')
-                fileservice.remoteserver = peer
-            else:
-                for i in ['close', 'cleanup']:
-                    getattr(peer, i, lambda: None)()
+            for i in ['close', 'cleanup']:
+                getattr(peer, i, lambda: None)()
+        else:
+            conn.__exit__(None, None, None)
 
 def clientfetch(repo, paths, lastnodemap=None, peer=None):
     """download annotate cache from the server for paths"""

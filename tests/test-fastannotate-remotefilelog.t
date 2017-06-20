@@ -43,6 +43,7 @@ Setup fastannotate
 Test blame
 
   $ hg blame x --debug
+  fastannotate: using remotefilelog connection pool
   running * (glob)
   sending hello command
   sending between command
@@ -54,7 +55,6 @@ Test blame
   fastannotate: server returned
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
-  fastannotate: donating sshpeer to remotefilelog
   remotefilelog: prefetching 0 files for annotate
   fastannotate: x: using fast path (resolved fctx: True)
   0: x
@@ -134,6 +134,9 @@ Update to tip to predownload the remotefilelog ancestor map
 Fastannotate will donate its sshpeer to remotefilelog:
 
   $ hg blame x -r 'tip^' --debug
+  sending getfiles command (?)
+  sending getfiles command (?)
+  fastannotate: using remotefilelog connection pool
   running * (glob)
   sending hello command
   sending between command
@@ -145,11 +148,9 @@ Fastannotate will donate its sshpeer to remotefilelog:
   fastannotate: server returned
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
-  fastannotate: donating sshpeer to remotefilelog
-  sending getfiles command (?)
+  sending getfiles command
   remotefilelog: prefetching 0 files for annotate
   fastannotate: x: using fast path (resolved fctx: False)
-  sending getfiles command (?)
   0: x
   1: y
   2: z
@@ -187,6 +188,7 @@ Fastannotate teaches remotefilelog to only prefetch the side branch
   remote: * (glob)
   sending getfiles command
   remotefilelog: prefetching 3 files for annotate
+  sending getfiles command
   0: x
   1: y
   2: z
@@ -202,6 +204,7 @@ before, no real "getfiles" happens
 
   $ rm -rf .hg/fastannotate
   $ hg blame x -r 'side' --debug
+  fastannotate: using remotefilelog connection pool
   running * (glob)
   sending hello command
   sending between command
@@ -213,7 +216,6 @@ before, no real "getfiles" happens
   fastannotate: server returned
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
   fastannotate: writing * bytes to fastannotate/default/x.* (glob)
-  fastannotate: donating sshpeer to remotefilelog
   remotefilelog: prefetching 3 files for annotate
   0: x
   1: y
@@ -250,7 +252,7 @@ In the below case, the first getfiles is for the ancestormap for the main
   remote: capabilities: * (glob)
   remote: * (glob)
   sending getfiles command
-  fastannotate: stealing peer from remotefilelog
+  fastannotate: using remotefilelog connection pool
   fastannotate: requesting 1 files
   sending batch command
   fastannotate: server returned
@@ -353,6 +355,7 @@ Annotating 3, no prefetch is needed.
   $ hg log -r . -T '{rev}\n'
   3
   $ hg annotate a -r 3 --debug
+  fastannotate: using remotefilelog connection pool
   running * (glob)
   sending hello command
   sending between command
@@ -364,7 +367,6 @@ Annotating 3, no prefetch is needed.
   fastannotate: server returned
   fastannotate: writing * bytes to fastannotate/default/a.* (glob)
   fastannotate: writing * bytes to fastannotate/default/a.* (glob)
-  fastannotate: donating sshpeer to remotefilelog
   remotefilelog: prefetching 0 files for annotate
   fastannotate: a: using fast path (resolved fctx: False)
   0: 1
