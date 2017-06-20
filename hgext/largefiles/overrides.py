@@ -1007,7 +1007,8 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     archiver.done()
 
 def hgsubrepoarchive(orig, repo, archiver, prefix, match=None, decode=True):
-    if not repo._repo.lfstatus:
+    lfenabled = util.safehasattr(repo._repo, '_largefilesenabled')
+    if not lfenabled or not repo._repo.lfstatus:
         return orig(repo, archiver, prefix, match, decode)
 
     repo._get(repo._state + ('hg',))

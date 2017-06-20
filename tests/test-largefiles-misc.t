@@ -1075,6 +1075,10 @@ largefiles (issue4547)
   $ hg -R subrepo-root status -S
   M large
   M no-largefiles/normal1
+  $ hg -R subrepo-root extdiff -p echo -S --config extensions.extdiff=
+  "*\\no-largefiles\\normal1" "*\\no-largefiles\\normal1" (glob) (windows !)
+  */no-largefiles/normal1 */no-largefiles/normal1 (glob) (no-windows !)
+  [1]
   $ hg -R subrepo-root revert --all
   reverting subrepo-root/.hglf/large (glob)
   reverting subrepo no-largefiles
