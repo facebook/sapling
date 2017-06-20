@@ -764,3 +764,31 @@ def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
     elif cur != tgt and newact == repo._activebookmark:
         deactivate(repo)
     marks.recordchange(tr)
+
+def printbookmarks(ui, repo, **opts):
+    """print bookmarks to a formatter
+
+    Provides a way for extensions to control how bookmarks are printed.
+    """
+    fm = ui.formatter('bookmarks', opts)
+    hexfn = fm.hexfunc
+    marks = repo._bookmarks
+    if len(marks) == 0 and fm.isplain():
+        ui.status(_("no bookmarks set\n"))
+    for bmark, n in sorted(marks.iteritems()):
+        active = repo._activebookmark
+        if bmark == active:
+            prefix, label = '*', activebookmarklabel
+        else:
+            prefix, label = ' ', ''
+
+        fm.startitem()
+        if not ui.quiet:
+            fm.plain(' %s ' % prefix, label=label)
+        fm.write('bookmark', '%s', bmark, label=label)
+        pad = " " * (25 - encoding.colwidth(bmark))
+        fm.condwrite(not ui.quiet, 'rev node', pad + ' %d:%s',
+                     repo.changelog.rev(n), hexfn(n), label=label)
+        fm.data(active=(bmark == active))
+        fm.plain('\n')
+    fm.end()
