@@ -8,20 +8,20 @@
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > @command('buggylocking', [], '')
+  > @command(b'buggylocking', [], '')
   > def buggylocking(ui, repo):
   >     lo = repo.lock()
   >     wl = repo.wlock()
   >     wl.release()
   >     lo.release()
   > 
-  > @command('buggytransaction', [], '')
+  > @command(b'buggytransaction', [], '')
   > def buggylocking(ui, repo):
   >     tr = repo.transaction('buggy')
   >     # make sure we rollback the transaction as we don't want to rely on the__del__
   >     tr.release()
   > 
-  > @command('properlocking', [], '')
+  > @command(b'properlocking', [], '')
   > def properlocking(ui, repo):
   >     """check that reentrance is fine"""
   >     wl = repo.wlock()
@@ -37,14 +37,14 @@
   >     lo.release()
   >     wl.release()
   > 
-  > @command('nowaitlocking', [], '')
+  > @command(b'nowaitlocking', [], '')
   > def nowaitlocking(ui, repo):
   >     lo = repo.lock()
   >     wl = repo.wlock(wait=False)
   >     wl.release()
   >     lo.release()
   > 
-  > @command('stripintr', [], '')
+  > @command(b'stripintr', [], '')
   > def stripintr(ui, repo):
   >     lo = repo.lock()
   >     tr = repo.transaction('foobar')
@@ -52,16 +52,16 @@
   >         repair.strip(repo.ui, repo, [repo['.'].node()])
   >     finally:
   >         lo.release()
-  > @command('oldanddeprecated', [], '')
+  > @command(b'oldanddeprecated', [], '')
   > def oldanddeprecated(ui, repo):
   >     """test deprecation warning API"""
   >     def foobar(ui):
   >         ui.deprecwarn('foorbar is deprecated, go shopping', '42.1337')
   >     foobar(ui)
-  > @command('nouiwarning', [], '')
+  > @command(b'nouiwarning', [], '')
   > def nouiwarning(ui, repo):
   >     util.nouideprecwarn('this is a test', '13.37')
-  > @command('programmingerror', [], '')
+  > @command(b'programmingerror', [], '')
   > def programmingerror(ui, repo):
   >     raise error.ProgrammingError('something went wrong', hint='try again')
   > EOF
