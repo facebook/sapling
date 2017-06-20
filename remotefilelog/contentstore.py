@@ -293,16 +293,21 @@ class manifestrevlogstore(object):
 
         return missing
 
-    def setrepackstartlinkrev(self, rev):
-        self._repackstartlinkrev = rev
+    def setrepacklinkrevrange(self, startrev, endrev):
+        self._repackstartlinkrev = startrev
+        self._repackendlinkrev = endrev
 
     def markledger(self, ledger):
         treename = ''
         rl = revlog.revlog(self._svfs, '00manifesttree.i')
         startlinkrev = self._repackstartlinkrev
+        endlinkrev = self._repackendlinkrev
         for rev in xrange(len(rl) - 1, -1, -1):
-            if rl.linkrev(rev) < startlinkrev:
+            linkrev = rl.linkrev(rev)
+            if linkrev < startlinkrev:
                 break
+            if linkrev > endlinkrev:
+                continue
             node = rl.node(rev)
             ledger.markdataentry(self, treename, node)
             ledger.markhistoryentry(self, treename, node)
@@ -315,8 +320,11 @@ class manifestrevlogstore(object):
 
             rl = revlog.revlog(self._svfs, path)
             for rev in xrange(len(rl) - 1, -1, -1):
-                if rl.linkrev(rev) < startlinkrev:
+                linkrev = rl.linkrev(rev)
+                if linkrev < startlinkrev:
                     break
+                if linkrev > endlinkrev:
+                    continue
                 node = rl.node(rev)
                 ledger.markdataentry(self, treename, node)
                 ledger.markhistoryentry(self, treename, node)

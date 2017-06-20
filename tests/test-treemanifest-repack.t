@@ -185,7 +185,7 @@ Test repacking from revlogs to pack files on the server
   23226e7a252c  000000000000  43
 
 Test incremental revlog repacking
-# 1. Make that we'll need to repack
+# 1. Make commit that we'll need to repack
   $ echo >> a
   $ hg commit -Aqm 'modify a'
   $ hg debugindex .hg/store/00manifesttree.i
@@ -208,3 +208,16 @@ Test incremental revlog repacking
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack | grep 7878
   [1]
   $ mv .hg/store/00manifesttree.i.bak .hg/store/00manifesttree.i
+
+Test incremental repack with limited revs only repacks those revs
+  $ rm -rf .hg/cache/packs/manifests
+  $ hg repack --incremental --config treemanifest.repackstartrev=1 --config treemanifest.repackendrev=1
+  $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
+  
+  
+  Node          Delta Base    Delta Length
+  1832e0765de9  000000000000  89
+  
+  dir
+  Node          Delta Base    Delta Length
+  23226e7a252c  000000000000  43

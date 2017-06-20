@@ -54,6 +54,13 @@ bundles.
     [treemanifest]
     sendtrees = False
 
+Setting `treemanifest.repackstartrev` and `treemanifest.repackendrev` causes `hg
+repack --incremental` to only repack the revlog entries in the given range. The
+default values are 0 and len(changelog) - 1, respectively.
+
+   [treemanifest]
+   repackstartrev = 0
+   repackendrev = 1000
 """
 
 from mercurial import (
@@ -1045,7 +1052,10 @@ def serverrepack(repo, incremental=False):
     hpackstore = historypackstore(repo.ui, packpath)
     histstore = unionmetadatastore(hpackstore, revlogstore)
 
-    if incremental:
+    startrev = repo.ui.configint('treemanifest', 'repackstartrev', 0)
+    endrev = repo.ui.configint('treemanifest', 'repackendrev',
+                               len(repo.changelog) - 1)
+    if startrev == 0 and incremental:
         latestpackedlinkrev = 0
         mfrevlog = repo.manifestlog.treemanifestlog._revlog
         for i in xrange(len(mfrevlog) - 1, 0, -1):
@@ -1053,8 +1063,9 @@ def serverrepack(repo, incremental=False):
             if not dpackstore.getmissing([('', node)]):
                 latestpackedlinkrev = mfrevlog.linkrev(i)
                 break
-        revlogstore.setrepackstartlinkrev(latestpackedlinkrev + 1)
+        startrev = latestpackedlinkrev + 1
 
+    revlogstore.setrepacklinkrevrange(startrev, endrev)
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
 
 def striptrees(orig, repo, tr, striprev, files):
