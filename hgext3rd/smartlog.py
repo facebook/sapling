@@ -34,6 +34,7 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
+    dagop,
     error,
     extensions,
     graphmod,
@@ -320,7 +321,7 @@ def getdag(ui, repo, revs, master):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                gp = gpcache[mpar] = revset.reachableroots(
+                gp = gpcache[mpar] = dagop.reachableroots(
                     repo, smartset.baseset(revs), [mpar])
             if not gp:
                 parents.append((graphmod.MISSINGPARENT, mpar))

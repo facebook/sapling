@@ -478,7 +478,7 @@ Recent arg select days correctly
   
 
 Make sure the template keywords are documented correctly
-  $ hg help templates | grep -A1 successor
+  $ hg help templates | grep -A1 successor | grep -v predecessors
       amendsuccessors
                     Return all of the node's successors created as a result of
                     amend
