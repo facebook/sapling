@@ -93,6 +93,7 @@ import cstore
 
 import os
 import struct
+import time
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -691,6 +692,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     else:
         fallbackpath = repo.ui.config('paths', 'default')
 
+    start = time.time()
     remote = hg.peer(repo.ui, {}, fallbackpath)
     if 'gettreepack' not in remote._capabilities():
         raise error.Abort(_("missing gettreepack capability on remote"))
@@ -700,11 +702,17 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         op = bundle2.processbundle(repo, bundle, None)
 
         receivednodes = op.records[RECEIVEDNODE_RECORD]
+        count = 0
         missingnodes = set(mfnodes)
         for reply in receivednodes:
             missingnodes.difference_update(n for d, n
                                            in reply
                                            if d == rootdir)
+            count += len(reply)
+        if op.repo.ui.configbool("remotefilelog", "debug"):
+            op.repo.ui.warn(_("%s trees fetched over %0.2fs\n") %
+                            (count, time.time() - start))
+
         if missingnodes:
             raise error.Abort(_("unable to download %d trees (%s,...)") %
                                (len(missingnodes), list(missingnodes)[0]))

@@ -66,6 +66,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd ..
 
   $ initclients
+  2 trees fetched over * (glob)
   $ pushclients
 
   $ cd master

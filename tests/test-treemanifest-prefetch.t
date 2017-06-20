@@ -59,6 +59,7 @@
 
 Test prefetchtrees
   $ hg prefetchtrees -r '0 + 1 + 2'
+  6 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests
   29938257d506f677320d5abec8e34a1a9ed635fe.histidx
   29938257d506f677320d5abec8e34a1a9ed635fe.histpack
@@ -124,6 +125,7 @@ Test prefetchtrees
 Test prefetch with base node (subdir/ shouldn't show up in the pack)
   $ rm -rf $CACHEDIR/master
   $ hg prefetchtrees -r '2' --base '1'
+  2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
 
@@ -144,6 +146,8 @@ Test auto prefetch during normal access
   *No such file or directory (glob)
   [1]
   $ hg log -r tip --stat --pager=off
+  3 trees fetched over * (glob)
+  2 trees fetched over * (glob)
   changeset:   2:bd6f9b289c01
   tag:         tip
   user:        test
@@ -199,6 +203,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching trees
+  6 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   subdir
@@ -234,6 +239,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching trees
+  3 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   dir
@@ -251,6 +257,7 @@ Test auto prefetch during pull
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
   $ hg prefetchtrees -r 1
+  3 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
@@ -258,6 +265,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching trees
+  2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
@@ -289,6 +297,7 @@ Test prefetching certain revs during pull
   added 2 changesets with 2 changes to 1 files
   (run 'hg update' to get a working copy)
   prefetching trees
+  3 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   dir
@@ -310,6 +319,7 @@ Test prefetching certain revs during pull
   searching for changes
   no changes found
   prefetching trees
+  2 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
   
   dir
