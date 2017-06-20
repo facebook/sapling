@@ -1,3 +1,5 @@
+#require no-windows
+
 ATTENTION: logtoprocess runs commands asynchronously. Be sure to append "| cat"
 to hg commands, to wait for the output, if you want to test its output.
 Otherwise the test will be flaky.
