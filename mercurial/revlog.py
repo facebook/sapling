@@ -13,6 +13,7 @@ and O(changes) merge between branches.
 
 from __future__ import absolute_import
 
+import binascii
 import collections
 import errno
 import hashlib
@@ -1094,7 +1095,7 @@ class revlog(object):
                 if maybewdir:
                     raise error.WdirUnsupported
                 return None
-            except TypeError:
+            except (TypeError, binascii.Error):
                 pass
 
     def lookup(self, id):
