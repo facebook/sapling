@@ -79,7 +79,7 @@ Start a simple HTTP server to serve bundles
 
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > EOF
 

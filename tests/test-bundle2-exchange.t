@@ -18,7 +18,7 @@ enable obsolescence
   > evolution=createmarkers,exchange
   > bundle2-output-capture=True
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false
@@ -909,7 +909,7 @@ Test lazily acquiring the lock during unbundle
   $ cp $TESTTMP/hgrc.orig $HGRCPATH
   $ cat >> $HGRCPATH <<EOF
   > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
+  > ssh=$PYTHON "$TESTDIR/dummyssh"
   > EOF
 
   $ cat >> $TESTTMP/locktester.py <<EOF

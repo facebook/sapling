@@ -10,7 +10,7 @@
   > 
   > print "merging for", os.path.basename(sys.argv[1])
   > EOF
-  $ HGMERGE="python ../merge"; export HGMERGE
+  $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 
   $ hg init t
   $ cd t

@@ -5,7 +5,7 @@ when we do a merge.
   > import sys, os
   > print "merging for", os.path.basename(sys.argv[1])
   > EOF
-  $ HGMERGE="python ../merge"; export HGMERGE
+  $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 
 Creating base:
 
