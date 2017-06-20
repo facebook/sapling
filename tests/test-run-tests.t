@@ -1000,8 +1000,8 @@ running is placed.
   >   $ test "\$TESTDIR" = "$TESTTMP"/anothertests
   > #endif
   >   $ test "\$RUNTESTDIR" = "$TESTDIR"
-  >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py
-  >   #!/usr/bin/env python
+  >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py | sed 's@.!.*python@#!USRBINENVPY@'
+  >   #!USRBINENVPY
   >   #
   >   # check-code - a style and portability checker for Mercurial
   > EOF
