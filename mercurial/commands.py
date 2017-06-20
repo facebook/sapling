@@ -66,12 +66,6 @@ table.update(debugcommandsmod.command._table)
 
 command = registrar.command(table)
 
-# label constants
-# until 3.5, bookmarks.current was the advertised name, not
-# bookmarks.active, so we must use both to avoid breaking old
-# custom styles
-activebookmarklabel = 'bookmarks.active bookmarks.current'
-
 # common command options
 
 globalopts = [
@@ -994,7 +988,7 @@ def bookmark(ui, repo, *names, **opts):
         for bmark, n in sorted(marks.iteritems()):
             active = repo._activebookmark
             if bmark == active:
-                prefix, label = '*', activebookmarklabel
+                prefix, label = '*', bookmarks.activebookmarklabel
             else:
                 prefix, label = ' ', ''
 
@@ -4816,10 +4810,10 @@ def summary(ui, repo, **opts):
         ui.write(_('bookmarks:'), label='log.bookmark')
         if active is not None:
             if active in marks:
-                ui.write(' *' + active, label=activebookmarklabel)
+                ui.write(' *' + active, label=bookmarks.activebookmarklabel)
                 marks.remove(active)
             else:
-                ui.write(' [%s]' % active, label=activebookmarklabel)
+                ui.write(' [%s]' % active, label=bookmarks.activebookmarklabel)
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')

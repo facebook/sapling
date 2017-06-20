@@ -25,6 +25,12 @@ from . import (
     util,
 )
 
+# label constants
+# until 3.5, bookmarks.current was the advertised name, not
+# bookmarks.active, so we must use both to avoid breaking old
+# custom styles
+activebookmarklabel = 'bookmarks.active bookmarks.current'
+
 def _getbkfile(repo):
     """Hook so that extensions that mess with the store can hook bm storage.
 
