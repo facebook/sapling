@@ -1997,7 +1997,7 @@ def trypullbundlefromurl(ui, repo, url):
             cg = readbundle(ui, fh, 'stream')
 
             if isinstance(cg, bundle2.unbundle20):
-                bundle2.processbundle(repo, cg, lambda: tr)
+                bundle2.applybundle(repo, cg, tr, 'clonebundles', url)
             elif isinstance(cg, streamclone.streamcloneapplier):
                 cg.apply(repo)
             else:
