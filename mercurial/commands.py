@@ -971,7 +971,6 @@ def bookmark(ui, repo, *names, **opts):
         try:
             wlock = repo.wlock()
             lock = repo.lock()
-            cur = repo.changectx('.').node()
             marks = repo._bookmarks
             if delete:
                 tr = repo.transaction('bookmark')
@@ -985,23 +984,7 @@ def bookmark(ui, repo, *names, **opts):
                 bookmarks.rename(repo, tr, rename, names[0], force, inactive)
             elif names:
                 tr = repo.transaction('bookmark')
-                newact = None
-                for mark in names:
-                    mark = bookmarks.checkformat(repo, mark)
-                    if newact is None:
-                        newact = mark
-                    if inactive and mark == repo._activebookmark:
-                        bookmarks.deactivate(repo)
-                        return
-                    tgt = cur
-                    if rev:
-                        tgt = scmutil.revsingle(repo, rev).node()
-                    marks.checkconflict(mark, force, tgt)
-                    marks[mark] = tgt
-                if not inactive and cur == marks[newact] and not rev:
-                    bookmarks.activate(repo, newact)
-                elif cur != tgt and newact == repo._activebookmark:
-                    bookmarks.deactivate(repo)
+                bookmarks.addbookmarks(repo, tr, names, rev, force, inactive)
             elif inactive:
                 if len(marks) == 0:
                     ui.status(_("no bookmarks set\n"))

@@ -726,3 +726,35 @@ def rename(repo, tr, old, new, force=False, inactive=False):
         activate(repo, mark)
     del marks[old]
     marks.recordchange(tr)
+
+def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
+    """add a list of bookmarks
+
+    If force is specified, then the new name can overwrite an existing
+    bookmark.
+
+    If inactive is specified, then do not activate any bookmark. Otherwise, the
+    first bookmark is activated.
+
+    Raises an abort error if old is not in the bookmark store.
+    """
+    marks = repo._bookmarks
+    cur = repo.changectx('.').node()
+    newact = None
+    for mark in names:
+        mark = checkformat(repo, mark)
+        if newact is None:
+            newact = mark
+        if inactive and mark == repo._activebookmark:
+            deactivate(repo)
+            return
+        tgt = cur
+        if rev:
+            tgt = scmutil.revsingle(repo, rev).node()
+        marks.checkconflict(mark, force, tgt)
+        marks[mark] = tgt
+    if not inactive and cur == marks[newact] and not rev:
+        activate(repo, newact)
+    elif cur != tgt and newact == repo._activebookmark:
+        deactivate(repo)
+    marks.recordchange(tr)
