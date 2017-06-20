@@ -967,36 +967,24 @@ def bookmark(ui, repo, *names, **opts):
         raise error.Abort(_("bookmark name required"))
 
     if delete or rename or names or inactive:
-        wlock = lock = tr = None
-        try:
-            wlock = repo.wlock()
-            lock = repo.lock()
-            marks = repo._bookmarks
+        with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
             if delete:
-                tr = repo.transaction('bookmark')
                 bookmarks.delete(repo, tr, names)
             elif rename:
-                tr = repo.transaction('bookmark')
                 if not names:
                     raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
                     raise error.Abort(_("only one new bookmark name allowed"))
                 bookmarks.rename(repo, tr, rename, names[0], force, inactive)
             elif names:
-                tr = repo.transaction('bookmark')
                 bookmarks.addbookmarks(repo, tr, names, rev, force, inactive)
             elif inactive:
-                if len(marks) == 0:
+                if len(repo._bookmarks) == 0:
                     ui.status(_("no bookmarks set\n"))
                 elif not repo._activebookmark:
                     ui.status(_("no active bookmark\n"))
                 else:
                     bookmarks.deactivate(repo)
-            if tr is not None:
-                marks.recordchange(tr)
-                tr.close()
-        finally:
-            lockmod.release(tr, lock, wlock)
     else: # show bookmarks
         fm = ui.formatter('bookmarks', opts)
         hexfn = fm.hexfunc
