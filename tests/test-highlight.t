@@ -148,7 +148,11 @@ hgweb filerevision, html
   <div class="overflow">
   <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines stripes4 wrap bottomline" data-logurl="/log/tip/primes.py" data-ishead="1">
+  <pre class="sourcelines stripes4 wrap bottomline"
+       data-logurl="/log/tip/primes.py"
+       data-selectabletag="SPAN"
+       data-ishead="1">
+  
   <span id="l1"><span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></span><a href="#l1"></a>
   <span id="l2"></span><a href="#l2"></a>
   <span id="l3"><span class="sd">primes = 2 : sieve [3, 5..]</span></span><a href="#l3"></a>
@@ -179,7 +183,8 @@ hgweb filerevision, html
   <span id="l28">        <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></span><a href="#l28"></a>
   <span id="l29">    <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></span><a href="#l29"></a>
   <span id="l30">    <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></span><a href="#l30"></a>
-  <span id="l31"></span><a href="#l31"></a></pre>
+  <span id="l31"></span><a href="#l31"></a>
+  </pre>
   </div>
   
   <script type="text/javascript" src="/static/followlines.js"></script>

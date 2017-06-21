@@ -66,7 +66,12 @@ file |
 </div>
 
 <div class="page_body">
-<pre class="sourcelines stripes" data-logurl="{url|urlescape}log/{symrev}/{file|urlescape}" data-ishead="{ishead}">{text%fileline}</pre>
+<pre class="sourcelines stripes"
+     data-logurl="{url|urlescape}log/{symrev}/{file|urlescape}"
+     data-selectabletag="SPAN"
+     data-ishead="{ishead}">
+{text%fileline}
+</pre>
 </div>
 
 <script type="text/javascript" src="{staticurl|urlescape}followlines.js"></script>

@@ -17,6 +17,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // Tag of children of "sourcelines" element on which to add "line
+    // selection" style.
+    var selectableTag = sourcelines.dataset.selectabletag;
+    if (typeof selectableTag === 'undefined') {
+        return;
+    }
+
     var isHead = parseInt(sourcelines.dataset.ishead || "0");
 
     // tooltip to invite on lines selection
@@ -52,22 +59,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // on mousemove, show tooltip close to cursor position
     sourcelines.addEventListener('mousemove', moveAndShowTooltip);
 
-    // retrieve all direct <span> children of <pre class="sourcelines">
-    var spans = Array.prototype.filter.call(
+    // retrieve all direct *selectable* children of class="sourcelines"
+    // element
+    var selectableElements = Array.prototype.filter.call(
         sourcelines.children,
-        function(x) { return x.tagName === 'SPAN' });
+        function(x) { return x.tagName === selectableTag });
 
     // add a "followlines-select" class to change cursor type in CSS
-    for (var i = 0; i < spans.length; i++) {
-        spans[i].classList.add('followlines-select');
+    for (var i = 0; i < selectableElements.length; i++) {
+        selectableElements[i].classList.add('followlines-select');
     }
 
     var lineSelectedCSSClass = 'followlines-selected';
 
-    //** add CSS class on <span> element in `from`-`to` line range */
+    //** add CSS class on selectable elements in `from`-`to` line range */
     function addSelectedCSSClass(from, to) {
         for (var i = from; i <= to; i++) {
-            spans[i].classList.add(lineSelectedCSSClass);
+            selectableElements[i].classList.add(lineSelectedCSSClass);
         }
     }
 
@@ -80,24 +88,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ** return the <span> element parent of `element` */
-    function findParentSpan(element) {
+    // ** return the element of type "selectableTag" parent of `element` */
+    function selectableParent(element) {
         var parent = element.parentElement;
         if (parent === null) {
             return null;
         }
-        if (element.tagName == 'SPAN' && parent.isSameNode(sourcelines)) {
+        if (element.tagName == selectableTag && parent.isSameNode(sourcelines)) {
             return element;
         }
-        return findParentSpan(parent);
+        return selectableParent(parent);
     }
 
     //** event handler for "click" on the first line of a block */
     function lineSelectStart(e) {
-        var startElement = findParentSpan(e.target);
+        var startElement = selectableParent(e.target);
         if (startElement === null) {
-            // not a <span> (maybe <a>): abort, keeping event listener
-            // registered for other click with <span> target
+            // not a "selectable" element (maybe <a>): abort, keeping event
+            // listener registered for other click with a "selectable" target
             return;
         }
 
@@ -112,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         //** event handler for "click" on the last line of the block */
         function lineSelectEnd(e) {
-            var endElement = findParentSpan(e.target);
+            var endElement = selectableParent(e.target);
             if (endElement === null) {
                 // not a <span> (maybe <a>): abort, keeping event listener
                 // registered for other click with <span> target
