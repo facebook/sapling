@@ -316,7 +316,7 @@ def getshelvename(repo, parent, opts):
     """Decide on the name this shelve is going to have"""
     def gennames():
         yield label
-        for i in xrange(1, 100):
+        for i in itertools.count(1):
             yield '%s-%02d' % (label, i)
     name = opts.get('name')
     label = repo._activebookmark or parent.branch() or 'default'
@@ -343,8 +343,6 @@ def getshelvename(repo, parent, opts):
             if not shelvedfile(repo, n, patchextension).exists():
                 name = n
                 break
-        else:
-            raise error.Abort(_("too many shelved changes named '%s'") % label)
 
     return name
 
