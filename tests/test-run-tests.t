@@ -668,6 +668,58 @@ Race condition - test file was modified when test is running
 
   $ rm test-race.t
 
+When "#testcases" is used in .t files
+
+  $ cat >> test-cases.t <<EOF
+  > #testcases a b
+  > #if a
+  >   $ echo 1
+  > #endif
+  > #if b
+  >   $ echo 2
+  > #endif
+  > EOF
+
+  $ cat <<EOF | rt -i test-cases.t 2>&1
+  > y
+  > y
+  > EOF
+  
+  --- $TESTTMP/test-cases.t
+  +++ $TESTTMP/test-cases.t.a.err
+  @@ -1,6 +1,7 @@
+   #testcases a b
+   #if a
+     $ echo 1
+  +  1
+   #endif
+   #if b
+     $ echo 2
+  Accept this change? [n] .
+  --- $TESTTMP/test-cases.t
+  +++ $TESTTMP/test-cases.t.b.err
+  @@ -5,4 +5,5 @@
+   #endif
+   #if b
+     $ echo 2
+  +  2
+   #endif
+  Accept this change? [n] .
+  # Ran 2 tests, 0 skipped, 0 failed.
+
+  $ cat test-cases.t
+  #testcases a b
+  #if a
+    $ echo 1
+    1
+  #endif
+  #if b
+    $ echo 2
+    2
+  #endif
+
+  $ rm test-cases.t
+
 (reinstall)
   $ mv backup test-failure.t
 

@@ -1605,7 +1605,7 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('Accept this change? [n] ')
                     answer = sys.stdin.readline().strip()
                     if answer.lower() in ('y', 'yes'):
-                        if test.name.endswith('.t'):
+                        if test.path.endswith(b'.t'):
                             rename(test.errpath, test.path)
                         else:
                             rename(test.errpath, '%s.out' % test.path)
