@@ -132,7 +132,7 @@ def clone(orig, ui, source, *args, **opts):
     if pool:
         pool = util.expandpath(pool)
 
-    opts['shareopts'] = dict(
+    opts[r'shareopts'] = dict(
         pool=pool,
         mode=ui.config('share', 'poolnaming', 'identity'),
     )
