@@ -130,7 +130,7 @@ def _peerlookup(path):
 
 def islocal(repo):
     '''return true if repo (or path pointing to repo) is local'''
-    if isinstance(repo, str):
+    if isinstance(repo, bytes):
         try:
             return _peerlookup(repo).islocal(repo)
         except AttributeError:
