@@ -340,3 +340,13 @@ Test prefetching certain revs during pull
   
   Node          Delta Base    Delta Length
   aa52a49be522  000000000000  95
+
+Test that prefetch refills just part of a tree when the cache is deleted
+
+  $ echo >> dir/x
+  $ hg commit -m 'edit x locally'
+  created new head
+  $ rm -rf $CACHEDIR/master/*
+  $ hg cat subdir/z
+  3 trees fetched over * (glob)
+  z

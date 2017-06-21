@@ -946,15 +946,29 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     deltaentry = <node: 20 byte><deltabase: 20 byte>
                  <delta len: 8 byte><delta>
     """
-    if rootdir:
-        raise RuntimeError("rootdir not supported just yet: %s" %
-                           rootdir)
     if directories:
         raise RuntimeError("directories arg is not supported yet ('%s')" %
                             ', '.join(directories))
 
     historystore = repo.svfs.manifesthistorystore
     datastore = repo.svfs.manifestdatastore
+
+    # If asking for a sub-tree, start from the top level tree since the native
+    # treemanifest currently doesn't support
+    if rootdir != '':
+        mfrevlog = repo.manifestlog.treemanifestlog._revlog.dirlog(rootdir)
+        cl = repo.changelog
+        topnodes = []
+        for node in mfnodes:
+            clrev = mfrevlog.linkrev(mfrevlog.rev(node))
+            topnode = cl.changelogrevision(clrev).manifest
+            topnodes.append(topnode)
+        mfnodes = topnodes
+        rootdir = ''
+
+        # Since the native treemanifest implementation currently doesn't support
+        # sub-tree traversals, we can't do base node comparisons correctly.
+        basemfnodes = []
 
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)
@@ -1025,6 +1039,8 @@ class remotetreedatastore(object):
         # Only look at the server if not root or is public
         basemfnodes = []
         if name == '':
+            # TODO: once flat manifests are gone, we won't be able to peak at
+            # the revlog here to figure out our linkrev
             mfrevlog = self._repo.manifestlog._revlog
             rev = mfrevlog.rev(node)
             linkrev = mfrevlog.linkrev(rev)
