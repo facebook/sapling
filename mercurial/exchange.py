@@ -1610,7 +1610,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
     for name in getbundle2partsorder:
         func = getbundle2partsmapping[name]
         func(bundler, repo, source, bundlecaps=bundlecaps, b2caps=b2caps,
-             **kwargs)
+             **pycompat.strkwargs(kwargs))
 
     return bundler.getchunks()
 

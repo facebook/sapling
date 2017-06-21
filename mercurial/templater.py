@@ -371,7 +371,7 @@ def runsymbol(context, mapping, key, default=''):
         except TemplateNotFound:
             v = default
     if callable(v):
-        return v(**mapping)
+        return v(**pycompat.strkwargs(mapping))
     return v
 
 def buildtemplate(exp, context):

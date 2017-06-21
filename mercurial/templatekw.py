@@ -119,23 +119,24 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
     expand 'end_foos'.
     '''
     templ = mapping['templ']
+    strmapping = pycompat.strkwargs(mapping)
     if not plural:
         plural = name + 's'
     if not values:
         noname = 'no_' + plural
         if noname in templ:
-            yield templ(noname, **mapping)
+            yield templ(noname, **strmapping)
         return
     if name not in templ:
         if isinstance(values[0], bytes):
             yield separator.join(values)
         else:
             for v in values:
-                yield dict(v, **mapping)
+                yield dict(v, **strmapping)
         return
     startname = 'start_' + plural
     if startname in templ:
-        yield templ(startname, **mapping)
+        yield templ(startname, **strmapping)
     vmapping = mapping.copy()
     def one(v, tag=name):
         try:
@@ -146,7 +147,7 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
                     vmapping[a] = b
             except ValueError:
                 vmapping[name] = v
-        return templ(tag, **vmapping)
+        return templ(tag, **pycompat.strkwargs(vmapping))
     lastname = 'last_' + name
     if lastname in templ:
         last = values.pop()
@@ -158,7 +159,7 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
         yield one(last, tag=lastname)
     endname = 'end_' + plural
     if endname in templ:
-        yield templ(endname, **mapping)
+        yield templ(endname, **strmapping)
 
 def _formatrevnode(ctx):
     """Format changeset as '{rev}:{node|formatnode}', which is the default

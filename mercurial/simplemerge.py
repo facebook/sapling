@@ -24,6 +24,7 @@ from .i18n import _
 from . import (
     error,
     mdiff,
+    pycompat,
     util,
     vfs as vfsmod,
 )
@@ -455,7 +456,8 @@ def simplemerge(ui, local, base, other, **opts):
         extrakwargs['base_marker'] = '|||||||'
         extrakwargs['name_base'] = name_base
         extrakwargs['minimize'] = False
-    for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
+    for line in m3.merge_lines(name_a=name_a, name_b=name_b,
+                               **pycompat.strkwargs(extrakwargs)):
         out.write(line)
 
     if not opts.get('print'):
