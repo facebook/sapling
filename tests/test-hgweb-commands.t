@@ -1832,7 +1832,7 @@ Overviews
   // stop hiding script -->
   </script>
   
-  <div class="page_nav">
+  <div class="extra_nav">
   <a href="/graph/tip?revcount=30&style=gitweb">less</a>
   <a href="/graph/tip?revcount=120&style=gitweb">more</a>
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 

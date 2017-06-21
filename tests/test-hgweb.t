@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 8265
+  content-length: 8349
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -356,6 +356,12 @@ static file
       align-items: center;
   }
   div.page_nav a:visited { color:#0000cc; }
+  div.extra_nav {
+      padding: 8px;
+  }
+  div.extra_nav a:visited {
+      color: #0000cc;
+  }
   div.page_path { padding:8px; border:solid #d9d8d1; border-width:0px 0px 1px}
   div.page_footer { padding:4px 8px; background-color: #d9d8d1; }
   div.page_footer_text { float:left; color:#555555; font-style:italic; }
