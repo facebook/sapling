@@ -2774,8 +2774,7 @@ def identify(ui, repo, source=None, rev=None,
                   ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
             if num:
                 output.append("%s%s" %
-                  ('+'.join([pycompat.bytestr(p.rev()) for p in parents]),
-                                                                    changed))
+                  ('+'.join(["%d" % p.rev() for p in parents]), changed))
         else:
             if default or id:
                 output = [hexfunc(ctx.node())]
