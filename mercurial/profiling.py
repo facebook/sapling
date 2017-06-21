@@ -126,6 +126,8 @@ def statprofile(ui, fp):
         kwargs = {}
 
         def fraction(s):
+            if isinstance(s, (float, int)):
+                return float(s)
             if s.endswith('%'):
                 v = float(s[:-1]) / 100
             else:
