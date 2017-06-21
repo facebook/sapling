@@ -901,11 +901,12 @@ def logservicecall(logger, service, **kwargs):
     logger(service, eventtype='start', **kwargs)
     try:
         yield
-        logger(service, eventtype='success', elapsed=time.time() - start,
-               **kwargs)
+        logger(service, eventtype='success',
+               elapsedms = (time.time() - start) * 1000, **kwargs)
     except Exception as e:
-        logger(service, eventtype='failure', elapsed=time.time() - start,
-               errormsg=str(e), **kwargs)
+        logger(service, eventtype='failure',
+               elapsedms = (time.time() - start) * 1000, errormsg=str(e),
+               **kwargs)
         raise
 
 def _getorcreateinfinitepushlogger(op):
@@ -1012,7 +1013,7 @@ def bundle2scratchbranch(op, part):
                     _maybeaddpushbackpart(op, bookmark, bookmarknode,
                                           bookprevnode, params)
         log(scratchbranchparttype, eventtype='success',
-            elapsed=time.time() - parthandlerstart)
+            elapsedms=(time.time() - parthandlerstart) * 1000)
 
         fillmetadatabranchpattern = op.repo.ui.config(
             'infinitepush', 'fillmetadatabranchpattern', '')
@@ -1023,7 +1024,7 @@ def bundle2scratchbranch(op, part):
                                    [ctx.hex() for ctx in nodesctx])
     except Exception as e:
         log(scratchbranchparttype, eventtype='failure',
-            elapsed=time.time() - parthandlerstart,
+            elapsedms=(time.time() - parthandlerstart) * 1000,
             errormsg=str(e))
         raise
     finally:
