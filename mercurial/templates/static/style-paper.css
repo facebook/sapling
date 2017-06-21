@@ -280,10 +280,12 @@ td.annotate:hover div.annotate-info { display: inline; }
   background-color: #bfdfff;
 }
 
+div.overflow table tbody.sourcelines > tr.followlines-select:hover,
 div.overflow pre.sourcelines > span.followlines-select:hover {
   cursor: cell;
 }
 
+tbody.sourcelines > tr.followlines-selected,
 pre.sourcelines > span.followlines-selected {
   background-color: #99C7E9;
 }

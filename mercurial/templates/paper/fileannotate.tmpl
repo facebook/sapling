@@ -73,12 +73,17 @@
  <th class="line">&nbsp;&nbsp;line source</th>
 </tr>
 </thead>
-<tbody class="stripes2">
+<tbody class="stripes2 sourcelines"
+       data-logurl="{url|urlescape}log/{symrev}/{file|urlescape}"
+       data-selectabletag="TR"
+       data-ishead="{ishead}">
   {annotate%annotateline}
 </tbody>
 </table>
 </div>
 </div>
 </div>
+
+<script type="text/javascript" src="{staticurl|urlescape}followlines.js"></script>
 
 {footer}

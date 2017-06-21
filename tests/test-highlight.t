@@ -292,7 +292,10 @@ hgweb fileannotate, html
    <th class="line">&nbsp;&nbsp;line source</th>
   </tr>
   </thead>
-  <tbody class="stripes2">
+  <tbody class="stripes2 sourcelines"
+         data-logurl="/log/tip/primes.py"
+         data-selectabletag="TR"
+         data-ishead="1">
     
   <tr id="l1" class="thisrev">
   <td class="annotate parity0">
@@ -828,6 +831,8 @@ hgweb fileannotate, html
   </div>
   </div>
   </div>
+  
+  <script type="text/javascript" src="/static/followlines.js"></script>
   
   
   

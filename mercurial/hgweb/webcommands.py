@@ -865,6 +865,7 @@ def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)
     f = fctx.path()
     parity = paritygen(web.stripecount)
+    ishead = fctx.filerev() in fctx.filelog().headrevs()
 
     # parents() is called once per line and several lines likely belong to
     # same revision. So it is worth caching.
@@ -927,6 +928,7 @@ def annotate(web, req, tmpl):
                 symrev=webutil.symrevorshortnode(req, fctx),
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f),
+                ishead=int(ishead),
                 **webutil.commonentry(web.repo, fctx))
 
 @webcommand('filelog')

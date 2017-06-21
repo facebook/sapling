@@ -177,10 +177,12 @@ pre.sourcelines.stripes > span:target {
 }
 
 /* Followlines */
+div.page_body table tbody.sourcelines > tr.followlines-select:hover,
 div.page_body pre.sourcelines > span.followlines-select:hover {
   cursor: cell;
 }
 
+tbody.sourcelines > tr.followlines-selected,
 pre.sourcelines > span.followlines-selected {
   background-color: #99C7E9 !important;
 }

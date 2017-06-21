@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 8349
+  content-length: 8463
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -522,10 +522,12 @@ static file
   }
   
   /* Followlines */
+  div.page_body table tbody.sourcelines > tr.followlines-select:hover,
   div.page_body pre.sourcelines > span.followlines-select:hover {
     cursor: cell;
   }
   
+  tbody.sourcelines > tr.followlines-selected,
   pre.sourcelines > span.followlines-selected {
     background-color: #99C7E9 !important;
   }
