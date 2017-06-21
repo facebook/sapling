@@ -225,9 +225,10 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     # Find the largest generation with more than 2 packs and repack it.
     for i, limit in enumerate(limits):
         if len(generations[i]) > gencountlimit:
-            # Generally we only want to repack 2 things at once, but if the
-            # whole generation is small, let's just do it all!
-            count = 2
+            # Try to repack 3 things at once. This means if we run an
+            # incremental repack right after we add a new pack file, we'll still
+            # decrease the total number of pack files.
+            count = 3
             if sum(sizes[n] for n in generations[i]) < repacksizelimit:
                 count = len(generations[i])
             return sorted(generations[i], key=lambda x: sizes[x])[:count]
