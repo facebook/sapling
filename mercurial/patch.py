@@ -959,6 +959,18 @@ class recordhunk(object):
         rem = len([h for h in hunk if h[0] == '-'])
         return add, rem
 
+    def reversehunk(self):
+        """return another recordhunk which is the reverse of the hunk
+
+        If this hunk is diff(A, B), the returned hunk is diff(B, A). To do
+        that, swap fromline/toline and +/- signs while keep other things
+        unchanged.
+        """
+        m = {'+': '-', '-': '+'}
+        hunk = ['%s%s' % (m[l[0]], l[1:]) for l in self.hunk]
+        return recordhunk(self.header, self.toline, self.fromline, self.proc,
+                          self.before, hunk, self.after)
+
     def write(self, fp):
         delta = len(self.before) + len(self.after)
         if self.after and self.after[-1] == '\\ No newline at end of file\n':
@@ -1493,7 +1505,7 @@ def reversehunks(hunks):
      c
      1
      2
-    @@ -1,6 +2,6 @@
+    @@ -2,6 +1,6 @@
      c
      1
      2
@@ -1501,26 +1513,17 @@ def reversehunks(hunks):
     +4
      5
      d
-    @@ -5,3 +6,2 @@
+    @@ -6,3 +5,2 @@
      5
      d
     -lastline
 
     '''
 
-    from . import crecord as crecordmod
     newhunks = []
     for c in hunks:
-        if isinstance(c, crecordmod.uihunk):
-            # curses hunks encapsulate the record hunk in _hunk
-            c = c._hunk
-        if isinstance(c, recordhunk):
-            for j, line in enumerate(c.hunk):
-                if line.startswith("-"):
-                    c.hunk[j] = "+" + c.hunk[j][1:]
-                elif line.startswith("+"):
-                    c.hunk[j] = "-" + c.hunk[j][1:]
-            c.added, c.removed = c.removed, c.added
+        if util.safehasattr(c, 'reversehunk'):
+            c = c.reversehunk()
         newhunks.append(c)
     return newhunks
 

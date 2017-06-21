@@ -427,6 +427,54 @@ class uihunk(patchnode):
         self.pretty(x)
         return x.getvalue()
 
+    def reversehunk(self):
+        """return a recordhunk which is the reverse of the hunk
+
+        Assuming the displayed patch is diff(A, B) result. The returned hunk is
+        intended to be applied to B, instead of A.
+
+        For example, when A is "0\n1\n2\n6\n" and B is "0\n3\n4\n5\n6\n", and
+        the user made the following selection:
+
+                 0
+            [x] -1           [x]: selected
+            [ ] -2           [ ]: not selected
+            [x] +3
+            [ ] +4
+            [x] +5
+                 6
+
+        This function returns a hunk like:
+
+                 0
+                -3
+                -4
+                -5
+                +1
+                +4
+                 6
+
+        Note "4" was first deleted then added. That's because "4" exists in B
+        side and "-4" must exist between "-3" and "-5" to make the patch
+        applicable to B.
+        """
+        dels = []
+        adds = []
+        for line in self.changedlines:
+            text = line.linetext
+            if line.applied:
+                if text[0] == '+':
+                    dels.append(text[1:])
+                elif text[0] == '-':
+                    adds.append(text[1:])
+            elif text[0] == '+':
+                dels.append(text[1:])
+                adds.append(text[1:])
+        hunk = ['-%s' % l for l in dels] + ['+%s' % l for l in adds]
+        h = self._hunk
+        return patchmod.recordhunk(h.header, h.toline, h.fromline, h.proc,
+                                   h.before, hunk, h.after)
+
     def __getattr__(self, name):
         return getattr(self._hunk, name)
 
