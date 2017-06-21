@@ -716,6 +716,12 @@ class basefilectx(object):
         except error.LookupError:
             return "%s@???" % self.path()
 
+    def __bytes__(self):
+        try:
+            return "%s@%s" % (self.path(), self._changectx)
+        except error.LookupError:
+            return "%s@???" % self.path()
+
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
 
