@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import registrar, templatekw
+from mercurial.node import hex
 from phabricator import diffprops
 import re
 
@@ -27,3 +28,11 @@ def showtasks(**args):
     if match:
         tasks = re.findall('\d+', match.group(0))
     return templatekw.showlist('task', tasks, args)
+
+@templatekeyword('singlepublicbase')
+def singlepublicbase(repo, ctx, templ, **args):
+    """String. Return the public base commit hash."""
+    base = repo.revs('last(::%d - not public())', ctx.rev())
+    if len(base):
+        return hex(repo[base.first()].node())
+    return ""

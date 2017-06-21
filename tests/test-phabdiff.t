@@ -48,3 +48,13 @@ Make sure the template keywords are documented correctly
   $ hg help templates | egrep 'phabdiff|tasks'
       phabdiff      String. Return the phabricator diff id for a given hg rev.
       tasks         String. Return the tasks associated with given hg rev.
+
+Check singlepublicbase
+
+  $ hg log -r . --template "{singlepublicbase}\n"
+  
+
+  $ hg phase -p -r ::2
+
+  $ hg log -r . --template "{singlepublicbase}\n"
+  2480b7b497e0af879a40a0d4d960ceb748d27085
