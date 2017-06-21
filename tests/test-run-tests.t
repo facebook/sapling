@@ -641,6 +641,33 @@ Accept the fix
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
     saved backup bundle to $TESTTMP/*.hg (glob)<
 
+Race condition - test file was modified when test is running
+
+  $ TESTRACEDIR=`pwd`
+  $ export TESTRACEDIR
+  $ cat > test-race.t <<EOF
+  >   $ echo 1
+  >   $ echo "# a new line" >> $TESTRACEDIR/test-race.t
+  > EOF
+
+  $ rt -i test-race.t
+  
+  --- $TESTTMP/test-race.t
+  +++ $TESTTMP/test-race.t.err
+  @@ -1,2 +1,3 @@
+     $ echo 1
+  +  1
+     $ echo "# a new line" >> $TESTTMP/test-race.t
+  Reference output has changed (run again to prompt changes)
+  ERROR: test-race.t output changed
+  !
+  Failed test-race.t: output changed
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ rm test-race.t
+
 (reinstall)
   $ mv backup test-failure.t
 

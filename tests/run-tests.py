@@ -633,16 +633,19 @@ class Test(unittest.TestCase):
         self._testtmp = None
         self._chgsockdir = None
 
+        self._refout = self.readrefout()
+
+    def readrefout(self):
+        """read reference output"""
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
-        if debug:
-            self._refout = None # to match "out is None"
+        if self._debug:
+            return None # to match "out is None"
         elif os.path.exists(self.refpath):
-            f = open(self.refpath, 'rb')
-            self._refout = f.read().splitlines(True)
-            f.close()
+            with open(self.refpath, 'rb') as f:
+                return f.read().splitlines(True)
         else:
-            self._refout = []
+            return []
 
     # needed to get base class __repr__ running
     @property
@@ -1588,14 +1591,19 @@ class TestResult(unittest._TextTestResult):
 
             # handle interactive prompt without releasing iolock
             if self._options.interactive:
-                self.stream.write('Accept this change? [n] ')
-                answer = sys.stdin.readline().strip()
-                if answer.lower() in ('y', 'yes'):
-                    if test.name.endswith('.t'):
-                        rename(test.errpath, test.path)
-                    else:
-                        rename(test.errpath, '%s.out' % test.path)
-                    accepted = True
+                if test.readrefout() != expected:
+                    self.stream.write(
+                        'Reference output has changed (run again to prompt '
+                        'changes)')
+                else:
+                    self.stream.write('Accept this change? [n] ')
+                    answer = sys.stdin.readline().strip()
+                    if answer.lower() in ('y', 'yes'):
+                        if test.name.endswith('.t'):
+                            rename(test.errpath, test.path)
+                        else:
+                            rename(test.errpath, '%s.out' % test.path)
+                        accepted = True
             if not accepted:
                 self.faildata[test.name] = b''.join(lines)
 
