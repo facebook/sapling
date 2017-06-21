@@ -987,7 +987,7 @@ class manifestfactory(object):
                     fflag = m.flags(filename)
                     newtree.set(filename, fnode, fflag)
 
-                if not util.safehasattr(transaction, 'treepack'):
+                if not util.safehasattr(transaction, 'treedatapack'):
                     packpath = shallowutil.getlocalpackpath(
                             origself.opener.vfs.base,
                             'manifests')

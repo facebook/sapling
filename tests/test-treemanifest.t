@@ -103,3 +103,34 @@ Test config validation
   $ hg log -r . --config extensions.treemanifest=!
   abort: fastmanifest.usetree cannot be enabled without enabling treemanifest
   [255]
+
+Test rebasing a stack of commits results in a pack with all the trees
+
+  $ echo >> subdir/y
+  $ hg commit -qAm 'modify subdir/y'
+  $ echo >> subdir/y
+  $ hg commit -Am 'modify subdir/y again'
+  $ hg rebase -d 0 -s '.^'
+  rebasing 3:6a2476258ba5 "modify subdir/y"
+  rebasing 4:f096b21e165f "modify subdir/y again" (tip)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-backup.hg (glob)
+  $ hg log -r '.^::.' -T '{manifest}\n'
+  3:0d05c20bb7eb
+  4:8289b85c6a30
+  $ hg debugdatapack .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7.datapack
+  
+  subdir
+  Node          Delta Base    Delta Length
+  a4e2f032ee0f  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  0d05c20bb7eb  000000000000  92
+  
+  subdir
+  Node          Delta Base    Delta Length
+  ad0a48a2ec1e  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  8289b85c6a30  000000000000  92
