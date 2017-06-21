@@ -1090,6 +1090,12 @@ class TTest(Test):
         lines = f.readlines()
         f.close()
 
+        # .t file is both reference output and the test input, keep reference
+        # output updated with the the test input. This avoids some race
+        # conditions where the reference output does not match the actual test.
+        if self._refout is not None:
+            self._refout = lines
+
         salt, script, after, expected = self._parsetest(lines)
 
         # Write out the generated script.
