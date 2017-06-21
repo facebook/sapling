@@ -1582,6 +1582,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
 
     Returns an iterator over raw chunks (of varying sizes).
     """
+    kwargs = pycompat.byteskwargs(kwargs)
     usebundle2 = bundle2requested(bundlecaps)
     # bundle10 case
     if not usebundle2:
