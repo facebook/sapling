@@ -86,7 +86,11 @@ def ancestorcache(path):
             yield
         finally:
             extensions.unwrapfunction(revlog.revlog, 'ancestor', revlogancestor)
-            db.close()
+            try:
+                db.close()
+            except Exception:
+                # database corruption, we just nuke the database
+                util.tryunlink(path)
 
 def _drawendinglines(orig, lines, extra, edgemap, seen):
     # if we are going to have only one single column, draw the missing '|'s
