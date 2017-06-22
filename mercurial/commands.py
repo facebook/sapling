@@ -5216,7 +5216,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                                    "information"))
                 changes = [r.get('return', 0)
                            for r in op.records['changegroup']]
-                modheads = changegroup.combineresults(changes)
+                modheads = bundle2.combinechangegroupresults(changes)
             else:
                 txnname = 'unbundle\n%s' % util.hidepassword(url)
                 with repo.transaction(txnname) as tr:

@@ -1478,6 +1478,25 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
     # in case of sshrepo because we don't know the end of the stream
     return changegroup.writechunks(ui, chunkiter, filename, vfs=vfs)
 
+def combinechangegroupresults(results):
+    """logic to combine 0 or more addchangegroup results into one"""
+    changedheads = 0
+    result = 1
+    for ret in results:
+        # If any changegroup result is 0, return 0
+        if ret == 0:
+            result = 0
+            break
+        if ret < -1:
+            changedheads += ret + 1
+        elif ret > 1:
+            changedheads += ret - 1
+    if changedheads > 0:
+        result = 1 + changedheads
+    elif changedheads < 0:
+        result = -1 + changedheads
+    return result
+
 @parthandler('changegroup', ('version', 'nbchanges', 'treemanifest'))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo

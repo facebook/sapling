@@ -1398,7 +1398,7 @@ def _pullbundle2(pullop):
 
     if pullop.fetch:
         results = [cg['return'] for cg in op.records['changegroup']]
-        pullop.cgresult = changegroup.combineresults(results)
+        pullop.cgresult = bundle2.combinechangegroupresults(results)
 
     # processing phases change
     for namespace, value in op.records['listkeys']:
