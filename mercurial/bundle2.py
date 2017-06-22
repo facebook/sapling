@@ -395,6 +395,14 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
 
     return op
 
+def _processchangegroup(op, cg, tr, source, url, **kwargs):
+    ret, addednodes = cg.apply(op.repo, tr, source, url, **kwargs)
+    op.records.add('changegroup', {
+        'return': ret,
+        'addednodes': addednodes,
+    })
+    return ret
+
 def _processpart(op, part):
     """process a single part from a bundle
 
@@ -1524,12 +1532,8 @@ def handlechangegroup(op, inpart):
         op.repo.requirements.add('treemanifest')
         op.repo._applyopenerreqs()
         op.repo._writerequirements()
-    ret, addednodes = cg.apply(op.repo, tr, 'bundle2', 'bundle2',
-                               expectedtotal=nbchangesets)
-    op.records.add('changegroup', {
-        'return': ret,
-        'addednodes': addednodes,
-    })
+    ret = _processchangegroup(op, cg, tr, 'bundle2', 'bundle2',
+                              expectedtotal=nbchangesets)
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
@@ -1592,11 +1596,7 @@ def handleremotechangegroup(op, inpart):
     if not isinstance(cg, changegroup.cg1unpacker):
         raise error.Abort(_('%s: not a bundle version 1.0') %
             util.hidepassword(raw_url))
-    ret, addednodes = cg.apply(op.repo, tr, 'bundle2', 'bundle2')
-    op.records.add('changegroup', {
-        'return': ret,
-        'addednodes': addednodes,
-    })
+    ret = _processchangegroup(op, cg, tr, 'bundle2', 'bundle2')
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
