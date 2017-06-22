@@ -13,7 +13,7 @@ import os
 import stat
 import subprocess
 import time
-
+import unittest
 
 @testcase.eden_repo_test
 class SetAttrTest:
@@ -21,6 +21,9 @@ class SetAttrTest:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
+    # mtime should not get changed on permission changes
+    # to the file but currently its changing in Edenfs
+    @unittest.expectedFailure
     def test_chmod(self):
         filename = os.path.join(self.mount, 'hello')
 
@@ -28,7 +31,10 @@ class SetAttrTest:
         os.chmod(filename, st.st_mode | stat.S_IROTH)
         new_st = os.lstat(filename)
         self.assertGreaterEqual(new_st.st_atime, st.st_atime)
-        self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
+
+        self.assertEqual(new_st.st_mtime, st.st_mtime)
+        self.assertEqual(new_st.st_atime, st.st_atime)
+        self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mode, st.st_mode | stat.S_IROTH)
 
     def test_chown(self):
@@ -51,13 +57,17 @@ class SetAttrTest:
 
     def test_truncate(self):
         filename = os.path.join(self.mount, 'hello')
+        st = os.lstat(filename)
 
         with open(filename, 'r+') as f:
             f.truncate(0)
             self.assertEqual('', f.read())
 
-        st = os.lstat(filename)
-        self.assertEqual(st.st_size, 0)
+        new_st = os.lstat(filename)
+        self.assertEqual(new_st.st_size, 0)
+        self.assertGreaterEqual(new_st.st_atime, st.st_atime)
+        self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
+        self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
     def test_utime(self):
         filename = os.path.join(self.mount, 'hello')
@@ -92,3 +102,76 @@ class SetAttrTest:
 
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
+
+    def test_dir_addfile(self):
+        dirname = os.path.join(self.mount, 'test_dir')
+        self.mkdir('test_dir')
+
+        st = os.lstat(dirname)
+        self.write_file('test_file', 'test string')
+        new_st = os.lstat(dirname)
+
+        self.assertEqual(new_st.st_atime, st.st_atime)
+        self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
+        self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
+
+    def test_dir_delfile(self):
+        dirname = os.path.join(self.mount, 'test_dir')
+        self.mkdir('test_dir')
+        self.write_file('test_file', 'test string')
+        st = os.lstat(dirname)
+
+        self.rm('test_file')
+        new_st = os.lstat(dirname)
+
+        self.assertEqual(new_st.st_atime, st.st_atime)
+        self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
+        self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
+
+    def test_dir_change_filecontents(self):
+        dirname = os.path.join(self.mount, 'test_dir')
+        self.mkdir('test_dir')
+
+        self.write_file('test_file', 'test string')
+        st = os.lstat(dirname)
+        self.write_file('test_file', 'test string 1')
+        new_st = os.lstat(dirname)
+
+        self.assertEqual(new_st.st_mtime, st.st_mtime)
+        self.assertEqual(new_st.st_ctime, st.st_ctime)
+        self.assertEqual(new_st.st_mtime, st.st_mtime)
+
+    # Changing permisssions of directory should change
+    # only ctime of the directory, but currently chmod
+    # is not implemented for directories in edenfs
+    @unittest.expectedFailure
+    def test_dir_change_perm(self):
+        dirname = os.path.join(self.mount, 'test_dir')
+        self.mkdir('test_dir')
+
+        st = os.lstat(dirname)
+        os.chmod(dirname, st.st_mode | stat.S_IROTH)
+        new_st = os.lstat(dirname)
+
+        self.assertEqual(new_st.st_mtime, st.st_mtime)
+        self.assertEqual(new_st.st_atime, st.st_atime)
+        self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
+
+    # Opening the file in read mode should update the atime
+    # But it is not being updated in Edenfs
+    @unittest.expectedFailure
+    def test_timestamp_openfiles(self):
+        filename = os.path.join(self.mount, 'hello')
+        st = os.lstat(filename)
+        with open(filename, 'r') as f:
+            f.read()
+            new_st = os.lstat(filename)
+            self.assertEqual(new_st.st_mtime, st.st_mtime)
+            self.assertEqual(new_st.st_atime, st.st_atime)
+            self.assertEqual(new_st.st_ctime, st.st_ctime)
+            f.close()
+
+        new_st = os.lstat(filename)
+        self.assertEqual(new_st.st_mtime, st.st_mtime)
+        self.assertGreater(new_st.st_atime, st.st_atime)
+        self.assertEqual(new_st.st_ctime, st.st_ctime)
