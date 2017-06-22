@@ -10,6 +10,7 @@
 #include "GitBackingStore.h"
 
 #include <folly/Conv.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <git2.h>
 
@@ -77,7 +78,7 @@ Future<unique_ptr<Tree>> GitBackingStore::getTree(const Hash& id) {
 }
 
 unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
-  VLOG(4) << "importing tree " << id;
+  XLOG(DBG4) << "importing tree " << id;
 
   git_oid treeOID = hash2Oid(id);
   git_tree* gitTree = nullptr;
@@ -134,7 +135,7 @@ Future<unique_ptr<Blob>> GitBackingStore::getBlob(const Hash& id) {
 }
 
 unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
-  VLOG(5) << "importing blob " << id;
+  XLOG(DBG5) << "importing blob " << id;
 
   auto blobOID = hash2Oid(id);
   git_blob* blob = nullptr;
@@ -163,7 +164,7 @@ Future<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
 }
 
 unique_ptr<Tree> GitBackingStore::getTreeForCommitImpl(const Hash& commitID) {
-  VLOG(4) << "resolving tree for commit " << commitID;
+  XLOG(DBG4) << "resolving tree for commit " << commitID;
 
   // Look up the commit info
   git_oid commitOID = hash2Oid(commitID);

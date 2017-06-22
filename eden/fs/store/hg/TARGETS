@@ -21,6 +21,7 @@ cpp_library(
         "@/folly:folly",
         "@/folly:subprocess",
         "@/folly/experimental:env_util",
+        "@/folly/experimental/logging:logging",
     ],
     external_deps = [
         "gflags",

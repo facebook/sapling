@@ -11,6 +11,8 @@
 
 #include <folly/Exception.h>
 #include <folly/Likely.h>
+#include <folly/experimental/logging/xlog.h>
+
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -208,7 +210,7 @@ void InodeMap::startChildLookup(
   if (isUnlinked) {
     // FIXME: The UnloadedData object needs to have enough data to recreate
     // this object, or we need to be able to load the info from the overlay.
-    LOG(FATAL) << "reloading unlinked inodes not implemented yet";
+    XLOG(FATAL) << "reloading unlinked inodes not implemented yet";
   }
 
   // Ask the TreeInode to load this child inode.
@@ -221,8 +223,8 @@ void InodeMap::startChildLookup(
 
 InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   auto number = inode->getNodeId();
-  VLOG(5) << "successfully loaded inode " << number << ": "
-          << inode->getLogPath();
+  XLOG(DBG5) << "successfully loaded inode " << number << ": "
+             << inode->getLogPath();
 
   PromiseVector promises;
   try {
@@ -240,8 +242,8 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     data->unloadedInodes_.erase(it);
     return promises;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "error marking inode " << number
-               << " loaded: " << folly::exceptionStr(ex);
+    XLOG(ERR) << "error marking inode " << number
+              << " loaded: " << folly::exceptionStr(ex);
     auto ew = folly::exception_wrapper{std::current_exception(), ex};
     for (auto& promise : promises) {
       promise.setException(ew);
@@ -253,8 +255,8 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
 void InodeMap::inodeLoadFailed(
     fuse_ino_t number,
     const folly::exception_wrapper& ex) {
-  LOG(ERROR) << "failed to load inode " << number << ": "
-             << folly::exceptionStr(ex);
+  XLOG(ERR) << "failed to load inode " << number << ": "
+            << folly::exceptionStr(ex);
   auto promises = extractPendingPromises(number);
   for (auto& promise : promises) {
     promise.setException(ex);
@@ -316,7 +318,7 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
     // This generally shouldn't happen.  If a fuse_ino_t has been allocated
     // we should always know about it.  It's a bug if our caller calls us with
     // an invalid fuse_ino_t number.
-    LOG(ERROR) << "InodeMap called with unknown inode number " << number;
+    XLOG(ERR) << "InodeMap called with unknown inode number " << number;
     throwSystemErrorExplicit(EINVAL, "unknown inode number ", number);
   }
 
@@ -356,8 +358,8 @@ void InodeMap::decFuseRefcount(fuse_ino_t number, uint32_t count) {
   unloadedEntry.numFuseReferences -= count;
   if (unloadedEntry.numFuseReferences <= 0) {
     // We can completely forget about this unloaded inode now.
-    VLOG(5) << "forgetting unloaded inode " << number << ": "
-            << unloadedEntry.parent << ":" << unloadedEntry.name;
+    XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
+               << unloadedEntry.parent << ":" << unloadedEntry.name;
     data->unloadedInodes_.erase(unloadedIter);
   }
 }
@@ -435,8 +437,8 @@ void InodeMap::shutdownComplete() {
 void InodeMap::onInodeUnreferenced(
     const InodeBase* inode,
     ParentInodeInfo&& parentInfo) {
-  VLOG(5) << "inode " << inode->getNodeId()
-          << " unreferenced: " << inode->getLogPath();
+  XLOG(DBG5) << "inode " << inode->getNodeId()
+             << " unreferenced: " << inode->getLogPath();
   // Acquire our lock.
   auto data = data_.wlock();
 
@@ -521,23 +523,23 @@ void InodeMap::unloadInode(
   auto fuseCount = inode->getFuseRefcount();
   if (fuseCount > 0) {
     // Insert an unloaded entry
-    VLOG(5) << "unloading inode " << inode->getNodeId()
-            << " with FUSE refcount=" << fuseCount << ": "
-            << inode->getLogPath();
+    XLOG(DBG5) << "unloading inode " << inode->getNodeId()
+               << " with FUSE refcount=" << fuseCount << ": "
+               << inode->getLogPath();
     auto unloadedEntry =
         UnloadedInode(inode->getNodeId(), parent->getNodeId(), name);
     unloadedEntry.numFuseReferences = fuseCount;
     unloadedEntry.isUnlinked = isUnlinked;
     auto reverseInsertKey =
         std::make_pair(unloadedEntry.parent, unloadedEntry.name.piece());
-    VLOG(7) << "reverse unload emplace " << reverseInsertKey.first << ":"
-            << reverseInsertKey.second;
+    XLOG(DBG7) << "reverse unload emplace " << reverseInsertKey.first << ":"
+               << reverseInsertKey.second;
     auto ret = data->unloadedInodes_.emplace(
         inode->getNodeId(), std::move(unloadedEntry));
     CHECK(ret.second);
   } else {
-    VLOG(5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
-            << inode->getLogPath();
+    XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
+               << inode->getLogPath();
     // If this inode is unlinked, it can never be loaded again, since there are
     // no outstanding pointer or fuse references to it, and it cannot be
     // accessed by path either.  Delete any data about it from the overlay in
@@ -614,8 +616,8 @@ fuse_ino_t InodeMap::allocateInodeNumber() {
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {
-  VLOG(4) << "created new inode " << inode->getNodeId() << ": "
-          << inode->getLogPath();
+  XLOG(DBG4) << "created new inode " << inode->getNodeId() << ": "
+             << inode->getLogPath();
   auto data = data_.wlock();
   data->loadedInodes_.emplace(inode->getNodeId(), inode.get());
 }

@@ -7,23 +7,24 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "EdenServer.h"
+#include "eden/fs/service/EdenServer.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 
-#include "EdenServiceHandler.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
@@ -113,8 +114,8 @@ void EdenServer::prepare() {
   try {
     dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Could not parse config.json file: " << ex.what()
-               << " Skipping remount step.";
+    XLOG(ERR) << "Could not parse config.json file: " << ex.what()
+              << " Skipping remount step.";
   }
   for (auto& client : dirs.items()) {
     auto mountInfo = std::make_unique<MountInfo>();
@@ -125,8 +126,8 @@ void EdenServer::prepare() {
     try {
       handler_->mount(std::move(mountInfo));
     } catch (const std::exception& ex) {
-      LOG(ERROR) << "Failed to perform remount for " << client.first.c_str()
-                 << ": " << ex.what();
+      XLOG(ERR) << "Failed to perform remount for " << client.first.c_str()
+                << ": " << ex.what();
     }
   }
   prepareThriftAddress();
@@ -175,8 +176,8 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
     } catch (...) {
       // Consider recording all failed bind mounts in a way that can be
       // communicated back to the caller in a structured way.
-      LOG(ERROR) << "Failed to perform bind mount for "
-                 << pathInMountDir.stringPiece() << ".";
+      XLOG(ERR) << "Failed to perform bind mount for "
+                << pathInMountDir.stringPiece() << ".";
     }
   }
 }
@@ -185,15 +186,15 @@ void EdenServer::unmount(StringPiece mountPath) {
   try {
     fusell::privilegedFuseUnmount(mountPath);
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "Failed to perform unmount for \"" << mountPath
-               << "\": " << folly::exceptionStr(ex);
+    XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
+              << "\": " << folly::exceptionStr(ex);
     throw;
   }
 }
 
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
-  LOG(INFO) << "mount point \"" << mountPath << "\" stopped";
+  XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
     auto numErased = mountPoints_.erase(mountPath);
@@ -265,8 +266,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   // Ugh.  The SYNCHRONIZED() macro is super lame.
   // We have to return something here, since the compiler can't figure out
   // that we always return inside SYNCHRONIZED.
-  LOG(FATAL) << "unreached";
-  abort();
+  XLOG(FATAL) << "unreached";
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(

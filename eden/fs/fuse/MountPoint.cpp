@@ -7,12 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "MountPoint.h"
+#include "eden/fs/fuse/MountPoint.h"
 
-#include "Channel.h"
-#include "Dispatcher.h"
-
+#include <folly/experimental/logging/xlog.h>
 #include <sys/stat.h>
+
+#include "eden/fs/fuse/Channel.h"
+#include "eden/fs/fuse/Dispatcher.h"
 
 namespace facebook {
 namespace eden {
@@ -41,7 +42,7 @@ void MountPoint::start(bool debug, const std::function<void()>& onStop) {
     } catch (const std::exception& ex) {
       std::lock_guard<std::mutex> guard(mutex_);
       if (status_ == Status::STARTING) {
-        LOG(ERROR) << "error starting FUSE mount: " << folly::exceptionStr(ex);
+        XLOG(ERR) << "error starting FUSE mount: " << folly::exceptionStr(ex);
         startError_ = std::current_exception();
         status_ = Status::ERROR;
         statusCV_.notify_one();
@@ -49,8 +50,8 @@ void MountPoint::start(bool debug, const std::function<void()>& onStop) {
       } else {
         // We potentially could call onStop() with a pointer to the exception,
         // or nullptr when stopping normally.
-        LOG(ERROR) << "unhandled error occurred while running FUSE mount: "
-                   << folly::exceptionStr(ex);
+        XLOG(ERR) << "unhandled error occurred while running FUSE mount: "
+                  << folly::exceptionStr(ex);
       }
     }
     if (onStop) {

@@ -9,6 +9,8 @@
  */
 #include "StreamingSubscriber.h"
 
+#include <folly/experimental/logging/xlog.h>
+
 using folly::StringPiece;
 
 namespace facebook {
@@ -54,7 +56,7 @@ void StreamingSubscriber::journalUpdated() {
   if (!callback_->isRequestActive()) {
     // Peer disconnected, so tear down the subscription
     // TODO: is this the right way to detect this?
-    VLOG(1) << "Subscription is no longer active";
+    XLOG(DBG1) << "Subscription is no longer active";
     edenMount_->getJournal().wlock()->cancelSubscriber(subscriberId_);
     callback_->done();
     callback_.reset();
@@ -72,7 +74,7 @@ void StreamingSubscriber::journalUpdated() {
     // And send it
     callback_->write(pos);
   } catch (const std::exception& exc) {
-    LOG(ERROR) << "Error while sending subscription update: " << exc.what();
+    XLOG(ERR) << "Error while sending subscription update: " << exc.what();
   }
 }
 }

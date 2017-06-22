@@ -44,6 +44,8 @@ class PrivHelperServer {
   void run();
 
  private:
+  void initLogging();
+
   void messageLoop();
   void cleanupMountPoints();
   void processMountMsg(PrivHelperConn::Message* msg);

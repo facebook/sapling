@@ -16,6 +16,7 @@
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/EnvUtil.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gflags/gflags.h>
@@ -96,8 +97,8 @@ struct HgProxyHash {
     // Read the path name and file rev hash
     auto infoResult = store->get(StringPiece(getBlobKey(edenBlobHash)));
     if (!infoResult.isValid()) {
-      LOG(ERROR) << "received unknown mercurial proxy hash "
-                 << edenBlobHash.toString();
+      XLOG(ERR) << "received unknown mercurial proxy hash "
+                << edenBlobHash.toString();
       // Fall through and let infoResult.extractValue() throw
     }
 
@@ -220,7 +221,7 @@ struct HgProxyHash {
           " is too short (",
           infoBytes.size(),
           " bytes)");
-      LOG(ERROR) << msg;
+      XLOG(ERR) << msg;
       throw std::length_error(msg);
     }
 
@@ -239,7 +240,7 @@ struct HgProxyHash {
           "mercurial blob info data for ",
           edenBlobHash.toString(),
           " has inconsistent path length");
-      LOG(ERROR) << msg;
+      XLOG(ERR) << msg;
       throw std::length_error(msg);
     }
 
@@ -282,7 +283,7 @@ std::string findImportHelperPath() {
   }
 
   auto programDir = boost::filesystem::absolute(boost::filesystem::path(argv0));
-  VLOG(4) << "edenfs path: " << programDir.native();
+  XLOG(DBG4) << "edenfs path: " << programDir.native();
   programDir.remove_filename();
 
   auto toCheck = folly::make_array(
@@ -297,7 +298,8 @@ std::string findImportHelperPath() {
               "../../../../../../eden/fs/store/hg/hg_import_helper.py"));
 
   for (const auto& path : toCheck) {
-    VLOG(5) << "checking for hg_import_helper at \"" << path.native() << "\"";
+    XLOG(DBG5) << "checking for hg_import_helper at \"" << path.native()
+               << "\"";
     boost::filesystem::path normalized;
     try {
       normalized = boost::filesystem::canonical(path);
@@ -453,8 +455,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     FileType fileType;
     uint8_t ownerPermissions;
 
-    VLOG(10) << "tree: " << manifestNode << " " << entryName
-             << " node: " << node << " flag: " << entry->flag;
+    XLOG(DBG9) << "tree: " << manifestNode << " " << entryName
+               << " node: " << node << " flag: " << entry->flag;
 
     if (entry->isdirectory()) {
       fileType = FileType::DIRECTORY;
@@ -500,8 +502,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 Hash HgImporter::importManifest(StringPiece revName) {
   try {
     auto manifestNode = resolveManifestNode(revName);
-    LOG(ERROR) << "revision " << revName << " has manifest node "
-               << manifestNode;
+    XLOG(ERR) << "revision " << revName << " has manifest node "
+              << manifestNode;
 
     // Record that we are at the root for this node
     RelativePathPiece path{};
@@ -549,7 +551,7 @@ Hash HgImporter::importManifest(StringPiece revName) {
       }
     }
     auto rootHash = importer.finish();
-    VLOG(1) << "processed " << numPaths << " manifest paths";
+    XLOG(DBG1) << "processed " << numPaths << " manifest paths";
 
     return rootHash;
   }
@@ -559,8 +561,8 @@ IOBuf HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
   HgProxyHash hgInfo(store_, blobHash);
-  VLOG(5) << "requesting file contents of '" << hgInfo.path() << "', "
-          << hgInfo.revHash().toString();
+  XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
+             << hgInfo.revHash().toString();
 
   // Ask the import helper process for the file contents
   sendFileRequest(hgInfo.path(), hgInfo.revHash());
@@ -670,7 +672,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
     std::vector<char> errMsg(header.dataLength);
     folly::readFull(helperOut_, &errMsg.front(), header.dataLength);
     string errStr(&errMsg.front(), errMsg.size());
-    LOG(WARNING) << "error received from hg helper process: " << errStr;
+    XLOG(WARNING) << "error received from hg helper process: " << errStr;
     throw std::runtime_error(errStr);
   }
 

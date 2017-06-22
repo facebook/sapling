@@ -10,8 +10,8 @@
 #include "EdenMount.h"
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
-#include <glog/logging.h>
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/MountPoint.h"
@@ -109,8 +109,8 @@ EdenMount::EdenMount(
   auto maxInodeNumber = overlay_->getMaxRecordedInode();
 
   inodeMap_->initialize(std::move(rootInode), maxInodeNumber);
-  VLOG(2) << "Initializing eden mount " << getPath()
-          << "; max existing inode number is " << maxInodeNumber;
+  XLOG(DBG2) << "Initializing eden mount " << getPath()
+             << "; max existing inode number is " << maxInodeNumber;
 
   // Record the transition from no snapshot to the current snapshot in
   // the journal.  This also sets things up so that we can carry the
@@ -146,12 +146,12 @@ EdenMount::EdenMount(
 EdenMount::~EdenMount() {}
 
 void EdenMount::destroy() {
-  VLOG(1) << "beginning shutdown for EdenMount " << getPath();
+  XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
   inodeMap_->beginShutdown();
 }
 
 void EdenMount::shutdownComplete() {
-  VLOG(1) << "destruction complete for EdenMount " << getPath();
+  XLOG(DBG1) << "destruction complete for EdenMount " << getPath();
   delete this;
 }
 
@@ -219,8 +219,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   auto parentsLock = parentCommits_.wlock();
   auto oldParents = *parentsLock;
   auto ctx = std::make_shared<CheckoutContext>(std::move(parentsLock), force);
-  VLOG(1) << "starting checkout for " << this->getPath() << ": " << oldParents
-          << " to " << snapshotHash;
+  XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
+             << oldParents << " to " << snapshotHash;
 
   auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
@@ -248,8 +248,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       })
       .then([this, ctx, oldParents, snapshotHash]() {
         // Save the new snapshot hash
-        VLOG(1) << "updating snapshot for " << this->getPath() << " from "
-                << oldParents << " to " << snapshotHash;
+        XLOG(DBG1) << "updating snapshot for " << this->getPath() << " from "
+                   << oldParents << " to " << snapshotHash;
         this->config_->setParentCommits(snapshotHash);
         auto conflicts = ctx->finish(snapshotHash);
 
@@ -296,8 +296,8 @@ Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
   // Hold the snapshot lock around the entire operation.
   auto parentsLock = parentCommits_.wlock();
   auto oldParents = *parentsLock;
-  VLOG(1) << "resetting snapshot for " << this->getPath() << " from "
-          << oldParents << " to " << parents;
+  XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
+             << oldParents << " to " << parents;
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize some
   // files using the new source control state.

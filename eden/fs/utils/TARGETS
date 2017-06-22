@@ -6,6 +6,7 @@ cpp_library(
         "@/folly:evicting_cache_map",
         "@/folly:folly",
         "@/folly:subprocess",
+        "@/folly/experimental/logging:logging",
         "@/folly/futures:futures",
     ],
 )

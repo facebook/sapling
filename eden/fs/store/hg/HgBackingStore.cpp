@@ -9,6 +9,7 @@
  */
 #include "HgBackingStore.h"
 
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 
 #include "eden/fs/model/Blob.h"
@@ -69,12 +70,12 @@ unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
   auto result = localStore_->get(mappingKey);
   if (result.isValid()) {
     rootTreeHash = Hash{result.bytes()};
-    VLOG(5) << "found existing tree " << rootTreeHash.toString()
-            << " for mercurial commit " << commitID.toString();
+    XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
+               << " for mercurial commit " << commitID.toString();
   } else {
     rootTreeHash = importer_->importManifest(commitID.toString());
-    VLOG(1) << "imported mercurial commit " << commitID.toString()
-            << " as tree " << rootTreeHash.toString();
+    XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
+               << " as tree " << rootTreeHash.toString();
 
     localStore_->put(mappingKey, rootTreeHash.getBytes());
   }

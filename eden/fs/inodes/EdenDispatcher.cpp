@@ -11,19 +11,21 @@
 
 #include <dirent.h>
 #include <folly/Format.h>
+#include <folly/experimental/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
-#include "EdenMount.h"
-#include "FileHandle.h"
-#include "FileInode.h"
-#include "InodeMap.h"
-#include "TreeInode.h"
+
 #include "eden/fs/fuse/Channel.h"
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileHandle.h"
+#include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/TreeInode.h"
 
 using namespace folly;
 using facebook::eden::PathComponentPiece;
@@ -91,8 +93,8 @@ struct Walker : public std::enable_shared_from_this<Walker> {
     auto self = shared_from_this();
     std::thread thr([=] {
       sleep(FLAGS_warm_kernel_delay);
-      LOG(INFO) << "Initiating walk of myself to warm up inode cache, use "
-                   "--warm_kernel_on_startup=false to disable";
+      XLOG(INFO) << "Initiating walk of myself to warm up inode cache, use "
+                    "--warm_kernel_on_startup=false to disable";
       self->walkDir(rootPath);
     });
     thr.detach();
@@ -109,8 +111,7 @@ struct Walker : public std::enable_shared_from_this<Walker> {
         .then([=] {
           struct stat st;
           if (lstat(path.c_str(), &st) != 0) {
-            LOG(ERROR) << "failed to lstat(" << path
-                       << "): " << strerror(errno);
+            XLOG(ERR) << "failed to lstat(" << path << "): " << strerror(errno);
             return;
           }
           ++nfiles;
@@ -120,8 +121,8 @@ struct Walker : public std::enable_shared_from_this<Walker> {
           }
           auto dir = opendir(path.c_str());
           if (!dir) {
-            LOG(ERROR) << "Failed to opendir(" << path
-                       << "): " << strerror(errno);
+            XLOG(ERR) << "Failed to opendir(" << path
+                      << "): " << strerror(errno);
             return;
           }
           SCOPE_EXIT {
@@ -140,15 +141,15 @@ struct Walker : public std::enable_shared_from_this<Walker> {
           }
         })
         .onError([](const std::exception& e) {
-          LOG(ERROR) << "Error during walk: " << e.what();
+          XLOG(ERR) << "Error during walk: " << e.what();
         })
         .ensure([=] {
           if (--nwalk == 0) {
-            LOG(INFO) << "Finished walking " << nfiles << " files, took "
-                      << std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::steady_clock::now() - start)
-                             .count()
-                      << "ms";
+            XLOG(INFO) << "Finished walking " << nfiles << " files, took "
+                       << std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count()
+                       << "ms";
             // Since `self` owns the executor in which we're running,
             // we'll deadlock ourselves if we allow the destructor to
             // execute in one of its threads.  Switch to a different
@@ -183,7 +184,7 @@ void EdenDispatcher::initConnection(fuse_conn_info& /* conn */) {
 
 folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
     fuse_ino_t ino) {
-  VLOG(7) << "getattr(" << ino << ")";
+  XLOG(DBG7) << "getattr(" << ino << ")";
   return inodeMap_->lookupInode(ino).then(
       [](const InodePtr& inode) { return inode->getattr(); });
 }
@@ -191,7 +192,7 @@ folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
 folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
-  VLOG(7) << "opendir(" << ino << ")";
+  XLOG(DBG7) << "opendir(" << ino << ")";
   return inodeMap_->lookupTreeInode(ino).then(
       [fi](const TreeInodePtr& inode) { return inode->opendir(fi); });
 }
@@ -199,7 +200,7 @@ folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
 folly::Future<fuse_entry_param> EdenDispatcher::lookup(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
-  VLOG(7) << "lookup(" << parent << ", " << namepiece << ")";
+  XLOG(DBG7) << "lookup(" << parent << ", " << namepiece << ")";
   return inodeMap_->lookupTreeInode(parent)
       .then([name = PathComponent(namepiece)](const TreeInodePtr& tree) {
         return tree->getOrLoadChild(name);
@@ -214,7 +215,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
 
 folly::Future<fusell::Dispatcher::Attr>
 EdenDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int toSet) {
-  VLOG(7) << "setattr(" << ino << ")";
+  XLOG(DBG7) << "setattr(" << ino << ")";
   return inodeMap_->lookupInode(ino).then([attr, toSet](const InodePtr& inode) {
     return inode->setattr(attr, toSet);
   });
@@ -223,7 +224,7 @@ EdenDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int toSet) {
 folly::Future<folly::Unit> EdenDispatcher::forget(
     fuse_ino_t ino,
     unsigned long nlookup) {
-  VLOG(7) << "forget(" << ino << ", " << nlookup << ")";
+  XLOG(DBG7) << "forget(" << ino << ", " << nlookup << ")";
   inodeMap_->decFuseRefcount(ino, nlookup);
   return Unit{};
 }
@@ -231,7 +232,7 @@ folly::Future<folly::Unit> EdenDispatcher::forget(
 folly::Future<std::shared_ptr<fusell::FileHandle>> EdenDispatcher::open(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
-  VLOG(7) << "open(" << ino << ")";
+  XLOG(DBG7) << "open(" << ino << ")";
   return inodeMap_->lookupFileInode(ino).then(
       [fi](const FileInodePtr& inode) { return inode->open(fi); });
 }
@@ -241,8 +242,7 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
     PathComponentPiece name,
     mode_t mode,
     int flags) {
-  VLOG(7) << folly::sformat(
-      "create({}, {}, {:#x}, {:#x})", parent, name, mode, flags);
+  XLOGF(DBG7, "create({}, {}, {:#x}, {:#x})", parent, name, mode, flags);
   return inodeMap_->lookupTreeInode(parent)
       .then([ childName = PathComponent{name}, mode, flags ](
           const TreeInodePtr& parentInode) {
@@ -259,7 +259,7 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
 }
 
 folly::Future<std::string> EdenDispatcher::readlink(fuse_ino_t ino) {
-  VLOG(7) << "readlink(" << ino << ")";
+  XLOG(DBG7) << "readlink(" << ino << ")";
   return inodeMap_->lookupFileInode(ino).then(
       [](const FileInodePtr& inode) { return inode->readlink(); });
 }
@@ -269,8 +269,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev) {
-  VLOG(7) << folly::sformat(
-      "mknod({}, {}, {:#x}, {:#x})", parent, name, mode, rdev);
+  XLOGF(DBG7, "mknod({}, {}, {:#x}, {:#x})", parent, name, mode, rdev);
   return inodeMap_->lookupTreeInode(parent).then(
       [ childName = PathComponent{name}, mode, rdev ](
           const TreeInodePtr& inode) {
@@ -284,7 +283,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
 
 folly::Future<fuse_entry_param>
 EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
-  VLOG(7) << folly::sformat("mkdir({}, {}, {:#x})", parent, name, mode);
+  XLOGF(DBG7, "mkdir({}, {}, {:#x})", parent, name, mode);
   return inodeMap_->lookupTreeInode(parent).then(
       [ childName = PathComponent{name}, mode ](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode);
@@ -298,7 +297,7 @@ EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
 folly::Future<folly::Unit> EdenDispatcher::unlink(
     fuse_ino_t parent,
     PathComponentPiece name) {
-  VLOG(7) << "unlink(" << parent << ", " << name << ")";
+  XLOG(DBG7) << "unlink(" << parent << ", " << name << ")";
   return inodeMap_->lookupTreeInode(parent).then(
       [ this, childName = PathComponent{name} ](const TreeInodePtr& inode) {
         inode->unlink(childName);
@@ -308,7 +307,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
 folly::Future<folly::Unit> EdenDispatcher::rmdir(
     fuse_ino_t parent,
     PathComponentPiece name) {
-  VLOG(7) << "rmdir(" << parent << ", " << name << ")";
+  XLOG(DBG7) << "rmdir(" << parent << ", " << name << ")";
   return inodeMap_->lookupTreeInode(parent)
       .then([childName = PathComponent{name}](const TreeInodePtr& inode) {
         return inode->rmdir(childName);
@@ -319,7 +318,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
     fuse_ino_t parent,
     PathComponentPiece name,
     StringPiece link) {
-  VLOG(7) << "symlink(" << parent << ", " << name << ", " << link << ")";
+  XLOG(DBG7) << "symlink(" << parent << ", " << name << ", " << link << ")";
   return inodeMap_->lookupTreeInode(parent).then(
       [ linkContents = link.str(),
         childName = PathComponent{name} ](const TreeInodePtr& inode) {
@@ -336,8 +335,8 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
     PathComponentPiece namePiece,
     fuse_ino_t newParent,
     PathComponentPiece newNamePiece) {
-  VLOG(7) << "rename(" << parent << ", " << namePiece << ", " << newParent
-          << ", " << newNamePiece << ")";
+  XLOG(DBG7) << "rename(" << parent << ", " << namePiece << ", " << newParent
+             << ", " << newNamePiece << ")";
   // Start looking up both parents
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
@@ -358,7 +357,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::link(
     fuse_ino_t ino,
     fuse_ino_t newParent,
     PathComponentPiece newName) {
-  VLOG(7) << "link(" << ino << ", " << newParent << ", " << newName << ")";
+  XLOG(DBG7) << "link(" << ino << ", " << newParent << ", " << newName << ")";
   // We intentionally do not support hard links.
   // These generally cannot be tracked in source control (git or mercurial)
   // and are not portable to non-Unix platforms.
@@ -367,13 +366,13 @@ folly::Future<fuse_entry_param> EdenDispatcher::link(
 }
 
 Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
-  VLOG(7) << "getxattr(" << ino << ", " << name << ")";
+  XLOG(DBG7) << "getxattr(" << ino << ", " << name << ")";
   return inodeMap_->lookupInode(ino).then([attrName = name.str()](
       const InodePtr& inode) { return inode->getxattr(attrName); });
 }
 
 Future<vector<string>> EdenDispatcher::listxattr(fuse_ino_t ino) {
-  VLOG(7) << "listxattr(" << ino << ")";
+  XLOG(DBG7) << "listxattr(" << ino << ")";
   return inodeMap_->lookupInode(ino).then(
       [](const InodePtr& inode) { return inode->listxattr(); });
 }

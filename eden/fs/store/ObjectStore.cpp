@@ -11,13 +11,15 @@
 
 #include <folly/Conv.h>
 #include <folly/Optional.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <stdexcept>
-#include "BackingStore.h"
-#include "LocalStore.h"
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/LocalStore.h"
 
 using folly::Future;
 using folly::IOBuf;
@@ -41,7 +43,7 @@ Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);
   if (tree) {
-    VLOG(4) << "tree " << id << " found in local store";
+    XLOG(DBG4) << "tree " << id << " found in local store";
     return makeFuture(std::move(tree));
   }
 
@@ -59,7 +61,7 @@ Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
       std::unique_ptr<Tree> loadedTree) {
     if (!loadedTree) {
       // TODO: Perhaps we should do some short-term negative caching?
-      VLOG(2) << "unable to find tree " << id;
+      XLOG(DBG2) << "unable to find tree " << id;
       throw std::domain_error(
           folly::to<string>("tree ", id.toString(), " not found"));
     }
@@ -69,7 +71,7 @@ Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
     // here.
     //
     // localStore_->putTree(loadedTree.get());
-    VLOG(3) << "tree " << id << " retrieved from backing store";
+    XLOG(DBG3) << "tree " << id << " retrieved from backing store";
     return loadedTree;
   });
 }
@@ -77,7 +79,7 @@ Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
 Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {
-    VLOG(4) << "blob " << id << "  found in local store";
+    XLOG(DBG4) << "blob " << id << "  found in local store";
     return makeFuture(std::move(blob));
   }
 
@@ -85,13 +87,13 @@ Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
   return backingStore_->getBlob(id).then(
       [ localStore = localStore_, id ](std::unique_ptr<Blob> loadedBlob) {
         if (!loadedBlob) {
-          VLOG(2) << "unable to find blob " << id;
+          XLOG(DBG2) << "unable to find blob " << id;
           // TODO: Perhaps we should do some short-term negative caching?
           throw std::domain_error(
               folly::to<string>("blob ", id.toString(), " not found"));
         }
 
-        VLOG(3) << "blob " << id << "  retrieved from backing store";
+        XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
         localStore->putBlob(id, loadedBlob.get());
         return loadedBlob;
       });
@@ -99,7 +101,7 @@ Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
 
 Future<unique_ptr<Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID) const {
-  VLOG(3) << "getTreeForCommit(" << commitID << ")";
+  XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
   return backingStore_->getTreeForCommit(commitID).then(
       [commitID](std::unique_ptr<Tree> tree) {

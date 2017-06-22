@@ -9,6 +9,8 @@
  */
 #include "eden/fs/inodes/CheckoutAction.h"
 
+#include <folly/experimental/logging/xlog.h>
+
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -215,8 +217,8 @@ void CheckoutAction::setInode(InodePtr inode) {
 void CheckoutAction::error(
     folly::StringPiece msg,
     const folly::exception_wrapper& ew) {
-  LOG(ERROR) << "error performing checkout action: " << msg << ": "
-             << folly::exceptionStr(ew);
+  XLOG(ERR) << "error performing checkout action: " << msg << ": "
+            << folly::exceptionStr(ew);
   errors_.push_back(ew);
 }
 
@@ -242,10 +244,10 @@ bool CheckoutAction::ensureDataReady() noexcept {
     // a single exception that contains all of the messages concatenated
     // together.
     if (errors_.size() > 1) {
-      LOG(ERROR) << "multiple errors while attempting to load data for "
-                    "checkout action:";
+      XLOG(ERR) << "multiple errors while attempting to load data for "
+                   "checkout action:";
       for (const auto& ew : errors_) {
-        LOG(ERROR) << "CheckoutAction error: " << folly::exceptionStr(ew);
+        XLOG(ERR) << "CheckoutAction error: " << folly::exceptionStr(ew);
       }
     }
     promise_.setException(errors_[0]);

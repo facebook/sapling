@@ -7,16 +7,19 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Dispatcher.h"
+#include "eden/fs/fuse/Dispatcher.h"
+
 #include <folly/Exception.h>
 #include <folly/Format.h>
 #include <folly/MoveWrapper.h>
+#include <folly/experimental/logging/xlog.h>
 #include <wangle/concurrent/GlobalExecutor.h>
-#include "DirHandle.h"
-#include "FileHandle.h"
-#include "MountPoint.h"
-#include "RequestData.h"
-#include "SessionDeleter.h"
+
+#include "eden/fs/fuse/DirHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
+#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/fuse/SessionDeleter.h"
 
 using namespace folly;
 using namespace std::chrono;
@@ -119,12 +122,12 @@ void Dispatcher::disp_init(void* userdata, struct fuse_conn_info* conn) {
   disp->connInfo_ = *conn;
   disp->mountPoint_->mountStarted();
 
-  LOG(INFO) << "Speaking fuse protocol " << conn->proto_major << "."
-            << conn->proto_minor << ", async_read=" << conn->async_read
-            << ", max_write=" << conn->max_write
-            << ", max_readahead=" << conn->max_readahead
-            << ", capable=" << flagsToLabel(capsLabels, conn->capable)
-            << ", want=" << flagsToLabel(capsLabels, conn->want);
+  XLOG(INFO) << "Speaking fuse protocol " << conn->proto_major << "."
+             << conn->proto_minor << ", async_read=" << conn->async_read
+             << ", max_write=" << conn->max_write
+             << ", max_readahead=" << conn->max_readahead
+             << ", capable=" << flagsToLabel(capsLabels, conn->capable)
+             << ", want=" << flagsToLabel(capsLabels, conn->want);
 }
 
 void Dispatcher::destroy() {}

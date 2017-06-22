@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PrivHelperServer.h"
+#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
@@ -17,6 +17,10 @@
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/GlogStyleFormatter.h>
+#include <folly/experimental/logging/ImmediateFileWriter.h>
+#include <folly/experimental/logging/StandardLogHandler.h>
+#include <folly/experimental/logging/xlog.h>
 #include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -26,7 +30,7 @@
 #include <chrono>
 #include <set>
 
-#include "PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 using folly::checkUnixError;
 using folly::throwSystemError;
@@ -48,6 +52,26 @@ void PrivHelperServer::init(PrivHelperConn&& conn, uid_t uid, gid_t gid) {
   conn_ = std::move(conn);
   uid_ = uid;
   gid_ = gid;
+
+  initLogging();
+}
+
+void PrivHelperServer::initLogging() {
+  // Initialize the folly logging code for use inside the privhelper process.
+  // For simplicity and safety we always use a fixed logging configuration here
+  // rather than parsing a more complex full logging configuration string.
+  auto* rootCategory = folly::LoggerDB::get()->getCategory(".");
+
+  // We always use a non-async file writer, rather than the threaded async
+  // writer.
+  auto writer = std::make_shared<folly::ImmediateFileWriter>(
+      folly::File{STDERR_FILENO, false});
+  auto handler = std::make_shared<folly::StandardLogHandler>(
+      std::make_shared<folly::GlogStyleFormatter>(), std::move(writer));
+
+  // Add the handler to the root category.
+  rootCategory->setLevel(folly::LogLevel::WARNING);
+  rootCategory->addHandler(std::move(handler));
 }
 
 folly::File PrivHelperServer::fuseMount(const char* mountPath) {
@@ -112,8 +136,8 @@ void PrivHelperServer::fuseUnmount(const char* mountPath, bool force) {
     // This can happen if it was already manually unmounted by a
     // separate process.
     if (errnum != EINVAL) {
-      LOG(WARNING) << "error unmounting " << mountPath << ": "
-                   << folly::errnoStr(errnum);
+      XLOG(WARNING) << "error unmounting " << mountPath << ": "
+                    << folly::errnoStr(errnum);
     }
   }
 }
@@ -221,7 +245,7 @@ void PrivHelperServer::messageLoop() {
       // Crash if it does occur.  (We could send back an error message and
       // continue, but it seems better to fail hard to make sure this bug gets
       // noticed and debugged.)
-      LOG(FATAL) << "unsupported privhelper message type: " << msg.msgType;
+      XLOG(FATAL) << "unsupported privhelper message type: " << msg.msgType;
     }
   }
 }
@@ -295,8 +319,8 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
 
     auto now = std::chrono::steady_clock::now();
     if (now > endTime) {
-      LOG(WARNING) << "error unmounting " << mountPath
-                   << ": mount did not go away after successful unmount call";
+      XLOG(WARNING) << "error unmounting " << mountPath
+                    << ": mount did not go away after successful unmount call";
       break;
     }
     sched_yield();
@@ -313,20 +337,20 @@ void PrivHelperServer::run() {
   // exit.)
   auto sigret = signal(SIGINT, SIG_IGN);
   if (sigret == SIG_ERR) {
-    LOG(FATAL) << "error setting SIGINT handler in privhelper process"
-               << folly::errnoStr(errno);
+    XLOG(FATAL) << "error setting SIGINT handler in privhelper process"
+                << folly::errnoStr(errno);
   }
   sigret = signal(SIGTERM, SIG_IGN);
   if (sigret == SIG_ERR) {
-    LOG(FATAL) << "error setting SIGTERM handler in privhelper process"
-               << folly::errnoStr(errno);
+    XLOG(FATAL) << "error setting SIGTERM handler in privhelper process"
+                << folly::errnoStr(errno);
   }
 
   try {
     messageLoop();
   } catch (const PrivHelperClosedError& ex) {
     // The parent process exited, so we can quit too.
-    VLOG(5) << "privhelper process exiting";
+    XLOG(DBG5) << "privhelper process exiting";
   }
 
   // Unmount all active mount points

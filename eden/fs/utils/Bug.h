@@ -24,7 +24,7 @@
  * builds EDEN_BUG() just logs the error and then throws an exception that can
  * be handled by the calling code.
  *
- * Use LOG(FATAL) if you want to crash the program even in production builds.
+ * Use XLOG(FATAL) if you want to crash the program even in production builds.
  *
  * Example uses:
  *

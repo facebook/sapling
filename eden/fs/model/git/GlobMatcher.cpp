@@ -7,7 +7,9 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "GlobMatcher.h"
+#include "eden/fs/model/git/GlobMatcher.h"
+
+#include <folly/experimental/logging/xlog.h>
 
 using folly::ByteRange;
 using folly::Expected;
@@ -570,8 +572,8 @@ bool GlobMatcher::tryMatchAt(
         ++patternIdx;
       } else {
         // Unknown opcode.  This should never happen.
-        LOG(FATAL) << "bug processing glob pattern buffer at index "
-                   << patternIdx;
+        XLOG(FATAL) << "bug processing glob pattern buffer at index "
+                    << patternIdx;
       }
     }
   }

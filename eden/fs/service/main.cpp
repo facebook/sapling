@@ -10,6 +10,8 @@
 
 #include <folly/Conv.h>
 #include <folly/experimental/FunctionScheduler.h>
+#include <folly/experimental/logging/Init.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
@@ -26,6 +28,10 @@ DEFINE_string(
     "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
+
+// The logging configuration parameter.  We default to INFO for everything in
+// eden, and WARNING for all other categories.
+DEFINE_string(logging, ".=WARNING,eden=INFO", "Logging configuration");
 
 DEFINE_int32(
     fuseThreadStack,
@@ -122,8 +128,11 @@ int main(int argc, char **argv) {
   // been set up and configured based on the command line flags.)
   fusell::startPrivHelper(uid, gid);
   fusell::dropPrivileges();
-  LOG(INFO) << "Starting edenfs.  UID=" << uid << ", GID=" << gid
-            << ", PID=" << getpid();
+
+  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
+
+  XLOG(INFO) << "Starting edenfs.  UID=" << uid << ", GID=" << gid
+             << ", PID=" << getpid();
 
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
@@ -184,7 +193,7 @@ int main(int argc, char **argv) {
   server.prepare();
   runServer(server);
 
-  LOG(INFO) << "edenfs performing orderly shutdown";
+  XLOG(INFO) << "edenfs performing orderly shutdown";
   functionScheduler.shutdown();
 
   // Clean up all the server mount points before shutting down the privhelper
@@ -195,11 +204,11 @@ int main(int argc, char **argv) {
   auto privhelperExitCode = fusell::stopPrivHelper();
   if (privhelperExitCode != 0) {
     if (privhelperExitCode > 0) {
-      LOG(WARNING) << "privhelper process exited with unexpected code "
-                   << privhelperExitCode;
+      XLOG(WARNING) << "privhelper process exited with unexpected code "
+                    << privhelperExitCode;
     } else {
-      LOG(WARNING) << "privhelper process was killed by signal "
-                   << privhelperExitCode;
+      XLOG(WARNING) << "privhelper process was killed by signal "
+                    << privhelperExitCode;
     }
     return EX_SOFTWARE;
   }

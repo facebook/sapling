@@ -10,6 +10,8 @@
 #include "eden/fs/inodes/InodeBase.h"
 
 #include <folly/Likely.h>
+#include <folly/experimental/logging/xlog.h>
+
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
@@ -21,8 +23,8 @@ namespace facebook {
 namespace eden {
 
 InodeBase::~InodeBase() {
-  VLOG(5) << "inode " << this << " (" << ino_
-          << ") destroyed: " << getLogPath();
+  XLOG(DBG5) << "inode " << this << " (" << ino_
+             << ") destroyed: " << getLogPath();
 }
 
 InodeBase::InodeBase(EdenMount* mount)
@@ -31,8 +33,8 @@ InodeBase::InodeBase(EdenMount* mount)
       location_{
           LocationInfo{nullptr,
                        PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
-  VLOG(5) << "root inode " << this << " (" << ino_ << ") created for mount "
-          << mount_->getPath();
+  XLOG(DBG5) << "root inode " << this << " (" << ino_ << ") created for mount "
+             << mount_->getPath();
   // The root inode always starts with an implicit reference from FUSE.
   incFuseRefcount();
 }
@@ -47,7 +49,8 @@ InodeBase::InodeBase(
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   DCHECK_NE(ino_, 0);
-  VLOG(5) << "inode " << this << " (" << ino_ << ") created: " << getLogPath();
+  XLOG(DBG5) << "inode " << this << " (" << ino_
+             << ") created: " << getLogPath();
 }
 
 // See Dispatcher::getattr
@@ -193,7 +196,7 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
     TreeInode* parent,
     PathComponentPiece name,
     const RenameLock& renameLock) {
-  VLOG(5) << "inode " << this << " unlinked: " << getLogPath();
+  XLOG(DBG5) << "inode " << this << " unlinked: " << getLogPath();
   DCHECK(renameLock.isHeld(mount_));
 
   {
@@ -234,8 +237,8 @@ void InodeBase::updateLocation(
     TreeInodePtr newParent,
     PathComponentPiece newName,
     const RenameLock& renameLock) {
-  VLOG(5) << "inode " << this << " renamed: " << getLogPath() << " --> "
-          << newParent->getLogPath() << " / \"" << newName << "\"";
+  XLOG(DBG5) << "inode " << this << " renamed: " << getLogPath() << " --> "
+             << newParent->getLogPath() << " / \"" << newName << "\"";
   DCHECK(renameLock.isHeld(mount_));
   DCHECK_EQ(mount_, newParent->mount_);
 
@@ -271,8 +274,8 @@ ParentInodeInfo InodeBase::getParentInfo() const {
       auto loc = location_.rlock();
       parent = loc->parent;
       if (loc->unlinked) {
-        VLOG(6) << "getParentInfo(): unlinked inode detected after " << numTries
-                << " tries";
+        XLOG(DBG6) << "getParentInfo(): unlinked inode detected after "
+                   << numTries << " tries";
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
       }
@@ -297,15 +300,15 @@ ParentInodeInfo InodeBase::getParentInfo() const {
       auto loc = location_.rlock();
       if (loc->unlinked) {
         // This file was unlinked since we checked earlier
-        VLOG(6) << "getParentInfo(): file is newly unlinked on try "
-                << numTries;
+        XLOG(DBG6) << "getParentInfo(): file is newly unlinked on try "
+                   << numTries;
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, ParentContentsPtr{}};
       }
       if (loc->parent == parent) {
         // Our parent is still the same.  We're done.
-        VLOG(6) << "getParentInfo() acquired parent lock after " << numTries
-                << " tries";
+        XLOG(DBG6) << "getParentInfo() acquired parent lock after " << numTries
+                   << " tries";
         return ParentInodeInfo{
             loc->name, loc->parent, loc->unlinked, std::move(parentContents)};
       }

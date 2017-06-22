@@ -14,10 +14,11 @@
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
-#include "Overlay.h"
+
 #include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/fuse_headers.h"
@@ -444,8 +445,8 @@ void FileData::storeSha1(
     // If something goes wrong storing the attribute just log a warning
     // and leave sha1Valid_ as false.  We'll have to recompute the value
     // next time we need it.
-    LOG(WARNING) << "error setting SHA1 attribute in the overlay: "
-                 << folly::exceptionStr(ex);
+    XLOG(WARNING) << "error setting SHA1 attribute in the overlay: "
+                  << folly::exceptionStr(ex);
   }
 }
 }

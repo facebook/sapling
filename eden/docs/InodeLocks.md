@@ -19,7 +19,7 @@ remains at the very bottom of our lock-ordering stack.
 No other locks should be acquired while holding this lock, apart from InodeBase
 `location_` locks.  (InodeBase `location_` locks are only held with the
 InodeMap lock already held for the purpose of calling `inode->getLogPath()` in
-VLOG statements.)
+logging statements.)
 
 In general it should only be held very briefly while doing lookups/inserts on
 the map data structures.  Once we need to load an Inode the InodeMap lock is

@@ -10,6 +10,7 @@ cpp_library(
         "@/folly:folly",
         "@/folly:stats",
         "@/folly:synchronized",
+        "@/folly/experimental/logging:logging",
         "@/wangle:wangle",
     ] + ["@/common/stats:threadlocal"]) if is_facebook_internal() else [],
     external_deps = [

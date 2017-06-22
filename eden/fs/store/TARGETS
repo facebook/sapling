@@ -8,6 +8,7 @@ cpp_library(
         "@/eden/fs/rocksdb:rocksdb",
         "@/folly:folly",
         "@/folly/experimental:experimental",
+        "@/folly/experimental/logging:logging",
         "@/rocksdb:rocksdb",
     ],
 )

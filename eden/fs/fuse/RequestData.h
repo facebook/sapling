@@ -90,21 +90,13 @@ class RequestData : public folly::RequestData {
    * kernel. */
   template <typename FUTURE>
   folly::Future<folly::Unit> catchErrors(FUTURE&& fut) {
-    return fut
-        .onError([](const std::system_error& err) {
-          int errnum = EIO;
-          if (err.code().category() == std::system_category()) {
-            errnum = err.code().value();
-          }
-          VLOG(5) << folly::exceptionStr(err);
-          RequestData::get().replyError(errnum);
-        })
-        .onError([](const std::exception& err) {
-          VLOG(5) << folly::exceptionStr(err);
-          RequestData::get().replyError(EIO);
-        })
+    return fut.onError(systemErrorHandler)
+        .onError(genericErrorHandler)
         .ensure([] { RequestData::get().finishRequest(); });
   }
+
+  static void systemErrorHandler(const std::system_error& err);
+  static void genericErrorHandler(const std::exception& err);
 
   // Returns the supplementary group IDs for the process making the
   // current request

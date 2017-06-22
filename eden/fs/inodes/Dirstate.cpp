@@ -8,11 +8,14 @@
  *
  */
 #include "Dirstate.h"
+
 #include <folly/Format.h>
 #include <folly/MapUtil.h>
 #include <folly/Range.h>
 #include <folly/Unit.h>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
+#include <folly/experimental/logging/xlog.h>
+
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
@@ -97,8 +100,8 @@ class ThriftStatusCallback : public InodeDiffCallback {
       override {
     // TODO: It would be nice to have a mechanism to return error info as part
     // of the thrift result.
-    LOG(WARNING) << "error computing status data for " << path << ": "
-                 << folly::exceptionStr(ew);
+    XLOG(WARNING) << "error computing status data for " << path << ": "
+                  << folly::exceptionStr(ew);
   }
 
   /**
@@ -223,7 +226,7 @@ static bool isMagicPath(RelativePathPiece path) {
 }
 
 Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
-  LOG(INFO) << "Dirstate::onSnapshotChanged(" << rootTree->getHash() << ")";
+  XLOG(INFO) << "Dirstate::onSnapshotChanged(" << rootTree->getHash() << ")";
 
   {
     auto data = data_.wlock();

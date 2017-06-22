@@ -11,8 +11,10 @@
 
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <vector>
+
 #include "eden/fs/fuse/Channel.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
@@ -86,8 +88,8 @@ class TreeInode::IncompleteInodeLoad {
     // otherwise never be notified about the success or failure of this load
     // attempt, and requests for this inode would just be stuck forever.
     if (treeInode_) {
-      LOG(WARNING) << "IncompleteInodeLoad destroyed without explicitly "
-                   << "calling finish()";
+      XLOG(WARNING) << "IncompleteInodeLoad destroyed without explicitly "
+                    << "calling finish()";
       finish();
     }
   }
@@ -177,8 +179,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         return getInodeMap()->lookupInode(getMount()->getDotEdenInodeNumber());
       }
 
-      VLOG(5) << "attempted to load non-existent entry \"" << name << "\" in "
-              << getLogPath();
+      XLOG(DBG5) << "attempted to load non-existent entry \"" << name
+                 << "\" in " << getLogPath();
       return makeFuture<InodePtr>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
 
@@ -384,8 +386,8 @@ void TreeInode::inodeLoadComplete(
       // but the loading process would have to be significantly more
       // complicated to deal with this, both here and in the parent lookup
       // process in InodeMap::lookupInode().)
-      LOG(ERROR) << "child " << childName << " in " << getLogPath()
-                 << " removed before it finished loading";
+      XLOG(ERR) << "child " << childName << " in " << getLogPath()
+                << " removed before it finished loading";
       throw InodeError(
           ENOENT,
           inodePtrFromThis(),
@@ -434,8 +436,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     Entry* entry,
     PathComponentPiece name,
     fuse_ino_t number) {
-  VLOG(5) << "starting to load inode " << number << ": " << getLogPath()
-          << " / \"" << name << "\"";
+  XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
+             << " / \"" << name << "\"";
   DCHECK(entry->inode == nullptr);
   if (!S_ISDIR(entry->mode)) {
     // If this is a file we can just go ahead and create it now;
@@ -1247,15 +1249,15 @@ Future<Unit> TreeInode::rename(
       // or the exact same directory.
       if (locks.destChildExists()) {
         if (!locks.destChildIsDirectory()) {
-          VLOG(4) << "attempted to rename directory " << getLogPath() << "/"
-                  << name << " over file " << destParent->getLogPath() << "/"
-                  << destName;
+          XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
+                     << name << " over file " << destParent->getLogPath() << "/"
+                     << destName;
           return makeFuture<Unit>(InodeError(ENOTDIR, destParent, destName));
         } else if (
             locks.destChild() != srcEntry->inode && !locks.destChildIsEmpty()) {
-          VLOG(4) << "attempted to rename directory " << getLogPath() << "/"
-                  << name << " over non-empty directory "
-                  << destParent->getLogPath() << "/" << destName;
+          XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
+                     << name << " over non-empty directory "
+                     << destParent->getLogPath() << "/" << destName;
           return makeFuture<Unit>(InodeError(ENOTEMPTY, destParent, destName));
         }
       }
@@ -1263,18 +1265,18 @@ Future<Unit> TreeInode::rename(
       // The source is not a directory.
       // The destination must not exist, or must not be a directory.
       if (locks.destChildExists() && locks.destChildIsDirectory()) {
-        VLOG(4) << "attempted to rename file " << getLogPath() << "/" << name
-                << " over directory " << destParent->getLogPath() << "/"
-                << destName;
+        XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
+                   << " over directory " << destParent->getLogPath() << "/"
+                   << destName;
         return makeFuture<Unit>(InodeError(EISDIR, destParent, destName));
       }
     }
 
     // Make sure the destination directory is not unlinked.
     if (destParent->isUnlinked()) {
-      VLOG(4) << "attempted to rename file " << getLogPath() << "/" << name
-              << " into deleted directory " << destParent->getLogPath()
-              << " ( as " << destName << ")";
+      XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
+                 << " into deleted directory " << destParent->getLogPath()
+                 << " ( as " << destName << ")";
       return makeFuture<Unit>(InodeError(ENOENT, destParent));
     }
 
@@ -1546,14 +1548,14 @@ Future<Unit> TreeInode::diff(
     // the .gitignore inode, which changes the entry status
     auto contents = contents_.wlock();
 
-    VLOG(4) << "Loading ignore file for " << getLogPath();
+    XLOG(DBG4) << "Loading ignore file for " << getLogPath();
     Entry* inodeEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
       inodeEntry = iter->second.get();
       if (inodeEntry->isDirectory()) {
         // Ignore .gitignore directories
-        VLOG(4) << "Ignoring .gitignore directory in " << getLogPath();
+        XLOG(DBG4) << "Ignoring .gitignore directory in " << getLogPath();
         inodeEntry = nullptr;
       }
     }
@@ -1625,8 +1627,8 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     // Ignore .gitignore directories.
     // We should have caught this already in diff(), though, so it's unexpected
     // if we reach here with a TreeInode.
-    LOG(WARNING) << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
-                 << gitignoreInode->getLogPath();
+    XLOG(WARNING) << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
+                  << gitignoreInode->getLogPath();
     auto ignore = make_unique<GitIgnoreStack>(parentIgnore);
     return computeDiff(
         contents_.wlock(),
@@ -1965,9 +1967,9 @@ Future<Unit> TreeInode::checkout(
     CheckoutContext* ctx,
     std::unique_ptr<Tree> fromTree,
     std::unique_ptr<Tree> toTree) {
-  VLOG(4) << "checkout: starting update of " << getLogPath() << ": "
-          << (fromTree ? fromTree->getHash().toString() : "<none>") << " --> "
-          << (toTree ? toTree->getHash().toString() : "<none>");
+  XLOG(DBG4) << "checkout: starting update of " << getLogPath() << ": "
+             << (fromTree ? fromTree->getHash().toString() : "<none>")
+             << " --> " << (toTree ? toTree->getHash().toString() : "<none>");
   vector<unique_ptr<CheckoutAction>> actions;
   vector<IncompleteInodeLoad> pendingLoads;
 
@@ -2005,8 +2007,8 @@ Future<Unit> TreeInode::checkout(
     // Update our state in the overlay
     self->saveOverlayPostCheckout(ctx, toTree.get());
 
-    VLOG(4) << "checkout: finished update of " << self->getLogPath() << ": "
-            << numErrors << " errors";
+    XLOG(DBG4) << "checkout: finished update of " << self->getLogPath() << ": "
+               << numErrors << " errors";
   });
 }
 
@@ -2522,7 +2524,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
 
       if (ent->inode) {
         // We generally don't expect any inodes to be loaded already
-        LOG(WARNING)
+        XLOG(WARNING)
             << "found already-loaded inode for materialized child "
             << ent->inode->getLogPath()
             << " when performing initial loading of materialized inodes";

@@ -4,6 +4,7 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "@/folly:folly",
+        "@/folly/experimental/logging:logging",
         "@/folly/io:iobuf",
     ],
     external_deps = [

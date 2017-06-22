@@ -6,6 +6,7 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/eden/fs/store:store",
         "@/folly:folly",
+        "@/folly/experimental/logging:logging",
     ],
     external_deps = [
         ("libgit2", None, "git2"),

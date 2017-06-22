@@ -9,6 +9,7 @@
  */
 #include "HgManifestImporter.h"
 
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gflags/gflags.h>
@@ -119,8 +120,8 @@ Hash HgManifestImporter::PartialTree::compute(LocalStore* store) {
   std::tie(id_, treeData_) = store->serializeTree(&tree);
 
   computed_ = true;
-  VLOG(6) << "compute tree: '" << path_ << "' --> " << id_.toString() << " ("
-          << numPaths_ << " paths)";
+  XLOG(DBG6) << "compute tree: '" << path_ << "' --> " << id_.toString() << " ("
+             << numPaths_ << " paths)";
 
   return id_;
 }
@@ -142,8 +143,8 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
 
   store->put(id_, treeData_.coalesce());
 
-  VLOG(6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
-          << numPaths_ << " paths, " << trees_.size() << " trees)";
+  XLOG(DBG6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
+             << numPaths_ << " paths, " << trees_.size() << " trees)";
 
   return id_;
 }
@@ -178,7 +179,7 @@ void HgManifestImporter::processEntry(
     if (iter != end) {
       ++iter;
       while (iter != end) {
-        VLOG(5) << "push '" << iter.piece() << "'  # '" << dirname << "'";
+        XLOG(DBG5) << "push '" << iter.piece() << "'  # '" << dirname << "'";
         dirStack_.emplace_back(iter.piece());
         ++iter;
       }
@@ -189,8 +190,9 @@ void HgManifestImporter::processEntry(
     // None of the checks above passed, so the current entry must be a parent
     // of the current directory.  Record the current directory, then pop it off
     // the stack.
-    VLOG(5) << "pop '" << dirStack_.back().getPath() << "' --> '"
-            << (dirStack_.end() - 2)->getPath() << "'  # '" << dirname << "'";
+    XLOG(DBG5) << "pop '" << dirStack_.back().getPath() << "' --> '"
+               << (dirStack_.end() - 2)->getPath() << "'  # '" << dirname
+               << "'";
     popCurrentDir();
     CHECK(!dirStack_.empty());
     // Continue around the while loop, now that the current directory
@@ -205,7 +207,7 @@ Hash HgManifestImporter::finish() {
   // The last entry may have been in a deep subdirectory.
   // Pop everything off dirStack_, and record the trees as we go.
   while (dirStack_.size() > 1) {
-    VLOG(5) << "final pop '" << dirStack_.back().getPath() << "'";
+    XLOG(DBG5) << "final pop '" << dirStack_.back().getPath() << "'";
     popCurrentDir();
   }
 

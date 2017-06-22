@@ -7,12 +7,14 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "FileHandleMap.h"
+#include "eden/fs/fuse/FileHandleMap.h"
 
 #include <folly/Exception.h>
 #include <folly/Random.h>
-#include "DirHandle.h"
-#include "FileHandle.h"
+#include <folly/experimental/logging/xlog.h>
+
+#include "eden/fs/fuse/DirHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
 
 namespace facebook {
 namespace eden {
@@ -85,8 +87,8 @@ uint64_t FileHandleMap::recordHandle(std::shared_ptr<FileHandleBase> fh) {
   }
 
   // Fail this request with a reasonable approximation of the problem
-  LOG(ERROR) << "Unable to find a usable file number within "
-                "a reasonable number of attempts";
+  XLOG(ERR) << "Unable to find a usable file number within "
+               "a reasonable number of attempts";
   folly::throwSystemErrorExplicit(EMFILE);
 }
 

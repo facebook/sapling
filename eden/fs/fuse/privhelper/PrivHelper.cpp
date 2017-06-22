@@ -7,19 +7,20 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 
 #include <folly/Exception.h>
 #include <folly/Expected.h>
 #include <folly/File.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <mutex>
 
-#include "PrivHelperConn.h"
-#include "PrivHelperServer.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 using folly::checkUnixError;
 using std::string;
@@ -66,8 +67,8 @@ class PrivHelper {
       pid = waitpid(helperPid_, &status, 0);
     } while (pid == -1 && errno == EINTR);
     if (pid == -1) {
-      LOG(ERROR) << "error waiting on privhelper process: "
-                 << folly::errnoStr(errno);
+      XLOG(ERR) << "error waiting on privhelper process: "
+                << folly::errnoStr(errno);
       return folly::makeUnexpected(errno);
     }
     if (WIFSIGNALED(status)) {
@@ -121,8 +122,8 @@ class PrivHelper {
       // ignore it and try to receive another message.
       if (msg->xid < requestXid && msg->xid >= requestXid - 5 &&
           numRetries < 5) {
-        VLOG(1) << "ignoring stale privhelper response " << msg->xid
-                << " while waiting for " << requestXid;
+        XLOG(DBG1) << "ignoring stale privhelper response " << msg->xid
+                   << " while waiting for " << requestXid;
         numRetries++;
         continue;
       }
@@ -169,7 +170,7 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
     // Parent
     serverConn.close();
     gPrivHelper.reset(new PrivHelper(std::move(clientConn), pid, uid, gid));
-    VLOG(1) << "Forked mount helper process: pid=" << pid;
+    XLOG(DBG1) << "Forked mount helper process: pid=" << pid;
     return;
   }
 
@@ -181,9 +182,9 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
     server->run();
     rc = 0;
   } catch (const std::exception& ex) {
-    LOG(ERROR) << "error inside mount helper: " << folly::exceptionStr(ex);
+    XLOG(ERR) << "error inside mount helper: " << folly::exceptionStr(ex);
   } catch (...) {
-    LOG(ERROR) << "invalid type thrown inside mount helper";
+    XLOG(ERR) << "invalid type thrown inside mount helper";
   }
   _exit(rc);
 }

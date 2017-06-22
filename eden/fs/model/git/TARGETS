@@ -47,5 +47,6 @@ cpp_library(
     ],
     deps = [
         "@/folly:folly",
+        "@/folly/experimental/logging:logging",
     ],
 )

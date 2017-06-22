@@ -13,10 +13,12 @@
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <rocksdb/db.h>
 #include <array>
+
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
@@ -355,11 +357,11 @@ void LocalStore::flush() {
     return;
   }
 
-  VLOG(5) << "Flushing " << pending->writeBatch->Count()
-          << " entries with data size of "
-          << pending->writeBatch->GetDataSize();
+  XLOG(DBG5) << "Flushing " << pending->writeBatch->Count()
+             << " entries with data size of "
+             << pending->writeBatch->GetDataSize();
   auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
-  VLOG(5) << "... Flushed";
+  XLOG(DBG5) << "... Flushed";
   pending->writeBatch.reset();
 
   if (!status.ok()) {
@@ -374,11 +376,11 @@ void LocalStore::flushForRead() const {
     return;
   }
 
-  VLOG(5) << "READ op: Flushing " << pending->writeBatch->Count()
-          << " entries with data size of "
-          << pending->writeBatch->GetDataSize();
+  XLOG(DBG5) << "READ op: Flushing " << pending->writeBatch->Count()
+             << " entries with data size of "
+             << pending->writeBatch->GetDataSize();
   auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
-  VLOG(5) << "... Flushed";
+  XLOG(DBG5) << "... Flushed";
   pending->writeBatch.reset();
 
   if (!status.ok()) {

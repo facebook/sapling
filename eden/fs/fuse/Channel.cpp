@@ -7,12 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Channel.h"
+#include "eden/fs/fuse/Channel.h"
 
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
 #include <linux/fuse.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -20,9 +21,9 @@
 #include <unistd.h>
 #include <algorithm>
 
-#include "Dispatcher.h"
-#include "MountPoint.h"
-#include "SessionDeleter.h"
+#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/SessionDeleter.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 
 using namespace folly;
@@ -66,8 +67,8 @@ int fuseChanReceive(struct fuse_chan** chp, char* buf, size_t size) {
         return 0;
       }
       if (err != EINTR && err != EAGAIN) {
-        LOG(WARNING) << "error reading from fuse channel: "
-                     << folly::errnoStr(err);
+        XLOG(WARNING) << "error reading from fuse channel: "
+                      << folly::errnoStr(err);
       }
       return -err;
     }
@@ -80,8 +81,8 @@ int fuseChanReceive(struct fuse_chan** chp, char* buf, size_t size) {
     // length before using header fields though, so we have to make sure to
     // check for this ourselves.
     if (static_cast<size_t>(res) < sizeof(struct fuse_in_header)) {
-      LOG(ERROR) << "read truncated message from kernel fuse device: len="
-                 << res;
+      XLOG(ERR) << "read truncated message from kernel fuse device: len="
+                << res;
       return -EIO;
     }
     return res;
@@ -100,9 +101,9 @@ int fuseChanSend(struct fuse_chan* ch, const struct iovec iov[], size_t count) {
     if (err == ENOENT) {
       // Interrupted by a signal.  This is not an issue
     } else if (fuse_session_exited(fuse_chan_session(ch))) {
-      LOG(INFO) << "error writing to fuse device: session closed";
+      XLOG(INFO) << "error writing to fuse device: session closed";
     } else {
-      LOG(WARNING) << "error writing to fuse device: " << folly::errnoStr(err);
+      XLOG(WARNING) << "error writing to fuse device: " << folly::errnoStr(err);
     }
     return -err;
   }
@@ -188,7 +189,7 @@ void Channel::runSession(Dispatcher* disp, bool debug) {
   if (err) {
     throw std::runtime_error("session failed");
   }
-  LOG(INFO) << "session completed";
+  XLOG(INFO) << "session completed";
 }
 }
 }

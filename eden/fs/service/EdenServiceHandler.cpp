@@ -13,10 +13,10 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/Subprocess.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <unordered_set>
-#include "EdenError.h"
-#include "EdenServer.h"
+
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
@@ -31,6 +31,8 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/service/EdenError.h"
+#include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/GlobNode.h"
 #include "eden/fs/service/StreamingSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
@@ -109,8 +111,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
     auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
     auto repoSource = config->getRepoSource();
 
-    LOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
-              << info.mountPoint;
+    XLOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
+               << info.mountPoint;
     try {
       // TODO(mbolin): It would be preferable to pass the name of the repository
       // as defined in ~/.edenrc so that the script can derive the repoType and
@@ -120,8 +122,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
           folly::Subprocess::Options().pipeStdin());
       proc.closeParentFd(STDIN_FILENO);
       proc.waitChecked();
-      LOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
-                << info.mountPoint;
+      XLOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
+                 << info.mountPoint;
     } catch (const folly::SubprocessSpawnError& ex) {
       // If this failed because postCloneScript does not exist, then ignore the
       // error because we are tolerant of the case where /etc/eden/hooks does
@@ -130,8 +132,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
         // TODO(13448173): If clone fails, then we should roll back the mount.
         throw;
       }
-      LOG(INFO) << "Did not run post-clone hook '" << postCloneScript
-                << "' for " << info.mountPoint << " because it was not found.";
+      XLOG(INFO) << "Did not run post-clone hook '" << postCloneScript
+                 << "' for " << info.mountPoint << " because it was not found.";
     }
   }
 
@@ -411,7 +413,7 @@ void EdenServiceHandler::scmGetStatus(
                               << mountPoint.get();
 
   out = dirstate->getStatus(listIgnored);
-  LOG(INFO) << "scmGetStatus() returning " << out;
+  XLOG(INFO) << "scmGetStatus() returning " << out;
 }
 
 void EdenServiceHandler::hgGetDirstateTuple(
@@ -433,11 +435,11 @@ void EdenServiceHandler::hgSetDirstateTuple(
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
 
-  LOG(INFO) << "hgSetDirstateTuple(" << *relativePath << ") to "
-            << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
-                   tuple->get_status())
-            << " "
-            << _DirstateMergeState_VALUES_TO_NAMES.at(tuple->get_mergeState());
+  XLOG(INFO) << "hgSetDirstateTuple(" << *relativePath << ") to "
+             << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
+                    tuple->get_status())
+             << " "
+             << _DirstateMergeState_VALUES_TO_NAMES.at(tuple->get_mergeState());
 
   auto filename = RelativePathPiece{*relativePath};
   dirstate->hgSetDirstateTuple(filename, tuple.get());

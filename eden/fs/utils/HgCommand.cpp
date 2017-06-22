@@ -8,9 +8,11 @@
  *
  */
 #include "HgCommand.h"
-#include <thread>
-#include <gflags/gflags.h>
+
 #include <folly/dynamic.h>
+#include <folly/experimental/logging/xlog.h>
+#include <gflags/gflags.h>
+#include <thread>
 
 namespace facebook {
 namespace hgsparse {
@@ -83,7 +85,7 @@ HgDirInformation& HgTreeInformation::makeDir(folly::StringPiece name) {
 
 void HgTreeInformation::loadManifest() {
   std::thread thr([this] {
-    LOG(INFO) << "Parsing manifest for " << repoDir_ << " @ " << rev_;
+    XLOG(INFO) << "Parsing manifest for " << repoDir_ << " @ " << rev_;
     folly::Subprocess proc(
         {"hg", "manifest", "-v", "-r", rev_},
         folly::Subprocess::Options()
@@ -110,8 +112,8 @@ void HgTreeInformation::loadManifest() {
                        std::make_shared<HgFileInformation>(
                            flags, 0, basename(filename)));
           } else {
-            LOG(ERROR) << "[" << repoDir_ << "] hg files -r " << rev_
-                       << " stderr: " << line;
+            XLOG(ERR) << "[" << repoDir_ << "] hg files -r " << rev_
+                      << " stderr: " << line;
           }
           return false; // Keep reading from the child
         });
@@ -121,13 +123,13 @@ void HgTreeInformation::loadManifest() {
                        return true;
                      });
     proc.wait();
-    LOG(INFO) << "manifest loaded";
+    XLOG(INFO) << "manifest loaded";
   });
   thr.detach();
 }
 
 void HgTreeInformation::buildTree() {
-  LOG(INFO) << "Parsing file list for " << repoDir_ << " @ " << rev_;
+  XLOG(INFO) << "Parsing file list for " << repoDir_ << " @ " << rev_;
   size_t num_files = 0;
 
   folly::Subprocess proc(
@@ -154,8 +156,8 @@ void HgTreeInformation::buildTree() {
           sorted_insert(d.files, filename.str(), compare_str());
           num_files++;
         } else {
-          LOG(ERROR) << "[" << repoDir_ << "] hg files -r " << rev_
-                     << " stderr: " << line;
+          XLOG(ERR) << "[" << repoDir_ << "] hg files -r " << rev_
+                    << " stderr: " << line;
         }
         return false; // Keep reading from the child
       });
@@ -165,7 +167,7 @@ void HgTreeInformation::buildTree() {
                      return true;
                    });
   proc.waitChecked();
-  LOG(INFO) << "build tree with " << dirs_.size() << " dirs";
+  XLOG(INFO) << "build tree with " << dirs_.size() << " dirs";
   fileInfo_.setMaxSize(num_files * 1.2);
   loadManifest();
 }
@@ -331,7 +333,7 @@ std::string HgCommand::run(const std::vector<std::string>& args) {
   auto output = proc.communicate();
   auto res = proc.returnCode();
   if (!res.exited() || res.exitStatus() != 0) {
-    LOG(ERROR) << res.str() << ": " << output.second;
+    XLOG(ERR) << res.str() << ": " << output.second;
     proc.pollChecked();
   }
   return output.first;

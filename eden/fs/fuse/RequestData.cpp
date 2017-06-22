@@ -10,7 +10,7 @@
 #include "RequestData.h"
 #include "Dispatcher.h"
 
-#include <glog/logging.h>
+#include <folly/experimental/logging/xlog.h>
 
 using namespace folly;
 using namespace std::chrono;
@@ -48,7 +48,7 @@ bool RequestData::isFuseRequest() {
 RequestData& RequestData::get() {
   auto data = folly::RequestContext::get()->getContextData(kKey);
   if (UNLIKELY(!data)) {
-    LOG(FATAL) << "boom for missing RequestData";
+    XLOG(FATAL) << "boom for missing RequestData";
     throw std::runtime_error("no fuse request data set in this context!");
   }
   return *dynamic_cast<RequestData*>(data);
@@ -219,6 +219,20 @@ void RequestData::replyPoll(unsigned revents) {
 #else
   throwSystemErrorExplicit(ENOSYS);
 #endif
+}
+
+void RequestData::systemErrorHandler(const std::system_error& err) {
+  int errnum = EIO;
+  if (err.code().category() == std::system_category()) {
+    errnum = err.code().value();
+  }
+  XLOG(DBG5) << folly::exceptionStr(err);
+  RequestData::get().replyError(errnum);
+}
+
+void RequestData::genericErrorHandler(const std::exception& err) {
+  XLOG(DBG5) << folly::exceptionStr(err);
+  RequestData::get().replyError(EIO);
 }
 }
 }

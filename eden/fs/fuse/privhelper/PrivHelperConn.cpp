@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 #include <fcntl.h>
 #include <folly/Demangle.h>
@@ -15,6 +15,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/ScopeGuard.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gflags/gflags.h>
@@ -150,7 +151,7 @@ void PrivHelperConn::createConnPair(
 
 void PrivHelperConn::close() {
   if (socket_ == -1) {
-    LOG(WARNING) << "privhelper connection already closed";
+    XLOG(WARNING) << "privhelper connection already closed";
     return;
   }
 
@@ -281,8 +282,8 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
       continue;
     }
     if (cmsg->cmsg_len < CMSG_LEN(sizeof(int))) {
-      LOG(ERROR) << "privhelper control data is too short for a "
-                    "file descriptor";
+      XLOG(ERR) << "privhelper control data is too short for a "
+                   "file descriptor";
       continue;
     }
     // Technically the buffer could contain a full array of FDs here,
