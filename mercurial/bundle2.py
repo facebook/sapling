@@ -311,8 +311,10 @@ def _notransaction():
     raise TransactionUnavailable()
 
 def applybundle1(repo, cg, tr, source, url, **kwargs):
-    ret, addednodes = cg.apply(repo, tr, source, url, **kwargs)
-    return ret
+    # the transactiongetter won't be used, but we might as well set it
+    op = bundleoperation(repo, lambda: tr)
+    _processchangegroup(op, cg, tr, source, url, **kwargs)
+    return op
 
 def applybundle(repo, unbundler, tr, source=None, url=None):
     # transform me into unbundler.apply() as soon as the freeze is lifted
