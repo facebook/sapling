@@ -28,7 +28,6 @@ class IObjectStore {
  public:
   virtual ~IObjectStore() {}
 
-  virtual std::unique_ptr<Tree> getTree(const Hash& id) const = 0;
   virtual std::unique_ptr<Blob> getBlob(const Hash& id) const = 0;
 
   /**

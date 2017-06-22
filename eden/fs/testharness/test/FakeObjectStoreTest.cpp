@@ -32,13 +32,13 @@ Hash blobHash("5555555555555555555555555555555555555555");
 TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   FakeObjectStore store;
 
-  // Test getTree().
+  // Test getTreeFuture().
   vector<TreeEntry> entries1;
   uint8_t rw_ = 0b110;
   entries1.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE, rw_);
   Tree tree1(std::move(entries1), tree1Hash);
   store.addTree(std::move(tree1));
-  auto foundTree = store.getTree(tree1Hash);
+  auto foundTree = store.getTreeFuture(tree1Hash).get();
   EXPECT_TRUE(foundTree);
   EXPECT_EQ(tree1Hash, foundTree->getHash());
 
@@ -75,7 +75,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 TEST(FakeObjectStore, getMissingObjectThrows) {
   FakeObjectStore store;
   Hash hash("4242424242424242424242424242424242424242");
-  EXPECT_THROW(store.getTree(hash), std::domain_error);
+  EXPECT_THROW(store.getTreeFuture(hash).get(), std::domain_error);
   EXPECT_THROW(store.getBlob(hash), std::domain_error);
   EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
   EXPECT_THROW(store.getSha1ForBlob(hash), std::domain_error);

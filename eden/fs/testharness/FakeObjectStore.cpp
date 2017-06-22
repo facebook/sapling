@@ -53,10 +53,6 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
   }
 }
 
-unique_ptr<Tree> FakeObjectStore::getTree(const Hash& id) const {
-  return getTreeFuture(id).get();
-}
-
 Future<std::unique_ptr<Tree>> FakeObjectStore::getTreeFuture(
     const Hash& id) const {
   auto iter = trees_.find(id);

@@ -37,10 +37,6 @@ ObjectStore::ObjectStore(
 
 ObjectStore::~ObjectStore() {}
 
-unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
-  return getTreeFuture(id).get();
-}
-
 Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);

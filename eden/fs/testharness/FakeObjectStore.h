@@ -33,7 +33,6 @@ class FakeObjectStore : public IObjectStore {
   void addBlob(Blob&& blob);
   void setTreeForCommit(const Hash& commitID, Tree&& tree);
 
-  std::unique_ptr<Tree> getTree(const Hash& id) const override;
   std::unique_ptr<Blob> getBlob(const Hash& id) const override;
   Hash getSha1ForBlob(const Hash& id) const override;
 
