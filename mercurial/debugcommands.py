@@ -1749,6 +1749,8 @@ def debugrevlog(ui, repo, file_=None, **opts):
     nump1prev = 0
     nump2prev = 0
     chainlengths = []
+    chainbases = []
+    chainspans = []
 
     datasize = [None, 0, 0]
     fullsize = [None, 0, 0]
@@ -1774,10 +1776,16 @@ def debugrevlog(ui, repo, file_=None, **opts):
         size = r.length(rev)
         if delta == nullrev:
             chainlengths.append(0)
+            chainbases.append(r.start(rev))
+            chainspans.append(size)
             numfull += 1
             addsize(size, fullsize)
         else:
             chainlengths.append(chainlengths[delta] + 1)
+            baseaddr = chainbases[delta]
+            revaddr = r.start(rev)
+            chainbases.append(baseaddr)
+            chainspans.append((revaddr - baseaddr) + size)
             addsize(size, deltasize)
             if delta == rev - 1:
                 numprev += 1
@@ -1823,6 +1831,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
     totalsize = fulltotal + deltatotal
     avgchainlen = sum(chainlengths) / numrevs
     maxchainlen = max(chainlengths)
+    maxchainspan = max(chainspans)
     compratio = 1
     if totalsize:
         compratio = totalrawsize / totalsize
@@ -1879,6 +1888,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
     fmt = dfmtstr(max(avgchainlen, compratio))
     ui.write(('avg chain length  : ') + fmt % avgchainlen)
     ui.write(('max chain length  : ') + fmt % maxchainlen)
+    ui.write(('max chain reach  : ') + fmt % maxchainspan)
     ui.write(('compression ratio : ') + fmt % compratio)
 
     if format > 0:

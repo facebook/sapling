@@ -29,6 +29,7 @@
   
   avg chain length  : 0
   max chain length  : 0
+  max chain reach  : 44
   compression ratio : 0
   
   uncompressed data size (min/max/avg) : 43 / 43 / 43
