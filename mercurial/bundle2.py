@@ -1478,8 +1478,10 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
     # in case of sshrepo because we don't know the end of the stream
     return changegroup.writechunks(ui, chunkiter, filename, vfs=vfs)
 
-def combinechangegroupresults(results):
+def combinechangegroupresults(op):
     """logic to combine 0 or more addchangegroup results into one"""
+    results = [r.get('return', 0)
+               for r in op.records['changegroup']]
     changedheads = 0
     result = 1
     for ret in results:

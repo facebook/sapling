@@ -1397,8 +1397,7 @@ def _pullbundle2(pullop):
         raise error.Abort(_('missing support for %s') % exc)
 
     if pullop.fetch:
-        results = [cg['return'] for cg in op.records['changegroup']]
-        pullop.cgresult = bundle2.combinechangegroupresults(results)
+        pullop.cgresult = bundle2.combinechangegroupresults(op)
 
     # processing phases change
     for namespace, value in op.records['listkeys']:

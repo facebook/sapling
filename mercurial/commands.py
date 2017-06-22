@@ -5214,9 +5214,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                             hint=_("see https://mercurial-scm.org/"
                                    "wiki/BundleFeature for more "
                                    "information"))
-                changes = [r.get('return', 0)
-                           for r in op.records['changegroup']]
-                modheads = bundle2.combinechangegroupresults(changes)
+                modheads = bundle2.combinechangegroupresults(op)
             else:
                 txnname = 'unbundle\n%s' % util.hidepassword(url)
                 with repo.transaction(txnname) as tr:
