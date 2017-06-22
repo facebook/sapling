@@ -311,17 +311,18 @@ Future<Unit> FileData::ensureDataLoaded() {
   }
 
   // Load the blob data.
-  //
-  // TODO: We really should use a Future-based API for this rather than
-  // blocking until the load completes.  However, for that to work we will need
-  // to add some extra data tracking whether or not we are already in the
-  // process of loading the data.  We need to avoid multiple threads all trying
-  // to load the data at the same time.
+  auto blobFuture = getObjectStore()->getBlobFuture(state->hash.value());
+
+  // TODO: We really should defer this using a Future rather than calling get()
+  // here and blocking until the load completes.  However, for that to work we
+  // will need to add some extra data tracking whether or not we are already in
+  // the process of loading the data.  We need to avoid multiple threads all
+  // trying to load the data at the same time.
   //
   // For now doing a blocking load with the inode_->state_ lock held ensures
   // that only one thread can load the data at a time.  It's pretty unfortunate
   // to block with the lock held, though :-(
-  blob_ = getObjectStore()->getBlob(state->hash.value());
+  blob_ = blobFuture.get();
   return makeFuture();
 }
 
@@ -355,7 +356,8 @@ Future<Unit> FileData::materializeForWrite(int openFlags) {
       // TODO: Load the blob using the non-blocking Future APIs.
       // However, just as in ensureDataLoaded() above we will also need
       // to add a mechanism to wait for already in-progress loads.
-      blob_ = getObjectStore()->getBlob(state->hash.value());
+      auto blobFuture = getObjectStore()->getBlobFuture(state->hash.value());
+      blob_ = blobFuture.get();
     }
 
     // Write the blob contents out to the overlay

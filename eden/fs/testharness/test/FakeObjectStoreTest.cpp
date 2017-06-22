@@ -42,11 +42,11 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   EXPECT_TRUE(foundTree);
   EXPECT_EQ(tree1Hash, foundTree->getHash());
 
-  // Test getBlob().
+  // Test getBlobFuture().
   auto buf1 = IOBuf();
   Blob blob1(blobHash, buf1);
   store.addBlob(std::move(blob1));
-  auto foundBlob = store.getBlob(blobHash);
+  auto foundBlob = store.getBlobFuture(blobHash).get();
   EXPECT_TRUE(foundBlob);
   EXPECT_EQ(blobHash, foundBlob->getHash());
 
@@ -76,7 +76,7 @@ TEST(FakeObjectStore, getMissingObjectThrows) {
   FakeObjectStore store;
   Hash hash("4242424242424242424242424242424242424242");
   EXPECT_THROW(store.getTreeFuture(hash).get(), std::domain_error);
-  EXPECT_THROW(store.getBlob(hash), std::domain_error);
+  EXPECT_THROW(store.getBlobFuture(hash).get(), std::domain_error);
   EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
   EXPECT_THROW(store.getSha1ForBlob(hash), std::domain_error);
 }

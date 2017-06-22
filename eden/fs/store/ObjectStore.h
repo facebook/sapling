@@ -39,16 +39,6 @@ class ObjectStore : public IObjectStore {
   ~ObjectStore() override;
 
   /**
-   * Get a Blob by ID.
-   *
-   * This function never returns nullptr.  It throws std::domain_error if the
-   * specified blob ID does not exist, or possibly other exceptions on error.
-   *
-   * TODO: This API will be deprecated in favor of getBlobFuture()
-   */
-  std::unique_ptr<Blob> getBlob(const Hash& id) const override;
-
-  /**
    * Get a Tree by commit ID.
    *
    * This throws std::domain_error if the specified blob ID does not exist, or

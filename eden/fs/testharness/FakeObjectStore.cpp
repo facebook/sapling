@@ -63,10 +63,6 @@ Future<std::unique_ptr<Tree>> FakeObjectStore::getTreeFuture(
   return makeFuture(make_unique<Tree>(iter->second));
 }
 
-unique_ptr<Blob> FakeObjectStore::getBlob(const Hash& id) const {
-  return getBlobFuture(id).get();
-}
-
 Future<std::unique_ptr<Blob>> FakeObjectStore::getBlobFuture(
     const Hash& id) const {
   auto iter = blobs_.find(id);

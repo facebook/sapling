@@ -74,10 +74,6 @@ Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
   });
 }
 
-unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
-  return getBlobFuture(id).get();
-}
-
 Future<unique_ptr<Blob>> ObjectStore::getBlobFuture(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {

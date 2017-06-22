@@ -28,8 +28,6 @@ class IObjectStore {
  public:
   virtual ~IObjectStore() {}
 
-  virtual std::unique_ptr<Blob> getBlob(const Hash& id) const = 0;
-
   /**
    * Return the SHA1 hash of the blob contents.
    *
