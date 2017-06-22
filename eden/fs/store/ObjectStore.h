@@ -55,8 +55,7 @@ class ObjectStore : public IObjectStore {
    * It may result in a std::domain_error if the specified tree ID does not
    * exist, or possibly other exceptions on error.
    */
-  folly::Future<std::unique_ptr<Tree>> getTreeFuture(
-      const Hash& id) const override;
+  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) const override;
 
   /**
    * Get a Blob by ID.
@@ -65,8 +64,7 @@ class ObjectStore : public IObjectStore {
    * It may result in a std::domain_error if the specified blob ID does not
    * exist, or possibly other exceptions on error.
    */
-  folly::Future<std::unique_ptr<Blob>> getBlobFuture(
-      const Hash& id) const override;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) const override;
 
   /**
    * Get a commit's root Tree.

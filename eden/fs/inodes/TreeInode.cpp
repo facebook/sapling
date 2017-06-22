@@ -453,13 +453,17 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   if (!entry->isMaterialized()) {
-    return getStore()->getTreeFuture(entry->getHash()).then([
-      self = inodePtrFromThis(),
-      childName = PathComponent{name},
-      number
-    ](std::unique_ptr<Tree> tree)->unique_ptr<InodeBase> {
-      return make_unique<TreeInode>(number, self, childName, std::move(tree));
-    });
+    return getStore()
+        ->getTree(entry->getHash())
+        .then([
+          self = inodePtrFromThis(),
+          childName = PathComponent{name},
+          number
+        ](std::unique_ptr<Tree> tree)
+                  ->unique_ptr<InodeBase> {
+                    return make_unique<TreeInode>(
+                        number, self, childName, std::move(tree));
+                  });
   }
 
   // No corresponding TreeEntry, this exists only in the overlay.

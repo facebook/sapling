@@ -35,10 +35,8 @@ class FakeObjectStore : public IObjectStore {
 
   Hash getSha1ForBlob(const Hash& id) const override;
 
-  folly::Future<std::unique_ptr<Tree>> getTreeFuture(
-      const Hash& id) const override;
-  folly::Future<std::unique_ptr<Blob>> getBlobFuture(
-      const Hash& id) const override;
+  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) const override;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) const override;
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) const override;
   folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const override;

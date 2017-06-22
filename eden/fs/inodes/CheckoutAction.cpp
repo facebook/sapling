@@ -124,7 +124,7 @@ Future<Unit> CheckoutAction::run(
     // Load the Blob or Tree for the old TreeEntry.
     if (oldScmEntry_.hasValue()) {
       if (oldScmEntry_.value().getType() == TreeEntryType::TREE) {
-        store->getTreeFuture(oldScmEntry_.value().getHash())
+        store->getTree(oldScmEntry_.value().getHash())
             .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
             })
@@ -132,7 +132,7 @@ Future<Unit> CheckoutAction::run(
               rc->error("error getting old tree", ew);
             });
       } else {
-        store->getBlobFuture(oldScmEntry_.value().getHash())
+        store->getBlob(oldScmEntry_.value().getHash())
             .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> oldBlob) {
               rc->setOldBlob(std::move(oldBlob));
             })
@@ -146,7 +146,7 @@ Future<Unit> CheckoutAction::run(
     if (newScmEntry_.hasValue()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.getType() == TreeEntryType::TREE) {
-        store->getTreeFuture(newEntry.getHash())
+        store->getTree(newEntry.getHash())
             .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> newTree) {
               rc->setNewTree(std::move(newTree));
             })
@@ -154,7 +154,7 @@ Future<Unit> CheckoutAction::run(
               rc->error("error getting new tree", ew);
             });
       } else {
-        store->getBlobFuture(newEntry.getHash())
+        store->getBlob(newEntry.getHash())
             .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> newBlob) {
               rc->setNewBlob(std::move(newBlob));
             })

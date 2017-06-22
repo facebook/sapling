@@ -37,7 +37,7 @@ ObjectStore::ObjectStore(
 
 ObjectStore::~ObjectStore() {}
 
-Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
+Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);
   if (tree) {
@@ -74,7 +74,7 @@ Future<unique_ptr<Tree>> ObjectStore::getTreeFuture(const Hash& id) const {
   });
 }
 
-Future<unique_ptr<Blob>> ObjectStore::getBlobFuture(const Hash& id) const {
+Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {
     VLOG(4) << "blob " << id << "  found in local store";

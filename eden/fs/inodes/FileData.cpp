@@ -311,7 +311,7 @@ Future<Unit> FileData::ensureDataLoaded() {
   }
 
   // Load the blob data.
-  auto blobFuture = getObjectStore()->getBlobFuture(state->hash.value());
+  auto blobFuture = getObjectStore()->getBlob(state->hash.value());
 
   // TODO: We really should defer this using a Future rather than calling get()
   // here and blocking until the load completes.  However, for that to work we
@@ -356,7 +356,7 @@ Future<Unit> FileData::materializeForWrite(int openFlags) {
       // TODO: Load the blob using the non-blocking Future APIs.
       // However, just as in ensureDataLoaded() above we will also need
       // to add a mechanism to wait for already in-progress loads.
-      auto blobFuture = getObjectStore()->getBlobFuture(state->hash.value());
+      auto blobFuture = getObjectStore()->getBlob(state->hash.value());
       blob_ = blobFuture.get();
     }
 

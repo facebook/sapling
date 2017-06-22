@@ -120,7 +120,7 @@ folly::Future<folly::Unit> diffRemovedTree(
     RelativePath currentPath,
     const TreeEntry& entry) {
   DCHECK_EQ(TreeEntryType::TREE, entry.getType());
-  return context->store->getTreeFuture(entry.getHash()).then([
+  return context->store->getTree(entry.getHash()).then([
     context,
     currentPath = RelativePath{std::move(currentPath)}
   ](unique_ptr<Tree> && tree) {
@@ -250,7 +250,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     }
 
     // Possibly modified directory.  Load the Tree in question.
-    return context_->store->getTreeFuture(scmEntry_.getHash()).then([
+    return context_->store->getTree(scmEntry_.getHash()).then([
       this,
       treeInode = std::move(treeInode)
     ](unique_ptr<Tree> && tree) {

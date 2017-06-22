@@ -53,8 +53,7 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
   }
 }
 
-Future<std::unique_ptr<Tree>> FakeObjectStore::getTreeFuture(
-    const Hash& id) const {
+Future<std::unique_ptr<Tree>> FakeObjectStore::getTree(const Hash& id) const {
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
     return makeFuture<unique_ptr<Tree>>(
@@ -63,8 +62,7 @@ Future<std::unique_ptr<Tree>> FakeObjectStore::getTreeFuture(
   return makeFuture(make_unique<Tree>(iter->second));
 }
 
-Future<std::unique_ptr<Blob>> FakeObjectStore::getBlobFuture(
-    const Hash& id) const {
+Future<std::unique_ptr<Blob>> FakeObjectStore::getBlob(const Hash& id) const {
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
     return makeFuture<unique_ptr<Blob>>(

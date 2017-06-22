@@ -510,7 +510,7 @@ void EdenServiceHandler::debugGetScmTree(
     auto localStore = store->getLocalStore();
     tree = localStore->getTree(id);
   } else {
-    tree = store->getTreeFuture(id).get();
+    tree = store->getTree(id).get();
   }
 
   if (!tree) {
@@ -540,7 +540,7 @@ void EdenServiceHandler::debugGetScmBlob(
     auto localStore = store->getLocalStore();
     blob = localStore->getBlob(id);
   } else {
-    blob = store->getBlobFuture(id).get();
+    blob = store->getBlob(id).get();
   }
 
   if (!blob) {

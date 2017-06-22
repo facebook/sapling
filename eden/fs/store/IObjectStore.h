@@ -34,19 +34,18 @@ class IObjectStore {
    * (Note that this is different than the Hash identifying the blob.  The
    * hash identifying the blob may be computed using a separate mechanism, and
    * may not be the same as the SHA1-hash of its contents.)
+   *
+   * TODO: This blocking API will eventually be deprecated in favor of
+   * getBlobMetadata()
    */
   virtual Hash getSha1ForBlob(const Hash& id) const = 0;
 
   /*
-   * Future-based APIs.
-   *
-   * Eventually all callers will be updated to use these versions, and the
-   * non-future APIs will be removed.  (We can then drop the "Future" from
-   * these method names.)
+   * Object access APIs.
    */
-  virtual folly::Future<std::unique_ptr<Tree>> getTreeFuture(
+  virtual folly::Future<std::unique_ptr<Tree>> getTree(
       const Hash& id) const = 0;
-  virtual folly::Future<std::unique_ptr<Blob>> getBlobFuture(
+  virtual folly::Future<std::unique_ptr<Blob>> getBlob(
       const Hash& id) const = 0;
   virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) const = 0;
