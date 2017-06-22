@@ -1198,14 +1198,8 @@ def _aborthistedit(ui, repo, state):
             f = hg.openpath(ui, backupfile)
             gen = exchange.readbundle(ui, f, backupfile)
             with repo.transaction('histedit.abort') as tr:
-                if not isinstance(gen, bundle2.unbundle20):
-                    bundle2.applybundle1(repo, gen, tr,
-                                         source='histedit',
-                                         url='bundle:' + backupfile)
-                else:
-                    bundle2.applybundle(repo, gen, tr,
-                                        source='histedit',
-                                        url='bundle:' + backupfile)
+                bundle2.applybundle(repo, gen, tr, source='histedit',
+                                    url='bundle:' + backupfile)
 
             os.remove(backupfile)
 

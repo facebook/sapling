@@ -316,14 +316,17 @@ def applybundle1(repo, cg, tr, source, url, **kwargs):
     _processchangegroup(op, cg, tr, source, url, **kwargs)
     return op
 
-def applybundle(repo, unbundler, tr, source=None, url=None):
+def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
     # transform me into unbundler.apply() as soon as the freeze is lifted
-    tr.hookargs['bundle2'] = '1'
-    if source is not None and 'source' not in tr.hookargs:
-        tr.hookargs['source'] = source
-    if url is not None and 'url' not in tr.hookargs:
-        tr.hookargs['url'] = url
-    return processbundle(repo, unbundler, lambda: tr)
+    if isinstance(unbundler, unbundle20):
+        tr.hookargs['bundle2'] = '1'
+        if source is not None and 'source' not in tr.hookargs:
+            tr.hookargs['source'] = source
+        if url is not None and 'url' not in tr.hookargs:
+            tr.hookargs['url'] = url
+        return processbundle(repo, unbundler, lambda: tr)
+    else:
+        return applybundle1(repo, unbundler, tr, source, url, **kwargs)
 
 def processbundle(repo, unbundler, transactiongetter=None, op=None):
     """This function process a bundle, apply effect to/from a repo

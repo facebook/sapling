@@ -211,12 +211,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             if not isinstance(gen, bundle2.unbundle20):
                 txnname = "strip\n%s" % util.hidepassword(tmpbundleurl)
             with repo.transaction(txnname) as tr:
-                if isinstance(gen, bundle2.unbundle20):
-                    bundle2.applybundle(repo, gen, tr, source='strip',
-                                        url=tmpbundleurl)
-                else:
-                    bundle2.applybundle1(repo, gen, tr, 'strip', tmpbundleurl,
-                                         emptyok=True)
+                bundle2.applybundle(repo, gen, tr, source='strip',
+                                    url=tmpbundleurl, emptyok=True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()

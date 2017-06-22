@@ -5207,13 +5207,8 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 if not isinstance(gen, bundle2.unbundle20):
                     txnname = 'unbundle\n%s' % util.hidepassword(url)
                 with repo.transaction(txnname) as tr:
-                    if isinstance(gen, bundle2.unbundle20):
-                        op = bundle2.applybundle(repo, gen, tr,
-                                                 source='unbundle',
-                                                 url=url)
-                    else:
-                        op = bundle2.applybundle1(repo, gen, tr,
-                                                  source='unbundle', url=url)
+                    op = bundle2.applybundle(repo, gen, tr, source='unbundle',
+                                             url=url)
             except error.BundleUnknownFeatureError as exc:
                 raise error.Abort(
                     _('%s: unknown bundle feature, %s') % (fname, exc),
