@@ -5202,23 +5202,23 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                           '"hg unbundle"'),
                         hint=_('use "hg debugapplystreamclonebundle"'))
             url = 'bundle:' + fname
-            if isinstance(gen, bundle2.unbundle20):
-                with repo.transaction('unbundle') as tr:
-                    try:
+            try:
+                if isinstance(gen, bundle2.unbundle20):
+                    with repo.transaction('unbundle') as tr:
                         op = bundle2.applybundle(repo, gen, tr,
                                                  source='unbundle',
                                                  url=url)
-                    except error.BundleUnknownFeatureError as exc:
-                        raise error.Abort(
-                            _('%s: unknown bundle feature, %s') % (fname, exc),
-                            hint=_("see https://mercurial-scm.org/"
-                                   "wiki/BundleFeature for more "
-                                   "information"))
-            else:
-                txnname = 'unbundle\n%s' % util.hidepassword(url)
-                with repo.transaction(txnname) as tr:
-                    op = bundle2.applybundle1(repo, gen, tr, source='unbundle',
-                                              url=url)
+                else:
+                    txnname = 'unbundle\n%s' % util.hidepassword(url)
+                    with repo.transaction(txnname) as tr:
+                        op = bundle2.applybundle1(repo, gen, tr,
+                                                  source='unbundle', url=url)
+            except error.BundleUnknownFeatureError as exc:
+                raise error.Abort(
+                    _('%s: unknown bundle feature, %s') % (fname, exc),
+                    hint=_("see https://mercurial-scm.org/"
+                           "wiki/BundleFeature for more "
+                           "information"))
             modheads = bundle2.combinechangegroupresults(op)
 
     return postincoming(ui, repo, modheads, opts.get(r'update'), None, None)
