@@ -234,7 +234,7 @@ Test formatting options
 Test many remotenames
   $ hg log -r . -T '{node}\n'
   97af35b3648c0098cbd8114ae1b1bafab997ac20
-  $ for i in `python $TESTDIR/seq.py 1 10`; do
+  $ for i in `$PYTHON $TESTDIR/seq.py 1 10`; do
   > echo 97af35b3648c0098cbd8114ae1b1bafab997ac20 bookmarks remote/remote$i >> .hg/remotenames
   > done
   $ cmd

@@ -17,7 +17,7 @@ Check diagnosis, debugging information
 
   $ printaccessedrevs() {
   >     [ ! -f "$TESTTMP/logfile" ] && echo "no access" && return
-  >     python "$TESTTMP/summary.py" "$TESTTMP/cachedrevs" "$TESTTMP/logfile"
+  >     $PYTHON "$TESTTMP/summary.py" "$TESTTMP/cachedrevs" "$TESTTMP/logfile"
   >     rm "$TESTTMP/logfile"
   > }
 

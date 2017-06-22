@@ -14,8 +14,8 @@ Get build path for native extensions
   $ PYTHONPATH="$BUILD_PATH:$PYTHONPATH"
   $ export PYTHONPATH
 
-  $ python $TESTDIR/remotefilelog-datapack.py
-  $ python $TESTDIR/remotefilelog-histpack.py
-  $ python $TESTDIR/cstore-datapackstore.py
-  $ python $TESTDIR/cstore-treemanifest.py
-  $ python $TESTDIR/cstore-uniondatapackstore.py
+  $ $PYTHON $TESTDIR/remotefilelog-datapack.py
+  $ $PYTHON $TESTDIR/remotefilelog-histpack.py
+  $ $PYTHON $TESTDIR/cstore-datapackstore.py
+  $ $PYTHON $TESTDIR/cstore-treemanifest.py
+  $ $PYTHON $TESTDIR/cstore-uniondatapackstore.py

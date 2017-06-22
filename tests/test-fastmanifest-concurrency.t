@@ -33,7 +33,7 @@ Check diagnosis, debugging information
   $ mkcommit e
 this is a barrier to ensure that any cache workers that we've kicked off
 have completed.
-  $ python "$TESTDIR/waitforfile.py" --created .hg/store/manifestcache/fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 --deleted .hg/fastmanifest --max-time 1
+  $ $PYTHON "$TESTDIR/waitforfile.py" --created .hg/store/manifestcache/fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 --deleted .hg/fastmanifest --max-time 1
   $ hg debugcachemanifest --pruneall
   $ hg debugcachemanifest --list
   cache size is: 0 bytes
@@ -43,7 +43,7 @@ have completed.
 
   $ hg bookmark abc
 this is a barrier to ensure that the cache fill has completed.
-  $ python "$TESTDIR/waitforfile.py" --created .hg/store/manifestcache/fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 --deleted .hg/fastmanifest --max-time 1
+  $ $PYTHON "$TESTDIR/waitforfile.py" --created .hg/store/manifestcache/fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 --deleted .hg/fastmanifest --max-time 1
   $ hg debugcachemanifest --list
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)

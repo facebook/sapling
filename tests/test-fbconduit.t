@@ -1,6 +1,6 @@
 Start up translation service.
 
-  $ python "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
+  $ $PYTHON "$TESTDIR/conduithttp.py" --port-file conduit.port --pid conduit.pid
   $ cat conduit.pid >> $DAEMON_PIDS
   $ CONDUIT_PORT=`cat conduit.port`
 
