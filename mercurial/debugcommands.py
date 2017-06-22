@@ -289,8 +289,9 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
             ui.write("%s%s\n" % (indent_string, hex(node)))
             chain = node
 
-def _debugobsmarkers(ui, data, indent=0, **opts):
+def _debugobsmarkers(ui, part, indent=0, **opts):
     """display version and markers contained in 'data'"""
+    data = part.read()
     indent_string = ' ' * indent
     try:
         version, markers = obsolete._readmarkers(data)
@@ -325,7 +326,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
             cg = changegroup.getunbundler(version, part, 'UN')
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
         if part.type == 'obsmarkers':
-            _debugobsmarkers(ui, part.read(), indent=4, **opts)
+            _debugobsmarkers(ui, part, indent=4, **opts)
 
 @command('debugbundle',
         [('a', 'all', None, _('show all details')),
