@@ -158,6 +158,7 @@ from . import (
     changegroup,
     error,
     obsolete,
+    phases,
     pushkey,
     pycompat,
     tags,
@@ -177,6 +178,8 @@ _fparttypesize = '>B'
 _fpartid = '>I'
 _fpayloadsize = '>i'
 _fpartparamcount = '>BB'
+
+_fphasesentry = '>i20s'
 
 preferedchunksize = 4096
 
@@ -1387,6 +1390,14 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
         obsmarkers = repo.obsstore.relevantmarkers(outgoing.missing)
         buildobsmarkerspart(bundler, obsmarkers)
 
+    if opts.get('phases', False):
+        headsbyphase = phases.subsetphaseheads(repo, outgoing.missing)
+        phasedata = []
+        for phase in phases.allphases:
+            for head in headsbyphase[phase]:
+                phasedata.append(_pack(_fphasesentry, phase, head))
+        bundler.newpart('phase-heads', data=''.join(phasedata))
+
 def addparttagsfnodescache(repo, bundler, outgoing):
     # we include the tags fnode cache for the bundle changeset
     # (as an optional parts)
@@ -1720,6 +1731,29 @@ def handlepushkey(op, inpart):
             if key in inpart.params:
                 kwargs[key] = inpart.params[key]
         raise error.PushkeyFailed(partid=str(inpart.id), **kwargs)
+
+def _readphaseheads(inpart):
+    headsbyphase = [[] for i in phases.allphases]
+    entrysize = struct.calcsize(_fphasesentry)
+    while True:
+        entry = inpart.read(entrysize)
+        if len(entry) < entrysize:
+            if entry:
+                raise error.Abort(_('bad phase-heads bundle part'))
+            break
+        phase, node = struct.unpack(_fphasesentry, entry)
+        headsbyphase[phase].append(node)
+    return headsbyphase
+
+@parthandler('phase-heads')
+def handlephases(op, inpart):
+    """apply phases from bundle part to repo"""
+    headsbyphase = _readphaseheads(inpart)
+    addednodes = []
+    for entry in op.records['changegroup']:
+        addednodes.extend(entry['addednodes'])
+    phases.updatephases(op.repo.unfiltered(), op.gettransaction(), headsbyphase,
+                        addednodes)
 
 @parthandler('reply:pushkey', ('return', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):

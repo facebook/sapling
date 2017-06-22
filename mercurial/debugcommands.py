@@ -311,6 +311,15 @@ def _debugobsmarkers(ui, part, indent=0, **opts):
             cmdutil.showmarker(fm, m)
         fm.end()
 
+def _debugphaseheads(ui, data, indent=0):
+    """display version and markers contained in 'data'"""
+    indent_string = ' ' * indent
+    headsbyphase = bundle2._readphaseheads(data)
+    for phase in phases.allphases:
+        for head in headsbyphase[phase]:
+            ui.write(indent_string)
+            ui.write('%s %s\n' % (hex(head), phases.phasenames[phase]))
+
 def _debugbundle2(ui, gen, all=None, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
@@ -327,6 +336,8 @@ def _debugbundle2(ui, gen, all=None, **opts):
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
         if part.type == 'obsmarkers':
             _debugobsmarkers(ui, part, indent=4, **opts)
+        if part.type == 'phase-heads':
+            _debugphaseheads(ui, part, indent=4)
 
 @command('debugbundle',
         [('a', 'all', None, _('show all details')),

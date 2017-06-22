@@ -430,6 +430,32 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         else:
             return False
 
+def subsetphaseheads(repo, subset):
+    """Finds the phase heads for a subset of a history
+
+    Returns a list indexed by phase number where each item is a list of phase
+    head nodes.
+    """
+    cl = repo.changelog
+
+    headsbyphase = [[] for i in allphases]
+    # No need to keep track of secret phase; any heads in the subset that
+    # are not mentioned are implicitly secret.
+    for phase in allphases[:-1]:
+        revset = "heads(%%ln & %s())" % phasenames[phase]
+        headsbyphase[phase] = [cl.node(r) for r in repo.revs(revset, subset)]
+    return headsbyphase
+
+def updatephases(repo, tr, headsbyphase, addednodes):
+    """Updates the repo with the given phase heads"""
+    # First make all the added revisions secret because changegroup.apply()
+    # currently sets the phase to draft.
+    retractboundary(repo, tr, secret, addednodes)
+
+    # Now advance phase boundaries of all but secret phase
+    for phase in allphases[:-1]:
+        advanceboundary(repo, tr, phase, headsbyphase[phase])
+
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict
 
