@@ -23,7 +23,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/ObjectStores.h"
 
 using folly::Future;
 using folly::makeFuture;
