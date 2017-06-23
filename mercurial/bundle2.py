@@ -310,12 +310,6 @@ def _notransaction():
     to be created"""
     raise TransactionUnavailable()
 
-def applybundle1(repo, cg, tr, source, url, **kwargs):
-    # the transactiongetter won't be used, but we might as well set it
-    op = bundleoperation(repo, lambda: tr)
-    _processchangegroup(op, cg, tr, source, url, **kwargs)
-    return op
-
 def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
     # transform me into unbundler.apply() as soon as the freeze is lifted
     if isinstance(unbundler, unbundle20):
@@ -326,7 +320,10 @@ def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
             tr.hookargs['url'] = url
         return processbundle(repo, unbundler, lambda: tr)
     else:
-        return applybundle1(repo, unbundler, tr, source, url, **kwargs)
+        # the transactiongetter won't be used, but we might as well set it
+        op = bundleoperation(repo, lambda: tr)
+        _processchangegroup(op, unbundler, tr, source, url, **kwargs)
+        return op
 
 def processbundle(repo, unbundler, transactiongetter=None, op=None):
     """This function process a bundle, apply effect to/from a repo
