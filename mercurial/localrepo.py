@@ -442,6 +442,9 @@ class localrepository(object):
             'aggressivemergedeltas', False)
         self.svfs.options['aggressivemergedeltas'] = aggressivemergedeltas
         self.svfs.options['lazydeltabase'] = not scmutil.gddeltaconfig(self.ui)
+        chainspan = self.ui.configbytes('experimental', 'maxdeltachainspan', -1)
+        if 0 <= chainspan:
+            self.svfs.options['maxdeltachainspan'] = chainspan
 
         for r in self.requirements:
             if r.startswith('exp-compression-'):

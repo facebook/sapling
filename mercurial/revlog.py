@@ -292,6 +292,7 @@ class revlog(object):
         self._nodecache = {nullid: nullrev}
         self._nodepos = None
         self._compengine = 'zlib'
+        self._maxdeltachainspan = -1
 
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, 'options', None)
@@ -313,6 +314,8 @@ class revlog(object):
             self._lazydeltabase = bool(opts.get('lazydeltabase', False))
             if 'compengine' in opts:
                 self._compengine = opts['compengine']
+            if 'maxdeltachainspan' in opts:
+                self._maxdeltachainspan = opts['maxdeltachainspan']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -1659,7 +1662,13 @@ class revlog(object):
         # - 'compresseddeltalen' is the sum of the total size of deltas we need
         #   to apply -- bounding it limits the amount of CPU we consume.
         dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
-        if (dist > textlen * 4 or l > textlen or
+
+        defaultmax = textlen * 4
+        maxdist = self._maxdeltachainspan
+        if not maxdist:
+            maxdist = dist # ensure the conditional pass
+        maxdist = max(maxdist, defaultmax)
+        if (dist > maxdist or l > textlen or
             compresseddeltalen > textlen * 2 or
             (self._maxchainlen and chainlen > self._maxchainlen)):
             return False
