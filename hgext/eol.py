@@ -367,7 +367,7 @@ def reposetup(ui, repo):
                     if wlock is not None:
                         wlock.release()
 
-        def commitctx(self, ctx, haserror=False):
+        def commitctx(self, ctx, error=False):
             for f in sorted(ctx.added() + ctx.modified()):
                 if not self._eolmatch(f):
                     continue
@@ -383,6 +383,6 @@ def reposetup(ui, repo):
                 if inconsistenteol(data):
                     raise errormod.Abort(_("inconsistent newline style "
                                            "in %s\n") % f)
-            return super(eolrepo, self).commitctx(ctx, haserror)
+            return super(eolrepo, self).commitctx(ctx, error)
     repo.__class__ = eolrepo
     repo._hgcleardirstate()
