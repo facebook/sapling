@@ -211,5 +211,6 @@ Test warning on config option access and registration
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
   devel-warn: specifying a default value for a registered config item: 'ui.quiet' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a default value for a registered config item: 'ui.interactive' 'None' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..

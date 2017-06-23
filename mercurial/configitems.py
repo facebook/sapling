@@ -42,6 +42,9 @@ coreconfigitem('patch', 'fuzz',
 coreconfigitem('ui', 'clonebundleprefers',
     default=[],
 )
+coreconfigitem('ui', 'interactive',
+    default=None,
+)
 coreconfigitem('ui', 'quiet',
     default=False,
 )

@@ -1139,7 +1139,7 @@ class ui(object):
 
         This function refers to input only; for output, see `ui.formatted()'.
         '''
-        i = self.configbool("ui", "interactive", None)
+        i = self.configbool("ui", "interactive")
         if i is None:
             # some environments replace stdin without implementing isatty
             # usually those are non-interactive
