@@ -35,7 +35,7 @@ testedwith = 'ships-with-hg-core'
 @command('fetch',
     [('r', 'rev', [],
      _('a specific revision you would like to pull'), _('REV')),
-    ('e', 'edit', None, _('invoke editor on commit messages')),
+    ('', 'edit', None, _('invoke editor on commit messages')),
     ('', 'force-editor', None, _('edit commit message (DEPRECATED)')),
     ('', 'switch-parent', None, _('switch parents when merging')),
     ] + cmdutil.commitopts + cmdutil.commitopts2 + cmdutil.remoteopts,
