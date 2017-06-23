@@ -118,7 +118,6 @@ def split(ui, repo, *revs, **opts):
                 common.restackonce(ui, repo, top, inhibithack=True)
         tr.close()
     finally:
-        tr.release()
         lockmod.release(tr, lock, wlock)
 
     # clean up possibly incorrect rebasestate
