@@ -221,6 +221,12 @@ docker-ubuntu-yakkety: contrib/docker/ubuntu-yakkety
 docker-ubuntu-yakkety-ppa: contrib/docker/ubuntu-yakkety
 	contrib/dockerdeb ubuntu yakkety --source-only
 
+docker-ubuntu-zesty: contrib/docker/ubuntu-zesty
+	contrib/dockerdeb ubuntu zesty
+
+docker-ubuntu-zesty-ppa: contrib/docker/ubuntu-zesty
+	contrib/dockerdeb ubuntu zesty --source-only
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
@@ -288,6 +294,7 @@ linux-wheels-i686:
 	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
 	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
 	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
+	docker-ubuntu-zesty docker-ubuntu-zesty-ppa \
 	fedora20 docker-fedora20 fedora21 docker-fedora21 \
 	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7 \
 	linux-wheels
