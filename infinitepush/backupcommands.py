@@ -683,7 +683,7 @@ def _localbackupstateexists(repo):
     return repo.vfs.exists(_backupstatefile)
 
 def _deletebackupstate(repo):
-    return repo.vfs.unlink(_backupstatefile)
+    return repo.vfs.tryunlink(_backupstatefile)
 
 def _readlocalbackupstate(ui, repo):
     if not _localbackupstateexists(repo):

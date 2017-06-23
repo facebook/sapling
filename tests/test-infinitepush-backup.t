@@ -471,6 +471,15 @@ Print garbage to infinitepushbackupgeneration file, make sure backup works fine
   nothing to backup
   finished in \d+\.(\d+)? seconds (re)
 
+Delete infinitepushbackupstate and set backupgeneration. Make sure it doesn't fail
+  $ rm .hg/infinitepushbackupstate
+  $ hg pushbackup --config infinitepushbackup.backupgeneration=2
+  starting backup * (glob)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     cf2adfba1469  headone
+  finished in * seconds (glob)
+
 Test hostname option
   $ rm .hg/infinitepushbackupstate
   $ hg pushbackup --config infinitepushbackup.hostname=hostname
