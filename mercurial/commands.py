@@ -5203,14 +5203,15 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                         hint=_('use "hg debugapplystreamclonebundle"'))
             url = 'bundle:' + fname
             try:
-                if isinstance(gen, bundle2.unbundle20):
-                    with repo.transaction('unbundle') as tr:
+                txnname = 'unbundle'
+                if not isinstance(gen, bundle2.unbundle20):
+                    txnname = 'unbundle\n%s' % util.hidepassword(url)
+                with repo.transaction(txnname) as tr:
+                    if isinstance(gen, bundle2.unbundle20):
                         op = bundle2.applybundle(repo, gen, tr,
                                                  source='unbundle',
                                                  url=url)
-                else:
-                    txnname = 'unbundle\n%s' % util.hidepassword(url)
-                    with repo.transaction(txnname) as tr:
+                    else:
                         op = bundle2.applybundle1(repo, gen, tr,
                                                   source='unbundle', url=url)
             except error.BundleUnknownFeatureError as exc:

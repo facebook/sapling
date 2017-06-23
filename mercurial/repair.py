@@ -207,13 +207,14 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()
             tmpbundleurl = 'bundle:' + vfs.join(tmpbundlefile)
-            if isinstance(gen, bundle2.unbundle20):
-                with repo.transaction('strip') as tr:
+            txnname = 'strip'
+            if not isinstance(gen, bundle2.unbundle20):
+                txnname = "strip\n%s" % util.hidepassword(tmpbundleurl)
+            with repo.transaction(txnname) as tr:
+                if isinstance(gen, bundle2.unbundle20):
                     bundle2.applybundle(repo, gen, tr, source='strip',
                                         url=tmpbundleurl)
-            else:
-                txnname = "strip\n%s" % util.hidepassword(tmpbundleurl)
-                with repo.transaction(txnname) as tr:
+                else:
                     bundle2.applybundle1(repo, gen, tr, 'strip', tmpbundleurl,
                                          emptyok=True)
             if not repo.ui.verbose:
