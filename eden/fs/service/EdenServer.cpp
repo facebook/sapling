@@ -275,9 +275,11 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   if (type == "null") {
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
-    return make_shared<HgBackingStore>(name, localStore_.get());
+    auto repoPath = realpath(name);
+    return make_shared<HgBackingStore>(repoPath, localStore_.get());
   } else if (type == "git") {
-    return make_shared<GitBackingStore>(name, localStore_.get());
+    auto repoPath = realpath(name);
+    return make_shared<GitBackingStore>(repoPath, localStore_.get());
   } else {
     throw std::domain_error(
         folly::to<string>("unsupported backing store type: ", type));

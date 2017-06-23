@@ -56,7 +56,7 @@ class HgImporter {
    * The caller is responsible for ensuring that the LocalStore object remains
    * valid for the lifetime of the HgImporter object.
    */
-  HgImporter(folly::StringPiece repoPath, LocalStore* store);
+  HgImporter(AbsolutePathPiece repoPath, LocalStore* store);
   virtual ~HgImporter();
 
   /**

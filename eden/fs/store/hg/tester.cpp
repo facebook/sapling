@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "usage: hg_import --edenDir=<dir> <repository>\n");
     return EX_USAGE;
   }
-  auto repoPath = argv[1];
+  auto repoPath = realpath(argv[1]);
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: --edenDir must be specified\n");
     return EX_USAGE;

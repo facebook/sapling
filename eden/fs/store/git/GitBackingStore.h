@@ -9,9 +9,10 @@
  */
 #pragma once
 
-#include "eden/fs/store/BackingStore.h"
-
 #include <folly/Range.h>
+
+#include "eden/fs/store/BackingStore.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 struct git_oid;
 struct git_repository;
@@ -34,7 +35,7 @@ class GitBackingStore : public BackingStore {
    * GitBackingStore object).  It is guaranteed to be valid for the lifetime of
    * the GitBackingStore object.
    */
-  GitBackingStore(folly::StringPiece repository, LocalStore* localStore);
+  GitBackingStore(AbsolutePathPiece repository, LocalStore* localStore);
   ~GitBackingStore() override;
 
   /**

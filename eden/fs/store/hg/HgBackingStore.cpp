@@ -28,7 +28,9 @@ using std::unique_ptr;
 namespace facebook {
 namespace eden {
 
-HgBackingStore::HgBackingStore(StringPiece repository, LocalStore* localStore)
+HgBackingStore::HgBackingStore(
+    AbsolutePathPiece repository,
+    LocalStore* localStore)
     : importer_(folly::construct_in_place, repository, localStore),
       localStore_(localStore) {}
 

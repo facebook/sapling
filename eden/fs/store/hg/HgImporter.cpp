@@ -350,11 +350,11 @@ std::string getImportHelperPath() {
 namespace facebook {
 namespace eden {
 
-HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
+HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
     : store_(store) {
   std::vector<string> cmd = {
       getImportHelperPath(),
-      repoPath.str(),
+      repoPath.value().str(),
       "--out-fd",
       folly::to<string>(HELPER_PIPE_FD),
   };

@@ -51,7 +51,9 @@ void freeBlobIOBufData(void* blobData, void* blobObject) {
 namespace facebook {
 namespace eden {
 
-GitBackingStore::GitBackingStore(StringPiece repository, LocalStore* localStore)
+GitBackingStore::GitBackingStore(
+    AbsolutePathPiece repository,
+    LocalStore* localStore)
     : localStore_{localStore} {
   // Make sure libgit2 is initialized.
   // (git_libgit2_init() is safe to call multiple times if multiple
@@ -59,7 +61,7 @@ GitBackingStore::GitBackingStore(StringPiece repository, LocalStore* localStore)
   // called once for each call to git_libgit2_init().)
   git_libgit2_init();
 
-  auto error = git_repository_open(&repo_, repository.str().c_str());
+  auto error = git_repository_open(&repo_, repository.value().str().c_str());
   gitCheckError(error, "error opening git repository", repository);
 }
 

@@ -11,6 +11,7 @@
 
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -32,7 +33,7 @@ class HgBackingStore : public BackingStore {
    * HgBackingStore object).  It is guaranteed to be valid for the lifetime of
    * the HgBackingStore object.
    */
-  HgBackingStore(folly::StringPiece repository, LocalStore* localStore);
+  HgBackingStore(AbsolutePathPiece repository, LocalStore* localStore);
   ~HgBackingStore() override;
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
