@@ -91,9 +91,7 @@ def _genrevdescendants(repo, revs, followfirst):
         cut = None
 
     cl = repo.changelog
-    # XXX this should be 'parentset.min()' assuming 'parentset' is a
-    # smartset (and if it is not, it should.)
-    first = min(revs)
+    first = revs.min()
     nullrev = node.nullrev
     if first == nullrev:
         # Are there nodes with a null first parent and a non-null
