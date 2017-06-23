@@ -720,8 +720,6 @@ def _checkshellalias(lui, ui, args):
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})
 
-_loaded = set()
-
 def _dispatch(req):
     args = req.args
     ui = req.ui
@@ -746,8 +744,7 @@ def _dispatch(req):
     profile = lui.configbool('profiling', 'enabled')
     with profiling.profile(lui, enabled=profile) as profiler:
         # Configure extensions in phases: uisetup, extsetup, cmdtable, and
-        # reposetup. Programs like TortoiseHg will call _dispatch several
-        # times so we keep track of configured extensions in _loaded.
+        # reposetup
         extensions.loadall(lui)
         # Propagate any changes to lui.__class__ by extensions
         ui.__class__ = lui.__class__
