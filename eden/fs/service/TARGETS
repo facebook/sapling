@@ -49,6 +49,7 @@ cpp_library(
         "@/eden/fs/store/git:git",
         "@/eden/fs/store/hg:hg",
         "@/folly/experimental:experimental",
+        "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
         "@/folly/init:init",
         "@/thrift/lib/cpp2:server",

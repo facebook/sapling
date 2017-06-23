@@ -1,13 +1,26 @@
+# @autodeps
+
 cpp_library(
     name = "privhelper",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/folly:folly",
+        "@/folly:demangle",
+        "@/folly:exception",
+        "@/folly:expected",
+        "@/folly:file",
+        "@/folly:format",
+        "@/folly:range",
+        "@/folly:scope_guard",
+        "@/folly:string_extended",
+        "@/folly/experimental/logging:glog_style_formatter",
+        "@/folly/experimental/logging:immediate_file_writer",
         "@/folly/experimental/logging:logging",
+        "@/folly/experimental/logging:standard_log_handler",
         "@/folly/io:iobuf",
     ],
     external_deps = [
-        ("boost", None, "boost_filesystem"),
+        "boost",
+        "gflags",
     ],
 )
