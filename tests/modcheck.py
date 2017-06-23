@@ -17,7 +17,7 @@ from mercurial import dispatch
 dirname = os.path.dirname
 
 # skip checking external modules
-skipmodre = re.compile(r'\Aremotenames|hgsubversion.*\Z')
+skipmodre = re.compile(r'\Amysql|remotenames|hgsubversion.*\Z')
 
 reporoot = dirname(dirname(__file__))
 pyroot = dirname(os.__file__)
