@@ -269,10 +269,10 @@ struct HgProxyHash {
  * Callers should use getImportHelperPath() rather than directly calling this
  * function.
  */
-std::string findImportHelperPath() {
+AbsolutePath findImportHelperPath() {
   // If a path was specified on the command line, use that
   if (!FLAGS_hgImportHelper.empty()) {
-    return FLAGS_hgImportHelper;
+    return realpath(FLAGS_hgImportHelper);
   }
 
   const char* argv0 = gflags::GetArgv0();
@@ -282,37 +282,40 @@ std::string findImportHelperPath() {
         "unable to determine edenfs executable path");
   }
 
-  auto programDir = boost::filesystem::absolute(boost::filesystem::path(argv0));
-  XLOG(DBG4) << "edenfs path: " << programDir.native();
-  programDir.remove_filename();
+  auto programPath = realpath(argv0);
+  XLOG(DBG4) << "edenfs path: " << programPath;
+  auto programDir = programPath.dirname();
 
-  auto toCheck = folly::make_array(
-      // Check in the same directory as the edenfs binary.
-      // This is where we expect to find the helper script in normal
-      // deployments.
-      programDir / boost::filesystem::path("hg_import_helper.py"),
-      // Check relative to the edenfs binary, if we are being run directly
-      // from the buck-out directory in a source code repository.
-      programDir /
-          boost::filesystem::path(
-              "../../../../../../eden/fs/store/hg/hg_import_helper.py"));
+  auto isHelper = [](const AbsolutePath& path) {
+    XLOG(DBG8) << "checking for hg_import_helper at \"" << path << "\"";
+    return access(path.value().c_str(), X_OK) == 0;
+  };
 
-  for (const auto& path : toCheck) {
-    XLOG(DBG5) << "checking for hg_import_helper at \"" << path.native()
-               << "\"";
-    boost::filesystem::path normalized;
-    try {
-      normalized = boost::filesystem::canonical(path);
-    } catch (const std::exception& ex) {
-      // canonical() only succeeds if the path exists
-      continue;
-    }
-    if (access(normalized.c_str(), X_OK) == 0) {
-      return normalized.native();
-    }
+  // Check in the same directory as the edenfs binary.
+  // This is where we expect to find the helper script in normal
+  // deployments.
+  PathComponentPiece helperName{"hg_import_helper.py"};
+  auto path = programDir + helperName;
+  if (isHelper(path)) {
+    return path;
   }
 
-  throw std::runtime_error("unable to find hg_import_helper.py script");
+  // Now check in all parent directories of the directory containing our
+  // binary.  This is where we will find the helper program if we are running
+  // from the build output directory in a source code repository.
+  AbsolutePathPiece dir = programDir;
+  RelativePathPiece helperPath{"eden/fs/store/hg/hg_import_helper.py"};
+  while (true) {
+    path = dir + helperPath;
+    if (isHelper(path)) {
+      return path;
+    }
+    auto parent = dir.dirname();
+    if (parent == dir) {
+      throw std::runtime_error("unable to find hg_import_helper.py script");
+    }
+    dir = parent;
+  }
 }
 
 /**
@@ -321,27 +324,11 @@ std::string findImportHelperPath() {
  * This function is thread-safe and caches the result once we have found
  * the  helper script once.
  */
-std::string getImportHelperPath() {
-  // We could use folly::Singleton to store the helper path, but we don't for a
-  // couple reasons:
-  // - We want to retry finding the helper path on subsequent calls if we fail
-  //   finding it the first time.  (If someone has sinced fixed the
-  //   installation path for ths script it's nicer to try looking for it
-  //   again.)
-  // - The Singleton API is slightly awkward for just storing a string with a
-  //   custom lookup function.
-  //
-  // This code should never be accessed during static initialization before
-  // main() starts, or during shutdown cleanup, so the we don't really need
-  // the extra safety that folly::Singleton provides for those situations.
-  static std::mutex helperPathMutex;
-  static std::string helperPath;
-
-  std::lock_guard<std::mutex> guard(helperPathMutex);
-  if (helperPath.empty()) {
-    helperPath = findImportHelperPath();
-  }
-
+AbsolutePath getImportHelperPath() {
+  // C++11 guarantees that this static initialization will be thread-safe, and
+  // if findImportHelperPath() throws it will retry initialization the next
+  // time getImportHelperPath() is called.
+  static AbsolutePath helperPath = findImportHelperPath();
   return helperPath;
 }
 
@@ -352,8 +339,9 @@ namespace eden {
 
 HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
     : store_(store) {
+  auto importHelper = getImportHelperPath();
   std::vector<string> cmd = {
-      getImportHelperPath(),
+      importHelper.value().toStdString(),
       repoPath.value().str(),
       "--out-fd",
       folly::to<string>(HELPER_PIPE_FD),
