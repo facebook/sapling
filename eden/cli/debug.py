@@ -150,6 +150,7 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
 def _print_inode_info(inode_info):
     print('{}:'.format(escape_path(inode_info.path)))
     print('  Inode number:  {}'.format(inode_info.inodeNumber))
+    print('  Ref count:     {}'.format(inode_info.refcount))
     print('  Materialized?: {}'.format(inode_info.materialized))
     print('  Object ID:     {}'.format(hash_str(inode_info.treeHash)))
     print('  Entries ({} total):'.format(len(inode_info.entries)))
@@ -177,13 +178,28 @@ def do_inode(args: argparse.Namespace):
         _print_inode_info(inode_info)
 
 
+def get_loaded_inode_count(inode_info):
+    count = 0
+    for tree in inode_info:
+        for inode in tree.entries:
+            if inode.loaded:
+                count += 1
+    return count
+
 def do_unload_inodes(args: argparse.Namespace):
     config = cmd_util.create_config(args)
     mount, rel_path = get_mount_path(args.path)
 
     with config.get_thrift_client() as client:
+        inodeInfo_before_unload = client.debugInodeStatus(mount, rel_path)
+        inodeCount_before_unload = get_loaded_inode_count(inodeInfo_before_unload)
+
         client.unloadInodeForPath(mount, rel_path)
-    print('Unloaded Free Inodes under the directory : %s' % args.path)
+
+        inodeInfo_after_unload = client.debugInodeStatus(mount, rel_path)
+        inodeCount_after_unload = get_loaded_inode_count(inodeInfo_after_unload)
+        count = inodeCount_before_unload - inodeCount_after_unload
+        print('Unloaded %s Inodes under the directory : %s' % (count, args.path))
 
 def setup_argparse(parser: argparse.ArgumentParser):
     subparsers = parser.add_subparsers(dest='subparser_name')

@@ -117,3 +117,32 @@ class ThriftTest:
             self.client.glob(self.mount, ['adir['])
         self.assertIn('unterminated bracket sequence',
                       str(ctx.exception))
+
+    def test_unload_free_inodes(self):
+        for i in range(100):
+            self.write_file('testfile%d.txt' % i, 'unload test case')
+
+        result = self.client.debugInodeStatus(self.mount, '')
+        inode_count_before_unload = 0
+        inode_count_after_unload = 0
+
+        for item in result:
+            for inode in item.entries:
+                if inode.loaded:
+                    inode_count_before_unload += 1
+        self.assertGreater(
+            inode_count_before_unload,
+            100,
+            'Number of loaded inodes should increase')
+
+        self.client.unloadInodeForPath(self.mount, '')
+
+        result = self.client.debugInodeStatus(self.mount, '')
+        for item in result:
+            for inode in item.entries:
+                if inode.loaded:
+                    inode_count_after_unload += 1
+        self.assertGreater(
+            inode_count_before_unload,
+            inode_count_after_unload,
+            'Number of loaded inodes should reduce after unload')

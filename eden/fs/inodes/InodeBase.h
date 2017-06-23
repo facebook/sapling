@@ -46,6 +46,13 @@ class InodeBase {
   }
 
   /**
+   * Gets the reference count of an inode.
+   */
+  uint32_t getRefcount() const {
+    return numFuseReferences_;
+  }
+
+  /**
    * Increment the number of references to this inode by its inode number.
    *
    * While the FUSE reference count is non-zero, the inode number will be

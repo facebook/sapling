@@ -134,10 +134,6 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         with open(edenrc, 'w') as f:
             config.write(f)
 
-    def get_path(self, path):
-        '''Resolves the path against self.mount.'''
-        return os.path.join(self.mount, path)
-
     def hg(self, *args, stdout_charset='utf-8'):
         '''Runs `hg.real` with the specified args in the Eden mount.
 
@@ -176,32 +172,3 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         '''Ensures that `hg status` reports no modifications.'''
         self.assert_status({}, msg=msg, check_ignored=check_ignored)
 
-    def touch(self, path):
-        '''Touch the file at the specified path relative to the clone.'''
-        fullpath = self.get_path(path)
-        with open(fullpath, 'a'):
-            os.utime(fullpath)
-
-    def write_file(self, path, contents, mode=0o644):
-        '''Create or overwrite a file with the given contents.'''
-        fullpath = self.get_path(path)
-        with open(fullpath, 'w') as f:
-            f.write(contents)
-        os.chmod(fullpath, mode)
-
-    def read_file(self, path):
-        '''Read the file with the specified path inside the eden repository,
-        and return its contents.
-        '''
-        fullpath = self.get_path(path)
-        with open(fullpath, 'r') as f:
-            return f.read()
-
-    def mkdir(self, path):
-        '''Call mkdir for the specified path relative to the clone.'''
-        fullpath = self.get_path(path)
-        os.mkdir(fullpath)
-
-    def rm(self, path):
-        '''Unlink the file at the specified path relative to the clone.'''
-        os.unlink(self.get_path(path))

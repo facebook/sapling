@@ -2598,6 +2598,7 @@ void TreeInode::unloadChildrenNow() {
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   TreeInodeDebugInfo info;
   info.inodeNumber = getNodeId();
+  info.refcount = getRefcount();
 
   auto myPath = getPath();
   if (myPath.hasValue()) {

@@ -206,6 +206,7 @@ struct TreeInodeDebugInfo {
   3: bool materialized
   4: BinaryHash treeHash
   5: list<TreeInodeEntryDebugInfo> entries
+  6: i64 refcount
 }
 
 service EdenService extends fb303.FacebookService {
