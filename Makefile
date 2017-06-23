@@ -196,7 +196,10 @@ deb:
 ppa:
 	contrib/builddeb --source-only
 
-docker-debian-jessie:
+contrib/docker/debian-%: contrib/docker/debian.template
+	sed "s/__CODENAME__/$*/" $< > $@
+
+docker-debian-jessie: contrib/docker/debian-jessie
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
 
