@@ -257,7 +257,9 @@ def afterloaded(extension, callback):
     '''
 
     if extension in _extensions:
-        callback(loaded=True)
+        # Report loaded as False if the extension is disabled
+        loaded = (_extensions[extension] is not None)
+        callback(loaded=loaded)
     else:
         _aftercallbacks.setdefault(extension, []).append(callback)
 
