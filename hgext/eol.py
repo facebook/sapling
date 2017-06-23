@@ -98,7 +98,7 @@ import re
 from mercurial.i18n import _
 from mercurial import (
     config,
-    error,
+    error as errormod,
     extensions,
     match,
     pycompat,
@@ -225,7 +225,7 @@ def parseeol(ui, repo, nodes):
                 return eolfile(ui, repo.root, data)
             except (IOError, LookupError):
                 pass
-    except error.ParseError as inst:
+    except errormod.ParseError as inst:
         ui.warn(_("warning: ignoring .hgeol file due to parse error "
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return None
@@ -254,7 +254,7 @@ def _checkhook(ui, repo, node, headsonly):
         for f, target, node in sorted(failed):
             msgs.append(_("  %s in %s should not have %s line endings") %
                         (f, node, eols[target]))
-        raise error.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
+        raise errormod.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
 
 def checkallhook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
@@ -356,7 +356,7 @@ def reposetup(ui, repo):
                     # Write the cache to update mtime and cache .hgeol
                     with self.vfs("eol.cache", "w") as f:
                         f.write(hgeoldata)
-                except error.LockUnavailable:
+                except errormod.LockUnavailable:
                     # If we cannot lock the repository and clear the
                     # dirstate, then a commit might not see all files
                     # as modified. But if we cannot lock the
@@ -381,8 +381,8 @@ def reposetup(ui, repo):
                     # have all non-binary files taken care of.
                     continue
                 if inconsistenteol(data):
-                    raise error.Abort(_("inconsistent newline style "
-                                       "in %s\n") % f)
+                    raise errormod.Abort(_("inconsistent newline style "
+                                           "in %s\n") % f)
             return super(eolrepo, self).commitctx(ctx, haserror)
     repo.__class__ = eolrepo
     repo._hgcleardirstate()
