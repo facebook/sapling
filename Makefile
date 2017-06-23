@@ -203,6 +203,10 @@ docker-debian-jessie: contrib/docker/debian-jessie
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
 
+docker-debian-stretch: contrib/docker/debian-stretch
+	mkdir -p packages/debian-stretch
+	contrib/dockerdeb debian stretch
+
 contrib/docker/ubuntu-%: contrib/docker/ubuntu.template
 	sed "s/__CODENAME__/$*/" $< > $@
 
@@ -293,7 +297,7 @@ linux-wheels-i686:
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
-	osx deb ppa docker-debian-jessie \
+	osx deb ppa docker-debian-jessie docker-debian-stretch \
 	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
 	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
 	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
