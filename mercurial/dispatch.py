@@ -30,17 +30,12 @@ from . import (
     error,
     extensions,
     fancyopts,
-    fileset,
     help,
     hg,
     hook,
     profiling,
     pycompat,
-    revset,
     scmutil,
-    templatefilters,
-    templatekw,
-    templater,
     ui as uimod,
     util,
 )
@@ -727,22 +722,6 @@ def _checkshellalias(lui, ui, args):
 
 _loaded = set()
 
-# list of (objname, loadermod, loadername) tuple:
-# - objname is the name of an object in extension module, from which
-#   extra information is loaded
-# - loadermod is the module where loader is placed
-# - loadername is the name of the function, which takes (ui, extensionname,
-#   extraobj) arguments
-extraloaders = [
-    ('cmdtable', commands, 'loadcmdtable'),
-    ('colortable', color, 'loadcolortable'),
-    ('filesetpredicate', fileset, 'loadpredicate'),
-    ('revsetpredicate', revset, 'loadpredicate'),
-    ('templatefilter', templatefilters, 'loadfilter'),
-    ('templatefunc', templater, 'loadfunction'),
-    ('templatekeyword', templatekw, 'loadkeyword'),
-]
-
 def _dispatch(req):
     args = req.args
     ui = req.ui
@@ -770,18 +749,10 @@ def _dispatch(req):
         # reposetup. Programs like TortoiseHg will call _dispatch several
         # times so we keep track of configured extensions in _loaded.
         extensions.loadall(lui)
-        exts = [ext for ext in extensions.extensions() if ext[0] not in _loaded]
         # Propagate any changes to lui.__class__ by extensions
         ui.__class__ = lui.__class__
 
         # (uisetup and extsetup are handled in extensions.loadall)
-
-        for name, module in exts:
-            for objname, loadermod, loadername in extraloaders:
-                extraobj = getattr(module, objname, None)
-                if extraobj is not None:
-                    getattr(loadermod, loadername)(ui, name, extraobj)
-            _loaded.add(name)
 
         # (reposetup is handled in hg.repository)
 

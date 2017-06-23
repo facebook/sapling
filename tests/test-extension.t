@@ -77,15 +77,25 @@ Check that extensions are loaded in phases:
   >     print "3) %s extsetup" % name
   > def reposetup(ui, repo):
   >    print "4) %s reposetup" % name
+  > 
+  > # custom predicate to check registration of functions at loading
+  > from mercurial import (
+  >     registrar,
+  >     smartset,
+  > )
+  > revsetpredicate = registrar.revsetpredicate()
+  > @revsetpredicate(name, safe=True) # safe=True for query via hgweb
+  > def custompredicate(repo, subset, x):
+  >     return smartset.baseset([r for r in subset if r in {0}])
   > EOF
 
   $ cp foo.py bar.py
   $ echo 'foo = foo.py' >> $HGRCPATH
   $ echo 'bar = bar.py' >> $HGRCPATH
 
-Command with no output, we just want to see the extensions loaded:
+Check normal command's load order of extensions and registration of functions
 
-  $ hg paths
+  $ hg log -r "foo() and bar()" -q
   1) foo imported
   1) bar imported
   2) foo uisetup
@@ -94,8 +104,9 @@ Command with no output, we just want to see the extensions loaded:
   3) bar extsetup
   4) foo reposetup
   4) bar reposetup
+  0:c24b9ac61126
 
-Check hgweb's load order:
+Check hgweb's load order of extensions and registration of functions
 
   $ cat > hgweb.cgi <<EOF
   > #!$PYTHON
@@ -117,6 +128,14 @@ Check hgweb's load order:
   3) bar extsetup
   4) foo reposetup
   4) bar reposetup
+
+(check that revset predicate foo() and bar() are available)
+
+  $ REQUEST_METHOD='GET' PATH_INFO='/shortlog' SCRIPT_NAME='' \
+  >     QUERY_STRING='rev=foo() and bar()' \
+  >     SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
+  >     | grep '<a href="/rev/[0-9a-z]*">'
+     <a href="/rev/c24b9ac61126">add file</a>
 
   $ echo 'foo = !' >> $HGRCPATH
   $ echo 'bar = !' >> $HGRCPATH

@@ -243,6 +243,43 @@ def loadall(ui, whitelist=None):
     # entries could result in double execution. See issue4646.
     _aftercallbacks.clear()
 
+    # delay importing avoids cyclic dependency (especially commands)
+    from . import (
+        color,
+        commands,
+        fileset,
+        revset,
+        templatefilters,
+        templatekw,
+        templater,
+    )
+
+    # list of (objname, loadermod, loadername) tuple:
+    # - objname is the name of an object in extension module,
+    #   from which extra information is loaded
+    # - loadermod is the module where loader is placed
+    # - loadername is the name of the function,
+    #   which takes (ui, extensionname, extraobj) arguments
+    extraloaders = [
+        ('cmdtable', commands, 'loadcmdtable'),
+        ('colortable', color, 'loadcolortable'),
+        ('filesetpredicate', fileset, 'loadpredicate'),
+        ('revsetpredicate', revset, 'loadpredicate'),
+        ('templatefilter', templatefilters, 'loadfilter'),
+        ('templatefunc', templater, 'loadfunction'),
+        ('templatekeyword', templatekw, 'loadkeyword'),
+    ]
+
+    for name in _order[newindex:]:
+        module = _extensions[name]
+        if not module:
+            continue # loading this module failed
+
+        for objname, loadermod, loadername in extraloaders:
+            extraobj = getattr(module, objname, None)
+            if extraobj is not None:
+                getattr(loadermod, loadername)(ui, name, extraobj)
+
 def afterloaded(extension, callback):
     '''Run the specified function after a named extension is loaded.
 
