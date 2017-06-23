@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
   debhelper \
   dh-python \
   devscripts \
+  less \
   python \
   python-all-dev \
   python-docutils \
