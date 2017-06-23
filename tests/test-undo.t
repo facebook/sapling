@@ -1,0 +1,62 @@
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > undo = $TESTDIR/../hgext3rd/undo.py
+  > EOF
+
+Build up a repo
+
+  $ hg init repo
+  $ cd repo
+
+Test committing
+
+  $ hg book master
+  $ touch a1 && hg add a1 && hg ci -ma1
+  $ touch a2 && hg add a2 && hg ci -ma2
+  $ hg book feature1
+  $ touch b && hg add b && hg ci -mb
+  $ hg up -q master
+  $ touch c1 && hg add c1 && hg ci -mc1
+  created new head
+  $ touch c2 && hg add c2 && hg ci -mc2
+  $ hg book feature2
+  $ touch d && hg add d && hg ci -md
+  $ hg debugindex .hg/store/undolog/command.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      12     -1       1 440cdcef588f 000000000000 000000000000
+       1        12       8     -1       1 86fddc37572c 000000000000 000000000000
+       2        20       8     -1       1 388d40a434df 000000000000 000000000000
+       3        28      14     -1       1 1cafbfad488a 000000000000 000000000000
+       4        42       7     -1       1 8879b3bd818b 000000000000 000000000000
+       5        49       8     -1       1 004b7198dafe 000000000000 000000000000
+       6        57       8     -1       1 60920018c706 000000000000 000000000000
+       7        65      14     -1       1 c3e212568400 000000000000 000000000000
+       8        79       7     -1       1 9d609b5b001c 000000000000 000000000000
+  $ hg debugdata .hg/store/undolog/command.i 0
+  book\x00master (no-eol) (esc)
+  $ hg debugdata .hg/store/undolog/command.i 1
+  ci\x00-ma1 (no-eol) (esc)
+  $ hg debugdata .hg/store/undolog/command.i 2
+  ci\x00-ma2 (no-eol) (esc)
+  $ hg debugdata .hg/store/undolog/command.i 3
+  book\x00feature1 (no-eol) (esc)
+  $ hg debugdata .hg/store/undolog/bookmarks.i 0
+  master 0000000000000000000000000000000000000000 (no-eol)
+  $ hg debugdata .hg/store/undolog/bookmarks.i 1
+  master df4fd610a3d6ca792281e7576587fa18f940d37a (no-eol)
+  $ hg debugdata .hg/store/undolog/bookmarks.i 2
+  master b68836a6e2cac33ba33a20249b85a486eec78186 (no-eol)
+  $ hg debugdata .hg/store/undolog/workingparent.i 0
+  0000000000000000000000000000000000000000 (no-eol)
+  $ hg debugdata .hg/store/undolog/workingparent.i 1
+  df4fd610a3d6ca792281e7576587fa18f940d37a (no-eol)
+  $ hg debugdata .hg/store/undolog/draftheads.i 1
+  df4fd610a3d6ca792281e7576587fa18f940d37a (no-eol)
+  $ hg debugdata .hg/store/undolog/draftheads.i 2
+  b68836a6e2cac33ba33a20249b85a486eec78186 (no-eol)
+  $ hg debugdata .hg/store/undolog/index.i 1
+  bookmarks 7e779701a683b09f3fb6177013cd051020a89849
+  command 86fddc37572cd9fa0a9791a958ee5c49b80dd306
+  date * (glob)
+  draftheads 19067172df74c2696a1a3dee5146b76a61c3761f
+  workingparent 19067172df74c2696a1a3dee5146b76a61c3761f (no-eol)
