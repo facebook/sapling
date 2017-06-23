@@ -185,8 +185,8 @@ def parsereleasenotesfile(sections, text):
 
     blocks = minirst.parse(text)[0]
 
-    def gatherparagraphs(offset):
-        paragraphs = []
+    def gatherparagraphsbullets(offset, title=False):
+        notefragment = []
 
         for i in range(offset + 1, len(blocks)):
             block = blocks[i]
@@ -198,17 +198,27 @@ def parsereleasenotesfile(sections, text):
             elif block['type'] == 'bullet':
                 if block['indent'] != 0:
                     raise error.Abort(_('indented bullet lists not supported'))
+                if title:
+                    lines = [l[1:].strip() for l in block['lines']]
+                    notefragment.append(lines)
+                    continue
+                else:
+                    lines = [[l[1:].strip() for l in block['lines']]]
 
-                lines = [l[1:].strip() for l in block['lines']]
-                paragraphs.append(lines)
-                continue
+                    for block in blocks[i + 1:]:
+                        if block['type'] in ('bullet', 'section'):
+                            break
+                        if block['type'] == 'paragraph':
+                            lines.append(block['lines'])
+                    notefragment.append(lines)
+                    continue
             elif block['type'] != 'paragraph':
                 raise error.Abort(_('unexpected block type in release notes: '
                                     '%s') % block['type'])
+            if title:
+                notefragment.append(block['lines'])
 
-            paragraphs.append(block['lines'])
-
-        return paragraphs
+        return notefragment
 
     currentsection = None
     for i, block in enumerate(blocks):
@@ -226,16 +236,18 @@ def parsereleasenotesfile(sections, text):
                                   title)
 
             currentsection = name
-            paragraphs = gatherparagraphs(i)
-            if paragraphs:
-                notes.addnontitleditem(currentsection, paragraphs)
+            bullet_points = gatherparagraphsbullets(i)
+            if bullet_points:
+                for para in bullet_points:
+                    notes.addnontitleditem(currentsection, para)
 
         elif block['underline'] == '-':  # sub-section
-            paragraphs = gatherparagraphs(i)
-
             if title == BULLET_SECTION:
-                notes.addnontitleditem(currentsection, paragraphs)
+                bullet_points = gatherparagraphsbullets(i)
+                for para in bullet_points:
+                    notes.addnontitleditem(currentsection, para)
             else:
+                paragraphs = gatherparagraphsbullets(i, True)
                 notes.addtitleditem(currentsection, title, paragraphs)
         else:
             raise error.Abort(_('unsupported section type for %s') % title)

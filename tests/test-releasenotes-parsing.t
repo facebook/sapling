@@ -59,7 +59,9 @@ Multiple bullet points. With some entries being multiple lines.
   section: feature
     bullet point:
       paragraph: First bullet point. It has a single line.
+    bullet point:
       paragraph: Second bullet point. It consists of multiple lines.
+    bullet point:
       paragraph: Third bullet point. It has a single line.
 
 Bullet point without newline between items
@@ -77,8 +79,11 @@ Bullet point without newline between items
   section: feature
     bullet point:
       paragraph: First bullet point
+    bullet point:
       paragraph: Second bullet point And it has multiple lines
+    bullet point:
       paragraph: Third bullet point
+    bullet point:
       paragraph: Fourth bullet point
 
 Sub-section contents are read
@@ -130,10 +135,12 @@ Multiple sections are read
   section: feature
     bullet point:
       paragraph: Feature 1
+    bullet point:
       paragraph: Feature 2
   section: fix
     bullet point:
       paragraph: Fix 1
+    bullet point:
       paragraph: Fix 2
 
 Mixed sub-sections and bullet list
@@ -166,4 +173,5 @@ Mixed sub-sections and bullet list
       paragraph: Some words about the second feature. That span multiple lines.
     bullet point:
       paragraph: Bullet item 1
+    bullet point:
       paragraph: Bullet item 2

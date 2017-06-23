@@ -34,8 +34,7 @@ A fix directive from commit message is added to release notes
   
   * Fix from commit message.
 
-Processing again will no-op
-TODO this is buggy
+Processing again ignores the already added bullet.
 
   $ hg releasenotes -r . $TESTTMP/single-fix-bullet
 
@@ -44,8 +43,6 @@ TODO this is buggy
   =========
   
   * Fix from release notes.
-  
-    Fix from commit message.
   
   * Fix from commit message.
 
@@ -111,7 +108,7 @@ Doing it again won't add another section
 
   $ cd ..
 
-Bullets don't merge properly
+Bullets from rev merge with those from notes file.
 
   $ hg init bullets
   $ cd bullets
@@ -157,7 +154,7 @@ Bullets don't merge properly
   
   * this is fix1.
   
-    this is fix2.
+  * this is fix2.
   
   * this is fix3.
 
