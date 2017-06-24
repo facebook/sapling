@@ -117,7 +117,7 @@ class abstractsmartset(object):
         """reverse the expected iteration order"""
         raise NotImplementedError()
 
-    def sort(self, reverse=True):
+    def sort(self, reverse=False):
         """get the set to iterate in an ascending or descending order"""
         raise NotImplementedError()
 
