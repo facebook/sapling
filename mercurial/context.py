@@ -65,14 +65,10 @@ class basectx(object):
 
         return o
 
-    def __str__(self):
-        r = short(self.node())
-        if pycompat.ispy3:
-            return r.decode('ascii')
-        return r
-
     def __bytes__(self):
         return short(self.node())
+
+    __str__ = encoding.strmethod(__bytes__)
 
     def __int__(self):
         return self.rev()
@@ -710,17 +706,13 @@ class basefilectx(object):
 
     __bool__ = __nonzero__
 
-    def __str__(self):
-        try:
-            return "%s@%s" % (self.path(), self._changectx)
-        except error.LookupError:
-            return "%s@???" % self.path()
-
     def __bytes__(self):
         try:
             return "%s@%s" % (self.path(), self._changectx)
         except error.LookupError:
             return "%s@???" % self.path()
+
+    __str__ = encoding.strmethod(__bytes__)
 
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
@@ -1306,11 +1298,10 @@ class committablectx(basectx):
         if self._extra['branch'] == '':
             self._extra['branch'] = 'default'
 
-    def __str__(self):
-        return str(self._parents[0]) + r"+"
-
     def __bytes__(self):
         return bytes(self._parents[0]) + "+"
+
+    __str__ = encoding.strmethod(__bytes__)
 
     def __nonzero__(self):
         return True

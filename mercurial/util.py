@@ -2740,7 +2740,7 @@ class url(object):
                 attrs.append('%s: %r' % (a, v))
         return '<url %s>' % ', '.join(attrs)
 
-    def __str__(self):
+    def __bytes__(self):
         r"""Join the URL's components back into a URL string.
 
         Examples:
@@ -2774,9 +2774,6 @@ class url(object):
         >>> print url(r'file:///D:\data\hg')
         file:///D:\data\hg
         """
-        return encoding.strfromlocal(self.__bytes__())
-
-    def __bytes__(self):
         if self._localpath:
             s = self.path
             if self.scheme == 'bundle':
@@ -2819,6 +2816,8 @@ class url(object):
         if self.fragment is not None:
             s += '#' + urlreq.quote(self.fragment, safe=self._safepchars)
         return s
+
+    __str__ = encoding.strmethod(__bytes__)
 
     def authinfo(self):
         user, passwd = self.user, self.passwd

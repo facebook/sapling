@@ -177,15 +177,24 @@ def unifromlocal(s):
     """Convert a byte string of local encoding to a unicode string"""
     return fromlocal(s).decode('utf-8')
 
+def unimethod(bytesfunc):
+    """Create a proxy method that forwards __unicode__() and __str__() of
+    Python 3 to __bytes__()"""
+    def unifunc(obj):
+        return unifromlocal(bytesfunc(obj))
+    return unifunc
+
 # converter functions between native str and byte string. use these if the
 # character encoding is not aware (e.g. exception message) or is known to
 # be locale dependent (e.g. date formatting.)
 if pycompat.ispy3:
     strtolocal = unitolocal
     strfromlocal = unifromlocal
+    strmethod = unimethod
 else:
     strtolocal = pycompat.identity
     strfromlocal = pycompat.identity
+    strmethod = pycompat.identity
 
 if not _nativeenviron:
     # now encoding and helper functions are available, recreate the environ
