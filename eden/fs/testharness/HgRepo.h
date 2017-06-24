@@ -1,0 +1,122 @@
+/*
+ *  Copyright (c) 2016-present, Facebook, Inc.
+ *  All rights reserved.
+ *
+ *  This source code is licensed under the BSD-style license found in the
+ *  LICENSE file in the root directory of this source tree. An additional grant
+ *  of patent rights can be found in the PATENTS file in the same directory.
+ *
+ */
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include "eden/fs/utils/PathFuncs.h"
+
+namespace facebook {
+namespace eden {
+
+class Hash;
+
+/**
+ * A helper class for working with a mercurial repository in unit tests.
+ */
+class HgRepo {
+ public:
+  explicit HgRepo(AbsolutePathPiece path);
+
+  const AbsolutePath& path() const {
+    return path_;
+  }
+
+  /**
+   * Run an hg command.
+   *
+   * The parameters are the arguments to pass to hg.  This should not
+   * include the "hg" program name itself (argument 0).
+   *
+   * e.g., hg("add") will run "hg add" in the repository.
+   * Arguments can be strings, RelativePaths, or AbsolutePaths.
+   *
+   * Returns the data that the command printed on stdout.
+   * Throws if the command exited with a non-zero status.
+   */
+  template <typename... Args>
+  std::string hg(const Args&... args) {
+    std::vector<std::string> argsVector;
+    buildHgArgs(argsVector, args...);
+    return hg(std::move(argsVector));
+  }
+
+  /**
+   * Run an hg command.
+   *
+   * @param args The arguments to pass to "hg" (not including argument 0, "hg"
+   *     itself).
+   *
+   * Returns the data that the command printed on stdout.
+   * Throws if the command exited with a non-zero status.
+   */
+  std::string hg(std::vector<std::string> args);
+
+  /**
+   * Call "hg init" to create the repository.
+   */
+  void hgInit();
+
+  Hash commit(folly::StringPiece message);
+
+  void mkdir(RelativePathPiece path, mode_t permissions = 0755);
+  void mkdir(folly::StringPiece path, mode_t permissions = 0755) {
+    mkdir(RelativePathPiece{path}, permissions);
+  }
+
+  void writeFile(
+      RelativePathPiece path,
+      folly::StringPiece contents,
+      mode_t permissions = 0644);
+  void writeFile(
+      folly::StringPiece path,
+      folly::StringPiece contents,
+      mode_t permissions = 0644) {
+    writeFile(RelativePathPiece{path}, contents, permissions);
+  }
+
+  void symlink(folly::StringPiece contents, RelativePathPiece path);
+
+ private:
+  void initHg();
+
+  void buildHgArgs(std::vector<std::string>& /* cmd */) {}
+  template <typename... Args>
+  void buildHgArgs(
+      std::vector<std::string>& cmd,
+      folly::StringPiece str,
+      const Args&... args) {
+    cmd.push_back(str.str());
+    buildHgArgs(cmd, args...);
+  }
+  template <typename... Args>
+  void buildHgArgs(
+      std::vector<std::string>& cmd,
+      RelativePathPiece path,
+      const Args&... args) {
+    cmd.push_back(path.value().str());
+    buildHgArgs(cmd, args...);
+  }
+  template <typename... Args>
+  void buildHgArgs(
+      std::vector<std::string>& cmd,
+      AbsolutePathPiece path,
+      const Args&... args) {
+    cmd.push_back(path.value().str());
+    buildHgArgs(cmd, args...);
+  }
+
+  AbsolutePath hgCmd_;
+  std::vector<std::string> hgEnv_;
+  AbsolutePath path_;
+};
+}
+}

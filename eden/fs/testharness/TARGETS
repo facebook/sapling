@@ -10,6 +10,7 @@ cpp_library(
         "@/eden/fs/store/hg:hg",
         "@/eden/fs/utils:utils",
         "@/folly:folly",
+        "@/folly:subprocess",
         "@/folly/experimental:test_util",
     ],
 )

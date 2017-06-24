@@ -490,8 +490,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 Hash HgImporter::importManifest(StringPiece revName) {
   try {
     auto manifestNode = resolveManifestNode(revName);
-    XLOG(ERR) << "revision " << revName << " has manifest node "
-              << manifestNode;
+    XLOG(DBG0) << "revision " << revName << " has manifest node "
+               << manifestNode;
 
     // Record that we are at the root for this node
     RelativePathPiece path{};

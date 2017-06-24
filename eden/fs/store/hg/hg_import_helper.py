@@ -20,6 +20,7 @@ import struct
 import sys
 import time
 
+import mercurial.error
 import mercurial.hg
 import mercurial.node
 import mercurial.scmutil
@@ -291,7 +292,16 @@ class HgServer(object):
         '''
         rev_name = request.body
         self.debug('resolving manifest node for revision %r', rev_name)
-        self.send_chunk(request, self.get_manifest_node(rev_name))
+        try:
+            node = self.get_manifest_node(rev_name)
+        except mercurial.error.RepoError as ex:
+            # Handle lookup errors explicitly, just so we avoid printing
+            # a backtrace in the log if we let this bubble all the way up
+            # to the unexpected exception handling code in process_request()
+            self.send_error(request, str(ex))
+            return
+
+        self.send_chunk(request, node)
 
     @cmd(CMD_GET_CACHE_PATH)
     def cmd_get_cache_path(self, request):
