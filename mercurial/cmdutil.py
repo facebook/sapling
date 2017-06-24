@@ -1577,7 +1577,12 @@ class jsonchangeset(changeset_printer):
 class changeset_templater(changeset_printer):
     '''format changeset information.'''
 
-    def __init__(self, ui, repo, tmplspec, matchfn, diffopts, buffered):
+    # Arguments before "buffered" used to be positional. Consider not
+    # adding/removing arguments before "buffered" to not break callers.
+    def __init__(self, ui, repo, tmplspec, matchfn=None, diffopts=None,
+                 buffered=False):
+        diffopts = diffopts or {}
+
         changeset_printer.__init__(self, ui, repo, matchfn, diffopts, buffered)
         self.t = formatter.loadtemplater(ui, tmplspec,
                                          cache=templatekw.defaulttempl)
@@ -1694,8 +1699,7 @@ def _lookuplogtemplate(ui, tmpl, style):
 def makelogtemplater(ui, repo, tmpl, buffered=False):
     """Create a changeset_templater from a literal template 'tmpl'"""
     spec = logtemplatespec(tmpl, None)
-    return changeset_templater(ui, repo, spec, matchfn=None, diffopts={},
-                               buffered=buffered)
+    return changeset_templater(ui, repo, spec, buffered=buffered)
 
 def show_changeset(ui, repo, opts, buffered=False):
     """show one changeset using template or regular display.
