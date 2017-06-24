@@ -944,12 +944,11 @@ def bookmark(ui, repo, *names, **opts):
 
           hg book -f @
     '''
-    opts = pycompat.byteskwargs(opts)
-    force = opts.get('force')
-    rev = opts.get('rev')
-    delete = opts.get('delete')
-    rename = opts.get('rename')
-    inactive = opts.get('inactive')
+    force = opts.get(r'force')
+    rev = opts.get(r'rev')
+    delete = opts.get(r'delete')
+    rename = opts.get(r'rename')
+    inactive = opts.get(r'inactive')
 
     if delete and rename:
         raise error.Abort(_("--delete and --rename are incompatible"))

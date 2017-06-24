@@ -20,6 +20,7 @@ from . import (
     error,
     lock as lockmod,
     obsolete,
+    pycompat,
     scmutil,
     txnutil,
     util,
@@ -771,6 +772,7 @@ def _printbookmarks(ui, repo, bmarks, **opts):
     Provides a way for extensions to control how bookmarks are printed (e.g.
     prepend or postpend names)
     """
+    opts = pycompat.byteskwargs(opts)
     fm = ui.formatter('bookmarks', opts)
     hexfn = fm.hexfunc
     if len(bmarks) == 0 and fm.isplain():
