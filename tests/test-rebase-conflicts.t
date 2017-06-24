@@ -3,6 +3,7 @@
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
+  > drawdag=$TESTDIR/drawdag.py
   > 
   > [phases]
   > publish=False
@@ -363,3 +364,50 @@ Test minimization of merge conflicts
   +b
   +c
   +>>>>>>> source: 7bc217434fc1 - test: abc
+
+Test rebase with obsstore turned on and off (issue5606)
+
+  $ cd $TESTTMP
+  $ hg init b
+  $ cd b
+  $ hg debugdrawdag <<'EOS'
+  > D
+  > |
+  > C
+  > |
+  > B E
+  > |/
+  > A
+  > EOS
+
+  $ hg update E -q
+  $ echo 3 > B
+  $ hg commit --amend -m E -A B -q
+  $ hg rebase -r B+D -d . --config experimental.evolution=all
+  rebasing 1:112478962961 "B" (B)
+  merging B
+  warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ echo 4 > B
+  $ hg resolve -m
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue --config experimental.evolution=none
+  rebasing 1:112478962961 "B" (B)
+  not rebasing ignored 2:26805aba1e60 "C" (C)
+  rebasing 3:f585351a92f8 "D" (D)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-cb2a9b47-backup.hg (glob)
+
+  $ rm .hg/localtags
+  $ hg tglog
+  o  3:draft 'D'
+  |
+  o  2:draft 'B'
+  |
+  @  1:draft 'E'
+  |
+  o  0:draft 'A'
+  
+Note the above graph is wrong since C got stripped incorrectly.
