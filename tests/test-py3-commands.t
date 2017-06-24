@@ -229,3 +229,11 @@ Show that update works now!
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ $PYTHON3 $HGBIN identify
   71c96e924262
+
+branches and bookmarks also works!
+
+  $ $PYTHON3 $HGBIN branches
+  default                        1:e1e9167203d4
+  $ $PYTHON3 $HGBIN bookmark book
+  $ $PYTHON3 $HGBIN bookmarks
+   * book                      0:71c96e924262
