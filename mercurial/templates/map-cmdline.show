@@ -5,8 +5,14 @@
 #   map-cmdline.default.
 showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, 5)}\n'
 
-showwork = '{cset_shortnode}{cset_names} {cset_shortdesc}'
+showwork = '{cset_shortnode}{namespaces % cset_namespace} {cset_shortdesc}'
 
 cset_shortnode = '{label("log.changeset changeset.{phase}", shortest(node, 5))}'
-cset_names = '{if(branches, " ({label("log.branch", branch)})")}{if(bookmarks, " ({label("log.bookmarks", bookmarks)})")}'
+
+# Treat branch and tags specially so we don't display "default" or "tip"
+cset_namespace = '{ifeq(namespace, "branches", names_branches, ifeq(namespace, "tags", names_tags, names_others))}'
+names_branches = '{ifeq(branch, "default", "", " ({label('log.{colorname}', branch)})")}'
+names_tags = '{if(names % "{ifeq(name, 'tip', '', name)}", " ({label('log.{colorname}', join(names % "{ifeq(name, 'tip', '', name)}", ' '))})")}'
+names_others = '{if(names, " ({label('log.{colorname}', join(names, ' '))})")}'
+
 cset_shortdesc = '{label("log.description", desc|firstline)}'

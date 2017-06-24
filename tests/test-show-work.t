@@ -181,10 +181,9 @@ Tags are rendered
   $ hg commit -m 'commit 3'
   $ hg tag 0.2
 
-TODO tags aren't yet rendered
   $ hg show work
   @  37582 Added tag 0.2 for changeset 6379c25b76f1
-  o  6379c commit 3
+  o  6379c (0.2) commit 3
   o  a2ad9 Added tag 0.1 for changeset 6a75536ea0b1
   |
   ~
@@ -206,14 +205,14 @@ Multiple names on same changeset render properly
   $ hg commit -m 'commit 2'
 
   $ hg show work
-  @  34834 (mybranch) (mybook) commit 2
+  @  34834 (mybook) (mybranch) commit 2
   o  97fcc commit 1
 
 Multiple bookmarks on same changeset render properly
 
   $ hg book mybook2
   $ hg show work
-  @  34834 (mybranch) (mybook mybook2) commit 2
+  @  34834 (mybook mybook2) (mybranch) commit 2
   o  97fcc commit 1
 
   $ cd ..
@@ -230,10 +229,9 @@ Extra namespaces are rendered
   $ echo 2 > foo
   $ hg commit -m 'commit 3'
 
-TODO don't yet render extra namespaces
   $ hg --config extensions.revnames=$TESTDIR/revnamesext.py show work
-  @  32f3e commit 3
-  o  6a755 commit 2
-  o  97fcc commit 1
+  @  32f3e (r2) commit 3
+  o  6a755 (r1) commit 2
+  o  97fcc (r0) commit 1
 
   $ cd ..
