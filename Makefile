@@ -203,9 +203,16 @@ deb:
 ppa:
 	contrib/builddeb --source-only
 
-docker-debian-jessie:
+contrib/docker/debian-%: contrib/docker/debian.template
+	sed "s/__CODENAME__/$*/" $< > $@
+
+docker-debian-jessie: contrib/docker/debian-jessie
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
+
+docker-debian-stretch: contrib/docker/debian-stretch
+	mkdir -p packages/debian-stretch
+	contrib/dockerdeb debian stretch
 
 contrib/docker/ubuntu-%: contrib/docker/ubuntu.template
 	sed "s/__CODENAME__/$*/" $< > $@
@@ -227,6 +234,12 @@ docker-ubuntu-yakkety: contrib/docker/ubuntu-yakkety
 
 docker-ubuntu-yakkety-ppa: contrib/docker/ubuntu-yakkety
 	contrib/dockerdeb ubuntu yakkety --source-only
+
+docker-ubuntu-zesty: contrib/docker/ubuntu-zesty
+	contrib/dockerdeb ubuntu zesty
+
+docker-ubuntu-zesty-ppa: contrib/docker/ubuntu-zesty
+	contrib/dockerdeb ubuntu zesty --source-only
 
 fedora20:
 	mkdir -p packages/fedora20
@@ -291,10 +304,11 @@ linux-wheels-i686:
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
 	dist dist-notests check tests check-code update-pot \
-	osx deb ppa docker-debian-jessie \
+	osx deb ppa docker-debian-jessie docker-debian-stretch \
 	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
 	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
 	docker-ubuntu-yakkety docker-ubuntu-yakkety-ppa \
+	docker-ubuntu-zesty docker-ubuntu-zesty-ppa \
 	fedora20 docker-fedora20 fedora21 docker-fedora21 \
 	centos5 docker-centos5 centos6 docker-centos6 centos7 docker-centos7 \
 	linux-wheels

@@ -1,9 +1,10 @@
-FROM debian:jessie
+FROM debian:__CODENAME__
 RUN apt-get update && apt-get install -y \
   build-essential \
   debhelper \
   dh-python \
   devscripts \
+  less \
   python \
   python-all-dev \
   python-docutils \
