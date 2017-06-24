@@ -43,7 +43,7 @@ class showcmdfunc(registrar._funcregistrarbase):
     # Used by _formatdoc().
     _docformat = '%s -- %s'
 
-    def _extrasetup(self, name, func, fmtopic=None):
+    def _extrasetup(self, name, func, fmtopic=None, csettopic=None):
         """Called with decorator arguments to register a show view.
 
         ``name`` is the sub-command name.
@@ -52,8 +52,16 @@ class showcmdfunc(registrar._funcregistrarbase):
 
         ``fmtopic`` is the topic in the style that will be rendered for
         this view.
+
+        ``csettopic`` is the topic in the style to be used for a changeset
+        printer.
+
+        If ``fmtopic`` is specified, the view function will receive a
+        formatter instance. If ``csettopic`` is specified, the view
+        function will receive a changeset printer.
         """
         func._fmtopic = fmtopic
+        func._csettopic = csettopic
 
 showview = showcmdfunc()
 
@@ -109,11 +117,21 @@ def show(ui, repo, view=None, template=None):
                           hint=_('run "hg show" to see available views'))
 
     template = template or 'show'
-    fmtopic = 'show%s' % views[view]._fmtopic
 
+    fn = views[view]
     ui.pager('show')
-    with ui.formatter(fmtopic, {'template': template}) as fm:
-        return views[view](ui, repo, fm)
+
+    if fn._fmtopic:
+        fmtopic = 'show%s' % fn._fmtopic
+        with ui.formatter(fmtopic, {'template': template}) as fm:
+            return fn(ui, repo, fm)
+    elif fn._csettopic:
+        ref = 'show%s' % fn._csettopic
+        spec = formatter.lookuptemplate(ui, ref, template)
+        displayer = cmdutil.changeset_templater(ui, repo, spec, buffered=True)
+        return fn(ui, repo, displayer)
+    else:
+        return fn(ui, repo)
 
 @showview('bookmarks', fmtopic='bookmarks')
 def showbookmarks(ui, repo, fm):
@@ -189,15 +207,13 @@ def underwayrevset(repo, subset, x):
 
     return subset & relevant
 
-@showview('work', fmtopic='work')
-def showwork(ui, repo, fm):
+@showview('work', csettopic='work')
+def showwork(ui, repo, displayer):
     """changesets that aren't finished"""
     # TODO support date-based limiting when calling revset.
     revs = repo.revs('sort(_underway(), topo)')
 
     revdag = graphmod.dagwalker(repo, revs)
-    tmpl = fm._t.load(fm._topic)
-    displayer = cmdutil.makelogtemplater(ui, repo, tmpl, buffered=True)
 
     ui.setconfig('experimental', 'graphshorten', True)
     cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)

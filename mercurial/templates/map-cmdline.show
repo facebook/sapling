@@ -1,9 +1,12 @@
 # TODO there are a few deficiencies in this file:
-# * Due to the way the file is loaded, references to other entities in the
-#   template doesn't work. That requires us to inline.
 # * The "namespace" of the labels needs to be worked out. We currently
 #   piggyback on existing values so color works.
 # * Obsolescence isn't considered for node labels. See _cset_labels in
 #   map-cmdline.default.
 showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, 5)}\n'
-showwork = '{label("log.changeset changeset.{phase}", shortest(node, 5))}{if(branches, " ({label("log.branch", branch)})")}{if(bookmarks, " ({label("log.bookmarks", bookmarks)})")} {label("log.description", desc|firstline)}'
+
+showwork = '{cset_shortnode}{cset_names} {cset_shortdesc}'
+
+cset_shortnode = '{label("log.changeset changeset.{phase}", shortest(node, 5))}'
+cset_names = '{if(branches, " ({label("log.branch", branch)})")}{if(bookmarks, " ({label("log.bookmarks", bookmarks)})")}'
+cset_shortdesc = '{label("log.description", desc|firstline)}'
