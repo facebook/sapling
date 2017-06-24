@@ -23,11 +23,14 @@ generatorset = smartset.generatorset
 # possible maximum depth between null and wdir()
 _maxlogdepth = 0x80000000
 
-def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
-    if followfirst:
-        cut = 1
-    else:
-        cut = None
+def _walkrevtree(pfunc, revs, startdepth, stopdepth):
+    """Walk DAG using 'pfunc' from the given 'revs' nodes
+
+    'pfunc(rev)' should return the parent revisions of the given 'rev'.
+
+    Scan ends at the stopdepth (exlusive) if specified. Revisions found
+    earlier than the startdepth are omitted.
+    """
     if startdepth is None:
         startdepth = 0
     if stopdepth is None:
@@ -36,13 +39,6 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
         return
     if stopdepth < 0:
         raise error.ProgrammingError('negative stopdepth')
-
-    cl = repo.changelog
-    def pfunc(rev):
-        try:
-            return cl.parentrevs(rev)[:cut]
-        except error.WdirUnsupported:
-            return (pctx.rev() for pctx in repo[rev].parents()[:cut])
 
     # load input revs lazily to heap so earlier revisions can be yielded
     # without fully computing the input revs
@@ -73,6 +69,19 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
             for prev in pfunc(currev):
                 if prev != node.nullrev:
                     heapq.heappush(pendingheap, (-prev, pdepth))
+
+def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
+    if followfirst:
+        cut = 1
+    else:
+        cut = None
+    cl = repo.changelog
+    def pfunc(rev):
+        try:
+            return cl.parentrevs(rev)[:cut]
+        except error.WdirUnsupported:
+            return (pctx.rev() for pctx in repo[rev].parents()[:cut])
+    return _walkrevtree(pfunc, revs, startdepth, stopdepth)
 
 def revancestors(repo, revs, followfirst, startdepth=None, stopdepth=None):
     """Like revlog.ancestors(), but supports additional options, includes
