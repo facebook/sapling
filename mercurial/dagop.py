@@ -23,10 +23,11 @@ generatorset = smartset.generatorset
 # possible maximum depth between null and wdir()
 _maxlogdepth = 0x80000000
 
-def _walkrevtree(pfunc, revs, startdepth, stopdepth):
+def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
     """Walk DAG using 'pfunc' from the given 'revs' nodes
 
-    'pfunc(rev)' should return the parent revisions of the given 'rev'.
+    'pfunc(rev)' should return the parent/child revisions of the given 'rev'
+    if 'reverse' is True/False respectively.
 
     Scan ends at the stopdepth (exlusive) if specified. Revisions found
     earlier than the startdepth are omitted.
@@ -39,25 +40,29 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth):
         return
     if stopdepth < 0:
         raise error.ProgrammingError('negative stopdepth')
+    if reverse:
+        heapsign = -1  # max heap
+    else:
+        heapsign = +1  # min heap
 
     # load input revs lazily to heap so earlier revisions can be yielded
     # without fully computing the input revs
-    revs.sort(reverse=True)
+    revs.sort(reverse)
     irevs = iter(revs)
-    pendingheap = []  # [(-rev, depth), ...] (i.e. lower depth first)
+    pendingheap = []  # [(heapsign * rev, depth), ...] (i.e. lower depth first)
 
     inputrev = next(irevs, None)
     if inputrev is not None:
-        heapq.heappush(pendingheap, (-inputrev, 0))
+        heapq.heappush(pendingheap, (heapsign * inputrev, 0))
 
     lastrev = None
     while pendingheap:
         currev, curdepth = heapq.heappop(pendingheap)
-        currev = -currev
+        currev = heapsign * currev
         if currev == inputrev:
             inputrev = next(irevs, None)
             if inputrev is not None:
-                heapq.heappush(pendingheap, (-inputrev, 0))
+                heapq.heappush(pendingheap, (heapsign * inputrev, 0))
         # rescan parents until curdepth >= startdepth because queued entries
         # of the same revision are iterated from the lowest depth
         foundnew = (currev != lastrev)
@@ -68,7 +73,7 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth):
         if foundnew and pdepth < stopdepth:
             for prev in pfunc(currev):
                 if prev != node.nullrev:
-                    heapq.heappush(pendingheap, (-prev, pdepth))
+                    heapq.heappush(pendingheap, (heapsign * prev, pdepth))
 
 def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
     if followfirst:
@@ -81,7 +86,7 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
             return cl.parentrevs(rev)[:cut]
         except error.WdirUnsupported:
             return (pctx.rev() for pctx in repo[rev].parents()[:cut])
-    return _walkrevtree(pfunc, revs, startdepth, stopdepth)
+    return _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse=True)
 
 def revancestors(repo, revs, followfirst, startdepth=None, stopdepth=None):
     """Like revlog.ancestors(), but supports additional options, includes
