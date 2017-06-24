@@ -166,3 +166,74 @@ Bookmark name appears in output
   ~
 
   $ cd ..
+
+Tags are rendered
+
+  $ hg init tags
+  $ cd tags
+  $ echo 0 > foo
+  $ hg -q commit -A -m 'commit 1'
+  $ echo 1 > foo
+  $ hg commit -m 'commit 2'
+  $ hg tag 0.1
+  $ hg phase --public -r .
+  $ echo 2 > foo
+  $ hg commit -m 'commit 3'
+  $ hg tag 0.2
+
+TODO tags aren't yet rendered
+  $ hg show work
+  @  37582 Added tag 0.2 for changeset 6379c25b76f1
+  o  6379c commit 3
+  o  a2ad9 Added tag 0.1 for changeset 6a75536ea0b1
+  |
+  ~
+
+  $ cd ..
+
+Multiple names on same changeset render properly
+
+  $ hg init multiplenames
+  $ cd multiplenames
+  $ echo 0 > foo
+  $ hg -q commit -A -m 'commit 1'
+  $ hg phase --public -r .
+  $ hg branch mybranch
+  marked working directory as branch mybranch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg bookmark mybook
+  $ echo 1 > foo
+  $ hg commit -m 'commit 2'
+
+  $ hg show work
+  @  34834 (mybranch) (mybook) commit 2
+  o  97fcc commit 1
+
+Multiple bookmarks on same changeset render properly
+
+  $ hg book mybook2
+  $ hg show work
+  @  34834 (mybranch) (mybook mybook2) commit 2
+  o  97fcc commit 1
+
+  $ cd ..
+
+Extra namespaces are rendered
+
+  $ hg init extranamespaces
+  $ cd extranamespaces
+  $ echo 0 > foo
+  $ hg -q commit -A -m 'commit 1'
+  $ hg phase --public -r .
+  $ echo 1 > foo
+  $ hg commit -m 'commit 2'
+  $ echo 2 > foo
+  $ hg commit -m 'commit 3'
+
+TODO don't yet render extra namespaces
+  $ hg --config extensions.revnames=$TESTDIR/revnamesext.py show work
+  @  32f3e commit 3
+  o  6a755 commit 2
+  o  97fcc commit 1
+
+  $ cd ..
