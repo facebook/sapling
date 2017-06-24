@@ -2840,7 +2840,7 @@ class url(object):
             return True # remote URL
         if hasdriveletter(self.path):
             return True # absolute for our purposes - can't be joined()
-        if self.path.startswith(r'\\'):
+        if self.path.startswith(br'\\'):
             return True # Windows UNC path
         if self.path.startswith('/'):
             return True # POSIX-style

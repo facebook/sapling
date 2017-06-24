@@ -1257,7 +1257,7 @@ class ui(object):
         # prompt to start parsing. Sadly, we also can't rely on
         # choices containing spaces, ASCII, or basically anything
         # except an ampersand followed by a character.
-        m = re.match(r'(?s)(.+?)\$\$([^\$]*&[^ \$].*)', prompt)
+        m = re.match(br'(?s)(.+?)\$\$([^\$]*&[^ \$].*)', prompt)
         msg = m.group(1)
         choices = [p.strip(' ') for p in m.group(2).split('$$')]
         return (msg,

@@ -2735,10 +2735,10 @@ def diffstatui(*args, **kw):
         if line and line[-1] in '+-':
             name, graph = line.rsplit(' ', 1)
             yield (name + ' ', '')
-            m = re.search(r'\++', graph)
+            m = re.search(br'\++', graph)
             if m:
                 yield (m.group(0), 'diffstat.inserted')
-            m = re.search(r'-+', graph)
+            m = re.search(br'-+', graph)
             if m:
                 yield (m.group(0), 'diffstat.deleted')
         else:
