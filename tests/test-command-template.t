@@ -3894,30 +3894,36 @@ Test active bookmark templating
 
 Test namespaces dict
 
-  $ hg log -T '{rev}\n{namespaces % " {namespace} color={colorname}\n  {join(names, ",")}\n"}\n'
+  $ hg --config extensions.revnamesext=$TESTDIR/revnamesext.py log -T '{rev}\n{namespaces % " {namespace} color={colorname} builtin={builtin}\n  {join(names, ",")}\n"}\n'
   2
-   bookmarks color=bookmark
+   bookmarks color=bookmark builtin=True
     bar,foo
-   tags color=tag
+   tags color=tag builtin=True
     tip
-   branches color=branch
+   branches color=branch builtin=True
     text.{rev}
+   revnames color=revname builtin=False
+    r2
   
   1
-   bookmarks color=bookmark
+   bookmarks color=bookmark builtin=True
     baz
-   tags color=tag
+   tags color=tag builtin=True
     
-   branches color=branch
+   branches color=branch builtin=True
     text.{rev}
+   revnames color=revname builtin=False
+    r1
   
   0
-   bookmarks color=bookmark
+   bookmarks color=bookmark builtin=True
     
-   tags color=tag
+   tags color=tag builtin=True
     
-   branches color=branch
+   branches color=branch builtin=True
     default
+   revnames color=revname builtin=False
+    r0
   
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
   bookmarks: bar foo
