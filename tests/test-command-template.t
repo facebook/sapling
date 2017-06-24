@@ -3894,10 +3894,31 @@ Test active bookmark templating
 
 Test namespaces dict
 
-  $ hg log -T '{rev}{namespaces % " {namespace}={join(names, ",")}"}\n'
-  2 bookmarks=bar,foo tags=tip branches=text.{rev}
-  1 bookmarks=baz tags= branches=text.{rev}
-  0 bookmarks= tags= branches=default
+  $ hg log -T '{rev}\n{namespaces % " {namespace} color={colorname}\n  {join(names, ",")}\n"}\n'
+  2
+   bookmarks color=bookmark
+    bar,foo
+   tags color=tag
+    tip
+   branches color=branch
+    text.{rev}
+  
+  1
+   bookmarks color=bookmark
+    baz
+   tags color=tag
+    
+   branches color=branch
+    text.{rev}
+  
+  0
+   bookmarks color=bookmark
+    
+   tags color=tag
+    
+   branches color=branch
+    default
+  
   $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
   bookmarks: bar foo
   tags: tip

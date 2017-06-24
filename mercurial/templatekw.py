@@ -554,13 +554,24 @@ def shownamespaces(**args):
     args = pycompat.byteskwargs(args)
     ctx = args['ctx']
     repo = ctx.repo()
-    namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
-                                            args))
-                               for k, ns in repo.names.iteritems())
+
+    namespaces = util.sortdict()
+    colornames = {}
+
+    for k, ns in repo.names.iteritems():
+        namespaces[k] = showlist('name', ns.names(repo, ctx.node()), args)
+        colornames[k] = ns.colorname
+
     f = _showlist('namespace', list(namespaces), args)
-    return _hybrid(f, namespaces,
-                   lambda k: {'namespace': k, 'names': namespaces[k]},
-                   lambda x: x['namespace'])
+
+    def makemap(ns):
+        return {
+            'namespace': ns,
+            'names': namespaces[ns],
+            'colorname': colornames[ns],
+        }
+
+    return _hybrid(f, namespaces, makemap, lambda x: x['namespace'])
 
 @templatekeyword('node')
 def shownode(repo, ctx, templ, **args):
