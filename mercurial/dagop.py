@@ -32,8 +32,10 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
         startdepth = 0
     if stopdepth is None:
         stopdepth = _maxlogdepth
-    if stopdepth <= 0:
+    if stopdepth == 0:
         return
+    if stopdepth < 0:
+        raise error.ProgrammingError('negative stopdepth')
 
     cl = repo.changelog
 
