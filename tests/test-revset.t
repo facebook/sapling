@@ -980,6 +980,60 @@ test descendants
   7
   8
 
+test descendants with depth limit
+
+ (depth=0 selects the node itself)
+
+  $ log 'descendants(0, depth=0)'
+  0
+  $ log 'null: & descendants(null, depth=0)'
+  -1
+
+ (p2 = null should be ignored)
+
+  $ log 'null: & descendants(null, depth=2)'
+  -1
+  0
+  1
+
+ (multiple paths: depth(6) = (2, 3))
+
+  $ log 'descendants(1+3, depth=2)'
+  1
+  2
+  3
+  4
+  5
+  6
+
+ (multiple paths: depth(5) = (1, 2), depth(6) = (2, 3))
+
+  $ log 'descendants(3+1, depth=2, startdepth=2)'
+  4
+  5
+  6
+
+ (multiple depths: depth(6) = (0, 2, 4), search for depth=2)
+
+  $ log 'descendants(0+3+6, depth=3, startdepth=1)'
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+
+ (multiple depths: depth(6) = (0, 4), no match)
+
+  $ log 'descendants(0+6, depth=3, startdepth=1)'
+  1
+  2
+  3
+  4
+  5
+  7
+
 test author
 
   $ log 'author(bob)'

@@ -595,23 +595,42 @@ def desc(repo, subset, x):
     return subset.filter(lambda r: matcher(repo[r].description()),
                          condrepr=('<desc %r>', ds))
 
-def _descendants(repo, subset, x, followfirst=False):
+def _descendants(repo, subset, x, followfirst=False, startdepth=None,
+                 stopdepth=None):
     roots = getset(repo, fullreposet(repo), x)
     if not roots:
         return baseset()
-    s = dagop.revdescendants(repo, roots, followfirst)
+    s = dagop.revdescendants(repo, roots, followfirst, startdepth, stopdepth)
     return subset & s
 
-@predicate('descendants(set)', safe=True)
+@predicate('descendants(set[, depth])', safe=True)
 def descendants(repo, subset, x):
     """Changesets which are descendants of changesets in set, including the
     given changesets themselves.
+
+    If depth is specified, the result only includes changesets up to
+    the specified generation.
     """
-    args = getargsdict(x, 'descendants', 'set')
+    # startdepth is for internal use only until we can decide the UI
+    args = getargsdict(x, 'descendants', 'set depth startdepth')
     if 'set' not in args:
         # i18n: "descendants" is a keyword
         raise error.ParseError(_('descendants takes at least 1 argument'))
-    return _descendants(repo, subset, args['set'])
+    startdepth = stopdepth = None
+    if 'startdepth' in args:
+        n = getinteger(args['startdepth'],
+                       "descendants expects an integer startdepth")
+        if n < 0:
+            raise error.ParseError("negative startdepth")
+        startdepth = n
+    if 'depth' in args:
+        # i18n: "descendants" is a keyword
+        n = getinteger(args['depth'], _("descendants expects an integer depth"))
+        if n < 0:
+            raise error.ParseError(_("negative depth"))
+        stopdepth = n + 1
+    return _descendants(repo, subset, args['set'],
+                        startdepth=startdepth, stopdepth=stopdepth)
 
 @predicate('_firstdescendants', safe=True)
 def _firstdescendants(repo, subset, x):

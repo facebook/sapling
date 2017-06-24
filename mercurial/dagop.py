@@ -125,10 +125,38 @@ def _genrevdescendants(repo, revs, followfirst):
                     yield i
                     break
 
-def revdescendants(repo, revs, followfirst):
+def _builddescendantsmap(repo, startrev, followfirst):
+    """Build map of 'rev -> child revs', offset from startrev"""
+    cl = repo.changelog
+    nullrev = node.nullrev
+    descmap = [[] for _rev in xrange(startrev, len(cl))]
+    for currev in cl.revs(startrev + 1):
+        p1rev, p2rev = cl.parentrevs(currev)
+        if p1rev >= startrev:
+            descmap[p1rev - startrev].append(currev)
+        if not followfirst and p2rev != nullrev and p2rev >= startrev:
+            descmap[p2rev - startrev].append(currev)
+    return descmap
+
+def _genrevdescendantsofdepth(repo, revs, followfirst, startdepth, stopdepth):
+    startrev = revs.min()
+    descmap = _builddescendantsmap(repo, startrev, followfirst)
+    def pfunc(rev):
+        return descmap[rev - startrev]
+    return _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse=False)
+
+def revdescendants(repo, revs, followfirst, startdepth=None, stopdepth=None):
     """Like revlog.descendants() but supports additional options, includes
-    the given revs themselves, and returns a smartset"""
-    gen = _genrevdescendants(repo, revs, followfirst)
+    the given revs themselves, and returns a smartset
+
+    Scan ends at the stopdepth (exlusive) if specified. Revisions found
+    earlier than the startdepth are omitted.
+    """
+    if startdepth is None and stopdepth is None:
+        gen = _genrevdescendants(repo, revs, followfirst)
+    else:
+        gen = _genrevdescendantsofdepth(repo, revs, followfirst,
+                                        startdepth, stopdepth)
     return generatorset(gen, iterasc=True)
 
 def _reachablerootspure(repo, minroot, roots, heads, includepath):
