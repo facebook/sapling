@@ -648,16 +648,19 @@ class localrepository(object):
         for r in self.revs(expr, *args):
             yield self[r]
 
-    def anyrevs(self, specs, user=False):
+    def anyrevs(self, specs, user=False, localalias=None):
         '''Find revisions matching one of the given revsets.
 
         Revset aliases from the configuration are not expanded by default. To
-        expand user aliases, specify ``user=True``.
+        expand user aliases, specify ``user=True``. To provide some local
+        definitions overriding user aliases, set ``localalias`` to
+        ``{name: definitionstring}``.
         '''
         if user:
-            m = revset.matchany(self.ui, specs, repo=self)
+            m = revset.matchany(self.ui, specs, repo=self,
+                                localalias=localalias)
         else:
-            m = revset.matchany(None, specs)
+            m = revset.matchany(None, specs, localalias=localalias)
         return m(self)
 
     def url(self):

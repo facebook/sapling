@@ -2001,12 +2001,15 @@ def match(ui, spec, repo=None, order=defineorder):
     """
     return matchany(ui, [spec], repo=repo, order=order)
 
-def matchany(ui, specs, repo=None, order=defineorder):
+def matchany(ui, specs, repo=None, order=defineorder, localalias=None):
     """Create a matcher that will include any revisions matching one of the
     given specs
 
     If order=followorder, a matcher takes the ordering specified by the input
     set.
+
+    If localalias is not None, it is a dict {name: definitionstring}. It takes
+    precedence over [revsetalias] config section.
     """
     if not specs:
         def mfunc(repo, subset=None):
@@ -2023,8 +2026,15 @@ def matchany(ui, specs, repo=None, order=defineorder):
         tree = ('or',
                 ('list',) + tuple(revsetlang.parse(s, lookup) for s in specs))
 
+    aliases = []
+    warn = None
     if ui:
-        tree = revsetlang.expandaliases(ui, tree)
+        aliases.extend(ui.configitems('revsetalias'))
+        warn = ui.warn
+    if localalias:
+        aliases.extend(localalias.items())
+    if aliases:
+        tree = revsetlang.expandaliases(tree, aliases, warn=warn)
     tree = revsetlang.foldconcat(tree)
     tree = revsetlang.analyze(tree, order)
     tree = revsetlang.optimize(tree)

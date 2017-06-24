@@ -561,14 +561,16 @@ class _aliasrules(parser.basealiasrules):
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             return tree[1][1], getlist(tree[2])
 
-def expandaliases(ui, tree):
-    aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
+def expandaliases(tree, aliases, warn=None):
+    """Expand aliases in a tree, aliases is a list of (name, value) tuples"""
+    aliases = _aliasrules.buildmap(aliases)
     tree = _aliasrules.expand(aliases, tree)
     # warn about problematic (but not referred) aliases
-    for name, alias in sorted(aliases.iteritems()):
-        if alias.error and not alias.warned:
-            ui.warn(_('warning: %s\n') % (alias.error))
-            alias.warned = True
+    if warn is not None:
+        for name, alias in sorted(aliases.iteritems()):
+            if alias.error and not alias.warned:
+                warn(_('warning: %s\n') % (alias.error))
+                alias.warned = True
     return tree
 
 def foldconcat(tree):

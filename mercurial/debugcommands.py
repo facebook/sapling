@@ -1960,9 +1960,11 @@ def debugrevspec(ui, repo, expr, **opts):
     one. Returns 1 if the optimized result differs.
     """
     opts = pycompat.byteskwargs(opts)
+    aliases = ui.configitems('revsetalias')
     stages = [
         ('parsed', lambda tree: tree),
-        ('expanded', lambda tree: revsetlang.expandaliases(ui, tree)),
+        ('expanded', lambda tree: revsetlang.expandaliases(tree, aliases,
+                                                           ui.warn)),
         ('concatenated', revsetlang.foldconcat),
         ('analyzed', revsetlang.analyze),
         ('optimized', revsetlang.optimize),

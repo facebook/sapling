@@ -4259,4 +4259,27 @@ loading it
   hg: parse error: unknown identifier: custom1
   [255]
 
+Test repo.anyrevs with customized revset overrides
+
+  $ cat > $TESTTMP/printprevset.py <<EOF
+  > from mercurial import encoding
+  > def reposetup(ui, repo):
+  >     alias = {}
+  >     p = encoding.environ.get('P')
+  >     if p:
+  >         alias['P'] = p
+  >     revs = repo.anyrevs(['P'], user=True, localalias=alias)
+  >     ui.write('P=%r' % list(revs))
+  > EOF
+
+  $ cat >> .hg/hgrc <<EOF
+  > custompredicate = !
+  > printprevset = $TESTTMP/printprevset.py
+  > EOF
+
+  $ hg --config revsetalias.P=1 log -r . -T '\n'
+  P=[1]
+  $ P=3 hg --config revsetalias.P=2 log -r . -T '\n'
+  P=[3]
+
   $ cd ..
