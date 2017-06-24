@@ -38,6 +38,11 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
         raise error.ProgrammingError('negative stopdepth')
 
     cl = repo.changelog
+    def pfunc(rev):
+        try:
+            return cl.parentrevs(rev)[:cut]
+        except error.WdirUnsupported:
+            return (pctx.rev() for pctx in repo[rev].parents()[:cut])
 
     # load input revs lazily to heap so earlier revisions can be yielded
     # without fully computing the input revs
@@ -65,14 +70,9 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
             yield currev
         pdepth = curdepth + 1
         if foundnew and pdepth < stopdepth:
-            try:
-                for prev in cl.parentrevs(currev)[:cut]:
-                    if prev != node.nullrev:
-                        heapq.heappush(pendingheap, (-prev, pdepth))
-            except error.WdirUnsupported:
-                for pctx in repo[currev].parents()[:cut]:
-                    if pctx.rev() != node.nullrev:
-                        heapq.heappush(pendingheap, (-pctx.rev(), pdepth))
+            for prev in pfunc(currev):
+                if prev != node.nullrev:
+                    heapq.heappush(pendingheap, (-prev, pdepth))
 
 def revancestors(repo, revs, followfirst, startdepth=None, stopdepth=None):
     """Like revlog.ancestors(), but supports additional options, includes
