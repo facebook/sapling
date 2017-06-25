@@ -495,7 +495,7 @@ class mergestate(object):
                 self._repo.wwrite(dfile, f.read(), flags)
                 f.close()
             else:
-                self._repo.wvfs.unlinkpath(dfile, ignoremissing=True)
+                wctx[dfile].remove(ignoremissing=True)
             complete, r, deleted = filemerge.premerge(self._repo, self._local,
                                                       lfile, fcd, fco, fca,
                                                       labels=self._labels)
@@ -1084,7 +1084,6 @@ def batchremove(repo, wctx, actions):
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    unlinkpath = repo.wvfs.unlinkpath
     audit = repo.wvfs.audit
     try:
         cwd = pycompat.getcwd()
@@ -1099,7 +1098,7 @@ def batchremove(repo, wctx, actions):
             repo.ui.note(_("removing %s\n") % f)
         audit(f)
         try:
-            unlinkpath(f, ignoremissing=True)
+            wctx[f].remove(ignoremissing=True)
         except OSError as inst:
             repo.ui.warn(_("update failed to remove %s: %s!\n") %
                          (f, inst.strerror))
@@ -1213,7 +1212,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
             audit(f)
-            repo.wvfs.unlinkpath(f)
+            wctx[f].remove()
 
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
 
@@ -1272,7 +1271,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.note(_("moving %s to %s\n") % (f0, f))
         audit(f)
         repo.wwrite(f, wctx.filectx(f0).data(), flags)
-        repo.wvfs.unlinkpath(f0)
+        wctx[f0].remove()
         updated += 1
 
     # local directory rename, get
