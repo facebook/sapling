@@ -671,8 +671,10 @@ def reposetup(ui, repo):
         '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
         rejects or conflicts due to expanded keywords in working dir.'''
         orig(self, ui, gp, backend, store, eolmode)
-        # shrink keywords read from working dir
-        self.lines = kwt.shrinklines(self.fname, self.lines)
+        kwt = getattr(getattr(backend, 'repo', None), '_keywordkwt', None)
+        if kwt:
+            # shrink keywords read from working dir
+            self.lines = kwt.shrinklines(self.fname, self.lines)
 
     def kwdiff(orig, *args, **kwargs):
         '''Monkeypatch patch.diff to avoid expansion.'''
@@ -696,6 +698,9 @@ def reposetup(ui, repo):
 
     def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
         '''Wraps cmdutil.amend expanding keywords after amend.'''
+        kwt = getattr(repo, '_keywordkwt', None)
+        if kwt is None:
+            return orig(ui, repo, commitfunc, old, extra, pats, opts)
         with repo.wlock():
             kwt.postcommit = True
             newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
@@ -716,6 +721,9 @@ def reposetup(ui, repo):
         For the latter we have to follow the symlink to find out whether its
         target is configured for expansion and we therefore must unexpand the
         keywords in the destination.'''
+        kwt = getattr(repo, '_keywordkwt', None)
+        if kwt is None:
+            return orig(ui, repo, pats, opts, rename)
         with repo.wlock():
             orig(ui, repo, pats, opts, rename)
             if opts.get('dry_run'):
@@ -739,6 +747,9 @@ def reposetup(ui, repo):
 
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
         '''Wraps record.dorecord expanding keywords after recording.'''
+        kwt = getattr(repo, '_keywordkwt', None)
+        if kwt is None:
+            return orig(ui, repo, commitfunc, *pats, **opts)
         with repo.wlock():
             # record returns 0 even when nothing has changed
             # therefore compare nodes before and after
@@ -758,6 +769,9 @@ def reposetup(ui, repo):
     def kwfilectx_cmp(orig, self, fctx):
         if fctx._customcmp:
             return fctx.cmp(self)
+        kwt = getattr(self._repo, '_keywordkwt', None)
+        if kwt is None:
+            return orig(self, fctx)
         # keyword affects data size, comparing wdir and filelog size does
         # not make sense
         if (fctx._filenode is None and
