@@ -39,7 +39,7 @@ def gnugetopt(args, options, longoptions):
     args = []
     while parseargs:
         arg = parseargs.pop(0)
-        if arg and arg[0] == '-' and len(arg) > 1:
+        if arg and arg[0:1] == '-' and len(arg) > 1:
             parseargs.insert(0, arg)
             topts, newparseargs = pycompat.getoptb(parseargs,\
                                             options, longoptions)

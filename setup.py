@@ -182,7 +182,7 @@ if 'SystemRoot' in os.environ:
 
 if os.path.isdir('.hg'):
     cmd = [sys.executable, 'hg', 'log', '-r', '.', '--template', '{tags}\n']
-    numerictags = [t for t in runhg(cmd, env).split() if t[0].isdigit()]
+    numerictags = [t for t in runhg(cmd, env).split() if t[0:1].isdigit()]
     hgid = runhg([sys.executable, 'hg', 'id', '-i'], env).strip()
     if numerictags: # tag(s) found
         version = numerictags[-1]
