@@ -1148,6 +1148,10 @@ def restorecollapsemsg(repo, isabort):
 def clearstatus(repo):
     'Remove the status files'
     _clearrebasesetvisibiliy(repo)
+    # Make sure the active transaction won't write the state file
+    tr = repo.currenttransaction()
+    if tr:
+        tr.removefilegenerator('rebasestate')
     repo.vfs.unlinkpath("rebasestate", ignoremissing=True)
 
 def needupdate(repo, state):

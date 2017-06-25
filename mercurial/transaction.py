@@ -292,6 +292,12 @@ class transaction(object):
         # but for bookmarks that are handled outside this mechanism.
         self._filegenerators[genid] = (order, filenames, genfunc, location)
 
+    @active
+    def removefilegenerator(self, genid):
+        """reverse of addfilegenerator, remove a file generator function"""
+        if genid in self._filegenerators:
+            del self._filegenerators[genid]
+
     def _generatefiles(self, suffix='', group=gengroupall):
         # write files registered for generation
         any = False

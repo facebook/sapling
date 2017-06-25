@@ -954,4 +954,4 @@ Testing rebase being called inside another transaction
   rebasing 2:dc0947a82db8 "C" (C tip)
 
   $ [ -f .hg/rebasestate ] && echo 'WRONG: rebasestate should not exist'
-  WRONG: rebasestate should not exist
+  [1]
