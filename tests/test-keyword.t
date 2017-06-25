@@ -1018,7 +1018,7 @@ kwexpand nonexistent
 #if serve
 hg serve
  - expand with hgweb file
- - no expansion with hgweb annotate/changeset/filediff
+ - no expansion with hgweb annotate/changeset/filediff/comparison
  - expand with hgweb file, again
  - check errors
 
@@ -1079,6 +1079,12 @@ hg serve
   
   
   
+  $ get-with-headers.py localhost:$HGPORT 'comparison/bb948857c743/a' | grep '\$[a-zA-Z]'
+  <td class="source equal"><a href="#l1r1">     1</a> expand $Id$</td>
+  <td class="source equal"><a href="#l1r1">     1</a> expand $Id$</td>
+  <td class="source equal"><a href="#l2r2">     2</a> do not process $Id:</td>
+  <td class="source equal"><a href="#l2r2">     2</a> do not process $Id:</td>
+  <td class="source insert"><a href="#r4">     4</a> $Xinfo$</td>
 
 (check "kwweb_skip"-ed webcommand doesn't suppress expanding keywords
 at subsequent webcommands)

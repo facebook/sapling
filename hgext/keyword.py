@@ -121,6 +121,9 @@ testedwith = 'ships-with-hg-core'
 nokwcommands = ('add addremove annotate bundle export grep incoming init log'
                 ' outgoing push tip verify convert email glog')
 
+# webcommands that do not act on keywords
+nokwwebcommands = ('annotate changeset rev filediff diff comparison')
+
 # hg commands that trigger expansion only when writing to working dir,
 # not when reading filelog, and unexpand when reading from working dir
 restricted = ('merge kwexpand kwshrink record qrecord resolve transplant'
@@ -763,6 +766,6 @@ def reposetup(ui, repo):
     extensions.wrapfunction(cmdutil, 'amend', kw_amend)
     extensions.wrapfunction(cmdutil, 'copy', kw_copy)
     extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
-    for c in 'annotate changeset rev filediff diff'.split():
+    for c in nokwwebcommands.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
     repo.__class__ = kwrepo
