@@ -1019,6 +1019,7 @@ kwexpand nonexistent
 hg serve
  - expand with hgweb file
  - no expansion with hgweb annotate/changeset/filediff
+ - expand with hgweb file, again
  - check errors
 
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
@@ -1078,6 +1079,18 @@ hg serve
   
   
   
+
+(check "kwweb_skip"-ed webcommand doesn't suppress expanding keywords
+at subsequent webcommands)
+
+  $ get-with-headers.py localhost:$HGPORT 'file/tip/a/?style=raw'
+  200 Script output follows
+  
+  expand $Id: a bb948857c743 Thu, 01 Jan 1970 00:00:02 +0000 user $
+  do not process $Id:
+  xxx $
+  $Xinfo: User Name <user@example.com>: firstline $
+
   $ cat errors.log
 #endif
 

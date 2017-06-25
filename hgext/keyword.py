@@ -675,8 +675,13 @@ def reposetup(ui, repo):
 
     def kwweb_skip(orig, web, req, tmpl):
         '''Wraps webcommands.x turning off keyword expansion.'''
+        origmatch = kwt.match
         kwt.match = util.never
-        return orig(web, req, tmpl)
+        try:
+            for chunk in orig(web, req, tmpl):
+                yield chunk
+        finally:
+            kwt.match = origmatch
 
     def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
         '''Wraps cmdutil.amend expanding keywords after amend.'''
