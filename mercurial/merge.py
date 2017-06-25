@@ -1078,7 +1078,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
 
     return actions, diverge, renamedelete
 
-def batchremove(repo, actions):
+def batchremove(repo, wctx, actions):
     """apply removes to the working directory
 
     yields tuples for progress updates
@@ -1122,7 +1122,7 @@ def batchremove(repo, actions):
                            "(consider changing to repo root: %s)\n") %
                          repo.root)
 
-def batchget(repo, mctx, actions):
+def batchget(repo, mctx, wctx, actions):
     """apply gets to the working directory
 
     mctx is the context to get from
@@ -1222,14 +1222,16 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # remove in parallel (must come first)
     z = 0
-    prog = worker.worker(repo.ui, 0.001, batchremove, (repo,), actions['r'])
+    prog = worker.worker(repo.ui, 0.001, batchremove, (repo, wctx),
+                         actions['r'])
     for i, item in prog:
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
     removed = len(actions['r'])
 
     # get in parallel
-    prog = worker.worker(repo.ui, 0.001, batchget, (repo, mctx), actions['g'])
+    prog = worker.worker(repo.ui, 0.001, batchget, (repo, mctx, wctx),
+                         actions['g'])
     for i, item in prog:
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
