@@ -16,6 +16,8 @@ import socket
 
 from .i18n import _
 from .node import (
+    hex,
+    nullid,
     wdirid,
     wdirrev,
 )
@@ -24,6 +26,7 @@ from . import (
     encoding,
     error,
     match as matchmod,
+    obsolete,
     pathutil,
     phases,
     pycompat,
@@ -560,6 +563,68 @@ def origpath(ui, repo, filepath):
         util.makedirs(origbackupdir)
 
     return fullorigpath + ".orig"
+
+def cleanupnodes(repo, mapping, operation):
+    """do common cleanups when old nodes are replaced by new nodes
+
+    That includes writing obsmarkers or stripping nodes, and moving bookmarks.
+    (we might also want to move working directory parent in the future)
+
+    mapping is {oldnode: [newnode]} or a iterable of nodes if they do not have
+    replacements. operation is a string, like "rebase".
+    """
+    if not util.safehasattr(mapping, 'items'):
+        mapping = {n: () for n in mapping}
+
+    with repo.transaction('cleanup') as tr:
+        # Move bookmarks
+        bmarks = repo._bookmarks
+        bmarkchanged = False
+        for oldnode, newnodes in mapping.items():
+            oldbmarks = repo.nodebookmarks(oldnode)
+            if not oldbmarks:
+                continue
+            bmarkchanged = True
+            if len(newnodes) > 1:
+                heads = list(repo.set('heads(%ln)', newnodes))
+                if len(heads) != 1:
+                    raise error.ProgrammingError(
+                        'cannot figure out bookmark movement')
+                newnode = heads[0].node()
+            elif len(newnodes) == 0:
+                # move bookmark backwards
+                roots = list(repo.set('max((::%n) - %ln)', oldnode,
+                                      list(mapping)))
+                if roots:
+                    newnode = roots[0].node()
+                else:
+                    newnode = nullid
+            else:
+                newnode = newnodes[0]
+            repo.ui.debug('moving bookmarks %r from %s to %s\n' %
+                          (oldbmarks, hex(oldnode), hex(newnode)))
+            for name in oldbmarks:
+                bmarks[name] = newnode
+        if bmarkchanged:
+            bmarks.recordchange(tr)
+
+        # Obsolete or strip nodes
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+            # If a node is already obsoleted, and we want to obsolete it
+            # without a successor, skip that obssolete request since it's
+            # unnecessary. That's the "if s or not isobs(n)" check below.
+            # Also sort the node in topology order, that might be useful for
+            # some obsstore logic.
+            # NOTE: the filtering and sorting might belong to createmarkers.
+            isobs = repo.obsstore.successors.__contains__
+            sortfunc = lambda ns: repo.changelog.rev(ns[0])
+            rels = [(repo[n], (repo[m] for m in s))
+                    for n, s in sorted(mapping.items(), key=sortfunc)
+                    if s or not isobs(n)]
+            obsolete.createmarkers(repo, rels, operation=operation)
+        else:
+            from . import repair # avoid import cycle
+            repair.delayedstrip(repo.ui, repo, list(mapping), operation)
 
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if opts is None:
