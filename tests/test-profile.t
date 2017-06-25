@@ -68,7 +68,7 @@ Install an extension that can sleep and guarantee a profiler has time to run
   > from mercurial import registrar, commands
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('sleep', [], 'hg sleep')
+  > @command(b'sleep', [], 'hg sleep')
   > def sleep(ui, *args, **kwargs):
   >     time.sleep(0.1)
   > EOF

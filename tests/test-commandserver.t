@@ -575,16 +575,16 @@ changelog and manifest would have invalid node:
   > from mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command("debuggetpass", norepo=True)
+  > @command(b"debuggetpass", norepo=True)
   > def debuggetpass(ui):
   >     ui.write("%s\\n" % ui.getpass())
-  > @command("debugprompt", norepo=True)
+  > @command(b"debugprompt", norepo=True)
   > def debugprompt(ui):
   >     ui.write("%s\\n" % ui.prompt("prompt:"))
-  > @command("debugreadstdin", norepo=True)
+  > @command(b"debugreadstdin", norepo=True)
   > def debugreadstdin(ui):
   >     ui.write("read: %r\n" % sys.stdin.read(1))
-  > @command("debugwritestdout", norepo=True)
+  > @command(b"debugwritestdout", norepo=True)
   > def debugwritestdout(ui):
   >     os.write(1, "low-level stdout fd and\n")
   >     sys.stdout.write("stdout should be redirected to /dev/null\n")

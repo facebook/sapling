@@ -12,7 +12,7 @@ Test if logtoprocess correctly captures command-related log calls.
   > from time import sleep
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('foo', [])
+  > @command(b'foo', [])
   > def foo(ui, repo):
   >     ui.log('foo', 'a message: %(bar)s\n', bar='spam')
   > EOF

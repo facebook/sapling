@@ -108,7 +108,7 @@ chg waits for pager if runcommand raises
   > from mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('crash')
+  > @command(b'crash')
   > def pagercrash(ui, repo, *pats, **opts):
   >     ui.write('going to crash\n')
   >     raise Exception('.')

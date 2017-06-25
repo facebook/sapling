@@ -203,7 +203,7 @@ Test warning on config option access and registration
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > @command('buggyconfig')
+  > @command(b'buggyconfig')
   > def cmdbuggyconfig(ui, repo):
   >     repo.ui.config('ui', 'quiet', False)
   >     repo.ui.config('ui', 'interactive', None)

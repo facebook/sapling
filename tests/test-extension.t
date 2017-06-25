@@ -12,10 +12,10 @@ Test basic extension support
   >     ui.write("reposetup called for %s\\n" % os.path.basename(repo.root))
   >     ui.write("ui %s= repo.ui\\n" % (ui == repo.ui and "=" or "!"))
   >     ui.flush()
-  > @command('foo', [], 'hg foo')
+  > @command(b'foo', [], 'hg foo')
   > def foo(ui, *args, **kwargs):
   >     ui.write("Foo\\n")
-  > @command('bar', [], 'hg bar', norepo=True)
+  > @command(b'bar', [], 'hg bar', norepo=True)
   > def bar(ui, *args, **kwargs):
   >     ui.write("Bar\\n")
   > EOF
@@ -408,12 +408,12 @@ Setup main procedure of extension.
   > # preceding import (= instantiate "demandmod" object instead of
   > # real "module" object) might hide problem of succeeding import.
   > 
-  > @command('showabsolute', [], norepo=True)
+  > @command(b'showabsolute', [], norepo=True)
   > def showabsolute(ui, *args, **opts):
   >     from absextroot import absolute
   >     ui.write('ABS: %s\n' % '\nABS: '.join(absolute.getresult()))
   > 
-  > @command('showrelative', [], norepo=True)
+  > @command(b'showrelative', [], norepo=True)
   > def showrelative(ui, *args, **opts):
   >     from . import relative
   >     ui.write('REL: %s\n' % '\nREL: '.join(relative.getresult()))
@@ -470,7 +470,7 @@ See also issue5208 for detail about example case on Python 3.x.
   > # demand import avoids failure of importing notexist here
   > import extlibroot.lsub1.lsub2.notexist
   > 
-  > @command('checkrelativity', [], norepo=True)
+  > @command(b'checkrelativity', [], norepo=True)
   > def checkrelativity(ui, *args, **opts):
   >     try:
   >         ui.write(extlibroot.lsub1.lsub2.notexist.text)
@@ -509,11 +509,11 @@ hide outer repo
   > from mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('debugfoobar', [], 'hg debugfoobar')
+  > @command(b'debugfoobar', [], 'hg debugfoobar')
   > def debugfoobar(ui, repo, *args, **opts):
   >     "yet another debug command"
   >     pass
-  > @command('foo', [], 'hg foo')
+  > @command(b'foo', [], 'hg foo')
   > def foo(ui, repo, *args, **opts):
   >     """yet another foo command
   >     This command has been DEPRECATED since forever.
@@ -750,7 +750,7 @@ Test help topic with same name as extension
   > command = registrar.command(cmdtable)
   > """multirevs extension
   > Big multi-line module docstring."""
-  > @command('multirevs', [], 'ARG', norepo=True)
+  > @command(b'multirevs', [], 'ARG', norepo=True)
   > def multirevs(ui, repo, arg, *args, **opts):
   >     """multirevs command"""
   >     pass
@@ -825,11 +825,11 @@ along with extension help itself
   > from mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('dodo', [], 'hg dodo')
+  > @command(b'dodo', [], 'hg dodo')
   > def dodo(ui, *args, **kwargs):
   >     """Does nothing"""
   >     ui.write("I do nothing. Yay\\n")
-  > @command('foofoo', [], 'hg foofoo')
+  > @command(b'foofoo', [], 'hg foofoo')
   > def foofoo(ui, *args, **kwargs):
   >     """Writes 'Foo foo'"""
   >     ui.write("Foo foo\\n")
@@ -936,11 +936,11 @@ along with extension help
   > from mercurial import commands, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('something', [], 'hg something')
+  > @command(b'something', [], 'hg something')
   > def something(ui, *args, **kwargs):
   >     """Does something"""
   >     ui.write("I do something. Yaaay\\n")
-  > @command('beep', [], 'hg beep')
+  > @command(b'beep', [], 'hg beep')
   > def beep(ui, *args, **kwargs):
   >     """Writes 'Beep beep'"""
   >     ui.write("Beep beep\\n")
@@ -1180,7 +1180,7 @@ Broken disabled extension and command:
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > class Bogon(Exception): pass
-  > @command('throw', [], 'hg throw', norepo=True)
+  > @command(b'throw', [], 'hg throw', norepo=True)
   > def throw(ui, **opts):
   >     """throws an exception"""
   >     raise Bogon()
@@ -1617,7 +1617,7 @@ Show deprecation warning for the use of cmdutil.command
   > from mercurial import cmdutil
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
-  > @command('foo', [], norepo=True)
+  > @command(b'foo', [], norepo=True)
   > def foo(ui):
   >     pass
   > EOF

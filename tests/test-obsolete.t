@@ -1107,7 +1107,7 @@ Test heads computation on pending index changes with obsolescence markers
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command("amendtransient",[], _('hg amendtransient [rev]'))
+  > @command(b"amendtransient",[], _('hg amendtransient [rev]'))
   > def amend(ui, repo, *pats, **opts):
   >   def commitfunc(ui, repo, message, match, opts):
   >     return repo.commit(message, repo['.'].user(), repo['.'].date(), match)

@@ -20,7 +20,7 @@ Test alignment of multibyte characters
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > @command('showoptlist',
+  > @command(b'showoptlist',
   >     [('s', 'opt1', '', 'short width'  + ' %(s)s' * 8, '%(s)s'),
   >     ('m', 'opt2', '', 'middle width' + ' %(m)s' * 8, '%(m)s'),
   >     ('l', 'opt3', '', 'long width'   + ' %(l)s' * 8, '%(l)s')],

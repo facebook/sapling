@@ -3,7 +3,7 @@
   > from mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('debugadddrop',
+  > @command(b'debugadddrop',
   >   [('', 'drop', False, 'drop file from dirstate', 'FILE'),
   >    ('', 'normal-lookup', False, 'add file to dirstate', 'FILE')],
   >     'hg debugadddrop')

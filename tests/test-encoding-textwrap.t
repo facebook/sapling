@@ -12,7 +12,7 @@ define commands to display help text
   > command = registrar.command(cmdtable)
   > 
   > # Japanese full-width characters:
-  > @command('show_full_ja', [], '')
+  > @command(b'show_full_ja', [], '')
   > def show_full_ja(ui, **opts):
   >     u'''\u3042\u3044\u3046\u3048\u304a\u304b\u304d\u304f\u3051 \u3042\u3044\u3046\u3048\u304a\u304b\u304d\u304f\u3051 \u3042\u3044\u3046\u3048\u304a\u304b\u304d\u304f\u3051
   > 
@@ -22,7 +22,7 @@ define commands to display help text
   >     '''
   > 
   > # Japanese half-width characters:
-  > @command('show_half_ja', [], '')
+  > @command(b'show_half_ja', [], '')
   > def show_half_ja(ui, *opts):
   >     u'''\uff71\uff72\uff73\uff74\uff75\uff76\uff77\uff78\uff79 \uff71\uff72\uff73\uff74\uff75\uff76\uff77\uff78\uff79 \uff71\uff72\uff73\uff74\uff75\uff76\uff77\uff78\uff79 \uff71\uff72\uff73\uff74\uff75\uff76\uff77\uff78\uff79
   > 
@@ -32,7 +32,7 @@ define commands to display help text
   >     '''
   > 
   > # Japanese ambiguous-width characters:
-  > @command('show_ambig_ja', [], '')
+  > @command(b'show_ambig_ja', [], '')
   > def show_ambig_ja(ui, **opts):
   >     u'''\u03b1\u03b2\u03b3\u03b4\u03c5\u03b6\u03b7\u03b8\u25cb \u03b1\u03b2\u03b3\u03b4\u03c5\u03b6\u03b7\u03b8\u25cb \u03b1\u03b2\u03b3\u03b4\u03c5\u03b6\u03b7\u03b8\u25cb
   > 
@@ -42,7 +42,7 @@ define commands to display help text
   >     '''
   > 
   > # Russian ambiguous-width characters:
-  > @command('show_ambig_ru', [], '')
+  > @command(b'show_ambig_ru', [], '')
   > def show_ambig_ru(ui, **opts):
   >     u'''\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438
   > 

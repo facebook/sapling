@@ -31,7 +31,7 @@ Test UI worker interaction
   > }
   > cmdtable = {}
   > command = registrar.command(cmdtable)
-  > @command('test', [], 'hg test [COST] [FUNC]')
+  > @command(b'test', [], 'hg test [COST] [FUNC]')
   > def t(ui, repo, cost=1.0, func='runme'):
   >     cost = float(cost)
   >     func = functable[func]

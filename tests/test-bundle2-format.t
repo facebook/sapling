@@ -70,7 +70,7 @@ Create an extension to test bundle2 API
   >             for val in op.reply.capabilities[cap]:
   >                 op.ui.write('debugreply:         %r\n' % val)
   > 
-  > @command('bundle2',
+  > @command(b'bundle2',
   >          [('', 'param', [], 'stream level parameter'),
   >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
   >           ('', 'unknownparams', False, 'include an unknown part parameters in the bundle'),
@@ -169,7 +169,7 @@ Create an extension to test bundle2 API
   >     finally:
   >         file.flush()
   > 
-  > @command('unbundle2', [], '')
+  > @command(b'unbundle2', [], '')
   > def cmdunbundle2(ui, repo, replypath=None):
   >     """process a bundle2 stream from stdin on the current repo"""
   >     try:
@@ -200,7 +200,7 @@ Create an extension to test bundle2 API
   >             for chunk in op.reply.getchunks():
   >                 file.write(chunk)
   > 
-  > @command('statbundle2', [], '')
+  > @command(b'statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
   >     """print statistic on the bundle2 container read from stdin"""
   >     unbundler = bundle2.getunbundler(ui, sys.stdin)

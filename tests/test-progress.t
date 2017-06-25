@@ -14,7 +14,7 @@
   >         return self._time
   > time.time = incrementingtime()
   > 
-  > @command('loop',
+  > @command(b'loop',
   >     [('', 'total', '', 'override for total'),
   >     ('', 'nested', False, 'show nested results'),
   >     ('', 'parallel', False, 'show parallel sets of results')],
