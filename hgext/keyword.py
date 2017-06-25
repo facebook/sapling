@@ -676,25 +676,31 @@ def reposetup(ui, repo):
             # shrink keywords read from working dir
             self.lines = kwt.shrinklines(self.fname, self.lines)
 
-    def kwdiff(orig, *args, **kwargs):
+    def kwdiff(orig, repo, *args, **kwargs):
         '''Monkeypatch patch.diff to avoid expansion.'''
-        restrict = kwt.restrict
-        kwt.restrict = True
+        kwt = getattr(repo, '_keywordkwt', None)
+        if kwt:
+            restrict = kwt.restrict
+            kwt.restrict = True
         try:
-            for chunk in orig(*args, **kwargs):
+            for chunk in orig(repo, *args, **kwargs):
                 yield chunk
         finally:
-            kwt.restrict = restrict
+            if kwt:
+                kwt.restrict = restrict
 
     def kwweb_skip(orig, web, req, tmpl):
         '''Wraps webcommands.x turning off keyword expansion.'''
-        origmatch = kwt.match
-        kwt.match = util.never
+        kwt = getattr(web.repo, '_keywordkwt', None)
+        if kwt:
+            origmatch = kwt.match
+            kwt.match = util.never
         try:
             for chunk in orig(web, req, tmpl):
                 yield chunk
         finally:
-            kwt.match = origmatch
+            if kwt:
+                kwt.match = origmatch
 
     def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
         '''Wraps cmdutil.amend expanding keywords after amend.'''
