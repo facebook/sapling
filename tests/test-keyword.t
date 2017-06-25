@@ -1097,6 +1097,7 @@ at subsequent webcommands)
   xxx $
   $Xinfo: User Name <user@example.com>: firstline $
 
+  $ killdaemons.py
   $ cat errors.log
 #endif
 
@@ -1429,3 +1430,46 @@ suppress expanding keywords at subsequent commands
   bar
 
   $ cd ..
+
+#if serve
+
+Test that keywords are expanded only in repositories, which enable
+keyword extension, even if multiple repositories are served in a
+process
+
+  $ cat >> fetch-merge/.hg/hgrc <<EOF
+  > [extensions]
+  > keyword = !
+  > EOF
+
+  $ cat > paths.conf <<EOF
+  > [paths]
+  > enabled=Test
+  > disabled=fetch-merge
+  > EOF
+
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E error.log --webdir-conf paths.conf
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ get-with-headers.py localhost:$HGPORT 'enabled/file/tip/m/?style=raw'
+  200 Script output follows
+  
+  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
+  bar
+
+  $ get-with-headers.py localhost:$HGPORT 'disabled/file/tip/m/?style=raw'
+  200 Script output follows
+  
+  $Id$
+  bar
+
+(check expansion again, for safety)
+
+  $ get-with-headers.py localhost:$HGPORT 'enabled/file/tip/m/?style=raw'
+  200 Script output follows
+  
+  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
+  bar
+
+  $ killdaemons.py
+#endif
