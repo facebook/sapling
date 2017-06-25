@@ -634,8 +634,8 @@ class ui(object):
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
         """
 
-        value = self.config(section, name, default, untrusted)
-        if value is None:
+        value = self._config(section, name, default, untrusted)
+        if value is _unset:
             if default is _unset:
                 default = 0
             value = default
