@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
+  > drawdag=$TESTDIR/drawdag.py
   > 
   > [phases]
   > publish=False
@@ -915,3 +916,42 @@ Testing from upper head
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second source with subdir
   
+Testing rebase being called inside another transaction
+
+  $ cd $TESTTMP
+  $ hg init tr-state
+  $ cd tr-state
+  $ cat > $TESTTMP/wraprebase.py <<EOF
+  > from __future__ import absolute_import
+  > from mercurial import extensions
+  > def _rebase(orig, ui, repo, *args, **kwargs):
+  >     with repo.wlock():
+  >         with repo.lock():
+  >             with repo.transaction('wrappedrebase'):
+  >                 return orig(ui, repo, *args, **kwargs)
+  > def wraprebase(loaded):
+  >     assert loaded
+  >     rebasemod = extensions.find('rebase')
+  >     extensions.wrapcommand(rebasemod.cmdtable, 'rebase', _rebase)
+  > def extsetup(ui):
+  >     extensions.afterloaded('rebase', wraprebase)
+  > EOF
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > wraprebase=$TESTTMP/wraprebase.py
+  > [experimental]
+  > evolution=all
+  > EOF
+
+  $ hg debugdrawdag <<'EOS'
+  > B C
+  > |/
+  > A
+  > EOS
+
+  $ hg rebase -s C -d B
+  rebasing 2:dc0947a82db8 "C" (C tip)
+
+  $ [ -f .hg/rebasestate ] && echo 'WRONG: rebasestate should not exist'
+  WRONG: rebasestate should not exist
