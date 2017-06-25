@@ -2775,20 +2775,20 @@ def identify(ui, repo, source=None, rev=None,
             for p in parents:
                 taglist.extend(p.tags())
 
-            changed = ""
+            dirty = ""
             if (any(repo.status())
                 or any(ctx.sub(s).dirty() for s in ctx.substate)):
-                changed = '+'
-            fm.data(changed=changed)
+                dirty = '+'
+            fm.data(dirty=dirty)
 
             hexoutput = [hexfunc(p.node()) for p in parents]
             if default or id:
-                output = ["%s%s" % ('+'.join(hexoutput), changed)]
-            fm.data(id="%s%s" % ('+'.join(hexoutput), changed))
+                output = ["%s%s" % ('+'.join(hexoutput), dirty)]
+            fm.data(id="%s%s" % ('+'.join(hexoutput), dirty))
 
             if num:
                 numoutput = ["%d" % p.rev() for p in parents]
-                output.append("%s%s" % ('+'.join(numoutput), changed))
+                output.append("%s%s" % ('+'.join(numoutput), dirty))
 
             for i, p in enumerate(parents):
                 fn = fm.nested('p%d' % (i + 1))

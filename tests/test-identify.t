@@ -48,7 +48,7 @@ with options
    {
     "bookmarks": [],
     "branch": "default",
-    "changed": "",
+    "dirty": "",
     "id": "cb9a9f314b8b",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
@@ -66,7 +66,7 @@ with modifications
    {
     "bookmarks": [],
     "branch": "default",
-    "changed": "+",
+    "dirty": "+",
     "id": "cb9a9f314b8b+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],

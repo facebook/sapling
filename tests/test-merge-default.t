@@ -54,7 +54,7 @@ Should succeed:
    {
     "bookmarks": [],
     "branch": "default",
-    "changed": "+",
+    "dirty": "+",
     "id": "f25cbe84d8b3+2d95304fed5d+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
     "p1": [{"node": "f25cbe84d8b320e298e7703f18a25a3959518c23", "rev": 4}],
