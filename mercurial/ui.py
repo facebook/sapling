@@ -540,8 +540,10 @@ class ui(object):
         ConfigError: foo.invalid is not a boolean ('somevalue')
         """
 
-        v = self.config(section, name, default, untrusted=untrusted)
+        v = self._config(section, name, default, untrusted=untrusted)
         if v is None:
+            return v
+        if v is _unset:
             if default is _unset:
                 return False
             return default
