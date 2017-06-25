@@ -53,6 +53,7 @@ Config::
 from mercurial.i18n import _
 from mercurial import (
     bookmarks,
+    cmdutil,
     commands,
     error,
     encoding,
@@ -172,6 +173,11 @@ def extsetup(ui):
     # wrapped createmarkers knows how to write operation-aware
     # metadata (e.g. 'amend', 'rebase' and so forth)
     wrapfunction(obsolete, 'createmarkers', _createmarkers)
+
+    # bookmark -D is an alias to strip -B
+    entry = wrapcommand(commands.table, 'bookmarks', bookmarkcmd)
+    entry[1].insert(3, ('D', 'strip', None,
+                        _('like --delete but also strip changesets')))
 
     # wrap bookmarks after remotenames
     def afterloaded(loaded):
@@ -791,6 +797,21 @@ def tagscmd(orig, ui, repo, **opts):
     if message:
         ui.warn(message + '\n')
     return orig(ui, repo, **opts)
+
+def bookmarkcmd(orig, ui, repo, *names, **opts):
+    strip = opts.pop('strip')
+    if not strip:
+        return orig(ui, repo, *names, **opts)
+    # check conflicted opts
+    for name in ['force', 'rev', 'rename', 'inactive', 'track', 'untrack',
+                 'all', 'remote']:
+        if opts.get(name):
+            raise error.Abort(_('--strip cannot be used together with %s')
+                              % ('--%s' % name))
+
+    # call strip -B, may raise UnknownCommand
+    stripfunc = cmdutil.findcmd('strip', commands.table)[1][0]
+    return stripfunc(ui, repo, bookmark=names, rev=[])
 
 def unfilteredcmd(orig, *args, **opts):
     # use unfiltered repo for performance
