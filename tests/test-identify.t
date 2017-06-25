@@ -43,12 +43,36 @@ with options
   cb9a9f314b8b
   $ hg id -n -t -b -i
   cb9a9f314b8b 0 default tip
+  $ hg id -Tjson
+  [
+   {
+    "bookmarks": [],
+    "branch": "default",
+    "changed": "",
+    "id": "cb9a9f314b8b",
+    "node": "ffffffffffffffffffffffffffffffffffffffff",
+    "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
+    "tags": ["tip"]
+   }
+  ]
 
 with modifications
 
   $ echo b > a
   $ hg id -n -t -b -i
   cb9a9f314b8b+ 0+ default tip
+  $ hg id -Tjson
+  [
+   {
+    "bookmarks": [],
+    "branch": "default",
+    "changed": "+",
+    "id": "cb9a9f314b8b+",
+    "node": "ffffffffffffffffffffffffffffffffffffffff",
+    "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
+    "tags": ["tip"]
+   }
+  ]
 
 other local repo
 

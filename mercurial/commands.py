@@ -2667,7 +2667,7 @@ def help_(ui, name=None, **opts):
     ('b', 'branch', None, _('show branch')),
     ('t', 'tags', None, _('show tags')),
     ('B', 'bookmarks', None, _('show bookmarks')),
-    ] + remoteopts,
+    ] + remoteopts + formatteropts,
     _('[-nibtB] [-r REV] [SOURCE]'),
     optionalrepo=True)
 def identify(ui, repo, source=None, rev=None,
@@ -2726,6 +2726,9 @@ def identify(ui, repo, source=None, rev=None,
         repo = peer.local()
         revs, checkout = hg.addbranchrevs(repo, peer, branches, None)
 
+    fm = ui.formatter('identify', opts)
+    fm.startitem()
+
     if not repo:
         if num or branch or tags:
             raise error.Abort(
@@ -2736,8 +2739,10 @@ def identify(ui, repo, source=None, rev=None,
             rev = "tip"
 
         remoterev = peer.lookup(rev)
+        hexrev = hexfunc(remoterev)
         if default or id:
-            output = [hexfunc(remoterev)]
+            output = [hexrev]
+        fm.data(id=hexrev)
 
         def getbms():
             bms = []
@@ -2749,13 +2754,17 @@ def identify(ui, repo, source=None, rev=None,
 
             return sorted(bms)
 
+        bms = getbms()
         if bookmarks:
-            output.extend(getbms())
+            output.extend(bms)
         elif default and not ui.quiet:
             # multiple bookmarks for a single parent separated by '/'
-            bm = '/'.join(getbms())
+            bm = '/'.join(bms)
             if bm:
                 output.append(bm)
+
+        fm.data(node=hex(remoterev))
+        fm.data(bookmarks=fm.formatlist(bms, name='bookmark'))
     else:
         ctx = scmutil.revsingle(repo, rev, None)
 
@@ -2767,19 +2776,32 @@ def identify(ui, repo, source=None, rev=None,
                 taglist.extend(p.tags())
 
             changed = ""
-            if default or id or num:
-                if (any(repo.status())
-                    or any(ctx.sub(s).dirty() for s in ctx.substate)):
-                    changed = '+'
+            if (any(repo.status())
+                or any(ctx.sub(s).dirty() for s in ctx.substate)):
+                changed = '+'
+            fm.data(changed=changed)
+
+            hexoutput = [hexfunc(p.node()) for p in parents]
             if default or id:
-                output = ["%s%s" %
-                  ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
+                output = ["%s%s" % ('+'.join(hexoutput), changed)]
+            fm.data(id="%s%s" % ('+'.join(hexoutput), changed))
+
             if num:
-                output.append("%s%s" %
-                  ('+'.join(["%d" % p.rev() for p in parents]), changed))
+                numoutput = ["%d" % p.rev() for p in parents]
+                output.append("%s%s" % ('+'.join(numoutput), changed))
+
+            for i, p in enumerate(parents):
+                fn = fm.nested('p%d' % (i + 1))
+                fn.startitem()
+                fn.data(rev=p.rev())
+                fn.data(node=p.hex())
+                fn.end()
         else:
+            hexoutput = hexfunc(ctx.node())
             if default or id:
-                output = [hexfunc(ctx.node())]
+                output = [hexoutput]
+            fm.data(id=hexoutput)
+
             if num:
                 output.append(pycompat.bytestr(ctx.rev()))
             taglist = ctx.tags()
@@ -2808,7 +2830,13 @@ def identify(ui, repo, source=None, rev=None,
             if bookmarks:
                 output.extend(ctx.bookmarks())
 
-    ui.write("%s\n" % ' '.join(output))
+        fm.data(node=ctx.hex())
+        fm.data(branch=ctx.branch())
+        fm.data(tags=fm.formatlist(taglist, name='tag', sep=':'))
+        fm.data(bookmarks=fm.formatlist(ctx.bookmarks(), name='bookmark'))
+
+    fm.plain("%s\n" % ' '.join(output))
+    fm.end()
 
 @command('import|patch',
     [('p', 'strip', 1,

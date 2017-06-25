@@ -95,7 +95,7 @@ pretxncommit and commit hooks can see both parents of merge
 test generic hooks
 
   $ hg id
-  pre-identify hook: HG_ARGS=id HG_HOOKNAME=pre-identify HG_HOOKTYPE=pre-identify HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'insecure': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None} HG_PATS=[]
+  pre-identify hook: HG_ARGS=id HG_HOOKNAME=pre-identify HG_HOOKTYPE=pre-identify HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'insecure': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None, 'template': ''} HG_PATS=[]
   abort: pre-identify hook exited with status 1
   [255]
   $ hg cat b
