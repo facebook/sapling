@@ -88,6 +88,7 @@ from __future__ import absolute_import
 import os
 import re
 import tempfile
+import weakref
 
 from mercurial.i18n import _
 from mercurial.hgweb import webcommands
@@ -212,7 +213,7 @@ class kwtemplater(object):
 
     def __init__(self, ui, repo, inc, exc):
         self.ui = ui
-        self.repo = repo
+        self._repo = weakref.ref(repo)
         self.match = match.match(repo.root, '', [], inc, exc)
         self.restrict = kwtools['hgcmd'] in restricted.split()
         self.postcommit = False
@@ -222,6 +223,10 @@ class kwtemplater(object):
             self.templates = dict(kwmaps)
         else:
             self.templates = _defaultkwmaps(self.ui)
+
+    @property
+    def repo(self):
+        return self._repo()
 
     @util.propertycache
     def escape(self):
@@ -658,6 +663,9 @@ def reposetup(ui, repo):
                 finally:
                     kwt.restrict = origrestrict
 
+    repo.__class__ = kwrepo
+    repo._keywordkwt = kwt
+
     # monkeypatches
     def kwpatchfile_init(orig, self, ui, gp, backend, store, eolmode=None):
         '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
@@ -768,4 +776,3 @@ def reposetup(ui, repo):
     extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
     for c in nokwwebcommands.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)
-    repo.__class__ = kwrepo
