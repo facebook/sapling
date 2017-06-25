@@ -253,6 +253,63 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     # extensions can use it
     return backupfile
 
+def safestriproots(ui, repo, nodes):
+    """return list of roots of nodes where descendants are covered by nodes"""
+    torev = repo.unfiltered().changelog.rev
+    revs = set(torev(n) for n in nodes)
+    # tostrip = wanted - unsafe = wanted - ancestors(orphaned)
+    # orphaned = affected - wanted
+    # affected = descendants(roots(wanted))
+    # wanted = revs
+    tostrip = set(repo.revs('%ld-(::((roots(%ld)::)-%ld))', revs, revs, revs))
+    notstrip = revs - tostrip
+    if notstrip:
+        nodestr = ', '.join(sorted(short(repo[n].node()) for n in notstrip))
+        ui.warn(_('warning: orphaned descendants detected, '
+                  'not stripping %s\n') % nodestr)
+    return [c.node() for c in repo.set('roots(%ld)', tostrip)]
+
+class stripcallback(object):
+    """used as a transaction postclose callback"""
+
+    def __init__(self, ui, repo, backup, topic):
+        self.ui = ui
+        self.repo = repo
+        self.backup = backup
+        self.topic = topic or 'backup'
+        self.nodelist = []
+
+    def addnodes(self, nodes):
+        self.nodelist.extend(nodes)
+
+    def __call__(self, tr):
+        roots = safestriproots(self.ui, self.repo, self.nodelist)
+        if roots:
+            strip(self.ui, self.repo, roots, True, self.topic)
+
+def delayedstrip(ui, repo, nodelist, topic=None):
+    """like strip, but works inside transaction and won't strip irreverent revs
+
+    nodelist must explicitly contain all descendants. Otherwise a warning will
+    be printed that some nodes are not stripped.
+
+    Always do a backup. The last non-None "topic" will be used as the backup
+    topic name. The default backup topic name is "backup".
+    """
+    tr = repo.currenttransaction()
+    if not tr:
+        nodes = safestriproots(ui, repo, nodelist)
+        return strip(ui, repo, nodes, True, topic)
+    # transaction postclose callbacks are called in alphabet order.
+    # use '\xff' as prefix so we are likely to be called last.
+    callback = tr.getpostclose('\xffstrip')
+    if callback is None:
+        callback = stripcallback(ui, repo, True, topic)
+        tr.addpostclose('\xffstrip', callback)
+    if topic:
+        callback.topic = topic
+    callback.addnodes(nodelist)
+
 def striptrees(repo, tr, striprev, files):
     if 'treemanifest' in repo.requirements: # safe but unnecessary
                                             # otherwise

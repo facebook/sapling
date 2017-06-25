@@ -2,6 +2,7 @@
   $ echo "usegeneraldelta=yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "strip=" >> $HGRCPATH
+  $ echo "drawdag=$TESTDIR/drawdag.py" >> $HGRCPATH
 
   $ restore() {
   >     hg unbundle -q .hg/strip-backup/*
@@ -940,4 +941,52 @@ Error during post-close callback of the strip transaction
   abort: boom
   [255]
 
+Use delayedstrip to strip inside a transaction
 
+  $ cd $TESTTMP
+  $ hg init delayedstrip
+  $ cd delayedstrip
+  $ hg debugdrawdag <<'EOS'
+  >   D
+  >   |
+  >   C F H    # Commit on top of "I",
+  >   | |/|    # Strip B+D+I+E+G+H+Z
+  > I B E G
+  >  \|/
+  >   A   Z
+  > EOS
+
+  $ hg up -C I
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 3 >> I
+  $ cat > $TESTTMP/delayedstrip.py <<EOF
+  > from mercurial import repair, commands
+  > def reposetup(ui, repo):
+  >     def getnodes(expr):
+  >         return [repo.changelog.node(r) for r in repo.revs(expr)]
+  >     with repo.wlock():
+  >         with repo.lock():
+  >             with repo.transaction('delayedstrip'):
+  >                 repair.delayedstrip(ui, repo, getnodes('B+I+Z+D+E'), 'J')
+  >                 repair.delayedstrip(ui, repo, getnodes('G+H+Z'), 'I')
+  >                 commands.commit(ui, repo, message='J', date='0 0')
+  > EOF
+  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/delayedstrip.py
+  warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
+  saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-81fa23b0-I.hg (glob)
+  
+  $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
+  @  6:2f2d51af6205 J
+  |
+  o  3:08ebfeb61bac I
+  |
+  | o  5:64a8289d2492 F
+  | |
+  | o  2:7fb047a69f22 E
+  |/
+  | o  4:26805aba1e60 C
+  | |
+  | o  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  

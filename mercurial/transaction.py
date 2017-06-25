@@ -412,7 +412,7 @@ class transaction(object):
 
     @active
     def addpostclose(self, category, callback):
-        """add a callback to be called after the transaction is closed
+        """add or replace a callback to be called after the transaction closed
 
         The transaction will be given as callback's first argument.
 
@@ -420,6 +420,11 @@ class transaction(object):
         with a newer callback.
         """
         self._postclosecallback[category] = callback
+
+    @active
+    def getpostclose(self, category):
+        """return a postclose callback added before, or None"""
+        return self._postclosecallback.get(category, None)
 
     @active
     def addabort(self, category, callback):
