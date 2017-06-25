@@ -165,7 +165,7 @@ def svnutcdate(text):
     return util.datestr((util.parsedate(text)[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 # make keyword tools accessible
-kwtools = {'templater': None, 'hgcmd': ''}
+kwtools = {'hgcmd': ''}
 
 def _defaultkwmaps(ui):
     '''Returns default keywordmaps according to keywordset configuration.'''
@@ -385,7 +385,7 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     wctx = repo[None]
     if len(wctx.parents()) > 1:
         raise error.Abort(_('outstanding uncommitted merge'))
-    kwt = kwtools['templater']
+    kwt = getattr(repo, '_keywordkwt', None)
     with repo.wlock():
         status = _status(ui, repo, wctx, kwt, *pats, **opts)
         if status.modified or status.added or status.removed or status.deleted:
@@ -529,7 +529,7 @@ def files(ui, repo, *pats, **opts):
       I = ignored
       i = ignored (not tracked)
     '''
-    kwt = kwtools['templater']
+    kwt = getattr(repo, '_keywordkwt', None)
     wctx = repo[None]
     status = _status(ui, repo, wctx, kwt, *pats, **opts)
     if pats:
@@ -614,7 +614,7 @@ def reposetup(ui, repo):
     if not inc:
         return
 
-    kwtools['templater'] = kwt = kwtemplater(ui, repo, inc, exc)
+    kwt = kwtemplater(ui, repo, inc, exc)
 
     class kwrepo(repo.__class__):
         def file(self, f):
