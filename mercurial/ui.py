@@ -439,32 +439,38 @@ class ui(object):
         return self._data(untrusted).source(section, name)
 
     def config(self, section, name, default=_unset, untrusted=False):
+        """return the plain string version of a config"""
+        value = self._config(section, name, default=default,
+                             untrusted=untrusted)
+        if value is _unset:
+            return None
+        return value
+
+    def _config(self, section, name, default=_unset, untrusted=False):
+        value = default
         if isinstance(name, list):
             alternates = name
-            # let us ignore the config items in the alternates case for now
-            if default is _unset:
-                default = None
         else:
             item = self._knownconfig.get(section, {}).get(name)
             if default is _unset:
-                default = None
-                if item is not None:
-                    default = item.default
+                if item is None:
+                    value = default
+                else:
+                    value = item.default
             elif item is not None:
                 msg = ("specifying a default value for a registered "
                        "config item: '%s.%s' '%s'")
                 msg %= (section, name, default)
-                self.develwarn(msg, 1, 'warn-config-default')
+                self.develwarn(msg, 2, 'warn-config-default')
 
             alternates = [name]
 
         for n in alternates:
-            value = self._data(untrusted).get(section, n, None)
-            if value is not None:
+            candidate = self._data(untrusted).get(section, n, None)
+            if candidate is not None:
+                value = candidate
                 name = n
                 break
-        else:
-            value = default
 
         if self.debugflag and not untrusted and self._reportuntrusted:
             for n in alternates:
