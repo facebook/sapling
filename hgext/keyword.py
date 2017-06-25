@@ -577,9 +577,136 @@ def shrink(ui, repo, *pats, **opts):
     # 3rd argument sets expansion to False
     _kwfwrite(ui, repo, False, *pats, **opts)
 
+# monkeypatches
+
+def kwpatchfile_init(orig, self, ui, gp, backend, store, eolmode=None):
+    '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
+    rejects or conflicts due to expanded keywords in working dir.'''
+    orig(self, ui, gp, backend, store, eolmode)
+    kwt = getattr(getattr(backend, 'repo', None), '_keywordkwt', None)
+    if kwt:
+        # shrink keywords read from working dir
+        self.lines = kwt.shrinklines(self.fname, self.lines)
+
+def kwdiff(orig, repo, *args, **kwargs):
+    '''Monkeypatch patch.diff to avoid expansion.'''
+    kwt = getattr(repo, '_keywordkwt', None)
+    if kwt:
+        restrict = kwt.restrict
+        kwt.restrict = True
+    try:
+        for chunk in orig(repo, *args, **kwargs):
+            yield chunk
+    finally:
+        if kwt:
+            kwt.restrict = restrict
+
+def kwweb_skip(orig, web, req, tmpl):
+    '''Wraps webcommands.x turning off keyword expansion.'''
+    kwt = getattr(web.repo, '_keywordkwt', None)
+    if kwt:
+        origmatch = kwt.match
+        kwt.match = util.never
+    try:
+        for chunk in orig(web, req, tmpl):
+            yield chunk
+    finally:
+        if kwt:
+            kwt.match = origmatch
+
+def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+    '''Wraps cmdutil.amend expanding keywords after amend.'''
+    kwt = getattr(repo, '_keywordkwt', None)
+    if kwt is None:
+        return orig(ui, repo, commitfunc, old, extra, pats, opts)
+    with repo.wlock():
+        kwt.postcommit = True
+        newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
+        if newid != old.node():
+            ctx = repo[newid]
+            kwt.restrict = True
+            kwt.overwrite(ctx, ctx.files(), False, True)
+            kwt.restrict = False
+        return newid
+
+def kw_copy(orig, ui, repo, pats, opts, rename=False):
+    '''Wraps cmdutil.copy so that copy/rename destinations do not
+    contain expanded keywords.
+    Note that the source of a regular file destination may also be a
+    symlink:
+    hg cp sym x                -> x is symlink
+    cp sym x; hg cp -A sym x   -> x is file (maybe expanded keywords)
+    For the latter we have to follow the symlink to find out whether its
+    target is configured for expansion and we therefore must unexpand the
+    keywords in the destination.'''
+    kwt = getattr(repo, '_keywordkwt', None)
+    if kwt is None:
+        return orig(ui, repo, pats, opts, rename)
+    with repo.wlock():
+        orig(ui, repo, pats, opts, rename)
+        if opts.get('dry_run'):
+            return
+        wctx = repo[None]
+        cwd = repo.getcwd()
+
+        def haskwsource(dest):
+            '''Returns true if dest is a regular file and configured for
+            expansion or a symlink which points to a file configured for
+            expansion. '''
+            source = repo.dirstate.copied(dest)
+            if 'l' in wctx.flags(source):
+                source = pathutil.canonpath(repo.root, cwd,
+                                           os.path.realpath(source))
+            return kwt.match(source)
+
+        candidates = [f for f in repo.dirstate.copies() if
+                      'l' not in wctx.flags(f) and haskwsource(f)]
+        kwt.overwrite(wctx, candidates, False, False)
+
+def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
+    '''Wraps record.dorecord expanding keywords after recording.'''
+    kwt = getattr(repo, '_keywordkwt', None)
+    if kwt is None:
+        return orig(ui, repo, commitfunc, *pats, **opts)
+    with repo.wlock():
+        # record returns 0 even when nothing has changed
+        # therefore compare nodes before and after
+        kwt.postcommit = True
+        ctx = repo['.']
+        wstatus = ctx.status()
+        ret = orig(ui, repo, commitfunc, *pats, **opts)
+        recctx = repo['.']
+        if ctx != recctx:
+            modified, added = _preselect(wstatus, recctx.files())
+            kwt.restrict = False
+            kwt.overwrite(recctx, modified, False, True)
+            kwt.overwrite(recctx, added, False, True, True)
+            kwt.restrict = True
+        return ret
+
+def kwfilectx_cmp(orig, self, fctx):
+    if fctx._customcmp:
+        return fctx.cmp(self)
+    kwt = getattr(self._repo, '_keywordkwt', None)
+    if kwt is None:
+        return orig(self, fctx)
+    # keyword affects data size, comparing wdir and filelog size does
+    # not make sense
+    if (fctx._filenode is None and
+        (self._repo._encodefilterpats or
+         kwt.match(fctx.path()) and 'l' not in fctx.flags() or
+         self.size() - 4 == fctx.size()) or
+        self.size() == fctx.size()):
+        return self._filelog.cmp(self._filenode, fctx.data())
+    return True
 
 def uisetup(ui):
-    ''' Monkeypatches dispatch._parse to retrieve user command.'''
+    ''' Monkeypatches dispatch._parse to retrieve user command.
+    Overrides file method to return kwfilelog instead of filelog
+    if file matches user configuration.
+    Wraps commit to overwrite configured files with updated
+    keyword substitutions.
+    Monkeypatches patch and webcommands.'''
 
     def kwdispatch_parse(orig, ui, args):
         '''Monkeypatch dispatch._parse to obtain running hg command.'''
@@ -589,13 +716,17 @@ def uisetup(ui):
 
     extensions.wrapfunction(dispatch, '_parse', kwdispatch_parse)
 
+    extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
+    extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
+    extensions.wrapfunction(patch, 'diff', kwdiff)
+    extensions.wrapfunction(cmdutil, 'amend', kw_amend)
+    extensions.wrapfunction(cmdutil, 'copy', kw_copy)
+    extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
+    for c in nokwwebcommands.split():
+        extensions.wrapfunction(webcommands, c, kwweb_skip)
+
 def reposetup(ui, repo):
-    '''Sets up repo as kwrepo for keyword substitution.
-    Overrides file method to return kwfilelog instead of filelog
-    if file matches user configuration.
-    Wraps commit to overwrite configured files with updated
-    keyword substitutions.
-    Monkeypatches patch and webcommands.'''
+    '''Sets up repo as kwrepo for keyword substitution.'''
 
     try:
         if (not repo.local() or kwtools['hgcmd'] in nokwcommands.split()
@@ -665,134 +796,3 @@ def reposetup(ui, repo):
 
     repo.__class__ = kwrepo
     repo._keywordkwt = kwt
-
-    # monkeypatches
-    def kwpatchfile_init(orig, self, ui, gp, backend, store, eolmode=None):
-        '''Monkeypatch/wrap patch.patchfile.__init__ to avoid
-        rejects or conflicts due to expanded keywords in working dir.'''
-        orig(self, ui, gp, backend, store, eolmode)
-        kwt = getattr(getattr(backend, 'repo', None), '_keywordkwt', None)
-        if kwt:
-            # shrink keywords read from working dir
-            self.lines = kwt.shrinklines(self.fname, self.lines)
-
-    def kwdiff(orig, repo, *args, **kwargs):
-        '''Monkeypatch patch.diff to avoid expansion.'''
-        kwt = getattr(repo, '_keywordkwt', None)
-        if kwt:
-            restrict = kwt.restrict
-            kwt.restrict = True
-        try:
-            for chunk in orig(repo, *args, **kwargs):
-                yield chunk
-        finally:
-            if kwt:
-                kwt.restrict = restrict
-
-    def kwweb_skip(orig, web, req, tmpl):
-        '''Wraps webcommands.x turning off keyword expansion.'''
-        kwt = getattr(web.repo, '_keywordkwt', None)
-        if kwt:
-            origmatch = kwt.match
-            kwt.match = util.never
-        try:
-            for chunk in orig(web, req, tmpl):
-                yield chunk
-        finally:
-            if kwt:
-                kwt.match = origmatch
-
-    def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
-        '''Wraps cmdutil.amend expanding keywords after amend.'''
-        kwt = getattr(repo, '_keywordkwt', None)
-        if kwt is None:
-            return orig(ui, repo, commitfunc, old, extra, pats, opts)
-        with repo.wlock():
-            kwt.postcommit = True
-            newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
-            if newid != old.node():
-                ctx = repo[newid]
-                kwt.restrict = True
-                kwt.overwrite(ctx, ctx.files(), False, True)
-                kwt.restrict = False
-            return newid
-
-    def kw_copy(orig, ui, repo, pats, opts, rename=False):
-        '''Wraps cmdutil.copy so that copy/rename destinations do not
-        contain expanded keywords.
-        Note that the source of a regular file destination may also be a
-        symlink:
-        hg cp sym x                -> x is symlink
-        cp sym x; hg cp -A sym x   -> x is file (maybe expanded keywords)
-        For the latter we have to follow the symlink to find out whether its
-        target is configured for expansion and we therefore must unexpand the
-        keywords in the destination.'''
-        kwt = getattr(repo, '_keywordkwt', None)
-        if kwt is None:
-            return orig(ui, repo, pats, opts, rename)
-        with repo.wlock():
-            orig(ui, repo, pats, opts, rename)
-            if opts.get('dry_run'):
-                return
-            wctx = repo[None]
-            cwd = repo.getcwd()
-
-            def haskwsource(dest):
-                '''Returns true if dest is a regular file and configured for
-                expansion or a symlink which points to a file configured for
-                expansion. '''
-                source = repo.dirstate.copied(dest)
-                if 'l' in wctx.flags(source):
-                    source = pathutil.canonpath(repo.root, cwd,
-                                               os.path.realpath(source))
-                return kwt.match(source)
-
-            candidates = [f for f in repo.dirstate.copies() if
-                          'l' not in wctx.flags(f) and haskwsource(f)]
-            kwt.overwrite(wctx, candidates, False, False)
-
-    def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
-        '''Wraps record.dorecord expanding keywords after recording.'''
-        kwt = getattr(repo, '_keywordkwt', None)
-        if kwt is None:
-            return orig(ui, repo, commitfunc, *pats, **opts)
-        with repo.wlock():
-            # record returns 0 even when nothing has changed
-            # therefore compare nodes before and after
-            kwt.postcommit = True
-            ctx = repo['.']
-            wstatus = ctx.status()
-            ret = orig(ui, repo, commitfunc, *pats, **opts)
-            recctx = repo['.']
-            if ctx != recctx:
-                modified, added = _preselect(wstatus, recctx.files())
-                kwt.restrict = False
-                kwt.overwrite(recctx, modified, False, True)
-                kwt.overwrite(recctx, added, False, True, True)
-                kwt.restrict = True
-            return ret
-
-    def kwfilectx_cmp(orig, self, fctx):
-        if fctx._customcmp:
-            return fctx.cmp(self)
-        kwt = getattr(self._repo, '_keywordkwt', None)
-        if kwt is None:
-            return orig(self, fctx)
-        # keyword affects data size, comparing wdir and filelog size does
-        # not make sense
-        if (fctx._filenode is None and
-            (self._repo._encodefilterpats or
-             kwt.match(fctx.path()) and 'l' not in fctx.flags() or
-             self.size() - 4 == fctx.size()) or
-            self.size() == fctx.size()):
-            return self._filelog.cmp(self._filenode, fctx.data())
-        return True
-
-    extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
-    extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
-    extensions.wrapfunction(patch, 'diff', kwdiff)
-    extensions.wrapfunction(cmdutil, 'amend', kw_amend)
-    extensions.wrapfunction(cmdutil, 'copy', kw_copy)
-    extensions.wrapfunction(cmdutil, 'dorecord', kw_dorecord)
-    for c in nokwwebcommands.split():
-        extensions.wrapfunction(webcommands, c, kwweb_skip)
