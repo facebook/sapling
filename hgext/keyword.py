@@ -665,8 +665,13 @@ def reposetup(ui, repo):
 
     def kwdiff(orig, *args, **kwargs):
         '''Monkeypatch patch.diff to avoid expansion.'''
+        restrict = kwt.restrict
         kwt.restrict = True
-        return orig(*args, **kwargs)
+        try:
+            for chunk in orig(*args, **kwargs):
+                yield chunk
+        finally:
+            kwt.restrict = restrict
 
     def kwweb_skip(orig, web, req, tmpl):
         '''Wraps webcommands.x turning off keyword expansion.'''

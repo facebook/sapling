@@ -1378,4 +1378,35 @@ Test restricted mode with fetch (with merge)
    $Xinfo$
   +xxxx
 
+Test that patch.diff(), which is implied by "hg diff" or so, doesn't
+suppress expanding keywords at subsequent commands
+
+#if windows
+  $ PYTHONPATH="$TESTDIR/../contrib;$PYTHONPATH"
+#else
+  $ PYTHONPATH="$TESTDIR/../contrib:$PYTHONPATH"
+#endif
+  $ export PYTHONPATH
+
+  $ grep -v '^promptecho ' < $HGRCPATH >> $HGRCPATH.new
+  $ mv $HGRCPATH.new $HGRCPATH
+
+  >>> from __future__ import print_function
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def check(server):
+  ...     # hello block
+  ...     readchannel(server)
+  ... 
+  ...     runcommand(server, ['cat', 'm'])
+  ...     runcommand(server, ['diff', '-c', '.', 'm'])
+  ...     runcommand(server, ['cat', 'm'])
+  *** runcommand cat m
+  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
+  bar
+  *** runcommand diff -c . m
+  *** runcommand cat m
+  $Id: m 800511b3a22d Thu, 01 Jan 1970 00:00:00 +0000 test $
+  bar
+
   $ cd ..
