@@ -570,6 +570,12 @@ class revlog(object):
         revs in ascending order and ``stopped`` is a bool indicating whether
         ``stoprev`` was hit.
         """
+        # Try C implementation.
+        try:
+            return self.index.deltachain(rev, stoprev, self._generaldelta)
+        except AttributeError:
+            pass
+
         chain = []
 
         # Alias to prevent attribute lookup in tight loop.

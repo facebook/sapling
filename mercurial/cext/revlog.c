@@ -816,6 +816,139 @@ bail:
 	return NULL;
 }
 
+static inline int index_baserev(indexObject *self, int rev)
+{
+	const char *data;
+
+	if (rev >= self->length - 1) {
+		PyObject *tuple = PyList_GET_ITEM(self->added,
+			rev - self->length + 1);
+		return (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 3));
+	}
+	else {
+		data = index_deref(self, rev);
+		if (data == NULL) {
+			return -2;
+		}
+
+		return getbe32(data + 16);
+	}
+}
+
+static PyObject *index_deltachain(indexObject *self, PyObject *args)
+{
+	int rev, generaldelta;
+	PyObject *stoparg;
+	int stoprev, iterrev, baserev = -1;
+	int stopped;
+	PyObject *chain = NULL, *value = NULL, *result = NULL;
+	const Py_ssize_t length = index_length(self);
+
+	if (!PyArg_ParseTuple(args, "iOi", &rev, &stoparg, &generaldelta)) {
+		return NULL;
+	}
+
+	if (PyInt_Check(stoparg)) {
+		stoprev = (int)PyInt_AsLong(stoparg);
+		if (stoprev == -1 && PyErr_Occurred()) {
+			return NULL;
+		}
+	}
+	else if (stoparg == Py_None) {
+		stoprev = -2;
+	}
+	else {
+		PyErr_SetString(PyExc_ValueError,
+			"stoprev must be integer or None");
+		return NULL;
+	}
+
+	if (rev < 0 || rev >= length - 1) {
+		PyErr_SetString(PyExc_ValueError, "revlog index out of range");
+		return NULL;
+	}
+
+	chain = PyList_New(0);
+	if (chain == NULL) {
+		return NULL;
+	}
+
+	baserev = index_baserev(self, rev);
+
+	/* This should never happen. */
+	if (baserev == -2) {
+		PyErr_SetString(PyExc_IndexError, "unable to resolve data");
+		goto bail;
+	}
+
+	iterrev = rev;
+
+	while (iterrev != baserev && iterrev != stoprev) {
+		value = PyInt_FromLong(iterrev);
+		if (value == NULL) {
+			goto bail;
+		}
+		if (PyList_Append(chain, value)) {
+			Py_DECREF(value);
+			goto bail;
+		}
+		Py_DECREF(value);
+
+		if (generaldelta) {
+			iterrev = baserev;
+		}
+		else {
+			iterrev--;
+		}
+
+		if (iterrev < 0) {
+			break;
+		}
+
+		if (iterrev >= length - 1) {
+			PyErr_SetString(PyExc_IndexError, "revision outside index");
+			return NULL;
+		}
+
+		baserev = index_baserev(self, iterrev);
+
+		/* This should never happen. */
+		if (baserev == -2) {
+			PyErr_SetString(PyExc_IndexError, "unable to resolve data");
+			goto bail;
+		}
+	}
+
+	if (iterrev == stoprev) {
+		stopped = 1;
+	}
+	else {
+		value = PyInt_FromLong(iterrev);
+		if (value == NULL) {
+			goto bail;
+		}
+		if (PyList_Append(chain, value)) {
+			Py_DECREF(value);
+			goto bail;
+		}
+		Py_DECREF(value);
+
+		stopped = 0;
+	}
+
+	if (PyList_Reverse(chain)) {
+		goto bail;
+	}
+
+	result = Py_BuildValue("OO", chain, stopped ? Py_True : Py_False);
+	Py_DECREF(chain);
+	return result;
+
+bail:
+	Py_DECREF(chain);
+	return NULL;
+}
+
 static inline int nt_level(const char *node, Py_ssize_t level)
 {
 	int v = node[level>>1];
@@ -1828,6 +1961,8 @@ static PyMethodDef index_methods[] = {
 	 "get head revisions"}, /* Can do filtering since 3.2 */
 	{"headrevsfiltered", (PyCFunction)index_headrevs, METH_VARARGS,
 	 "get filtered head revisions"}, /* Can always do filtering */
+	{"deltachain", (PyCFunction)index_deltachain, METH_VARARGS,
+	 "determine revisions with deltas to reconstruct fulltext"},
 	{"insert", (PyCFunction)index_insert, METH_VARARGS,
 	 "insert an index entry"},
 	{"partialmatch", (PyCFunction)index_partialmatch, METH_VARARGS,
