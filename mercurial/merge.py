@@ -492,7 +492,7 @@ class mergestate(object):
             # restore local
             if hash != nullhex:
                 f = self._repo.vfs('merge/' + hash)
-                self._repo.wwrite(dfile, f.read(), flags)
+                wctx[dfile].write(f.read(), flags)
                 f.close()
             else:
                 wctx[dfile].remove(ignoremissing=True)
@@ -1270,7 +1270,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         f0, flags = args
         repo.ui.note(_("moving %s to %s\n") % (f0, f))
         audit(f)
-        repo.wwrite(f, wctx.filectx(f0).data(), flags)
+        wctx[f].write(wctx.filectx(f0).data(), flags)
         wctx[f0].remove()
         updated += 1
 
@@ -1281,7 +1281,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         f0, flags = args
         repo.ui.note(_("getting %s to %s\n") % (f0, f))
-        repo.wwrite(f, mctx.filectx(f0).data(), flags)
+        wctx[f].write(mctx.filectx(f0).data(), flags)
         updated += 1
 
     # exec
