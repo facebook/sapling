@@ -414,7 +414,7 @@ class mergestate(object):
         if fcl.isabsent():
             hash = nullhex
         else:
-            hash = hashlib.sha1(fcl.path()).hexdigest()
+            hash = hex(hashlib.sha1(fcl.path()).digest())
             self._repo.vfs.write('merge/' + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
                            fca.path(), hex(fca.filenode()),
