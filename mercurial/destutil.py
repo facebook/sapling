@@ -11,7 +11,7 @@ from .i18n import _
 from . import (
     bookmarks,
     error,
-    obsolete,
+    obsutil,
     scmutil,
 )
 
@@ -24,7 +24,7 @@ def _destupdateobs(repo, clean):
 
     if p1.obsolete() and not p1.children():
         # allow updating to successors
-        successors = obsolete.successorssets(repo, p1.node())
+        successors = obsutil.successorssets(repo, p1.node())
 
         # behavior of certain cases is as follows,
         #

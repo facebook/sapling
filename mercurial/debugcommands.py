@@ -47,6 +47,7 @@ from . import (
     lock as lockmod,
     merge as mergemod,
     obsolete,
+    obsutil,
     phases,
     policy,
     pvec,
@@ -2110,7 +2111,7 @@ def debugsuccessorssets(ui, repo, *revs):
     for rev in scmutil.revrange(repo, revs):
         ctx = repo[rev]
         ui.write('%s\n'% ctx2str(ctx))
-        for succsset in obsolete.successorssets(repo, ctx.node(), cache):
+        for succsset in obsutil.successorssets(repo, ctx.node(), cache):
             if succsset:
                 ui.write('    ')
                 ui.write(node2str(succsset[0]))
