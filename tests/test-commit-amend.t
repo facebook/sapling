@@ -40,7 +40,7 @@ Amending changeset with changes in working dir:
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -m 'amend base1'
   pretxncommit 43f1ba15f28a50abf0aae529cf8a16bfced7b149
   43f1ba15f28a tip
-  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-f1bf3ab8-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-f1bf3ab8-amend.hg (glob)
   $ echo 'pretxncommit.foo = ' >> $HGRCPATH
   $ hg diff -c .
   diff -r ad120869acf0 -r 43f1ba15f28a a
@@ -93,7 +93,7 @@ Check proper abort for empty message
 
 Add new file:
   $ hg ci --amend -m 'amend base1 new file'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/43f1ba15f28a-7a3b3496-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/43f1ba15f28a-7a3b3496-amend.hg (glob)
 
 Remove file that was added in amended commit:
 (and test logfile option)
@@ -102,7 +102,7 @@ Remove file that was added in amended commit:
   $ hg rm b
   $ echo 'amend base1 remove new file' > ../logfile
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg ci --amend --logfile ../logfile
-  saved backup bundle to $TESTTMP/.hg/strip-backup/b8e3cb2b3882-0b55739a-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/b8e3cb2b3882-0b55739a-amend.hg (glob)
 
   $ hg cat b
   b: no such file in rev 74609c7f506e
@@ -117,13 +117,12 @@ No changes, just a different message:
   a
   committing manifest
   committing changelog
-  stripping amended changeset 74609c7f506e
   1 changesets found
   uncompressed size of bundle content:
        254 (changelog)
        163 (manifests)
        129  a
-  saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-1bfde511-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-1bfde511-amend.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        250 (changelog)
@@ -169,10 +168,10 @@ Test -u/-d:
   > EOF
   $ HGEDITOR="sh .hg/checkeditform.sh" hg ci --amend -u foo -d '1 0'
   HGEDITFORM=commit.amend.normal
-  saved backup bundle to $TESTTMP/.hg/strip-backup/1cd866679df8-5f5bcb85-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/1cd866679df8-5f5bcb85-amend.hg (glob)
   $ echo a >> a
   $ hg ci --amend -u foo -d '1 0'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/780e6f23e03d-83b10a27-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/780e6f23e03d-83b10a27-amend.hg (glob)
   $ hg log -r .
   changeset:   1:5f357c7560ab
   tag:         tip
@@ -261,13 +260,12 @@ then, test editing custom commit message
   a
   committing manifest
   committing changelog
-  stripping amended changeset 5f357c7560ab
   1 changesets found
   uncompressed size of bundle content:
        249 (changelog)
        163 (manifests)
        131  a
-  saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-e7c84ade-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-e7c84ade-amend.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        257 (changelog)
@@ -303,14 +301,12 @@ Same, but with changes in working dir (different code path):
   a
   committing manifest
   committing changelog
-  stripping intermediate changeset a0ea9b1a4c8c
-  stripping amended changeset 7ab3bf440b54
   2 changesets found
   uncompressed size of bundle content:
        464 (changelog)
        322 (manifests)
        249  a
-  saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-8e3b5088-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-8e3b5088-amend.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        257 (changelog)
@@ -337,13 +333,13 @@ Moving bookmarks, preserve active bookmark:
   $ hg book book1
   $ hg book book2
   $ hg ci --amend -m 'move bookmarks'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/ea22a388757c-e51094db-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/ea22a388757c-e51094db-amend.hg (glob)
   $ hg book
      book1                     1:6cec5aa930e2
    * book2                     1:6cec5aa930e2
   $ echo a >> a
   $ hg ci --amend -m 'move bookmarks'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/6cec5aa930e2-e9b06de4-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/6cec5aa930e2-e9b06de4-amend.hg (glob)
   $ hg book
      book1                     1:48bb6e53a15f
    * book2                     1:48bb6e53a15f
@@ -379,7 +375,7 @@ Moving branches:
   $ hg branch default -f
   marked working directory as branch default
   $ hg ci --amend -m 'back to default'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/8ac881fbf49d-fd962fef-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/8ac881fbf49d-fd962fef-amend.hg (glob)
   $ hg branches
   default                        2:ce12b0b57d46
 
@@ -395,7 +391,7 @@ Close branch:
   $ echo b >> b
   $ hg ci -mb
   $ hg ci --amend --close-branch -m 'closing branch foo'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/c962248fa264-6701c392-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/c962248fa264-6701c392-amend.hg (glob)
 
 Same thing, different code path:
 
@@ -404,7 +400,7 @@ Same thing, different code path:
   reopening closed branch head 4
   $ echo b >> b
   $ hg ci --amend --close-branch
-  saved backup bundle to $TESTTMP/.hg/strip-backup/027371728205-49c0c55d-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/027371728205-49c0c55d-amend.hg (glob)
   $ hg branches
   default                        2:ce12b0b57d46
 
@@ -425,7 +421,7 @@ Follow copies/renames:
   $ hg ci -m 'b -> c'
   $ hg mv c d
   $ hg ci --amend -m 'b -> d'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/b8c6eac7f12e-adaaa8b1-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/b8c6eac7f12e-adaaa8b1-amend.hg (glob)
   $ hg st --rev '.^' --copies d
   A d
     b
@@ -433,7 +429,7 @@ Follow copies/renames:
   $ hg ci -m 'e = d'
   $ hg cp e f
   $ hg ci --amend -m 'f = d'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/7f9761d65613-d37aa788-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/7f9761d65613-d37aa788-amend.hg (glob)
   $ hg st --rev '.^' --copies f
   A f
     d
@@ -444,7 +440,7 @@ Follow copies/renames:
   $ hg cp a f
   $ mv f.orig f
   $ hg ci --amend -m replacef
-  saved backup bundle to $TESTTMP/.hg/strip-backup/9e8c5f7e3d95-90259f67-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/9e8c5f7e3d95-90259f67-amend.hg (glob)
   $ hg st --change . --copies
   $ hg log -r . --template "{file_copies}\n"
   
@@ -456,7 +452,7 @@ Move added file (issue3410):
   adding g
   $ hg mv g h
   $ hg ci --amend
-  saved backup bundle to $TESTTMP/.hg/strip-backup/24aa8eacce2b-7059e0f1-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/24aa8eacce2b-7059e0f1-amend.hg (glob)
   $ hg st --change . --copies h
   A h
   $ hg log -r . --template "{file_copies}\n"
@@ -476,11 +472,11 @@ Preserve extra dict (issue3430):
   $ echo a >> a
   $ hg ci -ma
   $ hg ci --amend -m "a'"
-  saved backup bundle to $TESTTMP/.hg/strip-backup/3837aa2a2fdb-2be01fd1-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/3837aa2a2fdb-2be01fd1-amend.hg (glob)
   $ hg log -r . --template "{branch}\n"
   a
   $ hg ci --amend -m "a''"
-  saved backup bundle to $TESTTMP/.hg/strip-backup/c05c06be7514-ed28c4cd-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/c05c06be7514-ed28c4cd-amend.hg (glob)
   $ hg log -r . --template "{branch}\n"
   a
 
@@ -497,7 +493,7 @@ first graft something so there's an additional entry:
   $ hg graft 12
   grafting 12:2647734878ef "fork" (tip)
   $ hg ci --amend -m 'graft amend'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/bd010aea3f39-eedb103b-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/bd010aea3f39-eedb103b-amend.hg (glob)
   $ hg log -r . --debug | grep extra
   extra:       amend_source=bd010aea3f39f3fb2a2f884b9ccb0471cd77398e
   extra:       branch=a

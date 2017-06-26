@@ -37,7 +37,6 @@ from . import (
     phases,
     pycompat,
     registrar,
-    repair,
     revlog,
     revset,
     scmutil,
@@ -2749,7 +2748,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
-    createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
     newid = None
     with repo.wlock(), repo.lock():
@@ -2890,32 +2888,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             if newid != old.node():
                 # Reroute the working copy parent to the new changeset
                 repo.setparents(newid, nullid)
-
-                # Move bookmarks from old parent to amend commit
-                bms = repo.nodebookmarks(old.node())
-                if bms:
-                    marks = repo._bookmarks
-                    for bm in bms:
-                        ui.debug('moving bookmarks %r from %s to %s\n' %
-                                 (marks, old.hex(), hex(newid)))
-                        marks[bm] = newid
-                    marks.recordchange(tr)
-                #commit the whole amend process
-                if createmarkers:
-                    # mark the new changeset as successor of the rewritten one
-                    new = repo[newid]
-                    obs = [(old, (new,))]
-                    if node:
-                        obs.append((ctx, ()))
-
-                    obsolete.createmarkers(repo, obs, operation='amend')
-        if not createmarkers and newid != old.node():
-            # Strip the intermediate commit (if there was one) and the amended
-            # commit
-            if node:
-                ui.note(_('stripping intermediate changeset %s\n') % ctx)
-            ui.note(_('stripping amended changeset %s\n') % old)
-            repair.strip(ui, repo, old.node(), topic='amend-backup')
+                mapping = {old.node(): (newid,)}
+                if node:
+                    mapping[node] = ()
+                scmutil.cleanupnodes(repo, mapping, 'amend')
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):

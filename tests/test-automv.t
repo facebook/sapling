@@ -162,7 +162,7 @@ mv/rm/add
   R a.txt
   $ hg commit --amend -m 'amended'
   detected move of 1 files
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -185,7 +185,7 @@ mv/rm/add/modif
   R a.txt
   $ hg commit --amend -m 'amended'
   detected move of 1 files
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -207,7 +207,7 @@ mv/rm/add/modif
   A b.txt
   R a.txt
   $ hg commit --amend -m 'amended'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
   A c.txt
@@ -229,7 +229,7 @@ mv/rm/add/modif/changethreshold
   R a.txt
   $ hg commit --amend --config automv.similarity='60' -m 'amended'
   detected move of 1 files
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -248,7 +248,7 @@ mv
   ! a.txt
   ? b.txt
   $ hg commit --amend -m 'amended'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status -C
   ! a.txt
   ? b.txt
@@ -270,7 +270,7 @@ mv/rm/add/notincommitfiles
   A d.txt
   R a.txt
   $ hg commit --amend -m 'amended' d.txt
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A c.txt
   A d.txt
@@ -279,7 +279,7 @@ mv/rm/add/notincommitfiles
   R a.txt
   $ hg commit --amend -m 'amended'
   detected move of 1 files
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -301,7 +301,7 @@ mv/rm/add/--no-automv
   A b.txt
   R a.txt
   $ hg commit --amend -m 'amended' --no-automv
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
   A c.txt
@@ -322,7 +322,7 @@ mv/rm/commit/add/amend
   $ hg commit -m "removed a"
   $ hg add b.txt
   $ hg commit --amend -m 'amended'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend.hg (glob)
   $ hg status --change . -C
   A b.txt
   R a.txt
