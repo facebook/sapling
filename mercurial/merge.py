@@ -1130,7 +1130,6 @@ def batchget(repo, mctx, wctx, actions):
     """
     verbose = repo.ui.verbose
     fctx = mctx.filectx
-    wwrite = repo.wwrite
     ui = repo.ui
     i = 0
     with repo.wvfs.backgroundclosing(ui, expectedcount=len(actions)):
@@ -1151,7 +1150,7 @@ def batchget(repo, mctx, wctx, actions):
 
             if repo.wvfs.isdir(f) and not repo.wvfs.islink(f):
                 repo.wvfs.removedirs(f)
-            wwrite(f, fctx(f).data(), flags, backgroundclose=True)
+            wctx[f].write(fctx(f).data(), flags, backgroundclose=True)
             if i == 100:
                 yield i, f
                 i = 0

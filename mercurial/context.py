@@ -1892,9 +1892,10 @@ class workingfilectx(committablefilectx):
         """wraps unlink for a repo's working directory"""
         self._repo.wvfs.unlinkpath(self._path, ignoremissing=ignoremissing)
 
-    def write(self, data, flags):
+    def write(self, data, flags, backgroundclose=False):
         """wraps repo.wwrite"""
-        self._repo.wwrite(self._path, data, flags)
+        self._repo.wwrite(self._path, data, flags,
+                          backgroundclose=backgroundclose)
 
     def setflags(self, l, x):
         self._repo.wvfs.setflags(self._path, l, x)
