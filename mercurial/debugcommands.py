@@ -326,7 +326,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_('not a bundle2 file'))
     ui.write(('Stream params: %s\n' % repr(gen.params)))
-    parttypes = opts.get('part_type', [])
+    parttypes = opts.get(r'part_type', [])
     for part in gen.iterparts():
         if parttypes and part.type not in parttypes:
             continue
@@ -393,7 +393,7 @@ def debugcheckstate(ui, repo):
 def debugcolor(ui, repo, **opts):
     """show available color, effects or style"""
     ui.write(('color mode: %s\n') % ui._colormode)
-    if opts.get('style'):
+    if opts.get(r'style'):
         return _debugdisplaystyle(ui)
     else:
         return _debugdisplaycolor(ui)
@@ -461,8 +461,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 
     Otherwise, the changelog DAG of the current repo is emitted.
     """
-    spaces = opts.get('spaces')
-    dots = opts.get('dots')
+    spaces = opts.get(r'spaces')
+    dots = opts.get(r'dots')
     if file_:
         rlog = revlog.revlog(vfsmod.vfs(pycompat.getcwd(), audit=False),
                              file_)
@@ -475,8 +475,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                     yield 'l', (r, "r%i" % r)
     elif repo:
         cl = repo.changelog
-        tags = opts.get('tags')
-        branches = opts.get('branches')
+        tags = opts.get(r'tags')
+        branches = opts.get(r'branches')
         if tags:
             labels = {}
             for l, n in repo.tags().items():
@@ -531,7 +531,7 @@ def debugdata(ui, repo, file_, rev=None, **opts):
     norepo=True, optionalrepo=True)
 def debugdate(ui, date, range=None, **opts):
     """parse and display a date"""
-    if opts["extended"]:
+    if opts[r"extended"]:
         d = util.parsedate(date, util.extendeddateformats)
     else:
         d = util.parsedate(date)
@@ -650,8 +650,8 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 def debugstate(ui, repo, **opts):
     """show the contents of the current dirstate"""
 
-    nodates = opts.get('nodates')
-    datesort = opts.get('datesort')
+    nodates = opts.get(r'nodates')
+    datesort = opts.get(r'datesort')
 
     timestr = ""
     if datesort:
@@ -792,7 +792,7 @@ def debugextensions(ui, **opts):
     _('[-r REV] FILESPEC'))
 def debugfileset(ui, repo, expr, **opts):
     '''parse and apply a fileset specification'''
-    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
+    ctx = scmutil.revsingle(repo, opts.get(r'rev'), None)
     if ui.verbose:
         tree = fileset.parse(expr)
         ui.note(fileset.prettyformat(tree), "\n")
@@ -833,11 +833,11 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
         raise error.Abort("getbundle() not supported by target repository")
     args = {}
     if common:
-        args['common'] = [bin(s) for s in common]
+        args[r'common'] = [bin(s) for s in common]
     if head:
-        args['heads'] = [bin(s) for s in head]
+        args[r'heads'] = [bin(s) for s in head]
     # TODO: get desired bundlecaps from command line.
-    args['bundlecaps'] = None
+    args[r'bundlecaps'] = None
     bundle = repo.getbundle('debug', **args)
 
     bundletype = opts.get('type', 'bzip2').lower()
@@ -1176,11 +1176,11 @@ def debuglocks(ui, repo, **opts):
 
     """
 
-    if opts.get('force_lock'):
+    if opts.get(r'force_lock'):
         repo.svfs.unlink('lock')
-    if opts.get('force_wlock'):
+    if opts.get(r'force_wlock'):
         repo.vfs.unlink('wlock')
-    if opts.get('force_lock') or opts.get('force_lock'):
+    if opts.get(r'force_lock') or opts.get(r'force_lock'):
         return 0
 
     now = time.time()
@@ -1485,7 +1485,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         if fixpaths:
             spec = spec.replace(pycompat.ossep, '/')
         speclen = len(spec)
-        fullpaths = opts['full']
+        fullpaths = opts[r'full']
         files, dirs = set(), set()
         adddir, addfile = dirs.add, files.add
         for f, st in dirstate.iteritems():
@@ -1503,11 +1503,11 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         return files, dirs
 
     acceptable = ''
-    if opts['normal']:
+    if opts[r'normal']:
         acceptable += 'nm'
-    if opts['added']:
+    if opts[r'added']:
         acceptable += 'a'
-    if opts['removed']:
+    if opts[r'removed']:
         acceptable += 'r'
     cwd = repo.getcwd()
     if not specs:
@@ -1671,7 +1671,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
         dirstate = repo.dirstate
         changedfiles = None
         # See command doc for what minimal does.
-        if opts.get('minimal'):
+        if opts.get(r'minimal'):
             manifestfiles = set(ctx.manifest().keys())
             dirstatefiles = set(dirstate)
             manifestonly = manifestfiles - dirstatefiles
@@ -2134,14 +2134,14 @@ def debugtemplate(ui, repo, tmpl, **opts):
     Use --verbose to print the parsed tree.
     """
     revs = None
-    if opts['rev']:
+    if opts[r'rev']:
         if repo is None:
             raise error.RepoError(_('there is no Mercurial repository here '
                                     '(.hg not found)'))
-        revs = scmutil.revrange(repo, opts['rev'])
+        revs = scmutil.revrange(repo, opts[r'rev'])
 
     props = {}
-    for d in opts['define']:
+    for d in opts[r'define']:
         try:
             k, v = (e.strip() for e in d.split('=', 1))
             if not k or k == 'ui':
