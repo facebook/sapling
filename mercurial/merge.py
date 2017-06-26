@@ -1084,7 +1084,6 @@ def batchremove(repo, wctx, actions):
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    audit = repo.wvfs.audit
     try:
         cwd = pycompat.getcwd()
     except OSError as err:
@@ -1096,7 +1095,7 @@ def batchremove(repo, wctx, actions):
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
         if verbose:
             repo.ui.note(_("removing %s\n") % f)
-        audit(f)
+        wctx[f].audit()
         try:
             wctx[f].remove(ignoremissing=True)
         except OSError as inst:
@@ -1201,7 +1200,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if f1 != f and move:
             moves.append(f1)
 
-    audit = repo.wvfs.audit
     _updating = _('updating')
     _files = _('files')
     progress = repo.ui.progress
@@ -1210,7 +1208,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     for f in moves:
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
-            audit(f)
+            wctx[f].audit()
             wctx[f].remove()
 
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
@@ -1268,7 +1266,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         f0, flags = args
         repo.ui.note(_("moving %s to %s\n") % (f0, f))
-        audit(f)
+        wctx[f].audit()
         wctx[f].write(wctx.filectx(f0).data(), flags)
         wctx[f0].remove()
         updated += 1
@@ -1289,7 +1287,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         flags, = args
-        audit(f)
+        wctx[f].audit()
         wctx[f].setflags('l' in flags, 'x' in flags)
         updated += 1
 
@@ -1323,7 +1321,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                              overwrite, labels)
             continue
-        audit(f)
+        wctx[f].audit()
         complete, r = ms.preresolve(f, wctx)
         if not complete:
             numupdates += 1

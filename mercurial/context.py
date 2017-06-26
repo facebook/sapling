@@ -1879,6 +1879,9 @@ class workingfilectx(committablefilectx):
                 raise
             return (t, tz)
 
+    def audit(self):
+        return self._repo.wvfs.audit(self._path)
+
     def cmp(self, fctx):
         """compare with other file context
 
