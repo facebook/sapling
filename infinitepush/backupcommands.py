@@ -689,24 +689,19 @@ def _readlocalbackupstate(ui, repo):
     if not _localbackupstateexists(repo):
         return backupstate()
 
-    errormsg = 'corrupt %s file' % _backupstatefile
     with repo.vfs(_backupstatefile) as f:
         try:
             state = json.loads(f.read())
-            if 'bookmarks' not in state or 'heads' not in state:
-                ui.warn(_('%s\n') % errormsg)
-                return backupstate()
-            if (type(state['bookmarks']) != type({}) or
-                    type(state['heads']) != type([])):
-                ui.warn(_('%s\n') % errormsg)
-                return backupstate()
+            if (not isinstance(state['bookmarks'], dict) or
+                    not isinstance(state['heads'], list)):
+                raise ValueError('bad types of bookmarks or heads')
 
             result = backupstate()
             result.heads = set(state['heads'])
             result.localbookmarks = state['bookmarks']
             return result
-        except ValueError:
-            ui.warn(_('%s\n') % errormsg)
+        except (ValueError, KeyError, TypeError) as e:
+            ui.warn(_('corrupt file: %s (%s)\n') % (_backupstatefile, e))
             return backupstate()
     return backupstate()
 

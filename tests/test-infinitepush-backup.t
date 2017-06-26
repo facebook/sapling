@@ -491,3 +491,13 @@ Test hostname option
   $ scratchbookmarks | grep test/hostname
   infinitepush/backups/test/hostname$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
   infinitepush/backups/test/hostname$TESTTMP/client/heads/cf2adfba146909529bcca8c1626de6b4d9e73846 cf2adfba146909529bcca8c1626de6b4d9e73846
+
+Malformed backup state file
+  $ echo rubbish > .hg/infinitepushbackupstate
+  $ hg pushbackup
+  starting backup * (glob)
+  corrupt file: infinitepushbackupstate (No JSON object could be decoded)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     cf2adfba1469  headone
+  finished in * seconds (glob)
