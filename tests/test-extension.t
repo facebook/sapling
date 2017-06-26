@@ -131,7 +131,13 @@ Check hgweb's load order of extensions and registration of functions
 
 (check that revset predicate foo() and bar() are available)
 
-  $ REQUEST_METHOD='GET' PATH_INFO='/shortlog' SCRIPT_NAME='' \
+#if msys
+  $ PATH_INFO='//shortlog'
+#else
+  $ PATH_INFO='/shortlog'
+#endif
+  $ export PATH_INFO
+  $ REQUEST_METHOD='GET' SCRIPT_NAME='' \
   >     QUERY_STRING='rev=foo() and bar()' \
   >     SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
   >     | grep '<a href="/rev/[0-9a-z]*">'
