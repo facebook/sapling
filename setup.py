@@ -184,6 +184,12 @@ if os.path.isdir('.hg'):
     cmd = [sys.executable, 'hg', 'log', '-r', '.', '--template', '{tags}\n']
     numerictags = [t for t in runhg(cmd, env).split() if t[0:1].isdigit()]
     hgid = runhg([sys.executable, 'hg', 'id', '-i'], env).strip()
+    if not hgid:
+        # Bail out if hg is having problems interacting with this repository,
+        # rather than falling through and producing a bogus version number.
+        # Continuing with an invalid version number will break extensions
+        # that define minimumhgversion.
+        raise SystemExit('Unable to determine hg version from local repository')
     if numerictags: # tag(s) found
         version = numerictags[-1]
         if hgid.endswith('+'): # propagate the dirty status to the tag
