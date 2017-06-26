@@ -222,13 +222,9 @@ Test largefiles can be loaded in hgweb (wrapcommand() shouldn't fail)
   > application = hgweb('.', 'test repo')
   > wsgicgi.launch(application)
   > EOF
+  $ . "$TESTDIR/cgienv"
 
-  $ PATH_INFO='/' \
-  > QUERY_STRING='' \
-  > REQUEST_METHOD='GET' \
-  > SCRIPT_NAME='' \
-  > SERVER_NAME='localhost' \
-  > SERVER_PORT='80' \
+  $ SCRIPT_NAME='' \
   > python "$TESTTMP/hgweb.cgi" > /dev/null
 
 Test archiving the various revisions.  These hit corner cases known with
