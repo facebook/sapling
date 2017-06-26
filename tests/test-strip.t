@@ -1002,6 +1002,9 @@ Test high-level scmutil.cleanupnodes API
   $ for i in B C D F G I Z; do
   >     hg bookmark -i -r $i b-$i
   > done
+  $ hg bookmark -i -r E 'b-F@divergent1'
+  $ hg bookmark -i -r H 'b-F@divergent2'
+  $ hg bookmark -i -r G 'b-F@divergent3'
   $ cp -R . ../scmutilcleanup.obsstore
 
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
@@ -1025,13 +1028,13 @@ Test high-level scmutil.cleanupnodes API
   saved backup bundle to $TESTTMP/scmutilcleanup/.hg/strip-backup/f585351a92f8-73fb7c03-replace.hg (glob)
   
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  8:1473d4b996d1 G2 b-G
+  o  8:1473d4b996d1 G2 b-F@divergent3 b-G
   |
   | o  7:d94e89b773b6 F2 b-F
   | |
   | o  5:7fe5bac4c918 H
   |/|
-  | o  3:7fb047a69f22 E
+  | o  3:7fb047a69f22 E b-F@divergent1
   | |
   | | o  6:7c78f703e465 D2 b-D
   | | |
@@ -1048,6 +1051,8 @@ Test high-level scmutil.cleanupnodes API
      b-C                       0:426bada5c675
      b-D                       6:7c78f703e465
      b-F                       7:d94e89b773b6
+     b-F@divergent1            3:7fb047a69f22
+     b-F@divergent3            8:1473d4b996d1
      b-G                       8:1473d4b996d1
      b-I                       0:426bada5c675
      b-Z                       -1:000000000000
@@ -1066,13 +1071,13 @@ we have reusable code here
   
   $ rm .hg/localtags
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  12:1473d4b996d1 G2 b-G
+  o  12:1473d4b996d1 G2 b-F@divergent3 b-G
   |
   | o  11:d94e89b773b6 F2 b-F
   | |
   | o  8:7fe5bac4c918 H
   |/|
-  | o  4:7fb047a69f22 E
+  | o  4:7fb047a69f22 E b-F@divergent1
   | |
   | | o  10:7c78f703e465 D2 b-D
   | | |

@@ -567,6 +567,16 @@ def origpath(ui, repo, filepath):
 
     return fullorigpath + ".orig"
 
+class _containsnode(object):
+    """proxy __contains__(node) to container.__contains__ which accepts revs"""
+
+    def __init__(self, repo, revcontainer):
+        self._torev = repo.changelog.rev
+        self._revcontains = revcontainer.__contains__
+
+    def __contains__(self, node):
+        return self._revcontains(self._torev(node))
+
 def cleanupnodes(repo, mapping, operation):
     """do common cleanups when old nodes are replaced by new nodes
 
@@ -583,17 +593,16 @@ def cleanupnodes(repo, mapping, operation):
         # Move bookmarks
         bmarks = repo._bookmarks
         bmarkchanged = False
+        allnewnodes = [n for ns in mapping.values() for n in ns]
         for oldnode, newnodes in mapping.items():
             oldbmarks = repo.nodebookmarks(oldnode)
             if not oldbmarks:
                 continue
+            from . import bookmarks # avoid import cycle
             bmarkchanged = True
             if len(newnodes) > 1:
-                heads = list(repo.set('heads(%ln)', newnodes))
-                if len(heads) != 1:
-                    raise error.ProgrammingError(
-                        'cannot figure out bookmark movement')
-                newnode = heads[0].node()
+                # usually a split, take the one with biggest rev number
+                newnode = next(repo.set('max(%ln)', newnodes)).node()
             elif len(newnodes) == 0:
                 # move bookmark backwards
                 roots = list(repo.set('max((::%n) - %ln)', oldnode,
@@ -606,8 +615,13 @@ def cleanupnodes(repo, mapping, operation):
                 newnode = newnodes[0]
             repo.ui.debug('moving bookmarks %r from %s to %s\n' %
                           (oldbmarks, hex(oldnode), hex(newnode)))
+            # Delete divergent bookmarks being parents of related newnodes
+            deleterevs = repo.revs('parents(roots(%ln & (::%n))) - parents(%n)',
+                                   allnewnodes, newnode, oldnode)
+            deletenodes = _containsnode(repo, deleterevs)
             for name in oldbmarks:
                 bmarks[name] = newnode
+                bookmarks.deletedivergent(repo, deletenodes, name)
         if bmarkchanged:
             bmarks.recordchange(tr)
 
