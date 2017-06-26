@@ -20,6 +20,7 @@ from . import (
     error,
     exchange,
     obsolete,
+    obsutil,
     util,
 )
 
@@ -132,7 +133,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
 
     stripobsidx = obsmarkers = ()
     if repo.ui.configbool('devel', 'strip-obsmarkers', True):
-        obsmarkers = obsolete.exclusivemarkers(repo, stripbases)
+        obsmarkers = obsutil.exclusivemarkers(repo, stripbases)
     if obsmarkers:
         stripobsidx = [i for i, m in enumerate(repo.obsstore)
                        if m in obsmarkers]
