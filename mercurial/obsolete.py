@@ -869,27 +869,6 @@ def successormarkers(ctx):
     for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx.repo(), data)
 
-def allsuccessors(obsstore, nodes, ignoreflags=0):
-    """Yield node for every successor of <nodes>.
-
-    Some successors may be unknown locally.
-
-    This is a linear yield unsuited to detecting split changesets. It includes
-    initial nodes too."""
-    remaining = set(nodes)
-    seen = set(remaining)
-    while remaining:
-        current = remaining.pop()
-        yield current
-        for mark in obsstore.successors.get(current, ()):
-            # ignore marker flagged with specified flag
-            if mark[2] & ignoreflags:
-                continue
-            for suc in mark[1]:
-                if suc not in seen:
-                    seen.add(suc)
-                    remaining.add(suc)
-
 def foreground(repo, nodes):
     """return all nodes in the "foreground" of other node
 
@@ -911,7 +890,7 @@ def foreground(repo, nodes):
             plen = len(foreground)
             succs = set(c.node() for c in foreground)
             mutable = [c.node() for c in foreground if c.mutable()]
-            succs.update(allsuccessors(repo.obsstore, mutable))
+            succs.update(obsutil.allsuccessors(repo.obsstore, mutable))
             known = (n for n in succs if n in nm)
             foreground = set(repo.set('%ln::', known))
     return set(c.node() for c in foreground)
@@ -921,6 +900,11 @@ def allprecursors(obsstore, nodes, ignoreflags=0):
     movemsg = 'obsolete.allprecursors moved to obsutil.allprecursors'
     util.nouideprecwarn(movemsg, '4.3')
     return obsutil.allprecursors(obsstore, nodes, ignoreflags)
+
+def allsuccessors(obsstore, nodes, ignoreflags=0):
+    movemsg = 'obsolete.allsuccessors moved to obsutil.allsuccessors'
+    util.nouideprecwarn(movemsg, '4.3')
+    return obsutil.allsuccessors(obsstore, nodes, ignoreflags)
 
 def exclusivemarkers(repo, nodes):
     movemsg = 'obsolete.exclusivemarkers moved to obsutil.exclusivemarkers'

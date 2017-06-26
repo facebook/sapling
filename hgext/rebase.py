@@ -40,6 +40,7 @@ from mercurial import (
     merge as mergemod,
     mergeutil,
     obsolete,
+    obsutil,
     patch,
     phases,
     registrar,
@@ -1454,7 +1455,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     cl = repo.changelog
     for r in rebaseobsrevs:
         node = cl.node(r)
-        for s in obsolete.allsuccessors(repo.obsstore, [node]):
+        for s in obsutil.allsuccessors(repo.obsstore, [node]):
             try:
                 allsuccessors[cl.rev(s)] = cl.rev(node)
             except LookupError:

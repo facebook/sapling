@@ -57,6 +57,27 @@ def allprecursors(obsstore, nodes, ignoreflags=0):
                 seen.add(suc)
                 remaining.add(suc)
 
+def allsuccessors(obsstore, nodes, ignoreflags=0):
+    """Yield node for every successor of <nodes>.
+
+    Some successors may be unknown locally.
+
+    This is a linear yield unsuited to detecting split changesets. It includes
+    initial nodes too."""
+    remaining = set(nodes)
+    seen = set(remaining)
+    while remaining:
+        current = remaining.pop()
+        yield current
+        for mark in obsstore.successors.get(current, ()):
+            # ignore marker flagged with specified flag
+            if mark[2] & ignoreflags:
+                continue
+            for suc in mark[1]:
+                if suc not in seen:
+                    seen.add(suc)
+                    remaining.add(suc)
+
 def _filterprunes(markers):
     """return a set with no prune markers"""
     return set(m for m in markers if m[1])
