@@ -84,6 +84,7 @@ class diffopts(object):
 
     def copy(self, **kwargs):
         opts = dict((k, getattr(self, k)) for k in self.defaults)
+        opts = pycompat.strkwargs(opts)
         opts.update(kwargs)
         return diffopts(**opts)
 

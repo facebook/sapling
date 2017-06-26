@@ -2165,7 +2165,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     else:
         displayer = cmdutil.makelogtemplater(ui, repo, tmpl)
         for r in revs:
-            displayer.show(repo[r], **props)
+            displayer.show(repo[r], **pycompat.strkwargs(props))
         displayer.close()
 
 @command('debugupdatecaches', [])

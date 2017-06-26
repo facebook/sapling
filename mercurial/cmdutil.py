@@ -2839,7 +2839,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
             editform = mergeeditform(old, 'commit.amend')
-            editor = getcommiteditor(editform=editform, **opts)
+            editor = getcommiteditor(editform=editform,
+                                     **pycompat.strkwargs(opts))
             if not message:
                 editor = getcommiteditor(edit=True, editform=editform)
                 message = old.description()
