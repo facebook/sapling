@@ -1411,6 +1411,8 @@ class changeset_printer(object):
             self.ui.write(_("trouble:     %s\n") % ', '.join(ctx.troubles()),
                           label='log.trouble')
 
+        self._exthook(ctx)
+
         if self.ui.debugflag:
             files = ctx.p1().status(ctx)[:3]
             for key, value in zip([# i18n: column positioning for "hg log"
@@ -1456,6 +1458,11 @@ class changeset_printer(object):
         self.ui.write("\n")
 
         self.showpatch(ctx, matchfn)
+
+    def _exthook(self, ctx):
+        '''empty method used by extension as a hook point
+        '''
+        pass
 
     def showpatch(self, ctx, matchfn):
         if not matchfn:
