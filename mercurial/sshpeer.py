@@ -12,6 +12,7 @@ import re
 from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
     wireproto,
 )
@@ -259,6 +260,7 @@ class sshpeer(wireproto.wirepeer):
         yield wireproto.unescapearg(work)
 
     def _callstream(self, cmd, **args):
+        args = pycompat.byteskwargs(args)
         self.ui.debug("sending %s command\n" % cmd)
         self.pipeo.write("%s\n" % cmd)
         _func, names = wireproto.commands[cmd]

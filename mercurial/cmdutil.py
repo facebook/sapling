@@ -1332,6 +1332,7 @@ class changeset_printer(object):
             self.ui.write(self.footer)
 
     def show(self, ctx, copies=None, matchfn=None, **props):
+        props = pycompat.byteskwargs(props)
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
             self._show(ctx, copies, matchfn, props)
