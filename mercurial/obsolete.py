@@ -869,32 +869,6 @@ def successormarkers(ctx):
     for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx.repo(), data)
 
-def foreground(repo, nodes):
-    """return all nodes in the "foreground" of other node
-
-    The foreground of a revision is anything reachable using parent -> children
-    or precursor -> successor relation. It is very similar to "descendant" but
-    augmented with obsolescence information.
-
-    Beware that possible obsolescence cycle may result if complex situation.
-    """
-    repo = repo.unfiltered()
-    foreground = set(repo.set('%ln::', nodes))
-    if repo.obsstore:
-        # We only need this complicated logic if there is obsolescence
-        # XXX will probably deserve an optimised revset.
-        nm = repo.changelog.nodemap
-        plen = -1
-        # compute the whole set of successors or descendants
-        while len(foreground) != plen:
-            plen = len(foreground)
-            succs = set(c.node() for c in foreground)
-            mutable = [c.node() for c in foreground if c.mutable()]
-            succs.update(obsutil.allsuccessors(repo.obsstore, mutable))
-            known = (n for n in succs if n in nm)
-            foreground = set(repo.set('%ln::', known))
-    return set(c.node() for c in foreground)
-
 # keep compatibility for the 4.3 cycle
 def allprecursors(obsstore, nodes, ignoreflags=0):
     movemsg = 'obsolete.allprecursors moved to obsutil.allprecursors'
@@ -910,6 +884,11 @@ def exclusivemarkers(repo, nodes):
     movemsg = 'obsolete.exclusivemarkers moved to obsutil.exclusivemarkers'
     repo.ui.deprecwarn(movemsg, '4.3')
     return obsutil.exclusivemarkers(repo, nodes)
+
+def foreground(repo, nodes):
+    movemsg = 'obsolete.foreground moved to obsutil.foreground'
+    repo.ui.deprecwarn(movemsg, '4.3')
+    return obsutil.foreground(repo, nodes)
 
 def successorssets(repo, initialnode, cache=None):
     movemsg = 'obsolete.successorssets moved to obsutil.successorssets'

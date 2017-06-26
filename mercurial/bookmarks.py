@@ -19,7 +19,7 @@ from . import (
     encoding,
     error,
     lock as lockmod,
-    obsolete,
+    obsutil,
     pycompat,
     scmutil,
     txnutil,
@@ -682,7 +682,7 @@ def validdest(repo, old, new):
         # (new != nullrev has been excluded by the previous check)
         return True
     elif repo.obsstore:
-        return new.node() in obsolete.foreground(repo, [old.node()])
+        return new.node() in obsutil.foreground(repo, [old.node()])
     else:
         # still an independent clause as it is lazier (and therefore faster)
         return old.descendant(new)

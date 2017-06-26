@@ -28,7 +28,7 @@ from . import (
     error,
     filemerge,
     match as matchmod,
-    obsolete,
+    obsutil,
     pycompat,
     scmutil,
     subrepo,
@@ -1588,8 +1588,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to obsolete.foreground.
-                    foreground = obsolete.foreground(repo, [p1.node()])
+                    # amount of call to obsutil.foreground.
+                    foreground = obsutil.foreground(repo, [p1.node()])
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
                         pass # allow updating to successors
