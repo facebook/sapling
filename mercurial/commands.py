@@ -324,7 +324,7 @@ def annotate(ui, repo, *pats, **opts):
                 return '%s ' % hex
     else:
         hexfn = rootfm.hexfunc
-        formatrev = formathex = str
+        formatrev = formathex = pycompat.bytestr
 
     opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
              ('number', ' ', lambda x: x[0].rev(), formatrev),
