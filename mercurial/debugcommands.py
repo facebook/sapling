@@ -1884,7 +1884,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
     def fmtchunktype(chunktype):
         if chunktype == 'empty':
             return '    %s     : ' % chunktype
-        elif chunktype in string.ascii_letters:
+        elif chunktype in pycompat.bytestr(string.ascii_letters):
             return '    0x%s (%s)  : ' % (hex(chunktype), chunktype)
         else:
             return '    0x%s      : ' % hex(chunktype)
