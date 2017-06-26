@@ -10,6 +10,19 @@
 This extension provides the :hg:`show` command, which provides a central
 command for displaying commonly-accessed repository data and views of that
 data.
+
+The following config options can influence operation.
+
+``commands``
+------------
+
+``show.aliasprefix``
+   List of strings that will register aliases for views. e.g. ``s`` will
+   effectively set config options ``alias.s<view> = show <view>`` for all
+   views. i.e. `hg swork` would execute `hg show work`.
+
+   Aliases that would conflict with existing registrations will not be
+   performed.
 """
 
 from __future__ import absolute_import
@@ -18,6 +31,7 @@ from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import (
     cmdutil,
+    commands,
     error,
     formatter,
     graphmod,
@@ -217,6 +231,25 @@ def showwork(ui, repo, displayer):
 
     ui.setconfig('experimental', 'graphshorten', True)
     cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+
+def extsetup(ui):
+    # Alias `hg <prefix><view>` to `hg show <view>`.
+    for prefix in ui.configlist('commands', 'show.aliasprefix'):
+        for view in showview._table:
+            name = '%s%s' % (prefix, view)
+
+            choice, allcommands = cmdutil.findpossible(name, commands.table,
+                                                       strict=True)
+
+            # This alias is already a command name. Don't set it.
+            if name in choice:
+                continue
+
+            # Same for aliases.
+            if ui.config('alias', name):
+                continue
+
+            ui.setconfig('alias', name, 'show %s' % view, source='show')
 
 # Adjust the docstring of the show command so it shows all registered views.
 # This is a bit hacky because it runs at the end of module load. When moved

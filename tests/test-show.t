@@ -127,4 +127,42 @@ JSON works with no bookmarks
   [
   ]
 
+commands.show.aliasprefix aliases values to `show <view>`
+
+  $ hg --config commands.show.aliasprefix=s sbookmarks
+  (no bookmarks set)
+
+  $ hg --config commands.show.aliasprefix=sh shwork
+  @  7b570 commit for book2
+  o  b757f commit for book1
+  o  ba592 initial
+
+  $ hg --config commands.show.aliasprefix='s sh' swork
+  @  7b570 commit for book2
+  o  b757f commit for book1
+  o  ba592 initial
+
+  $ hg --config commands.show.aliasprefix='s sh' shwork
+  @  7b570 commit for book2
+  o  b757f commit for book1
+  o  ba592 initial
+
+The aliases don't appear in `hg config`
+
+  $ hg --config commands.show.aliasprefix=s config alias
+  [1]
+
+Doesn't overwrite existing alias
+
+  $ hg --config alias.swork='log -r .' --config commands.show.aliasprefix=s swork
+  changeset:   2:7b5709ab64cb
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit for book2
+  
+
+  $ hg --config alias.swork='log -r .' --config commands.show.aliasprefix=s config alias
+  alias.swork=log -r .
+
   $ cd ..
