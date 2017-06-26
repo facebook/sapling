@@ -127,6 +127,10 @@ pickle = util.pickle
 
 class _nullconverter(object):
     '''convert non-primitive data types to be processed by formatter'''
+
+    # set to True if context object should be stored as item
+    storecontext = False
+
     @staticmethod
     def formatdate(date, fmt):
         '''convert date tuple to appropriate format'''
@@ -178,7 +182,10 @@ class baseformatter(object):
         return self._converter.formatlist(data, name, fmt, sep)
     def context(self, **ctxs):
         '''insert context objects to be used to render template keywords'''
-        pass
+        ctxs = pycompat.byteskwargs(ctxs)
+        assert all(k == 'ctx' for k in ctxs)
+        if self._converter.storecontext:
+            self._item.update(ctxs)
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
         data = pycompat.byteskwargs(data)
@@ -228,6 +235,9 @@ def _iteritems(data):
 
 class _plainconverter(object):
     '''convert non-primitive data types to text'''
+
+    storecontext = False
+
     @staticmethod
     def formatdate(date, fmt):
         '''stringify date tuple in the given format'''
@@ -323,6 +333,9 @@ class jsonformatter(baseformatter):
 
 class _templateconverter(object):
     '''convert non-primitive data types to be processed by templater'''
+
+    storecontext = True
+
     @staticmethod
     def formatdate(date, fmt):
         '''return date tuple'''
@@ -355,12 +368,6 @@ class templateformatter(baseformatter):
         self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
         self._renderitem('docheader', {})
-
-    def context(self, **ctxs):
-        '''insert context objects to be used to render template keywords'''
-        ctxs = pycompat.byteskwargs(ctxs)
-        assert all(k == 'ctx' for k in ctxs)
-        self._item.update(ctxs)
 
     def _showitem(self):
         item = self._item.copy()
