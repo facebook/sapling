@@ -165,20 +165,23 @@ def runhg(cmd, env):
         return ''
     return out
 
-version = ''
 
-# Execute hg out of this directory with a custom environment which takes care
-# to not use any hgrc files and do no localization.
-env = {'HGMODULEPOLICY': 'py',
-       'HGRCPATH': '',
-       'LANGUAGE': 'C',
-       'PATH': ''} # make pypi modules that use os.environ['PATH'] happy
-if 'LD_LIBRARY_PATH' in os.environ:
-    env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
-if 'SystemRoot' in os.environ:
-    # SystemRoot is required by Windows to load various DLLs.  See:
-    # https://bugs.python.org/issue13524#msg148850
-    env['SystemRoot'] = os.environ['SystemRoot']
+def gethgenv():
+    # Execute hg out of this directory with a custom environment which takes
+    # care to not use any hgrc files and do no localization.
+    env = {'HGMODULEPOLICY': 'py',
+           'HGRCPATH': '',
+           'LANGUAGE': 'C',
+           'PATH': ''} # make pypi modules that use os.environ['PATH'] happy
+    if 'LD_LIBRARY_PATH' in os.environ:
+        env['LD_LIBRARY_PATH'] = os.environ['LD_LIBRARY_PATH']
+    if 'SystemRoot' in os.environ:
+        # SystemRoot is required by Windows to load various DLLs.  See:
+        # https://bugs.python.org/issue13524#msg148850
+        env['SystemRoot'] = os.environ['SystemRoot']
+
+env = gethgenv()
+version = ''
 
 if os.path.isdir('.hg'):
     cmd = [sys.executable, 'hg', 'log', '-r', '.', '--template', '{tags}\n']
