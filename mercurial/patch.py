@@ -2712,7 +2712,7 @@ def diffstat(lines, width=80):
         if isbinary:
             count = 'Bin'
         else:
-            count = adds + removes
+            count = '%d' % (adds + removes)
         pluses = '+' * scale(adds)
         minuses = '-' * scale(removes)
         output.append(' %s%s |  %*s %s%s\n' %
