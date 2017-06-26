@@ -1291,7 +1291,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         flags, = args
         audit(f)
-        repo.wvfs.setflags(f, 'l' in flags, 'x' in flags)
+        wctx[f].setflags('l' in flags, 'x' in flags)
         updated += 1
 
     # the ordering is important here -- ms.mergedriver will raise if the merge

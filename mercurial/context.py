@@ -1896,6 +1896,9 @@ class workingfilectx(committablefilectx):
         """wraps repo.wwrite"""
         self._repo.wwrite(self._path, data, flags)
 
+    def setflags(self, l, x):
+        self._repo.wvfs.setflags(self._path, l, x)
+
 class workingcommitctx(workingctx):
     """A workingcommitctx object makes access to data related to
     the revision being committed convenient.
