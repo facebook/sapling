@@ -307,7 +307,7 @@ def _debugobsmarkers(ui, part, indent=0, **opts):
         ui.write(msg)
         fm = ui.formatter('debugobsolete', opts)
         for rawmarker in sorted(markers):
-            m = obsolete.marker(None, rawmarker)
+            m = obsutil.marker(None, rawmarker)
             fm.startitem()
             fm.plain(indent_string)
             cmdutil.showmarker(fm, m)

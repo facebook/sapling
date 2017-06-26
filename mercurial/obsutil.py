@@ -7,6 +7,47 @@
 
 from __future__ import absolute_import
 
+class marker(object):
+    """Wrap obsolete marker raw data"""
+
+    def __init__(self, repo, data):
+        # the repo argument will be used to create changectx in later version
+        self._repo = repo
+        self._data = data
+        self._decodedmeta = None
+
+    def __hash__(self):
+        return hash(self._data)
+
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+        return self._data == other._data
+
+    def precnode(self):
+        """Precursor changeset node identifier"""
+        return self._data[0]
+
+    def succnodes(self):
+        """List of successor changesets node identifiers"""
+        return self._data[1]
+
+    def parentnodes(self):
+        """Parents of the precursors (None if not recorded)"""
+        return self._data[5]
+
+    def metadata(self):
+        """Decoded metadata dictionary"""
+        return dict(self._data[3])
+
+    def date(self):
+        """Creation date as (unixtime, offset)"""
+        return self._data[4]
+
+    def flags(self):
+        """The flags field of the marker"""
+        return self._data[2]
+
 def closestpredecessors(repo, nodeid):
     """yield the list of next predecessors pointing on visible changectx nodes
 

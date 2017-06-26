@@ -465,48 +465,6 @@ def encodemarkers(markers, addheader=False, version=_fm0version):
     for marker in markers:
         yield encodeone(marker)
 
-
-class marker(object):
-    """Wrap obsolete marker raw data"""
-
-    def __init__(self, repo, data):
-        # the repo argument will be used to create changectx in later version
-        self._repo = repo
-        self._data = data
-        self._decodedmeta = None
-
-    def __hash__(self):
-        return hash(self._data)
-
-    def __eq__(self, other):
-        if type(other) != type(self):
-            return False
-        return self._data == other._data
-
-    def precnode(self):
-        """Precursor changeset node identifier"""
-        return self._data[0]
-
-    def succnodes(self):
-        """List of successor changesets node identifiers"""
-        return self._data[1]
-
-    def parentnodes(self):
-        """Parents of the precursors (None if not recorded)"""
-        return self._data[5]
-
-    def metadata(self):
-        """Decoded metadata dictionary"""
-        return dict(self._data[3])
-
-    def date(self):
-        """Creation date as (unixtime, offset)"""
-        return self._data[4]
-
-    def flags(self):
-        """The flags field of the marker"""
-        return self._data[2]
-
 @util.nogc
 def _addsuccessors(successors, markers):
     for mark in markers:
@@ -851,7 +809,7 @@ def getmarkers(repo, nodes=None, exclusive=False):
         rawmarkers = repo.obsstore.relevantmarkers(nodes)
 
     for markerdata in rawmarkers:
-        yield marker(repo, markerdata)
+        yield obsutil.marker(repo, markerdata)
 
 # keep compatibility for the 4.3 cycle
 def allprecursors(obsstore, nodes, ignoreflags=0):
@@ -863,6 +821,11 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
     movemsg = 'obsolete.allsuccessors moved to obsutil.allsuccessors'
     util.nouideprecwarn(movemsg, '4.3')
     return obsutil.allsuccessors(obsstore, nodes, ignoreflags)
+
+def marker(repo, data):
+    movemsg = 'obsolete.marker moved to obsutil.marker'
+    repo.ui.deprecwarn(movemsg, '4.3')
+    return obsutil.marker(repo, data)
 
 def exclusivemarkers(repo, nodes):
     movemsg = 'obsolete.exclusivemarkers moved to obsutil.exclusivemarkers'
