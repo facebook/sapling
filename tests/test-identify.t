@@ -51,7 +51,7 @@ with options
     "dirty": "",
     "id": "cb9a9f314b8b",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
-    "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
+    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
     "tags": ["tip"]
    }
   ]
@@ -69,7 +69,7 @@ with modifications
     "dirty": "+",
     "id": "cb9a9f314b8b+",
     "node": "ffffffffffffffffffffffffffffffffffffffff",
-    "p1": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
+    "parents": [{"node": "cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b", "rev": 0}],
     "tags": ["tip"]
    }
   ]

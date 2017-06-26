@@ -2790,12 +2790,12 @@ def identify(ui, repo, source=None, rev=None,
                 numoutput = ["%d" % p.rev() for p in parents]
                 output.append("%s%s" % ('+'.join(numoutput), dirty))
 
-            for i, p in enumerate(parents):
-                fn = fm.nested('p%d' % (i + 1))
+            fn = fm.nested('parents')
+            for p in parents:
                 fn.startitem()
                 fn.data(rev=p.rev())
                 fn.data(node=p.hex())
-                fn.end()
+            fn.end()
         else:
             hexoutput = hexfunc(ctx.node())
             if default or id:
