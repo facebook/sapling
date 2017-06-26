@@ -34,6 +34,8 @@ class Client(object):
 
     def apply_arcconfig(self, config):
         self._host = config.get('conduit_uri', DEFAULT_HOST)
+        if self._host == 'https://phabricator.fb.com/api/':
+            self._host = 'https://phabricator.intern.facebook.com/api/'
         try:
             hostconfig = config['hosts'][self._host]
             self._user = hostconfig['user']
