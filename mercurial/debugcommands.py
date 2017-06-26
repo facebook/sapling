@@ -1818,7 +1818,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         # Obtain data on the raw chunks in the revlog.
         segment = r._getsegmentforrevs(rev, rev)[1]
         if segment:
-            chunktype = segment[0]
+            chunktype = bytes(segment[0:1])
         else:
             chunktype = 'empty'
 
