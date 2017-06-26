@@ -35,8 +35,8 @@
   remote:     7e6a6fd9c7c8  commit
   remote: infinitepush: bundlestore \(bundlesize=546, eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: bundlestore \(bundlesize=546, elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, newheadscount=1, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, newheadscount=1, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   $ cd ..
 
@@ -48,8 +48,8 @@ Check that logging works for b2x:infinitepushscratchbookmarks part
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(eventtype=start, hostname=[-.0-9a-z]+, newheadscount=0, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, newheadscount=0, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(eventtype=start, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepushscratchbookmarks \(elapsedms=.+, eventtype=success, hostname=[-.0-9a-z]+, reponame=babar, requestid=\d+, user=\w+\) (re)

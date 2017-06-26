@@ -902,10 +902,10 @@ def logservicecall(logger, service, **kwargs):
     try:
         yield
         logger(service, eventtype='success',
-               elapsedms = (time.time() - start) * 1000, **kwargs)
+               elapsedms=(time.time() - start) * 1000, **kwargs)
     except Exception as e:
         logger(service, eventtype='failure',
-               elapsedms = (time.time() - start) * 1000, errormsg=str(e),
+               elapsedms=(time.time() - start) * 1000, errormsg=str(e),
                **kwargs)
         raise
 
@@ -990,21 +990,24 @@ def bundle2scratchbranch(op, part):
 
         nodesctx = [bundle[rev] for rev in revs]
         inindex = lambda rev: bool(index.getbundle(bundle[rev].hex()))
-        hasnewheads = any(not inindex(rev) for rev in bundleheads)
+        if bundleheads:
+            newheadscount = sum(not inindex(rev) for rev in bundleheads)
+        else:
+            newheadscount = 0
         # If there's a bookmark specified, there should be only one head,
         # so we choose the last node, which will be that head.
         # If a bug or malicious client allows there to be a bookmark
         # with multiple heads, we will place the bookmark on the last head.
         bookmarknode = nodesctx[-1].hex() if nodesctx else None
         key = None
-        if hasnewheads:
+        if newheadscount:
             with open(bundlefile, 'r') as f:
                 bundledata = f.read()
                 with logservicecall(log, 'bundlestore',
                                     bundlesize=len(bundledata)):
                     key = store.write(bundledata)
 
-        with logservicecall(log, 'index'):
+        with logservicecall(log, 'index', newheadscount=newheadscount):
             with index:
                 if key:
                     index.addbundle(key, nodesctx)
