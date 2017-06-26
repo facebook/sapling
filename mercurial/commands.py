@@ -2795,6 +2795,7 @@ def identify(ui, repo, source=None, rev=None,
                 fn.startitem()
                 fn.data(rev=p.rev())
                 fn.data(node=p.hex())
+                fn.context(ctx=p)
             fn.end()
         else:
             hexoutput = hexfunc(ctx.node())
@@ -2834,6 +2835,7 @@ def identify(ui, repo, source=None, rev=None,
         fm.data(branch=ctx.branch())
         fm.data(tags=fm.formatlist(taglist, name='tag', sep=':'))
         fm.data(bookmarks=fm.formatlist(ctx.bookmarks(), name='bookmark'))
+        fm.context(ctx=ctx)
 
     fm.plain("%s\n" % ' '.join(output))
     fm.end()

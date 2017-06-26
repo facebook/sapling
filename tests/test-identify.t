@@ -56,6 +56,13 @@ with options
    }
   ]
 
+test template keywords and functions which require changectx:
+
+  $ hg id -T '{rev} {node|shortest}\n'
+  2147483647 ffff
+  $ hg id -T '{parents % "{rev} {node|shortest} {desc}\n"}'
+  0 cb9a a
+
 with modifications
 
   $ echo b > a
