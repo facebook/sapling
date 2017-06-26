@@ -267,8 +267,7 @@ def amend(ui, repo, *pats, **opts):
             else:
                 _usereducation(ui)
                 ui.warn(msg)
-                ui.status(_("(use 'hg rebase --restack' (alias: 'hg restack') "
-                            "to rebase them)\n"))
+                ui.status(_("(use 'hg restack' to rebase them)\n"))
 
         newbookmarks = repo._bookmarks
 

@@ -500,7 +500,7 @@ have createmarkers as we are creating instability
   $ echo "mmm" >> cM
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
+  (use 'hg restack' to rebase them)
   $ hg log -G
   @  18:210589181b14 add cM
   |
@@ -682,7 +682,7 @@ check that pruning and inhibited node does not confuse anything
   $ echo "CM" > cM
   $ hg amend
   warning: the changeset's children were left behind
-  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
+  (use 'hg restack' to rebase them)
   $ hg log -G
   @  21:721c3c279519 add cM
   |

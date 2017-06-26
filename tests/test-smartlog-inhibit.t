@@ -19,7 +19,7 @@ with the inhibit extension enabled.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended"
   warning: the changeset's children were left behind
-  (use 'hg rebase --restack' (alias: 'hg restack') to rebase them)
+  (use 'hg restack' to rebase them)
   $ hg smartlog -T '{rev} {bookmarks}'
   @  4
   |
