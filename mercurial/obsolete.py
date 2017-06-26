@@ -853,22 +853,6 @@ def getmarkers(repo, nodes=None, exclusive=False):
     for markerdata in rawmarkers:
         yield marker(repo, markerdata)
 
-def relevantmarkers(repo, node):
-    """all obsolete markers relevant to some revision"""
-    for markerdata in repo.obsstore.relevantmarkers(node):
-        yield marker(repo, markerdata)
-
-
-def precursormarkers(ctx):
-    """obsolete marker marking this changeset as a successors"""
-    for data in ctx.repo().obsstore.precursors.get(ctx.node(), ()):
-        yield marker(ctx.repo(), data)
-
-def successormarkers(ctx):
-    """obsolete marker making this changeset obsolete"""
-    for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
-        yield marker(ctx.repo(), data)
-
 # keep compatibility for the 4.3 cycle
 def allprecursors(obsstore, nodes, ignoreflags=0):
     movemsg = 'obsolete.allprecursors moved to obsutil.allprecursors'
