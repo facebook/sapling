@@ -10,6 +10,8 @@ Enable obsolete
   > logtemplate = {rev}:{node|short} {desc}\n
   > [experimental]
   > evolution=createmarkers
+  > [extensions]
+  > drawdag=$TESTDIR/drawdag.py
   > [alias]
   > debugobsolete = debugobsolete -d '0 0'
   > [phases]
@@ -617,3 +619,48 @@ successors-set. (report [A,B] not [A] + [A,B])
       82623d38b9ba 392fd25390da
 
   $ cd ..
+
+Use scmutil.cleanupnodes API to create divergence
+
+  $ hg init cleanupnodes
+  $ cd cleanupnodes
+  $ hg debugdrawdag <<'EOS'
+  >   B1  B3 B4
+  >   |     \|
+  >   A      Z
+  > EOS
+
+  $ hg update -q B1
+  $ echo 3 >> B
+  $ hg commit --amend -m B2
+  $ cat > $TESTTMP/scmutilcleanup.py <<EOF
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('cleanup')
+  > def cleanup(ui, repo):
+  >     def node(expr):
+  >         unfi = repo.unfiltered()
+  >         rev = unfi.revs(expr).first()
+  >         return unfi.changelog.node(rev)
+  >     with repo.wlock(), repo.lock(), repo.transaction('delayedstrip'):
+  >         mapping = {node('desc(B1)'): [node('desc(B3)')],
+  >                    node('desc(B3)'): [node('desc(B4)')]}
+  >         scmutil.cleanupnodes(repo, mapping, 'test')
+  > EOF
+
+  $ rm .hg/localtags
+  $ hg cleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
+  $ hg log -G -T '{rev}:{node|short} {desc} {troubles}' -r 'sort(all(), topo)'
+  @  5:1a2a9b5b0030 B2 divergent
+  |
+  | o  4:70d5a63ca112 B4 divergent
+  | |
+  | o  1:48b9aae0607f Z
+  |
+  o  0:426bada5c675 A
+  
+  $ hg debugobsolete
+  a178212c3433c4e77b573f6011e29affb8aefa33 1a2a9b5b0030632400aa78e00388c20f99d3ec44 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a178212c3433c4e77b573f6011e29affb8aefa33 ad6478fb94ecec98b86daae98722865d494ac561 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  ad6478fb94ecec98b86daae98722865d494ac561 70d5a63ca112acb3764bc1d7320ca90ea688d671 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}

@@ -619,9 +619,12 @@ def cleanupnodes(repo, mapping, operation):
             # Also sort the node in topology order, that might be useful for
             # some obsstore logic.
             # NOTE: the filtering and sorting might belong to createmarkers.
-            isobs = repo.obsstore.successors.__contains__
-            sortfunc = lambda ns: repo.changelog.rev(ns[0])
-            rels = [(repo[n], (repo[m] for m in s))
+            # Unfiltered repo is needed since nodes in mapping might be hidden.
+            unfi = repo.unfiltered()
+            isobs = unfi.obsstore.successors.__contains__
+            torev = unfi.changelog.rev
+            sortfunc = lambda ns: torev(ns[0])
+            rels = [(unfi[n], (unfi[m] for m in s))
                     for n, s in sorted(mapping.items(), key=sortfunc)
                     if s or not isobs(n)]
             obsolete.createmarkers(repo, rels, operation=operation)
