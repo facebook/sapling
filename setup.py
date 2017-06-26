@@ -146,10 +146,10 @@ def runcmd(cmd, env):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, env=env)
     out, err = p.communicate()
-    return out, err
+    return p.returncode, out, err
 
 def runhg(cmd, env):
-    out, err = runcmd(cmd, env)
+    returncode, out, err = runcmd(cmd, env)
     # If root is executing setup.py, but the repository is owned by
     # another user (as in "sudo python setup.py install") we will get
     # trust warnings since the .hg/hgrc file is untrusted. That is
@@ -159,7 +159,7 @@ def runhg(cmd, env):
            if not e.startswith(b'not trusting file') \
               and not e.startswith(b'warning: Not importing') \
               and not e.startswith(b'obsolete feature not enabled')]
-    if err:
+    if err or returncode != 0:
         printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
         printf(b'\n'.join([b'  ' + e for e in err]), file=sys.stderr)
         return ''
@@ -404,8 +404,8 @@ class buildhgextindex(Command):
         # here no extension enabled, disabled() lists up everything
         code = ('import pprint; from mercurial import extensions; '
                 'pprint.pprint(extensions.disabled())')
-        out, err = runcmd([sys.executable, '-c', code], env)
-        if err:
+        returncode, out, err = runcmd([sys.executable, '-c', code], env)
+        if err or returncode != 0:
             raise DistutilsExecError(err)
 
         with open(self._indexfilename, 'w') as f:
