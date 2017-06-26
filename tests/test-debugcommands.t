@@ -27,10 +27,10 @@
   chunks size   : 44
       0x75 (u)  : 44 (100.00%)
   
-  avg chain length  : 0
-  max chain length  : 0
-  max chain reach  : 44
-  compression ratio : 0
+  avg chain length  :  0
+  max chain length  :  0
+  max chain reach   : 44
+  compression ratio :  0
   
   uncompressed data size (min/max/avg) : 43 / 43 / 43
   full revision size (min/max/avg)     : 44 / 44 / 44

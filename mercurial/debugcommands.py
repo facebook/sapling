@@ -1885,10 +1885,10 @@ def debugrevlog(ui, repo, file_=None, **opts):
         ui.write(fmt % pcfmt(chunktypesizes[chunktype], totalsize))
 
     ui.write('\n')
-    fmt = dfmtstr(max(avgchainlen, compratio))
+    fmt = dfmtstr(max(avgchainlen, maxchainlen, maxchainspan, compratio))
     ui.write(('avg chain length  : ') + fmt % avgchainlen)
     ui.write(('max chain length  : ') + fmt % maxchainlen)
-    ui.write(('max chain reach  : ') + fmt % maxchainspan)
+    ui.write(('max chain reach   : ') + fmt % maxchainspan)
     ui.write(('compression ratio : ') + fmt % compratio)
 
     if format > 0:
