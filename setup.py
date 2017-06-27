@@ -149,9 +149,9 @@ def runcmd(cmd, env):
     return p.returncode, out, err
 
 class hgcommand(object):
-    def __init__(self):
-        self.cmd = [sys.executable, 'hg']
-        self.env = gethgenv()
+    def __init__(self, cmd, env):
+        self.cmd = cmd
+        self.env = env
 
     def run(self, args):
         cmd = self.cmd + args
@@ -171,7 +171,50 @@ class hgcommand(object):
             return ''
         return out
 
-def gethgenv():
+def findhg():
+    """Try to figure out how we should invoke hg for examining the local
+    repository contents.
+
+    Returns an hgcommand object."""
+    # By default, prefer the "hg" command in the user's path.  This was
+    # presumably the hg command that the user used to create this repository.
+    #
+    # This repository may require extensions or other settings that would not
+    # be enabled by running the hg script directly from this local repository.
+    hgenv = os.environ.copy()
+    # Use HGPLAIN to disable hgrc settings that would change output formatting,
+    # and disable localization for the same reasons.
+    hgenv['HGPLAIN'] = '1'
+    hgenv['LANGUAGE'] = 'C'
+    hgcmd = ['hg']
+    # Run a simple "hg log" command just to see if using hg from the user's
+    # path works and can successfully interact with this repository.
+    check_cmd = ['log', '-r.', '-Ttest']
+    try:
+        retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
+    except EnvironmentError:
+        retcode = -1
+    if retcode == 0:
+        return hgcommand(hgcmd, hgenv)
+
+    # Fall back to trying the local hg installation.
+    hgenv = localhgenv()
+    # Don't source any system hgrc files when using the local hg.
+    hgenv['HGRCPATH'] = ''
+    hgcmd = [sys.executable, 'hg']
+    try:
+        retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
+    except EnvironmentError:
+        retcode = -1
+    if retcode == 0:
+        return hgcommand(hgcmd, hgenv)
+
+    raise SystemExit('Unable to find a working hg binary to extract the '
+                     'version from the repository tags')
+
+def localhgenv():
+    """Get an environment dictionary to use for invoking or importing
+    mercurial from the local repository."""
     # Execute hg out of this directory with a custom environment which takes
     # care to not use any hgrc files and do no localization.
     env = {'HGMODULEPOLICY': 'py',
@@ -188,7 +231,7 @@ def gethgenv():
 version = ''
 
 if os.path.isdir('.hg'):
-    hg = hgcommand()
+    hg = findhg()
     cmd = ['log', '-r', '.', '--template', '{tags}\n']
     numerictags = [t for t in hg.run(cmd).split() if t[0:1].isdigit()]
     hgid = hg.run(['id', '-i']).strip()
@@ -410,7 +453,8 @@ class buildhgextindex(Command):
         # here no extension enabled, disabled() lists up everything
         code = ('import pprint; from mercurial import extensions; '
                 'pprint.pprint(extensions.disabled())')
-        returncode, out, err = runcmd([sys.executable, '-c', code], gethgenv())
+        returncode, out, err = runcmd([sys.executable, '-c', code],
+                                      localhgenv())
         if err or returncode != 0:
             raise DistutilsExecError(err)
 
