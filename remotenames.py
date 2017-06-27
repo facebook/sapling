@@ -36,6 +36,7 @@ from mercurial import repair
 from mercurial import repoview
 from mercurial import revset
 from mercurial import scmutil
+from mercurial import setdiscovery
 from mercurial import templatekw
 from mercurial import url
 from mercurial import util
@@ -172,6 +173,72 @@ def expull(orig, repo, remote, *args, **kwargs):
             with repo.vfs(_selectivepullenabledfile, 'w') as f:
                 f.write('enabled') # content doesn't matter
     return res
+
+def exfindcommonheads(orig, ui, local, remote, **kwargs):
+    '''Return a tuple (common, anyincoming, remoteheads) used to identify
+    missing nodes from or in remote.
+    '''
+    # The normal findcommonheads implementation tries to find the exact boundary
+    # between what the client has and what the server has. With remotenames, we
+    # have pretty good knowledge about what local commits already exist on the
+    # server, so we can short circuit all the discovery logic by just assuming
+    # the current remotenames are representative of what's on the server. In the
+    # worst case the data might be slightly out of sync and the server sends us
+    # more data than necessary, but this should be rare.
+    if not ui.configbool('remotenames', 'fastheaddiscovery', True):
+        return orig(ui, local, remote, **kwargs)
+
+    cl = local.changelog
+
+    remotepath = activepath(local.ui, remote)
+    remotenodes = []
+    for node, nametype, remotename, rname in readremotenames(local):
+        # Note: It's important that this excludes hidden commits (by doing
+        # node in local), since the callers assume all nodes in common are
+        # visible.
+        node = bin(node)
+        if remotename == remotepath and node in local:
+            remotenodes.append(node)
+
+    # If we have no remotenames, fallback to normal discovery.
+    if not remotenodes:
+        return orig(ui, local, remote, **kwargs)
+
+    remotenodes = set(remotenodes)
+
+    # Check which remote nodes still exist on the server
+    ui.status(_("searching for changes\n"))
+    batch = remote.iterbatch()
+    batch.heads()
+    batch.known(remotenodes)
+    batch.submit()
+    srvheadhashes, yesno = batch.results()
+    common = list(n for i, n in enumerate(remotenodes) if yesno[i])
+
+    # If we don't know of any server commits, fall back to legacy discovery
+    if not common:
+        # If this path is hit, it will print "searching for changes" twice,
+        # which is weird. This should be very rare though, since it only happens
+        # if the client has remote names, but none of those names exist on the
+        # server (i.e. the server has been completely replaced, or stripped).
+        ui.status(_("server has changed since last pull - falling back to the "
+                    "default search strategy\n"))
+        return orig(ui, local, remote, **kwargs)
+
+    if cl.tip() == nullid:
+        if srvheadhashes != [nullid]:
+            return [nullid], True, srvheadhashes
+        return ([nullid], False, [])
+
+    # early exit if we know all the specified remote heads already
+    clrev = cl.rev
+    clcontains = cl.__contains__
+    srvheads = list(clrev(n) for n in srvheadhashes if clcontains(n))
+    if len(srvheads) == len(srvheadhashes):
+        ui.debug("all remote heads known locally\n")
+        return (srvheadhashes, False, srvheadhashes)
+
+    return (common, True, srvheadhashes)
 
 def pullremotenames(repo, remote, bookmarks):
     path = activepath(repo.ui, remote)
@@ -646,6 +713,7 @@ def extsetup(ui):
     extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
+    extensions.wrapfunction(setdiscovery, 'findcommonheads', exfindcommonheads)
     # _getdynamicblockers was renamed to pinnedrevs in 4.3
     blockername = 'pinnedrevs'
     if not util.safehasattr(repoview, blockername):

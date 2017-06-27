@@ -215,6 +215,8 @@ Test that rebasing and pushing works as expected
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
+  server has changed since last pull - falling back to the default search strategy
+  searching for changes
   adding changesets
   adding manifests
   adding file changes
