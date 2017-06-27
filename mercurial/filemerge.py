@@ -298,10 +298,10 @@ def _iother(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     """Uses the other `p2()` version of files as the merged version."""
     if fco.isabsent():
         # local changed, remote deleted -- 'deleted' picked
-        repo.wvfs.unlinkpath(fcd.path())
+        _underlyingfctxifabsent(fcd).remove()
         deleted = True
     else:
-        repo.wwrite(fcd.path(), fco.data(), fco.flags())
+        _underlyingfctxifabsent(fcd).write(fco.data(), fco.flags())
         deleted = False
     return 0, deleted
 
@@ -313,8 +313,18 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     used to resolve these conflicts."""
     # for change/delete conflicts write out the changed version, then fail
     if fcd.isabsent():
-        repo.wwrite(fcd.path(), fco.data(), fco.flags())
+        _underlyingfctxifabsent(fcd).write(fco.data(), fco.flags())
     return 1, False
+
+def _underlyingfctxifabsent(filectx):
+    """Sometimes when resolving, our fcd is actually an absentfilectx, but
+    we want to write to it (to do the resolve). This helper returns the
+    underyling workingfilectx in that case.
+    """
+    if filectx.isabsent():
+        return filectx.changectx()[filectx.path()]
+    else:
+        return filectx
 
 def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
