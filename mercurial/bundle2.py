@@ -678,6 +678,9 @@ def getunbundler(ui, fp, magicstring=None):
         magicstring = changegroup.readexactly(fp, 4)
     magic, version = magicstring[0:2], magicstring[2:4]
     if magic != 'HG':
+        ui.debug(
+            "error: invalid magic: %r (version %r), should be 'HG'\n"
+            % (magic, version))
         raise error.Abort(_('not a Mercurial bundle'))
     unbundlerclass = formatmap.get(version)
     if unbundlerclass is None:
