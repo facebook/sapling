@@ -158,6 +158,7 @@ class EdenServer {
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
+  class ThriftServerEventHandler;
 
   // Forbidden copy constructor and assignment operator
   EdenServer(EdenServer const&) = delete;
@@ -190,6 +191,7 @@ class EdenServer {
   folly::Synchronized<std::shared_ptr<ConfigData>> configData_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
+  std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
 
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;

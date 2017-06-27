@@ -14,6 +14,7 @@
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/experimental/logging/xlog.h>
+#include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
@@ -64,6 +65,41 @@ std::string getPathToUnixDomainSocket(StringPiece edenDir);
 
 namespace facebook {
 namespace eden {
+
+class EdenServer::ThriftServerEventHandler
+    : public apache::thrift::server::TServerEventHandler,
+      public folly::AsyncSignalHandler {
+ public:
+  explicit ThriftServerEventHandler(EdenServer* edenServer)
+      : AsyncSignalHandler{nullptr}, edenServer_{edenServer} {}
+
+  void preServe(const folly::SocketAddress* /*address*/) override {
+    // preServe() will be called from the thrift server thread once when it is
+    // about to start serving.
+    //
+    // Register for SIGINT and SIGTERM.  We do this in preServe() so we can use
+    // the thrift server's EventBase to process the signal callbacks.
+    auto eventBase = folly::EventBaseManager::get()->getEventBase();
+    attachEventBase(eventBase);
+    registerSignalHandler(SIGINT);
+    registerSignalHandler(SIGTERM);
+  }
+
+  void signalReceived(int sig) noexcept override {
+    // Stop the server.
+    // Unregister for this signal first, so that we will be terminated
+    // immediately if the signal is sent again before we finish stopping.
+    // This makes it easier to kill the daemon if graceful shutdown hangs or
+    // takes longer than expected for some reason.  (For instance, if we
+    // unmounting the mount points hangs for some reason.)
+    XLOG(INFO) << "stopping due to signal " << sig;
+    unregisterSignalHandler(sig);
+    edenServer_->stop();
+  }
+
+ private:
+  EdenServer* edenServer_{nullptr};
+};
 
 EdenServer::EdenServer(
     AbsolutePathPiece edenDir,
@@ -300,6 +336,9 @@ void EdenServer::createThriftServer() {
   handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
   server_->setAddress(address);
+
+  serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
+  server_->setServerEventHandler(serverEventHandler_);
 }
 
 void EdenServer::acquireEdenLock() {
