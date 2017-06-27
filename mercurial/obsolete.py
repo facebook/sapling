@@ -613,6 +613,9 @@ class obsstore(object):
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
                 # call 'filecacheentry.refresh()'  here
                 f.close()
+            addedmarkers = transaction.changes.get('obsmarkers')
+            if addedmarkers is not None:
+                addedmarkers.update(new)
             self._addmarkers(new)
             # new marker *may* have changed several set. invalidate the cache.
             self.caches.clear()
