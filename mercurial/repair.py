@@ -285,7 +285,7 @@ class stripcallback(object):
     def __call__(self, tr):
         roots = safestriproots(self.ui, self.repo, self.nodelist)
         if roots:
-            strip(self.ui, self.repo, roots, True, self.topic)
+            strip(self.ui, self.repo, roots, self.backup, self.topic)
 
 def delayedstrip(ui, repo, nodelist, topic=None):
     """like strip, but works inside transaction and won't strip irreverent revs
