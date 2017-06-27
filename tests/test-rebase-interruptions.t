@@ -379,3 +379,53 @@ Test rebase interrupted by hooks
   o  0:public 'A'
   
   $ cd ..
+
+(pretxnclose version)
+
+  $ cp -R a3 hook-pretxnclose
+  $ cd hook-pretxnclose
+  $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
+  rebasing 2:965c486023db "C"
+  summary:     C
+  rebasing 6:a0b2430ebfb8 "F" (tip)
+  transaction abort!
+  rollback completed
+  abort: pretxnclose hook exited with status 1
+  [255]
+  $ hg tglogp
+  @  7:secret 'C'
+  |
+  | @  6:secret 'F'
+  | |
+  o |  5:public 'B'
+  | |
+  o |  4:public 'E'
+  | |
+  o |  3:public 'D'
+  | |
+  | o  2:secret 'C'
+  | |
+  | o  1:public 'B'
+  |/
+  o  0:public 'A'
+  
+  $ hg rebase --continue
+  already rebased 2:965c486023db "C" as 401ccec5e39f
+  rebasing 6:a0b2430ebfb8 "F"
+  saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  $ hg tglogp
+  @  6:secret 'F'
+  |
+  o  5:secret 'C'
+  |
+  o  4:public 'B'
+  |
+  o  3:public 'E'
+  |
+  o  2:public 'D'
+  |
+  | o  1:public 'B'
+  |/
+  o  0:public 'A'
+  
+  $ cd ..
