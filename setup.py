@@ -148,23 +148,28 @@ def runcmd(cmd, env):
     out, err = p.communicate()
     return p.returncode, out, err
 
-def runhg(cmd, env):
-    returncode, out, err = runcmd(cmd, env)
-    # If root is executing setup.py, but the repository is owned by
-    # another user (as in "sudo python setup.py install") we will get
-    # trust warnings since the .hg/hgrc file is untrusted. That is
-    # fine, we don't want to load it anyway.  Python may warn about
-    # a missing __init__.py in mercurial/locale, we also ignore that.
-    err = [e for e in err.splitlines()
-           if not e.startswith(b'not trusting file') \
-              and not e.startswith(b'warning: Not importing') \
-              and not e.startswith(b'obsolete feature not enabled')]
-    if err or returncode != 0:
-        printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
-        printf(b'\n'.join([b'  ' + e for e in err]), file=sys.stderr)
-        return ''
-    return out
+class hgcommand(object):
+    def __init__(self):
+        self.cmd = [sys.executable, 'hg']
+        self.env = gethgenv()
 
+    def run(self, args):
+        cmd = self.cmd + args
+        returncode, out, err = runcmd(cmd, self.env)
+        # If root is executing setup.py, but the repository is owned by
+        # another user (as in "sudo python setup.py install") we will get
+        # trust warnings since the .hg/hgrc file is untrusted. That is
+        # fine, we don't want to load it anyway.  Python may warn about
+        # a missing __init__.py in mercurial/locale, we also ignore that.
+        err = [e for e in err.splitlines()
+               if not e.startswith(b'not trusting file') \
+                  and not e.startswith(b'warning: Not importing') \
+                  and not e.startswith(b'obsolete feature not enabled')]
+        if err or returncode != 0:
+            printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
+            printf(b'\n'.join([b'  ' + e for e in err]), file=sys.stderr)
+            return ''
+        return out
 
 def gethgenv():
     # Execute hg out of this directory with a custom environment which takes
@@ -180,13 +185,13 @@ def gethgenv():
         # https://bugs.python.org/issue13524#msg148850
         env['SystemRoot'] = os.environ['SystemRoot']
 
-env = gethgenv()
 version = ''
 
 if os.path.isdir('.hg'):
-    cmd = [sys.executable, 'hg', 'log', '-r', '.', '--template', '{tags}\n']
-    numerictags = [t for t in runhg(cmd, env).split() if t[0:1].isdigit()]
-    hgid = runhg([sys.executable, 'hg', 'id', '-i'], env).strip()
+    hg = hgcommand()
+    cmd = ['log', '-r', '.', '--template', '{tags}\n']
+    numerictags = [t for t in hg.run(cmd).split() if t[0:1].isdigit()]
+    hgid = hg.run(['id', '-i']).strip()
     if not hgid:
         # Bail out if hg is having problems interacting with this repository,
         # rather than falling through and producing a bogus version number.
@@ -198,12 +203,10 @@ if os.path.isdir('.hg'):
         if hgid.endswith('+'): # propagate the dirty status to the tag
             version += '+'
     else: # no tag found
-        ltagcmd = [sys.executable, 'hg', 'parents', '--template',
-                   '{latesttag}']
-        ltag = runhg(ltagcmd, env)
-        changessincecmd = [sys.executable, 'hg', 'log', '-T', 'x\n', '-r',
-                           "only(.,'%s')" % ltag]
-        changessince = len(runhg(changessincecmd, env).splitlines())
+        ltagcmd = ['parents', '--template', '{latesttag}']
+        ltag = hg.run(ltagcmd)
+        changessincecmd = ['log', '-T', 'x\n', '-r', "only(.,'%s')" % ltag]
+        changessince = len(hg.run(changessincecmd).splitlines())
         version = '%s+%s-%s' % (ltag, changessince, hgid)
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
@@ -407,7 +410,7 @@ class buildhgextindex(Command):
         # here no extension enabled, disabled() lists up everything
         code = ('import pprint; from mercurial import extensions; '
                 'pprint.pprint(extensions.disabled())')
-        returncode, out, err = runcmd([sys.executable, '-c', code], env)
+        returncode, out, err = runcmd([sys.executable, '-c', code], gethgenv())
         if err or returncode != 0:
             raise DistutilsExecError(err)
 
