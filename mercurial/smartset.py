@@ -766,6 +766,11 @@ class generatorset(abstractsmartset):
     be iterated more than once.
     When asked for membership it generates values until either it finds the
     requested one or has gone through all the elements in the generator
+
+    >>> xs = generatorset([0, 1, 4], iterasc=True)
+    >>> assert xs.last() == xs.last()
+    >>> xs.last()  # cached
+    4
     """
     def __init__(self, gen, iterasc=None):
         """
@@ -937,7 +942,7 @@ class generatorset(abstractsmartset):
             # we need to consume all and try again
             for x in self._consumegen():
                 pass
-            return self.first()
+            return self.last()
         return next(it(), None)
 
     def __repr__(self):

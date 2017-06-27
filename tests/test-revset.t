@@ -1337,6 +1337,16 @@ Test order of first/last revisions
   0
   1
 
+Test scmutil.revsingle() should return the last revision
+
+  $ hg debugrevspec -s 'last(0::)'
+  * set:
+  <baseset slice=0:1
+    <generatorset->>
+  9
+  $ hg identify -r '0::' --num
+  9
+
 Test matching
 
   $ log 'matching(6)'
