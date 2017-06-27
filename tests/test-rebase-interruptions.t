@@ -272,13 +272,68 @@ Abort the rebasing:
   o  0:public 'A'
   
 
-Test rebase interrupted by hooks (pretxncommit)
+Test rebase interrupted by hooks
 
   $ hg up 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo F > F
   $ hg add F
   $ hg ci -m F
+
+  $ cd ..
+
+(precommit version)
+
+  $ cp -R a3 hook-precommit
+  $ cd hook-precommit
+  $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
+  rebasing 2:965c486023db "C"
+  M A
+  rebasing 6:a0b2430ebfb8 "F" (tip)
+  abort: precommit hook exited with status 1
+  [255]
+  $ hg tglogp
+  @  7:secret 'C'
+  |
+  | @  6:secret 'F'
+  | |
+  o |  5:public 'B'
+  | |
+  o |  4:public 'E'
+  | |
+  o |  3:public 'D'
+  | |
+  | o  2:secret 'C'
+  | |
+  | o  1:public 'B'
+  |/
+  o  0:public 'A'
+  
+  $ hg rebase --continue
+  already rebased 2:965c486023db "C" as 401ccec5e39f
+  rebasing 6:a0b2430ebfb8 "F"
+  saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  $ hg tglogp
+  @  6:secret 'F'
+  |
+  o  5:secret 'C'
+  |
+  o  4:public 'B'
+  |
+  o  3:public 'E'
+  |
+  o  2:public 'D'
+  |
+  | o  1:public 'B'
+  |/
+  o  0:public 'A'
+  
+  $ cd ..
+
+(pretxncommit version)
+
+  $ cp -R a3 hook-pretxncommit
+  $ cd hook-pretxncommit
   $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxncommit=hg log -r $HG_NODE | grep "summary:     C"'
   rebasing 2:965c486023db "C"
   summary:     C
@@ -307,7 +362,7 @@ Test rebase interrupted by hooks (pretxncommit)
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
   $ hg tglogp
   @  6:secret 'F'
   |
