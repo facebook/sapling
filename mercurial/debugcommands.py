@@ -1429,16 +1429,16 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         if opts['rev']:
             revs = scmutil.revrange(repo, opts['rev'])
             nodes = [repo[r].node() for r in revs]
-            markers = list(obsolete.getmarkers(repo, nodes=nodes,
+            markers = list(obsutil.getmarkers(repo, nodes=nodes,
                                                exclusive=opts['exclusive']))
             markers.sort(key=lambda x: x._data)
         else:
-            markers = obsolete.getmarkers(repo)
+            markers = obsutil.getmarkers(repo)
 
         markerstoiter = markers
         isrelevant = lambda m: True
         if opts.get('rev') and opts.get('index'):
-            markerstoiter = obsolete.getmarkers(repo)
+            markerstoiter = obsutil.getmarkers(repo)
             markerset = set(markers)
             isrelevant = lambda m: m in markerset
 

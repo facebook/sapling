@@ -796,21 +796,6 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
-def getmarkers(repo, nodes=None, exclusive=False):
-    """returns markers known in a repository
-
-    If <nodes> is specified, only markers "relevant" to those nodes are are
-    returned"""
-    if nodes is None:
-        rawmarkers = repo.obsstore
-    elif exclusive:
-        rawmarkers = obsutil.exclusivemarkers(repo, nodes)
-    else:
-        rawmarkers = repo.obsstore.relevantmarkers(nodes)
-
-    for markerdata in rawmarkers:
-        yield obsutil.marker(repo, markerdata)
-
 # keep compatibility for the 4.3 cycle
 def allprecursors(obsstore, nodes, ignoreflags=0):
     movemsg = 'obsolete.allprecursors moved to obsutil.allprecursors'
@@ -826,6 +811,11 @@ def marker(repo, data):
     movemsg = 'obsolete.marker moved to obsutil.marker'
     repo.ui.deprecwarn(movemsg, '4.3')
     return obsutil.marker(repo, data)
+
+def getmarkers(repo, nodes=None, exclusive=False):
+    movemsg = 'obsolete.getmarkers moved to obsutil.getmarkers'
+    repo.ui.deprecwarn(movemsg, '4.3')
+    return obsutil.getmarkers(repo, nodes=nodes, exclusive=exclusive)
 
 def exclusivemarkers(repo, nodes):
     movemsg = 'obsolete.exclusivemarkers moved to obsutil.exclusivemarkers'

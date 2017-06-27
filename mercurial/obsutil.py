@@ -48,6 +48,21 @@ class marker(object):
         """The flags field of the marker"""
         return self._data[2]
 
+def getmarkers(repo, nodes=None, exclusive=False):
+    """returns markers known in a repository
+
+    If <nodes> is specified, only markers "relevant" to those nodes are are
+    returned"""
+    if nodes is None:
+        rawmarkers = repo.obsstore
+    elif exclusive:
+        rawmarkers = exclusivemarkers(repo, nodes)
+    else:
+        rawmarkers = repo.obsstore.relevantmarkers(nodes)
+
+    for markerdata in rawmarkers:
+        yield marker(repo, markerdata)
+
 def closestpredecessors(repo, nodeid):
     """yield the list of next predecessors pointing on visible changectx nodes
 
