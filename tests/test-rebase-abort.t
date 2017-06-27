@@ -374,11 +374,10 @@ test aborting an interrupted series (issue5084)
   $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 3 -d tip
   rebasing 3:3a71550954f1 "b"
   rebasing 4:e80b69427d80 "c"
-  transaction abort!
-  rollback completed
   abort: ^C
   [255]
   $ hg rebase --abort
+  saved backup bundle to $TESTTMP/interrupted/.hg/strip-backup/3d8812cf300d-93041a90-backup.hg (glob)
   rebase aborted
   $ hg log -G --template "{rev} {desc} {bookmarks}"
   o  6 no-a
@@ -399,7 +398,7 @@ test aborting an interrupted series (issue5084)
   parent: 0:df4f53cec30a 
    base
   branch: default
-  commit: 1 unknown (clean)
+  commit: (clean)
   update: 6 new changesets (update)
   phases: 7 draft
 
