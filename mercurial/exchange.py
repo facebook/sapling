@@ -730,7 +730,8 @@ def _pushb2ctxcheckheads(pushop, bundler):
     # * if we don't push anything, there are nothing to check.
     if not pushop.force and pushop.outgoing.missingheads:
         allowunrelated = 'related' in bundler.capabilities.get('checkheads', ())
-        if not allowunrelated:
+        emptyremote = pushop.pushbranchmap is None
+        if not allowunrelated or emptyremote:
             bundler.newpart('check:heads', data=iter(pushop.remoteheads))
         else:
             affected = set()

@@ -297,3 +297,22 @@ Test push hook locking
   lock:  user *, process * (*s) (glob)
   wlock: user *, process * (*s) (glob)
 
+Test bare push with multiple race checking options
+--------------------------------------------------
+
+  $ hg init test-bare-push-no-concurrency
+  $ hg init test-bare-push-unrelated-concurrency
+  $ hg -R test-revflag push -r 0 test-bare-push-no-concurrency --config server.concurrent-push-mode=strict
+  pushing to test-bare-push-no-concurrency
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ hg -R test-revflag push -r 0 test-bare-push-unrelated-concurrency --config server.concurrent-push-mode=check-related
+  pushing to test-bare-push-unrelated-concurrency
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
