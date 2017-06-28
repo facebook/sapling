@@ -317,7 +317,7 @@ class rebaseruntime(object):
                 hint=_('use --keep to keep original changesets'))
 
         obsrevs = _filterobsoleterevs(self.repo, set(rebaseset))
-        self._handleskippingobsolete(rebaseset, obsrevs, dest)
+        self._handleskippingobsolete(rebaseset, obsrevs, dest.rev())
 
         result = buildstate(self.repo, dest, rebaseset, self.collapsef,
                             self.obsoletenotrebased)
@@ -1464,7 +1464,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     if allsuccessors:
         # Look for successors of obsolete nodes to be rebased among
         # the ancestors of dest
-        ancs = cl.ancestors([repo[dest].rev()],
+        ancs = cl.ancestors([dest],
                             stoprev=min(allsuccessors),
                             inclusive=True)
         for s in allsuccessors:
