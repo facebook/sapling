@@ -80,6 +80,9 @@ coreconfigitem('devel', 'serverexactprotocol',
 coreconfigitem('devel', 'serverrequirecert',
     default=None,
 )
+coreconfigitem('devel', 'strip-obsmarkers',
+    default=True,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )

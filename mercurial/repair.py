@@ -132,7 +132,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     stripbases = [cl.node(r) for r in tostrip]
 
     stripobsidx = obsmarkers = ()
-    if repo.ui.configbool('devel', 'strip-obsmarkers', True):
+    if repo.ui.configbool('devel', 'strip-obsmarkers'):
         obsmarkers = obsutil.exclusivemarkers(repo, stripbases)
     if obsmarkers:
         stripobsidx = [i for i, m in enumerate(repo.obsstore)
