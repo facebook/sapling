@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_unittest(
     name = "test",
     srcs = glob(["*Test.cpp"]),
@@ -5,8 +7,7 @@ cpp_unittest(
         "@/eden/fs/model:model",
         "@/eden/fs/utils:utils",
         "@/folly:array",
-    ],
-    external_deps = [
-        ("googletest", None, "gtest"),
+        "@/folly:string_extended",
+        "@/folly/io:iobuf",
     ],
 )

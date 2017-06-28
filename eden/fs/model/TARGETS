@@ -1,14 +1,20 @@
+# @autodeps
+
 cpp_library(
     name = "model",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
+        "@/folly:conv",
+        "@/folly:format",
+        "@/folly:optional",
+        "@/folly:range",
+        "@/folly:string_extended",
+        "@/folly/io:iobuf",
         "@/folly/ssl:openssl_hash",
     ],
     external_deps = [
-        ("boost", "any"),
-        ("openssl", None, "ssl"),
+        "boost",
     ],
 )

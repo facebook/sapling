@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_library(
     name = "git",
     srcs = [
@@ -10,11 +12,10 @@ cpp_library(
     ],
     deps = [
         "@/eden/fs/model:model",
-        "@/folly:folly",
+        "@/folly:format",
+        "@/folly:range",
+        "@/folly:string_extended",
         "@/folly/io:iobuf",
-    ],
-    external_deps = [
-        ("libgit2", None, "git2"),
     ],
 )
 
@@ -33,7 +34,8 @@ cpp_library(
     deps = [
         ":glob",
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
+        "@/folly:optional",
+        "@/folly:range",
     ],
 )
 
@@ -46,7 +48,8 @@ cpp_library(
         "GlobMatcher.h",
     ],
     deps = [
-        "@/folly:folly",
+        "@/folly:expected",
+        "@/folly:range",
         "@/folly/experimental/logging:logging",
     ],
 )

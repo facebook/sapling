@@ -1,9 +1,11 @@
+# @autodeps
+
 cpp_library(
     name = "rocksdb",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/folly:folly",
+        "@/folly:string_extended",
         "@/rocksdb:rocksdb",
     ],
     external_deps = [

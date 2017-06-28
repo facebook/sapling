@@ -1,12 +1,18 @@
+# @autodeps
+
 cpp_unittest(
     name = "test",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/fuse/privhelper:privhelper",
+        "@/folly:exception",
+        "@/folly:file",
+        "@/folly:range",
         "@/folly/experimental:test_util",
+        "@/folly/io:iobuf",
     ],
     external_deps = [
-        ("boost", "any"),
+        ("boost", None, "boost_filesystem"),
     ],
 )

@@ -1,23 +1,35 @@
+# @autodeps
+
 cpp_unittest(
     name = "test",
     srcs = glob(
         ["*Test.cpp"],
         excludes = [
-            # TODO(mbolin): Figure out what is salvagable from these tests and then
-            # re-enable them.
+            # TODO(mbolin): Figure out what is salvagable from these tests and
+            # then re-enable them.
             "DirstateTest.cpp",
             "DirstatePersistenceTest.cpp",
         ],
     ),
     deps = [
+        "@/eden/fs/config:config",
+        "@/eden/fs/fuse:fusell",
         "@/eden/fs/inodes:inodes",
+        "@/eden/fs/journal:journal",
+        "@/eden/fs/service:thrift_cpp",
         "@/eden/fs/testharness:testharness",
         "@/eden/fs/utils:utils",
         "@/eden/fs/utils/test:test_lib",
+        "@/folly:array",
+        "@/folly:bits",
+        "@/folly:conv",
+        "@/folly:exception_wrapper",
+        "@/folly:format",
+        "@/folly:range",
+        "@/folly:string_extended",
         "@/folly/test:test_utils",
     ],
     external_deps = [
         ("googletest", None, "gmock"),
-        ("googletest", None, "gtest"),
     ],
 )

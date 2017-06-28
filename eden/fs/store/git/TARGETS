@@ -1,12 +1,18 @@
+# @autodeps
+
 cpp_library(
     name = "git",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/model:model",
+        "@/eden/fs/model/git:git",
         "@/eden/fs/store:store",
-        "@/folly:folly",
+        "@/eden/fs/utils:utils",
+        "@/folly:conv",
+        "@/folly:range",
         "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
     ],
     external_deps = [
         ("libgit2", None, "git2"),

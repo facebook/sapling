@@ -1,14 +1,14 @@
+# @autodeps
+
 cpp_unittest(
     name = "test",
     srcs = glob(["*Test.cpp"]),
     deps = [
         "@/eden/fs/model:model",
         "@/eden/fs/store:store",
-        "@/eden/fs/testharness:testharness",
-        "@/folly:folly",
+        "@/folly:optional",
+        "@/folly:string_extended",
         "@/folly/experimental:test_util",
-    ],
-    external_deps = [
-        ("googletest", None, "gtest"),
+        "@/folly/io:iobuf",
     ],
 )

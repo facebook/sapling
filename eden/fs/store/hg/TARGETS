@@ -2,6 +2,7 @@
 # This gets run as a standalone script using the system Python installation,
 # rather than as a PAR file.  It needs to use the system python interpreter
 # in order to find the system's installed mercurial libraries.
+# @autodeps
 
 TESTER_SRCS = ["tester.cpp"]
 
@@ -16,12 +17,19 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/eden/fs/model/git:git",
         "@/eden/fs/store:store",
+        "@/eden/fs/utils:utils",
         "@/eden/hg/datastorage:datapack",
         "@/folly:array",
-        "@/folly:folly",
+        "@/folly:bits",
+        "@/folly:conv",
+        "@/folly:file",
+        "@/folly:range",
         "@/folly:subprocess",
+        "@/folly:synchronized",
         "@/folly/experimental:env_util",
         "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
     ],
     external_deps = [
         "gflags",
@@ -35,6 +43,12 @@ cpp_binary(
     srcs = TESTER_SRCS,
     deps = [
         ":hg",
+        "@/eden/fs/model:model",
+        "@/eden/fs/store:store",
+        "@/eden/fs/utils:utils",
         "@/folly/init:init",
+    ],
+    external_deps = [
+        "gflags",
     ],
 )

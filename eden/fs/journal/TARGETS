@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_library(
     name = "journal",
     srcs = glob(["*.cpp"]),
@@ -5,10 +7,7 @@ cpp_library(
     deps = [
         "@/eden/fs/model:model",
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
-    ],
-    external_deps = [
-        ("boost", "any"),
+        "@/folly:function",
     ],
 )
 
@@ -17,6 +16,5 @@ cpp_unittest(
     srcs = glob(["test/*Test.cpp"]),
     deps = [
         ":journal",
-        "@/folly/experimental:test_util",
     ],
 )

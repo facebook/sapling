@@ -1,18 +1,35 @@
+# @autodeps
+
 include_defs("//eden/DEFS")
+
+stats_deps = ["@/common/stats:threadlocal"] if is_facebook_internal() else []
 
 cpp_library(
     name = "fusell",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
-    deps = ([
+    deps = stats_deps + [
         "@/eden/fs/fuse/privhelper:privhelper",
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
-        "@/folly:stats",
+        "@/folly:array",
+        "@/folly:exception",
+        "@/folly:fbvector",
+        "@/folly:file",
+        "@/folly:format",
+        "@/folly:move_wrapper",
+        "@/folly:portability",
+        "@/folly:random",
+        "@/folly:range",
+        "@/folly:string_extended",
         "@/folly:synchronized",
+        "@/folly:thread_local",
         "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
+        "@/folly/io/async:request_context",
+        "@/folly/stats:timeseries_histogram",
         "@/wangle:wangle",
-    ] + ["@/common/stats:threadlocal"]) if is_facebook_internal() else [],
+    ],
     external_deps = [
         ("fuse", None, "fuse"),
     ],

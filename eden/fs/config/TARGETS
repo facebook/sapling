@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_library(
     name = "config",
     srcs = glob(["*.cpp"]),
@@ -5,7 +7,17 @@ cpp_library(
     deps = [
         "@/eden/fs/model:model",
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
-        "@/folly/experimental:experimental",
+        "@/folly:dynamic",
+        "@/folly:file",
+        "@/folly:json",
+        "@/folly:optional",
+        "@/folly:range",
+        "@/folly:string_extended",
+        "@/folly/experimental:string_keyed_unordered_map",
+        "@/folly/io:iobuf",
+    ],
+    external_deps = [
+        "boost",
+        ("boost", None, "boost_filesystem"),
     ],
 )

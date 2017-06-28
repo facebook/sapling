@@ -13,7 +13,6 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gflags/gflags.h>
-#include <rocksdb/db.h>
 
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"

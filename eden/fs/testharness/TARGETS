@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_library(
     name = "testharness",
     srcs = glob(["*.cpp"]),
@@ -6,11 +8,28 @@ cpp_library(
         "@/eden/fs/config:config",
         "@/eden/fs/fuse:fusell",
         "@/eden/fs/inodes:inodes",
+        "@/eden/fs/inodes:serialization-cpp2",
         "@/eden/fs/model:model",
+        "@/eden/fs/store:store",
         "@/eden/fs/store/hg:hg",
         "@/eden/fs/utils:utils",
-        "@/folly:folly",
+        "@/folly:conv",
+        "@/folly:exception",
+        "@/folly:exception_wrapper",
+        "@/folly:file",
+        "@/folly:format",
+        "@/folly:optional",
+        "@/folly:portability",
+        "@/folly:range",
+        "@/folly:string_extended",
         "@/folly:subprocess",
         "@/folly/experimental:test_util",
+        "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
+        "@/folly/ssl:openssl_hash",
+    ],
+    external_deps = [
+        ("googletest", None, "gtest"),
     ],
 )

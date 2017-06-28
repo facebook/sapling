@@ -10,7 +10,7 @@
 #pragma once
 
 #include <folly/String.h>
-#include <rocksdb/db.h>
+#include <rocksdb/db.h> // @manual=@/rocksdb:rocksdb
 
 namespace facebook {
 namespace eden {

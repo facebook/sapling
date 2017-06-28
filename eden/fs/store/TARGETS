@@ -1,3 +1,5 @@
+# @autodeps
+
 cpp_library(
     name = "store",
     srcs = glob(["*.cpp"]),
@@ -6,9 +8,18 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/eden/fs/model/git:git",
         "@/eden/fs/rocksdb:rocksdb",
-        "@/folly:folly",
-        "@/folly/experimental:experimental",
+        "@/eden/fs/utils:utils",
+        "@/folly:bits",
+        "@/folly:conv",
+        "@/folly:format",
+        "@/folly:optional",
+        "@/folly:range",
+        "@/folly:string_extended",
+        "@/folly:synchronized",
+        "@/folly/experimental:string_keyed_unordered_set",
         "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
         "@/rocksdb:rocksdb",
     ],
 )

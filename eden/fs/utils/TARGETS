@@ -1,12 +1,30 @@
+# @autodeps
+
 cpp_library(
     name = "utils",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        "@/folly:conv",
+        "@/folly:dynamic",
         "@/folly:evicting_cache_map",
-        "@/folly:folly",
+        "@/folly:exception",
+        "@/folly:exception_wrapper",
+        "@/folly:fbvector",
+        "@/folly:format",
+        "@/folly:hash",
+        "@/folly:optional",
+        "@/folly:singleton",
+        "@/folly:string_extended",
         "@/folly:subprocess",
         "@/folly/experimental/logging:logging",
-        "@/folly/futures:futures",
+        "@/folly/futures:core",
+        "@/folly/futures:shared_promise",
+        "@/folly/portability:stdlib",
+    ],
+    external_deps = [
+        "boost",
+        "gflags",
+        "glog",
     ],
 )

@@ -1,14 +1,18 @@
+# @autodeps
+
 cpp_unittest(
     name = "test",
     srcs = glob(["*Test.cpp"]),
     deps = [
         ":test_lib",
         "@/eden/fs/utils:utils",
+        "@/folly:exception",
+        "@/folly:exception_wrapper",
         "@/folly/experimental:test_util",
     ],
     external_deps = [
+        "boost",
         ("googletest", None, "gmock"),
-        ("googletest", None, "gtest"),
     ],
 )
 
