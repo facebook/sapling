@@ -68,6 +68,9 @@ coreconfigitem('devel', 'check-locks',
 coreconfigitem('devel', 'check-relroot',
     default=False,
 )
+coreconfigitem('devel', 'disableloaddefaultcerts',
+    default=False,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
