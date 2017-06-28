@@ -71,6 +71,9 @@ coreconfigitem('devel', 'check-relroot',
 coreconfigitem('devel', 'disableloaddefaultcerts',
     default=False,
 )
+coreconfigitem('devel', 'servercafile',
+    default='',
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
