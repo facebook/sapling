@@ -814,7 +814,7 @@ if os.name == 'nt':
     setupversion = version.split('+', 1)[0]
 
 if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
-    version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()
+    version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[1].splitlines()
     if version:
         version = version[0]
         if sys.version_info[0] == 3:
