@@ -60,7 +60,7 @@ coreconfigitem('patch', 'fuzz',
     default=2,
 )
 coreconfigitem('ui', 'clonebundleprefers',
-    default=[],
+    default=list,
 )
 coreconfigitem('ui', 'interactive',
     default=None,

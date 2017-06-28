@@ -455,6 +455,8 @@ class ui(object):
             if default is _unset:
                 if item is None:
                     value = default
+                elif callable(item.default):
+                    value = item.default()
                 else:
                     value = item.default
             elif item is not None:
