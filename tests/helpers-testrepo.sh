@@ -25,3 +25,16 @@ syshgenv () {
     HGPLAIN=1
     export HGPLAIN
 }
+
+# Most test-check-* sourcing this file run "hg files", which is not available
+# in ancient versions of hg. So we double check if "syshg files" works and
+# fallback to hg bundled in the repo.
+syshg files -h >/dev/null 2>/dev/null
+if [ $? -ne 0 ]; then
+    syshg() {
+        hg "$@"
+    }
+    syshgenv() {
+        :
+    }
+fi
