@@ -7,6 +7,10 @@
 
 from __future__ import absolute_import
 
+from . import (
+    phases,
+)
+
 class marker(object):
     """Wrap obsolete marker raw data"""
 
@@ -284,6 +288,28 @@ def foreground(repo, nodes):
             known = (n for n in succs if n in nm)
             foreground = set(repo.set('%ln::', known))
     return set(c.node() for c in foreground)
+
+def getobsoleted(repo, tr):
+    """return the set of pre-existing revisions obsoleted by a transaction"""
+    torev = repo.unfiltered().changelog.nodemap.get
+    phase = repo._phasecache.phase
+    succsmarkers = repo.obsstore.successors.get
+    public = phases.public
+    addedmarkers = tr.changes.get('obsmarkers')
+    addedrevs = tr.changes.get('revs')
+    seenrevs = set(addedrevs)
+    obsoleted = set()
+    for mark in addedmarkers:
+        node = mark[0]
+        rev = torev(node)
+        if rev is None or rev in seenrevs:
+            continue
+        seenrevs.add(rev)
+        if phase(repo, rev) == public:
+            continue
+        if set(succsmarkers(node)).issubset(addedmarkers):
+            obsoleted.add(rev)
+    return obsoleted
 
 def successorssets(repo, initialnode, cache=None):
     """Return set of all latest successors of initial nodes

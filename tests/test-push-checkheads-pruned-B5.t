@@ -88,5 +88,6 @@ Actual testing
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   3 new obsolescence markers
+  obsoleted 3 changesets
 
   $ cd ../..

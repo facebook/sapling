@@ -205,6 +205,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 2 new obsolescence markers
+  # unbundling: obsoleted 1 changesets
   # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
@@ -366,6 +367,7 @@ problematic)
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 1 new obsolescence markers
+  # unbundling: obsoleted 1 changesets
   # unbundling: (run 'hg heads' to see heads)
 
 bundling multiple revisions
@@ -957,6 +959,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 6 new obsolescence markers
+  # unbundling: obsoleted 3 changesets
   # unbundling: (run 'hg heads' to see heads)
 
 Bundle multiple revisions
@@ -1057,6 +1060,7 @@ Bundle multiple revisions
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 7 new obsolescence markers
+  # unbundling: obsoleted 2 changesets
   # unbundling: (run 'hg heads' to see heads)
 
 * top one and initial precursors
@@ -1122,6 +1126,7 @@ Bundle multiple revisions
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 6 new obsolescence markers
+  # unbundling: obsoleted 3 changesets
   # unbundling: (run 'hg heads' to see heads)
 
 * top one and one of the split
@@ -1189,6 +1194,7 @@ Bundle multiple revisions
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 7 new obsolescence markers
+  # unbundling: obsoleted 2 changesets
   # unbundling: (run 'hg heads' to see heads)
 
 * all

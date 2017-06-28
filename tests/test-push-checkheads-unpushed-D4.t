@@ -118,5 +118,6 @@ Actual testing (existing branch only)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
+  obsoleted 1 changesets
 
   $ cd ../..

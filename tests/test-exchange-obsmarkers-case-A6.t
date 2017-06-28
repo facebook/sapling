@@ -97,6 +97,7 @@ Actual Test (explicit push version)
   searching for changes
   no changes found
   remote: 1 new obsolescence markers
+  remote: obsoleted 1 changesets
   ## post push state
   # obstore: main
   28b51eb45704506b5c603decd6bf7ac5e0f6a52f e5ea8f9c73143125d36658e90ef70c6d2027a5b7 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -107,6 +108,7 @@ Actual Test (explicit push version)
   pulling from main
   no changes found
   1 new obsolescence markers
+  obsoleted 1 changesets
   ## post pull state
   # obstore: main
   28b51eb45704506b5c603decd6bf7ac5e0f6a52f e5ea8f9c73143125d36658e90ef70c6d2027a5b7 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -130,6 +132,7 @@ Actual Test (bare push version)
   searching for changes
   no changes found
   remote: 1 new obsolescence markers
+  remote: obsoleted 1 changesets
   ## post push state
   # obstore: main
   28b51eb45704506b5c603decd6bf7ac5e0f6a52f e5ea8f9c73143125d36658e90ef70c6d2027a5b7 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -141,6 +144,7 @@ Actual Test (bare push version)
   searching for changes
   no changes found
   1 new obsolescence markers
+  obsoleted 1 changesets
   ## post pull state
   # obstore: main
   28b51eb45704506b5c603decd6bf7ac5e0f6a52f e5ea8f9c73143125d36658e90ef70c6d2027a5b7 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}

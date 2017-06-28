@@ -13,6 +13,7 @@ import hashlib
 import os
 import re
 import socket
+import weakref
 
 from .i18n import _
 from .node import (
@@ -22,11 +23,13 @@ from .node import (
     wdirrev,
 )
 
+from .i18n import _
 from . import (
     encoding,
     error,
     match as matchmod,
     obsolete,
+    obsutil,
     pathutil,
     phases,
     pycompat,
@@ -1059,3 +1062,15 @@ class simplekeyvaluefile(object):
             lines.append("%s=%s\n" % (k, v))
         with self.vfs(self.path, mode='wb', atomictemp=True) as fp:
             fp.write(''.join(lines))
+
+def registersummarycallback(repo, otr):
+    """register a callback to issue a summary after the transaction is closed
+    """
+    reporef = weakref.ref(repo)
+    def reportsummary(tr):
+        """the actual callback reporting the summary"""
+        repo = reporef()
+        obsoleted = obsutil.getobsoleted(repo, tr)
+        if obsoleted:
+            repo.ui.status(_('obsoleted %i changesets\n') % len(obsoleted))
+    otr.addpostclose('00-txnreport', reportsummary)

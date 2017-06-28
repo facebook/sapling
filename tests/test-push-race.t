@@ -1665,6 +1665,7 @@ racing commit push a new head obsoleting the one touched by the raced push
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
+  obsoleted 1 changesets
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R ./client-other pull
   pulling from ssh://user@dummy/server
@@ -1674,6 +1675,7 @@ racing commit push a new head obsoleting the one touched by the raced push
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
+  obsoleted 1 changesets
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg -R ./client-racy pull
   pulling from ssh://user@dummy/server
@@ -1770,6 +1772,7 @@ Pushing
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 1 files (+1 heads)
   remote: 1 new obsolescence markers
+  remote: obsoleted 1 changesets
 
   $ release $TESTTMP/watchfile
 

@@ -484,6 +484,7 @@ Update to a successor works
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 1 files (+1 heads)
   remote: 2 new obsolescence markers
+  remote: obsoleted 1 changesets
   updating bookmark Y
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
