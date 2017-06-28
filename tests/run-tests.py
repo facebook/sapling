@@ -70,6 +70,13 @@ try:
 except ImportError:
     import queue
 
+try:
+    import shlex
+    shellquote = shlex.quote
+except (ImportError, AttributeError):
+    import pipes
+    shellquote = pipes.quote
+
 if os.environ.get('RTUNICODEPEDANTRY', False):
     try:
         reload(sys)
@@ -752,6 +759,7 @@ class Test(unittest.TestCase):
         This will return a tuple describing the result of the test.
         """
         env = self._getenv()
+        self._genrestoreenv(env)
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
@@ -887,6 +895,30 @@ class Test(unittest.TestCase):
             return b'::1'
         else:
             return b'127.0.0.1'
+
+    def _genrestoreenv(self, testenv):
+        """Generate a script that can be used by tests to restore the original
+        environment."""
+        # Put the restoreenv script inside self._threadtmp
+        scriptpath = os.path.join(self._threadtmp, b'restoreenv.sh')
+        testenv['HGTEST_RESTOREENV'] = scriptpath
+
+        # Only restore environment variable names that the shell allows
+        # us to export.
+        name_regex = re.compile('[a-zA-Z][a-zA-Z0-9_]*')
+
+        with open(scriptpath, 'w') as envf:
+            for name, value in os.environ.items():
+                if not name_regex.match(name):
+                    # Skip environment variables with unusual names not
+                    # allowed by most shells.
+                    continue
+                envf.write('%s=%s\n' % (name, shellquote(value)))
+
+            for name in testenv:
+                if name in os.environ:
+                    continue
+                envf.write('unset %s\n' % (name,))
 
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
@@ -2274,9 +2306,6 @@ class TestRunner(object):
             sepb = _bytespath(os.pathsep)
         else:
             sepb = os.pathsep
-        # save the original path, for tests that need to invoke the
-        # system python
-        osenvironb[b"ORIG_PATH"] = osenvironb[b"PATH"]
         path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
         if os.path.islink(__file__):
             # test helper will likely be at the end of the symlink
@@ -2302,7 +2331,6 @@ class TestRunner(object):
         # are in /opt/subversion.)
         oldpypath = osenvironb.get(IMPL_PATH)
         if oldpypath:
-            osenvironb['ORIG_' + IMPL_PATH] = oldpypath
             pypath.append(oldpypath)
         osenvironb[IMPL_PATH] = sepb.join(pypath)
 

@@ -18,10 +18,7 @@ syshg () {
 # Revert the environment so that running "hg" runs the system hg
 # rather than the test hg installation.
 syshgenv () {
-    PATH="$ORIG_PATH"
-    PYTHONPATH="$ORIG_PYTHONPATH"
-    JYTHONPATH="$ORIG_JYTHONPATH"
-    unset HGRCPATH
+    . "$HGTEST_RESTOREENV"
     HGPLAIN=1
     export HGPLAIN
 }
