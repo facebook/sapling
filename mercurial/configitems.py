@@ -77,6 +77,9 @@ coreconfigitem('devel', 'servercafile',
 coreconfigitem('devel', 'serverexactprotocol',
     default='',
 )
+coreconfigitem('devel', 'serverrequirecert',
+    default=None,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
