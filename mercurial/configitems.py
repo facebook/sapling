@@ -59,6 +59,9 @@ coreconfigitem = getitemregister(coreitems)
 coreconfigitem('devel', 'all-warnings',
     default=False,
 )
+coreconfigitem('devel', 'bundle2.debug',
+    default=False,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )

@@ -187,12 +187,12 @@ _parttypeforbidden = re.compile('[^a-zA-Z0-9_:-]')
 
 def outdebug(ui, message):
     """debug regarding output stream (bundling)"""
-    if ui.configbool('devel', 'bundle2.debug', False):
+    if ui.configbool('devel', 'bundle2.debug'):
         ui.debug('bundle2-output: %s\n' % message)
 
 def indebug(ui, message):
     """debug on input stream (unbundling)"""
-    if ui.configbool('devel', 'bundle2.debug', False):
+    if ui.configbool('devel', 'bundle2.debug'):
         ui.debug('bundle2-input: %s\n' % message)
 
 def validateparttype(parttype):
