@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from __future__ import absolute_import
+import os
 
 from mercurial import (
     dispatch,
@@ -14,7 +15,6 @@ from mercurial import (
 )
 
 from mercurial.util import (
-    os,
     makedate,
 )
 
@@ -23,29 +23,48 @@ from mercurial.node import (
     nullid,
 )
 
-staticcommand = []
-
 # Wrappers
 
 def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # This wrapper executes whenever a command is run.
     # Some commands (eg hg sl) don't actually modify anything
     # ie can't be undone, but the command doesn't know this.
-    global staticcommand
-    staticcommand = fullargs
-    return orig(lui, repo, cmd, fullargs, *args)
+    command = fullargs
 
-# Hooks
+    # Check wether undolog is consistent
+    # ie check wether the undo ext was
+    # off before this command
+    safelog(repo, "")
 
-def writeloghook(ui, repo, **kwargs):
-    nodes = {
+    result = orig(lui, repo, cmd, fullargs, *args)
+
+    # record changes to repo
+    safelog(repo, command)
+    return result
+
+# Log Control
+
+def safelog(repo, command):
+    if repo is not None:# some hg commands don't require repo
+        with repo.lock():
+            with repo.transaction("undolog"):
+                log(repo, command)
+
+def log(repo, command):
+    newnodes = {
         'bookmarks': _logbookmarks(repo),
         'draftheads': _logdraftheads(repo),
         'workingparent': _logworkingparent(repo),
-        'date': _logdate(repo),
-        'command': _logcommand(repo),
     }
-    _logindex(repo, nodes)
+    exsistingnodes = _readindex(repo, 0)
+    if all(newnodes.get(x) == exsistingnodes.get(x) for x in newnodes.keys()):
+        return
+    else:
+        newnodes.update({
+            'date': _logdate(repo),
+            'command': _logcommand(repo, command),
+        })
+        _logindex(repo, newnodes)
 
 # Logs
 
@@ -71,11 +90,8 @@ def _logdraftheads(repo):
     revstring = "\n".join(sorted(hexnodes))
     return writelog(repo, "draftheads.i", revstring)
 
-def _logcommand(repo):
-    global staticcommand
-    assert staticcommand
-    revstring = "\0".join(staticcommand)
-    staticcommand = []
+def _logcommand(repo, command):
+    revstring = "\0".join(command)
     return writelog(repo, "command.i", revstring)
 
 def _logbookmarks(repo):
@@ -93,8 +109,26 @@ def _logindex(repo, nodes):
 
 # Setup
 
-def reposetup(ui, repo):
-    repo.ui.setconfig("hooks", "pretxnclose.undo", writeloghook)
-
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', _runcommandwrapper)
+
+def _readindex(repo, reverseindex, prefetchedrevlog=None):
+    if prefetchedrevlog is None:
+        path = os.path.join('undolog', 'index.i')
+        rlog = revlog.revlog(repo.svfs, path)
+    else:
+        rlog = prefetchedrevlog
+    index = len(rlog) - reverseindex - 1
+    # before time
+    if index < 0:
+        return {}
+    # in the future
+    if index > len(rlog) - 1:
+        raise IndexError
+    chunk = rlog.revision(index)
+    indexdict = {}
+    for row in chunk.split("\n"):
+        kvpair = row.split(' ', 1)
+        if kvpair[0]:
+            indexdict[kvpair[0]] = kvpair[1]
+    return indexdict
