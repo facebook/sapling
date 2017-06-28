@@ -74,6 +74,9 @@ coreconfigitem('devel', 'disableloaddefaultcerts',
 coreconfigitem('devel', 'servercafile',
     default='',
 )
+coreconfigitem('devel', 'serverexactprotocol',
+    default='',
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
