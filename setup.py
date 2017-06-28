@@ -227,6 +227,7 @@ def localhgenv():
         # SystemRoot is required by Windows to load various DLLs.  See:
         # https://bugs.python.org/issue13524#msg148850
         env['SystemRoot'] = os.environ['SystemRoot']
+    return env
 
 version = ''
 
