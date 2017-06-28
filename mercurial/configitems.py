@@ -65,6 +65,9 @@ coreconfigitem('devel', 'bundle2.debug',
 coreconfigitem('devel', 'check-locks',
     default=False,
 )
+coreconfigitem('devel', 'check-relroot',
+    default=False,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
