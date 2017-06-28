@@ -207,7 +207,8 @@ def push(repo, dest, force, revs):
     old_encoding = util.swap_out_encoding()
 
     try:
-        hasobsolete = obsolete._enabled
+        hasobsolete = (obsolete._enabled or
+                       obsolete.isenabled(repo, obsolete.createmarkersopt))
     except:
         hasobsolete = False
 
