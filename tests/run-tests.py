@@ -2274,6 +2274,9 @@ class TestRunner(object):
             sepb = _bytespath(os.pathsep)
         else:
             sepb = os.pathsep
+        # save the original path, for tests that need to invoke the
+        # system python
+        osenvironb[b"ORIG_PATH"] = osenvironb[b"PATH"]
         path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
         if os.path.islink(__file__):
             # test helper will likely be at the end of the symlink
@@ -2299,6 +2302,7 @@ class TestRunner(object):
         # are in /opt/subversion.)
         oldpypath = osenvironb.get(IMPL_PATH)
         if oldpypath:
+            osenvironb['ORIG_' + IMPL_PATH] = oldpypath
             pypath.append(oldpypath)
         osenvironb[IMPL_PATH] = sepb.join(pypath)
 
