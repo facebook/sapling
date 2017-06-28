@@ -62,6 +62,9 @@ coreconfigitem('devel', 'all-warnings',
 coreconfigitem('devel', 'bundle2.debug',
     default=False,
 )
+coreconfigitem('devel', 'check-locks',
+    default=False,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
