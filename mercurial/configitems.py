@@ -89,6 +89,9 @@ coreconfigitem('devel', 'check-relroot',
 coreconfigitem('devel', 'disableloaddefaultcerts',
     default=False,
 )
+coreconfigitem('devel', 'legacy.exchange',
+    default=list,
+)
 coreconfigitem('devel', 'servercafile',
     default='',
 )
