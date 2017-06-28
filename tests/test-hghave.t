@@ -1,3 +1,5 @@
+  $ . "$TESTDIR/helpers-testrepo.sh"
+
 Testing that hghave does not crash when checking features
 
   $ hghave --test-features 2>/dev/null
@@ -18,7 +20,10 @@ Testing hghave extensibility for third party tools
   >   $ echo foo
   >   foo
   > EOF
-  $ run-tests.py $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t
+  $ ( \
+  > syshgenv; \
+  > $TESTDIR/run-tests.py $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t \
+  > )
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 

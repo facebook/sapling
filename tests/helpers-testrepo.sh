@@ -1,19 +1,27 @@
-# The test-repo is a live hg repository which may have evolution
-# markers created, e.g. when a ~/.hgrc enabled evolution.
+# Invoke the system hg installation (rather than the local hg version being
+# tested).
 #
-# Tests are run using a custom HGRCPATH, which do not
-# enable evolution markers by default.
+# We want to use the hg version being tested when interacting with the test
+# repository, and the system hg when interacting with the mercurial source code
+# repository.
 #
-# If test-repo includes evolution markers, and we do not
-# enable evolution markers, hg will occasionally complain
-# when it notices them, which disrupts tests resulting in
-# sporadic failures.
-#
-# Since we aren't performing any write operations on the
-# test-repo, there's no harm in telling hg that we support
-# evolution markers, which is what the following lines
-# for the hgrc file do:
-cat >> $HGRCPATH << EOF
-[experimental]
-evolution=createmarkers
-EOF
+# The mercurial source repository was typically orignally cloned with the
+# system mercurial installation, and may require extensions or settings from
+# the system installation.
+syshg () {
+    (
+        syshgenv
+        exec hg "$@"
+    )
+}
+
+# Revert the environment so that running "hg" runs the system hg
+# rather than the test hg installation.
+syshgenv () {
+    PATH="$ORIG_PATH"
+    PYTHONPATH="$ORIG_PYTHONPATH"
+    JYTHONPATH="$ORIG_JYTHONPATH"
+    unset HGRCPATH
+    HGPLAIN=1
+    export HGPLAIN
+}

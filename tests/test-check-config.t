@@ -31,7 +31,7 @@ Sanity check check-config.py
 
 New errors are not allowed. Warnings are strongly discouraged.
 
-  $ hg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
+  $ syshg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
               limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
   

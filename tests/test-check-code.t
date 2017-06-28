@@ -7,7 +7,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ hg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
+  $ syshg locate -X contrib/python-zstandard -X hgext/fsmonitor/pywatchman |
   > sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
@@ -33,7 +33,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 
 Prevent adding new files in the root directory accidentally.
 
-  $ hg files 'glob:*'
+  $ syshg files 'glob:*'
   .editorconfig
   .hgignore
   .hgsigs
