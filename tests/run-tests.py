@@ -88,6 +88,18 @@ origenviron = os.environ.copy()
 osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
+with_color = False
+try: # is pygments installed
+    import pygments
+    import pygments.lexers as lexers
+    import pygments.formatters as formatters
+    with_color = True
+except ImportError:
+    pass
+
+if not sys.stderr.isatty(): # check if the terminal is capable
+    with_color = False
+
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
@@ -255,6 +267,9 @@ def getparser():
         help="output files annotated with coverage")
     parser.add_option("-c", "--cover", action="store_true",
         help="print a test coverage report")
+    parser.add_option("--color", choices=["always", "auto", "never"],
+                      default="auto",
+                      help="colorisation: always|auto|never (default: auto)")
     parser.add_option("-d", "--debug", action="store_true",
         help="debug mode: write output of test scripts to console"
              " rather than capturing and diffing it (disables timeout)")
@@ -396,6 +411,13 @@ def parseargs(args, parser):
         # chg shares installation location with hg
         parser.error('--chg does not work when --with-hg is specified '
                      '(use --with-chg instead)')
+
+    global with_color
+    if options.color != 'auto':
+        if options.color == 'never':
+            with_color = False
+        else: # 'always', for testing purposes
+            with_color = True
 
     global useipv6
     if options.ipv6:
@@ -1625,6 +1647,11 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
+                        if with_color:
+                            line = pygments.highlight(
+                                    line,
+                                    lexers.DiffLexer(),
+                                    formatters.Terminal256Formatter())
                         if PYTHON3:
                             self.stream.flush()
                             self.stream.buffer.write(line)

@@ -119,6 +119,43 @@ test churn with globs
   python hash seed: * (glob)
   [1]
 
+test diff colorisation
+
+  $ rt test-failure.t --color always
+  
+  \x1b[38;5;124m--- $TESTTMP/test-failure.t\x1b[39m (esc)
+  \x1b[38;5;34m+++ $TESTTMP/test-failure.t.err\x1b[39m (esc)
+  \x1b[38;5;90;01m@@ -1,3 +1,3 @@\x1b[39;00m (esc)
+     $ echo "bar-baz"; echo "bar-bad"
+  \x1b[38;5;34m+  bar*baz (glob)\x1b[39m (esc)
+     bar*bad (glob)
+  \x1b[38;5;124m-  bar*baz (glob)\x1b[39m (esc)
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ rt test-failure.t 2> tmp.log
+  [1]
+  $ cat tmp.log
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,3 +1,3 @@
+     $ echo "bar-baz"; echo "bar-bad"
+  +  bar*baz (glob)
+     bar*bad (glob)
+  -  bar*baz (glob)
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+
 basic failing test
   $ cat > test-failure.t << EOF
   >   $ echo babar
