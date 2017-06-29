@@ -39,25 +39,6 @@ DEFINE_int32(
     1000000,
     "pre-size inode hash table for this many entries");
 
-DEFINE_bool(
-    warm_kernel_on_startup,
-    false,
-    "whether to crawl ourselves on startup to warm up the kernel "
-    "inode/vnode cache");
-
-DEFINE_int32(
-    warm_kernel_num_threads,
-    32,
-    "how many threads to use when crawling ourselves during warm up.  "
-    "Making this too large without raising the file descriptors "
-    "ulimit can cause serious problems and has diminishing returns on "
-    "crawl performance.");
-
-DEFINE_int32(
-    warm_kernel_delay,
-    1,
-    "how many seconds to delay before triggering the inode/vnode cache warmup");
-
 namespace facebook {
 namespace eden {
 
@@ -67,98 +48,6 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
       inodeMap_(mount_->getInodeMap()) {}
 
 namespace {
-/* We use this class to warm up the kernel inode/vnode cache after we've
- * mounted.
- * The time this takes for large trees can be rather significant, so it
- * is worthwhile to spend some effort to do this in parallel as soon as
- * we're mounted; it can reduce the wall time that the user will see
- * pretty significantly.
- */
-struct Walker : public std::enable_shared_from_this<Walker> {
-  std::atomic<uint32_t> nwalk{0};
-  std::atomic<uint32_t> nfiles{0};
-  std::string rootPath;
-  std::chrono::steady_clock::time_point start;
-  wangle::CPUThreadPoolExecutor pool;
-
-  explicit Walker(const std::string& rootPath)
-      : rootPath(rootPath),
-        start(std::chrono::steady_clock::now()),
-        pool(
-            FLAGS_warm_kernel_num_threads,
-            1 /* priorities */,
-            FLAGS_inode_reserve /* max queue size */) {}
-
-  void walk() {
-    auto self = shared_from_this();
-    std::thread thr([=] {
-      sleep(FLAGS_warm_kernel_delay);
-      XLOG(INFO) << "Initiating walk of myself to warm up inode cache, use "
-                    "--warm_kernel_on_startup=false to disable";
-      self->walkDir(rootPath);
-    });
-    thr.detach();
-  }
-
-  void stop() {
-    pool.stop();
-  }
-
-  void walkDir(const std::string& path) {
-    auto self = shared_from_this();
-    ++nwalk;
-    via(&pool)
-        .then([=] {
-          struct stat st;
-          if (lstat(path.c_str(), &st) != 0) {
-            XLOG(ERR) << "failed to lstat(" << path << "): " << strerror(errno);
-            return;
-          }
-          ++nfiles;
-
-          if (!S_ISDIR(st.st_mode)) {
-            return;
-          }
-          auto dir = opendir(path.c_str());
-          if (!dir) {
-            XLOG(ERR) << "Failed to opendir(" << path
-                      << "): " << strerror(errno);
-            return;
-          }
-          SCOPE_EXIT {
-            closedir(dir);
-          };
-          while (true) {
-            auto de = readdir(dir);
-            if (!de) {
-              return;
-            }
-            if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
-              continue;
-            }
-            auto full = folly::to<std::string>(path, "/", de->d_name);
-            self->walkDir(full);
-          }
-        })
-        .onError([](const std::exception& e) {
-          XLOG(ERR) << "Error during walk: " << e.what();
-        })
-        .ensure([=] {
-          if (--nwalk == 0) {
-            XLOG(INFO) << "Finished walking " << nfiles << " files, took "
-                       << std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::steady_clock::now() - start)
-                              .count()
-                       << "ms";
-            // Since `self` owns the executor in which we're running,
-            // we'll deadlock ourselves if we allow the destructor to
-            // execute in one of its threads.  Switch to a different
-            // context to shut down this pool
-            wangle::getCPUExecutor()->add([self] { self->stop(); });
-          }
-        });
-  }
-};
 
 /** Compute a fuse_entry_param */
 fuse_entry_param computeEntryParam(
@@ -172,14 +61,6 @@ fuse_entry_param computeEntryParam(
   entry.entry_timeout = attr.timeout;
   return entry;
 }
-}
-
-void EdenDispatcher::initConnection(fuse_conn_info& /* conn */) {
-  if (FLAGS_warm_kernel_on_startup) {
-    auto walker =
-        std::make_shared<Walker>(mount_->getPath().stringPiece().str());
-    walker->walk();
-  }
 }
 
 folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
