@@ -343,7 +343,7 @@ class rebaseruntime(object):
         if dest.closesbranch() and not self.keepbranchesf:
             self.ui.status(_('reopening closed branch head %s\n') % dest)
 
-    def _performrebase(self, tr):
+    def _performrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
@@ -395,7 +395,7 @@ class rebaseruntime(object):
                                              self.state,
                                              self.destancestors,
                                              self.obsoletenotrebased)
-                self.storestatus(tr=tr)
+                self.storestatus()
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
@@ -480,24 +480,12 @@ class rebaseruntime(object):
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             revtoreuse = max(self.state)
-            dsguard = dirstateguard.dirstateguard(repo, 'rebase')
-            try:
-                newnode = concludenode(repo, revtoreuse, p1, self.external,
-                                       commitmsg=commitmsg,
-                                       extrafn=_makeextrafn(self.extrafns),
-                                       editor=editor,
-                                       keepbranches=self.keepbranchesf,
-                                       date=self.date)
-                dsguard.close()
-                release(dsguard)
-            except error.InterventionRequired:
-                dsguard.close()
-                release(dsguard)
-                raise
-            except Exception:
-                release(dsguard)
-                raise
-
+            newnode = concludenode(repo, revtoreuse, p1, self.external,
+                                   commitmsg=commitmsg,
+                                   extrafn=_makeextrafn(self.extrafns),
+                                   editor=editor,
+                                   keepbranches=self.keepbranchesf,
+                                   date=self.date)
             if newnode is None:
                 newrev = self.dest
             else:
@@ -734,20 +722,7 @@ def rebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
 
-        with repo.transaction('rebase') as tr:
-            dsguard = dirstateguard.dirstateguard(repo, 'rebase')
-            try:
-                rbsrt._performrebase(tr)
-                dsguard.close()
-                release(dsguard)
-            except error.InterventionRequired:
-                dsguard.close()
-                release(dsguard)
-                tr.close()
-                raise
-            except Exception:
-                release(dsguard)
-                raise
+        rbsrt._performrebase()
         rbsrt._finishrebase()
 
 def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
@@ -873,28 +848,33 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
-    repo.setparents(repo[p1].node(), repo[p2].node())
-    ctx = repo[rev]
-    if commitmsg is None:
-        commitmsg = ctx.description()
-    keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
-    extra = {'rebase_source': ctx.hex()}
-    if extrafn:
-        extrafn(ctx, extra)
+    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+    try:
+        repo.setparents(repo[p1].node(), repo[p2].node())
+        ctx = repo[rev]
+        if commitmsg is None:
+            commitmsg = ctx.description()
+        keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
+        extra = {'rebase_source': ctx.hex()}
+        if extrafn:
+            extrafn(ctx, extra)
 
-    destphase = max(ctx.phase(), phases.draft)
-    overrides = {('phases', 'new-commit'): destphase}
-    with repo.ui.configoverride(overrides, 'rebase'):
-        if keepbranch:
-            repo.ui.setconfig('ui', 'allowemptycommit', True)
-        # Commit might fail if unresolved files exist
-        if date is None:
-            date = ctx.date()
-        newnode = repo.commit(text=commitmsg, user=ctx.user(),
-                              date=date, extra=extra, editor=editor)
+        destphase = max(ctx.phase(), phases.draft)
+        overrides = {('phases', 'new-commit'): destphase}
+        with repo.ui.configoverride(overrides, 'rebase'):
+            if keepbranch:
+                repo.ui.setconfig('ui', 'allowemptycommit', True)
+            # Commit might fail if unresolved files exist
+            if date is None:
+                date = ctx.date()
+            newnode = repo.commit(text=commitmsg, user=ctx.user(),
+                                  date=date, extra=extra, editor=editor)
 
-    repo.dirstate.setbranch(repo[newnode].branch())
-    return newnode
+        repo.dirstate.setbranch(repo[newnode].branch())
+        dsguard.close()
+        return newnode
+    finally:
+        release(dsguard)
 
 def rebasenode(repo, rev, p1, base, state, collapse, dest):
     'Rebase a single revision rev on top of p1 using base as merge ancestor'

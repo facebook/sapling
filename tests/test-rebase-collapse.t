@@ -572,8 +572,6 @@ Interactions between collapse and keepbranches
   o  0: 'A'
   
   $ hg rebase --keepbranches --collapse -s 1 -d 3
-  transaction abort!
-  rollback completed
   abort: cannot collapse multiple named branches
   [255]
 

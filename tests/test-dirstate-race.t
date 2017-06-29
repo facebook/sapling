@@ -220,11 +220,13 @@ Configure a merge tool that runs status in the middle of the rebase.
   > test.args=$TESTTMP/mergetool-race.sh \$output
   > EOF
 
+BROKEN: the "M b" line should not be there
   $ hg rebase -s . -d 3 --tool test
   rebasing 4:b08445fd6b2a "c4" (tip)
   merging a
   custom merge tool
   M a
+  M b
   ? a.orig
   custom merge tool end
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/* (glob)
