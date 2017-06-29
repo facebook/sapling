@@ -125,15 +125,10 @@ class shelvedfile(object):
         fp = self.opener()
         try:
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
-            if not isinstance(gen, bundle2.unbundle20):
-                gen.apply(self.repo, 'unshelve',
-                          'bundle:' + self.vfs.join(self.fname),
-                          targetphase=phases.secret)
-            if isinstance(gen, bundle2.unbundle20):
-                bundle2.applybundle(self.repo, gen,
-                                    self.repo.currenttransaction(),
-                                    source='unshelve',
-                                    url='bundle:' + self.vfs.join(self.fname))
+            bundle2.applybundle(self.repo, gen, self.repo.currenttransaction(),
+                                source='unshelve',
+                                url='bundle:' + self.vfs.join(self.fname),
+                                targetphase=phases.secret)
         finally:
             fp.close()
 
