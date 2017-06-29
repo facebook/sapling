@@ -14,8 +14,10 @@ from __future__ import absolute_import
 
 import os
 import sys
+import traceback
 
 from mercurial import (
+    dispatch,
     extensions,
 )
 
@@ -44,6 +46,12 @@ def _writeerr(orig, self, *args, **opts):
         text = _colorizetraceback(self, text)
     return orig(self, text, **opts)
 
+def _handlecommandexception(orig, ui):
+    trace = traceback.format_exc()
+    ui.log("commandexception", "%s\n", trace)
+    ui.write_err(_colorizetraceback(ui, trace))
+    return True  # do not re-raise the exception
+
 def uisetup(ui):
     class morecolorsui(ui.__class__):
         def traceback(self, exc=None, force=False):
@@ -58,3 +66,5 @@ def uisetup(ui):
             finally:
                 extensions.unwrapfunction(cls, 'write_err', _writeerr)
     ui.__class__ = morecolorsui
+    extensions.wrapfunction(dispatch, 'handlecommandexception',
+                            _handlecommandexception)
