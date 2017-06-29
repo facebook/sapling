@@ -905,7 +905,7 @@ class Test(unittest.TestCase):
 
         # Only restore environment variable names that the shell allows
         # us to export.
-        name_regex = re.compile('[a-zA-Z][a-zA-Z0-9_]*')
+        name_regex = re.compile('^[a-zA-Z][a-zA-Z0-9_]*$')
 
         with open(scriptpath, 'w') as envf:
             for name, value in os.environ.items():
