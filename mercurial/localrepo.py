@@ -66,22 +66,24 @@ release = lockmod.release
 urlerr = util.urlerr
 urlreq = util.urlreq
 
-class repofilecache(scmutil.filecache):
+class _basefilecache(scmutil.filecache):
     """All filecache usage on repo are done for logic that should be unfiltered
     """
-
-    def join(self, obj, fname):
-        return obj.vfs.join(fname)
     def __get__(self, repo, type=None):
         if repo is None:
             return self
-        return super(repofilecache, self).__get__(repo.unfiltered(), type)
+        return super(_basefilecache, self).__get__(repo.unfiltered(), type)
     def __set__(self, repo, value):
-        return super(repofilecache, self).__set__(repo.unfiltered(), value)
+        return super(_basefilecache, self).__set__(repo.unfiltered(), value)
     def __delete__(self, repo):
-        return super(repofilecache, self).__delete__(repo.unfiltered())
+        return super(_basefilecache, self).__delete__(repo.unfiltered())
 
-class storecache(repofilecache):
+class repofilecache(_basefilecache):
+    """filecache for files in .hg but outside of .hg/store"""
+    def join(self, obj, fname):
+        return obj.vfs.join(fname)
+
+class storecache(_basefilecache):
     """filecache for files in the store"""
     def join(self, obj, fname):
         return obj.sjoin(fname)
