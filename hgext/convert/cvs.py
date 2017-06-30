@@ -81,7 +81,7 @@ class convert_cvs(converter_source):
             db = cvsps.createlog(self.ui, cache=cache)
             db = cvsps.createchangeset(self.ui, db,
                 fuzz=int(self.ui.config('convert', 'cvsps.fuzz')),
-                mergeto=self.ui.config('convert', 'cvsps.mergeto', None),
+                mergeto=self.ui.config('convert', 'cvsps.mergeto'),
                 mergefrom=self.ui.config('convert', 'cvsps.mergefrom'))
 
             for cs in db:

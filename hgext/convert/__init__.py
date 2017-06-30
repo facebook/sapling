@@ -40,6 +40,9 @@ configitem('convert', 'cvsps.fuzz',
 configitem('convert', 'cvsps.mergefrom',
     default=None,
 )
+configitem('convert', 'cvsps.mergeto',
+    default=None,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
