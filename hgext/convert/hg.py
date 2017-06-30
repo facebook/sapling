@@ -446,7 +446,7 @@ class mercurial_sink(common.converter_sink):
 class mercurial_source(common.converter_source):
     def __init__(self, ui, path, revs=None):
         common.converter_source.__init__(self, ui, path, revs)
-        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
+        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors')
         self.ignored = set()
         self.saverev = ui.configbool('convert', 'hg.saverev', False)
         try:

@@ -70,6 +70,9 @@ configitem('convert', 'git.skipsubmodules',
 configitem('convert', 'hg.clonebranches',
     default=False,
 )
+configitem('convert', 'hg.ignoreerrors',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
