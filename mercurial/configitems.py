@@ -113,6 +113,9 @@ coreconfigitem('hostsecurity', 'disabletls10warning',
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
+coreconfigitem('server', 'bundle1',
+    default=True,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )

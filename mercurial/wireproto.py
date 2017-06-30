@@ -608,7 +608,7 @@ def bundle1allowed(repo, action):
         if v is not None:
             return v
 
-    return ui.configbool('server', 'bundle1', True)
+    return ui.configbool('server', 'bundle1')
 
 def supportedcompengines(ui, proto, role):
     """Obtain the list of supported compression engines for a request."""
