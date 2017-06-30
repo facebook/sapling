@@ -606,6 +606,9 @@ coreconfigitem('web', 'certificate',
 coreconfigitem('web', 'collapse',
     default=False,
 )
+coreconfigitem('web', 'csp',
+    default=None,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
