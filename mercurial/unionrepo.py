@@ -232,7 +232,7 @@ class unionrepository(localrepo.localrepository):
 def instance(ui, path, create):
     if create:
         raise error.Abort(_('cannot create new union repository'))
-    parentpath = ui.config("bundle", "mainreporoot", "")
+    parentpath = ui.config("bundle", "mainreporoot")
     if not parentpath:
         # try to find the correct path to the working directory repo
         parentpath = cmdutil.findrepo(pycompat.getcwd())

@@ -63,6 +63,10 @@ coreconfigitem('auth', 'cookiefile',
 coreconfigitem('bookmarks', 'pushing',
     default=list,
 )
+# bundle.mainreporoot: internal hack for bundlerepo
+coreconfigitem('bundle', 'mainreporoot',
+    default='',
+)
 coreconfigitem('color', 'mode',
     default='auto',
 )
