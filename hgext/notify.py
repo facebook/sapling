@@ -173,6 +173,9 @@ configitem('notify', 'fromauthor',
 configitem('notify', 'maxdiff',
     default=300,
 )
+configitem('notify', 'maxsubject',
+    default=67,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -336,7 +339,7 @@ class notifier(object):
             else:
                 s = ctx.description().lstrip().split('\n', 1)[0].rstrip()
                 subject = '%s: %s' % (self.root, s)
-        maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
+        maxsubject = int(self.ui.config('notify', 'maxsubject'))
         if maxsubject:
             subject = util.ellipsis(subject, maxsubject)
         msg['Subject'] = mail.headencode(self.ui, subject,
