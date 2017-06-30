@@ -139,6 +139,16 @@ else:
             return func
         return decorator
 
+try:
+    import registrar
+    configtable = {}
+    configitem = registrar.configitem(configtable)
+    configitem('perf', 'stub',
+        default=False,
+    )
+except (ImportError, AttributeError):
+    pass
+
 def getlen(ui):
     if ui.configbool("perf", "stub"):
         return lambda x: 1
