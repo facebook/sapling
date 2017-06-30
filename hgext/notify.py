@@ -161,6 +161,9 @@ configitem = registrar.configitem(configtable)
 configitem('notify', 'config',
     default=None,
 )
+configitem('notify', 'diffstat',
+    default=True,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -368,7 +371,7 @@ class notifier(object):
                             opts=patch.diffallopts(self.ui))
         difflines = ''.join(chunks).splitlines()
 
-        if self.ui.configbool('notify', 'diffstat', True):
+        if self.ui.configbool('notify', 'diffstat'):
             s = patch.diffstat(difflines)
             # s may be nil, don't include the header if it is
             if s:
