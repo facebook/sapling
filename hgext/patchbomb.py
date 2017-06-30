@@ -115,6 +115,9 @@ configitem('patchbomb', 'flagtemplate',
 configitem('patchbomb', 'from',
     default=None,
 )
+configitem('patchbomb', 'intro',
+    default='auto',
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -151,7 +154,7 @@ def prompt(ui, prompt, default=None, rest=':'):
 
 def introwanted(ui, opts, number):
     '''is an introductory message apparently wanted?'''
-    introconfig = ui.config('patchbomb', 'intro', 'auto')
+    introconfig = ui.config('patchbomb', 'intro')
     if opts.get('intro') or opts.get('desc'):
         intro = True
     elif introconfig == 'always':
