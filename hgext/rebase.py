@@ -76,6 +76,10 @@ testedwith = 'ships-with-hg-core'
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('commands', 'rebase.requiredest',
+            default=False,
+)
+
 configitem('experimental', 'rebaseskipobsolete',
     default=True,
 )
