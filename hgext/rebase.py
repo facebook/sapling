@@ -73,6 +73,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('experimental', 'rebaseskipobsolete',
+    default=True,
+)
+
 def _nothingtorebase():
     return 1
 
@@ -307,8 +314,7 @@ class rebaseruntime(object):
         destmap:        {srcrev: destrev} destination revisions
         """
         self.obsoletenotrebased = {}
-        if not self.ui.configbool('experimental', 'rebaseskipobsolete',
-                                  default=True):
+        if not self.ui.configbool('experimental', 'rebaseskipobsolete'):
             return
         obsoleteset = set(obsoleterevs)
         self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
