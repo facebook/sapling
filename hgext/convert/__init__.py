@@ -103,6 +103,9 @@ configitem('convert', 'p4.startrev',
 configitem('convert', 'skiptags',
     default=False,
 )
+configitem('convert', 'svn.debugsvnlog',
+    default=True,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

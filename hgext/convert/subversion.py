@@ -1059,7 +1059,7 @@ class svn_source(converter_source):
         args = [self.baseurl, relpaths, start, end, limit,
                 discover_changed_paths, strict_node_history]
         # developer config: convert.svn.debugsvnlog
-        if not self.ui.configbool('convert', 'svn.debugsvnlog', True):
+        if not self.ui.configbool('convert', 'svn.debugsvnlog'):
             return directlogstream(*args)
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
