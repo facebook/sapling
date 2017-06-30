@@ -2078,7 +2078,7 @@ def newreporequirements(repo):
         requirements.add('store')
         if ui.configbool('format', 'usefncache', True):
             requirements.add('fncache')
-            if ui.configbool('format', 'dotencode', True):
+            if ui.configbool('format', 'dotencode'):
                 requirements.add('dotencode')
 
     compengine = ui.config('experimental', 'format.compression', 'zlib')

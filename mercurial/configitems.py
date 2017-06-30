@@ -110,6 +110,9 @@ coreconfigitem('format', 'aggressivemergedeltas',
 coreconfigitem('format', 'chunkcachesize',
     default=None,
 )
+coreconfigitem('format', 'dotencode',
+    default=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
