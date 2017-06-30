@@ -483,7 +483,7 @@ class cg1packer(object):
             bundlecaps = set()
         self._bundlecaps = bundlecaps
         # experimental config: bundle.reorder
-        reorder = repo.ui.config('bundle', 'reorder', 'auto')
+        reorder = repo.ui.config('bundle', 'reorder')
         if reorder == 'auto':
             reorder = None
         else:
