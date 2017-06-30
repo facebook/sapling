@@ -634,6 +634,9 @@ coreconfigitem('web', 'port',
 coreconfigitem('web', 'prefix',
     default='',
 )
+coreconfigitem('web', 'refreshinterval',
+    default=20,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

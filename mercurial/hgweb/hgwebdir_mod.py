@@ -29,6 +29,7 @@ from .common import (
 from .request import wsgirequest
 
 from .. import (
+    configitems,
     encoding,
     error,
     hg,
@@ -124,10 +125,11 @@ class hgwebdir(object):
         self.refresh()
 
     def refresh(self):
-        refreshinterval = 20
         if self.ui:
-            refreshinterval = self.ui.configint('web', 'refreshinterval',
-                                                refreshinterval)
+            refreshinterval = self.ui.configint('web', 'refreshinterval')
+        else:
+            item = configitems.coreitems['web']['refreshinterval']
+            refreshinterval = item.default
 
         # refreshinterval <= 0 means to always refresh.
         if (refreshinterval > 0 and
