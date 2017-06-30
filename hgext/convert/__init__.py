@@ -73,6 +73,9 @@ configitem('convert', 'hg.clonebranches',
 configitem('convert', 'hg.ignoreerrors',
     default=False,
 )
+configitem('convert', 'hg.revs',
+    default=None,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
