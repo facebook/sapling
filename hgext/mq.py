@@ -115,6 +115,9 @@ configitem = registrar.configitem(configtable)
 configitem('mq', 'git',
     default='auto',
 )
+configitem('mq', 'keepchanges',
+    default=False,
+)
 
 # force load strip extension formerly included in mq and import some utility
 try:
