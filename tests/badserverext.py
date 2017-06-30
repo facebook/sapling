@@ -47,6 +47,9 @@ configitem = registrar.configitem(configtable)
 configitem('badserver', 'closeafteraccept',
     default=False,
 )
+configitem('badserver', 'closeafterrecvbytes',
+    default=0,
+)
 
 # We can't adjust __class__ on a socket instance. So we define a proxy type.
 class socketproxy(object):
@@ -267,7 +270,7 @@ def extsetup(ui):
         def process_request(self, socket, address):
             # Wrap socket in a proxy if we need to count bytes.
             closeafterrecvbytes = self._ui.configint('badserver',
-                                                     'closeafterrecvbytes', 0)
+                                                     'closeafterrecvbytes')
             closeaftersendbytes = self._ui.configint('badserver',
                                                      'closeaftersendbytes', 0)
 
