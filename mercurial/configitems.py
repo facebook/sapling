@@ -591,6 +591,9 @@ coreconfigitem('web', 'address',
 coreconfigitem('web', 'allow_archive',
     default=list,
 )
+coreconfigitem('web', 'allow_read',
+    default=list,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
