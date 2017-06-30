@@ -67,6 +67,9 @@ configitem('convert', 'git.similarity',
 configitem('convert', 'git.skipsubmodules',
     default=False,
 )
+configitem('convert', 'hg.clonebranches',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
