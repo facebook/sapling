@@ -118,6 +118,9 @@ configitem = registrar.configitem(configtable)
 configitem('eol', 'fix-trailing-newline',
     default=False,
 )
+configitem('eol', 'native',
+    default=pycompat.oslinesep,
+)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
@@ -174,7 +177,7 @@ class eolfile(object):
 
         isrepolf = self.cfg.get('repository', 'native') != 'CRLF'
         self._encode['NATIVE'] = isrepolf and 'to-lf' or 'to-crlf'
-        iswdlf = ui.config('eol', 'native', pycompat.oslinesep) in ('LF', '\n')
+        iswdlf = ui.config('eol', 'native') in ('LF', '\n')
         self._decode['NATIVE'] = iswdlf and 'to-lf' or 'to-crlf'
 
         include = []
