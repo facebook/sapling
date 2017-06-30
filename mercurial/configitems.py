@@ -56,6 +56,9 @@ def getitemregister(configtable):
 
 coreconfigitem = getitemregister(coreitems)
 
+coreconfigitem('auth', 'cookiefile',
+    default=None,
+)
 coreconfigitem('color', 'mode',
     default='auto',
 )
