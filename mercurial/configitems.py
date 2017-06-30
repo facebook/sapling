@@ -146,6 +146,9 @@ coreconfigitem('devel', 'strip-obsmarkers',
 coreconfigitem('email', 'charsets',
     default=list,
 )
+coreconfigitem('email', 'from',
+    default=None,
+)
 coreconfigitem('email', 'method',
     default='smtp',
 )
