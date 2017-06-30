@@ -446,7 +446,7 @@ class convert_git(common.converter_source, common.commandline):
         bookmarks = {}
 
         # Handle local and remote branches
-        remoteprefix = self.ui.config('convert', 'git.remoteprefix', 'remote')
+        remoteprefix = self.ui.config('convert', 'git.remoteprefix')
         reftypes = [
             # (git prefix, hg prefix)
             ('refs/remotes/origin/', remoteprefix + '/'),

@@ -52,6 +52,9 @@ configitem('convert', 'git.extrakeys',
 configitem('convert', 'git.findcopiesharder',
     default=False,
 )
+configitem('convert', 'git.remoteprefix',
+    default='remote',
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
