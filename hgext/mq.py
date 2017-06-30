@@ -118,6 +118,9 @@ configitem('mq', 'git',
 configitem('mq', 'keepchanges',
     default=False,
 )
+configitem('mq', 'plain',
+    default=False,
+)
 
 # force load strip extension formerly included in mq and import some utility
 try:
@@ -463,7 +466,7 @@ class queue(object):
                 gitmode = 'no'
         self.gitmode = gitmode
         # deprecated config: mq.plain
-        self.plainmode = ui.configbool('mq', 'plain', False)
+        self.plainmode = ui.configbool('mq', 'plain')
         self.checkapplied = True
 
     @util.propertycache
