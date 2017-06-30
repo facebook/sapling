@@ -439,6 +439,9 @@ coreconfigitem('ui', 'debug',
 coreconfigitem('ui', 'debugger',
     default=None,
 )
+coreconfigitem('ui', 'fallbackencoding',
+    default=None,
+)
 coreconfigitem('ui', 'forcemerge',
     default=None,
 )
