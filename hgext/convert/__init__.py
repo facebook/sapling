@@ -55,6 +55,9 @@ configitem('convert', 'git.findcopiesharder',
 configitem('convert', 'git.remoteprefix',
     default='remote',
 )
+configitem('convert', 'git.renamelimit',
+    default=400,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

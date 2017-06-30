@@ -90,8 +90,7 @@ class convert_git(common.converter_source, common.commandline):
             if findcopiesharder:
                 self.simopt.append('--find-copies-harder')
 
-            renamelimit = ui.configint('convert', 'git.renamelimit',
-                                       default=400)
+            renamelimit = ui.configint('convert', 'git.renamelimit')
             self.simopt.append('-l%d' % renamelimit)
         else:
             self.simopt = []
