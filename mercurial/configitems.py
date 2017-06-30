@@ -631,6 +631,9 @@ coreconfigitem('web', 'ipv6',
 coreconfigitem('web', 'port',
     default=8000,
 )
+coreconfigitem('web', 'prefix',
+    default='',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

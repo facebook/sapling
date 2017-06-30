@@ -277,7 +277,7 @@ class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
 
         handler.preparehttpserver(self, ui)
 
-        prefix = ui.config('web', 'prefix', '')
+        prefix = ui.config('web', 'prefix')
         if prefix:
             prefix = '/' + prefix.strip('/')
         self.prefix = prefix

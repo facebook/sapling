@@ -177,7 +177,7 @@ class hgwebdir(object):
         if self.stripecount:
             self.stripecount = int(self.stripecount)
         self._baseurl = self.ui.config('web', 'baseurl')
-        prefix = self.ui.config('web', 'prefix', '')
+        prefix = self.ui.config('web', 'prefix')
         if prefix.startswith('/'):
             prefix = prefix[1:]
         if prefix.endswith('/'):
