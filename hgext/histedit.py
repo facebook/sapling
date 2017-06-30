@@ -224,6 +224,9 @@ configitem('histedit', 'dropmissing',
 configitem('histedit', 'linelen',
     default=80,
 )
+configitem('histedit', 'singletransaction',
+    default=False,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -1130,7 +1133,7 @@ def _continuehistedit(ui, repo, state):
     # Don't use singletransaction by default since it rolls the entire
     # transaction back if an unexpected exception happens (like a
     # pretxncommit hook throws, or the user aborts the commit msg editor).
-    if ui.configbool("histedit", "singletransaction", False):
+    if ui.configbool("histedit", "singletransaction"):
         # Don't use a 'with' for the transaction, since actions may close
         # and reopen a transaction. For example, if the action executes an
         # external process it may choose to commit the transaction first.
