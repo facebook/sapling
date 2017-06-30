@@ -622,6 +622,9 @@ coreconfigitem('web', 'description',
 coreconfigitem('web', 'encoding',
     default=lambda: encoding.encoding,
 )
+coreconfigitem('web', 'errorlog',
+    default='-',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

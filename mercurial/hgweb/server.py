@@ -283,7 +283,7 @@ class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
         self.prefix = prefix
 
         alog = openlog(ui.config('web', 'accesslog'), ui.fout)
-        elog = openlog(ui.config('web', 'errorlog', '-'), ui.ferr)
+        elog = openlog(ui.config('web', 'errorlog'), ui.ferr)
         self.accesslog = alog
         self.errorlog = elog
 
