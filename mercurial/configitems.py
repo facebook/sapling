@@ -640,6 +640,9 @@ coreconfigitem('web', 'refreshinterval',
 coreconfigitem('web', 'stripes',
     default=1,
 )
+coreconfigitem('web', 'style',
+    default='paper',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

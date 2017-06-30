@@ -406,7 +406,7 @@ def changesetentry(web, req, tmpl, ctx):
     if basectx is None:
         basectx = ctx.p1()
 
-    style = web.config('web', 'style', 'paper')
+    style = web.config('web', 'style')
     if 'style' in req.form:
         style = req.form['style'][0]
 

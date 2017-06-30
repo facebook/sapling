@@ -762,7 +762,7 @@ def filediff(web, req, tmpl):
         ctx = fctx.changectx()
     basectx = ctx.p1()
 
-    style = web.config('web', 'style', 'paper')
+    style = web.config('web', 'style')
     if 'style' in req.form:
         style = req.form['style'][0]
 
@@ -999,7 +999,7 @@ def filelog(web, req, tmpl):
     revs = fctx.filelog().revs(start, end - 1)
     entries = []
 
-    diffstyle = web.config('web', 'style', 'paper')
+    diffstyle = web.config('web', 'style')
     if 'style' in req.form:
         diffstyle = req.form['style'][0]
 
