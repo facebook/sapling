@@ -94,6 +94,9 @@ configitem('convert', 'hg.usebranchnames',
 configitem('convert', 'ignoreancestorcheck',
     default=False,
 )
+configitem('convert', 'localtimezone',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
