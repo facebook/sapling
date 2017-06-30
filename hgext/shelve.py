@@ -63,6 +63,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('shelve', 'maxbackups',
+    default=10,
+)
+
 backupdir = 'shelve-backup'
 shelvedir = 'shelved'
 shelvefileextensions = ['hg', 'patch', 'oshelve']
@@ -271,7 +278,7 @@ class shelvedstate(object):
 
 def cleanupoldbackups(repo):
     vfs = vfsmod.vfs(repo.vfs.join(backupdir))
-    maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
+    maxbackups = repo.ui.configint('shelve', 'maxbackups')
     hgfiles = [f for f in vfs.listdir()
                if f.endswith('.' + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
