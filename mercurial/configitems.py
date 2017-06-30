@@ -317,6 +317,9 @@ coreconfigitem('paths', 'default-push',
 coreconfigitem('phases', 'checksubrepos',
     default='follow',
 )
+coreconfigitem('phases', 'new-commit',
+    default=dynamicdefault,
+)
 coreconfigitem('phases', 'publish',
     default=True,
 )
