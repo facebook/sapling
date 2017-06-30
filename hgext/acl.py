@@ -199,6 +199,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     match,
+    registrar,
     util,
 )
 
@@ -209,6 +210,14 @@ urlreq = util.urlreq
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+# deprecated config: acl.config
+configitem('acl', 'config',
+    default=None,
+)
 
 def _getusers(ui, group):
 
