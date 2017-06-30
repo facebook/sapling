@@ -172,7 +172,7 @@ def allowservergeneration(repo):
     # So don't allow this by default.
     secret = phases.hassecret(repo)
     if secret:
-        return repo.ui.configbool('server', 'uncompressedallowsecret', False)
+        return repo.ui.configbool('server', 'uncompressedallowsecret')
 
     return True
 

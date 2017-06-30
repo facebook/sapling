@@ -134,6 +134,9 @@ coreconfigitem('server', 'maxhttpheaderlen',
 coreconfigitem('server', 'preferuncompressed',
     default=False,
 )
+coreconfigitem('server', 'uncompressedallowsecret',
+    default=False,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )
