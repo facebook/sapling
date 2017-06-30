@@ -182,6 +182,9 @@ configitem('notify', 'mbox',
 configitem('notify', 'merge',
     default=True,
 )
+configitem('notify', 'sources',
+    default='serve',
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -294,7 +297,7 @@ class notifier(object):
 
     def skipsource(self, source):
         '''true if incoming changes from this source should be skipped.'''
-        ok_sources = self.ui.config('notify', 'sources', 'serve').split()
+        ok_sources = self.ui.config('notify', 'sources').split()
         return source not in ok_sources
 
     def send(self, ctx, count, data):
