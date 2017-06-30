@@ -119,6 +119,9 @@ coreconfigitem('format', 'generaldelta',
 coreconfigitem('format', 'manifestcachesize',
     default=None,
 )
+coreconfigitem('format', 'maxchainlen',
+    default=None,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
