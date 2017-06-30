@@ -36,6 +36,9 @@ configitem = registrar.configitem(configtable)
 configitem('gpg', 'cmd',
     default='gpg',
 )
+configitem('gpg', 'key',
+    default=None,
+)
 
 class gpg(object):
     def __init__(self, path, key=None):
@@ -101,7 +104,7 @@ def newgpg(ui, **opts):
     gpgpath = ui.config("gpg", "cmd")
     gpgkey = opts.get('key')
     if not gpgkey:
-        gpgkey = ui.config("gpg", "key", None)
+        gpgkey = ui.config("gpg", "key")
     return gpg(gpgpath, gpgkey)
 
 def sigwalk(repo):
