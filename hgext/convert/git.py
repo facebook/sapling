@@ -110,8 +110,7 @@ class convert_git(common.converter_source, common.commandline):
             raise error.Abort(_('copying of extra key is forbidden: %s') %
                               _(', ').join(sorted(banned)))
 
-        committeractions = self.ui.configlist('convert', 'git.committeractions',
-                                              'messagedifferent')
+        committeractions = self.ui.configlist('convert', 'git.committeractions')
 
         messagedifferent = None
         messagealways = None

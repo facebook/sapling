@@ -43,6 +43,9 @@ configitem('convert', 'cvsps.mergefrom',
 configitem('convert', 'cvsps.mergeto',
     default=None,
 )
+configitem('convert', 'git.committeractions',
+    default=lambda: ['messagedifferent'],
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
