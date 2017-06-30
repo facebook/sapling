@@ -49,6 +49,9 @@ configitem('convert', 'git.committeractions',
 configitem('convert', 'git.extrakeys',
     default=list,
 )
+configitem('convert', 'git.findcopiesharder',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
