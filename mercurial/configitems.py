@@ -637,6 +637,9 @@ coreconfigitem('web', 'prefix',
 coreconfigitem('web', 'refreshinterval',
     default=20,
 )
+coreconfigitem('web', 'stripes',
+    default=1,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
