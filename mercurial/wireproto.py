@@ -771,7 +771,7 @@ def _capabilities(repo, proto):
 
     if proto.name == 'http':
         caps.append('httpheader=%d' %
-                    repo.ui.configint('server', 'maxhttpheaderlen', 1024))
+                    repo.ui.configint('server', 'maxhttpheaderlen'))
         if repo.ui.configbool('experimental', 'httppostargs', False):
             caps.append('httppostargs')
 

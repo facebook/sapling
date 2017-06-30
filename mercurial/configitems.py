@@ -128,6 +128,9 @@ coreconfigitem('server', 'concurrent-push-mode',
 coreconfigitem('server', 'disablefullbundle',
     default=False,
 )
+coreconfigitem('server', 'maxhttpheaderlen',
+    default=1024,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )
