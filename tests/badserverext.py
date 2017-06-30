@@ -53,6 +53,9 @@ configitem('badserver', 'closeafterrecvbytes',
 configitem('badserver', 'closeaftersendbytes',
     default=0,
 )
+configitem('badserver', 'closebeforeaccept',
+    default=False,
+)
 
 # We can't adjust __class__ on a socket instance. So we define a proxy type.
 class socketproxy(object):
