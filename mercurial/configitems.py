@@ -59,6 +59,10 @@ coreconfigitem = getitemregister(coreitems)
 coreconfigitem('auth', 'cookiefile',
     default=None,
 )
+# bookmarks.pushing: internal hack for discovery
+coreconfigitem('bookmarks', 'pushing',
+    default=list,
+)
 coreconfigitem('color', 'mode',
     default='auto',
 )
