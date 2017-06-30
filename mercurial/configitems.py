@@ -122,6 +122,9 @@ coreconfigitem('format', 'manifestcachesize',
 coreconfigitem('format', 'maxchainlen',
     default=None,
 )
+coreconfigitem('format', 'obsstore-version',
+    default=None,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )

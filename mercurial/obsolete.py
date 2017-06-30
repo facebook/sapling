@@ -717,7 +717,7 @@ def makestore(ui, repo):
     """Create an obsstore instance from a repo."""
     # read default format for new obsstore.
     # developer config: format.obsstore-version
-    defaultformat = ui.configint('format', 'obsstore-version', None)
+    defaultformat = ui.configint('format', 'obsstore-version')
     # rely on obsstore class default when possible.
     kwargs = {}
     if defaultformat is not None:
