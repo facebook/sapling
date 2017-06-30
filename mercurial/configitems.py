@@ -442,6 +442,9 @@ coreconfigitem('ui', 'debugger',
 coreconfigitem('ui', 'fallbackencoding',
     default=None,
 )
+coreconfigitem('ui', 'forcecwd',
+    default=None,
+)
 coreconfigitem('ui', 'forcemerge',
     default=None,
 )
