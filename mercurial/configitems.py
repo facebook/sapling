@@ -338,6 +338,9 @@ coreconfigitem('profiling', 'nested',
 coreconfigitem('profiling', 'output',
     default=None,
 )
+coreconfigitem('profiling', 'showmax',
+    default=0.999,
+)
 coreconfigitem('profiling', 'sort',
     default='inlinetime',
 )

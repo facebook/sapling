@@ -138,7 +138,7 @@ def statprofile(ui, fp):
 
         if profformat == 'chrome':
             showmin = ui.configwith(fraction, 'profiling', 'showmin', 0.005)
-            showmax = ui.configwith(fraction, 'profiling', 'showmax', 0.999)
+            showmax = ui.configwith(fraction, 'profiling', 'showmax')
             kwargs.update(minthreshold=showmin, maxthreshold=showmax)
         elif profformat == 'hotpath':
             # inconsistent config: profiling.showmin
