@@ -112,6 +112,9 @@ configitem('patchbomb', 'confirm',
 configitem('patchbomb', 'flagtemplate',
     default=None,
 )
+configitem('patchbomb', 'from',
+    default=None,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
