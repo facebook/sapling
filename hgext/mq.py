@@ -109,6 +109,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('mq', 'git',
+    default='auto',
+)
+
 # force load strip extension formerly included in mq and import some utility
 try:
     stripext = extensions.find('strip')
@@ -444,17 +451,14 @@ class queue(object):
         self.activeguards = None
         self.guardsdirty = False
         # Handle mq.git as a bool with extended values
-        try:
-            gitmode = ui.configbool('mq', 'git', None)
-            if gitmode is None:
-                raise error.ConfigError
-            if gitmode:
-                self.gitmode = 'yes'
+        gitmode = ui.config('mq', 'git').lower()
+        boolmode = util.parsebool(gitmode)
+        if boolmode is not None:
+            if boolmode:
+                gitmode = 'yes'
             else:
-                self.gitmode = 'no'
-        except error.ConfigError:
-            # let's have check-config ignore the type mismatch
-            self.gitmode = ui.config(r'mq', 'git', 'auto').lower()
+                gitmode = 'no'
+        self.gitmode = gitmode
         # deprecated config: mq.plain
         self.plainmode = ui.configbool('mq', 'plain', False)
         self.checkapplied = True
