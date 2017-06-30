@@ -49,6 +49,7 @@ from mercurial.node import (
     short,
 )
 from mercurial import (
+    registrar,
     util,
 )
 
@@ -57,6 +58,13 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('win32text', 'warn',
+    default=True,
+)
 
 # regexp for single LF without CR preceding.
 re_single_lf = re.compile('(^|[^\r])\n', re.MULTILINE)
@@ -178,6 +186,6 @@ def reposetup(ui, repo):
 
 def extsetup(ui):
     # deprecated config: win32text.warn
-    if ui.configbool('win32text', 'warn', True):
+    if ui.configbool('win32text', 'warn'):
         ui.warn(_("win32text is deprecated: "
                   "https://mercurial-scm.org/wiki/Win32TextExtension\n"))
