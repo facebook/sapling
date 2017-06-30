@@ -350,6 +350,9 @@ coreconfigitem('profiling', 'sort',
 coreconfigitem('profiling', 'statformat',
     default='hotpath',
 )
+coreconfigitem('profiling', 'type',
+    default='stat',
+)
 coreconfigitem('progress', 'assume-tty',
     default=False,
 )

@@ -183,7 +183,7 @@ class profile(object):
         profiler = encoding.environ.get('HGPROF')
         proffn = None
         if profiler is None:
-            profiler = self._ui.config('profiling', 'type', default='stat')
+            profiler = self._ui.config('profiling', 'type')
         if profiler not in ('ls', 'stat', 'flame'):
             # try load profiler from extension with the same name
             proffn = _loadprofiler(self._ui, profiler)
