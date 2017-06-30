@@ -541,8 +541,7 @@ class backgroundfilecloser(object):
         # There is overhead to starting and stopping the background threads.
         # Don't do background processing unless the file count is large enough
         # to justify it.
-        minfilecount = ui.configint('worker', 'backgroundcloseminfilecount',
-                                    2048)
+        minfilecount = ui.configint('worker', 'backgroundcloseminfilecount')
         # FUTURE dynamically start background threads after minfilecount closes.
         # (We don't currently have any callers that don't know their file count)
         if expectedcount > 0 and expectedcount < minfilecount:

@@ -158,3 +158,6 @@ coreconfigitem('ui', 'quiet',
 coreconfigitem('worker', 'backgroundclosemaxqueue',
     default=384,
 )
+coreconfigitem('worker', 'backgroundcloseminfilecount',
+    default=2048,
+)
