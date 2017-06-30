@@ -34,6 +34,9 @@ configitem = registrar.configitem(configtable)
 configitem('convert', 'cvsps.cache',
     default=True,
 )
+configitem('convert', 'cvsps.fuzz',
+    default=60,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
