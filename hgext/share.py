@@ -69,6 +69,9 @@ configitem = registrar.configitem(configtable)
 configitem('share', 'pool',
     default=None,
 )
+configitem('share', 'poolnaming',
+    default='identity',
+)
 
 @command('share',
     [('U', 'noupdate', None, _('do not create a working directory')),
@@ -141,7 +144,7 @@ def clone(orig, ui, source, *args, **opts):
 
     opts[r'shareopts'] = {
         'pool': pool,
-        'mode': ui.config('share', 'poolnaming', 'identity'),
+        'mode': ui.config('share', 'poolnaming'),
     }
 
     return orig(ui, source, *args, **opts)
