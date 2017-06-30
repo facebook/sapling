@@ -582,6 +582,9 @@ coreconfigitem('ui', 'verbose',
 coreconfigitem('verify', 'skipflags',
     default=None,
 )
+coreconfigitem('web', 'accesslog',
+    default='-',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
