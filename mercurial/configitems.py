@@ -107,6 +107,9 @@ coreconfigitem('devel', 'strip-obsmarkers',
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
+coreconfigitem('hostsecurity', 'disabletls10warning',
+    default=False,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
