@@ -61,6 +61,9 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('blackbox', 'dirty',
+    default=False,
+)
 configitem('blackbox', 'maxsize',
     default='1 MB',
 )
@@ -191,7 +194,7 @@ def wrapui(ui):
                     ctx = ui._bbrepo[None]
                     parents = ctx.parents()
                     rev = ('+'.join([hex(p.node()) for p in parents]))
-                    if (ui.configbool('blackbox', 'dirty', False) and (
+                    if (ui.configbool('blackbox', 'dirty') and (
                         any(ui._bbrepo.status()) or
                         any(ctx.sub(s).dirty() for s in ctx.substate)
                     )):
