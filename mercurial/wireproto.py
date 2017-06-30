@@ -755,7 +755,7 @@ def _capabilities(repo, proto):
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
     if streamclone.allowservergeneration(repo):
-        if repo.ui.configbool('server', 'preferuncompressed', False):
+        if repo.ui.configbool('server', 'preferuncompressed'):
             caps.append('stream-preferred')
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
