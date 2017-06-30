@@ -102,6 +102,7 @@ from mercurial import (
     extensions,
     match,
     pycompat,
+    registrar,
     util,
 )
 
@@ -110,6 +111,13 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('eol', 'fix-trailing-newline',
+    default=False,
+)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
@@ -123,7 +131,7 @@ def tolf(s, params, ui, **kwargs):
         return s
     if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
         return s
-    if (ui.configbool('eol', 'fix-trailing-newline', False)
+    if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
         s = s + '\n'
     return util.tolf(s)
@@ -134,7 +142,7 @@ def tocrlf(s, params, ui, **kwargs):
         return s
     if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
         return s
-    if (ui.configbool('eol', 'fix-trailing-newline', False)
+    if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
         s = s + '\n'
     return util.tocrlf(s)
