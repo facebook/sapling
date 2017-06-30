@@ -58,6 +58,9 @@ configitem('convert', 'git.remoteprefix',
 configitem('convert', 'git.renamelimit',
     default=400,
 )
+configitem('convert', 'git.saverev',
+    default=True,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

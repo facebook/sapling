@@ -372,7 +372,7 @@ class convert_git(common.converter_source, common.commandline):
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
-        saverev = self.ui.configbool('convert', 'git.saverev', True)
+        saverev = self.ui.configbool('convert', 'git.saverev')
 
         c = common.commit(parents=parents, date=date, author=author,
                           desc=message,
