@@ -208,6 +208,9 @@ coreconfigitem('ui', 'quiet',
 coreconfigitem('ui', 'username',
     alias=[('ui', 'user')]
 )
+coreconfigitem('worker', 'backgroundclose',
+    default=dynamicdefault,
+)
 # Windows defaults to a limit of 512 open files. A buffer of 128
 # should give us enough headway.
 coreconfigitem('worker', 'backgroundclosemaxqueue',
