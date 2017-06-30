@@ -958,7 +958,7 @@ def _computedivergentset(repo):
                 continue # emergency cycle hanging prevention
             seen.add(prec)
             if prec not in newermap:
-                obsutil.successorssets(repo, prec, newermap)
+                obsutil.successorssets(repo, prec, cache=newermap)
             newer = [n for n in newermap[prec] if n]
             if len(newer) > 1:
                 divergent.add(ctx.rev())
