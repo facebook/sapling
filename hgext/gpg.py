@@ -30,6 +30,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('gpg', 'cmd',
+    default='gpg',
+)
+
 class gpg(object):
     def __init__(self, path, key=None):
         self.path = path
@@ -91,7 +98,7 @@ class gpg(object):
 
 def newgpg(ui, **opts):
     """create a new gpg instance"""
-    gpgpath = ui.config("gpg", "cmd", "gpg")
+    gpgpath = ui.config("gpg", "cmd")
     gpgkey = opts.get('key')
     if not gpgkey:
         gpgkey = ui.config("gpg", "key", None)
