@@ -176,6 +176,9 @@ configitem('notify', 'maxdiff',
 configitem('notify', 'maxsubject',
     default=67,
 )
+configitem('notify', 'mbox',
+    default=None,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
