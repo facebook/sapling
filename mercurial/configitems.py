@@ -152,6 +152,9 @@ coreconfigitem('progress', 'assume-tty',
 coreconfigitem('progress', 'clear-complete',
     default=True,
 )
+coreconfigitem('progress', 'estimate',
+    default=2,
+)
 coreconfigitem('server', 'bundle1',
     default=True,
 )
