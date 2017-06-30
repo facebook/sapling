@@ -428,6 +428,9 @@ coreconfigitem('smtp', 'local_hostname',
 coreconfigitem('smtp', 'password',
     default=None,
 )
+coreconfigitem('smtp', 'port',
+    default=dynamicdefault,
+)
 coreconfigitem('smtp', 'tls',
     default='none',
 )
