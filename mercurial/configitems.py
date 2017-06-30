@@ -194,6 +194,9 @@ coreconfigitem('experimental', 'crecordtest',
 coreconfigitem('experimental', 'editortmpinhg',
     default=False,
 )
+coreconfigitem('experimental', 'nonnormalparanoidcheck',
+    default=False,
+)
 coreconfigitem('experimental', 'stabilization',
     default=list,
     alias=[('experimental', 'evolution')],
