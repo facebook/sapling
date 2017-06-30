@@ -221,6 +221,9 @@ configitem('histedit', 'defaultrev',
 configitem('histedit', 'dropmissing',
     default=False,
 )
+configitem('histedit', 'linelen',
+    default=80,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -452,7 +455,7 @@ class histeditaction(object):
         line = '%s %s %d %s' % (self.verb, ctx, ctx.rev(), summary)
         # trim to 75 columns by default so it's not stupidly wide in my editor
         # (the 5 more are left for verb)
-        maxlen = self.repo.ui.configint('histedit', 'linelen', default=80)
+        maxlen = self.repo.ui.configint('histedit', 'linelen')
         maxlen = max(maxlen, 22) # avoid truncating hash
         return util.ellipsis(line, maxlen)
 
