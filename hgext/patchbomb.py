@@ -106,6 +106,9 @@ configitem = registrar.configitem(configtable)
 configitem('patchbomb', 'bundletype',
     default=None,
 )
+configitem('patchbomb', 'confirm',
+    default=False,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
