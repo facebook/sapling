@@ -145,6 +145,7 @@ from mercurial import (
     error,
     mail,
     patch,
+    registrar,
     util,
 )
 
@@ -153,6 +154,13 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('notify', 'config',
+    default=None,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
