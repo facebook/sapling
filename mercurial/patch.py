@@ -448,6 +448,9 @@ class abstractbackend(object):
     def exists(self, fname):
         raise NotImplementedError
 
+    def close(self):
+        raise NotImplementedError
+
 class fsbackend(abstractbackend):
     def __init__(self, ui, basedir):
         super(fsbackend, self).__init__(ui)
