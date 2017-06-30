@@ -643,6 +643,9 @@ coreconfigitem('web', 'stripes',
 coreconfigitem('web', 'style',
     default='paper',
 )
+coreconfigitem('web', 'templates',
+    default=None,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
