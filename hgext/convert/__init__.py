@@ -79,6 +79,9 @@ configitem('convert', 'hg.revs',
 configitem('convert', 'hg.saverev',
     default=False,
 )
+configitem('convert', 'hg.sourcename',
+    default=None,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
