@@ -163,6 +163,9 @@ coreconfigitem('progress', 'clear-complete',
 coreconfigitem('progress', 'estimate',
     default=2,
 )
+coreconfigitem('progress', 'width',
+    default=dynamicdefault,
+)
 coreconfigitem('server', 'bundle1',
     default=True,
 )
