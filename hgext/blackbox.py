@@ -67,6 +67,9 @@ configitem('blackbox', 'dirty',
 configitem('blackbox', 'maxsize',
     default='1 MB',
 )
+configitem('blackbox', 'logsource',
+    default=False,
+)
 
 lastui = None
 
@@ -199,7 +202,7 @@ def wrapui(ui):
                         any(ctx.sub(s).dirty() for s in ctx.substate)
                     )):
                         changed = '+'
-                if ui.configbool('blackbox', 'logsource', False):
+                if ui.configbool('blackbox', 'logsource'):
                     src = ' [%s]' % event
                 else:
                     src = ''
