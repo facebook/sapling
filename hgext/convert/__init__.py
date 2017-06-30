@@ -85,6 +85,9 @@ configitem('convert', 'hg.sourcename',
 configitem('convert', 'hg.startrev',
     default=None,
 )
+configitem('convert', 'hg.tagsbranch',
+    default='default',
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

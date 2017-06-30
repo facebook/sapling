@@ -49,7 +49,7 @@ class mercurial_sink(common.converter_sink):
         common.converter_sink.__init__(self, ui, path)
         self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
         self.clonebranches = ui.configbool('convert', 'hg.clonebranches')
-        self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
+        self.tagsbranch = ui.config('convert', 'hg.tagsbranch')
         self.lastbranch = None
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
