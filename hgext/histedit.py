@@ -188,6 +188,7 @@ from mercurial.i18n import _
 from mercurial import (
     bundle2,
     cmdutil,
+    configitems,
     context,
     copies,
     destutil,
@@ -211,6 +212,12 @@ pickle = util.pickle
 release = lock.release
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem('histedit', 'defaultrev',
+    default=configitems.dynamicdefault,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
