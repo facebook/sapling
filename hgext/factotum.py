@@ -70,6 +70,9 @@ configitem = registrar.configitem(configtable)
 configitem('factotum', 'executable',
     default='/bin/auth/factotum',
 )
+configitem('factotum', 'mountpoint',
+    default='/mnt/factotum',
+)
 
 def auth_getkey(self, params):
     if not self.ui.interactive():
@@ -137,6 +140,6 @@ def uisetup(ui):
     global _executable
     _executable = ui.config('factotum', 'executable')
     global _mountpoint
-    _mountpoint = ui.config('factotum', 'mountpoint', '/mnt/factotum')
+    _mountpoint = ui.config('factotum', 'mountpoint')
     global _service
     _service = ui.config('factotum', 'service', 'hg')
