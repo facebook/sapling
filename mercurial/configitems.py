@@ -113,6 +113,9 @@ coreconfigitem('format', 'chunkcachesize',
 coreconfigitem('format', 'dotencode',
     default=True,
 )
+coreconfigitem('format', 'generaldelta',
+    default=False,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
