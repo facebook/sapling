@@ -121,6 +121,9 @@ configitem('mq', 'keepchanges',
 configitem('mq', 'plain',
     default=False,
 )
+configitem('mq', 'secret',
+    default=False,
+)
 
 # force load strip extension formerly included in mq and import some utility
 try:
@@ -419,7 +422,7 @@ def newcommit(repo, phase, *args, **kwargs):
     """
     repo = repo.unfiltered()
     if phase is None:
-        if repo.ui.configbool('mq', 'secret', False):
+        if repo.ui.configbool('mq', 'secret'):
             phase = phases.secret
     overrides = {('ui', 'allowemptycommit'): True}
     if phase is not None:
@@ -1059,7 +1062,7 @@ class queue(object):
         repo._phasecache
         patches = self._revpatches(repo, sorted(revs))
         qfinished = self._cleanup(patches, len(patches))
-        if qfinished and repo.ui.configbool('mq', 'secret', False):
+        if qfinished and repo.ui.configbool('mq', 'secret'):
             # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
             tphase = repo.ui.config('phases', 'new-commit', phases.draft)
@@ -2164,7 +2167,7 @@ class queue(object):
                     self.added.append(patchname)
                     imported.append(patchname)
                     patchname = None
-                    if rev and repo.ui.configbool('mq', 'secret', False):
+                    if rev and repo.ui.configbool('mq', 'secret'):
                         # if we added anything with --rev, move the secret root
                         phases.retractboundary(repo, tr, phases.secret, [n])
                     self.parseseries()
@@ -3423,7 +3426,7 @@ def qqueue(ui, repo, name=None, **opts):
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
     if repo.mq.applied:
-        if repo.ui.configbool('mq', 'secret', False):
+        if repo.ui.configbool('mq', 'secret'):
             mqphase = phases.secret
         else:
             mqphase = phases.draft
