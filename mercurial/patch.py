@@ -456,9 +456,6 @@ class fsbackend(abstractbackend):
         super(fsbackend, self).__init__(ui)
         self.opener = vfsmod.vfs(basedir)
 
-    def _join(self, f):
-        return os.path.join(self.opener.base, f)
-
     def getfile(self, fname):
         if self.opener.islink(fname):
             return (self.opener.readlink(fname), (True, False))
