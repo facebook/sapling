@@ -33,8 +33,19 @@ from __future__ import absolute_import
 
 import socket
 
+from mercurial import(
+    registrar,
+)
+
 from mercurial.hgweb import (
     server,
+)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('badserver', 'closeafteraccept',
+    default=False,
 )
 
 # We can't adjust __class__ on a socket instance. So we define a proxy type.
