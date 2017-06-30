@@ -766,7 +766,7 @@ class dirstate(object):
 
         # enough 'delaywrite' prevents 'pack_dirstate' from dropping
         # timestamp of each entries in dirstate, because of 'now > mtime'
-        delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
+        delaywrite = self._ui.configint('debug', 'dirstate.delaywrite')
         if delaywrite > 0:
             # do we have any files to delay for?
             for f, e in self._map.iteritems():

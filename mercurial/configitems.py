@@ -107,6 +107,9 @@ coreconfigitem('commands', 'status.verbose',
 coreconfigitem('commands', 'update.requiredest',
     default=False,
 )
+coreconfigitem('debug', 'dirstate.delaywrite',
+    default=0,
+)
 coreconfigitem('devel', 'all-warnings',
     default=False,
 )
