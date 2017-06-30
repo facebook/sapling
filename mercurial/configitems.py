@@ -161,3 +161,6 @@ coreconfigitem('worker', 'backgroundclosemaxqueue',
 coreconfigitem('worker', 'backgroundcloseminfilecount',
     default=2048,
 )
+coreconfigitem('worker', 'backgroundclosethreadcount',
+    default=4,
+)
