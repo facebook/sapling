@@ -91,6 +91,9 @@ configitem('convert', 'hg.tagsbranch',
 configitem('convert', 'hg.usebranchnames',
     default=True,
 )
+configitem('convert', 'ignoreancestorcheck',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
