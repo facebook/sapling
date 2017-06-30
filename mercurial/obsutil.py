@@ -338,15 +338,16 @@ def successorssets(repo, initialnode, cache=None):
     successors set. To distinguish this from a pruned changeset, the successor
     set will contain itself only, i.e. [(A,)].
 
-    Finally, successors unknown locally are considered to be pruned (obsoleted
-    without any successors).
+    Finally, final successors unknown locally are considered to be pruned
+    (pruned: obsoleted without any successors). (Final: successors not affected
+    by markers).
 
-    The optional `cache` parameter is a dictionary that may contain precomputed
-    successors sets. It is meant to reuse the computation of a previous call to
-    `successorssets` when multiple calls are made at the same time. The cache
-    dictionary is updated in place. The caller is responsible for its life
-    span. Code that makes multiple calls to `successorssets` *must* use this
-    cache mechanism or suffer terrible performance.
+    The optional `cache` parameter is a dictionary that may contains
+    precomputed successors sets. It is meant to reuse the computation of a
+    previous call to `successorssets` when multiple calls are made at the same
+    time. The cache dictionary is updated in place. The caller is responsible
+    for its life span. Code that makes multiple calls to `successorssets`
+    *should* use this cache mechanism or risk a performance hit.
     """
 
     succmarkers = repo.obsstore.successors
