@@ -125,6 +125,9 @@ coreconfigitem('server', 'compressionengines',
 coreconfigitem('server', 'concurrent-push-mode',
     default='strict',
 )
+coreconfigitem('server', 'disablefullbundle',
+    default=False,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )

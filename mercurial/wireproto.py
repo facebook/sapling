@@ -842,7 +842,7 @@ def getbundle(repo, proto, others):
                               hint=bundle2requiredhint)
 
     try:
-        if repo.ui.configbool('server', 'disablefullbundle', False):
+        if repo.ui.configbool('server', 'disablefullbundle'):
             # Check to see if this is a full clone.
             clheads = set(repo.changelog.heads())
             heads = set(opts.get('heads', set()))
