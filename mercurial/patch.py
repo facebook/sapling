@@ -2077,7 +2077,7 @@ def patchbackend(ui, backend, patchobj, strip, prefix, files=None,
     if files is None:
         files = set()
     if eolmode is None:
-        eolmode = ui.config('patch', 'eol', 'strict')
+        eolmode = ui.config('patch', 'eol')
     if eolmode.lower() not in eolmodes:
         raise error.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()

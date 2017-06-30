@@ -110,6 +110,9 @@ coreconfigitem('hostsecurity', 'ciphers',
 coreconfigitem('hostsecurity', 'disabletls10warning',
     default=False,
 )
+coreconfigitem('patch', 'eol',
+    default='strict',
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
