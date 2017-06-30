@@ -191,7 +191,7 @@ class progbar(object):
     def complete(self):
         if not shouldprint(self.ui):
             return
-        if self.ui.configbool('progress', 'clear-complete', default=True):
+        if self.ui.configbool('progress', 'clear-complete'):
             self.clear()
         else:
             self._writeerr('\n')

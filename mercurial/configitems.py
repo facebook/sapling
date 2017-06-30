@@ -149,6 +149,9 @@ coreconfigitem('patch', 'fuzz',
 coreconfigitem('progress', 'assume-tty',
     default=False,
 )
+coreconfigitem('progress', 'clear-complete',
+    default=True,
+)
 coreconfigitem('server', 'bundle1',
     default=True,
 )
