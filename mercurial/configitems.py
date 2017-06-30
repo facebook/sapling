@@ -104,6 +104,9 @@ coreconfigitem('devel', 'serverrequirecert',
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
 )
+coreconfigitem('hostsecurity', 'ciphers',
+    default=None,
+)
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
