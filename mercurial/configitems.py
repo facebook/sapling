@@ -615,6 +615,9 @@ coreconfigitem('web', 'deny_read',
 coreconfigitem('web', 'descend',
     default=True,
 )
+coreconfigitem('web', 'description',
+    default="",
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

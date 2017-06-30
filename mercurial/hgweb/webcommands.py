@@ -719,8 +719,11 @@ def summary(web, req, tmpl):
     start = max(0, count - web.maxchanges)
     end = min(count, start + web.maxchanges)
 
+    desc = web.config("web", "description")
+    if not desc:
+        desc = 'unknown'
     return tmpl("summary",
-                desc=web.config("web", "description", "unknown"),
+                desc=desc,
                 owner=get_contact(web.config) or "unknown",
                 lastchange=tip.date(),
                 tags=tagentries,

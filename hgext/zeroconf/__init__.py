@@ -127,7 +127,9 @@ def zc_create_server(create_server, ui, app):
         with app._obtainrepo() as repo:
             name = app.reponame or os.path.basename(repo.root)
             path = repo.ui.config("web", "prefix", "").strip('/')
-            desc = repo.ui.config("web", "description", name)
+            desc = repo.ui.config("web", "description")
+            if not desc:
+                desc = name
         publish(name, desc, path, port)
     else:
         # webdir
@@ -137,7 +139,9 @@ def zc_create_server(create_server, ui, app):
             u.readconfig(os.path.join(path, '.hg', 'hgrc'))
             name = os.path.basename(repo)
             path = (prefix + repo).strip('/')
-            desc = u.config('web', 'description', name)
+            desc = u.config('web', 'description')
+            if not desc:
+                desc = name
             publish(name, desc, path, port)
     return httpd
 
