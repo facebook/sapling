@@ -56,6 +56,9 @@ def getitemregister(configtable):
 
 coreconfigitem = getitemregister(coreitems)
 
+coreconfigitem('color', 'mode',
+    default='auto',
+)
 coreconfigitem('devel', 'all-warnings',
     default=False,
 )

@@ -208,7 +208,7 @@ def _modesetup(ui):
     formatted = (always or (encoding.environ.get('TERM') != 'dumb'
                  and ui.formatted()))
 
-    mode = ui.config('color', 'mode', 'auto')
+    mode = ui.config('color', 'mode')
 
     # If pager is active, color.pagermode overrides color.mode.
     if getattr(ui, 'pageractive', False):
