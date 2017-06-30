@@ -104,6 +104,9 @@ coreconfigitem('devel', 'serverrequirecert',
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
 )
+coreconfigitem('format', 'aggressivemergedeltas',
+    default=False,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )

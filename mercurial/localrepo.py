@@ -439,7 +439,7 @@ class localrepository(object):
             self.svfs.options['manifestcachesize'] = manifestcachesize
         # experimental config: format.aggressivemergedeltas
         aggressivemergedeltas = self.ui.configbool('format',
-            'aggressivemergedeltas', False)
+                                                   'aggressivemergedeltas')
         self.svfs.options['aggressivemergedeltas'] = aggressivemergedeltas
         self.svfs.options['lazydeltabase'] = not scmutil.gddeltaconfig(self.ui)
         chainspan = self.ui.configbytes('experimental', 'maxdeltachainspan', -1)
