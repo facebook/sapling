@@ -284,7 +284,7 @@ Show all commands + options
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugsetparents: 
   debugsub: rev
-  debugsuccessorssets: 
+  debugsuccessorssets: closest
   debugtemplate: rev, define
   debugupdatecaches: 
   debugupgraderepo: optimize, run

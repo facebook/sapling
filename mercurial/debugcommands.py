@@ -2067,13 +2067,14 @@ def debugsub(ui, repo, rev=None):
         ui.write((' revision %s\n') % v[1])
 
 @command('debugsuccessorssets',
-    [],
+    [('', 'closest', False, _('return closest successors sets only'))],
     _('[REV]'))
-def debugsuccessorssets(ui, repo, *revs):
+def debugsuccessorssets(ui, repo, *revs, **opts):
     """show set of successors for revision
 
     A successors set of changeset A is a consistent group of revisions that
-    succeed A. It contains non-obsolete changesets only.
+    succeed A. It contains non-obsolete changesets only unless closests
+    successors set is set.
 
     In most cases a changeset A has a single successors set containing a single
     successor (changeset A replaced by A').
@@ -2111,7 +2112,9 @@ def debugsuccessorssets(ui, repo, *revs):
     for rev in scmutil.revrange(repo, revs):
         ctx = repo[rev]
         ui.write('%s\n'% ctx2str(ctx))
-        for succsset in obsutil.successorssets(repo, ctx.node(), cache=cache):
+        for succsset in obsutil.successorssets(repo, ctx.node(),
+                                                closest=opts['closest'],
+                                                cache=cache):
             if succsset:
                 ui.write('    ')
                 ui.write(node2str(succsset[0]))

@@ -311,12 +311,15 @@ def getobsoleted(repo, tr):
             obsoleted.add(rev)
     return obsoleted
 
-def successorssets(repo, initialnode, cache=None):
+def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
 
     The successors set of a changeset A are the group of revisions that succeed
     A. It succeeds A as a consistent whole, each revision being only a partial
-    replacement. The successors set contains non-obsolete changesets only.
+    replacement. By default, the successors set contains non-obsolete
+    changesets only, walking the obsolescence graph until reaching a leaf. If
+    'closest' is set to True, closest successors-sets are return (the
+    obsolescence walk stops on known changesets).
 
     This function returns the full list of successor sets which is why it
     returns a list of tuples and not just a single tuple. Each tuple is a valid
@@ -342,12 +345,19 @@ def successorssets(repo, initialnode, cache=None):
     (pruned: obsoleted without any successors). (Final: successors not affected
     by markers).
 
+    The 'closest' mode respect the repoview filtering. For example, without
+    filter it will stop at the first locally known changeset, with 'visible'
+    filter it will stop on visible changesets).
+
     The optional `cache` parameter is a dictionary that may contains
     precomputed successors sets. It is meant to reuse the computation of a
     previous call to `successorssets` when multiple calls are made at the same
     time. The cache dictionary is updated in place. The caller is responsible
     for its life span. Code that makes multiple calls to `successorssets`
     *should* use this cache mechanism or risk a performance hit.
+
+    Since results are different depending of the 'closest' most, the same cache
+    cannot be reused for both mode.
     """
 
     succmarkers = repo.obsstore.successors
@@ -394,8 +404,10 @@ def successorssets(repo, initialnode, cache=None):
         #
         # 1) We already know the successors sets of CURRENT:
         #    -> mission accomplished, pop it from the stack.
-        # 2) Node is not obsolete:
-        #    -> the node is its own successors sets. Add it to the cache.
+        # 2) Stop the walk:
+        #    default case: Node is not obsolete
+        #    closest case: Node is known at this repo filter level
+        #      -> the node is its own successors sets. Add it to the cache.
         # 3) We do not know successors set of direct successors of CURRENT:
         #    -> We add those successors to the stack.
         # 4) We know successors sets of all direct successors of CURRENT:
@@ -403,13 +415,20 @@ def successorssets(repo, initialnode, cache=None):
         #       cache.
         #
         current = toproceed[-1]
+
+        # case 2 condition is a bit hairy because of closest,
+        # we compute it on its own
+        case2condition =  ((current not in succmarkers)
+                           or (closest and current != initialnode
+                               and current in repo))
+
         if current in cache:
             # case (1): We already know the successors sets
             stackedset.remove(toproceed.pop())
-        elif current not in succmarkers:
-            # case (2): The node is not obsolete.
+        elif case2condition:
+            # case (2): end of walk.
             if current in repo:
-                # We have a valid last successors.
+                # We have a valid successors.
                 cache[current] = [(current,)]
             else:
                 # Final obsolete version is unknown locally.

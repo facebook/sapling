@@ -80,6 +80,23 @@ A_1 have two direct and divergent successors A_1 and A_1
   $ hg log -r 'divergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba
+      392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
 
 check that mercurial refuse to push
 
@@ -128,6 +145,25 @@ indirect divergence with known changeset
   $ hg log -r 'divergent()'
   2:82623d38b9ba A_1
   4:01f36c5a8fda A_3
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  82623d38b9ba
+      82623d38b9ba
+  01f36c5a8fda
+      01f36c5a8fda
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba
+      392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  01f36c5a8fda
+      01f36c5a8fda
   $ cd ..
 
 
@@ -160,6 +196,23 @@ indirect divergence with known changeset
   $ hg log -r 'divergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba
+      392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
   $ cd ..
 
 do not take unknown node in account if they are final
@@ -175,6 +228,10 @@ do not take unknown node in account if they are final
   $ hg debugsuccessorssets --hidden 'desc('A_0')'
   007dc284c1f8
       392fd25390da
+  $ hg debugsuccessorssets 'desc('A_0')' --closest
+  $ hg debugsuccessorssets 'desc('A_0')' --closest --hidden
+  007dc284c1f8
+      82623d38b9ba
 
   $ cd ..
 
@@ -211,6 +268,23 @@ divergence that converge again is not divergence anymore
   01f36c5a8fda
       01f36c5a8fda
   $ hg log -r 'divergent()'
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  01f36c5a8fda
+      01f36c5a8fda
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba
+      392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  01f36c5a8fda
+      01f36c5a8fda
   $ cd ..
 
 split is not divergences
@@ -237,6 +311,22 @@ split is not divergences
   392fd25390da
       392fd25390da
   $ hg log -r 'divergent()'
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
 
 Even when subsequent rewriting happen
 
@@ -277,6 +367,28 @@ Even when subsequent rewriting happen
       01f36c5a8fda
   392fd25390da
       e442cfc57690
+  01f36c5a8fda
+      01f36c5a8fda
+  6a411f0d7a0a
+      e442cfc57690
+  e442cfc57690
+      e442cfc57690
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  01f36c5a8fda
+      01f36c5a8fda
+  e442cfc57690
+      e442cfc57690
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
   01f36c5a8fda
       01f36c5a8fda
   6a411f0d7a0a
@@ -352,6 +464,40 @@ Check more complex obsolescence graft (with divergence)
       14608b260df8
   bed64f5d2f5a
       bed64f5d2f5a
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  01f36c5a8fda
+      01f36c5a8fda
+  7ae126973a96
+      7ae126973a96
+  14608b260df8
+      14608b260df8
+  bed64f5d2f5a
+      bed64f5d2f5a
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  01f36c5a8fda
+      01f36c5a8fda
+  6a411f0d7a0a
+      e442cfc57690
+  e442cfc57690
+      e442cfc57690
+  3750ebee865d
+      392fd25390da
+  7ae126973a96
+      7ae126973a96
+  14608b260df8
+      14608b260df8
+  bed64f5d2f5a
+      bed64f5d2f5a
   $ hg log -r 'divergent()'
   4:01f36c5a8fda A_3
   8:7ae126973a96 A_7
@@ -416,6 +562,38 @@ fix the divergence
       a139f71be9da
   a139f71be9da
       a139f71be9da
+  $ hg debugsuccessorssets 'all()' --closest
+  d20a80d4def3
+      d20a80d4def3
+  01f36c5a8fda
+      01f36c5a8fda
+  a139f71be9da
+      a139f71be9da
+  $ hg debugsuccessorssets 'all()' --closest --hidden
+  d20a80d4def3
+      d20a80d4def3
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+  82623d38b9ba
+      82623d38b9ba
+  392fd25390da
+      392fd25390da
+  01f36c5a8fda
+      01f36c5a8fda
+  6a411f0d7a0a
+      e442cfc57690
+  e442cfc57690
+      e442cfc57690
+  3750ebee865d
+      392fd25390da
+  7ae126973a96
+      a139f71be9da
+  14608b260df8
+      a139f71be9da
+  bed64f5d2f5a
+      a139f71be9da
+  a139f71be9da
+      a139f71be9da
   $ hg log -r 'divergent()'
 
   $ cd ..
@@ -431,6 +609,10 @@ successors-set. (report [A,B] not [A] + [A,B])
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
   $ hg debugsuccessorssets --hidden 'desc('A_0')'
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+  $ hg debugsuccessorssets 'desc('A_0')' --closest
+  $ hg debugsuccessorssets 'desc('A_0')' --closest --hidden
   007dc284c1f8
       82623d38b9ba 392fd25390da
 
