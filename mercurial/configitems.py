@@ -122,6 +122,9 @@ coreconfigitem('server', 'bundle1gd',
 coreconfigitem('server', 'compressionengines',
     default=list,
 )
+coreconfigitem('server', 'concurrent-push-mode',
+    default='strict',
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )

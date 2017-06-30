@@ -1343,7 +1343,7 @@ def getrepocaps(repo, allowpushback=False):
         caps['obsmarkers'] = supportedformat
     if allowpushback:
         caps['pushback'] = ()
-    cpmode = repo.ui.config('server', 'concurrent-push-mode', 'strict')
+    cpmode = repo.ui.config('server', 'concurrent-push-mode')
     if cpmode == 'check-related':
         caps['checkheads'] = ('related',)
     return caps
