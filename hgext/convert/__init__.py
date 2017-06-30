@@ -61,6 +61,9 @@ configitem('convert', 'git.renamelimit',
 configitem('convert', 'git.saverev',
     default=True,
 )
+configitem('convert', 'git.similarity',
+    default=50,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

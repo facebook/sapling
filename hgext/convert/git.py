@@ -81,7 +81,7 @@ class convert_git(common.converter_source, common.commandline):
                                 path)
 
         # The default value (50) is based on the default for 'git diff'.
-        similarity = ui.configint('convert', 'git.similarity', default=50)
+        similarity = ui.configint('convert', 'git.similarity')
         if similarity < 0 or similarity > 100:
             raise error.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
