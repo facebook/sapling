@@ -84,6 +84,7 @@ if os.environ.get('RTUNICODEPEDANTRY', False):
     except NameError:
         pass
 
+origenviron = os.environ.copy()
 osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
@@ -907,16 +908,21 @@ class Test(unittest.TestCase):
         # us to export.
         name_regex = re.compile('^[a-zA-Z][a-zA-Z0-9_]*$')
 
+        # Do not restore these variables; otherwise tests would fail.
+        reqnames = {'PYTHON', 'TESTDIR', 'TESTTMP'}
+
         with open(scriptpath, 'w') as envf:
-            for name, value in os.environ.items():
+            for name, value in origenviron.items():
                 if not name_regex.match(name):
                     # Skip environment variables with unusual names not
                     # allowed by most shells.
                     continue
+                if name in reqnames:
+                    continue
                 envf.write('%s=%s\n' % (name, shellquote(value)))
 
             for name in testenv:
-                if name in os.environ:
+                if name in origenviron or name in reqnames:
                     continue
                 envf.write('unset %s\n' % (name,))
 
