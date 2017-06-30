@@ -261,8 +261,7 @@ class convert_git(common.converter_source, common.commandline):
         lcount = len(difftree)
         i = 0
 
-        skipsubmodules = self.ui.configbool('convert', 'git.skipsubmodules',
-                                            False)
+        skipsubmodules = self.ui.configbool('convert', 'git.skipsubmodules')
         def add(entry, f, isdest):
             seen.add(f)
             h = entry[3]

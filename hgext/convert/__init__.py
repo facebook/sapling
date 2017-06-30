@@ -64,6 +64,9 @@ configitem('convert', 'git.saverev',
 configitem('convert', 'git.similarity',
     default=50,
 )
+configitem('convert', 'git.skipsubmodules',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
