@@ -179,6 +179,9 @@ configitem('notify', 'maxsubject',
 configitem('notify', 'mbox',
     default=None,
 )
+configitem('notify', 'merge',
+    default=True,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -220,7 +223,7 @@ class notifier(object):
         self.test = self.ui.configbool('notify', 'test', True)
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
-        self.merge = self.ui.configbool('notify', 'merge', True)
+        self.merge = self.ui.configbool('notify', 'merge')
 
         mapfile = None
         template = (self.ui.config('notify', hooktype) or
