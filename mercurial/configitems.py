@@ -140,6 +140,9 @@ coreconfigitem('server', 'uncompressedallowsecret',
 coreconfigitem('server', 'validate',
     default=False,
 )
+coreconfigitem('server', 'zliblevel',
+    default=-1,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )

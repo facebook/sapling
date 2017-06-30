@@ -135,7 +135,7 @@ class webproto(wireproto.abstractserverproto):
         # Don't allow untrusted settings because disabling compression or
         # setting a very high compression level could lead to flooding
         # the server's network or CPU.
-        opts = {'level': self.ui.configint('server', 'zliblevel', -1)}
+        opts = {'level': self.ui.configint('server', 'zliblevel')}
         return HGTYPE, util.compengines['zlib'], opts
 
 def iscmd(cmd):
