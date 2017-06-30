@@ -604,7 +604,7 @@ def bundle1allowed(repo, action):
         return v
 
     if gd:
-        v = ui.configbool('server', 'bundle1gd', None)
+        v = ui.configbool('server', 'bundle1gd')
         if v is not None:
             return v
 

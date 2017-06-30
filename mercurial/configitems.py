@@ -116,6 +116,9 @@ coreconfigitem('patch', 'fuzz',
 coreconfigitem('server', 'bundle1',
     default=True,
 )
+coreconfigitem('server', 'bundle1gd',
+    default=None,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )
