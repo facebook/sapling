@@ -354,7 +354,7 @@ class svn_source(converter_source):
 
         self.trunkname = self.ui.config('convert', 'svn.trunk',
                                         'trunk').strip('/')
-        self.startrev = self.ui.config('convert', 'svn.startrev', default=0)
+        self.startrev = self.ui.config('convert', 'svn.startrev')
         try:
             self.startrev = int(self.startrev)
             if self.startrev < 0:
