@@ -32,8 +32,16 @@ from mercurial import (
     copies,
     error,
     extensions,
+    registrar,
     scmutil,
     similar
+)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('automv', 'similarity',
+    default=95,
 )
 
 def extsetup(ui):
@@ -48,7 +56,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
     renames = None
     disabled = opts.pop('no_automv', False)
     if not disabled:
-        threshold = ui.configint('automv', 'similarity', 95)
+        threshold = ui.configint('automv', 'similarity')
         if not 0 <= threshold <= 100:
             raise error.Abort(_('automv.similarity must be between 0 and 100'))
         if threshold > 0:
