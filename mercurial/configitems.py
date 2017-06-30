@@ -597,6 +597,9 @@ coreconfigitem('web', 'allow_read',
 coreconfigitem('web', 'baseurl',
     default=None,
 )
+coreconfigitem('web', 'cacerts',
+    default=None,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
