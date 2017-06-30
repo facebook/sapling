@@ -52,6 +52,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     httpconnection,
+    registrar,
     url,
     util,
 )
@@ -62,6 +63,13 @@ passwordmgr = url.passwordmgr
 ERRMAX = 128
 
 _executable = _mountpoint = _service = None
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('factotum', 'executable',
+    default='/bin/auth/factotum',
+)
 
 def auth_getkey(self, params):
     if not self.ui.interactive():
@@ -127,7 +135,7 @@ def find_user_password(self, realm, authuri):
 
 def uisetup(ui):
     global _executable
-    _executable = ui.config('factotum', 'executable', '/bin/auth/factotum')
+    _executable = ui.config('factotum', 'executable')
     global _mountpoint
     _mountpoint = ui.config('factotum', 'mountpoint', '/mnt/factotum')
     global _service
