@@ -100,6 +100,9 @@ configitem('convert', 'localtimezone',
 configitem('convert', 'p4.startrev',
     default=0,
 )
+configitem('convert', 'skiptags',
+    default=False,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 
