@@ -194,6 +194,9 @@ configitem('notify', 'style',
 configitem('notify', 'template',
     default=None,
 )
+configitem('notify', 'test',
+    default=True,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -232,7 +235,7 @@ class notifier(object):
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
         self.mbox = self.ui.config('notify', 'mbox')
-        self.test = self.ui.configbool('notify', 'test', True)
+        self.test = self.ui.configbool('notify', 'test')
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
         self.merge = self.ui.configbool('notify', 'merge')
