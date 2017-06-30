@@ -61,6 +61,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('hgk', 'path',
+    default='hgk',
+)
+
 @command('debug-diff-tree',
     [('p', 'patch', None, _('generate patch')),
     ('r', 'recursive', None, _('recursive')),
@@ -346,6 +353,6 @@ def view(ui, repo, *etc, **opts):
     if repo.filtername is None:
         optstr += '--hidden'
 
-    cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
+    cmd = ui.config("hgk", "path") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
     ui.system(cmd, blockedtag='hgk_view')
