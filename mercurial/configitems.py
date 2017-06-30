@@ -609,6 +609,9 @@ coreconfigitem('web', 'collapse',
 coreconfigitem('web', 'csp',
     default=None,
 )
+coreconfigitem('web', 'deny_read',
+    default=list,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
