@@ -170,6 +170,9 @@ configitem('notify', 'domain',
 configitem('notify', 'fromauthor',
     default=None,
 )
+configitem('notify', 'maxdiff',
+    default=300,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -367,7 +370,7 @@ class notifier(object):
 
     def diff(self, ctx, ref=None):
 
-        maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
+        maxdiff = int(self.ui.config('notify', 'maxdiff'))
         prev = ctx.p1().node()
         if ref:
             ref = ref.node()
