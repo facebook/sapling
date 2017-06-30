@@ -63,6 +63,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('share', 'pool',
+    default=None,
+)
+
 @command('share',
     [('U', 'noupdate', None, _('do not create a working directory')),
      ('B', 'bookmarks', None, _('also share bookmarks')),
@@ -128,7 +135,7 @@ def unshare(ui, repo):
 
 # Wrap clone command to pass auto share options.
 def clone(orig, ui, source, *args, **opts):
-    pool = ui.config('share', 'pool', None)
+    pool = ui.config('share', 'pool')
     if pool:
         pool = util.expandpath(pool)
 
