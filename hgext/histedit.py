@@ -215,6 +215,9 @@ command = registrar.command(cmdtable)
 
 configtable = {}
 configitem = registrar.configitem(configtable)
+configitem('experimental', 'histedit.autoverb',
+    default=False,
+)
 configitem('histedit', 'defaultrev',
     default=configitems.dynamicdefault,
 )
