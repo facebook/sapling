@@ -21,7 +21,7 @@ cpp_library(
         "@/folly:optional",
         "@/folly:portability",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly:subprocess",
         "@/folly/experimental:test_util",
         "@/folly/experimental/logging:logging",

@@ -10,7 +10,7 @@ cpp_library(
         "@/folly:format",
         "@/folly:optional",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/io:iobuf",
         "@/folly/ssl:openssl_hash",
     ],

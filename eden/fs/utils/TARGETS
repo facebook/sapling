@@ -15,7 +15,7 @@ cpp_library(
         "@/folly:hash",
         "@/folly:optional",
         "@/folly:singleton",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly:subprocess",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",

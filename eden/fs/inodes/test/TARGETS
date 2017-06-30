@@ -26,7 +26,7 @@ cpp_unittest(
         "@/folly:exception_wrapper",
         "@/folly:format",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/test:test_utils",
     ],
     external_deps = [

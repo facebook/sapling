@@ -7,7 +7,7 @@ cpp_unittest(
         "@/eden/fs/model:model",
         "@/eden/fs/utils:utils",
         "@/folly:array",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/io:iobuf",
     ],
 )

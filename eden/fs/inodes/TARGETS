@@ -53,7 +53,7 @@ cpp_library(
         "@/folly:portability",
         "@/folly:range",
         "@/folly:shared_mutex",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly:unit",

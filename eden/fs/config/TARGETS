@@ -12,7 +12,7 @@ cpp_library(
         "@/folly:json",
         "@/folly:optional",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/experimental:string_keyed_unordered_map",
         "@/folly/io:iobuf",
     ],

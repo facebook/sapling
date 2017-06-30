@@ -12,7 +12,7 @@ cpp_library(
         "@/folly:format",
         "@/folly:range",
         "@/folly:scope_guard",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/experimental/logging:glog_style_formatter",
         "@/folly/experimental/logging:immediate_file_writer",
         "@/folly/experimental/logging:logging",

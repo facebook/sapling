@@ -14,7 +14,7 @@ cpp_library(
         "@/folly:format",
         "@/folly:optional",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly:synchronized",
         "@/folly/experimental:string_keyed_unordered_set",
         "@/folly/experimental/logging:logging",

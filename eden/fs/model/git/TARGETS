@@ -14,7 +14,7 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/folly:format",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/io:iobuf",
     ],
 )

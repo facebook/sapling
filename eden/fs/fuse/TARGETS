@@ -20,7 +20,7 @@ cpp_library(
         "@/folly:portability",
         "@/folly:random",
         "@/folly:range",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly/experimental/logging:logging",

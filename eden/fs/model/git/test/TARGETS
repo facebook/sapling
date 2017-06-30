@@ -10,7 +10,7 @@ cpp_unittest(
         "@/eden/fs/model/git:git",
         "@/eden/fs/model/git:gitignore",
         "@/eden/fs/model/git:glob",
-        "@/folly:string_extended",
+        "@/folly:string",
         "@/folly/io:iobuf",
     ],
 )
