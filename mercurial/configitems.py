@@ -155,6 +155,9 @@ coreconfigitem('email', 'from',
 coreconfigitem('email', 'method',
     default='smtp',
 )
+coreconfigitem('experimental', 'allowdivergence',
+    default=False,
+)
 coreconfigitem('experimental', 'bundle-phases',
     default=False,
 )
