@@ -76,7 +76,7 @@ class convert_cvs(converter_source):
             id = None
 
             cache = 'update'
-            if not self.ui.configbool('convert', 'cvsps.cache', True):
+            if not self.ui.configbool('convert', 'cvsps.cache'):
                 cache = None
             db = cvsps.createlog(self.ui, cache=cache)
             db = cvsps.createchangeset(self.ui, db,

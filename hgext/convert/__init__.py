@@ -28,6 +28,13 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('convert', 'cvsps.cache',
+    default=True,
+)
+
 # Commands definition was moved elsewhere to ease demandload job.
 
 @command('convert',
