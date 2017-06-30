@@ -588,6 +588,9 @@ coreconfigitem('web', 'accesslog',
 coreconfigitem('web', 'address',
     default='',
 )
+coreconfigitem('web', 'allow_archive',
+    default=list,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
