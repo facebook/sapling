@@ -603,6 +603,9 @@ coreconfigitem('web', 'cacerts',
 coreconfigitem('web', 'certificate',
     default=None,
 )
+coreconfigitem('web', 'collapse',
+    default=False,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

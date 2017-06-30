@@ -325,7 +325,7 @@ class hgwebdir(object):
         def rawentries(subdir="", **map):
 
             descend = self.ui.configbool('web', 'descend', True)
-            collapse = self.ui.configbool('web', 'collapse', False)
+            collapse = self.ui.configbool('web', 'collapse')
             seenrepos = set()
             seendirs = set()
             for name, path in self.repos:
