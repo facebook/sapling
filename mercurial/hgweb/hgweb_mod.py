@@ -320,7 +320,7 @@ class hgweb(object):
         rctx = requestcontext(self, repo)
 
         # This state is global across all threads.
-        encoding.encoding = rctx.config('web', 'encoding', encoding.encoding)
+        encoding.encoding = rctx.config('web', 'encoding')
         rctx.repo.ui.environ = req.env
 
         if rctx.csp:

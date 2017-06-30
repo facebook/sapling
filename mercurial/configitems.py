@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import functools
 
 from . import (
+    encoding,
     error,
 )
 
@@ -617,6 +618,9 @@ coreconfigitem('web', 'descend',
 )
 coreconfigitem('web', 'description',
     default="",
+)
+coreconfigitem('web', 'encoding',
+    default=lambda: encoding.encoding,
 )
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,

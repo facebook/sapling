@@ -170,8 +170,7 @@ class hgwebdir(object):
 
         self.repos = repos
         self.ui = u
-        encoding.encoding = self.ui.config('web', 'encoding',
-                                           encoding.encoding)
+        encoding.encoding = self.ui.config('web', 'encoding')
         self.style = self.ui.config('web', 'style', 'paper')
         self.templatepath = self.ui.config('web', 'templates', None)
         self.stripecount = self.ui.config('web', 'stripes', 1)
