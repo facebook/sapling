@@ -625,6 +625,9 @@ coreconfigitem('web', 'encoding',
 coreconfigitem('web', 'errorlog',
     default='-',
 )
+coreconfigitem('web', 'ipv6',
+    default=False,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
