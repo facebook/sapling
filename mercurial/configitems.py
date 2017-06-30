@@ -302,6 +302,9 @@ coreconfigitem('http_proxy', 'user',
 coreconfigitem('merge', 'followcopies',
     default=True,
 )
+coreconfigitem('merge', 'preferancestor',
+        default=lambda: ['*'],
+)
 coreconfigitem('pager', 'ignore',
     default=list,
 )

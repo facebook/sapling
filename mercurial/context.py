@@ -659,7 +659,7 @@ class changectx(basectx):
             anc = cahs[0]
         else:
             # experimental config: merge.preferancestor
-            for r in self._repo.ui.configlist('merge', 'preferancestor', ['*']):
+            for r in self._repo.ui.configlist('merge', 'preferancestor'):
                 try:
                     ctx = changectx(self._repo, r)
                 except error.RepoLookupError:

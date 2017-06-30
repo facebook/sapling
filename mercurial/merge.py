@@ -1566,7 +1566,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
         p2 = repo[node]
         if pas[0] is None:
-            if repo.ui.configlist('merge', 'preferancestor', ['*']) == ['*']:
+            if repo.ui.configlist('merge', 'preferancestor') == ['*']:
                 cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
                 pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
