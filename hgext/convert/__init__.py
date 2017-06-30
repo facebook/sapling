@@ -97,6 +97,9 @@ configitem('convert', 'ignoreancestorcheck',
 configitem('convert', 'localtimezone',
     default=False,
 )
+configitem('convert', 'p4.encoding',
+    default=lambda: convcmd.orig_encoding,
+)
 configitem('convert', 'p4.startrev',
     default=0,
 )
