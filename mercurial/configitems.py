@@ -125,6 +125,9 @@ coreconfigitem('format', 'maxchainlen',
 coreconfigitem('format', 'obsstore-version',
     default=None,
 )
+coreconfigitem('format', 'usefncache',
+    default=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
