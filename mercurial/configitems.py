@@ -137,6 +137,9 @@ coreconfigitem('server', 'preferuncompressed',
 coreconfigitem('server', 'uncompressedallowsecret',
     default=False,
 )
+coreconfigitem('server', 'validate',
+    default=False,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )

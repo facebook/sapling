@@ -309,7 +309,7 @@ class cg1unpacker(object):
             self._unpackmanifests(repo, revmap, trp, prog, changesets)
 
             needfiles = {}
-            if repo.ui.configbool('server', 'validate', default=False):
+            if repo.ui.configbool('server', 'validate'):
                 cl = repo.changelog
                 ml = repo.manifestlog
                 # validate incoming csets have their manifests
