@@ -155,3 +155,6 @@ coreconfigitem('ui', 'interactive',
 coreconfigitem('ui', 'quiet',
     default=False,
 )
+coreconfigitem('worker', 'backgroundclosemaxqueue',
+    default=384,
+)
