@@ -97,6 +97,9 @@ configitem('convert', 'ignoreancestorcheck',
 configitem('convert', 'localtimezone',
     default=False,
 )
+configitem('convert', 'p4.startrev',
+    default=0,
+)
 
 # Commands definition was moved elsewhere to ease demandload job.
 

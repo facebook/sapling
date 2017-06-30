@@ -138,7 +138,7 @@ class p4_source(common.converter_source):
         vieworder.sort(key=len, reverse=True)
 
         # handle revision limiting
-        startrev = self.ui.config('convert', 'p4.startrev', default=0)
+        startrev = self.ui.config('convert', 'p4.startrev')
 
         # now read the full changelists to get the list of file revisions
         ui.status(_('collecting p4 changelists\n'))
