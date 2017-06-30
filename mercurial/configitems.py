@@ -612,6 +612,9 @@ coreconfigitem('web', 'csp',
 coreconfigitem('web', 'deny_read',
     default=list,
 )
+coreconfigitem('web', 'descend',
+    default=True,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
