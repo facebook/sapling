@@ -107,6 +107,9 @@ coreconfigitem('devel', 'strip-obsmarkers',
 coreconfigitem('format', 'aggressivemergedeltas',
     default=False,
 )
+coreconfigitem('format', 'chunkcachesize',
+    default=None,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
