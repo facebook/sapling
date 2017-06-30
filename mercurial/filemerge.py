@@ -555,13 +555,6 @@ def _formatconflictmarker(repo, ctx, template, label, pad):
     # 8 for the prefix of conflict marker lines (e.g. '<<<<<<< ')
     return util.ellipsis(mark, 80 - 8)
 
-_defaultconflictmarker = ('{node|short} '
-                          '{ifeq(tags, "tip", "", '
-                           'ifeq(tags, "", "", "{tags} "))}'
-                          '{if(bookmarks, "{bookmarks} ")}'
-                          '{ifeq(branch, "default", "", "{branch} ")}'
-                          '- {author|user}: {desc|firstline}')
-
 _defaultconflictlabels = ['local', 'other']
 
 def _formatlabels(repo, fcd, fco, fca, labels):
@@ -574,7 +567,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
     ca = fca.changectx()
 
     ui = repo.ui
-    template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
+    template = ui.config('ui', 'mergemarkertemplate')
     template = templater.unquotestring(template)
     tmpl = formatter.maketemplater(ui, template)
 

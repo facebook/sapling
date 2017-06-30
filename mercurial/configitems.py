@@ -484,6 +484,14 @@ coreconfigitem('ui', 'merge',
 coreconfigitem('ui', 'mergemarkers',
     default='basic',
 )
+coreconfigitem('ui', 'mergemarkertemplate',
+    default=('{node|short} '
+            '{ifeq(tags, "tip", "", '
+            'ifeq(tags, "", "", "{tags} "))}'
+            '{if(bookmarks, "{bookmarks} ")}'
+            '{ifeq(branch, "default", "", "{branch} ")}'
+            '- {author|user}: {desc|firstline}')
+)
 coreconfigitem('ui', 'nontty',
     default=False,
 )
