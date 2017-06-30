@@ -164,3 +164,6 @@ coreconfigitem('worker', 'backgroundcloseminfilecount',
 coreconfigitem('worker', 'backgroundclosethreadcount',
     default=4,
 )
+coreconfigitem('worker', 'numcpus',
+    default=None,
+)
