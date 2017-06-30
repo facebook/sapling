@@ -585,6 +585,9 @@ coreconfigitem('verify', 'skipflags',
 coreconfigitem('web', 'accesslog',
     default='-',
 )
+coreconfigitem('web', 'address',
+    default='',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

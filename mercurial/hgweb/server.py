@@ -326,7 +326,7 @@ def create_server(ui, app):
         mimetypes.init()
         sys.setdefaultencoding(oldenc)
 
-    address = ui.config('web', 'address', '')
+    address = ui.config('web', 'address')
     port = util.getport(ui.config('web', 'port', 8000))
     try:
         return cls(ui, app, (address, port), handler)
