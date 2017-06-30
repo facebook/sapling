@@ -116,6 +116,9 @@ coreconfigitem('format', 'dotencode',
 coreconfigitem('format', 'generaldelta',
     default=False,
 )
+coreconfigitem('format', 'manifestcachesize',
+    default=None,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
