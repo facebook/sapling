@@ -128,6 +128,9 @@ coreconfigitem('format', 'obsstore-version',
 coreconfigitem('format', 'usefncache',
     default=True,
 )
+coreconfigitem('format', 'usegeneraldelta',
+    default=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
