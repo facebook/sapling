@@ -119,6 +119,9 @@ coreconfigitem('server', 'bundle1',
 coreconfigitem('server', 'bundle1gd',
     default=None,
 )
+coreconfigitem('server', 'compressionengines',
+    default=list,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
 )
