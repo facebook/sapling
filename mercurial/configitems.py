@@ -341,6 +341,9 @@ coreconfigitem('profiling', 'output',
 coreconfigitem('profiling', 'showmax',
     default=0.999,
 )
+coreconfigitem('profiling', 'showmin',
+    default=dynamicdefault,
+)
 coreconfigitem('profiling', 'sort',
     default='inlinetime',
 )
