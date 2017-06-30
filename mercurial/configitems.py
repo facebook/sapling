@@ -600,6 +600,9 @@ coreconfigitem('web', 'baseurl',
 coreconfigitem('web', 'cacerts',
     default=None,
 )
+coreconfigitem('web', 'certificate',
+    default=None,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
