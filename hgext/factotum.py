@@ -73,6 +73,9 @@ configitem('factotum', 'executable',
 configitem('factotum', 'mountpoint',
     default='/mnt/factotum',
 )
+configitem('factotum', 'service',
+    default='hg',
+)
 
 def auth_getkey(self, params):
     if not self.ui.interactive():
@@ -142,4 +145,4 @@ def uisetup(ui):
     global _mountpoint
     _mountpoint = ui.config('factotum', 'mountpoint')
     global _service
-    _service = ui.config('factotum', 'service', 'hg')
+    _service = ui.config('factotum', 'service')
