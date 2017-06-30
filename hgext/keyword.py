@@ -143,6 +143,12 @@ colortable = {
 
 templatefilter = registrar.templatefilter()
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('keywordset', 'svn',
+    default=False,
+)
 # date like in cvs' $Date
 @templatefilter('utcdate')
 def utcdate(text):
