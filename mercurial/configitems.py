@@ -628,6 +628,9 @@ coreconfigitem('web', 'errorlog',
 coreconfigitem('web', 'ipv6',
     default=False,
 )
+coreconfigitem('web', 'port',
+    default=8000,
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )

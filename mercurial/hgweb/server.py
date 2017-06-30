@@ -327,7 +327,7 @@ def create_server(ui, app):
         sys.setdefaultencoding(oldenc)
 
     address = ui.config('web', 'address')
-    port = util.getport(ui.config('web', 'port', 8000))
+    port = util.getport(ui.config('web', 'port'))
     try:
         return cls(ui, app, (address, port), handler)
     except socket.error as inst:
