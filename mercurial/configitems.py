@@ -131,6 +131,9 @@ coreconfigitem('format', 'usefncache',
 coreconfigitem('format', 'usegeneraldelta',
     default=True,
 )
+coreconfigitem('format', 'usestore',
+    default=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
