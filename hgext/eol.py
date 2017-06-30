@@ -121,6 +121,9 @@ configitem('eol', 'fix-trailing-newline',
 configitem('eol', 'native',
     default=pycompat.oslinesep,
 )
+configitem('eol', 'only-consistent',
+    default=True,
+)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
@@ -132,7 +135,7 @@ def tolf(s, params, ui, **kwargs):
     """Filter to convert to LF EOLs."""
     if util.binary(s):
         return s
-    if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
+    if ui.configbool('eol', 'only-consistent') and inconsistenteol(s):
         return s
     if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
@@ -143,7 +146,7 @@ def tocrlf(s, params, ui, **kwargs):
     """Filter to convert to CRLF EOLs."""
     if util.binary(s):
         return s
-    if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
+    if ui.configbool('eol', 'only-consistent') and inconsistenteol(s):
         return s
     if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
