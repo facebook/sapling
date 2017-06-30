@@ -164,6 +164,9 @@ configitem('notify', 'config',
 configitem('notify', 'diffstat',
     default=True,
 )
+configitem('notify', 'domain',
+    default=None,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
