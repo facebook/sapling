@@ -50,6 +50,9 @@ configitem('badserver', 'closeafteraccept',
 configitem('badserver', 'closeafterrecvbytes',
     default=0,
 )
+configitem('badserver', 'closeaftersendbytes',
+    default=0,
+)
 
 # We can't adjust __class__ on a socket instance. So we define a proxy type.
 class socketproxy(object):
@@ -272,7 +275,7 @@ def extsetup(ui):
             closeafterrecvbytes = self._ui.configint('badserver',
                                                      'closeafterrecvbytes')
             closeaftersendbytes = self._ui.configint('badserver',
-                                                     'closeaftersendbytes', 0)
+                                                     'closeaftersendbytes')
 
             if closeafterrecvbytes or closeaftersendbytes:
                 socket = socketproxy(socket, self.errorlog,
