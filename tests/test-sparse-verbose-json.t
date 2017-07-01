@@ -21,7 +21,7 @@ test sparse with --verbose and -T json
 Verify basic --include and --reset
 
   $ hg up -q 0
-  $ hg sparse --include 'hide' -Tjson
+  $ hg debugsparse --include 'hide' -Tjson
   [
    {
     "exclude_rules_added": 0,
@@ -32,14 +32,14 @@ Verify basic --include and --reset
     "profiles_added": 0
    }
   ]
-  $ hg sparse --clear-rules
-  $ hg sparse --include 'hide' --verbose
+  $ hg debugsparse --clear-rules
+  $ hg debugsparse --include 'hide' --verbose
   removing show
   Profile # change: 0
   Include rule # change: 1
   Exclude rule # change: 0
 
-  $ hg sparse --reset -Tjson
+  $ hg debugsparse --reset -Tjson
   [
    {
     "exclude_rules_added": 0,
@@ -50,8 +50,8 @@ Verify basic --include and --reset
     "profiles_added": 0
    }
   ]
-  $ hg sparse --include 'hide'
-  $ hg sparse --reset --verbose
+  $ hg debugsparse --include 'hide'
+  $ hg debugsparse --reset --verbose
   getting show
   Profile # change: 0
   Include rule # change: -1
@@ -59,9 +59,9 @@ Verify basic --include and --reset
 
 Verifying that problematic files still allow us to see the deltas when forcing:
 
-  $ hg sparse --include 'show*'
+  $ hg debugsparse --include 'show*'
   $ touch hide
-  $ hg sparse --delete 'show*' --force -Tjson
+  $ hg debugsparse --delete 'show*' --force -Tjson
   pending changes to 'hide'
   [
    {
@@ -73,9 +73,9 @@ Verifying that problematic files still allow us to see the deltas when forcing:
     "profiles_added": 0
    }
   ]
-  $ hg sparse --include 'show*' --force
+  $ hg debugsparse --include 'show*' --force
   pending changes to 'hide'
-  $ hg sparse --delete 'show*' --force --verbose
+  $ hg debugsparse --delete 'show*' --force --verbose
   pending changes to 'hide'
   Profile # change: 0
   Include rule # change: -1

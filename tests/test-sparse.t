@@ -21,17 +21,17 @@ test sparse
 Verify basic --include
 
   $ hg up -q 0
-  $ hg sparse --include 'hide'
+  $ hg debugsparse --include 'hide'
   $ ls
   hide
 
 Absolute paths outside the repo should just be rejected
 
-  $ hg sparse --include /foo/bar
+  $ hg debugsparse --include /foo/bar
   warning: paths cannot start with /, ignoring: ['/foo/bar']
-  $ hg sparse --include '$TESTTMP/myrepo/hide'
+  $ hg debugsparse --include '$TESTTMP/myrepo/hide'
 
-  $ hg sparse --include '/root'
+  $ hg debugsparse --include '/root'
   warning: paths cannot start with /, ignoring: ['/root']
 
 Verify commiting while sparse includes other files
@@ -46,7 +46,7 @@ Verify commiting while sparse includes other files
 
 Verify --reset brings files back
 
-  $ hg sparse --reset
+  $ hg debugsparse --reset
   $ ls
   hide
   show
@@ -55,12 +55,12 @@ Verify --reset brings files back
   $ cat show
   a
 
-Verify 'hg sparse' default output
+Verify 'hg debugsparse' default output
 
   $ hg up -q null
-  $ hg sparse --include 'show*'
+  $ hg debugsparse --include 'show*'
 
-  $ hg sparse
+  $ hg debugsparse
   [include]
   show*
   [exclude]
@@ -89,19 +89,19 @@ Adding an excluded file should fail
 
   $ hg add hide3
   abort: cannot add 'hide3' - it is outside the sparse checkout
-  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
+  (include file with `hg debugsparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
   [255]
 
 Verify deleting sparseness while a file has changes fails
 
-  $ hg sparse --delete 'show*'
+  $ hg debugsparse --delete 'show*'
   pending changes to 'hide'
   abort: cannot change sparseness due to pending changes (delete the files or use --force to bring them back dirty)
   [255]
 
 Verify deleting sparseness with --force brings back files
 
-  $ hg sparse --delete -f 'show*'
+  $ hg debugsparse --delete -f 'show*'
   pending changes to 'hide'
   $ ls
   hide
@@ -116,14 +116,14 @@ Verify deleting sparseness with --force brings back files
 
 Verify editing sparseness fails if pending changes
 
-  $ hg sparse --include 'show*'
+  $ hg debugsparse --include 'show*'
   pending changes to 'hide'
   abort: could not update sparseness due to pending changes
   [255]
 
 Verify adding sparseness hides files
 
-  $ hg sparse --exclude -f 'hide*'
+  $ hg debugsparse --exclude -f 'hide*'
   pending changes to 'hide'
   $ ls
   hide
@@ -149,7 +149,7 @@ Verify rebase temporarily includes excluded files
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
-  $ hg sparse
+  $ hg debugsparse
   [include]
   
   [exclude]
@@ -186,7 +186,7 @@ Verify merge fails if merging excluded files
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-  $ hg sparse
+  $ hg debugsparse
   [include]
   
   [exclude]
@@ -198,7 +198,7 @@ Verify merge fails if merging excluded files
   $ hg up -C .
   cleaned up 1 temporarily added file(s) from the sparse checkout
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg sparse
+  $ hg debugsparse
   [include]
   
   [exclude]
@@ -208,7 +208,7 @@ Verify merge fails if merging excluded files
 Verify strip -k resets dirstate correctly
 
   $ hg status
-  $ hg sparse
+  $ hg debugsparse
   [include]
   
   [exclude]
@@ -246,15 +246,15 @@ Test status on a file in a subdir
 
   $ mkdir -p dir1/dir2
   $ touch dir1/dir2/file
-  $ hg sparse -I dir1/dir2
+  $ hg debugsparse -I dir1/dir2
   $ hg status
   ? dir1/dir2/file
 
 Test that add -s adds dirs to sparse profile
 
-  $ hg sparse --reset
-  $ hg sparse --include empty
-  $ hg sparse
+  $ hg debugsparse --reset
+  $ hg debugsparse --include empty
+  $ hg debugsparse
   [include]
   empty
   [exclude]
@@ -266,13 +266,13 @@ Test that add -s adds dirs to sparse profile
   $ touch add/bar
   $ hg add add/foo
   abort: cannot add 'add/foo' - it is outside the sparse checkout
-  (include file with `hg sparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
+  (include file with `hg debugsparse --include <pattern>` or use `hg add -s <file>` to include file directory while adding)
   [255]
   $ hg add -s add/foo
   $ hg st
   A add/foo
   ? add/bar
-  $ hg sparse
+  $ hg debugsparse
   [include]
   add
   empty
@@ -284,7 +284,7 @@ Test that add -s adds dirs to sparse profile
   $ hg st
   A add/bar
   A add/foo
-  $ hg sparse
+  $ hg debugsparse
   [include]
   add
   empty
@@ -316,7 +316,7 @@ Test debugrebuilddirstate
   $ hg add included excluded
   $ hg commit -m 'a commit' -q
   $ cp .hg/dirstate ../dirstateboth
-  $ hg sparse -X excluded
+  $ hg debugsparse -X excluded
   $ cp ../dirstateboth .hg/dirstate
   $ hg debugrebuilddirstate
   $ hg debugdirstate
@@ -324,11 +324,11 @@ Test debugrebuilddirstate
 
 Test debugdirstate --minimal where file is in the parent manifest but not the
 dirstate
-  $ hg sparse -X included
+  $ hg debugsparse -X included
   $ hg debugdirstate
   $ cp .hg/dirstate ../dirstateallexcluded
-  $ hg sparse --reset
-  $ hg sparse -X excluded
+  $ hg debugsparse --reset
+  $ hg debugsparse -X excluded
   $ cp ../dirstateallexcluded .hg/dirstate
   $ touch includedadded
   $ hg add includedadded
@@ -350,7 +350,7 @@ manifest
   $ cp .hg/dirstate ../moreexcluded
   $ hg forget excludednomanifest
   $ rm excludednomanifest
-  $ hg sparse -X excludednomanifest
+  $ hg debugsparse -X excludednomanifest
   $ cp ../moreexcluded .hg/dirstate
   $ hg manifest
   excluded

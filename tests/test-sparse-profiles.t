@@ -25,11 +25,11 @@ test sparse
   > EOF
   $ hg ci -Aqm 'initial'
 
-  $ hg sparse --include '*.sparse'
+  $ hg debugsparse --include '*.sparse'
 
 Verify enabling a single profile works
 
-  $ hg sparse --enable-profile webpage.sparse
+  $ hg debugsparse --enable-profile webpage.sparse
   $ ls
   backend.sparse
   index.html
@@ -37,7 +37,7 @@ Verify enabling a single profile works
 
 Verify enabling two profiles works
 
-  $ hg sparse --enable-profile backend.sparse
+  $ hg debugsparse --enable-profile backend.sparse
   $ ls
   backend.sparse
   data.py
@@ -46,7 +46,7 @@ Verify enabling two profiles works
 
 Verify disabling a profile works
 
-  $ hg sparse --disable-profile webpage.sparse
+  $ hg debugsparse --disable-profile webpage.sparse
   $ ls
   backend.sparse
   data.py
@@ -220,11 +220,11 @@ Test checking out a commit that does not contain the sparse profile. The
 warning message can be suppressed by setting missingwarning = false in
 [sparse] section of your config:
 
-  $ hg sparse --reset
+  $ hg debugsparse --reset
   $ hg rm *.sparse
   $ hg commit -m "delete profiles"
   $ hg up -q ".^"
-  $ hg sparse --enable-profile backend.sparse
+  $ hg debugsparse --enable-profile backend.sparse
   $ ls
   index.html
   readme.txt
@@ -235,14 +235,14 @@ warning message can be suppressed by setting missingwarning = false in
   data.py
   index.html
   readme.txt
-  $ hg sparse --disable-profile backend.sparse | grep warning
+  $ hg debugsparse --disable-profile backend.sparse | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bfcb76de99cc - ignoring it
   [1]
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > missingwarning = false
   > EOF
-  $ hg sparse --enable-profile backend.sparse
+  $ hg debugsparse --enable-profile backend.sparse
 
   $ cd ..
 
@@ -265,7 +265,7 @@ Test file permissions changing across a sparse profile change
   > EOF
   $ hg commit -qm 'update profile'
   $ hg up -q 0
-  $ hg sparse --enable-profile .hgsparse
+  $ hg debugsparse --enable-profile .hgsparse
   $ hg up -q 2
   $ ls -l b
   -rwxr-xr-x* b (glob)

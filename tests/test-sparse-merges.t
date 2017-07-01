@@ -19,7 +19,7 @@ test merging things outside of the sparse checkout
   $ hg commit -m 'feature - bar2'
 
   $ hg update -q default
-  $ hg sparse --exclude 'bar**'
+  $ hg debugsparse --exclude 'bar**'
 
   $ hg merge feature
   temporarily included 1 file(s) in the sparse checkout for merging
@@ -55,7 +55,7 @@ copy
   $ hg ci -Aqm 'add branchonly'
 
   $ hg up -q default
-  $ hg sparse -X branchonly
+  $ hg debugsparse -X branchonly
   $ hg merge feature
   temporarily included 2 file(s) in the sparse checkout for merging
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

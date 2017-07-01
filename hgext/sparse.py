@@ -335,7 +335,7 @@ def _setupdirstate(ui):
 
     # Prevent adding files that are outside the sparse checkout
     editfuncs = ['normal', 'add', 'normallookup', 'copy', 'remove', 'merge']
-    hint = _('include file with `hg sparse --include <pattern>` or use ' +
+    hint = _('include file with `hg debugsparse --include <pattern>` or use ' +
              '`hg add -s <file>` to include file directory while adding')
     for func in editfuncs:
         def _wrapper(orig, self, *args):
@@ -622,7 +622,7 @@ def _wraprepo(ui, repo):
     repo.signaturecache = {}
     repo.__class__ = SparseRepo
 
-@command('^sparse', [
+@command('^debugsparse', [
     ('I', 'include', False, _('include files in the sparse checkout')),
     ('X', 'exclude', False, _('exclude files in the sparse checkout')),
     ('d', 'delete', False, _('delete an include/exclude rule')),
@@ -635,7 +635,7 @@ def _wraprepo(ui, repo):
     ('', 'reset', False, _('makes the repo full again')),
     ] + commands.templateopts,
     _('[--OPTION] PATTERN...'))
-def sparse(ui, repo, *pats, **opts):
+def debugsparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
 
     The sparse command is used to make the current checkout sparse.
