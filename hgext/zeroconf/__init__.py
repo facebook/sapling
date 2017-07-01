@@ -167,12 +167,12 @@ def getzcpaths():
                                   value.properties.get("path", "/"))
         yield "zc-" + name, url
 
-def config(orig, self, section, key, default=None, untrusted=False):
+def config(orig, self, section, key, *args, **kwargs):
     if section == "paths" and key.startswith("zc-"):
         for name, path in getzcpaths():
             if name == key:
                 return path
-    return orig(self, section, key, default, untrusted)
+    return orig(self, section, key, *args, **kwargs)
 
 def configitems(orig, self, section, *args, **kwargs):
     repos = orig(self, section, *args, **kwargs)
