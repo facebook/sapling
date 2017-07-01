@@ -83,7 +83,6 @@ Some special comments could have side effects:
 from __future__ import absolute_import, print_function
 
 import collections
-import contextlib
 import itertools
 
 from mercurial.i18n import _
@@ -277,13 +276,6 @@ def _walkgraph(edges):
                 if leaf in v:
                     v.remove(leaf)
 
-@contextlib.contextmanager
-def transaction(repo):
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('drawdag'):
-                yield
-
 @command('debugdrawdag', [])
 def debugdrawdag(ui, repo, **opts):
     """read an ASCII graph from stdin and create changesets
@@ -332,7 +324,7 @@ def debugdrawdag(ui, repo, **opts):
                     local=True)
 
     # handle special comments
-    with transaction(repo):
+    with repo.wlock(), repo.lock(), repo.transaction('drawdag'):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
         for line in text.splitlines():
             if ' # ' not in line:
