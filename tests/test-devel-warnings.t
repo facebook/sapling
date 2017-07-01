@@ -187,7 +187,7 @@ Test programming error failure:
 Old style deprecation warning
 
   $ hg nouiwarning
-  $TESTTMP/buggylocking.py:61: DeprecationWarning: this is a test
+  $TESTTMP/buggylocking.py:*: DeprecationWarning: this is a test (glob)
   (compatibility will be dropped after Mercurial-13.37, update your code.)
     util.nouideprecwarn('this is a test', '13.37')
 
