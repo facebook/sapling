@@ -2,7 +2,7 @@
 
 cpp_unittest(
     name = "test",
-    srcs = glob(
+    srcs = ["main.cpp"] + glob(
         ["*Test.cpp"],
         excludes = [
             # TODO(mbolin): Figure out what is salvagable from these tests and
@@ -27,6 +27,8 @@ cpp_unittest(
         "@/folly:format",
         "@/folly:range",
         "@/folly:string",
+        "@/folly/experimental/logging:init",
+        "@/folly/init:init",
         "@/folly/test:test_utils",
     ],
     external_deps = [
