@@ -333,7 +333,12 @@ Test rebase interrupted by hooks
 
   $ cp -R a3 hook-pretxncommit
   $ cd hook-pretxncommit
-  $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxncommit=hg log -r $HG_NODE | grep "summary:     C"'
+#if windows
+  $ NODE="%HG_NODE%"
+#else
+  $ NODE="\$HG_NODE"
+#endif
+  $ hg rebase --source 2 --dest 5 --tool internal:other --config "hooks.pretxncommit=hg log -r $NODE | grep \"summary:     C\""
   rebasing 2:965c486023db "C"
   summary:     C
   rebasing 6:a0b2430ebfb8 "F" (tip)
