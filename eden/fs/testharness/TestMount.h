@@ -159,6 +159,17 @@ class TestMount {
   }
 
   /**
+   * Re-create the EdenMount object, simulating a scenario where it was
+   * unmounted and then remounted.
+   *
+   * Note that if the caller is holding references to the old EdenMount object
+   * this will prevent it from being destroyed.  This may result in an error
+   * trying to create the new EdenMount if the old mount object still exists
+   * and is still holding a lock on the overlay or other data structures.
+   */
+  void remount();
+
+  /**
    * Add file to the mount; it will be available in the overlay.
    */
   void addFile(folly::StringPiece path, folly::StringPiece contents);

@@ -153,6 +153,25 @@ void TestMount::initTestDirectory() {
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
 }
 
+void TestMount::remount() {
+  // Create a new copy of the ClientConfig
+  auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
+  // Create a new ObjectStore pointing to our local store and backing storpe
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+
+  // Reset the edenMount_ pointer.  This will destroy the old EdenMount
+  // assuming that no-one else still has any references to it.
+  //
+  // We do this explicitly so that the old edenMount_ is destroyed before we
+  // create the new one below.
+  edenMount_.reset();
+
+  // Create a new EdenMount object.
+  edenMount_ = EdenMount::makeShared(
+      std::move(config), std::move(objectStore), AbsolutePathPiece(), &stats_);
+}
+
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {
   resetCommit(nextCommitHash(), builder, setReady);
 }
