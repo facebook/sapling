@@ -493,9 +493,9 @@ def _wraprepo(ui, repo):
             # resolve and can be slow.
             return self.filectx(profile, changeid=changeid).data()
 
-        def sparsechecksum(self, filepath):
-            fh = open(filepath)
-            return hashlib.sha1(fh.read()).hexdigest()
+        def _sparsechecksum(self, path):
+            data = self.vfs.read(path)
+            return hashlib.sha1(data).hexdigest()
 
         def _sparsesignature(self, includetemp=True):
             """Returns the signature string representing the contents of the
@@ -511,8 +511,7 @@ def _wraprepo(ui, repo):
             if signature is None or (includetemp and tempsignature is None):
                 signature = 0
                 try:
-                    sparsepath = self.vfs.join('sparse')
-                    signature = self.sparsechecksum(sparsepath)
+                    signature = self._sparsechecksum('sparse')
                 except (OSError, IOError):
                     pass
                 signaturecache['signature'] = signature
@@ -520,8 +519,7 @@ def _wraprepo(ui, repo):
                 tempsignature = 0
                 if includetemp:
                     try:
-                        tempsparsepath = self.vfs.join('tempsparse')
-                        tempsignature = self.sparsechecksum(tempsparsepath)
+                        tempsignature = self._sparsechecksum('tempsparse')
                     except (OSError, IOError):
                         pass
                     signaturecache['tempsignature'] = tempsignature
