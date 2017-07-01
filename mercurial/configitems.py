@@ -78,7 +78,7 @@ coreconfigitem('devel', 'serverexactprotocol',
     default='',
 )
 coreconfigitem('devel', 'serverrequirecert',
-    default=None,
+    default=False,
 )
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
