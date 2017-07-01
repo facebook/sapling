@@ -6,6 +6,17 @@
 # GNU General Public License version 2 or any later version.
 
 """allow sparse checkouts of the working directory (EXPERIMENTAL)
+
+(This extension is not yet protected by backwards compatibility
+guarantees. Any aspect may break in future releases until this
+notice is removed.)
+
+This extension allows the working directory to only consist of a
+subset of files for the revision. This allows specific files or
+directories to be explicitly included or excluded. Many repository
+operations have performance proportional to the number of files in
+the working directory. So only realizing a subset of files in the
+working directory can improve performance.
 """
 
 from __future__ import absolute_import
