@@ -237,8 +237,8 @@ class cg1unpacker(object):
         repo.ui.progress(_('manifests'), None)
         self.callback = None
 
-    def apply(self, repo, tr, srctype, url, emptyok=False,
-              targetphase=phases.draft, expectedtotal=None):
+    def apply(self, repo, tr, srctype, url, targetphase=phases.draft,
+              expectedtotal=None):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
         the URL of the repo where this changegroup is coming from.
@@ -297,7 +297,7 @@ class cg1unpacker(object):
             cgnodes = cl.addgroup(self, csmap, trp, addrevisioncb=onchangelog)
             efiles = len(efiles)
 
-            if not (cgnodes or emptyok):
+            if not cgnodes:
                 raise error.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
