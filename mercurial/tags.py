@@ -539,9 +539,10 @@ def tag(repo, names, node, message, local, user, date, editor=False):
             raise error.Abort(_('working copy of .hgtags is changed'),
                              hint=_('please commit .hgtags manually'))
 
-    repo.tags() # instantiate the cache
-    _tag(repo.unfiltered(), names, node, message, local, user, date,
-         editor=editor)
+    with repo.wlock():
+        repo.tags() # instantiate the cache
+        _tag(repo.unfiltered(), names, node, message, local, user, date,
+             editor=editor)
 
 def _tag(repo, names, node, message, local, user, date, extra=None,
          editor=False):
