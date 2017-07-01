@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include "TreeInode.h"
@@ -76,6 +77,14 @@ class Overlay {
 
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;
+
+  /**
+   * An open file descriptor to the overlay info file.
+   *
+   * This is primarily used to hold a lock on the overlay for as long as we are
+   * using it.  We want to ensure that only one eden process
+   */
+  folly::File infoFile_;
 };
 }
 }

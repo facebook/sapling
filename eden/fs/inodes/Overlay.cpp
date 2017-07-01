@@ -101,14 +101,19 @@ void Overlay::initOverlay() {
   if (fd >= 0) {
     // This is an existing overlay directory.
     // Read the info file and make sure we are compatible with its version.
-    File f(fd, true);
-    readExistingOverlay(f.fd());
+    infoFile_ = File{fd, true};
+    readExistingOverlay(infoFile_.fd());
   } else if (errno != ENOENT) {
     folly::throwSystemError(
         "error reading eden overlay info file ", infoPath.stringPiece());
   } else {
     // This is a brand new overlay directory.
     initNewOverlay();
+    infoFile_ = File{infoPath.value().c_str(), O_RDONLY};
+  }
+
+  if (!infoFile_.try_lock()) {
+    folly::throwSystemError("failed to acquire overlay lock on ", infoPath);
   }
 }
 
