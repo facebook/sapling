@@ -104,6 +104,8 @@
   $ hg properlocking
   $ hg nowaitlocking
 
+Stripping from a transaction
+
   $ echo a > a
   $ hg add a
   $ hg commit -m a
