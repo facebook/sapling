@@ -219,7 +219,7 @@ configitem('acl', 'config',
     default=None,
 )
 configitem('acl', 'sources',
-    default='serve',
+    default=['serve'],
 )
 
 def _getusers(ui, group):
@@ -292,7 +292,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         raise error.Abort(_('config error - hook type "%s" cannot stop '
                            'incoming changesets nor commits') % hooktype)
     if (hooktype == 'pretxnchangegroup' and
-        source not in ui.config('acl', 'sources').split()):
+        source not in ui.configlist('acl', 'sources')):
         ui.debug('acl: changes have source "%s" - skipping\n' % source)
         return
 
