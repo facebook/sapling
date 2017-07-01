@@ -298,7 +298,8 @@ class cg1unpacker(object):
             efiles = len(efiles)
 
             if not cgnodes:
-                raise error.Abort(_("received changelog group is empty"))
+                repo.ui.develwarn('applied empty changegroup',
+                                  config='empty-changegroup')
             clend = len(cl)
             changesets = clend - clstart
             repo.ui.progress(_('changesets'), None)
