@@ -589,12 +589,17 @@ create bundle with two heads
 
 update to active bookmark if it's not the parent
 
+(it is known issue that fsmonitor can't handle nested repositories. In
+this test scenario, cloned-bookmark-default and tobundle exist in the
+working directory of current repository)
+
   $ hg summary
   parent: 2:db815d6d32e6 
    2
   branch: default
   bookmarks: *Z Y x  y
-  commit: 1 added, 1 unknown (new branch head)
+  commit: 1 added, 1 unknown (new branch head) (no-fsmonitor !)
+  commit: 1 added, * unknown (new branch head) (glob) (fsmonitor !)
   update: 2 new changesets (update)
   phases: 5 draft
   $ hg update
@@ -774,6 +779,10 @@ tipmost surviving ancestor of the stripped revision.
 
 no-op update doesn't deactivate bookmarks
 
+(it is known issue that fsmonitor can't handle nested repositories. In
+this test scenario, cloned-bookmark-default and tobundle exist in the
+working directory of current repository)
+
   $ hg bookmarks
    * four                      3:9ba5f110a0b3
      should-end-on-two         2:db815d6d32e6
@@ -786,7 +795,8 @@ no-op update doesn't deactivate bookmarks
    y
   branch: test
   bookmarks: *four
-  commit: 2 unknown (clean)
+  commit: 2 unknown (clean) (no-fsmonitor !)
+  commit: * unknown (clean) (glob) (fsmonitor !)
   update: (current)
   phases: 4 draft
 
