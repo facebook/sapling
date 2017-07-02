@@ -288,6 +288,8 @@ class localrepository(object):
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
+        # These auditor are not used by the vfs,
+        # only used when writing this comment: basectx.match
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
                                                 realfs=False)
