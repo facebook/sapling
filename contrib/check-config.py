@@ -13,6 +13,7 @@ import sys
 
 foundopts = {}
 documented = {}
+allowinconsistent = set()
 
 configre = re.compile(r'''
     # Function call
@@ -35,6 +36,11 @@ configwithre = re.compile('''
     \)''', re.VERBOSE | re.MULTILINE)
 
 configpartialre = (r"""ui\.config""")
+
+ignorere = re.compile(r'''
+    \#\s(?P<reason>internal|experimental|deprecated|developer|inconsistent)\s
+    config:\s(?P<config>\S+\.\S+)$
+    ''', re.VERBOSE | re.MULTILINE)
 
 def main(args):
     for f in args:
@@ -82,10 +88,12 @@ def main(args):
                 documented[m.group(1)] = 1
 
             # look for ignore markers
-            m = re.search(r'# (?:internal|experimental|deprecated|developer)'
-                          ' config: (\S+\.\S+)$', l)
+            m = ignorere.search(l)
             if m:
-                documented[m.group(1)] = 1
+                if m.group('reason') == 'inconsistent':
+                    allowinconsistent.add(m.group('config'))
+                else:
+                    documented[m.group('config')] = 1
 
             # look for code-like bits
             line = carryover + l
@@ -100,7 +108,8 @@ def main(args):
                     default = ''
                 if re.match('[a-z.]+$', default):
                     default = '<variable>'
-                if name in foundopts and (ctype, default) != foundopts[name]:
+                if (name in foundopts and (ctype, default) != foundopts[name]
+                    and name not in allowinconsistent):
                     print(l)
                     print("conflict on %s: %r != %r" % (name, (ctype, default),
                                                         foundopts[name]))

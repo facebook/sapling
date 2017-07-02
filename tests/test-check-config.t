@@ -14,6 +14,13 @@ Sanity check check-config.py
   > # Missing with default value
   > foo = ui.configbool('ui', 'missingbool1', default=True)
   > foo = ui.configbool('ui', 'missingbool2', False)
+  > # Inconsistent values for defaults.
+  > foo = ui.configint('ui', 'intdefault', default=1)
+  > foo = ui.configint('ui', 'intdefault', default=42)
+  > # Can suppress inconsistent value error
+  > foo = ui.configint('ui', 'intdefault2', default=1)
+  > # inconsistent config: ui.intdefault2
+  > foo = ui.configint('ui', 'intdefault2', default=42)
   > EOF
 
   $ cat > files << EOF
@@ -24,7 +31,12 @@ Sanity check check-config.py
   $ cd "$TESTDIR"/..
 
   $ $PYTHON contrib/check-config.py < $TESTTMP/files
+  foo = ui.configint('ui', 'intdefault', default=42)
+  
+  conflict on ui.intdefault: ('int', '42') != ('int', '1')
   undocumented: ui.doesnotexist (str)
+  undocumented: ui.intdefault (int) [42]
+  undocumented: ui.intdefault2 (int) [42]
   undocumented: ui.missingbool1 (bool) [True]
   undocumented: ui.missingbool2 (bool)
   undocumented: ui.missingint (int)
@@ -33,6 +45,3 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ syshg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
-              limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
-  
-  conflict on profiling.showmin: ('with', '0.05') != ('with', '0.005')
