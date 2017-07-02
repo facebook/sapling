@@ -21,7 +21,7 @@ Testing hghave extensibility for third party tools
   >   foo
   > EOF
   $ ( \
-  > syshgenv; \
+  > testrepohgenv; \
   > $TESTDIR/run-tests.py $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t \
   > )
   .

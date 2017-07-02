@@ -27,11 +27,10 @@ syshgenv () {
 # in ancient versions of hg. So we double check if "syshg files" works and
 # fallback to hg bundled in the repo.
 syshg files -h >/dev/null 2>/dev/null
-if [ $? -ne 0 ]; then
-    syshg() {
-        hg "$@"
-    }
-    syshgenv() {
-        :
-    }
+if [ $? -eq 0 ]; then
+    alias testrepohg=syshg
+    alias testrepohgenv=syshgenv
+else
+    alias testrepohg=hg
+    alias testrepohgenv=:
 fi

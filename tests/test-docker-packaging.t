@@ -1,7 +1,7 @@
 #require test-repo slow docker
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-  $ syshgenv
+  $ testrepohgenv
 
 Ensure debuild doesn't run the testsuite, as that could get silly.
   $ DEB_BUILD_OPTIONS=nocheck

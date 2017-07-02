@@ -1,7 +1,7 @@
 #require test-repo slow osx osxpackaging
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-  $ syshgenv
+  $ testrepohgenv
 
   $ OUTPUTDIR="`pwd`"
   $ export OUTPUTDIR

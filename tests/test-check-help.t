@@ -23,7 +23,7 @@
 Check if ":hg:`help TOPIC`" is valid:
 (use "xargs -n1 -t" to see which help commands are executed)
 
-  $ syshg files 'glob:{hgdemandimport,hgext,mercurial}/**/*.py' \
+  $ testrepohg files 'glob:{hgdemandimport,hgext,mercurial}/**/*.py' \
   > | sed 's|\\|/|g' \
   > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" \
   > | xargs -n1 hg help > /dev/null

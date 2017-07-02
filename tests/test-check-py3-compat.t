@@ -3,7 +3,8 @@
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
 
-  $ syshg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON contrib/check-py3-compat.py
+  $ testrepohg files 'set:(**.py)' | sed 's|\\|/|g' \
+  > | xargs $PYTHON contrib/check-py3-compat.py
   contrib/python-zstandard/setup.py not using absolute_import
   contrib/python-zstandard/setup_zstd.py not using absolute_import
   contrib/python-zstandard/tests/common.py not using absolute_import
@@ -22,7 +23,8 @@
   tests/test-demandimport.py not using absolute_import
 
 #if py3exe
-  $ syshg files 'set:(**.py) - grep(pygments)' -X hgext/fsmonitor/pywatchman \
+  $ testrepohg files 'set:(**.py) - grep(pygments)' \
+  > -X hgext/fsmonitor/pywatchman \
   > | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
   hgext/convert/transport.py: error importing: <*Error> No module named 'svn.client' (error at transport.py:*) (glob)
@@ -38,7 +40,7 @@
 #endif
 
 #if py3exe py3pygments
-  $ syshg files 'set:(**.py) and grep(pygments)' | sed 's|\\|/|g' \
+  $ testrepohg files 'set:(**.py) and grep(pygments)' | sed 's|\\|/|g' \
   > | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
 #endif

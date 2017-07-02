@@ -43,5 +43,5 @@ Sanity check check-config.py
 
 New errors are not allowed. Warnings are strongly discouraged.
 
-  $ syshg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
+  $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py

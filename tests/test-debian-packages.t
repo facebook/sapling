@@ -1,7 +1,7 @@
 #require test-repo slow debhelper
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-  $ syshgenv
+  $ testrepohgenv
 
 Ensure debuild doesn't run the testsuite, as that could get silly.
   $ DEB_BUILD_OPTIONS=nocheck

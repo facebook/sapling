@@ -6,7 +6,7 @@
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
 
-  $ syshg locate 'set:**.py or grep("^#!.*python")' \
+  $ testrepohg locate 'set:**.py or grep("^#!.*python")' \
   > -X hgext/fsmonitor/pywatchman \
   > -X mercurial/pycompat.py -X contrib/python-zstandard \
   > 2>/dev/null \

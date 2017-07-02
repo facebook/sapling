@@ -14,7 +14,7 @@ these may expose other cycles.
 Known-bad files are excluded by -X as some of them would produce unstable
 outputs, which should be fixed later.
 
-  $ syshg locate 'set:**.py or grep(r"^#!.*?python")' \
+  $ testrepohg locate 'set:**.py or grep(r"^#!.*?python")' \
   > 'tests/**.t' \
   > -X contrib/debugshell.py \
   > -X contrib/python-zstandard/ \
