@@ -16,7 +16,7 @@ cpp_library(
         "@/folly:conv",
         "@/folly:exception",
         "@/folly:exception_wrapper",
-        "@/folly:file",
+        "@/folly:file_util",
         "@/folly:format",
         "@/folly:optional",
         "@/folly:portability",

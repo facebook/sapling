@@ -22,7 +22,7 @@ cpp_library(
         "@/folly:array",
         "@/folly:bits",
         "@/folly:conv",
-        "@/folly:file",
+        "@/folly:file_util",
         "@/folly:range",
         "@/folly:subprocess",
         "@/folly:synchronized",

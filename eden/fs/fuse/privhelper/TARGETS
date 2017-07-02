@@ -9,6 +9,7 @@ cpp_library(
         "@/folly:exception",
         "@/folly:expected",
         "@/folly:file",
+        "@/folly:file_util",
         "@/folly:format",
         "@/folly:range",
         "@/folly:scope_guard",

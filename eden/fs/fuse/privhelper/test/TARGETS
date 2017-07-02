@@ -8,6 +8,7 @@ cpp_unittest(
         "@/eden/fs/fuse/privhelper:privhelper",
         "@/folly:exception",
         "@/folly:file",
+        "@/folly:file_util",
         "@/folly:range",
         "@/folly/experimental:test_util",
         "@/folly/io:iobuf",

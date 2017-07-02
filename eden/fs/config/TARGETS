@@ -9,6 +9,7 @@ cpp_library(
         "@/eden/fs/utils:utils",
         "@/folly:dynamic",
         "@/folly:file",
+        "@/folly:file_util",
         "@/folly:json",
         "@/folly:optional",
         "@/folly:range",

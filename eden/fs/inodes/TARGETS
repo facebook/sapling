@@ -46,6 +46,7 @@ cpp_library(
         "@/folly:exception",
         "@/folly:exception_wrapper",
         "@/folly:file",
+        "@/folly:file_util",
         "@/folly:format",
         "@/folly:likely",
         "@/folly:map_util",

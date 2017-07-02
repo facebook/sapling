@@ -7,7 +7,7 @@ cpp_unittest(
         "@/eden/fs/config:config",
         "@/eden/fs/utils:utils",
         "@/eden/fs/utils/test:test_lib",
-        "@/folly:file",
+        "@/folly:file_util",
         "@/folly/experimental:test_util",
     ],
 )
