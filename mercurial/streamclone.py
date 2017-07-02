@@ -225,10 +225,11 @@ def generatev1(repo):
                 # partially encode name over the wire for backwards compat
                 yield '%s\0%d\n' % (store.encodedir(name), size)
                 if size <= 65536:
-                    with svfs(name, 'rb') as fp:
+                    with svfs(name, 'rb', auditpath=False) as fp:
                         yield fp.read(size)
                 else:
-                    for chunk in util.filechunkiter(svfs(name), limit=size):
+                    data = svfs(name, auditpath=False)
+                    for chunk in util.filechunkiter(data, limit=size):
                         yield chunk
         finally:
             svfs.mustaudit = oldaudit

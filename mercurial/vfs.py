@@ -320,7 +320,8 @@ class vfs(abstractvfs):
         os.chmod(name, self.createmode & 0o666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False,
-                 notindexed=False, backgroundclose=False, checkambig=False):
+                 notindexed=False, backgroundclose=False, checkambig=False,
+                 auditpath=True):
         '''Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
@@ -344,11 +345,12 @@ class vfs(abstractvfs):
         only for writing), and is useful only if target file is
         guarded by any lock (e.g. repo.lock or repo.wlock).
         '''
-        if self._audit:
-            r = util.checkosfilename(path)
-            if r:
-                raise error.Abort("%s: %r" % (r, path))
-        self.audit(path)
+        if auditpath:
+            if self._audit:
+                r = util.checkosfilename(path)
+                if r:
+                    raise error.Abort("%s: %r" % (r, path))
+            self.audit(path)
         f = self.join(path)
 
         if not text and "b" not in mode:
