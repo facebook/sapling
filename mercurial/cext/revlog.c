@@ -8,6 +8,7 @@
 */
 
 #include <Python.h>
+#include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
 #include <string.h>
@@ -816,6 +817,11 @@ bail:
 	return NULL;
 }
 
+/**
+ * Obtain the base revision index entry.
+ *
+ * Callers must ensure that rev >= 0 or illegal memory access may occur.
+ */
 static inline int index_baserev(indexObject *self, int rev)
 {
 	const char *data;
@@ -841,7 +847,7 @@ static PyObject *index_deltachain(indexObject *self, PyObject *args)
 	PyObject *stoparg;
 	int stoprev, iterrev, baserev = -1;
 	int stopped;
-	PyObject *chain = NULL, *value = NULL, *result = NULL;
+	PyObject *chain = NULL, *result = NULL;
 	const Py_ssize_t length = index_length(self);
 
 	if (!PyArg_ParseTuple(args, "iOi", &rev, &stoparg, &generaldelta)) {
@@ -876,15 +882,16 @@ static PyObject *index_deltachain(indexObject *self, PyObject *args)
 	baserev = index_baserev(self, rev);
 
 	/* This should never happen. */
-	if (baserev == -2) {
-		PyErr_SetString(PyExc_IndexError, "unable to resolve data");
+	if (baserev <= -2) {
+		/* Error should be set by index_deref() */
+		assert(PyErr_Occurred());
 		goto bail;
 	}
 
 	iterrev = rev;
 
 	while (iterrev != baserev && iterrev != stoprev) {
-		value = PyInt_FromLong(iterrev);
+		PyObject *value = PyInt_FromLong(iterrev);
 		if (value == NULL) {
 			goto bail;
 		}
@@ -913,8 +920,9 @@ static PyObject *index_deltachain(indexObject *self, PyObject *args)
 		baserev = index_baserev(self, iterrev);
 
 		/* This should never happen. */
-		if (baserev == -2) {
-			PyErr_SetString(PyExc_IndexError, "unable to resolve data");
+		if (baserev <= -2) {
+			/* Error should be set by index_deref() */
+			assert(PyErr_Occurred());
 			goto bail;
 		}
 	}
@@ -923,7 +931,7 @@ static PyObject *index_deltachain(indexObject *self, PyObject *args)
 		stopped = 1;
 	}
 	else {
-		value = PyInt_FromLong(iterrev);
+		PyObject *value = PyInt_FromLong(iterrev);
 		if (value == NULL) {
 			goto bail;
 		}
