@@ -354,6 +354,12 @@ def desthistedit(ui, repo):
 
     return None
 
+def stackbase(ui, repo):
+    # The histedit default base stops at public changesets, branchpoints,
+    # and merges, which is exactly what we want for a stack.
+    revs = scmutil.revrange(repo, [histeditdefaultrevset])
+    return revs.last() if revs else None
+
 def _statusotherbook(ui, repo):
     bmheads = bookmarks.headsforactive(repo)
     curhead = repo[repo._activebookmark].node()

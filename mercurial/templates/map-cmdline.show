@@ -6,6 +6,7 @@
 showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, 5)}\n'
 
 showwork = '{cset_shortnode}{namespaces % cset_namespace} {cset_shortdesc}'
+showstack = '{showwork}'
 
 cset_shortnode = '{label("log.changeset changeset.{phase}", shortest(node, 5))}'
 

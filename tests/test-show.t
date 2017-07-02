@@ -11,6 +11,7 @@ No arguments shows available views
   available views:
   
   bookmarks -- bookmarks and their associated changeset
+  stack -- current line of work
   work -- changesets that aren't finished
   
   abort: no view requested
@@ -39,6 +40,8 @@ No arguments shows available views
       List of available views:
   
       bookmarks   bookmarks and their associated changeset
+  
+      stack       current line of work
   
       work        changesets that aren't finished
   

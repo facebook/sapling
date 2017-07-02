@@ -32,9 +32,11 @@ from mercurial.node import nullrev
 from mercurial import (
     cmdutil,
     commands,
+    destutil,
     error,
     formatter,
     graphmod,
+    phases,
     pycompat,
     registrar,
     revset,
@@ -170,6 +172,166 @@ def showbookmarks(ui, repo, fm):
         fm.write('node', fm.hexfunc(node), fm.hexfunc(node))
         fm.data(active=bm == active,
                 longestbookmarklen=longestname)
+
+@showview('stack', csettopic='stack')
+def showstack(ui, repo, displayer):
+    """current line of work"""
+    wdirctx = repo['.']
+    if wdirctx.rev() == nullrev:
+        raise error.Abort(_('stack view only available when there is a '
+                            'working directory'))
+
+    if wdirctx.phase() == phases.public:
+        ui.write(_('(empty stack; working directory is a published '
+                   'changeset)\n'))
+        return
+
+    # TODO extract "find stack" into a function to facilitate
+    # customization and reuse.
+
+    baserev = destutil.stackbase(ui, repo)
+    basectx = None
+
+    if baserev is None:
+        baserev = wdirctx.rev()
+        stackrevs = {wdirctx.rev()}
+    else:
+        stackrevs = set(repo.revs('%d::.', baserev))
+
+    ctx = repo[baserev]
+    if ctx.p1().rev() != nullrev:
+        basectx = ctx.p1()
+
+    # And relevant descendants.
+    branchpointattip = False
+    cl = repo.changelog
+
+    for rev in cl.descendants([wdirctx.rev()]):
+        ctx = repo[rev]
+
+        # Will only happen if . is public.
+        if ctx.phase() == phases.public:
+            break
+
+        stackrevs.add(ctx.rev())
+
+        if len(ctx.children()) > 1:
+            branchpointattip = True
+            break
+
+    stackrevs = list(reversed(sorted(stackrevs)))
+
+    # Find likely target heads for the current stack. These are likely
+    # merge or rebase targets.
+    if basectx:
+        # TODO make this customizable?
+        newheads = set(repo.revs('heads(%d::) - %ld - not public()',
+                                 basectx.rev(), stackrevs))
+    else:
+        newheads = set()
+
+    try:
+        cmdutil.findcmd('rebase', commands.table)
+        haverebase = True
+    except error.UnknownCommand:
+        haverebase = False
+
+    # TODO use templating.
+    # TODO consider using graphmod. But it may not be necessary given
+    # our simplicity and the customizations required.
+    # TODO use proper graph symbols from graphmod
+
+    shortesttmpl = formatter.maketemplater(ui, '{shortest(node, 5)}')
+    def shortest(ctx):
+        return shortesttmpl.render({'ctx': ctx, 'node': ctx.hex()})
+
+    # We write out new heads to aid in DAG awareness and to help with decision
+    # making on how the stack should be reconciled with commits made since the
+    # branch point.
+    if newheads:
+        # Calculate distance from base so we can render the count and so we can
+        # sort display order by commit distance.
+        revdistance = {}
+        for head in newheads:
+            # There is some redundancy in DAG traversal here and therefore
+            # room to optimize.
+            ancestors = cl.ancestors([head], stoprev=basectx.rev())
+            revdistance[head] = len(list(ancestors))
+
+        sourcectx = repo[stackrevs[-1]]
+
+        sortedheads = sorted(newheads, key=lambda x: revdistance[x],
+                             reverse=True)
+
+        for i, rev in enumerate(sortedheads):
+            ctx = repo[rev]
+
+            if i:
+                ui.write(': ')
+            else:
+                ui.write('  ')
+
+            ui.write(('o  '))
+            displayer.show(ctx)
+            displayer.flush(ctx)
+            ui.write('\n')
+
+            if i:
+                ui.write(':/')
+            else:
+                ui.write(' /')
+
+            ui.write('    (')
+            ui.write(_('%d commits ahead') % revdistance[rev],
+                     label='stack.commitdistance')
+
+            if haverebase:
+                # TODO may be able to omit --source in some scenarios
+                ui.write('; ')
+                ui.write(('hg rebase --source %s --dest %s' % (
+                         shortest(sourcectx), shortest(ctx))),
+                         label='stack.rebasehint')
+
+            ui.write(')\n')
+
+        ui.write(':\n:    ')
+        ui.write(_('(stack head)\n'), label='stack.label')
+
+    if branchpointattip:
+        ui.write(' \\ /  ')
+        ui.write(_('(multiple children)\n'), label='stack.label')
+        ui.write('  |\n')
+
+    for rev in stackrevs:
+        ctx = repo[rev]
+        symbol = '@' if rev == wdirctx.rev() else 'o'
+
+        if newheads:
+            ui.write(': ')
+        else:
+            ui.write('  ')
+
+        ui.write(symbol, '  ')
+        displayer.show(ctx)
+        displayer.flush(ctx)
+        ui.write('\n')
+
+    # TODO display histedit hint?
+
+    if basectx:
+        # Vertically and horizontally separate stack base from parent
+        # to reinforce stack boundary.
+        if newheads:
+            ui.write(':/   ')
+        else:
+            ui.write(' /   ')
+
+        ui.write(_('(stack base)'), '\n', label='stack.label')
+        ui.write(('o  '))
+
+        displayer.show(basectx)
+        displayer.flush(basectx)
+        ui.write('\n')
 
 @revsetpredicate('_underway([commitage[, headage]])')
 def underwayrevset(repo, subset, x):
