@@ -23,6 +23,24 @@ syshgenv () {
     export HGPLAIN
 }
 
+# The test-repo is a live hg repository which may have evolution markers
+# created, e.g. when a ~/.hgrc enabled evolution.
+#
+# Tests may be run using a custom HGRCPATH, which do not enable evolution
+# markers by default.
+#
+# If test-repo includes evolution markers, and we do not enable evolution
+# markers, hg will occasionally complain when it notices them, which disrupts
+# tests resulting in sporadic failures.
+#
+# Since we aren't performing any write operations on the test-repo, there's
+# no harm in telling hg that we support evolution markers, which is what the
+# following lines for the hgrc file do:
+cat >> "$HGRCPATH" << EOF
+[experimental]
+evolution = createmarkers
+EOF
+
 # Most test-check-* sourcing this file run "hg files", which is not available
 # in ancient versions of hg. So we double check if "syshg files" works and
 # fallback to hg bundled in the repo.
