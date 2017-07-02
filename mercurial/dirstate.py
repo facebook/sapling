@@ -83,10 +83,6 @@ class dirstate(object):
         # ntpath.join(root, '') of Python 2.7.9 does not add sep if root is
         # UNC path pointing to root share (issue4557)
         self._rootdir = pathutil.normasprefix(root)
-        # internal config: ui.forcecwd
-        forcecwd = ui.config('ui', 'forcecwd')
-        if forcecwd:
-            self._cwd = forcecwd
         self._dirty = False
         self._dirtypl = False
         self._lastnormaltime = 0
@@ -299,6 +295,10 @@ class dirstate(object):
 
     @propertycache
     def _cwd(self):
+        # internal config: ui.forcecwd
+        forcecwd = self._ui.config('ui', 'forcecwd')
+        if forcecwd:
+            return forcecwd
         return pycompat.getcwd()
 
     def getcwd(self):
