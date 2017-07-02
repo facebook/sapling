@@ -327,6 +327,9 @@ def getobsoleted(repo, tr):
             obsoleted.add(rev)
     return obsoleted
 
+class _succs(list):
+    """small class to represent a successors with some metadata about it"""
+
 def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
 
@@ -445,7 +448,7 @@ def successorssets(repo, initialnode, closest=False, cache=None):
             # case (2): end of walk.
             if current in repo:
                 # We have a valid successors.
-                cache[current] = [(current,)]
+                cache[current] = [_succs((current,))]
             else:
                 # Final obsolete version is unknown locally.
                 # Do not count that as a valid successors
@@ -521,13 +524,13 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 succssets = []
                 for mark in sorted(succmarkers[current]):
                     # successors sets contributed by this marker
-                    markss = [[]]
+                    markss = [_succs()]
                     for suc in mark[1]:
                         # cardinal product with previous successors
                         productresult = []
                         for prefix in markss:
                             for suffix in cache[suc]:
-                                newss = list(prefix)
+                                newss = _succs(prefix)
                                 for part in suffix:
                                     # do not duplicated entry in successors set
                                     # first entry wins.
