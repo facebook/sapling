@@ -58,7 +58,7 @@ FileInode::FileInode(
     mode_t mode,
     const folly::Optional<Hash>& hash)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(folly::construct_in_place, this, mode, hash) {}
+      state_(folly::in_place, this, mode, hash) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,
@@ -68,7 +68,7 @@ FileInode::FileInode(
     folly::File&& file,
     dev_t rdev)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(folly::construct_in_place, this, mode, std::move(file), rdev) {}
+      state_(folly::in_place, this, mode, std::move(file), rdev) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   auto data = getOrLoadData();

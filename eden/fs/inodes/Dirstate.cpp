@@ -46,7 +46,7 @@ class ThriftStatusCallback : public InodeDiffCallback {
  public:
   explicit ThriftStatusCallback(
       const folly::StringKeyedUnorderedMap<DirstateTuple>& hgDirstateTuples)
-      : data_{folly::construct_in_place, hgDirstateTuples} {}
+      : data_{folly::in_place, hgDirstateTuples} {}
 
   void ignoredFile(RelativePathPiece path) override {
     processChangedFile(

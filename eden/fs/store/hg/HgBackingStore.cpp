@@ -31,7 +31,7 @@ namespace eden {
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore)
-    : importer_(folly::construct_in_place, repository, localStore),
+    : importer_(folly::in_place, repository, localStore),
       localStore_(localStore) {}
 
 HgBackingStore::~HgBackingStore() {}
