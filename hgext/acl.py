@@ -219,7 +219,7 @@ configitem('acl', 'config',
     default=None,
 )
 configitem('acl', 'sources',
-    default=['serve'],
+    default=lambda: ['serve'],
 )
 
 def _getusers(ui, group):
