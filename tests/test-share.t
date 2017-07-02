@@ -243,6 +243,8 @@ test that commits work
 non largefiles repos won't enable largefiles
 
   $ hg share --config extensions.largefiles= repo3 sharedrepo
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   updating working directory
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ [ -f sharedrepo/.hg/hgrc ]

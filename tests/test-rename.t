@@ -625,6 +625,7 @@ check illegal path components
   abort: path contains illegal component: .hg/a1 (glob)
   [255]
   $ hg --config extensions.largefiles= rename d1/d11/a1 .hg
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   abort: path contains illegal component: .hg/a1 (glob)
   [255]
   $ hg status -C
@@ -632,6 +633,7 @@ check illegal path components
   abort: ../a1 not under root '$TESTTMP' (glob)
   [255]
   $ hg --config extensions.largefiles= rename d1/d11/a1 ..
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   abort: ../a1 not under root '$TESTTMP' (glob)
   [255]
   $ hg status -C

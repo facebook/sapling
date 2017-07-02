@@ -47,6 +47,7 @@ changeset graph
 
 Make sure largefiles doesn't interfere with logging a regular file
   $ hg --debug log a -T '{rev}: {desc}\n' --config extensions.largefiles=
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   updated patterns: .hglf/a, a
   0: a
   $ hg log a
@@ -67,6 +68,7 @@ Make sure largefiles doesn't interfere with logging a regular file
   summary:     a
   
   $ hg --debug log glob:a* -T '{rev}: {desc}\n' --config extensions.largefiles=
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   updated patterns: glob:.hglf/a*, glob:a*
   3: d
   0: a
@@ -2077,6 +2079,7 @@ hg log -f dir across branches
   
 Ensure that largefiles doesn't interfere with following a normal file
   $ hg  --config extensions.largefiles= log -f d -T '{desc}' -G
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   @  c
   |
   o  a

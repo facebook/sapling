@@ -81,6 +81,7 @@ Test log
   
 Largefiles doesn't crash
   $ hg log -T '{rev}\n' --stat 'set:modified()' --config extensions.largefiles=
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   1
    content1_content2_content1-tracked |  2 +-
    content1_content2_content3-tracked |  2 +-

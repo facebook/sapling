@@ -730,6 +730,7 @@ final release (and dirstate flush).
   $ hg ci -ma
   223eafe2750c tip
   $ hg up 0 --config extensions.largefiles=
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

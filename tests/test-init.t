@@ -135,6 +135,8 @@ clone to remote1
 
 The largefiles extension doesn't crash
   $ hg clone -e "python \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remotelf --config extensions.largefiles=
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
   searching for changes
   remote: adding changesets
   remote: adding manifests
