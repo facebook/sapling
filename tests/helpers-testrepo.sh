@@ -1,5 +1,6 @@
-# Invoke the system hg installation (rather than the local hg version being
-# tested).
+# In most cases, the mercurial repository can be read by the bundled hg, but
+# that isn't always true because third-party extensions may change the store
+# format, for example. In which case, the system hg installation is used.
 #
 # We want to use the hg version being tested when interacting with the test
 # repository, and the system hg when interacting with the mercurial source code
@@ -41,11 +42,9 @@ cat >> "$HGRCPATH" << EOF
 evolution = createmarkers
 EOF
 
-# Most test-check-* sourcing this file run "hg files", which is not available
-# in ancient versions of hg. So we double check if "syshg files" works and
-# fallback to hg bundled in the repo.
-syshg files -h >/dev/null 2>/dev/null
-if [ $? -eq 0 ]; then
+# Use the system hg command if the bundled hg can't read the repository with
+# no warning nor error.
+if [ -n "`hg id -R "$TESTDIR/.." 2>&1 >/dev/null`" ]; then
     alias testrepohg=syshg
     alias testrepohgenv=syshgenv
 else
