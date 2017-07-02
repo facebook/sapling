@@ -213,26 +213,21 @@ def generatev1(repo):
                   (len(entries), total_bytes))
 
     svfs = repo.svfs
-    oldaudit = svfs.mustaudit
     debugflag = repo.ui.debugflag
-    svfs.mustaudit = False
 
     def emitrevlogdata():
-        try:
-            for name, size in entries:
-                if debugflag:
-                    repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-                # partially encode name over the wire for backwards compat
-                yield '%s\0%d\n' % (store.encodedir(name), size)
-                if size <= 65536:
-                    with svfs(name, 'rb', auditpath=False) as fp:
-                        yield fp.read(size)
-                else:
-                    data = svfs(name, auditpath=False)
-                    for chunk in util.filechunkiter(data, limit=size):
-                        yield chunk
-        finally:
-            svfs.mustaudit = oldaudit
+        for name, size in entries:
+            if debugflag:
+                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+            # partially encode name over the wire for backwards compat
+            yield '%s\0%d\n' % (store.encodedir(name), size)
+            if size <= 65536:
+                with svfs(name, 'rb', auditpath=False) as fp:
+                    yield fp.read(size)
+            else:
+                data = svfs(name, auditpath=False)
+                for chunk in util.filechunkiter(data, limit=size):
+                    yield chunk
 
     return len(entries), total_bytes, emitrevlogdata()
 
