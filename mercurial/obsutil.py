@@ -330,6 +330,9 @@ def getobsoleted(repo, tr):
 class _succs(list):
     """small class to represent a successors with some metadata about it"""
 
+    def copy(self):
+        return _succs(self)
+
 def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
 
@@ -530,7 +533,7 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                         productresult = []
                         for prefix in markss:
                             for suffix in cache[suc]:
-                                newss = _succs(prefix)
+                                newss = prefix.copy()
                                 for part in suffix:
                                     # do not duplicated entry in successors set
                                     # first entry wins.
