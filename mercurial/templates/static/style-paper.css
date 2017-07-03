@@ -214,6 +214,7 @@ td.annotate {
   white-space: nowrap;
 }
 div.annotate-info {
+  z-index: 5;
   display: none;
   position: absolute;
   background-color: #FFFFFF;
@@ -267,7 +268,7 @@ td.annotate:hover div.annotate-info { display: inline; }
   -ms-user-select: none;
   user-select: none;
   display: inline-block;
-  margin-left: -5em;
+  margin-left: -6em;
   width: 4em;
   font-size: smaller;
   color: #999;
@@ -280,11 +281,7 @@ td.annotate:hover div.annotate-info { display: inline; }
   background-color: #bfdfff;
 }
 
-div.overflow table tbody.sourcelines > tr.followlines-select:hover,
-div.overflow pre.sourcelines > span.followlines-select:hover {
-  cursor: cell;
-}
-
+/* Followlines */
 tbody.sourcelines > tr.followlines-selected,
 pre.sourcelines > span.followlines-selected {
   background-color: #99C7E9;
@@ -322,19 +319,59 @@ div.followlines-link {
   font-family: sans-serif;
 }
 
-div#followlines-tooltip {
+.btn-followlines {
   display: none;
-  position: fixed;
-  background-color: #ffc;
-  border: 1px solid #999;
-  padding: 2px;
+  cursor: pointer;
+  box-sizing: content-box;
+  font-size: 12px;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  margin: 0px;
+  margin-top: -2px;
+  padding: 0px;
+  background-color: #E5FDE5;
+  border: 1px solid #9BC19B;
+  font-family: monospace;
+  text-align: center;
+  line-height: 5px;
 }
 
-.sourcelines:hover > div#followlines-tooltip {
+tr .btn-followlines {
+  position: absolute;
+}
+
+span .btn-followlines {
+  float: left;
+}
+
+span.followlines-select .btn-followlines {
+  margin-left: -1.5em;
+}
+
+.btn-followlines:hover {
+  transform: scale(1.2, 1.2);
+}
+
+.btn-followlines .followlines-plus {
+  color: green;
+}
+
+.btn-followlines .followlines-minus {
+  color: red;
+}
+
+.btn-followlines-end {
+  background-color: #ffdcdc;
+}
+
+.sourcelines tr:hover .btn-followlines,
+.sourcelines span.followlines-select:hover > .btn-followlines {
   display: inline;
 }
 
-.sourcelines:hover > div#followlines-tooltip.hidden {
+.btn-followlines-hidden,
+.sourcelines tr:hover .btn-followlines-hidden {
   display: none;
 }
 

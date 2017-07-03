@@ -26,14 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var isHead = parseInt(sourcelines.dataset.ishead || "0");
 
-    // tooltip to invite on lines selection
-    var tooltip = document.createElement('div');
-    tooltip.id = 'followlines-tooltip';
-    tooltip.classList.add('hidden');
-    var initTooltipText = 'click to start following lines history from here';
-    tooltip.textContent = initTooltipText;
-    sourcelines.appendChild(tooltip);
-
     //* position "element" on top-right of cursor */
     function positionTopRight(element, event) {
         var x = (event.clientX + 10) + 'px',
@@ -42,32 +34,60 @@ document.addEventListener('DOMContentLoaded', function() {
         element.style.left = x;
     }
 
-    var tooltipTimeoutID;
-    //* move the "tooltip" with cursor (top-right) and show it after 1s */
-    function moveAndShowTooltip(e) {
-        if (typeof tooltipTimeoutID !== 'undefined') {
-            // avoid accumulation of timeout callbacks (blinking)
-            window.clearTimeout(tooltipTimeoutID);
-        }
-        tooltip.classList.add('hidden');
-        positionTopRight(tooltip, e);
-        tooltipTimeoutID = window.setTimeout(function() {
-            tooltip.classList.remove('hidden');
-        }, 1000);
-    }
-
-    // on mousemove, show tooltip close to cursor position
-    sourcelines.addEventListener('mousemove', moveAndShowTooltip);
-
     // retrieve all direct *selectable* children of class="sourcelines"
     // element
     var selectableElements = Array.prototype.filter.call(
         sourcelines.children,
         function(x) { return x.tagName === selectableTag });
 
-    // add a "followlines-select" class to change cursor type in CSS
+    var btnTitleStart = 'start following lines history from here';
+    var btnTitleEnd = 'terminate line block selection here';
+
+    //** return a <button> element with +/- spans */
+    function createButton() {
+        var btn = document.createElement('button');
+        btn.title = btnTitleStart;
+        btn.classList.add('btn-followlines');
+        var plusSpan = document.createElement('span');
+        plusSpan.classList.add('followlines-plus');
+        plusSpan.textContent = '+';
+        btn.appendChild(plusSpan);
+        var br = document.createElement('br');
+        btn.appendChild(br);
+        var minusSpan = document.createElement('span');
+        minusSpan.classList.add('followlines-minus');
+        minusSpan.textContent = '−';
+        btn.appendChild(minusSpan);
+        return btn;
+    }
+
+    // extend DOM with CSS class for selection highlight and action buttons
+    var followlinesButtons = []
     for (var i = 0; i < selectableElements.length; i++) {
         selectableElements[i].classList.add('followlines-select');
+        var btn = createButton();
+        followlinesButtons.push(btn);
+        // insert the <button> as child of `selectableElements[i]` unless the
+        // latter has itself a child  with a "followlines-btn-parent" class
+        // (annotate view)
+        var btnSupportElm = selectableElements[i];
+        var childSupportElms = btnSupportElm.getElementsByClassName(
+            'followlines-btn-parent');
+        if ( childSupportElms.length > 0 ) {
+            btnSupportElm = childSupportElms[0];
+        }
+        var refNode = btnSupportElm.children[0]; // node to insert <button> before
+        btnSupportElm.insertBefore(btn, refNode);
+    }
+
+    // ** re-initialize followlines buttons */
+    function resetButtons() {
+        for (var i = 0; i < followlinesButtons.length; i++) {
+            var btn = followlinesButtons[i];
+            btn.title = btnTitleStart;
+            btn.classList.remove('btn-followlines-end');
+            btn.classList.remove('btn-followlines-hidden');
+        }
     }
 
     var lineSelectedCSSClass = 'followlines-selected';
@@ -100,27 +120,54 @@ document.addEventListener('DOMContentLoaded', function() {
         return selectableParent(parent);
     }
 
+    // ** update buttons title and style upon first click */
+    function updateButtons(selectable) {
+        for (var i = 0; i < followlinesButtons.length; i++) {
+            var btn = followlinesButtons[i];
+            btn.title = btnTitleEnd;
+            btn.classList.add('btn-followlines-end');
+        }
+        // on clicked button, change title to "cancel"
+        var clicked = selectable.getElementsByClassName('btn-followlines')[0];
+        clicked.title = 'cancel';
+        clicked.classList.remove('btn-followlines-end');
+    }
+
+    //** add `listener` on "click" event for all `followlinesButtons` */
+    function buttonsAddEventListener(listener) {
+        for (var i = 0; i < followlinesButtons.length; i++) {
+            followlinesButtons[i].addEventListener('click', listener);
+        }
+    }
+
+    //** remove `listener` on "click" event for all `followlinesButtons` */
+    function buttonsRemoveEventListener(listener) {
+        for (var i = 0; i < followlinesButtons.length; i++) {
+            followlinesButtons[i].removeEventListener('click', listener);
+        }
+    }
+
     //** event handler for "click" on the first line of a block */
     function lineSelectStart(e) {
-        var startElement = selectableParent(e.target);
+        var startElement = selectableParent(e.target.parentElement);
         if (startElement === null) {
             // not a "selectable" element (maybe <a>): abort, keeping event
             // listener registered for other click with a "selectable" target
             return;
         }
 
-        // update tooltip text
-        tooltip.textContent = 'click again to terminate line block selection here';
+        // update button tooltip text and CSS
+        updateButtons(startElement);
 
         var startId = parseInt(startElement.id.slice(1));
         startElement.classList.add(lineSelectedCSSClass); // CSS
 
         // remove this event listener
-        sourcelines.removeEventListener('click', lineSelectStart);
+        buttonsRemoveEventListener(lineSelectStart);
 
         //** event handler for "click" on the last line of the block */
         function lineSelectEnd(e) {
-            var endElement = selectableParent(e.target);
+            var endElement = selectableParent(e.target.parentElement);
             if (endElement === null) {
                 // not a <span> (maybe <a>): abort, keeping event listener
                 // registered for other click with <span> target
@@ -128,27 +175,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // remove this event listener
-            sourcelines.removeEventListener('click', lineSelectEnd);
+            buttonsRemoveEventListener(lineSelectEnd);
 
-            // hide tooltip and disable motion tracking
-            tooltip.classList.add('hidden');
-            sourcelines.removeEventListener('mousemove', moveAndShowTooltip);
-            window.clearTimeout(tooltipTimeoutID);
-
-            //* restore initial "tooltip" state */
-            function restoreTooltip() {
-                tooltip.textContent = initTooltipText;
-                sourcelines.addEventListener('mousemove', moveAndShowTooltip);
-            }
+            // reset button tooltip text
+            resetButtons();
 
             // compute line range (startId, endId)
             var endId = parseInt(endElement.id.slice(1));
             if (endId == startId) {
                 // clicked twice the same line, cancel and reset initial state
-                // (CSS, event listener for selection start, tooltip)
+                // (CSS, event listener for selection start)
                 removeSelectedCSSClass();
-                sourcelines.addEventListener('click', lineSelectStart);
-                restoreTooltip();
+                buttonsAddEventListener(lineSelectStart);
                 return;
             }
             var inviteElement = endElement;
@@ -169,31 +207,37 @@ document.addEventListener('DOMContentLoaded', function() {
             inviteElement.appendChild(div);
             // set position close to cursor (top-right)
             positionTopRight(div, e);
+            // hide all buttons
+            for (var i = 0; i < followlinesButtons.length; i++) {
+                followlinesButtons[i].classList.add('btn-followlines-hidden');
+            }
 
             //** event handler for cancelling selection */
             function cancel() {
                 // remove invite box
                 div.parentNode.removeChild(div);
                 // restore initial event listeners
-                sourcelines.addEventListener('click', lineSelectStart);
-                sourcelines.removeEventListener('click', cancel);
+                buttonsAddEventListener(lineSelectStart);
+                buttonsRemoveEventListener(cancel);
+                for (var i = 0; i < followlinesButtons.length; i++) {
+                    followlinesButtons[i].classList.remove('btn-followlines-hidden');
+                }
                 // remove styles on selected lines
                 removeSelectedCSSClass();
-                // restore tooltip element
-                restoreTooltip();
+                resetButtons();
             }
 
             // bind cancel event to click on <button>
             button.addEventListener('click', cancel);
             // as well as on an click on any source line
-            sourcelines.addEventListener('click', cancel);
+            buttonsAddEventListener(cancel);
         }
 
-        sourcelines.addEventListener('click', lineSelectEnd);
+        buttonsAddEventListener(lineSelectEnd);
 
     }
 
-    sourcelines.addEventListener('click', lineSelectStart);
+    buttonsAddEventListener(lineSelectStart);
 
     //** return a <div id="followlines"> and inner cancel <button> elements */
     function followlinesBox(targetUri, fromline, toline, isHead) {

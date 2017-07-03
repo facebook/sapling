@@ -94,7 +94,7 @@ annotateline = '
         <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
       </div>
     </td>
-    <td class="source"><a href="#{lineid}">{linenumber}</a> {line|escape}</td>
+    <td class="source followlines-btn-parent"><a href="#{lineid}">{linenumber}</a> {line|escape}</td>
   </tr>'
 annotateparent = '
   <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rev}</a>'

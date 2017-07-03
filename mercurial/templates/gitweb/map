@@ -113,7 +113,7 @@ annotateline = '
         <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
       </div>
     </td>
-    <td><pre><a class="linenr" href="#{lineid}">{linenumber}</a></pre></td>
+    <td class="followlines-btn-parent"><pre><a class="linenr" href="#{lineid}">{linenumber}</a></pre></td>
     <td><pre>{line|escape}</pre></td>
   </tr>'
 annotateparent = '

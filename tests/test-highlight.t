@@ -314,7 +314,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l1">     1</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></td>
+  <td class="source followlines-btn-parent"><a href="#l1">     1</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></td>
   </tr>
   <tr id="l2" class="thisrev">
   <td class="annotate parity0">
@@ -331,7 +331,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l2">     2</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l2">     2</a> </td>
   </tr>
   <tr id="l3" class="thisrev">
   <td class="annotate parity0">
@@ -348,7 +348,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l3">     3</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></td>
+  <td class="source followlines-btn-parent"><a href="#l3">     3</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></td>
   </tr>
   <tr id="l4" class="thisrev">
   <td class="annotate parity0">
@@ -365,7 +365,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l4">     4</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></td>
+  <td class="source followlines-btn-parent"><a href="#l4">     4</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></td>
   </tr>
   <tr id="l5" class="thisrev">
   <td class="annotate parity0">
@@ -382,7 +382,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l5">     5</a> <span class="sd">&quot;&quot;&quot;</span></td>
+  <td class="source followlines-btn-parent"><a href="#l5">     5</a> <span class="sd">&quot;&quot;&quot;</span></td>
   </tr>
   <tr id="l6" class="thisrev">
   <td class="annotate parity0">
@@ -399,7 +399,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l6">     6</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l6">     6</a> </td>
   </tr>
   <tr id="l7" class="thisrev">
   <td class="annotate parity0">
@@ -416,7 +416,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l7">     7</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></td>
+  <td class="source followlines-btn-parent"><a href="#l7">     7</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></td>
   </tr>
   <tr id="l8" class="thisrev">
   <td class="annotate parity0">
@@ -433,7 +433,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l8">     8</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l8">     8</a> </td>
   </tr>
   <tr id="l9" class="thisrev">
   <td class="annotate parity0">
@@ -450,7 +450,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l9">     9</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></td>
+  <td class="source followlines-btn-parent"><a href="#l9">     9</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></td>
   </tr>
   <tr id="l10" class="thisrev">
   <td class="annotate parity0">
@@ -467,7 +467,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l10">    10</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></td>
+  <td class="source followlines-btn-parent"><a href="#l10">    10</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></td>
   </tr>
   <tr id="l11" class="thisrev">
   <td class="annotate parity0">
@@ -484,7 +484,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l11">    11</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
+  <td class="source followlines-btn-parent"><a href="#l11">    11</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
   </tr>
   <tr id="l12" class="thisrev">
   <td class="annotate parity0">
@@ -501,7 +501,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l12">    12</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></td>
+  <td class="source followlines-btn-parent"><a href="#l12">    12</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></td>
   </tr>
   <tr id="l13" class="thisrev">
   <td class="annotate parity0">
@@ -518,7 +518,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l13">    13</a>         <span class="c"># It is important to yield *here* in order to stop the</span></td>
+  <td class="source followlines-btn-parent"><a href="#l13">    13</a>         <span class="c"># It is important to yield *here* in order to stop the</span></td>
   </tr>
   <tr id="l14" class="thisrev">
   <td class="annotate parity0">
@@ -535,7 +535,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l14">    14</a>         <span class="c"># infinite recursion.</span></td>
+  <td class="source followlines-btn-parent"><a href="#l14">    14</a>         <span class="c"># infinite recursion.</span></td>
   </tr>
   <tr id="l15" class="thisrev">
   <td class="annotate parity0">
@@ -552,7 +552,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l15">    15</a>         <span class="kn">yield</span> <span class="n">p</span></td>
+  <td class="source followlines-btn-parent"><a href="#l15">    15</a>         <span class="kn">yield</span> <span class="n">p</span></td>
   </tr>
   <tr id="l16" class="thisrev">
   <td class="annotate parity0">
@@ -569,7 +569,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l16">    16</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
+  <td class="source followlines-btn-parent"><a href="#l16">    16</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
   </tr>
   <tr id="l17" class="thisrev">
   <td class="annotate parity0">
@@ -586,7 +586,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l17">    17</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
+  <td class="source followlines-btn-parent"><a href="#l17">    17</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
   </tr>
   <tr id="l18" class="thisrev">
   <td class="annotate parity0">
@@ -603,7 +603,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l18">    18</a>             <span class="kn">yield</span> <span class="n">n</span></td>
+  <td class="source followlines-btn-parent"><a href="#l18">    18</a>             <span class="kn">yield</span> <span class="n">n</span></td>
   </tr>
   <tr id="l19" class="thisrev">
   <td class="annotate parity0">
@@ -620,7 +620,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l19">    19</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l19">    19</a> </td>
   </tr>
   <tr id="l20" class="thisrev">
   <td class="annotate parity0">
@@ -637,7 +637,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l20">    20</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
+  <td class="source followlines-btn-parent"><a href="#l20">    20</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
   </tr>
   <tr id="l21" class="thisrev">
   <td class="annotate parity0">
@@ -654,7 +654,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l21">    21</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
+  <td class="source followlines-btn-parent"><a href="#l21">    21</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
   </tr>
   <tr id="l22" class="thisrev">
   <td class="annotate parity0">
@@ -671,7 +671,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l22">    22</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l22">    22</a> </td>
   </tr>
   <tr id="l23" class="thisrev">
   <td class="annotate parity0">
@@ -688,7 +688,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l23">    23</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></td>
+  <td class="source followlines-btn-parent"><a href="#l23">    23</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></td>
   </tr>
   <tr id="l24" class="thisrev">
   <td class="annotate parity0">
@@ -705,7 +705,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l24">    24</a>     <span class="kn">import</span> <span class="nn">sys</span></td>
+  <td class="source followlines-btn-parent"><a href="#l24">    24</a>     <span class="kn">import</span> <span class="nn">sys</span></td>
   </tr>
   <tr id="l25" class="thisrev">
   <td class="annotate parity0">
@@ -722,7 +722,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l25">    25</a>     <span class="kn">try</span><span class="p">:</span></td>
+  <td class="source followlines-btn-parent"><a href="#l25">    25</a>     <span class="kn">try</span><span class="p">:</span></td>
   </tr>
   <tr id="l26" class="thisrev">
   <td class="annotate parity0">
@@ -739,7 +739,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l26">    26</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></td>
+  <td class="source followlines-btn-parent"><a href="#l26">    26</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></td>
   </tr>
   <tr id="l27" class="thisrev">
   <td class="annotate parity0">
@@ -756,7 +756,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l27">    27</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></td>
+  <td class="source followlines-btn-parent"><a href="#l27">    27</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></td>
   </tr>
   <tr id="l28" class="thisrev">
   <td class="annotate parity0">
@@ -773,7 +773,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></td>
+  <td class="source followlines-btn-parent"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></td>
   </tr>
   <tr id="l29" class="thisrev">
   <td class="annotate parity0">
@@ -790,7 +790,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l29">    29</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></td>
+  <td class="source followlines-btn-parent"><a href="#l29">    29</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></td>
   </tr>
   <tr id="l30" class="thisrev">
   <td class="annotate parity0">
@@ -807,7 +807,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l30">    30</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></td>
+  <td class="source followlines-btn-parent"><a href="#l30">    30</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></td>
   </tr>
   <tr id="l31" class="thisrev">
   <td class="annotate parity0">
@@ -824,7 +824,7 @@ hgweb fileannotate, html
   <a href="/rev/1af356141006">changeset</a>
   </div>
   </td>
-  <td class="source"><a href="#l31">    31</a> </td>
+  <td class="source followlines-btn-parent"><a href="#l31">    31</a> </td>
   </tr>
   </tbody>
   </table>

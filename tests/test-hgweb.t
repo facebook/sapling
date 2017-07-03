@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 8463
+  content-length: 8985
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -431,6 +431,7 @@ static file
     white-space: nowrap;
   }
   div.annotate-info {
+    z-index: 5;
     display: none;
     position: absolute;
     background-color: #FFFFFF;
@@ -497,7 +498,7 @@ static file
   	-ms-user-select: none;
   	user-select: none;
   	display: inline-block;
-  	margin-left: -5em;
+  	margin-left: -6em;
   	width: 4em;
   	color: #999;
   	text-align: right;
@@ -522,11 +523,6 @@ static file
   }
   
   /* Followlines */
-  div.page_body table tbody.sourcelines > tr.followlines-select:hover,
-  div.page_body pre.sourcelines > span.followlines-select:hover {
-    cursor: cell;
-  }
-  
   tbody.sourcelines > tr.followlines-selected,
   pre.sourcelines > span.followlines-selected {
     background-color: #99C7E9 !important;
@@ -564,21 +560,62 @@ static file
     font-family: sans-serif;
   }
   
-  div#followlines-tooltip {
+  .btn-followlines {
     display: none;
-    position: fixed;
-    background-color: #ffc;
-    border: 1px solid #999;
-    padding: 2px;
+    cursor: pointer;
+    box-sizing: content-box;
+    font-size: 11px;
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    margin: 0px;
+    margin-top: -2px;
+    padding: 0px;
+    background-color: #E5FDE5;
+    border: 1px solid #9BC19B;
+    font-family: monospace;
+    text-align: center;
+    line-height: 5px;
   }
   
-  .sourcelines:hover > div#followlines-tooltip {
+  tr .btn-followlines {
+    position: absolute;
+  }
+  
+  span .btn-followlines {
+    float: left;
+  }
+  
+  span.followlines-select .btn-followlines {
+    margin-left: -1.6em;
+  }
+  
+  .btn-followlines:hover {
+    transform: scale(1.1, 1.1);
+  }
+  
+  .btn-followlines .followlines-plus {
+    color: green;
+  }
+  
+  .btn-followlines .followlines-minus {
+    color: red;
+  }
+  
+  .btn-followlines-end {
+    background-color: #ffdcdc;
+  }
+  
+  .sourcelines tr:hover .btn-followlines,
+  .sourcelines span.followlines-select:hover > .btn-followlines {
     display: inline;
   }
   
-  .sourcelines:hover > div#followlines-tooltip.hidden {
+  .btn-followlines-hidden,
+  .sourcelines tr:hover .btn-followlines-hidden {
     display: none;
   }
+  
   /* Graph */
   div#wrapper {
   	position: relative;
