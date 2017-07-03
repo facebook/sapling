@@ -602,6 +602,38 @@ def showpredecessors(repo, ctx, **args):
                    lambda x: {'ctx': repo[x], 'revcache': {}},
                    lambda d: _formatrevnode(d['ctx']))
 
+@templatekeyword("successorssets")
+def showsuccessorssets(repo, ctx, **args):
+    """Returns a string of sets of successors for a changectx
+
+    Format used is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and
+    ctx2 while also diverged into ctx3"""
+    if not ctx.obsolete():
+        return ''
+    args = pycompat.byteskwargs(args)
+
+    ssets = obsutil.successorssets(repo, ctx.node(), closest=True)
+    ssets = [[hex(n) for n in ss] for ss in ssets]
+
+    data = []
+    for ss in ssets:
+        h = _hybrid(None, ss, lambda x: {'ctx': repo[x], 'revcache': {}},
+                    lambda d: _formatrevnode(d['ctx']))
+        data.append(h)
+
+    # Format the successorssets
+    def render(d):
+        t = []
+        for i in d.gen:
+            t.append(i)
+        return "".join(t)
+
+    def gen(data):
+        yield "; ".join(render(d) for d in data)
+
+    return _hybrid(gen(data), data, lambda x: {'successorset': x},
+                   lambda d: d["successorset"])
+
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
