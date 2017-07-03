@@ -339,6 +339,14 @@ class _succs(list):
         new.markers = self.markers.copy()
         return new
 
+    @util.propertycache
+    def _set(self):
+        # immutable
+        return set(self)
+
+    def canmerge(self, other):
+        return self._set.issubset(other._set)
+
 def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
 
@@ -554,16 +562,16 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 # remove duplicated and subset
                 seen = []
                 final = []
-                candidate = sorted(((set(s), s) for s in succssets if s),
-                                   key=lambda x: len(x[1]), reverse=True)
-                for setversion, listversion in candidate:
-                    for seenset, seensuccs in seen:
-                        if setversion.issubset(seenset):
-                            seensuccs.markers.update(listversion.markers)
+                candidate = sorted((s for s in succssets if s),
+                                   key=len, reverse=True)
+                for cand in candidate:
+                    for seensuccs in seen:
+                        if cand.canmerge(seensuccs):
+                            seensuccs.markers.update(cand.markers)
                             break
                     else:
-                        final.append(listversion)
-                        seen.append((setversion, listversion))
+                        final.append(cand)
+                        seen.append(cand)
                 final.reverse() # put small successors set first
                 cache[current] = final
     return cache[initialnode]
