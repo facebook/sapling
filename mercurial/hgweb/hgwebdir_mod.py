@@ -404,7 +404,7 @@ class hgwebdir(object):
                 except Exception as e:
                     u.warn(_('error reading %s/.hg/hgrc: %s\n') % (path, e))
                     continue
-                def get(section, name, default=None):
+                def get(section, name, default=uimod._unset):
                     return u.config(section, name, default, untrusted=True)
 
                 if u.configbool("web", "hidden", untrusted=True):

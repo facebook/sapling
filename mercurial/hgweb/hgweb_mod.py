@@ -119,19 +119,19 @@ class requestcontext(object):
         self.csp, self.nonce = cspvalues(self.repo.ui)
 
     # Trust the settings from the .hg/hgrc files by default.
-    def config(self, section, name, default=None, untrusted=True):
+    def config(self, section, name, default=uimod._unset, untrusted=True):
         return self.repo.ui.config(section, name, default,
                                    untrusted=untrusted)
 
-    def configbool(self, section, name, default=False, untrusted=True):
+    def configbool(self, section, name, default=uimod._unset, untrusted=True):
         return self.repo.ui.configbool(section, name, default,
                                        untrusted=untrusted)
 
-    def configint(self, section, name, default=None, untrusted=True):
+    def configint(self, section, name, default=uimod._unset, untrusted=True):
         return self.repo.ui.configint(section, name, default,
                                       untrusted=untrusted)
 
-    def configlist(self, section, name, default=None, untrusted=True):
+    def configlist(self, section, name, default=uimod._unset, untrusted=True):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
