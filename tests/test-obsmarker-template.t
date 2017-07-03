@@ -887,3 +887,281 @@ Check templates
   |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
   @  ea207398892e
   
+Test template with split + divergence with cycles
+=================================================
+
+  $ hg log -G
+  o  changeset:   3:f897c6137566
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  @  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+  $ hg up
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Create a commit with three files
+  $ touch A B C
+  $ hg commit -A -m "Add A,B,C" A B C
+
+Split it
+  $ hg up 3
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ touch A
+  $ hg commit -A -m "Add A,B,C" A
+  created new head
+
+  $ touch B
+  $ hg commit -A -m "Add A,B,C" B
+
+  $ touch C
+  $ hg commit -A -m "Add A,B,C" C
+
+  $ hg log -G
+  @  changeset:   7:ba2ed02b0c9a
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   6:4a004186e638
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   5:dd800401bd8c
+  |  parent:      3:f897c6137566
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  | o  changeset:   4:9bd10a0775e4
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     Add A,B,C
+  |
+  o  changeset:   3:f897c6137566
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+  $ hg debugobsolete `getid "4"` `getid "5"` `getid "6"` `getid "7"`
+  $ hg log -G
+  @  changeset:   7:ba2ed02b0c9a
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   6:4a004186e638
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   5:dd800401bd8c
+  |  parent:      3:f897c6137566
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   3:f897c6137566
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+Diverge one of the splitted commit
+
+  $ hg up 6
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg commit --amend -m "Add only B"
+
+  $ hg up 6 --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg commit --amend -m "Add B only"
+
+  $ hg log -G
+  @  changeset:   9:0b997eb7ceee
+  |  tag:         tip
+  |  parent:      5:dd800401bd8c
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  trouble:     divergent
+  |  summary:     Add B only
+  |
+  | o  changeset:   8:b18bc8331526
+  |/   parent:      5:dd800401bd8c
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    trouble:     divergent
+  |    summary:     Add only B
+  |
+  | o  changeset:   7:ba2ed02b0c9a
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  trouble:     unstable, divergent
+  | |  summary:     Add A,B,C
+  | |
+  | x  changeset:   6:4a004186e638
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     Add A,B,C
+  |
+  o  changeset:   5:dd800401bd8c
+  |  parent:      3:f897c6137566
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  trouble:     divergent
+  |  summary:     Add A,B,C
+  |
+  o  changeset:   3:f897c6137566
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+
+Check templates
+---------------
+
+  $ hg tlog
+  @  0b997eb7ceee
+  |    Predecessors: 6:4a004186e638
+  |    semi-colon: 6:4a004186e638
+  |    json: ["4a004186e63889f20cb16434fcbd72220bd1eace"]
+  |    map: 6:4a004186e63889f20cb16434fcbd72220bd1eace
+  | o  b18bc8331526
+  |/     Predecessors: 6:4a004186e638
+  |      semi-colon: 6:4a004186e638
+  |      json: ["4a004186e63889f20cb16434fcbd72220bd1eace"]
+  |      map: 6:4a004186e63889f20cb16434fcbd72220bd1eace
+  | o  ba2ed02b0c9a
+  | |
+  | x  4a004186e638
+  |/
+  o  dd800401bd8c
+  |
+  o  f897c6137566
+  |
+  o  ea207398892e
+  
+  $ hg tlog --hidden
+  @  0b997eb7ceee
+  |    Predecessors: 6:4a004186e638
+  |    semi-colon: 6:4a004186e638
+  |    json: ["4a004186e63889f20cb16434fcbd72220bd1eace"]
+  |    map: 6:4a004186e63889f20cb16434fcbd72220bd1eace
+  | o  b18bc8331526
+  |/     Predecessors: 6:4a004186e638
+  |      semi-colon: 6:4a004186e638
+  |      json: ["4a004186e63889f20cb16434fcbd72220bd1eace"]
+  |      map: 6:4a004186e63889f20cb16434fcbd72220bd1eace
+  | o  ba2ed02b0c9a
+  | |    Predecessors: 4:9bd10a0775e4
+  | |    semi-colon: 4:9bd10a0775e4
+  | |    json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  | |    map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  | x  4a004186e638
+  |/     Predecessors: 4:9bd10a0775e4
+  |      semi-colon: 4:9bd10a0775e4
+  |      json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  |      map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  o  dd800401bd8c
+  |    Predecessors: 4:9bd10a0775e4
+  |    semi-colon: 4:9bd10a0775e4
+  |    json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  |    map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  | x  9bd10a0775e4
+  |/
+  o  f897c6137566
+  |    Predecessors: 2:0dec01379d3b
+  |    semi-colon: 2:0dec01379d3b
+  |    json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |    map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
+  | x  0dec01379d3b
+  | |    Predecessors: 1:471f378eab4c
+  | |    semi-colon: 1:471f378eab4c
+  | |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
+  | |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
+  | x  471f378eab4c
+  |/     Predecessors: 2:0dec01379d3b
+  |      semi-colon: 2:0dec01379d3b
+  |      json: ["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]
+  |      map: 2:0dec01379d3be6318c470ead31b1fe7ae7cb53d5
+  o  ea207398892e
+  
+  $ hg up --hidden 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg rebase -r 7 -d 8 --config extensions.rebase=
+  rebasing 7:ba2ed02b0c9a "Add A,B,C"
+  $ hg tlog
+  o  eceed8f98ffc
+  |    Predecessors: 4:9bd10a0775e4
+  |    semi-colon: 4:9bd10a0775e4
+  |    json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  |    map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  | o  0b997eb7ceee
+  | |    Predecessors: 4:9bd10a0775e4
+  | |    semi-colon: 4:9bd10a0775e4
+  | |    json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  | |    map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  o |  b18bc8331526
+  |/     Predecessors: 4:9bd10a0775e4
+  |      semi-colon: 4:9bd10a0775e4
+  |      json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  |      map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  o  dd800401bd8c
+  |    Predecessors: 4:9bd10a0775e4
+  |    semi-colon: 4:9bd10a0775e4
+  |    json: ["9bd10a0775e478708cada5f176ec6de654359ce7"]
+  |    map: 4:9bd10a0775e478708cada5f176ec6de654359ce7
+  | @  9bd10a0775e4
+  |/
+  o  f897c6137566
+  |
+  o  ea207398892e
+  
+Test templates with pruned commits
+==================================
+
+Test setup
+----------
+
+  $ hg init $TESTTMP/templates-local-prune
+  $ cd $TESTTMP/templates-local-prune
+  $ mkcommit ROOT
+  $ mkcommit A0
+  $ hg debugobsolete --record-parent `getid "."`
+
+Check output
+------------
+
+  $ hg up "desc(A0)" --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg tlog
+  @  471f378eab4c
+  |
+  o  ea207398892e
+  
