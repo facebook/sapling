@@ -601,3 +601,11 @@ def successorsetverb(successorset):
     else:
         verb = 'split'
     return verb
+
+def markersusers(markers):
+    """ Returns a sorted list of markers users without duplicates
+    """
+    markersmeta = [dict(m[3]) for m in markers]
+    users = set(meta.get('user') for meta in markersmeta if meta.get('user'))
+
+    return sorted(users)
