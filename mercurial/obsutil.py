@@ -585,8 +585,40 @@ def successorsandmarkers(repo, ctx):
 
     ssets = successorssets(repo, ctx.node(), closest=True)
 
-    values = []
+    # closestsuccessors returns an empty list for pruned revisions, remap it
+    # into a list containing an empty list for future processing
+    if ssets == []:
+        ssets = [[]]
+
+    # Try to recover pruned markers
+    succsmap = repo.obsstore.successors
+    fullsuccessorsets = [] # successor set + markers
     for sset in ssets:
+        if sset:
+            fullsuccessorsets.append(sset)
+        else:
+            # successorsset return an empty set() when ctx or one of its
+            # successors is pruned.
+            # In this case, walk the obs-markers tree again starting with ctx
+            # and find the relevant pruning obs-makers, the ones without
+            # successors.
+            # Having these markers allow us to compute some information about
+            # its fate, like who pruned this changeset and when.
+
+            # XXX we do not catch all prune markers (eg rewritten then pruned)
+            # (fix me later)
+            foundany = False
+            for mark in succsmap.get(ctx.node(), ()):
+                if not mark[1]:
+                    foundany = True
+                    sset = _succs()
+                    sset.markers.add(mark)
+                    fullsuccessorsets.append(sset)
+            if not foundany:
+                fullsuccessorsets.append(_succs())
+
+    values = []
+    for sset in fullsuccessorsets:
         values.append({'successors': sset, 'markers': sset.markers})
 
     return values

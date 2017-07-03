@@ -12,7 +12,7 @@ Global setup
   > [experimental]
   > stabilization=all
   > [templates]
-  > obsfatesuccessors = " as {join(successors, ", ")}"
+  > obsfatesuccessors = "{if(successors, " as ")}{join(successors, ", ")}"
   > obsfateverb = "{obsfateverb(successors)}"
   > obsfateusers = "{if(obsfateusers(markers), " by {join(obsfateusers(markers), ", ")}")}"
   > obsfatedate = "{if(obsfatedate(markers), "{ifeq(min(obsfatedate(markers)), max(obsfatedate(markers)), " (at {min(obsfatedate(markers))|isodate})", " (between {min(obsfatedate(markers))|isodate} and {max(obsfatedate(markers))|isodate})")}")}"
@@ -165,7 +165,7 @@ with --hidden
   | @  a468dc9b3633
   |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  f137d23bb3e1
-  | |
+  | |    Obsfate: pruned by test1 (at 2009-02-13 23:31 +0000);
   | x  471f378eab4c
   |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
@@ -214,7 +214,7 @@ visible.
   | x  a468dc9b3633
   |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  f137d23bb3e1
-  | |
+  | |    Obsfate: pruned by test1 (at 2009-02-13 23:31 +0000);
   | x  471f378eab4c
   |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
@@ -225,7 +225,7 @@ visible.
   | x  a468dc9b3633
   |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
   | x  f137d23bb3e1
-  | |
+  | |    Obsfate: [{"markers": [["f137d23bb3e11dc1daeb6264fac9cb2433782e15", [], 0, [["user", "test1"]], [1234567890.0, 0], ["471f378eab4c5e25f6c77f785b27c936efb22874"]]], "successors": []}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["user", "test1"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
   o  ea207398892e
@@ -1218,7 +1218,7 @@ Check templates
   o  f897c6137566
   |
   | @  471f378eab4c
-  |/
+  |/     Obsfate: pruned;
   o  ea207398892e
   
 
@@ -1635,11 +1635,11 @@ Check output
   
   $ hg fatelog
   @  471f378eab4c
-  |
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg fatelog -v
   @  471f378eab4c
-  |
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
