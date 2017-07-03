@@ -330,8 +330,14 @@ def getobsoleted(repo, tr):
 class _succs(list):
     """small class to represent a successors with some metadata about it"""
 
+    def __init__(self, *args, **kwargs):
+        super(_succs, self).__init__(*args, **kwargs)
+        self.markers = set()
+
     def copy(self):
-        return _succs(self)
+        new = _succs(self)
+        new.markers = self.markers.copy()
+        return new
 
 def successorssets(repo, initialnode, closest=False, cache=None):
     """Return set of all latest successors of initial nodes
@@ -527,13 +533,16 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 succssets = []
                 for mark in sorted(succmarkers[current]):
                     # successors sets contributed by this marker
-                    markss = [_succs()]
+                    base = _succs()
+                    base.markers.add(mark)
+                    markss = [base]
                     for suc in mark[1]:
                         # cardinal product with previous successors
                         productresult = []
                         for prefix in markss:
                             for suffix in cache[suc]:
                                 newss = prefix.copy()
+                                newss.markers.update(suffix.markers)
                                 for part in suffix:
                                     # do not duplicated entry in successors set
                                     # first entry wins.
@@ -548,12 +557,13 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 candidate = sorted(((set(s), s) for s in succssets if s),
                                    key=lambda x: len(x[1]), reverse=True)
                 for setversion, listversion in candidate:
-                    for seenset in seen:
+                    for seenset, seensuccs in seen:
                         if setversion.issubset(seenset):
+                            seensuccs.markers.update(listversion.markers)
                             break
                     else:
                         final.append(listversion)
-                        seen.append(setversion)
+                        seen.append((setversion, listversion))
                 final.reverse() # put small successors set first
                 cache[current] = final
     return cache[initialnode]
