@@ -7,7 +7,9 @@
 """simple Phabricator integration
 
 This extension provides a ``phabsend`` command which sends a stack of
-changesets to Phabricator without amending commit messages.
+changesets to Phabricator without amending commit messages, and a ``phabread``
+command which prints a stack of revisions in a format suitable
+for :hg:`import`.
 
 By default, Phabricator requires ``Test Plan`` which might prevent some
 changeset from being sent. The requirement could be disabled by changing
@@ -25,6 +27,7 @@ Config::
     # Repo callsign. If a repo has a URL https://$HOST/diffusion/FOO, then its
     # callsign is "FOO".
     callsign = FOO
+
 """
 
 from __future__ import absolute_import
@@ -273,3 +276,65 @@ def phabsend(ui, repo, *revs, **opts):
         ui.write(_('D%s: %s - %s: %s\n') % (newrevid, action, ctx,
                                             ctx.description().split('\n')[0]))
         lastrevid = newrevid
+
+_summaryre = re.compile('^Summary:\s*', re.M)
+
+def readpatch(repo, params, recursive=False):
+    """generate plain-text patch readable by 'hg import'
+
+    params is passed to "differential.query". If recursive is True, also return
+    dependent patches.
+    """
+    # Differential Revisions
+    drevs = callconduit(repo, 'differential.query', params)
+    if len(drevs) == 1:
+        drev = drevs[0]
+    else:
+        raise error.Abort(_('cannot get Differential Revision %r') % params)
+
+    repo.ui.note(_('reading D%s\n') % drev[r'id'])
+
+    diffid = max(int(v) for v in drev[r'diffs'])
+    body = callconduit(repo, 'differential.getrawdiff', {'diffID': diffid})
+    desc = callconduit(repo, 'differential.getcommitmessage',
+                       {'revision_id': drev[r'id']})
+    header = '# HG changeset patch\n'
+
+    # Remove potential empty "Summary:"
+    desc = _summaryre.sub('', desc)
+
+    # Try to preserve metadata (user, date) from hg:meta property
+    diffs = callconduit(repo, 'differential.querydiffs', {'ids': [diffid]})
+    props = diffs[str(diffid)][r'properties'] # could be empty list or dict
+    if props and r'hg:meta' in props:
+        meta = props[r'hg:meta']
+        for k, v in meta.items():
+            header += '# %s %s\n' % (k.capitalize(), v)
+
+    patch = ('%s%s\n%s') % (header, desc, body)
+
+    # Check dependencies
+    if recursive:
+        auxiliary = drev.get(r'auxiliary', {})
+        depends = auxiliary.get(r'phabricator:depends-on', [])
+        for phid in depends:
+            patch = readpatch(repo, {'phids': [phid]}, recursive=True) + patch
+    return patch
+
+@command('phabread',
+         [('', 'stack', False, _('read dependencies'))],
+         _('REVID [OPTIONS]'))
+def phabread(ui, repo, revid, **opts):
+    """print patches from Phabricator suitable for importing
+
+    REVID could be a Differential Revision identity, like ``D123``, or just the
+    number ``123``, or a full URL like ``https://phab.example.com/D123``.
+
+    If --stack is given, follow dependencies information and read all patches.
+    """
+    try:
+        revid = int(revid.split('/')[-1].replace('D', ''))
+    except ValueError:
+        raise error.Abort(_('invalid Revision ID: %s') % revid)
+    patch = readpatch(repo, {'ids': [revid]}, recursive=opts.get('stack'))
+    ui.write(patch)
