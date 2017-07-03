@@ -590,3 +590,14 @@ def successorsandmarkers(repo, ctx):
         values.append({'successors': sset, 'markers': sset.markers})
 
     return values
+
+def successorsetverb(successorset):
+    """ Return the verb summarizing the successorset
+    """
+    if not successorset:
+        verb = 'pruned'
+    elif len(successorset) == 1:
+        verb = 'rewritten'
+    else:
+        verb = 'split'
+    return verb

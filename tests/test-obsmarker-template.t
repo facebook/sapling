@@ -13,7 +13,8 @@ Global setup
   > stabilization=all
   > [templates]
   > obsfatesuccessors = " as {join(successors, ", ")}"
-  > obsfate = "rewritten{obsfatesuccessors}; "
+  > obsfateverb = "{obsfateverb(successors)}"
+  > obsfate = "{obsfateverb}{obsfatesuccessors}; "
   > [alias]
   > tlog = log -G -T '{node|short}\
   >     {if(predecessors, "\n  Predecessors: {predecessors}")}\
@@ -318,7 +319,7 @@ Predecessors template should show current revision as it is the working copy
   o  337fec4d2edc
   |
   | @  471597cad322
-  |/     Obsfate: rewritten as 2:337fec4d2edc, 3:f257fde29c7a;
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a;
   o  ea207398892e
   
   $ hg up f257fde29c7a
@@ -359,7 +360,7 @@ with --hidden
   o  337fec4d2edc
   |
   | x  471597cad322
-  |/     Obsfate: rewritten as 2:337fec4d2edc, 3:f257fde29c7a;
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a;
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -1528,7 +1529,7 @@ Check templates
   o  dd800401bd8c
   |
   | x  9bd10a0775e4
-  |/     Obsfate: rewritten as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a;
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a;
   o  f897c6137566
   |
   | x  0dec01379d3b
@@ -1603,7 +1604,7 @@ Check templates
   o  dd800401bd8c
   |
   | @  9bd10a0775e4
-  |/     Obsfate: rewritten as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc; rewritten as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc;
+  |/     Obsfate: split as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc; split as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc;
   o  f897c6137566
   |
   o  ea207398892e

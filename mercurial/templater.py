@@ -18,6 +18,7 @@ from . import (
     encoding,
     error,
     minirst,
+    obsutil,
     parser,
     pycompat,
     registrar,
@@ -848,6 +849,22 @@ def mod(context, mapping, args):
 
     func = lambda a, b: a % b
     return runarithmetic(context, mapping, (func, args[0], args[1]))
+
+@templatefunc('obsfateverb(successors)')
+def obsfateverb(context, mapping, args):
+    """Compute obsfate related information based on successors (EXPERIMENTAL)"""
+    if len(args) != 1:
+        # i18n: "obsfateverb" is a keyword
+        raise error.ParseError(_("obsfateverb expects one arguments"))
+
+    successors = evalfuncarg(context, mapping, args[0])
+
+    try:
+        return obsutil.successorsetverb(successors)
+    except TypeError:
+        # i18n: "obsfateverb" is a keyword
+        errmsg = _("obsfateverb first argument should be countable")
+        raise error.ParseError(errmsg)
 
 @templatefunc('relpath(path)')
 def relpath(context, mapping, args):
