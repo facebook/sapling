@@ -562,9 +562,9 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 # remove duplicated and subset
                 seen = []
                 final = []
-                candidate = sorted((s for s in succssets if s),
-                                   key=len, reverse=True)
-                for cand in candidate:
+                candidates = sorted((s for s in succssets if s),
+                                    key=len, reverse=True)
+                for cand in candidates:
                     for seensuccs in seen:
                         if cand.canmerge(seensuccs):
                             seensuccs.markers.update(cand.markers)
