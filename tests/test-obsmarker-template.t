@@ -15,7 +15,8 @@ Global setup
   > obsfatesuccessors = " as {join(successors, ", ")}"
   > obsfateverb = "{obsfateverb(successors)}"
   > obsfateusers = "{if(obsfateusers(markers), " by {join(obsfateusers(markers), ", ")}")}"
-  > obsfate = "{obsfateverb}{obsfatesuccessors}{obsfateusers}; "
+  > obsfatedate = "{if(obsfatedate(markers), "{ifeq(min(obsfatedate(markers)), max(obsfatedate(markers)), " (at {min(obsfatedate(markers))|isodate})", " (between {min(obsfatedate(markers))|isodate} and {max(obsfatedate(markers))|isodate})")}")}"
+  > obsfate = "{obsfateverb}{obsfatesuccessors}{obsfateusers}{obsfatedate}; "
   > [alias]
   > tlog = log -G -T '{node|short}\
   >     {if(predecessors, "\n  Predecessors: {predecessors}")}\
@@ -94,21 +95,21 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelog
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelog -v
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A1)' --hidden
@@ -131,7 +132,7 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   o  ea207398892e
   
 Predecessors template should show all the predecessors as we force their display
@@ -162,11 +163,11 @@ with --hidden
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  f137d23bb3e1
   | |
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1;
+  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
 
@@ -211,11 +212,11 @@ visible.
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2;
+  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  f137d23bb3e1
   | |
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1;
+  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -319,7 +320,7 @@ Predecessors template should show current revision as it is the working copy
   o  337fec4d2edc
   |
   | @  471597cad322
-  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test;
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up f257fde29c7a
@@ -360,7 +361,7 @@ with --hidden
   o  337fec4d2edc
   |
   | x  471597cad322
-  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test;
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -461,7 +462,7 @@ Predecessors template should show current revision as it is the working copy
   o  eb5a0daa2192
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(B0)' --hidden
@@ -490,9 +491,9 @@ displayed
   o  eb5a0daa2192
   |
   | @  0dec01379d3b
-  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test;
+  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(C0)'
@@ -528,9 +529,9 @@ with --hidden
   @  eb5a0daa2192
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test;
+  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -667,7 +668,7 @@ Predecessors template should show current revision as it is the working copy
   | o  fdf9bde5129a
   |/
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 2:fdf9bde5129a by test; rewritten as 4:019fadeab383 by test;
+  |/     Obsfate: rewritten as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A1)'
@@ -723,11 +724,11 @@ Predecessors template should the predecessors as we force their display with
   o  019fadeab383
   |
   | x  65b757b745b9
-  |/     Obsfate: rewritten as 4:019fadeab383 by test;
+  |/     Obsfate: rewritten as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000);
   | @  fdf9bde5129a
   |/
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:fdf9bde5129a by test; rewritten as 3:65b757b745b9 by test;
+  |/     Obsfate: rewritten as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -845,7 +846,7 @@ Predecessors template should show current revision as it is the working copy
   o  eb5a0daa2192
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(B0)' --hidden
@@ -873,9 +874,9 @@ Predecessors template should both predecessors as they are visible
   o  eb5a0daa2192
   |
   | @  0dec01379d3b
-  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(B1)' --hidden
@@ -903,9 +904,9 @@ Predecessors template should both predecessors as they are visible
   o  eb5a0daa2192
   |
   | @  b7ea6d14e664
-  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(C0)'
@@ -954,11 +955,11 @@ with --hidden
   @  eb5a0daa2192
   |
   | x  b7ea6d14e664
-  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   | | x  0dec01379d3b
-  | |/     Obsfate: rewritten as 3:b7ea6d14e664 by test;
+  | |/     Obsfate: rewritten as 3:b7ea6d14e664 by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test;
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -1082,7 +1083,7 @@ Predecessors template should show current revision as it is the working copy
   o  7a230b46bf61
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 2:7a230b46bf61 by test;
+  |/     Obsfate: rewritten as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A2)'
@@ -1119,7 +1120,7 @@ with --hidden
   @  7a230b46bf61
   |
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:7a230b46bf61 by test;
+  |/     Obsfate: rewritten as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -1194,9 +1195,9 @@ Check templates
   o  f897c6137566
   |
   | @  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 by test; rewritten as 1:471f378eab4c by test;
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000); rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test;
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
 
@@ -1452,7 +1453,7 @@ Check templates
   | o  ba2ed02b0c9a
   | |
   | x  4a004186e638
-  |/     Obsfate: rewritten as 8:b18bc8331526 by test; rewritten as 9:0b997eb7ceee by test;
+  |/     Obsfate: rewritten as 8:b18bc8331526 by test (at 1970-01-01 00:00 +0000); rewritten as 9:0b997eb7ceee by test (at 1970-01-01 00:00 +0000);
   o  dd800401bd8c
   |
   o  f897c6137566
@@ -1525,17 +1526,17 @@ Check templates
   | o  ba2ed02b0c9a
   | |
   | x  4a004186e638
-  |/     Obsfate: rewritten as 8:b18bc8331526 by test; rewritten as 9:0b997eb7ceee by test;
+  |/     Obsfate: rewritten as 8:b18bc8331526 by test (at 1970-01-01 00:00 +0000); rewritten as 9:0b997eb7ceee by test (at 1970-01-01 00:00 +0000);
   o  dd800401bd8c
   |
   | x  9bd10a0775e4
-  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a by test;
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a by test (at 1970-01-01 00:00 +0000);
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 by test; rewritten as 1:471f378eab4c by test;
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000); rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b by test;
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -1604,7 +1605,7 @@ Check templates
   o  dd800401bd8c
   |
   | @  9bd10a0775e4
-  |/     Obsfate: split as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc by test; split as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc by test;
+  |/     Obsfate: split as 5:dd800401bd8c, 9:0b997eb7ceee, 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000); split as 5:dd800401bd8c, 8:b18bc8331526, 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000);
   o  f897c6137566
   |
   o  ea207398892e

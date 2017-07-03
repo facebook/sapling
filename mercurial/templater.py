@@ -840,6 +840,34 @@ def localdate(context, mapping, args):
         tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
 
+@templatefunc('max(iterable)')
+def max_(context, mapping, args, **kwargs):
+    """Return the max of an iterable"""
+    if len(args) != 1:
+        # i18n: "max" is a keyword
+        raise error.ParseError(_("max expects one arguments"))
+
+    iterable = evalfuncarg(context, mapping, args[0])
+    try:
+        return max(iterable)
+    except (TypeError, ValueError):
+        # i18n: "max" is a keyword
+        raise error.ParseError(_("max first argument should be an iterable"))
+
+@templatefunc('min(iterable)')
+def min_(context, mapping, args, **kwargs):
+    """Return the min of an iterable"""
+    if len(args) != 1:
+        # i18n: "min" is a keyword
+        raise error.ParseError(_("min expects one arguments"))
+
+    iterable = evalfuncarg(context, mapping, args[0])
+    try:
+        return min(iterable)
+    except (TypeError, ValueError):
+        # i18n: "min" is a keyword
+        raise error.ParseError(_("min first argument should be an iterable"))
+
 @templatefunc('mod(a, b)')
 def mod(context, mapping, args):
     """Calculate a mod b such that a / b + a mod b == a"""
@@ -849,6 +877,23 @@ def mod(context, mapping, args):
 
     func = lambda a, b: a % b
     return runarithmetic(context, mapping, (func, args[0], args[1]))
+
+@templatefunc('obsfatedate(markers)')
+def obsfatedate(context, mapping, args):
+    """Compute obsfate related information based on markers (EXPERIMENTAL)"""
+    if len(args) != 1:
+        # i18n: "obsfatedate" is a keyword
+        raise error.ParseError(_("obsfatedate expects one arguments"))
+
+    markers = evalfuncarg(context, mapping, args[0])
+
+    try:
+        data = obsutil.markersdates(markers)
+        return templatekw.hybridlist(data, name='date', fmt='%d %d')
+    except (TypeError, KeyError):
+        # i18n: "obsfatedate" is a keyword
+        errmsg = _("obsfatedate first argument should be an iterable")
+        raise error.ParseError(errmsg)
 
 @templatefunc('obsfateusers(markers)')
 def obsfateusers(context, mapping, args):

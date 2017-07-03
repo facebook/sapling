@@ -602,6 +602,11 @@ def successorsetverb(successorset):
         verb = 'split'
     return verb
 
+def markersdates(markers):
+    """returns the list of dates for a list of markers
+    """
+    return [m[4] for m in markers]
+
 def markersusers(markers):
     """ Returns a sorted list of markers users without duplicates
     """
