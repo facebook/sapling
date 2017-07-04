@@ -72,8 +72,9 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
             if f and b:
                 filepath = vfs.join(f)
                 backuppath = vfs.join(b)
+                checkambig = checkambigfiles and (f, l) in checkambigfiles
                 try:
-                    util.copyfile(backuppath, filepath, checkambig=True)
+                    util.copyfile(backuppath, filepath, checkambig=checkambig)
                     backupfiles.append(b)
                 except IOError:
                     report(_("failed to recover %s\n") % f)
@@ -328,10 +329,12 @@ class transaction(object):
                     name += suffix
                     if suffix:
                         self.registertmp(name, location=location)
+                        checkambig = False
                     else:
                         self.addbackup(name, location=location)
+                        checkambig = (name, location) in self.checkambigfiles
                     files.append(vfs(name, 'w', atomictemp=True,
-                                     checkambig=not suffix))
+                                     checkambig=checkambig))
                 genfunc(*files)
             finally:
                 for f in files:
