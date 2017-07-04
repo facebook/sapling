@@ -22,6 +22,23 @@ from . import (
     util,
 )
 
+def _avoidambig(path, oldstat):
+    """Avoid file stat ambiguity forcibly
+
+    This function causes copying ``path`` file, if it is owned by
+    another (see issue5418 and issue5584 for detail).
+    """
+    def checkandavoid():
+        newstat = util.filestat.frompath(path)
+        # return whether file stat ambiguity is (already) avoided
+        return (not newstat.isambig(oldstat) or
+                newstat.avoidambig(path, oldstat))
+    if not checkandavoid():
+        # simply copy to change owner of path to get privilege to
+        # advance mtime (see issue5418)
+        util.rename(util.mktempcopy(path), path)
+        checkandavoid()
+
 class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
@@ -613,10 +630,7 @@ class checkambigatclosing(closewrapbase):
     def _checkambig(self):
         oldstat = self._oldstat
         if oldstat.stat:
-            newstat = util.filestat.frompath(self._origfh.name)
-            if newstat.isambig(oldstat):
-                # stat of changed file is ambiguous to original one
-                newstat.avoidambig(self._origfh.name, oldstat)
+            _avoidambig(self._origfh.name, oldstat)
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self._origfh.__exit__(exc_type, exc_value, exc_tb)
