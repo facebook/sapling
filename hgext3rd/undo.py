@@ -47,13 +47,13 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     safelog(repo, command)
     return result
 
-# Log Control
+# Write: Log control
 
 def safelog(repo, command):
     if repo is not None:# some hg commands don't require repo
         with repo.lock():
             with repo.transaction("undolog"):
-                log(repo, command)
+                log(repo.filtered('visible'), command)
 
 def log(repo, command):
     newnodes = {
@@ -74,7 +74,7 @@ def log(repo, command):
         })
         _logindex(repo, newnodes)
 
-# Logs
+# Write: Logs
 
 def writelog(repo, name, revstring):
     assert repo.currenttransaction() is not None
@@ -114,6 +114,30 @@ def _logworkingparent(repo):
 def _logindex(repo, nodes):
     revstring = "\n".join(sorted('%s %s' % (k, v) for k, v in nodes.items()))
     return writelog(repo, "index.i", revstring)
+
+# Read
+
+def _readindex(repo, reverseindex, prefetchedrevlog=None):
+    if prefetchedrevlog is None:
+        path = os.path.join('undolog', 'index.i')
+        rlog = revlog.revlog(repo.svfs, path)
+    else:
+        rlog = prefetchedrevlog
+    index = len(rlog) - reverseindex - 1
+    if index < 0 or index > len(rlog) - 1:
+        raise IndexError
+    chunk = rlog.revision(index)
+    indexdict = {}
+    for row in chunk.split("\n"):
+        kvpair = row.split(' ', 1)
+        if kvpair[0]:
+            indexdict[kvpair[0]] = kvpair[1]
+    return indexdict
+
+def _readnode(repo, filename, hexnode):
+    path = os.path.join('undolog', filename)
+    rlog = revlog.revlog(repo.svfs, path)
+    return rlog.revision(bin(hexnode))
 
 # Visualize
 
@@ -203,29 +227,8 @@ def _debugundoindex(ui, repo, reverseindex):
         fm.write('content', '%s', header + content)
     fm.end()
 
-# Read
 
-def _readindex(repo, reverseindex, prefetchedrevlog=None):
-    if prefetchedrevlog is None:
-        path = os.path.join('undolog', 'index.i')
-        rlog = revlog.revlog(repo.svfs, path)
-    else:
-        rlog = prefetchedrevlog
-    index = len(rlog) - reverseindex - 1
-    if index < 0 or index > len(rlog) - 1:
-        raise IndexError
-    chunk = rlog.revision(index)
-    indexdict = {}
-    for row in chunk.split("\n"):
-        kvpair = row.split(' ', 1)
-        if kvpair[0]:
-            indexdict[kvpair[0]] = kvpair[1]
-    return indexdict
 
-def _readnode(repo, filename, hexnode):
-    path = os.path.join('undolog', filename)
-    rlog = revlog.revlog(repo.svfs, path)
-    return rlog.revision(bin(hexnode))
 
 # Setup
 

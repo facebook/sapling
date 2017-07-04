@@ -146,3 +146,22 @@ Index out of bound error
   $ hg debugundohistory -n 50
   abort: index out of bounds
   [255]
+
+Revset tests
+  $ hg log -G -r 'draft()' --hidden >> c1
+  $ hg debugundohistory -n 0
+  command:
+  	commit -m words
+  bookmarks:
+  	feature1 49cdb4091aca3c09f402ff001cd20cf086873683
+  	feature2 296fda51a303650465d07a1cd054075cbe6d3cbd
+  	master 0a3dd3e15e65b90836f492112d816f3ee073d897
+  date:
+  	* (glob)
+  draftheads:
+  	ADDED:
+  		0a3dd3e15e65b90836f492112d816f3ee073d897
+  	REMOVED:
+  	
+  workingparent:
+  	0a3dd3e15e65b90836f492112d816f3ee073d897
