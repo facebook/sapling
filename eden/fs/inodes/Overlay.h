@@ -57,6 +57,15 @@ class Overlay {
    * Get the path to the overlay file for the given inode
    */
   AbsolutePath getFilePath(fuse_ino_t inodeNumber) const;
+  /**
+   * Creates header for the files stored in Overlay
+   */
+  static folly::IOBuf createHeader(
+      folly::StringPiece identifier,
+      uint32_t version,
+      const struct timespec& atime,
+      const struct timespec& ctime,
+      const struct timespec& mtime);
 
   /**
    * Get the maximum inode number stored in the overlay.

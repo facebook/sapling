@@ -12,6 +12,8 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -37,7 +39,9 @@ using std::unique_ptr;
 constexpr StringPiece kMetaDir{"overlay"};
 constexpr StringPiece kMetaFile{"dirdata"};
 constexpr StringPiece kInfoFile{"info"};
-
+constexpr StringPiece kHeaderIdentifier{"OVDR"};
+constexpr uint32_t kHeaderVersion = 1;
+constexpr size_t kHeaderLength = 64;
 /**
  * 4-byte magic identifier to put at the start of the info file.
  * This merely helps confirm that we are in fact reading an overlay info file
@@ -269,9 +273,19 @@ void Overlay::saveOverlayDir(
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
+  // Add header to the overlay directory.
+  struct timespec zeroTime = {0, 0};
+
+  auto header = createHeader(
+      kHeaderIdentifier, kHeaderVersion, zeroTime, zeroTime, zeroTime);
+
+  auto iov = header.getIov();
+  iov.push_back(
+      {const_cast<char*>(serializedData.data()), serializedData.size()});
+
   // And update the file on disk
   folly::writeFileAtomic(
-      getFilePath(inodeNumber).stringPiece(), serializedData);
+      getFilePath(inodeNumber).stringPiece(), iov.data(), iov.size());
 }
 
 void Overlay::removeOverlayData(fuse_ino_t inodeNumber) const {
@@ -373,7 +387,73 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     }
     folly::throwSystemErrorExplicit(err, "failed to read ", path);
   }
-  return CompactSerializer::deserialize<overlay::OverlayDir>(serializedData);
+
+  // Removing header and deserializing the contents
+  if (serializedData.size() < kHeaderLength) {
+    // Something Wrong with the file(may be corrupted)
+    folly::throwSystemErrorExplicit(
+        EIO,
+        "Overlay file ",
+        path,
+        " is too short for header: size=",
+        serializedData.size());
+  }
+
+  StringPiece header{serializedData, 0, kHeaderLength};
+  StringPiece contents{serializedData};
+  contents.advance(kHeaderLength);
+
+  // check if the header contains valid identifier and version
+  StringPiece identifier{header, 0, kHeaderIdentifier.size()};
+  header.advance(kHeaderIdentifier.size());
+  StringPiece version{header, 0, sizeof(kHeaderVersion)};
+
+  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{version});
+  folly::io::Cursor cursor(&buf);
+  auto ver = cursor.readBE<uint32_t>();
+
+  // Header doesn't contain identifier
+  if (identifier.compare(kHeaderIdentifier) != 0) {
+    folly::throwSystemError(
+        EIO,
+        "unexpected overlay header identifier in ",
+        path,
+        ": ",
+        folly::hexlify(ByteRange{identifier}));
+  }
+  // Version number is different
+  if (ver != kHeaderVersion) {
+    folly::throwSystemError(
+        EIO, "Unexpected overlay version ", ver, " in ", path);
+  }
+
+  return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
+}
+
+// Overlay version number is currently 32 bit,
+// so making version uint32_t instead of uint16_t
+folly::IOBuf Overlay::createHeader(
+    StringPiece identifier,
+    uint32_t version,
+    const struct timespec& atime,
+    const struct timespec& ctime,
+    const struct timespec& mtime) {
+  folly::IOBuf header(folly::IOBuf::CREATE, kHeaderLength);
+  folly::io::Appender appender(&header, 0);
+  appender.push(identifier);
+  appender.writeBE(version);
+  appender.writeBE<uint64_t>(atime.tv_sec);
+  appender.writeBE<uint64_t>(atime.tv_nsec);
+  appender.writeBE<uint64_t>(ctime.tv_sec);
+  appender.writeBE<uint64_t>(ctime.tv_nsec);
+  appender.writeBE<uint64_t>(mtime.tv_sec);
+  appender.writeBE<uint64_t>(mtime.tv_nsec);
+  auto paddingSize = kHeaderLength - header.length();
+  appender.ensure(paddingSize);
+  memset(appender.writableData(), 0, paddingSize);
+  appender.append(paddingSize);
+
+  return header;
 }
 }
 }
