@@ -271,6 +271,9 @@ def phabsend(ui, repo, *revs, **opts):
     revs = list(revs) + opts.get('rev', [])
     revs = scmutil.revrange(repo, revs)
 
+    if not revs:
+        raise error.Abort(_('phabsend requires at least one changeset'))
+
     # Send patches one by one so we know their Differential Revision IDs and
     # can provide dependency relationship
     lastrevid = None
