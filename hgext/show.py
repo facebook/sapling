@@ -233,7 +233,7 @@ def showstack(ui, repo, displayer):
     try:
         cmdutil.findcmd('rebase', commands.table)
         haverebase = True
-    except error.UnknownCommand:
+    except (error.AmbiguousCommand, error.UnknownCommand):
         haverebase = False
 
     # TODO use templating.
