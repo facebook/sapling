@@ -66,6 +66,11 @@ release = lockmod.release
 urlerr = util.urlerr
 urlreq = util.urlreq
 
+# set of (path, vfs-location) tuples. vfs-location is:
+# - 'plain for vfs relative paths
+# - '' for svfs relative paths
+_cachedfiles = set()
+
 class _basefilecache(scmutil.filecache):
     """All filecache usage on repo are done for logic that should be unfiltered
     """
@@ -80,11 +85,21 @@ class _basefilecache(scmutil.filecache):
 
 class repofilecache(_basefilecache):
     """filecache for files in .hg but outside of .hg/store"""
+    def __init__(self, *paths):
+        super(repofilecache, self).__init__(*paths)
+        for path in paths:
+            _cachedfiles.add((path, 'plain'))
+
     def join(self, obj, fname):
         return obj.vfs.join(fname)
 
 class storecache(_basefilecache):
     """filecache for files in the store"""
+    def __init__(self, *paths):
+        super(storecache, self).__init__(*paths)
+        for path in paths:
+            _cachedfiles.add((path, ''))
+
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
