@@ -195,18 +195,8 @@ class abstractvfs(object):
         dstpath = self.join(dst)
         oldstat = checkambig and util.filestat.frompath(dstpath)
         if oldstat and oldstat.stat:
-            def dorename(spath, dpath):
-                ret = util.rename(spath, dpath)
-                newstat = util.filestat.frompath(dpath)
-                if newstat.isambig(oldstat):
-                    # stat of renamed file is ambiguous to original one
-                    return ret, newstat.avoidambig(dpath, oldstat)
-                return ret, True
-            ret, avoided = dorename(srcpath, dstpath)
-            if not avoided:
-                # simply copy to change owner of srcpath (see issue5418)
-                util.copyfile(dstpath, srcpath)
-                ret, avoided = dorename(srcpath, dstpath)
+            ret = util.rename(srcpath, dstpath)
+            _avoidambig(dstpath, oldstat)
             return ret
         return util.rename(srcpath, dstpath)
 
