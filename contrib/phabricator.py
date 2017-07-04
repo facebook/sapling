@@ -202,17 +202,28 @@ def writediffproperties(ctx, diff):
     }
     callconduit(ctx.repo(), 'differential.setdiffproperty', params)
 
-def createdifferentialrevision(ctx, revid=None, parentrevid=None):
+def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None):
     """create or update a Differential Revision
 
     If revid is None, create a new Differential Revision, otherwise update
     revid. If parentrevid is not None, set it as a dependency.
+
+    If oldnode is not None, check if the patch content (without commit message
+    and metadata) has changed before creating another diff.
     """
     repo = ctx.repo()
-    diff = creatediff(ctx)
-    writediffproperties(ctx, diff)
+    if oldnode:
+        diffopts = mdiff.diffopts(git=True, context=1)
+        oldctx = repo.unfiltered()[oldnode]
+        neednewdiff = (getdiff(ctx, diffopts) != getdiff(oldctx, diffopts))
+    else:
+        neednewdiff = True
 
-    transactions = [{'type': 'update', 'value': diff[r'phid']}]
+    transactions = []
+    if neednewdiff:
+        diff = creatediff(ctx)
+        writediffproperties(ctx, diff)
+        transactions.append({'type': 'update', 'value': diff[r'phid']})
 
     # Use a temporary summary to set dependency. There might be better ways but
     # I cannot find them for now. But do not do that if we are updating an
@@ -271,7 +282,8 @@ def phabsend(ui, repo, *revs, **opts):
         oldnode, revid = getmapping(ctx)
         if oldnode != ctx.node():
             # Create or update Differential Revision
-            revision = createdifferentialrevision(ctx, revid, lastrevid)
+            revision = createdifferentialrevision(ctx, revid, lastrevid,
+                                                  oldnode)
             newrevid = int(revision[r'object'][r'id'])
             if revid:
                 action = _('updated')
