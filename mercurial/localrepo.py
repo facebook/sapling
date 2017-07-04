@@ -1098,7 +1098,8 @@ class localrepository(object):
                                      aftertrans(renames),
                                      self.store.createmode,
                                      validator=validate,
-                                     releasefn=releasefn)
+                                     releasefn=releasefn,
+                                     checkambigfiles=_cachedfiles)
         tr.changes['revs'] = set()
         tr.changes['obsmarkers'] = set()
 
@@ -1164,7 +1165,8 @@ class localrepository(object):
                 vfsmap = {'': self.svfs,
                           'plain': self.vfs,}
                 transaction.rollback(self.svfs, vfsmap, "journal",
-                                     self.ui.warn)
+                                     self.ui.warn,
+                                     checkambigfiles=_cachedfiles)
                 self.invalidate()
                 return True
             else:
@@ -1220,7 +1222,8 @@ class localrepository(object):
         parents = self.dirstate.parents()
         self.destroying()
         vfsmap = {'plain': self.vfs, '': self.svfs}
-        transaction.rollback(self.svfs, vfsmap, 'undo', ui.warn)
+        transaction.rollback(self.svfs, vfsmap, 'undo', ui.warn,
+                             checkambigfiles=_cachedfiles)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks', checkambig=True)
         if self.svfs.exists('undo.phaseroots'):

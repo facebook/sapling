@@ -39,8 +39,9 @@ test qpush on empty series
   > from mercurial import extensions, transaction
   > def wrapplayback(orig,
   >                  journal, report, opener, vfsmap, entries, backupentries,
-  >                  unlink=True):
-  >     orig(journal, report, opener, vfsmap, entries, backupentries, unlink)
+  >                  unlink=True, checkambigfiles=None):
+  >     orig(journal, report, opener, vfsmap, entries, backupentries, unlink,
+  >          checkambigfiles)
   >     # Touching files truncated at "transaction.abort" causes
   >     # forcible re-loading invalidated filecache properties
   >     # (including repo.changelog)
