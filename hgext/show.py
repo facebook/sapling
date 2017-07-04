@@ -219,7 +219,7 @@ def showstack(ui, repo, displayer):
             branchpointattip = True
             break
 
-    stackrevs = list(reversed(sorted(stackrevs)))
+    stackrevs = list(sorted(stackrevs, reverse=True))
 
     # Find likely target heads for the current stack. These are likely
     # merge or rebase targets.
