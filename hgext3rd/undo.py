@@ -16,6 +16,9 @@ from mercurial import (
     extensions,
     registrar,
     revlog,
+    revset,
+    revsetlang,
+    smartset,
     util,
 )
 
@@ -227,8 +230,34 @@ def _debugundoindex(ui, repo, reverseindex):
         fm.write('content', '%s', header + content)
     fm.end()
 
+# Revset logic
 
+def _getolddrafts(repo, reverseindex):
+    nodedict = _readindex(repo, reverseindex)
+    olddraftheads = _readnode(repo, "draftheads.i", nodedict["draftheads"])
+    oldheadslist = olddraftheads.split("\n")
+    oldlogrevstring = revsetlang.formatspec('draft() & ancestors(%ls)',
+            oldheadslist)
+    urepo = repo.unfiltered()
+    return urepo.revs(oldlogrevstring)
 
+revsetpredicate = registrar.revsetpredicate()
+
+@revsetpredicate('olddraft')
+def _olddraft(repo, subset, x):
+    """``olddraft([index])``
+    previous draft commits
+
+    'index' is how many undoable commands you want to look back
+    an undoable command is one that changed draft heads, bookmarks
+    and or working copy parent
+    Note: this revset may include hidden commits
+    """
+    args = revset.getargsdict(x, 'olddraftrevset', 'reverseindex')
+    reverseindex = revsetlang.getinteger(args.get('reverseindex'),
+                _('index must be a positive integer'), 1)
+    revs = _getolddrafts(repo, reverseindex)
+    return smartset.baseset(revs)
 
 # Setup
 

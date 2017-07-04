@@ -151,17 +151,23 @@ Revset tests
   $ hg log -G -r 'draft()' --hidden >> c1
   $ hg debugundohistory -n 0
   command:
-  	commit -m words
+  	ci -ma5
   bookmarks:
   	feature1 49cdb4091aca3c09f402ff001cd20cf086873683
   	feature2 296fda51a303650465d07a1cd054075cbe6d3cbd
-  	master 0a3dd3e15e65b90836f492112d816f3ee073d897
+  	master aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   date:
   	* (glob)
   draftheads:
   	ADDED:
-  		0a3dd3e15e65b90836f492112d816f3ee073d897
+  		aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   	REMOVED:
-  	
+  		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
   workingparent:
-  	0a3dd3e15e65b90836f492112d816f3ee073d897
+  	aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
+
+Test 'olddraft([NUM])' revset
+  $ hg log -G -r 'olddraft(0) - olddraft(1)' --hidden -T compact
+  @  8[tip][master]   aa430c8afedf   1970-01-01 00:00 +0000   test
+  |    a5
+  ~
