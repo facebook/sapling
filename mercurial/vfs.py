@@ -547,8 +547,6 @@ class backgroundfilecloser(object):
         if expectedcount > 0 and expectedcount < minfilecount:
             return
 
-        # Windows defaults to a limit of 512 open files. A buffer of 128
-        # should give us enough headway.
         maxqueue = ui.configint('worker', 'backgroundclosemaxqueue')
         threadcount = ui.configint('worker', 'backgroundclosethreadcount')
 

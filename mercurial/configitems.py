@@ -155,6 +155,8 @@ coreconfigitem('ui', 'interactive',
 coreconfigitem('ui', 'quiet',
     default=False,
 )
+# Windows defaults to a limit of 512 open files. A buffer of 128
+# should give us enough headway.
 coreconfigitem('worker', 'backgroundclosemaxqueue',
     default=384,
 )
