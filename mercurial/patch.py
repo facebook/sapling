@@ -922,18 +922,24 @@ class recordhunk(object):
 
     XXX shouldn't we merge this with the other hunk class?
     """
-    maxcontext = 3
 
-    def __init__(self, header, fromline, toline, proc, before, hunk, after):
-        def trimcontext(number, lines):
-            delta = len(lines) - self.maxcontext
-            if False and delta > 0:
-                return number + delta, lines[:self.maxcontext]
-            return number, lines
+    def __init__(self, header, fromline, toline, proc, before, hunk, after,
+                 maxcontext=None):
+        def trimcontext(lines, reverse=False):
+            if maxcontext is not None:
+                delta = len(lines) - maxcontext
+                if delta > 0:
+                    if reverse:
+                        return delta, lines[delta:]
+                    else:
+                        return delta, lines[:maxcontext]
+            return 0, lines
 
         self.header = header
-        self.fromline, self.before = trimcontext(fromline, before)
-        self.toline, self.after = trimcontext(toline, after)
+        trimedbefore, self.before = trimcontext(before, True)
+        self.fromline = fromline + trimedbefore
+        self.toline = toline + trimedbefore
+        _trimedafter, self.after = trimcontext(after, False)
         self.proc = proc
         self.hunk = hunk
         self.added, self.removed = self.countchanges(self.hunk)
@@ -1527,8 +1533,49 @@ def reversehunks(hunks):
         newhunks.append(c)
     return newhunks
 
-def parsepatch(originalchunks):
-    """patch -> [] of headers -> [] of hunks """
+def parsepatch(originalchunks, maxcontext=None):
+    """patch -> [] of headers -> [] of hunks
+
+    If maxcontext is not None, trim context lines if necessary.
+
+    >>> rawpatch = '''diff --git a/folder1/g b/folder1/g
+    ... --- a/folder1/g
+    ... +++ b/folder1/g
+    ... @@ -1,8 +1,10 @@
+    ...  1
+    ...  2
+    ... -3
+    ...  4
+    ...  5
+    ...  6
+    ... +6.1
+    ... +6.2
+    ...  7
+    ...  8
+    ... +9'''
+    >>> out = util.stringio()
+    >>> headers = parsepatch([rawpatch], maxcontext=1)
+    >>> for header in headers:
+    ...     header.write(out)
+    ...     for hunk in header.hunks:
+    ...         hunk.write(out)
+    >>> print(out.getvalue())
+    diff --git a/folder1/g b/folder1/g
+    --- a/folder1/g
+    +++ b/folder1/g
+    @@ -2,3 +2,2 @@
+     2
+    -3
+     4
+    @@ -6,2 +5,4 @@
+     6
+    +6.1
+    +6.2
+     7
+    @@ -8,1 +9,2 @@
+     8
+    +9
+    """
     class parser(object):
         """patch parsing state machine"""
         def __init__(self):
@@ -1550,7 +1597,7 @@ def parsepatch(originalchunks):
         def addcontext(self, context):
             if self.hunk:
                 h = recordhunk(self.header, self.fromline, self.toline,
-                        self.proc, self.before, self.hunk, context)
+                        self.proc, self.before, self.hunk, context, maxcontext)
                 self.header.hunks.append(h)
                 self.fromline += len(self.before) + h.removed
                 self.toline += len(self.before) + h.added
