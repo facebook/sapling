@@ -196,6 +196,8 @@ def writediffproperties(ctx, diff):
         'data': json.dumps({
             'user': ctx.user(),
             'date': '%d %d' % ctx.date(),
+            'node': ctx.hex(),
+            'parent': ctx.p1().hex(),
         }),
     }
     callconduit(ctx.repo(), 'differential.setdiffproperty', params)
@@ -292,6 +294,11 @@ def phabsend(ui, repo, *revs, **opts):
 
 _summaryre = re.compile('^Summary:\s*', re.M)
 
+# Map from "hg:meta" keys to header understood by "hg import". The order is
+# consistent with "hg export" output.
+_metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
+                              (r'node', 'Node ID'), (r'parent', 'Parent ')])
+
 def readpatch(repo, params, recursive=False):
     """generate plain-text patch readable by 'hg import'
 
@@ -316,13 +323,16 @@ def readpatch(repo, params, recursive=False):
     # Remove potential empty "Summary:"
     desc = _summaryre.sub('', desc)
 
-    # Try to preserve metadata (user, date) from hg:meta property
+    # Try to preserve metadata from hg:meta property. Write hg patch headers
+    # that can be read by the "import" command. See patchheadermap and extract
+    # in mercurial/patch.py for supported headers.
     diffs = callconduit(repo, 'differential.querydiffs', {'ids': [diffid]})
     props = diffs[str(diffid)][r'properties'] # could be empty list or dict
     if props and r'hg:meta' in props:
         meta = props[r'hg:meta']
-        for k, v in meta.items():
-            header += '# %s %s\n' % (k.capitalize(), v)
+        for k in _metanamemap.keys():
+            if k in meta:
+                header += '# %s %s\n' % (_metanamemap[k], meta[k])
 
     patch = ('%s%s\n%s') % (header, desc, body)
 
