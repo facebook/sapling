@@ -358,14 +358,34 @@ def querydrev(repo, params, stack=False):
     order that the latter ones depend on the former ones. Otherwise, return a
     list of a unique "Differential Revision dict".
     """
+    prefetched = {} # {id or phid: drev}
+    def fetch(params):
+        """params -> single drev or None"""
+        key = (params.get(r'ids') or params.get(r'phids') or [None])[0]
+        if key in prefetched:
+            return prefetched[key]
+        # Otherwise, send the request. If we're fetching a stack, be smarter
+        # and fetch more ids in one batch, even if it could be unnecessary.
+        batchparams = params
+        if stack and len(params.get(r'ids', [])) == 1:
+            i = int(params[r'ids'][0])
+            # developer config: phabricator.batchsize
+            batchsize = repo.ui.configint('phabricator', 'batchsize', 12)
+            batchparams = {'ids': range(max(1, i - batchsize), i + 1)}
+        drevs = callconduit(repo, 'differential.query', batchparams)
+        # Fill prefetched with the result
+        for drev in drevs:
+            prefetched[drev[r'phid']] = drev
+            prefetched[int(drev[r'id'])] = drev
+        if key not in prefetched:
+            raise error.Abort(_('cannot get Differential Revision %r') % params)
+        return prefetched[key]
+
     result = []
     queue = [params]
     while queue:
         params = queue.pop()
-        drevs = callconduit(repo, 'differential.query', params)
-        if len(drevs) != 1:
-            raise error.Abort(_('cannot get Differential Revision %r') % params)
-        drev = drevs[0]
+        drev = fetch(params)
         result.append(drev)
         if stack:
             auxiliary = drev.get(r'auxiliary', {})
