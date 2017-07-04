@@ -8,7 +8,7 @@ Build up a repo
   $ hg init repo
   $ cd repo
 
-Test committing
+Test data store
 
   $ hg book master
   $ touch a1 && hg add a1 && hg ci -ma1
@@ -65,3 +65,84 @@ Test committing
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-e25f6bc1-amend-backup.hg (glob)
   $ hg debugdata .hg/store/undolog/command.i 11
   commit\x00--amend (no-eol) (esc)
+
+Test debugundohistory
+  $ hg debugundohistory -l
+  0: commit --amend
+  1: ci -md
+  2: book feature2
+  3: ci -mc2
+  4: ci -mc1
+  $ hg update master
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (activating bookmark master)
+  $ echo "test" >> a1
+  $ hg commit -m "words"
+  created new head
+  $ hg debugundohistory -l
+  0: commit -m words
+  1: update master
+  2: commit --amend
+  3: ci -md
+  4: book feature2
+  $ hg debugundohistory -n 0
+  command:
+  	commit -m words
+  bookmarks:
+  	feature1 49cdb4091aca3c09f402ff001cd20cf086873683
+  	feature2 296fda51a303650465d07a1cd054075cbe6d3cbd
+  	master 0a3dd3e15e65b90836f492112d816f3ee073d897
+  date:
+  	* (glob)
+  draftheads:
+  	ADDED:
+  		0a3dd3e15e65b90836f492112d816f3ee073d897
+  	REMOVED:
+  	
+  workingparent:
+  	0a3dd3e15e65b90836f492112d816f3ee073d897
+
+Test gap in data (extension dis and enabled)
+  $ hg debugundohistory -l
+  0: commit -m words
+  1: update master
+  2: commit --amend
+  3: ci -md
+  4: book feature2
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > undo =!
+  > EOF
+  $ touch cmiss && hg add cmiss && hg ci -mcmiss
+  $ cat >>$HGRCPATH <<EOF
+  > [extensions]
+  > undo = $TESTDIR/../hgext3rd/undo.py
+  > EOF
+  $ touch a5 && hg add a5 && hg ci -ma5
+  $ hg debugundohistory -l
+  0: ci -ma5
+  1: 
+  2: commit -m words
+  3: update master
+  4: commit --amend
+  $ hg debugundohistory 1
+  command:
+  	unkown command(s) run, gap in log
+  bookmarks:
+  	feature1 49cdb4091aca3c09f402ff001cd20cf086873683
+  	feature2 296fda51a303650465d07a1cd054075cbe6d3cbd
+  	master 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
+  date:
+  	* (glob)
+  draftheads:
+  	ADDED:
+  		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
+  	REMOVED:
+  		0a3dd3e15e65b90836f492112d816f3ee073d897
+  workingparent:
+  	1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
+
+Index out of bound error
+  $ hg debugundohistory -n 50
+  abort: index out of bounds
+  [255]
