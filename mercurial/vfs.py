@@ -190,6 +190,11 @@ class abstractvfs(object):
         checkambig argument is used with util.filestat, and is useful
         only if destination file is guarded by any lock
         (e.g. repo.lock or repo.wlock).
+
+        To avoid file stat ambiguity forcibly, checkambig=True involves
+        copying ``src`` file, if it is owned by another. Therefore, use
+        checkambig=True only in limited cases (see also issue5418 and
+        issue5584 for detail).
         """
         srcpath = self.join(src)
         dstpath = self.join(dst)
@@ -343,6 +348,12 @@ class vfs(abstractvfs):
         ``checkambig`` argument is passed to atomictemplfile (valid
         only for writing), and is useful only if target file is
         guarded by any lock (e.g. repo.lock or repo.wlock).
+
+        To avoid file stat ambiguity forcibly, checkambig=True involves
+        copying ``path`` file opened in "append" mode (e.g. for
+        truncation), if it is owned by another. Therefore, use
+        combination of append mode and checkambig=True only in limited
+        cases (see also issue5418 and issue5584 for detail).
         '''
         if auditpath:
             if self._audit:
