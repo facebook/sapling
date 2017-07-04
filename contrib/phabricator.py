@@ -314,50 +314,106 @@ _summaryre = re.compile('^Summary:\s*', re.M)
 _metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
                               (r'node', 'Node ID'), (r'parent', 'Parent ')])
 
-def readpatch(repo, params, recursive=False):
+def querydrev(repo, params, stack=False):
+    """return a list of "Differential Revision" dicts
+
+    params is the input of "differential.query" API, and is expected to match
+    just a single Differential Revision.
+
+    A "Differential Revision dict" looks like:
+
+        {
+            "id": "2",
+            "phid": "PHID-DREV-672qvysjcczopag46qty",
+            "title": "example",
+            "uri": "https://phab.example.com/D2",
+            "dateCreated": "1499181406",
+            "dateModified": "1499182103",
+            "authorPHID": "PHID-USER-tv3ohwc4v4jeu34otlye",
+            "status": "0",
+            "statusName": "Needs Review",
+            "properties": [],
+            "branch": null,
+            "summary": "",
+            "testPlan": "",
+            "lineCount": "2",
+            "activeDiffPHID": "PHID-DIFF-xoqnjkobbm6k4dk6hi72",
+            "diffs": [
+              "3",
+              "4",
+            ],
+            "commits": [],
+            "reviewers": [],
+            "ccs": [],
+            "hashes": [],
+            "auxiliary": {
+              "phabricator:projects": [],
+              "phabricator:depends-on": [
+                "PHID-DREV-gbapp366kutjebt7agcd"
+              ]
+            },
+            "repositoryPHID": "PHID-REPO-hub2hx62ieuqeheznasv",
+            "sourcePath": null
+        }
+
+    If stack is True, return a list of "Differential Revision dict"s in an
+    order that the latter ones depend on the former ones. Otherwise, return a
+    list of a unique "Differential Revision dict".
+    """
+    result = []
+    queue = [params]
+    while queue:
+        params = queue.pop()
+        drevs = callconduit(repo, 'differential.query', params)
+        if len(drevs) != 1:
+            raise error.Abort(_('cannot get Differential Revision %r') % params)
+        drev = drevs[0]
+        result.append(drev)
+        if stack:
+            auxiliary = drev.get(r'auxiliary', {})
+            depends = auxiliary.get(r'phabricator:depends-on', [])
+            for phid in depends:
+                queue.append({'phids': [phid]})
+    result.reverse()
+    return result
+
+def readpatch(repo, params, write, stack=False):
     """generate plain-text patch readable by 'hg import'
 
-    params is passed to "differential.query". If recursive is True, also return
-    dependent patches.
+    write is usually ui.write. params is passed to "differential.query". If
+    stack is True, also write dependent patches.
     """
     # Differential Revisions
-    drevs = callconduit(repo, 'differential.query', params)
-    if len(drevs) == 1:
-        drev = drevs[0]
-    else:
-        raise error.Abort(_('cannot get Differential Revision %r') % params)
+    drevs = querydrev(repo, params, stack)
 
-    repo.ui.note(_('reading D%s\n') % drev[r'id'])
+    # Prefetch hg:meta property for all diffs
+    diffids = sorted(set(max(int(v) for v in drev[r'diffs']) for drev in drevs))
+    diffs = callconduit(repo, 'differential.querydiffs', {'ids': diffids})
 
-    diffid = max(int(v) for v in drev[r'diffs'])
-    body = callconduit(repo, 'differential.getrawdiff', {'diffID': diffid})
-    desc = callconduit(repo, 'differential.getcommitmessage',
-                       {'revision_id': drev[r'id']})
-    header = '# HG changeset patch\n'
+    # Generate patch for each drev
+    for drev in drevs:
+        repo.ui.note(_('reading D%s\n') % drev[r'id'])
 
-    # Remove potential empty "Summary:"
-    desc = _summaryre.sub('', desc)
+        diffid = max(int(v) for v in drev[r'diffs'])
+        body = callconduit(repo, 'differential.getrawdiff', {'diffID': diffid})
+        desc = callconduit(repo, 'differential.getcommitmessage',
+                           {'revision_id': drev[r'id']})
+        header = '# HG changeset patch\n'
 
-    # Try to preserve metadata from hg:meta property. Write hg patch headers
-    # that can be read by the "import" command. See patchheadermap and extract
-    # in mercurial/patch.py for supported headers.
-    diffs = callconduit(repo, 'differential.querydiffs', {'ids': [diffid]})
-    props = diffs[str(diffid)][r'properties'] # could be empty list or dict
-    if props and r'hg:meta' in props:
-        meta = props[r'hg:meta']
-        for k in _metanamemap.keys():
-            if k in meta:
-                header += '# %s %s\n' % (_metanamemap[k], meta[k])
+        # Remove potential empty "Summary:"
+        desc = _summaryre.sub('', desc)
 
-    patch = ('%s%s\n%s') % (header, desc, body)
+        # Try to preserve metadata from hg:meta property. Write hg patch
+        # headers that can be read by the "import" command. See patchheadermap
+        # and extract in mercurial/patch.py for supported headers.
+        props = diffs[str(diffid)][r'properties'] # could be empty list or dict
+        if props and r'hg:meta' in props:
+            meta = props[r'hg:meta']
+            for k in _metanamemap.keys():
+                if k in meta:
+                    header += '# %s %s\n' % (_metanamemap[k], meta[k])
 
-    # Check dependencies
-    if recursive:
-        auxiliary = drev.get(r'auxiliary', {})
-        depends = auxiliary.get(r'phabricator:depends-on', [])
-        for phid in depends:
-            patch = readpatch(repo, {'phids': [phid]}, recursive=True) + patch
-    return patch
+        write(('%s%s\n%s') % (header, desc, body))
 
 @command('phabread',
          [('', 'stack', False, _('read dependencies'))],
@@ -374,5 +430,4 @@ def phabread(ui, repo, revid, **opts):
         revid = int(revid.split('/')[-1].replace('D', ''))
     except ValueError:
         raise error.Abort(_('invalid Revision ID: %s') % revid)
-    patch = readpatch(repo, {'ids': [revid]}, recursive=opts.get('stack'))
-    ui.write(patch)
+    readpatch(repo, {'ids': [revid]}, ui.write, opts.get('stack'))
