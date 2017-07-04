@@ -215,6 +215,11 @@ def showstack(ui, repo, displayer):
 
         stackrevs.add(ctx.rev())
 
+        # ctx.children() within a function iterating on descandants
+        # potentially has severe performance concerns because revlog.children()
+        # iterates over all revisions after ctx's node. However, the number of
+        # draft changesets should be a reasonably small number. So even if
+        # this is quadratic, the perf impact should be minimal.
         if len(ctx.children()) > 1:
             branchpointattip = True
             break
