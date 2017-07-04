@@ -77,7 +77,7 @@ working dir on public changeset should display special message
 
   $ hg -q up 1
   $ hg show stack
-  (empty stack; working directory is a published changeset)
+  (empty stack; working directory parent is a published changeset)
 
 Branch point in descendants displayed at top of graph
 

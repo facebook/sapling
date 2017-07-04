@@ -182,7 +182,7 @@ def showstack(ui, repo, displayer):
                             'working directory'))
 
     if wdirctx.phase() == phases.public:
-        ui.write(_('(empty stack; working directory is a published '
+        ui.write(_('(empty stack; working directory parent is a published '
                    'changeset)\n'))
         return
 
