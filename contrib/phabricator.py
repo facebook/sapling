@@ -307,8 +307,6 @@ def phabsend(ui, repo, *revs, **opts):
                                             ctx.description().split('\n')[0]))
         lastrevid = newrevid
 
-_summaryre = re.compile('^Summary:\s*', re.M)
-
 # Map from "hg:meta" keys to header understood by "hg import". The order is
 # consistent with "hg export" output.
 _metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
@@ -377,6 +375,20 @@ def querydrev(repo, params, stack=False):
     result.reverse()
     return result
 
+def getdescfromdrev(drev):
+    """get description (commit message) from "Differential Revision"
+
+    This is similar to differential.getcommitmessage API. But we only care
+    about limited fields: title, summary, test plan, and URL.
+    """
+    title = drev[r'title']
+    summary = drev[r'summary'].rstrip()
+    testplan = drev[r'testPlan'].rstrip()
+    if testplan:
+        testplan = 'Test Plan:\n%s' % testplan
+    uri = 'Differential Revision: %s' % drev[r'uri']
+    return '\n\n'.join(filter(None, [title, summary, testplan, uri]))
+
 def readpatch(repo, params, write, stack=False):
     """generate plain-text patch readable by 'hg import'
 
@@ -396,12 +408,8 @@ def readpatch(repo, params, write, stack=False):
 
         diffid = max(int(v) for v in drev[r'diffs'])
         body = callconduit(repo, 'differential.getrawdiff', {'diffID': diffid})
-        desc = callconduit(repo, 'differential.getcommitmessage',
-                           {'revision_id': drev[r'id']})
+        desc = getdescfromdrev(drev)
         header = '# HG changeset patch\n'
-
-        # Remove potential empty "Summary:"
-        desc = _summaryre.sub('', desc)
 
         # Try to preserve metadata from hg:meta property. Write hg patch
         # headers that can be read by the "import" command. See patchheadermap
