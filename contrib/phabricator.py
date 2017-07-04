@@ -135,7 +135,9 @@ def getrepophid(repo):
     repo.ui.setconfig('phabricator', 'repophid', repophid)
     return repophid
 
-_differentialrevisionre = re.compile('\AD([1-9][0-9]*)\Z')
+_differentialrevisiontagre = re.compile('\AD([1-9][0-9]*)\Z')
+_differentialrevisiondescre = re.compile(
+    '^Differential Revision:.*D([1-9][0-9]*)$', re.M)
 
 def getmapping(ctx):
     """return (node, associated Differential Revision ID) or (None, None)
@@ -143,15 +145,26 @@ def getmapping(ctx):
     Examines all precursors and their tags. Tags with format like "D1234" are
     considered a match and the node with that tag, and the number after "D"
     (ex. 1234) will be returned.
+
+    If tags are not found, examine commit message. The "Differential Revision:"
+    line could associate this changeset to a Differential Revision.
     """
     unfi = ctx.repo().unfiltered()
     nodemap = unfi.changelog.nodemap
+
+    # Check tags like "D123"
     for n in obsolete.allprecursors(unfi.obsstore, [ctx.node()]):
         if n in nodemap:
             for tag in unfi.nodetags(n):
-                m = _differentialrevisionre.match(tag)
+                m = _differentialrevisiontagre.match(tag)
                 if m:
                     return n, int(m.group(1))
+
+    # Check commit message
+    m = _differentialrevisiondescre.search(ctx.description())
+    if m:
+        return None, int(m.group(1))
+
     return None, None
 
 def getdiff(ctx, diffopts):
