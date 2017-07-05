@@ -381,11 +381,15 @@ def querydrev(repo, params, stack=False):
             raise error.Abort(_('cannot get Differential Revision %r') % params)
         return prefetched[key]
 
+    visited = set()
     result = []
     queue = [params]
     while queue:
         params = queue.pop()
         drev = fetch(params)
+        if drev[r'id'] in visited:
+            continue
+        visited.add(drev[r'id'])
         result.append(drev)
         if stack:
             auxiliary = drev.get(r'auxiliary', {})
