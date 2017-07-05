@@ -861,31 +861,31 @@ Example ``.hg/hgrc``::
 
 Most hooks are run with environment variables set that give useful
 additional information. For each hook below, the environment variables
-it is passed are listed with names of the form ``$HG_foo``. The
+it is passed are listed with names in the form ``$HG_foo``. The
 ``$HG_HOOKTYPE`` and ``$HG_HOOKNAME`` variables are set for all hooks.
-their respectively contains the type of hook which triggered the run and
-the full name of the hooks in the config. In the example about this will
+They contain the type of hook which triggered the run and the full name
+of the hook in the config, respectively. In the example above, this will
 be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 
 ``changegroup``
-  Run after a changegroup has been added via push, pull or unbundle.  ID of the
-  first new changeset is in ``$HG_NODE`` and last in ``$HG_NODE_LAST``. URL
-  from which changes came is in ``$HG_URL``.
+  Run after a changegroup has been added via push, pull or unbundle.  The ID of
+  the first new changeset is in ``$HG_NODE`` and last is in ``$HG_NODE_LAST``.
+  The URL from which changes came is in ``$HG_URL``.
 
 ``commit``
-  Run after a changeset has been created in the local repository. ID
+  Run after a changeset has been created in the local repository. The ID
   of the newly created changeset is in ``$HG_NODE``. Parent changeset
   IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 
 ``incoming``
   Run after a changeset has been pulled, pushed, or unbundled into
   the local repository. The ID of the newly arrived changeset is in
-  ``$HG_NODE``. URL that was source of changes came is in ``$HG_URL``.
+  ``$HG_NODE``. The URL that was source of the changes is in ``$HG_URL``.
 
 ``outgoing``
-  Run after sending changes from local repository to another. ID of
-  first changeset sent is in ``$HG_NODE``. Source of operation is in
-  ``$HG_SOURCE``; Also see :hg:`help config.hooks.preoutgoing` hook.
+  Run after sending changes from the local repository to another. The ID of
+  first changeset sent is in ``$HG_NODE``. The source of operation is in
+  ``$HG_SOURCE``. Also see :hg:`help config.hooks.preoutgoing`.
 
 ``post-<command>``
   Run after successful invocations of the associated command. The
@@ -917,93 +917,94 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 
 ``prechangegroup``
   Run before a changegroup is added via push, pull or unbundle. Exit
-  status 0 allows the changegroup to proceed. Non-zero status will
-  cause the push, pull or unbundle to fail. URL from which changes
+  status 0 allows the changegroup to proceed. A non-zero status will
+  cause the push, pull or unbundle to fail. The URL from which changes
   will come is in ``$HG_URL``.
 
 ``precommit``
   Run before starting a local commit. Exit status 0 allows the
-  commit to proceed. Non-zero status will cause the commit to fail.
+  commit to proceed. A non-zero status will cause the commit to fail.
   Parent changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 
 ``prelistkeys``
   Run before listing pushkeys (like bookmarks) in the
-  repository. Non-zero status will cause failure. The key namespace is
+  repository. A non-zero status will cause failure. The key namespace is
   in ``$HG_NAMESPACE``.
 
 ``preoutgoing``
   Run before collecting changes to send from the local repository to
-  another. Non-zero status will cause failure. This lets you prevent
-  pull over HTTP or SSH. Also prevents against local pull, push
-  (outbound) or bundle commands, but not effective, since you can
-  just copy files instead then. Source of operation is in
-  ``$HG_SOURCE``. If "serve", operation is happening on behalf of remote
-  SSH or HTTP repository. If "push", "pull" or "bundle", operation
-  is happening on behalf of repository on same system.
+  another. A non-zero status will cause failure. This lets you prevent
+  pull over HTTP or SSH. It can also prevent propagating commits (via
+  local pull, push (outbound) or bundle commands), but not completely,
+  since you can just copy files instead. The source of operation is in
+  ``$HG_SOURCE``. If "serve", the operation is happening on behalf of a remote
+  SSH or HTTP repository. If "push", "pull" or "bundle", the operation
+  is happening on behalf of a repository on same system.
 
 ``prepushkey``
   Run before a pushkey (like a bookmark) is added to the
-  repository. Non-zero status will cause the key to be rejected. The
+  repository. A non-zero status will cause the key to be rejected. The
   key namespace is in ``$HG_NAMESPACE``, the key is in ``$HG_KEY``,
   the old value (if any) is in ``$HG_OLD``, and the new value is in
   ``$HG_NEW``.
 
 ``pretag``
   Run before creating a tag. Exit status 0 allows the tag to be
-  created. Non-zero status will cause the tag to fail. ID of
-  changeset to tag is in ``$HG_NODE``. Name of tag is in ``$HG_TAG``. Tag is
-  local if ``$HG_LOCAL=1``, in repository if ``$HG_LOCAL=0``.
+  created. A non-zero status will cause the tag to fail. The ID of the
+  changeset to tag is in ``$HG_NODE``. The name of tag is in ``$HG_TAG``. The
+  tag is local if ``$HG_LOCAL=1``, or in the repository if ``$HG_LOCAL=0``.
 
 ``pretxnopen``
   Run before any new repository transaction is open. The reason for the
-  transaction will be in ``$HG_TXNNAME`` and a unique identifier for the
+  transaction will be in ``$HG_TXNNAME``, and a unique identifier for the
   transaction will be in ``HG_TXNID``. A non-zero status will prevent the
   transaction from being opened.
 
 ``pretxnclose``
   Run right before the transaction is actually finalized. Any repository change
   will be visible to the hook program. This lets you validate the transaction
-  content or change it. Exit status 0 allows the commit to proceed. Non-zero
+  content or change it. Exit status 0 allows the commit to proceed. A non-zero
   status will cause the transaction to be rolled back. The reason for the
-  transaction opening will be in ``$HG_TXNNAME`` and a unique identifier for
+  transaction opening will be in ``$HG_TXNNAME``, and a unique identifier for
   the transaction will be in ``HG_TXNID``. The rest of the available data will
-  vary according the transaction type. New changesets will add ``$HG_NODE`` (id
-  of the first added changeset), ``$HG_NODE_LAST`` (id of the last added
-  changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables, bookmarks and phases
-  changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``, etc.
+  vary according the transaction type. New changesets will add ``$HG_NODE``
+  (the ID of the first added changeset), ``$HG_NODE_LAST`` (the ID of the last
+  added changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables.  Bookmark and
+  phase changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``
+  respectively, etc.
 
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. See :hg:`help config.hooks.pretxnclose` docs for
+  after the lock is released. See :hg:`help config.hooks.pretxnclose` for
   details about available variables.
 
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
-  docs for details about available variables.
+  for details about available variables.
 
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle, but before
-  the transaction has been committed. Changegroup is visible to hook program.
-  This lets you validate incoming changes before accepting them. Passed the ID
-  of the first new changeset in ``$HG_NODE`` and last in ``$HG_NODE_LAST``.
-  Exit status 0 allows the transaction to commit. Non-zero status will cause
-  the transaction to be rolled back and the push, pull or unbundle will fail.
-  URL that was source of changes is in ``$HG_URL``.
+  the transaction has been committed. The changegroup is visible to the hook
+  program. This allows validation of incoming changes before accepting them.
+  The ID of the first new changeset is in ``$HG_NODE`` and last is in
+  ``$HG_NODE_LAST``. Exit status 0 allows the transaction to commit. A non-zero
+  status will cause the transaction to be rolled back, and the push, pull or
+  unbundle will fail. The URL that was the source of changes is in ``$HG_URL``.
 
 ``pretxncommit``
-  Run after a changeset has been created but the transaction not yet
-  committed. Changeset is visible to hook program. This lets you
-  validate commit message and changes. Exit status 0 allows the
-  commit to proceed. Non-zero status will cause the transaction to
-  be rolled back. ID of changeset is in ``$HG_NODE``. Parent changeset
-  IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
+  Run after a changeset has been created, but before the transaction is
+  committed. The changeset is visible to the hook program. This allows
+  validation of the commit message and changes. Exit status 0 allows the
+  commit to proceed. A non-zero status will cause the transaction to
+  be rolled back. The ID of the new changeset is in ``$HG_NODE``. The parent
+  changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``.
 
 ``preupdate``
   Run before updating the working directory. Exit status 0 allows
-  the update to proceed. Non-zero status will prevent the update.
-  Changeset ID of first new parent is in ``$HG_PARENT1``. If merge, ID
-  of second new parent is in ``$HG_PARENT2``.
+  the update to proceed. A non-zero status will prevent the update.
+  The changeset ID of first new parent is in ``$HG_PARENT1``. If updating to a
+  merge, the ID of second new parent is in ``$HG_PARENT2``.
 
 ``listkeys``
   Run after listing pushkeys (like bookmarks) in the repository. The
@@ -1017,20 +1018,20 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   value is in ``$HG_NEW``.
 
 ``tag``
-  Run after a tag is created. ID of tagged changeset is in ``$HG_NODE``.
-  Name of tag is in ``$HG_TAG``. Tag is local if ``$HG_LOCAL=1``, in
-  repository if ``$HG_LOCAL=0``.
+  Run after a tag is created. The ID of the tagged changeset is in ``$HG_NODE``.
+  The name of tag is in ``$HG_TAG``. The tag is local if ``$HG_LOCAL=1``, or in
+  the repository if ``$HG_LOCAL=0``.
 
 ``update``
-  Run after updating the working directory. Changeset ID of first
-  new parent is in ``$HG_PARENT1``. If merge, ID of second new parent is
-  in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the
-  update failed (e.g. because conflicts not resolved), ``$HG_ERROR=1``.
+  Run after updating the working directory. The changeset ID of first
+  new parent is in ``$HG_PARENT1``. If updating to a merge, the ID of second new
+  parent is in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the
+  update failed (e.g. because conflicts were not resolved), ``$HG_ERROR=1``.
 
 .. note::
 
    It is generally better to use standard hooks rather than the
-   generic pre- and post- command hooks as they are guaranteed to be
+   generic pre- and post- command hooks, as they are guaranteed to be
    called in the appropriate contexts for influencing transactions.
    Also, hooks like "commit" will be called in all contexts that
    generate a commit (e.g. tag) and not just the commit command.
