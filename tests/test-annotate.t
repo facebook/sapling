@@ -725,6 +725,65 @@ we follow all branches in descending direction
   |
   ~
 
+Issue5595: on a merge changeset with different line ranges depending on
+parent, be conservative and use the surrounding interval to avoid loosing
+track of possible further descendants in specified range.
+
+  $ hg up 23 --quiet
+  $ hg cat baz -r 24
+  0
+  0
+  1 baz:1
+  2 baz:2
+  3+ baz:3
+  4 baz:4
+  5
+  6
+  $ cat > baz << EOF
+  > 0
+  > 0
+  > a
+  > b
+  > 3+ baz:3
+  > 4 baz:4
+  > y
+  > z
+  > EOF
+  $ hg ci -m 'baz: mostly rewrite with some content from 24'
+  created new head
+  $ hg merge --tool :merge-other 24
+  merging baz
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'merge forgetting about baz rewrite'
+  $ cat > baz << EOF
+  > 0
+  > 0
+  > 1 baz:1
+  > 2+ baz:2
+  > 3+ baz:3
+  > 4 baz:4
+  > 5
+  > 6
+  > EOF
+  $ hg ci -m 'baz: narrow change (2->2+)'
+  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:4, startrev=20, descend=True)' --graph
+  @  33: baz: narrow change (2->2+)
+  |
+  o    32: merge forgetting about baz rewrite
+  |\
+  | o  31: baz: mostly rewrite with some content from 24
+  | :
+  | : o  30: baz:3->+3
+  | :/
+  +---o  27: baz:3+->3-
+  | :
+  o :  24: baz:3->3+
+  :/
+  o    20: baz:4
+  |\
+  ~ ~
+
 check error cases
   $ hg up 24 --quiet
   $ hg log -r 'followlines()'
