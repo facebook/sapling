@@ -29,7 +29,7 @@ Create an extension to test bundle2 remote-changegroup parts
   >           from the given file.
   >       - raw-remote-changegroup <python expression>
   >           Creates a remote-changegroup part with the data given in the
-  >           python expression as parameters. The python expression is
+  >           Python expression as parameters. The Python expression is
   >           evaluated with eval, and is expected to be a dict.
   >     """
   >     def newpart(name, data=''):

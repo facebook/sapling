@@ -4,7 +4,7 @@ commit hooks can see env vars
 
   $ cat > $TESTTMP/txnabort.checkargs.py <<EOF
   > def showargs(ui, repo, hooktype, **kwargs):
-  >     ui.write('%s python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
+  >     ui.write('%s Python hook: %s\n' % (hooktype, ','.join(sorted(kwargs))))
   > EOF
 
   $ hg init a
@@ -175,7 +175,7 @@ more there after
   5:6f611f8018c1
   pretxncommit.forbid hook: HG_HOOKNAME=pretxncommit.forbid1 HG_HOOKTYPE=pretxncommit HG_NODE=6f611f8018c10e827fee6bd2bc807f937e761567 HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_PENDING=$TESTTMP/a
   transaction abort!
-  txnabort python hook: txnid,txnname
+  txnabort Python hook: txnid,txnname
   txnabort hook: HG_HOOKNAME=txnabort.1 HG_HOOKTYPE=txnabort HG_TXNID=TXN:$ID$ HG_TXNNAME=commit
   rollback completed
   abort: pretxncommit.forbid1 hook exited with status 1
