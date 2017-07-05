@@ -154,7 +154,9 @@ HgManifestImporter::HgManifestImporter(LocalStore* store) : store_(store) {
   store_->enableBatchMode(FLAGS_hgManifestImportBufferSize);
 }
 
-HgManifestImporter::~HgManifestImporter() {}
+HgManifestImporter::~HgManifestImporter() {
+  store_->disableBatchMode();
+}
 
 void HgManifestImporter::processEntry(
     RelativePathPiece dirname,
@@ -215,7 +217,7 @@ Hash HgManifestImporter::finish() {
   dirStack_.pop_back();
   CHECK(dirStack_.empty());
 
-  store_->disableBatchMode();
+  store_->flush();
 
   return rootHash;
 }

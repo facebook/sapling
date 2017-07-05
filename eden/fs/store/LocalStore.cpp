@@ -340,6 +340,9 @@ void LocalStore::flushIfNotBatch() {
 }
 
 void LocalStore::enableBatchMode(size_t bufferSize) {
+  // FIXME: This code is not thread safe.  This doesn't lock around
+  // writeBatchBufferSize_, and this API assumes that only a single external
+  // caller tries to manage batch mode.
   CHECK_EQ(writeBatchBufferSize_, 0) << "Must not already be in batch mode";
   writeBatchBufferSize_ = bufferSize;
 }
