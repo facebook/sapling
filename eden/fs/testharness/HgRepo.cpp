@@ -10,6 +10,7 @@
 #include "eden/fs/testharness/HgRepo.h"
 
 #include <folly/Exception.h>
+#include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/Subprocess.h>
@@ -87,6 +88,19 @@ void HgRepo::hgInit() {
       hgCmd_.value().c_str(),
       &hgEnv_);
   p.waitChecked();
+}
+
+void HgRepo::appendToHgrc(folly::StringPiece data) {
+  auto hgrcPath =
+      path_ + PathComponentPiece{".hg"} + PathComponentPiece{"hgrc"};
+  folly::File hgrc{hgrcPath.stringPiece(), O_WRONLY | O_APPEND | O_CREAT};
+  if (folly::writeFull(hgrc.fd(), data.data(), data.size()) < 0) {
+    folly::throwSystemError("error writing to ", hgrcPath);
+  }
+}
+
+void HgRepo::appendToHgrc(const std::vector<std::string>& lines) {
+  appendToHgrc(folly::join("\n", lines));
 }
 
 Hash HgRepo::commit(StringPiece message) {

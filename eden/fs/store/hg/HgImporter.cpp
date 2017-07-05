@@ -448,7 +448,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
     if (entry->isdirectory()) {
       fileType = FileType::DIRECTORY;
-      ownerPermissions = 0b110;
+      ownerPermissions = 0b111;
     } else if (entry->flag) {
       switch (*entry->flag) {
         case 'x':
@@ -481,9 +481,9 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     iter.next();
   }
 
-  auto tree = std::make_unique<Tree>(std::move(entries), manifestNode);
+  auto tree = std::make_unique<Tree>(std::move(entries), edenBlobHash);
   auto serialized = store_->serializeTree(tree.get());
-  store_->put(manifestNode, serialized.second.coalesce());
+  store_->put(edenBlobHash, serialized.second.coalesce());
   return tree;
 }
 

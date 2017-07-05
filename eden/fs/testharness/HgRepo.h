@@ -65,6 +65,12 @@ class HgRepo {
    */
   void hgInit();
 
+  /**
+   * Append data to the repository's hgrc file
+   */
+  void appendToHgrc(folly::StringPiece data);
+  void appendToHgrc(const std::vector<std::string>& lines);
+
   Hash commit(folly::StringPiece message);
 
   void mkdir(RelativePathPiece path, mode_t permissions = 0755);

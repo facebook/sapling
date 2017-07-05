@@ -51,14 +51,16 @@ class HgImportTest : public ::testing::Test {
   }
 
  protected:
+  void importTest(bool treemanifest);
+
   TemporaryDirectory testDir_{"eden_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + PathComponentPiece{"repo"}};
   LocalStore localStore_{testPath_ + PathComponentPiece{"store"}};
 };
 
-TEST_F(HgImportTest, import) {
-  // Set up the repository
+void HgImportTest::importTest(bool treemanifest) {
+  // Set up the initial commit
   repo_.mkdir("foo");
   StringPiece barData = "this is a test file\n";
   repo_.writeFile("foo/bar.txt", barData);
@@ -75,7 +77,9 @@ TEST_F(HgImportTest, import) {
 
   // Import the root tree
   HgImporter importer(repo_.path(), &localStore_);
-  auto rootTreeHash = importer.importManifest(commit1.toString());
+  auto rootTreeHash = treemanifest
+      ? importer.importTreeManifest(commit1.toString())
+      : importer.importFlatManifest(commit1.toString());
   auto rootTree = localStore_.getTree(rootTreeHash);
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
   EXPECT_EQ(rootTreeHash, rootTree->getHash());
@@ -83,14 +87,26 @@ TEST_F(HgImportTest, import) {
       getTreeEntryNames(rootTree.get()),
       ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 
-  // Import the "foo" tree
+  // Get the "foo" tree.
+  // When using flatmanifest, it should have already been imported
+  // by importFlatManifest().  When using treemanifest we need to call
+  // importer.importTree().
   auto fooEntry = rootTree->getEntryAt(PathComponentPiece{"foo"});
   ASSERT_EQ(FileType::DIRECTORY, fooEntry.getFileType());
   EXPECT_EQ(0b111, fooEntry.getOwnerPermissions());
-  auto fooTree = localStore_.getTree(fooEntry.getHash());
+  auto fooTree = treemanifest ? importer.importTree(fooEntry.getHash())
+                              : localStore_.getTree(fooEntry.getHash());
+  ASSERT_TRUE(fooTree);
   ASSERT_THAT(
       getTreeEntryNames(fooTree.get()),
       ElementsAre(PathComponent{"bar.txt"}, PathComponent{"test.txt"}));
+  if (treemanifest) {
+    // HgImporter::importTree() is currently responsible for inserting the tree
+    // into the LocalStore.
+    auto fooTree2 = localStore_.getTree(fooEntry.getHash());
+    ASSERT_TRUE(fooTree2);
+    EXPECT_EQ(*fooTree, *fooTree2);
+  }
 
   auto barEntry = fooTree->getEntryAt(PathComponentPiece{"bar.txt"});
   ASSERT_EQ(FileType::REGULAR_FILE, barEntry.getFileType());
@@ -103,26 +119,40 @@ TEST_F(HgImportTest, import) {
   EXPECT_FALSE(localStore_.getBlob(barEntry.getHash()));
   EXPECT_FALSE(localStore_.getBlob(testEntry.getHash()));
 
-  // Import the "src" tree
+  // Get the "src" tree from the LocalStore.
   auto srcEntry = rootTree->getEntryAt(PathComponentPiece{"src"});
   ASSERT_EQ(FileType::DIRECTORY, srcEntry.getFileType());
   EXPECT_EQ(0b111, srcEntry.getOwnerPermissions());
-  auto srcTree = localStore_.getTree(srcEntry.getHash());
+  auto srcTree = treemanifest ? importer.importTree(srcEntry.getHash())
+                              : localStore_.getTree(srcEntry.getHash());
+  ASSERT_TRUE(srcTree);
   ASSERT_THAT(
       getTreeEntryNames(srcTree.get()),
       ElementsAre(PathComponent{"eden"}, PathComponent{"somelink"}));
+  if (treemanifest) {
+    auto srcTree2 = localStore_.getTree(srcEntry.getHash());
+    ASSERT_TRUE(srcTree2);
+    EXPECT_EQ(*srcTree, *srcTree2);
+  }
 
   auto somelinkEntry = srcTree->getEntryAt(PathComponentPiece{"somelink"});
   ASSERT_EQ(FileType::SYMLINK, somelinkEntry.getFileType());
   EXPECT_EQ(0b111, somelinkEntry.getOwnerPermissions());
 
-  // Import the "src/eden" tree
+  // Get the "src/eden" tree from the LocalStore
   auto edenEntry = srcTree->getEntryAt(PathComponentPiece{"eden"});
   ASSERT_EQ(FileType::DIRECTORY, edenEntry.getFileType());
   EXPECT_EQ(0b111, edenEntry.getOwnerPermissions());
-  auto edenTree = localStore_.getTree(edenEntry.getHash());
+  auto edenTree = treemanifest ? importer.importTree(edenEntry.getHash())
+                               : localStore_.getTree(edenEntry.getHash());
+  ASSERT_TRUE(edenTree);
   ASSERT_THAT(
       getTreeEntryNames(edenTree.get()), ElementsAre(PathComponent{"main.py"}));
+  if (treemanifest) {
+    auto edenTree2 = localStore_.getTree(edenEntry.getHash());
+    ASSERT_TRUE(edenTree2);
+    EXPECT_EQ(*edenTree, *edenTree2);
+  }
 
   auto mainEntry = edenTree->getEntryAt(PathComponentPiece{"main.py"});
   ASSERT_EQ(FileType::REGULAR_FILE, mainEntry.getFileType());
@@ -144,7 +174,7 @@ TEST_F(HgImportTest, import) {
   // Test importing objects that do not exist
   Hash noSuchHash = makeTestHash("123");
   EXPECT_THROW_RE(
-      importer.importManifest(noSuchHash.toString()),
+      importer.importFlatManifest(noSuchHash.toString()),
       std::exception,
       "unknown revision");
   EXPECT_THROW_RE(
@@ -154,13 +184,37 @@ TEST_F(HgImportTest, import) {
 
   // Test trying to import manifests using blob hashes, and vice-versa
   EXPECT_THROW_RE(
-      importer.importManifest(barEntry.getHash().toString()),
+      importer.importFlatManifest(barEntry.getHash().toString()),
       std::exception,
       "unknown revision");
   EXPECT_THROW_RE(
       importer.importFileContents(commit1),
       std::exception,
       "value not present in store");
+}
+
+TEST_F(HgImportTest, importFlatManifest) {
+  importTest(false);
+}
+
+TEST_F(HgImportTest, importTreeManifest) {
+  repo_.appendToHgrc({"[extensions]",
+                      "fastmanifest=",
+                      "treemanifest=",
+                      "",
+                      "[remotefilelog]",
+                      "reponame=eden_test_hg_import",
+                      "",
+                      "[fastmanifest]",
+                      "usetree=True",
+                      "cacheonchange=True",
+                      "usecache=True",
+                      ""
+                      "[treemanifest]",
+                      "usecunionstore=True",
+                      "autocreatetrees=True"});
+
+  importTest(true);
 }
 
 int main(int argc, char* argv[]) {

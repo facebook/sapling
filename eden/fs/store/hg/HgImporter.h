@@ -67,6 +67,26 @@ class HgImporter {
   Hash importManifest(folly::StringPiece revName);
 
   /**
+   * Import the manifest for the specified revision using mercurial
+   * treemanifest data.
+   *
+   * Most callers should use the importManifest() function above, which
+   * automatically chooses the best mechanism to use for importing tree data.
+   * This method is exposed publicly primarily for testing purposes.
+   */
+  Hash importTreeManifest(folly::StringPiece revName);
+
+  /**
+   * Import the manifest for the specified revision using mercurial
+   * flat manifest data.
+   *
+   * Most callers should use the importManifest() function above, which
+   * automatically chooses the best mechanism to use for importing tree data.
+   * This method is exposed publicly primarily for testing purposes.
+   */
+  Hash importFlatManifest(folly::StringPiece revName);
+
+  /**
    * Import the tree with the specified tree manifest hash.
    *
    * Returns the Tree, or throws on error.
@@ -177,8 +197,6 @@ class HgImporter {
       const Hash& manifestNode,
       const Hash& edenBlobHash,
       RelativePathPiece path);
-  Hash importTreeManifest(folly::StringPiece revName);
-  Hash importFlatManifest(folly::StringPiece revName);
 
   folly::Subprocess helper_;
   LocalStore* store_{nullptr};
