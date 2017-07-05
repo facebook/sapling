@@ -4,7 +4,7 @@ Test alignment of multibyte characters
   $ export HGENCODING
   $ hg init t
   $ cd t
-  $ python << EOF
+  $ $PYTHON << EOF
   > # (byte, width) = (6, 4)
   > s = "\xe7\x9f\xad\xe5\x90\x8d"
   > # (byte, width) = (7, 7): odd width is good for alignment test

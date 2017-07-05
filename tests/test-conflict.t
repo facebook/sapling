@@ -120,7 +120,7 @@ Verify line splitting of custom conflict marker which causes multiple lines
 Verify line trimming of custom conflict marker using multi-byte characters
 
   $ hg up -q --clean .
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > fp = open('logfile', 'w')
   > fp.write('12345678901234567890123456789012345678901234567890' +
   >          '1234567890') # there are 5 more columns for 80 columns

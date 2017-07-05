@@ -123,7 +123,7 @@ Check hgweb's load order of extensions and registration of functions
   > EOF
   $ . "$TESTDIR/cgienv"
 
-  $ PATH_INFO='/' SCRIPT_NAME='' python hgweb.cgi \
+  $ PATH_INFO='/' SCRIPT_NAME='' $PYTHON hgweb.cgi \
   >    | grep '^[0-9]) ' # ignores HTML output
   1) foo imported
   1) bar imported

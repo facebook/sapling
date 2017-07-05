@@ -1584,7 +1584,7 @@ Test that secret mq patch does not break hgweb
   $ PATH_INFO=/tags; export PATH_INFO
 #endif
   $ QUERY_STRING='style=raw'
-  $ python hgweb.cgi | grep '^tip'
+  $ $PYTHON hgweb.cgi | grep '^tip'
   tip	[0-9a-f]{40} (re)
 
   $ cd ..

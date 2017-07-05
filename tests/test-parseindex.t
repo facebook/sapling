@@ -66,7 +66,7 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
 
   $ cd a
 
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > from mercurial import changelog, vfs
   > cl = changelog.changelog(vfs.vfs('.hg/store'))
   > print 'good heads:'
@@ -128,7 +128,7 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
   $ hg clone --pull -q --config phases.publish=False ../a segv
   $ rm -R limit/.hg/cache segv/.hg/cache
 
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > data = open("limit/.hg/store/00changelog.i", "rb").read()
   > for n, p in [('limit', '\0\0\0\x02'), ('segv', '\0\x01\0\0')]:
   >     # corrupt p1 at rev0 and p2 at rev1

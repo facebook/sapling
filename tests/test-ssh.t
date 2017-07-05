@@ -139,7 +139,7 @@ updating rc
 
   $ echo "default-push = ssh://user@dummy/remote" >> .hg/hgrc
   $ echo "[ui]" >> .hg/hgrc
-  $ echo "ssh = python \"$TESTDIR/dummyssh\"" >> .hg/hgrc
+  $ echo "ssh = $PYTHON \"$TESTDIR/dummyssh\"" >> .hg/hgrc
 
 find outgoing
 
@@ -273,7 +273,7 @@ a bad, evil hook that prints to stdout
 
   $ cat <<EOF >> ../remote/.hg/hgrc
   > [hooks]
-  > changegroup.stdout = python $TESTTMP/badhook
+  > changegroup.stdout = $PYTHON $TESTTMP/badhook
   > changegroup.pystdout = python:$TESTTMP/badpyhook.py:hook
   > EOF
   $ echo r > r
@@ -380,7 +380,7 @@ parameters:
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > python "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
+  > $PYTHON "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
   > EOF
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
@@ -396,7 +396,7 @@ parameters:
   abort: no suitable response from remote hg!
   [255]
 
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" python "$TESTDIR/../contrib/hg-ssh"
+  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" $PYTHON "$TESTDIR/../contrib/hg-ssh"
   Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
   [255]
 
@@ -408,7 +408,7 @@ Test hg-ssh in read-only mode:
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > python "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/remote"
+  > $PYTHON "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/remote"
   > EOF
 
   $ hg clone --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/remote" read-only-local
@@ -455,7 +455,7 @@ stderr from remote commands should be printed before stdout from local code (iss
   > [paths]
   > default-push = ssh://user@dummy/remote
   > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = $PYTHON "$TESTDIR/dummyssh"
   > [extensions]
   > localwrite = localwrite.py
   > EOF
@@ -477,7 +477,7 @@ debug output
 
   $ hg pull --debug ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
-  running python ".*/dummyssh" user@dummy ('|")hg -R remote serve --stdio('|") (re)
+  running .* ".*/dummyssh" user@dummy ('|")hg -R remote serve --stdio('|") (re)
   sending hello command
   sending between command
   remote: 355

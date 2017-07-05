@@ -230,7 +230,7 @@ cloning local tags
 Issue601: hg tag doesn't do the right thing if .hgtags or localtags
 doesn't end with EOL
 
-  $ python << EOF
+  $ $PYTHON << EOF
   > f = file('.hg/localtags'); last = f.readlines()[-1][:-1]; f.close()
   > f = file('.hg/localtags', 'w'); f.write(last); f.close()
   > EOF
@@ -242,7 +242,7 @@ doesn't end with EOL
   c2899151f4e76890c602a2597a650a72666681bf localnewline
   
 
-  $ python << EOF
+  $ $PYTHON << EOF
   > f = file('.hgtags'); last = f.readlines()[-1][:-1]; f.close()
   > f = file('.hgtags', 'w'); f.write(last); f.close()
   > EOF

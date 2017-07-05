@@ -342,7 +342,7 @@ Check ui.interface logic for the chunkselector
 The default interface is text
   $ cp $HGRCPATH.pretest $HGRCPATH
   $ chunkselectorinterface() {
-  > python <<EOF
+  > $PYTHON <<EOF
   > from mercurial import hg, ui;\
   > repo = hg.repository(ui.ui.load(), ".");\
   > print repo.ui.interface("chunkselector")

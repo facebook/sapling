@@ -225,7 +225,7 @@ Test largefiles can be loaded in hgweb (wrapcommand() shouldn't fail)
   $ . "$TESTDIR/cgienv"
 
   $ SCRIPT_NAME='' \
-  > python "$TESTTMP/hgweb.cgi" > /dev/null
+  > $PYTHON "$TESTTMP/hgweb.cgi" > /dev/null
 
 Test archiving the various revisions.  These hit corner cases known with
 archiving.

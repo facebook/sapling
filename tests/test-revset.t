@@ -4180,7 +4180,7 @@ test author/desc/keyword in problematic encoding
   $ hg init problematicencoding
   $ cd problematicencoding
 
-  $ python > setup.sh <<EOF
+  $ $PYTHON > setup.sh <<EOF
   > print u'''
   > echo a > text
   > hg add text
@@ -4196,7 +4196,7 @@ test author/desc/keyword in problematic encoding
   $ sh < setup.sh
 
 test in problematic encoding
-  $ python > test.sh <<EOF
+  $ $PYTHON > test.sh <<EOF
   > print u'''
   > hg --encoding cp932 log --template '{rev}\\n' -r 'author(\u30A2)'
   > echo ====

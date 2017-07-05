@@ -37,4 +37,4 @@ outputs, which should be fixed later.
   > -X tests/test-hgweb-no-path-info.t \
   > -X tests/test-hgweb-no-request-uri.t \
   > -X tests/test-hgweb-non-interactive.t \
-  > | sed 's-\\-/-g' | python "$import_checker" -
+  > | sed 's-\\-/-g' | $PYTHON "$import_checker" -

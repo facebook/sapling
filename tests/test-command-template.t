@@ -4253,7 +4253,7 @@ Set up repository for non-ascii encoding tests:
 
   $ hg init nonascii
   $ cd nonascii
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > open('latin1', 'w').write('\xe9')
   > open('utf-8', 'w').write('\xc3\xa9')
   > EOF

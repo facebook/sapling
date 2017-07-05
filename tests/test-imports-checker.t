@@ -8,7 +8,7 @@ Run the doctests from the import checker, and make sure
 it's working correctly.
   $ TERM=dumb
   $ export TERM
-  $ python -m doctest $import_checker
+  $ $PYTHON -m doctest $import_checker
 
 Run additional tests for the import checker
 

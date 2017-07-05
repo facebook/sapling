@@ -279,7 +279,7 @@ short hash. This tests issue3893.
 Test that trimming description using multi-byte characters
 --------------------------------------------------------------------
 
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > fp = open('logfile', 'w')
   > fp.write('12345678901234567890123456789012345678901234567890' +
   >          '12345') # there are 5 more columns for 80 columns

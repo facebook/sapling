@@ -49,7 +49,7 @@ delete an untracked file
 
   $ touch untracked_file
   $ touch untracked_file_readonly
-  $ python <<EOF
+  $ $PYTHON <<EOF
   > import os, stat
   > f= 'untracked_file_readonly'
   > os.chmod(f, stat.S_IMODE(os.stat(f).st_mode) & ~stat.S_IWRITE)
