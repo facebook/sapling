@@ -1879,6 +1879,12 @@ class workingfilectx(committablefilectx):
                 raise
             return (t, tz)
 
+    def exists(self):
+        return self._repo.wvfs.exists(self._path)
+
+    def lexists(self):
+        return self._repo.wvfs.lexists(self._path)
+
     def audit(self):
         return self._repo.wvfs.audit(self._path)
 

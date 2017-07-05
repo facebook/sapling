@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import errno
 import hashlib
-import os
 import shutil
 import struct
 
@@ -1206,7 +1205,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # remove renamed files after safely stored
     for f in moves:
-        if os.path.lexists(repo.wjoin(f)):
+        if wctx[f].lexists():
             repo.ui.debug("removing %s\n" % f)
             wctx[f].audit()
             wctx[f].remove()
