@@ -489,60 +489,67 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
 Hash HgImporter::importManifest(StringPiece revName) {
   try {
-    auto manifestNode = resolveManifestNode(revName);
-    XLOG(DBG0) << "revision " << revName << " has manifest node "
-               << manifestNode;
-
-    // Record that we are at the root for this node
-    RelativePathPiece path{};
-    auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-    auto tree = importTreeImpl(manifestNode, proxyInfo.first, path);
-    // Only write the proxy hash value for this once we've imported
-    // the root.
-    HgProxyHash::store(store_, proxyInfo);
-
-    return tree->getHash();
+    return importTreeManifest(revName);
   } catch (const MissingKeyError&) {
     // We don't have a tree manifest available for the target rev,
-    // so let's fall back to the full flat manifest importer.
-
-    // Send the manifest request to the helper process
-    sendManifestRequest(revName);
-
-    HgManifestImporter importer(store_);
-    size_t numPaths = 0;
-
-    IOBuf chunkData;
-    while (true) {
-      // Read the chunk header
-      auto header = readChunkHeader();
-
-      // Allocate a larger chunk buffer if we need to,
-      // but prefer to re-use the old buffer if we can.
-      if (header.dataLength > chunkData.capacity()) {
-        chunkData = IOBuf(IOBuf::CREATE, header.dataLength);
-      } else {
-        chunkData.clear();
-      }
-      folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
-      chunkData.append(header.dataLength);
-
-      // Now process the entries in the chunk
-      Cursor cursor(&chunkData);
-      while (!cursor.isAtEnd()) {
-        readManifestEntry(importer, cursor);
-        ++numPaths;
-      }
-
-      if ((header.flags & FLAG_MORE_CHUNKS) == 0) {
-        break;
-      }
-    }
-    auto rootHash = importer.finish();
-    XLOG(DBG1) << "processed " << numPaths << " manifest paths";
-
-    return rootHash;
+    // so let's fall through to the full flat manifest importer.
   }
+
+  return importFlatManifest(revName);
+}
+
+Hash HgImporter::importTreeManifest(StringPiece revName) {
+  auto manifestNode = resolveManifestNode(revName);
+  XLOG(DBG0) << "revision " << revName << " has manifest node " << manifestNode;
+
+  // Record that we are at the root for this node
+  RelativePathPiece path{};
+  auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
+  auto tree = importTreeImpl(manifestNode, proxyInfo.first, path);
+  // Only write the proxy hash value for this once we've imported
+  // the root.
+  HgProxyHash::store(store_, proxyInfo);
+
+  return tree->getHash();
+}
+
+Hash HgImporter::importFlatManifest(StringPiece revName) {
+  // Send the manifest request to the helper process
+  sendManifestRequest(revName);
+
+  HgManifestImporter importer(store_);
+  size_t numPaths = 0;
+
+  IOBuf chunkData;
+  while (true) {
+    // Read the chunk header
+    auto header = readChunkHeader();
+
+    // Allocate a larger chunk buffer if we need to,
+    // but prefer to re-use the old buffer if we can.
+    if (header.dataLength > chunkData.capacity()) {
+      chunkData = IOBuf(IOBuf::CREATE, header.dataLength);
+    } else {
+      chunkData.clear();
+    }
+    folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
+    chunkData.append(header.dataLength);
+
+    // Now process the entries in the chunk
+    Cursor cursor(&chunkData);
+    while (!cursor.isAtEnd()) {
+      readManifestEntry(importer, cursor);
+      ++numPaths;
+    }
+
+    if ((header.flags & FLAG_MORE_CHUNKS) == 0) {
+      break;
+    }
+  }
+  auto rootHash = importer.finish();
+  XLOG(DBG1) << "processed " << numPaths << " manifest paths";
+
+  return rootHash;
 }
 
 IOBuf HgImporter::importFileContents(Hash blobHash) {

@@ -177,6 +177,8 @@ class HgImporter {
       const Hash& manifestNode,
       const Hash& edenBlobHash,
       RelativePathPiece path);
+  Hash importTreeManifest(folly::StringPiece revName);
+  Hash importFlatManifest(folly::StringPiece revName);
 
   folly::Subprocess helper_;
   LocalStore* store_{nullptr};
