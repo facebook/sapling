@@ -61,5 +61,8 @@ class Tree {
   const Hash hash_;
   const std::vector<TreeEntry> entries_;
 };
+
+bool operator==(const Tree& tree1, const Tree& tree2);
+bool operator!=(const Tree& tree1, const Tree& tree2);
 }
 }

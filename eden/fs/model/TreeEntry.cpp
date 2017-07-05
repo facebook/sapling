@@ -27,5 +27,16 @@ std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
   os << "TreeEntryType::" << int(type);
   return os;
 }
+
+bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
+  return (entry1.getHash() == entry2.getHash()) &&
+      (entry1.getFileType() == entry2.getFileType()) &&
+      (entry1.getOwnerPermissions() == entry2.getOwnerPermissions()) &&
+      (entry1.getName() == entry2.getName());
+}
+
+bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {
+  return !(entry1 == entry2);
+}
 }
 }
