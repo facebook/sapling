@@ -46,3 +46,10 @@ def parseconfig(ui, raw):
             current.add(line)
 
     return includes, excludes, profiles
+
+# Exists as separate function to facilitate monkeypatching.
+def readprofile(repo, profile, changeid):
+    """Resolve the raw content of a sparse profile file."""
+    # TODO add some kind of cache here because this incurs a manifest
+    # resolve and can be slow.
+    return repo.filectx(profile, changeid=changeid).data()

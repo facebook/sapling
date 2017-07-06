@@ -431,7 +431,7 @@ def _wraprepo(ui, repo):
                     visited.add(profile)
 
                     try:
-                        raw = self.getrawprofile(profile, rev)
+                        raw = sparse.readprofile(self, profile, rev)
                     except error.ManifestLookupError:
                         msg = (
                             "warning: sparse profile '%s' not found "
@@ -454,11 +454,6 @@ def _wraprepo(ui, repo):
             if includes:
                 includes.add('.hg*')
             return includes, excludes, profiles
-
-        def getrawprofile(self, profile, changeid):
-            # TODO add some kind of cache here because this incurs a manifest
-            # resolve and can be slow.
-            return self.filectx(profile, changeid=changeid).data()
 
         def _sparsechecksum(self, path):
             data = self.vfs.read(path)
