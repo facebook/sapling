@@ -193,5 +193,13 @@ def _getdag(orig, *args):
     return orig(*args)
 
 def extsetup(ui):
-    smartlog = extensions.find("smartlog")
-    extensions.wrapfunction(smartlog, 'getdag', _getdag)
+    def _smartlogloaded(loaded):
+        smartlog = None
+        try:
+            smartlog = extensions.find('smartlog')
+        except KeyError:
+            pass
+        if smartlog:
+            extensions.wrapfunction(smartlog, 'getdag', _getdag)
+
+    extensions.afterloaded('smartlog', _smartlogloaded)

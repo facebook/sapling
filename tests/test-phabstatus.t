@@ -59,6 +59,15 @@ And finally, the success case
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Needs Review
 
+Make sure the code works without the smartlog extensions
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
+  >   "result": {"1" : {"count": 1, "status": "Needs Review", "hash": "lolwut"}}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg --config 'extensions.smartlog=!' log -T '{phabstatus}\n' -r .
+  Needs Review
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | egrep 'phabstatus|syncstatus'
