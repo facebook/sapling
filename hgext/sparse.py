@@ -92,6 +92,7 @@ from mercurial import (
     match as matchmod,
     merge as mergemod,
     registrar,
+    sparse,
     util,
 )
 
@@ -407,40 +408,6 @@ def _setupdirstate(ui):
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
-        def readsparseconfig(self, raw):
-            """Takes a string sparse config and returns the includes,
-            excludes, and profiles it specified.
-            """
-            includes = set()
-            excludes = set()
-            current = includes
-            profiles = []
-            for line in raw.split('\n'):
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    # empty or comment line, skip
-                    continue
-                elif line.startswith('%include '):
-                    line = line[9:].strip()
-                    if line:
-                        profiles.append(line)
-                elif line == '[include]':
-                    if current != includes:
-                        raise error.Abort(_('.hg/sparse cannot have includes ' +
-                            'after excludes'))
-                    continue
-                elif line == '[exclude]':
-                    current = excludes
-                elif line:
-                    if line.strip().startswith('/'):
-                        self.ui.warn(_('warning: sparse profile cannot use' +
-                                       ' paths starting with /, ignoring %s\n')
-                                       % line)
-                        continue
-                    current.add(line)
-
-            return includes, excludes, profiles
-
         def getsparsepatterns(self, rev):
             """Returns the include/exclude patterns specified by the
             given rev.
@@ -452,7 +419,7 @@ def _wraprepo(ui, repo):
                 raise error.Abort(_("cannot parse sparse patterns from " +
                     "working copy"))
 
-            includes, excludes, profiles = self.readsparseconfig(raw)
+            includes, excludes, profiles = sparse.parseconfig(self.ui, raw)
 
             ctx = self[rev]
             if profiles:
@@ -475,8 +442,8 @@ def _wraprepo(ui, repo):
                         else:
                             self.ui.debug(msg)
                         continue
-                    pincludes, pexcludes, subprofs = \
-                        self.readsparseconfig(raw)
+                    pincludes, pexcludes, subprofs = sparse.parseconfig(
+                        self.ui, raw)
                     includes.update(pincludes)
                     excludes.update(pexcludes)
                     for subprofile in subprofs:
@@ -787,7 +754,7 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
         raw = repo.vfs.tryread('sparse')
         if raw:
             oldinclude, oldexclude, oldprofiles = map(
-                set, repo.readsparseconfig(raw))
+                set, sparse.parseconfig(ui, raw))
         else:
             oldinclude = set()
             oldexclude = set()
@@ -846,7 +813,7 @@ def _import(ui, repo, files, opts, force=False):
 
         # read current configuration
         raw = repo.vfs.tryread('sparse')
-        oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
+        oincludes, oexcludes, oprofiles = sparse.parseconfig(ui, raw)
         includes, excludes, profiles = map(
                 set, (oincludes, oexcludes, oprofiles))
 
@@ -863,8 +830,8 @@ def _import(ui, repo, files, opts, force=False):
         changed = False
         for file in files:
             with util.posixfile(util.expandpath(file)) as importfile:
-                iincludes, iexcludes, iprofiles = repo.readsparseconfig(
-                    importfile.read())
+                iincludes, iexcludes, iprofiles = sparse.parseconfig(
+                    ui, importfile.read())
                 oldsize = len(includes) + len(excludes) + len(profiles)
                 includes.update(iincludes - aincludes)
                 excludes.update(iexcludes - aexcludes)
@@ -897,7 +864,7 @@ def _import(ui, repo, files, opts, force=False):
 def _clear(ui, repo, files, force=False):
     with repo.wlock():
         raw = repo.vfs.tryread('sparse')
-        includes, excludes, profiles = repo.readsparseconfig(raw)
+        includes, excludes, profiles = sparse.parseconfig(ui, raw)
 
         if includes or excludes:
             oldstatus = repo.status()
