@@ -11,6 +11,7 @@ test-contrib-check-code.t
 test-contrib-check-commit.t
 test-ctxmanager.py
 test-diff-issue2761.t
+test-diff-newlines.t
 test-diff-reverse.t
 test-diff-subdir.t
 test-dirstate-nonnormalset.t
