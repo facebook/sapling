@@ -27,21 +27,22 @@ A set of extension and shell functions ensures this scheduling.
   > 
   > def delaypush(orig, pushop):
   >     # notify we are done preparing
-  >     readypath = pushop.repo.ui.config('delaypush', 'ready-path', None)
+  >     ui = pushop.repo.ui
+  >     readypath = ui.config('delaypush', 'ready-path', None)
   >     if readypath is not None:
   >         with open(readypath, 'w') as r:
   >             r.write('foo')
-  >         pushop.repo.ui.status('wrote ready: %s\n' % readypath)
+  >         ui.status('wrote ready: %s\n' % readypath)
   >     # now wait for the other process to be done
-  >     watchpath = pushop.repo.ui.config('delaypush', 'release-path', None)
+  >     watchpath = ui.config('delaypush', 'release-path', None)
   >     if watchpath is not None:
-  >         pushop.repo.ui.status('waiting on: %s\n' % watchpath)
+  >         ui.status('waiting on: %s\n' % watchpath)
   >         limit = 100
   >         while 0 < limit and not os.path.exists(watchpath):
   >             limit -= 1
   >             time.sleep(0.1)
   >         if limit <= 0:
-  >             repo.ui.warn('exiting without watchfile: %s' % watchpath)
+  >             ui.warn('exiting without watchfile: %s' % watchpath)
   >         else:
   >             # delete the file at the end of the push
   >             def delete():
