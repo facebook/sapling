@@ -300,3 +300,87 @@ def matcher(repo, revs=None, includetemp=True):
     repo._sparsematchercache[key] = result
 
     return result
+
+def calculateupdates(orig, repo, wctx, mctx, ancestors, branchmerge, *arg,
+                      **kwargs):
+    """Filter updates to only lay out files that match the sparse rules.
+    """
+    actions, diverge, renamedelete = orig(repo, wctx, mctx, ancestors,
+                                          branchmerge, *arg, **kwargs)
+
+    oldrevs = [pctx.rev() for pctx in wctx.parents()]
+    oldsparsematch = matcher(repo, oldrevs)
+
+    if oldsparsematch.always():
+        return actions, diverge, renamedelete
+
+    files = set()
+    prunedactions = {}
+
+    if branchmerge:
+        # If we're merging, use the wctx filter, since we're merging into
+        # the wctx.
+        sparsematch = matcher(repo, [wctx.parents()[0].rev()])
+    else:
+        # If we're updating, use the target context's filter, since we're
+        # moving to the target context.
+        sparsematch = matcher(repo, [mctx.rev()])
+
+    temporaryfiles = []
+    for file, action in actions.iteritems():
+        type, args, msg = action
+        files.add(file)
+        if sparsematch(file):
+            prunedactions[file] = action
+        elif type == 'm':
+            temporaryfiles.append(file)
+            prunedactions[file] = action
+        elif branchmerge:
+            if type != 'k':
+                temporaryfiles.append(file)
+                prunedactions[file] = action
+        elif type == 'f':
+            prunedactions[file] = action
+        elif file in wctx:
+            prunedactions[file] = ('r', args, msg)
+
+    if len(temporaryfiles) > 0:
+        repo.ui.status(_('temporarily included %d file(s) in the sparse '
+                         'checkout for merging\n') % len(temporaryfiles))
+        addtemporaryincludes(repo, temporaryfiles)
+
+        # Add the new files to the working copy so they can be merged, etc
+        actions = []
+        message = 'temporarily adding to sparse checkout'
+        wctxmanifest = repo[None].manifest()
+        for file in temporaryfiles:
+            if file in wctxmanifest:
+                fctx = repo[None][file]
+                actions.append((file, (fctx.flags(), False), message))
+
+        typeactions = collections.defaultdict(list)
+        typeactions['g'] = actions
+        mergemod.applyupdates(repo, typeactions, repo[None], repo['.'],
+                              False)
+
+        dirstate = repo.dirstate
+        for file, flags, msg in actions:
+            dirstate.normal(file)
+
+    profiles = activeprofiles(repo)
+    changedprofiles = profiles & files
+    # If an active profile changed during the update, refresh the checkout.
+    # Don't do this during a branch merge, since all incoming changes should
+    # have been handled by the temporary includes above.
+    if changedprofiles and not branchmerge:
+        mf = mctx.manifest()
+        for file in mf:
+            old = oldsparsematch(file)
+            new = sparsematch(file)
+            if not old and new:
+                flags = mf.flags(file)
+                prunedactions[file] = ('g', (flags, False), '')
+            elif old and not new:
+                prunedactions[file] = ('r', [], '')
+
+    return prunedactions, diverge, renamedelete
