@@ -134,9 +134,6 @@ def activeprofiles(repo):
 
     return profiles
 
-def invalidatesignaturecache(repo):
-    repo._sparsesignaturecache.clear()
-
 def configsignature(repo, includetemp=True):
     """Obtain the signature string for the current sparse configuration.
 
@@ -180,7 +177,7 @@ def writeconfig(repo, includes, excludes, profiles):
                 fh.write(e)
                 fh.write('\n')
 
-    invalidatesignaturecache(repo)
+    repo._sparsesignaturecache.clear()
 
 def readtemporaryincludes(repo):
     raw = repo.vfs.tryread('tempsparse')
@@ -191,7 +188,7 @@ def readtemporaryincludes(repo):
 
 def writetemporaryincludes(repo, includes):
     repo.vfs.write('tempsparse', '\n'.join(sorted(includes)))
-    invalidatesignaturecache(repo)
+    repo._sparsesignaturecache.clear()
 
 def addtemporaryincludes(repo, additional):
     includes = readtemporaryincludes(repo)
@@ -229,7 +226,7 @@ def prunetemporaryincludes(repo):
         dirstate.drop(file)
 
     repo.vfs.unlink('tempsparse')
-    invalidatesignaturecache(repo)
+    repo._sparsesignaturecache.clear()
     msg = _('cleaned up %d temporarily added file(s) from the '
             'sparse checkout\n')
     repo.ui.status(msg % len(tempincludes))
