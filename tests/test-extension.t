@@ -142,7 +142,7 @@ Check hgweb's load order of extensions and registration of functions
   $ PATH_INFO='/shortlog'
 #endif
   $ export PATH_INFO
-  $ SCRIPT_NAME='' QUERY_STRING='rev=foo() and bar()' python hgweb.cgi \
+  $ SCRIPT_NAME='' QUERY_STRING='rev=foo() and bar()' $PYTHON hgweb.cgi \
   >     | grep '<a href="/rev/[0-9a-z]*">'
      <a href="/rev/c24b9ac61126">add file</a>
 
