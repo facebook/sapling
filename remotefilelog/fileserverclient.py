@@ -325,6 +325,7 @@ class fileserverclient(object):
         fetchmisses += len(missed)
 
         count = [total - len(missed)]
+        fromcache = count[0]
         self.ui.progress(_downloading, count[0], total=total)
         self.ui.log("remotefilelog", "remote cache hit rate is %r of %r ",
                     count[0], total, hit=count[0], total=total)
@@ -367,6 +368,17 @@ class fileserverclient(object):
                         else:
                             raise error.Abort("configured remotefilelog server"
                                              " does not support remotefilelog")
+
+                    self.ui.log("remotefilefetchlog",
+                                "Success",
+                                fetched_files = count[0] - fromcache,
+                                total_to_fetch = total - fromcache)
+                except:
+                    self.ui.log("remotefilefetchlog",
+                                "Fail",
+                                fetched_files = count[0] - fromcache,
+                                total_to_fetch = total - fromcache)
+                    raise
                 finally:
                     self.ui.verbose = verbose
                 # send to memcache
@@ -403,17 +415,33 @@ class fileserverclient(object):
 
         See `remotefilelogserver.getpack` for the file format.
         """
-        with self._connect() as conn:
-            remote = conn.peer
-            remote._callstream("getpackv1")
+        try:
+            with self._connect() as conn:
+                total = len(fileids)
+                rcvd = 0
 
-            self._sendpackrequest(remote, fileids)
+                remote = conn.peer
+                remote._callstream("getpackv1")
 
-            packpath = shallowutil.getcachepackpath(self.repo,
-                                                    constants.FILEPACK_CATEGORY)
-            receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
-                                                                 remote.pipei,
-                                                                 packpath)
+                self._sendpackrequest(remote, fileids)
+
+                packpath = shallowutil.getcachepackpath(self.repo,
+                                                        constants.FILEPACK_CATEGORY)
+                receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
+                                                                     remote.pipei,
+                                                                     packpath)
+                rcvd = len(receiveddata)
+
+            self.ui.log("remotefilefetchlog",
+                        "Success(pack)" if (rcvd==total) else "Fail(pack)",
+                        fetched_files = rcvd,
+                        total_to_fetch = total)
+        except:
+            self.ui.log("remotefilefetchlog",
+                        "Fail(pack)",
+                        fetched_files = rcvd,
+                        total_to_fetch = total)
+            raise
 
     def _sendpackrequest(self, remote, fileids):
         """Formats and writes the given fileids to the remote as part of a
