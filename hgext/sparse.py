@@ -17,6 +17,59 @@ directories to be explicitly included or excluded. Many repository
 operations have performance proportional to the number of files in
 the working directory. So only realizing a subset of files in the
 working directory can improve performance.
+
+Sparse Config Files
+-------------------
+
+The set of files that are part of a sparse checkout are defined by
+a sparse config file. The file defines 3 things: includes (files to
+include in the sparse checkout), excludes (files to exclude from the
+sparse checkout), and profiles (links to other config files).
+
+The file format is newline delimited. Empty lines and lines beginning
+with ``#`` are ignored.
+
+Lines beginning with ``%include `` denote another sparse config file
+to include. e.g. ``%include tests.sparse``. The filename is relative
+to the repository root.
+
+The special lines ``[include]`` and ``[exclude]`` denote the section
+for includes and excludes that follow, respectively. It is illegal to
+have ``[include]`` after ``[exclude]``. If no sections are defined,
+entries are assumed to be in the ``[include]`` section.
+
+Non-special lines resemble file patterns to be added to either includes
+or excludes. The syntax of these lines is documented by :hg:`help patterns`.
+Patterns are interpreted as ``glob:`` by default and match against the
+root of the repository.
+
+Exclusion patterns take precedence over inclusion patterns. So even
+if a file is explicitly included, an ``[exclude]`` entry can remove it.
+
+For example, say you have a repository with 3 directories, ``frontend/``,
+``backend/``, and ``tools/``. ``frontend/`` and ``backend/`` correspond
+to different projects and it is uncommon for someone working on one
+to need the files for the other. But ``tools/`` contains files shared
+between both projects. Your sparse config files may resemble::
+
+  # frontend.sparse
+  frontend/**
+  tools/**
+
+  # backend.sparse
+  backend/**
+  tools/**
+
+Say the backend grows in size. Or there's a directory with thousands
+of files you wish to exclude. You can modify the profile to exclude
+certain files::
+
+  [include]
+  backend/**
+  tools/**
+
+  [exclude]
+  tools/tests/**
 """
 
 from __future__ import absolute_import
