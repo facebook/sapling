@@ -382,3 +382,102 @@ def filterupdatesactions(repo, wctx, mctx, branchmerge, actions):
                 prunedactions[file] = ('r', [], '')
 
     return prunedactions
+
+def refreshwdir(repo, origstatus, origsparsematch, force=False):
+    """Refreshes working directory by taking sparse config into account.
+
+    The old status and sparse matcher is compared against the current sparse
+    matcher.
+
+    Will abort if a file with pending changes is being excluded or included
+    unless ``force`` is True.
+    """
+    modified, added, removed, deleted, unknown, ignored, clean = origstatus
+
+    # Verify there are no pending changes
+    pending = set()
+    pending.update(modified)
+    pending.update(added)
+    pending.update(removed)
+    sparsematch = matcher(repo)
+    abort = False
+
+    for f in pending:
+        if not sparsematch(f):
+            repo.ui.warn(_("pending changes to '%s'\n") % f)
+            abort = not force
+
+    if abort:
+        raise error.Abort(_('could not update sparseness due to pending '
+                            'changes'))
+
+    # Calculate actions
+    dirstate = repo.dirstate
+    ctx = repo['.']
+    added = []
+    lookup = []
+    dropped = []
+    mf = ctx.manifest()
+    files = set(mf)
+
+    actions = {}
+
+    for file in files:
+        old = origsparsematch(file)
+        new = sparsematch(file)
+        # Add files that are newly included, or that don't exist in
+        # the dirstate yet.
+        if (new and not old) or (old and new and not file in dirstate):
+            fl = mf.flags(file)
+            if repo.wvfs.exists(file):
+                actions[file] = ('e', (fl,), '')
+                lookup.append(file)
+            else:
+                actions[file] = ('g', (fl, False), '')
+                added.append(file)
+        # Drop files that are newly excluded, or that still exist in
+        # the dirstate.
+        elif (old and not new) or (not old and not new and file in dirstate):
+            dropped.append(file)
+            if file not in pending:
+                actions[file] = ('r', [], '')
+
+    # Verify there are no pending changes in newly included files
+    abort = False
+    for file in lookup:
+        repo.ui.warn(_("pending changes to '%s'\n") % file)
+        abort = not force
+    if abort:
+        raise error.Abort(_('cannot change sparseness due to pending '
+                            'changes (delete the files or use '
+                            '--force to bring them back dirty)'))
+
+    # Check for files that were only in the dirstate.
+    for file, state in dirstate.iteritems():
+        if not file in files:
+            old = origsparsematch(file)
+            new = sparsematch(file)
+            if old and not new:
+                dropped.append(file)
+
+    # Apply changes to disk
+    typeactions = dict((m, []) for m in 'a f g am cd dc r dm dg m e k'.split())
+    for f, (m, args, msg) in actions.iteritems():
+        if m not in typeactions:
+            typeactions[m] = []
+        typeactions[m].append((f, args, msg))
+
+    mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
+
+    # Fix dirstate
+    for file in added:
+        dirstate.normal(file)
+
+    for file in dropped:
+        dirstate.drop(file)
+
+    for file in lookup:
+        # File exists on disk, and we're bringing it back in an unknown state.
+        dirstate.normallookup(file)
+
+    return added, dropped, lookup

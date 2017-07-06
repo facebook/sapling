@@ -147,16 +147,11 @@ Same tests, with -Tjson enabled to output summaries
 If importing results in no new rules being added, no refresh should take place!
 
   $ cat > $TESTTMP/trap_sparse_refresh.py <<EOF
-  > from mercurial import error, extensions
+  > from mercurial import error, sparse
   > def extsetup(ui):
-  >     def abort_refresh(ui, *args):
+  >     def abort_refresh(*args, **kwargs):
   >         raise error.Abort('sparse._refresh called!')
-  >     def sparseloaded(loaded):
-  >         if not loaded:
-  >             return
-  >         sparse = extensions.find('sparse')
-  >         sparse._refresh = abort_refresh
-  >     extensions.afterloaded('sparse', sparseloaded)
+  >     sparse.refreshwdir = abort_refresh
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
