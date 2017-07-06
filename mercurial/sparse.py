@@ -132,10 +132,6 @@ def activeprofiles(repo):
 def invalidatesignaturecache(repo):
     repo._sparsesignaturecache.clear()
 
-def _checksum(repo, path):
-    data = repo.vfs.read(path)
-    return hashlib.sha1(data).hexdigest()
-
 def configsignature(repo, includetemp=True):
     """Obtain the signature string for the current sparse configuration.
 
@@ -148,25 +144,18 @@ def configsignature(repo, includetemp=True):
     if includetemp:
         tempsignature = cache.get('tempsignature')
     else:
-        tempsignature = 0
+        tempsignature = '0'
 
     if signature is None or (includetemp and tempsignature is None):
-        signature = 0
-        try:
-            signature = _checksum(repo, 'sparse')
-        except (OSError, IOError):
-            pass
+        signature = hashlib.sha1(repo.vfs.tryread('sparse')).hexdigest()
         cache['signature'] = signature
 
-        tempsignature = 0
         if includetemp:
-            try:
-                tempsignature = _checksum(repo, 'tempsparse')
-            except (OSError, IOError):
-                pass
+            raw = repo.vfs.tryread('tempsparse')
+            tempsignature = hashlib.sha1(raw).hexdigest()
             cache['tempsignature'] = tempsignature
 
-    return '%s %s' % (str(signature), str(tempsignature))
+    return '%s %s' % (signature, tempsignature)
 
 def writeconfig(repo, includes, excludes, profiles):
     """Write the sparse config file given a sparse configuration."""
