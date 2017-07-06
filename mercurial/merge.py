@@ -1514,6 +1514,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
     Return the same tuple as applyupdates().
     """
+    # Avoid cycle.
+    from . import sparse
 
     # This function used to find the default destination if node was None, but
     # that's now in destutil.py.
@@ -1702,6 +1704,11 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
                 if not branchmerge:
                     repo.dirstate.setbranch(p2.branch())
+
+    # If we're updating to a location, clean up any stale temporary includes
+    # (ex: this happens during hg rebase --abort).
+    if not branchmerge:
+        sparse.prunetemporaryincludes(repo)
 
     if not partial:
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])

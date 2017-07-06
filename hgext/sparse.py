@@ -119,7 +119,8 @@ def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
         return
 
-    _wraprepo(ui, repo)
+    if 'dirstate' in repo._filecache:
+        repo.dirstate.repo = repo
 
 def replacefilecache(cls, propname, replacement):
     """Replace a filecache property with a new class. This allows changing the
@@ -224,17 +225,6 @@ def _setupupdates(ui):
 
     extensions.wrapfunction(mergemod, 'calculateupdates', _calculateupdates)
 
-    def _update(orig, repo, node, branchmerge, *args, **kwargs):
-        results = orig(repo, node, branchmerge, *args, **kwargs)
-
-        # If we're updating to a location, clean up any stale temporary includes
-        # (ex: this happens during hg rebase --abort).
-        if not branchmerge and util.safehasattr(repo, 'prunetemporaryincludes'):
-            repo.prunetemporaryincludes()
-        return results
-
-    extensions.wrapfunction(mergemod, 'update', _update)
-
 def _setupcommit(ui):
     def _refreshoncommit(orig, self, node):
         """Refresh the checkout when commits touch .hgsparse
@@ -251,8 +241,7 @@ def _setupcommit(ui):
             origsparsematch = sparse.matcher(repo)
             _refresh(repo.ui, repo, origstatus, origsparsematch, True)
 
-        if util.safehasattr(repo, 'prunetemporaryincludes'):
-            repo.prunetemporaryincludes()
+        sparse.prunetemporaryincludes(repo)
 
     extensions.wrapfunction(context.committablectx, 'markcommitted',
         _refreshoncommit)
@@ -402,47 +391,6 @@ def _setupdirstate(ui):
                                           hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
-
-def _wraprepo(ui, repo):
-    class SparseRepo(repo.__class__):
-        def prunetemporaryincludes(self):
-            if repo.vfs.exists('tempsparse'):
-                origstatus = self.status()
-                modified, added, removed, deleted, a, b, c = origstatus
-                if modified or added or removed or deleted:
-                    # Still have pending changes. Don't bother trying to prune.
-                    return
-
-                sparsematch = sparse.matcher(self, includetemp=False)
-                dirstate = self.dirstate
-                actions = []
-                dropped = []
-                tempincludes = sparse.readtemporaryincludes(self)
-                for file in tempincludes:
-                    if file in dirstate and not sparsematch(file):
-                        message = 'dropping temporarily included sparse files'
-                        actions.append((file, None, message))
-                        dropped.append(file)
-
-                typeactions = collections.defaultdict(list)
-                typeactions['r'] = actions
-                mergemod.applyupdates(self, typeactions, self[None], self['.'],
-                                      False)
-
-                # Fix dirstate
-                for file in dropped:
-                    dirstate.drop(file)
-
-                self.vfs.unlink('tempsparse')
-                sparse.invalidatesignaturecache(self)
-                msg = _("cleaned up %d temporarily added file(s) from the "
-                        "sparse checkout\n")
-                ui.status(msg % len(tempincludes))
-
-    if 'dirstate' in repo._filecache:
-        repo.dirstate.repo = repo
-
-    repo.__class__ = SparseRepo
 
 @command('^debugsparse', [
     ('I', 'include', False, _('include files in the sparse checkout')),

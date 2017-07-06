@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import hashlib
 import os
 
@@ -15,6 +16,7 @@ from .node import nullid
 from . import (
     error,
     match as matchmod,
+    merge as mergemod,
     pycompat,
 )
 
@@ -196,6 +198,41 @@ def addtemporaryincludes(repo, additional):
     for i in additional:
         includes.add(i)
     writetemporaryincludes(repo, includes)
+
+def prunetemporaryincludes(repo):
+    if not enabled or not repo.vfs.exists('tempsparse'):
+        return
+
+    origstatus = repo.status()
+    modified, added, removed, deleted, a, b, c = origstatus
+    if modified or added or removed or deleted:
+        # Still have pending changes. Don't bother trying to prune.
+        return
+
+    sparsematch = matcher(repo, includetemp=False)
+    dirstate = repo.dirstate
+    actions = []
+    dropped = []
+    tempincludes = readtemporaryincludes(repo)
+    for file in tempincludes:
+        if file in dirstate and not sparsematch(file):
+            message = _('dropping temporarily included sparse files')
+            actions.append((file, None, message))
+            dropped.append(file)
+
+    typeactions = collections.defaultdict(list)
+    typeactions['r'] = actions
+    mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
+
+    # Fix dirstate
+    for file in dropped:
+        dirstate.drop(file)
+
+    repo.vfs.unlink('tempsparse')
+    invalidatesignaturecache(repo)
+    msg = _('cleaned up %d temporarily added file(s) from the '
+            'sparse checkout\n')
+    repo.ui.status(msg % len(tempincludes))
 
 def matcher(repo, revs=None, includetemp=True):
     """Obtain a matcher for sparse working directories for the given revs.
