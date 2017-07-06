@@ -312,6 +312,7 @@ EFFECTFLAGFIELD = "ef1"
 
 DESCCHANGED = 1 << 0 # action changed the description
 METACHANGED = 1 << 1 # action change the meta
+DIFFCHANGED = 1 << 3 # action change diff introduced by the changeset
 PARENTCHANGED = 1 << 2 # action change the parent
 USERCHANGED = 1 << 4 # the user changed
 DATECHANGED = 1 << 5 # the date changed
@@ -331,6 +332,47 @@ def metanotblacklisted(metaitem):
     metakey = metaitem[0]
 
     return not any(pattern.match(metakey) for pattern in METABLACKLIST)
+
+def _prepare_hunk(hunk):
+    """Drop all information but the username and patch"""
+    cleanhunk = []
+    for line in hunk.splitlines():
+        if line.startswith(b'# User') or not line.startswith(b'#'):
+            if line.startswith(b'@@'):
+                line = b'@@\n'
+            cleanhunk.append(line)
+    return cleanhunk
+
+def _getdifflines(iterdiff):
+    """return a cleaned up lines"""
+    lines = next(iterdiff, None)
+
+    if lines is None:
+        return lines
+
+    return _prepare_hunk(lines)
+
+def _cmpdiff(leftctx, rightctx):
+    """return True if both ctx introduce the "same diff"
+
+    This is a first and basic implementation, with many shortcoming.
+    """
+
+    # Leftctx or right ctx might be filtered, so we need to use the contexts
+    # with an unfiltered repository to safely compute the diff
+    leftunfi = leftctx._repo.unfiltered()[leftctx.rev()]
+    leftdiff = leftunfi.diff(git=1)
+    rightunfi = rightctx._repo.unfiltered()[rightctx.rev()]
+    rightdiff = rightunfi.diff(git=1)
+
+    left, right = (0, 0)
+    while None not in (left, right):
+        left = _getdifflines(leftdiff)
+        right = _getdifflines(rightdiff)
+
+        if left != right:
+            return False
+    return True
 
 def geteffectflag(relation):
     """ From an obs-marker relation, compute what changed between the
@@ -370,6 +412,10 @@ def geteffectflag(relation):
 
         if ctxmeta != srcmeta:
             effects |= METACHANGED
+
+        # Check if the diff has changed
+        if not _cmpdiff(source, changectx):
+            effects |= DIFFCHANGED
 
     return effects
 
