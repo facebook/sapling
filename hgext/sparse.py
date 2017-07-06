@@ -75,7 +75,6 @@ certain files::
 from __future__ import absolute_import
 
 import collections
-import hashlib
 import os
 
 from mercurial.i18n import _
@@ -405,38 +404,6 @@ def _setupdirstate(ui):
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
-        def _sparsechecksum(self, path):
-            data = self.vfs.read(path)
-            return hashlib.sha1(data).hexdigest()
-
-        def _sparsesignature(self, includetemp=True):
-            """Returns the signature string representing the contents of the
-            current project sparse configuration. This can be used to cache the
-            sparse matcher for a given set of revs."""
-            signaturecache = self._sparsesignaturecache
-            signature = signaturecache.get('signature')
-            if includetemp:
-                tempsignature = signaturecache.get('tempsignature')
-            else:
-                tempsignature = 0
-
-            if signature is None or (includetemp and tempsignature is None):
-                signature = 0
-                try:
-                    signature = self._sparsechecksum('sparse')
-                except (OSError, IOError):
-                    pass
-                signaturecache['signature'] = signature
-
-                tempsignature = 0
-                if includetemp:
-                    try:
-                        tempsignature = self._sparsechecksum('tempsparse')
-                    except (OSError, IOError):
-                        pass
-                    signaturecache['tempsignature'] = tempsignature
-            return '%s %s' % (str(signature), str(tempsignature))
-
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs.
 
@@ -451,7 +418,7 @@ def _wraprepo(ui, repo):
                     self.dirstate.parents() if node != nullid]
 
             includetemp = kwargs.get('includetemp', True)
-            signature = self._sparsesignature(includetemp=includetemp)
+            signature = sparse.configsignature(self, includetemp=includetemp)
 
             key = '%s %s' % (str(signature), ' '.join([str(r) for r in revs]))
 

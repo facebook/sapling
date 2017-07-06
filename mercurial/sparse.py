@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import hashlib
+
 from .i18n import _
 from .node import nullid
 from . import (
@@ -129,6 +131,42 @@ def activeprofiles(repo):
 
 def invalidatesignaturecache(repo):
     repo._sparsesignaturecache.clear()
+
+def _checksum(repo, path):
+    data = repo.vfs.read(path)
+    return hashlib.sha1(data).hexdigest()
+
+def configsignature(repo, includetemp=True):
+    """Obtain the signature string for the current sparse configuration.
+
+    This is used to construct a cache key for matchers.
+    """
+    cache = repo._sparsesignaturecache
+
+    signature = cache.get('signature')
+
+    if includetemp:
+        tempsignature = cache.get('tempsignature')
+    else:
+        tempsignature = 0
+
+    if signature is None or (includetemp and tempsignature is None):
+        signature = 0
+        try:
+            signature = _checksum(repo, 'sparse')
+        except (OSError, IOError):
+            pass
+        cache['signature'] = signature
+
+        tempsignature = 0
+        if includetemp:
+            try:
+                tempsignature = _checksum(repo, 'tempsparse')
+            except (OSError, IOError):
+                pass
+            cache['tempsignature'] = tempsignature
+
+    return '%s %s' % (str(signature), str(tempsignature))
 
 def writeconfig(repo, includes, excludes, profiles):
     """Write the sparse config file given a sparse configuration."""
