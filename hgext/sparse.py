@@ -928,12 +928,9 @@ class forceincludematcher(object):
     def prefix(self):
         return False
 
-    def hash(self):
-        sha1 = hashlib.sha1()
-        sha1.update(_hashmatcher(self._matcher))
-        for include in sorted(self._includes):
-            sha1.update(include + '\0')
-        return sha1.hexdigest()
+    def __repr__(self):
+        return ('<forceincludematcher matcher=%r, includes=%r>' %
+                (self._matcher, sorted(self._includes)))
 
 class unionmatcher(object):
     """A matcher that is the union of several matchers."""
@@ -961,11 +958,8 @@ class unionmatcher(object):
     def prefix(self):
         return False
 
-    def hash(self):
-        sha1 = hashlib.sha1()
-        for m in self._matchers:
-            sha1.update(_hashmatcher(m))
-        return sha1.hexdigest()
+    def __repr__(self):
+        return ('<unionmatcher matchers=%r>' % self._matchers)
 
 class negatematcher(object):
     def __init__(self, matcher):
@@ -986,16 +980,10 @@ class negatematcher(object):
     def anypats(self):
         return True
 
-    def hash(self):
-        sha1 = hashlib.sha1()
-        sha1.update('negate')
-        sha1.update(_hashmatcher(self._matcher))
-        return sha1.hexdigest()
+    def __repr__(self):
+        return ('<negatematcher matcher=%r>' % self._matcher)
 
 def _hashmatcher(matcher):
-    if util.safehasattr(matcher, 'hash'):
-        return matcher.hash()
-
     sha1 = hashlib.sha1()
     sha1.update(repr(matcher))
     return sha1.hexdigest()
