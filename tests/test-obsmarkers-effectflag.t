@@ -164,4 +164,4 @@ amend closing the branch should be detected as meta change
 check result
 
   $ hg debugobsolete -r .
-  2f599e54c1c6974299065cdf54e1ad640bfb7b5d 12c6238b5e371eea00fd2013b12edce3f070928b 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'amend', 'user': 'test'}
+  2f599e54c1c6974299065cdf54e1ad640bfb7b5d 12c6238b5e371eea00fd2013b12edce3f070928b 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '2', 'operation': 'amend', 'user': 'test'}

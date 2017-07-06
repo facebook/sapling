@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import re
+
 from . import (
     phases,
     util
@@ -309,10 +311,26 @@ def foreground(repo, nodes):
 EFFECTFLAGFIELD = "ef1"
 
 DESCCHANGED = 1 << 0 # action changed the description
+METACHANGED = 1 << 1 # action change the meta
 PARENTCHANGED = 1 << 2 # action change the parent
 USERCHANGED = 1 << 4 # the user changed
 DATECHANGED = 1 << 5 # the date changed
 BRANCHCHANGED = 1 << 6 # the branch changed
+
+METABLACKLIST = [
+    re.compile('^branch$'),
+    re.compile('^.*-source$'),
+    re.compile('^.*_source$'),
+    re.compile('^source$'),
+]
+
+def metanotblacklisted(metaitem):
+    """ Check that the key of a meta item (extrakey, extravalue) does not
+    match at least one of the blacklist pattern
+    """
+    metakey = metaitem[0]
+
+    return not any(pattern.match(metakey) for pattern in METABLACKLIST)
 
 def geteffectflag(relation):
     """ From an obs-marker relation, compute what changed between the
@@ -342,6 +360,16 @@ def geteffectflag(relation):
         # Check if at least one of the parent has changed
         if changectx.parents() != source.parents():
             effects |= PARENTCHANGED
+
+        # Check if other meta has changed
+        changeextra = changectx.extra().items()
+        ctxmeta = filter(metanotblacklisted, changeextra)
+
+        sourceextra = source.extra().items()
+        srcmeta = filter(metanotblacklisted, sourceextra)
+
+        if ctxmeta != srcmeta:
+            effects |= METACHANGED
 
     return effects
 
