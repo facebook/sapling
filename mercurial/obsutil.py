@@ -308,6 +308,8 @@ def foreground(repo, nodes):
 # logic around storing and using effect flags
 EFFECTFLAGFIELD = "ef1"
 
+DESCCHANGED = 1 << 0 # action changed the description
+
 def geteffectflag(relation):
     """ From an obs-marker relation, compute what changed between the
     predecessor and the successor.
@@ -315,6 +317,11 @@ def geteffectflag(relation):
     effects = 0
 
     source = relation[0]
+
+    for changectx in relation[1]:
+        # Check if description has changed
+        if changectx.description() != source.description():
+            effects |= DESCCHANGED
 
     return effects
 
