@@ -422,6 +422,11 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces()
 
+        # Key to signature value.
+        self._sparsesignaturecache = {}
+        # Signature to cached matcher instance.
+        self._sparsematchercache = {}
+
     def close(self):
         self._writecaches()
 
@@ -1300,6 +1305,7 @@ class localrepository(object):
 
         self.unfiltered()._branchcaches.clear()
         self.invalidatevolatilesets()
+        self._sparsesignaturecache.clear()
 
     def invalidatevolatilesets(self):
         self.filteredrevcache.clear()

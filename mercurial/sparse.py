@@ -126,3 +126,6 @@ def activeprofiles(repo):
         profiles.update(patternsforrev(repo, rev)[2])
 
     return profiles
+
+def invalidatesignaturecache(repo):
+    repo._sparsesignaturecache.clear()

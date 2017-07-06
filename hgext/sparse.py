@@ -421,7 +421,7 @@ def _wraprepo(ui, repo):
             """Returns the signature string representing the contents of the
             current project sparse configuration. This can be used to cache the
             sparse matcher for a given set of revs."""
-            signaturecache = self.signaturecache
+            signaturecache = self._sparsesignaturecache
             signature = signaturecache.get('signature')
             if includetemp:
                 tempsignature = signaturecache.get('tempsignature')
@@ -445,13 +445,6 @@ def _wraprepo(ui, repo):
                     signaturecache['tempsignature'] = tempsignature
             return '%s %s' % (str(signature), str(tempsignature))
 
-        def invalidatecaches(self):
-            self.invalidatesignaturecache()
-            return super(SparseRepo, self).invalidatecaches()
-
-        def invalidatesignaturecache(self):
-            self.signaturecache.clear()
-
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs.
 
@@ -470,7 +463,7 @@ def _wraprepo(ui, repo):
 
             key = '%s %s' % (str(signature), ' '.join([str(r) for r in revs]))
 
-            result = self.sparsecache.get(key, None)
+            result = self._sparsematchercache.get(key, None)
             if result:
                 return result
 
@@ -513,7 +506,7 @@ def _wraprepo(ui, repo):
                 tempincludes = self.gettemporaryincludes()
                 result = forceincludematcher(result, tempincludes)
 
-            self.sparsecache[key] = result
+            self._sparsematchercache[key] = result
 
             return result
 
@@ -523,7 +516,7 @@ def _wraprepo(ui, repo):
                 '\n'.join(sorted(include)),
                 '\n'.join(sorted(exclude)))
             self.vfs.write("sparse", raw)
-            self.invalidatesignaturecache()
+            sparse.invalidatesignaturecache(self)
 
         def addtemporaryincludes(self, files):
             includes = self.gettemporaryincludes()
@@ -541,7 +534,7 @@ def _wraprepo(ui, repo):
         def _writetemporaryincludes(self, includes):
             raw = '\n'.join(sorted(includes))
             self.vfs.write('tempsparse', raw)
-            self.invalidatesignaturecache()
+            sparse.invalidatesignaturecache(self)
 
         def prunetemporaryincludes(self):
             if repo.vfs.exists('tempsparse'):
@@ -572,15 +565,14 @@ def _wraprepo(ui, repo):
                     dirstate.drop(file)
 
                 self.vfs.unlink('tempsparse')
-                self.invalidatesignaturecache()
+                sparse.invalidatesignaturecache(self)
                 msg = _("cleaned up %d temporarily added file(s) from the "
                         "sparse checkout\n")
                 ui.status(msg % len(tempincludes))
 
     if 'dirstate' in repo._filecache:
         repo.dirstate.repo = repo
-    repo.sparsecache = {}
-    repo.signaturecache = {}
+
     repo.__class__ = SparseRepo
 
 @command('^debugsparse', [
