@@ -213,7 +213,7 @@ def _setupupdates(ui):
             for file, flags, msg in actions:
                 dirstate.normal(file)
 
-        profiles = repo.getactiveprofiles()
+        profiles = sparse.activeprofiles(repo)
         changedprofiles = profiles & files
         # If an active profile changed during the update, refresh the checkout.
         # Don't do this during a branch merge, since all incoming changes should
@@ -516,17 +516,6 @@ def _wraprepo(ui, repo):
             self.sparsecache[key] = result
 
             return result
-
-        def getactiveprofiles(self):
-            revs = [self.changelog.rev(node) for node in
-                    self.dirstate.parents() if node != nullid]
-
-            activeprofiles = set()
-            for rev in revs:
-                _, _, profiles = sparse.patternsforrev(self, rev)
-                activeprofiles.update(profiles)
-
-            return activeprofiles
 
         def writesparseconfig(self, include, exclude, profiles):
             raw = '%s[include]\n%s\n[exclude]\n%s\n' % (

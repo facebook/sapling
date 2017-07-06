@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from .i18n import _
+from .node import nullid
 from . import (
     error,
 )
@@ -115,3 +116,13 @@ def patternsforrev(repo, rev):
         includes.add('.hg*')
 
     return includes, excludes, profiles
+
+def activeprofiles(repo):
+    revs = [repo.changelog.rev(node) for node in
+            repo.dirstate.parents() if node != nullid]
+
+    profiles = set()
+    for rev in revs:
+        profiles.update(patternsforrev(repo, rev)[2])
+
+    return profiles
