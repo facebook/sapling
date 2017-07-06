@@ -65,7 +65,7 @@ amend touching the branch only
 check result
 
   $ hg debugobsolete --rev .
-  bd3db8264ceebf1966319f5df3be7aac6acd1a8e 14a01456e0574f0e0a0b15b2345486a6364a8d79 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'amend', 'user': 'test'}
+  bd3db8264ceebf1966319f5df3be7aac6acd1a8e 14a01456e0574f0e0a0b15b2345486a6364a8d79 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '64', 'operation': 'amend', 'user': 'test'}
 
   $ hg up default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -106,7 +106,7 @@ amend with multiple effect (desc and meta)
 check result
 
   $ hg debugobsolete --rev .
-  fad47e5bd78e6aa4db1b5a0a1751bc12563655ff a94e0fd5f1c81d969381a76eb0d37ce499a44fae 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '49', 'operation': 'amend', 'user': 'test'}
+  fad47e5bd78e6aa4db1b5a0a1751bc12563655ff a94e0fd5f1c81d969381a76eb0d37ce499a44fae 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '113', 'operation': 'amend', 'user': 'test'}
 
 rebase not touching the diff
 ----------------------------

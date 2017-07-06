@@ -311,6 +311,7 @@ EFFECTFLAGFIELD = "ef1"
 DESCCHANGED = 1 << 0 # action changed the description
 USERCHANGED = 1 << 4 # the user changed
 DATECHANGED = 1 << 5 # the date changed
+BRANCHCHANGED = 1 << 6 # the branch changed
 
 def geteffectflag(relation):
     """ From an obs-marker relation, compute what changed between the
@@ -332,6 +333,10 @@ def geteffectflag(relation):
         # Check if date has changed
         if changectx.date() != source.date():
             effects |= DATECHANGED
+
+        # Check if branch has changed
+        if changectx.branch() != source.branch():
+            effects |= BRANCHCHANGED
 
     return effects
 
