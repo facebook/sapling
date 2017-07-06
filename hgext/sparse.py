@@ -436,16 +436,9 @@ def _wraprepo(ui, repo):
             return includes, excludes, profiles
 
         def getrawprofile(self, profile, changeid):
-            try:
-                simplecache = extensions.find('simplecache')
-                node = self[changeid].hex()
-                def func():
-                    return self.filectx(profile, changeid=changeid).data()
-                key = 'sparseprofile:%s:%s' % (profile.replace('/', '__'), node)
-                return simplecache.memoize(func, key,
-                        simplecache.stringserializer, self.ui)
-            except KeyError:
-                return self.filectx(profile, changeid=changeid).data()
+            # TODO add some kind of cache here because this incurs a manifest
+            # resolve and can be slow.
+            return self.filectx(profile, changeid=changeid).data()
 
         def sparsechecksum(self, filepath):
             fh = open(filepath)
