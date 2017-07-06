@@ -102,7 +102,6 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 def uisetup(ui):
-    _setupupdates(ui)
     _setupcommit(ui)
 
 def extsetup(ui):
@@ -135,10 +134,6 @@ def replacefilecache(cls, propname, replacement):
     if cls is object:
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
                              propname))
-
-def _setupupdates(ui):
-    extensions.wrapfunction(mergemod, 'calculateupdates',
-                            sparse.calculateupdates)
 
 def _setupcommit(ui):
     def _refreshoncommit(orig, self, node):

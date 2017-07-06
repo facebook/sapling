@@ -301,18 +301,16 @@ def matcher(repo, revs=None, includetemp=True):
 
     return result
 
-def calculateupdates(orig, repo, wctx, mctx, ancestors, branchmerge, *arg,
-                      **kwargs):
-    """Filter updates to only lay out files that match the sparse rules.
-    """
-    actions, diverge, renamedelete = orig(repo, wctx, mctx, ancestors,
-                                          branchmerge, *arg, **kwargs)
+def filterupdatesactions(repo, wctx, mctx, branchmerge, actions):
+    """Filter updates to only lay out files that match the sparse rules."""
+    if not enabled:
+        return actions
 
     oldrevs = [pctx.rev() for pctx in wctx.parents()]
     oldsparsematch = matcher(repo, oldrevs)
 
     if oldsparsematch.always():
-        return actions, diverge, renamedelete
+        return actions
 
     files = set()
     prunedactions = {}
@@ -383,4 +381,4 @@ def calculateupdates(orig, repo, wctx, mctx, ancestors, branchmerge, *arg,
             elif old and not new:
                 prunedactions[file] = ('r', [], '')
 
-    return prunedactions, diverge, renamedelete
+    return prunedactions

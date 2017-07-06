@@ -975,7 +975,10 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
                      acceptremote, followcopies, matcher=None,
                      mergeforce=False):
-    "Calculate the actions needed to merge mctx into wctx using ancestors"
+    """Calculate the actions needed to merge mctx into wctx using ancestors"""
+    # Avoid cycle.
+    from . import sparse
+
     if len(ancestors) == 1: # default
         actions, diverge, renamedelete = manifestmerge(
             repo, wctx, mctx, ancestors[0], branchmerge, force, matcher,
@@ -1074,7 +1077,10 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
         fractions = _forgetremoved(wctx, mctx, branchmerge)
         actions.update(fractions)
 
-    return actions, diverge, renamedelete
+    prunedactions = sparse.filterupdatesactions(repo, wctx, mctx, branchmerge,
+                                                actions)
+
+    return prunedactions, diverge, renamedelete
 
 def batchremove(repo, wctx, actions):
     """apply removes to the working directory
