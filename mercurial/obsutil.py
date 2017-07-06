@@ -309,6 +309,7 @@ def foreground(repo, nodes):
 EFFECTFLAGFIELD = "ef1"
 
 DESCCHANGED = 1 << 0 # action changed the description
+PARENTCHANGED = 1 << 2 # action change the parent
 USERCHANGED = 1 << 4 # the user changed
 DATECHANGED = 1 << 5 # the date changed
 BRANCHCHANGED = 1 << 6 # the branch changed
@@ -337,6 +338,10 @@ def geteffectflag(relation):
         # Check if branch has changed
         if changectx.branch() != source.branch():
             effects |= BRANCHCHANGED
+
+        # Check if at least one of the parent has changed
+        if changectx.parents() != source.parents():
+            effects |= PARENTCHANGED
 
     return effects
 

@@ -81,7 +81,7 @@ rebase (parents change)
 check result
 
   $ hg debugobsolete --rev .
-  c85eff83a0340efd9da52b806a94c350222f3371 da86aa2f19a30d6686b15cae15c7b6c908ec9699 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'rebase', 'user': 'test'}
+  c85eff83a0340efd9da52b806a94c350222f3371 da86aa2f19a30d6686b15cae15c7b6c908ec9699 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '4', 'operation': 'rebase', 'user': 'test'}
 
 amend touching the diff
 -----------------------
@@ -150,7 +150,7 @@ rebase not touching the diff
   rebasing 17:b57fed8d8322 "H1"
   merging H0
   $ hg debugobsolete -r tip
-  b57fed8d83228a8ae3748d8c3760a77638dd4f8c e509e2eb3df5d131ff7c02350bf2a9edd0c09478 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'rebase', 'user': 'test'}
+  b57fed8d83228a8ae3748d8c3760a77638dd4f8c e509e2eb3df5d131ff7c02350bf2a9edd0c09478 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '4', 'operation': 'rebase', 'user': 'test'}
 
 amend closing the branch should be detected as meta change
 ----------------------------------------------------------
