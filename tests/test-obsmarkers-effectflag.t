@@ -40,7 +40,7 @@ amend touching the user only
 check result
 
   $ hg debugobsolete --rev .
-  ef4a313b1e0ade55718395d80e6b88c5ccd875eb 5485c92d34330dac9d7a63dc07e1e3373835b964 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'amend', 'user': 'test'}
+  ef4a313b1e0ade55718395d80e6b88c5ccd875eb 5485c92d34330dac9d7a63dc07e1e3373835b964 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '16', 'operation': 'amend', 'user': 'test'}
 
 amend touching the date only
 ----------------------------
@@ -106,7 +106,7 @@ amend with multiple effect (desc and meta)
 check result
 
   $ hg debugobsolete --rev .
-  fad47e5bd78e6aa4db1b5a0a1751bc12563655ff a94e0fd5f1c81d969381a76eb0d37ce499a44fae 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '1', 'operation': 'amend', 'user': 'test'}
+  fad47e5bd78e6aa4db1b5a0a1751bc12563655ff a94e0fd5f1c81d969381a76eb0d37ce499a44fae 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '17', 'operation': 'amend', 'user': 'test'}
 
 rebase not touching the diff
 ----------------------------

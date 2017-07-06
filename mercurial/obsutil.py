@@ -309,6 +309,7 @@ def foreground(repo, nodes):
 EFFECTFLAGFIELD = "ef1"
 
 DESCCHANGED = 1 << 0 # action changed the description
+USERCHANGED = 1 << 4 # the user changed
 
 def geteffectflag(relation):
     """ From an obs-marker relation, compute what changed between the
@@ -322,6 +323,10 @@ def geteffectflag(relation):
         # Check if description has changed
         if changectx.description() != source.description():
             effects |= DESCCHANGED
+
+        # Check if user has changed
+        if changectx.user() != source.user():
+            effects |= USERCHANGED
 
     return effects
 
