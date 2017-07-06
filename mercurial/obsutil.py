@@ -305,6 +305,19 @@ def foreground(repo, nodes):
             foreground = set(repo.set('%ln::', known))
     return set(c.node() for c in foreground)
 
+# logic around storing and using effect flags
+EFFECTFLAGFIELD = "ef1"
+
+def geteffectflag(relation):
+    """ From an obs-marker relation, compute what changed between the
+    predecessor and the successor.
+    """
+    effects = 0
+
+    source = relation[0]
+
+    return effects
+
 def getobsoleted(repo, tr):
     """return the set of pre-existing revisions obsoleted by a transaction"""
     torev = repo.unfiltered().changelog.nodemap.get
