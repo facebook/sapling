@@ -193,7 +193,7 @@ def _setupupdates(ui):
         if len(temporaryfiles) > 0:
             ui.status(_("temporarily included %d file(s) in the sparse checkout"
                 " for merging\n") % len(temporaryfiles))
-            repo.addtemporaryincludes(temporaryfiles)
+            sparse.addtemporaryincludes(repo, temporaryfiles)
 
             # Add the new files to the working copy so they can be merged, etc
             actions = []
@@ -503,30 +503,12 @@ def _wraprepo(ui, repo):
                 result = unionmatcher(matchers)
 
             if kwargs.get('includetemp', True):
-                tempincludes = self.gettemporaryincludes()
+                tempincludes = sparse.readtemporaryincludes(self)
                 result = forceincludematcher(result, tempincludes)
 
             self._sparsematchercache[key] = result
 
             return result
-
-        def addtemporaryincludes(self, files):
-            includes = self.gettemporaryincludes()
-            for file in files:
-                includes.add(file)
-            self._writetemporaryincludes(includes)
-
-        def gettemporaryincludes(self):
-            existingtemp = set()
-            raw = self.vfs.tryread('tempsparse')
-            if raw:
-                existingtemp.update(raw.split('\n'))
-            return existingtemp
-
-        def _writetemporaryincludes(self, includes):
-            raw = '\n'.join(sorted(includes))
-            self.vfs.write('tempsparse', raw)
-            sparse.invalidatesignaturecache(self)
 
         def prunetemporaryincludes(self):
             if repo.vfs.exists('tempsparse'):
@@ -540,7 +522,7 @@ def _wraprepo(ui, repo):
                 dirstate = self.dirstate
                 actions = []
                 dropped = []
-                tempincludes = self.gettemporaryincludes()
+                tempincludes = sparse.readtemporaryincludes(self)
                 for file in tempincludes:
                     if file in dirstate and not sparsematch(file):
                         message = 'dropping temporarily included sparse files'
@@ -639,7 +621,7 @@ def debugsparse(ui, repo, *pats, **opts):
     if count == 0:
         if repo.vfs.exists('sparse'):
             ui.status(repo.vfs.read("sparse") + "\n")
-            temporaryincludes = repo.gettemporaryincludes()
+            temporaryincludes = sparse.readtemporaryincludes(repo)
             if temporaryincludes:
                 ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
                 ui.status(("\n".join(temporaryincludes) + "\n"))

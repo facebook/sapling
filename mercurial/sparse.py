@@ -149,3 +149,20 @@ def writeconfig(repo, includes, excludes, profiles):
                 fh.write('\n')
 
     invalidatesignaturecache(repo)
+
+def readtemporaryincludes(repo):
+    raw = repo.vfs.tryread('tempsparse')
+    if not raw:
+        return set()
+
+    return set(raw.split('\n'))
+
+def writetemporaryincludes(repo, includes):
+    repo.vfs.write('tempsparse', '\n'.join(sorted(includes)))
+    invalidatesignaturecache(repo)
+
+def addtemporaryincludes(repo, additional):
+    includes = readtemporaryincludes(repo)
+    for i in additional:
+        includes.add(i)
+    writetemporaryincludes(repo, includes)
