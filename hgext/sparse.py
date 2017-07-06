@@ -445,13 +445,13 @@ def _wraprepo(ui, repo):
             """Returns the include/exclude patterns specified by the
             given rev.
             """
-            if not self.vfs.exists('sparse'):
+            raw = self.vfs.tryread('sparse')
+            if not raw:
                 return set(), set(), []
             if rev is None:
                 raise error.Abort(_("cannot parse sparse patterns from " +
                     "working copy"))
 
-            raw = self.vfs.read('sparse')
             includes, excludes, profiles = self.readsparseconfig(raw)
 
             ctx = self[rev]
@@ -623,8 +623,8 @@ def _wraprepo(ui, repo):
 
         def gettemporaryincludes(self):
             existingtemp = set()
-            if self.vfs.exists('tempsparse'):
-                raw = self.vfs.read('tempsparse')
+            raw = self.vfs.tryread('tempsparse')
+            if raw:
                 existingtemp.update(raw.split('\n'))
             return existingtemp
 
@@ -784,8 +784,8 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
     try:
         oldsparsematch = repo.sparsematch()
 
-        if repo.vfs.exists('sparse'):
-            raw = repo.vfs.read('sparse')
+        raw = repo.vfs.tryread('sparse')
+        if raw:
             oldinclude, oldexclude, oldprofiles = map(
                 set, repo.readsparseconfig(raw))
         else:
@@ -845,9 +845,7 @@ def _import(ui, repo, files, opts, force=False):
                 repo.dirstate.parents() if node != nullid]
 
         # read current configuration
-        raw = ''
-        if repo.vfs.exists('sparse'):
-            raw = repo.vfs.read('sparse')
+        raw = repo.vfs.tryread('sparse')
         oincludes, oexcludes, oprofiles = repo.readsparseconfig(raw)
         includes, excludes, profiles = map(
                 set, (oincludes, oexcludes, oprofiles))
@@ -898,9 +896,7 @@ def _import(ui, repo, files, opts, force=False):
 
 def _clear(ui, repo, files, force=False):
     with repo.wlock():
-        raw = ''
-        if repo.vfs.exists('sparse'):
-            raw = repo.vfs.read('sparse')
+        raw = repo.vfs.tryread('sparse')
         includes, excludes, profiles = repo.readsparseconfig(raw)
 
         if includes or excludes:
