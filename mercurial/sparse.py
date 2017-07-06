@@ -12,6 +12,11 @@ from . import (
     error,
 )
 
+# Whether sparse features are enabled. This variable is intended to be
+# temporary to facilitate porting sparse to core. It should eventually be
+# a per-repo option, possibly a repo requirement.
+enabled = False
+
 def parseconfig(ui, raw):
     """Parse sparse config file content.
 

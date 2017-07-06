@@ -110,6 +110,8 @@ def uisetup(ui):
     _setupcommit(ui)
 
 def extsetup(ui):
+    sparse.enabled = True
+
     _setupclone(ui)
     _setuplog(ui)
     _setupadd(ui)
