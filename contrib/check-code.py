@@ -138,7 +138,7 @@ testpats = [
      "put a backslash-escaped newline after sed 'i' command"),
     (r'^diff *-\w*[uU].*$\n(^  \$ |^$)', "prefix diff -u/-U with cmp"),
     (r'^\s+(if)? diff *-\w*[uU]', "prefix diff -u/-U with cmp"),
-    (r'\spython\s(?!bindings)', "don't use 'python', use '$PYTHON'"),
+    (r'[\s="`\']python\s(?!bindings)', "don't use 'python', use '$PYTHON'"),
     (r'seq ', "don't use 'seq', use $TESTDIR/seq.py"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
     (r'\|&', "don't use |&, use 2>&1"),
