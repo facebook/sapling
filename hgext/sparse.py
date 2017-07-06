@@ -250,14 +250,17 @@ def _setupcommit(ui):
         """
         orig(self, node)
         repo = self._repo
-        if util.safehasattr(repo, 'getsparsepatterns'):
-            ctx = repo[node]
-            _, _, profiles = repo.getsparsepatterns(ctx.rev())
-            if set(profiles) & set(ctx.files()):
-                origstatus = repo.status()
-                origsparsematch = repo.sparsematch()
-                _refresh(repo.ui, repo, origstatus, origsparsematch, True)
 
+        ctx = repo[node]
+        profiles = sparse.patternsforrev(repo, ctx.rev())[2]
+
+        # profiles will only have data if sparse is enabled.
+        if set(profiles) & set(ctx.files()):
+            origstatus = repo.status()
+            origsparsematch = repo.sparsematch()
+            _refresh(repo.ui, repo, origstatus, origsparsematch, True)
+
+        if util.safehasattr(repo, 'prunetemporaryincludes'):
             repo.prunetemporaryincludes()
 
     extensions.wrapfunction(context.committablectx, 'markcommitted',
@@ -410,53 +413,6 @@ def _setupdirstate(ui):
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
-        def getsparsepatterns(self, rev):
-            """Returns the include/exclude patterns specified by the
-            given rev.
-            """
-            raw = self.vfs.tryread('sparse')
-            if not raw:
-                return set(), set(), []
-            if rev is None:
-                raise error.Abort(_("cannot parse sparse patterns from " +
-                    "working copy"))
-
-            includes, excludes, profiles = sparse.parseconfig(self.ui, raw)
-
-            ctx = self[rev]
-            if profiles:
-                visited = set()
-                while profiles:
-                    profile = profiles.pop()
-                    if profile in visited:
-                        continue
-                    visited.add(profile)
-
-                    try:
-                        raw = sparse.readprofile(self, profile, rev)
-                    except error.ManifestLookupError:
-                        msg = (
-                            "warning: sparse profile '%s' not found "
-                            "in rev %s - ignoring it\n" % (profile, ctx))
-                        if self.ui.configbool(
-                                'sparse', 'missingwarning', True):
-                            self.ui.warn(msg)
-                        else:
-                            self.ui.debug(msg)
-                        continue
-                    pincludes, pexcludes, subprofs = sparse.parseconfig(
-                        self.ui, raw)
-                    includes.update(pincludes)
-                    excludes.update(pexcludes)
-                    for subprofile in subprofs:
-                        profiles.append(subprofile)
-
-                profiles = visited
-
-            if includes:
-                includes.add('.hg*')
-            return includes, excludes, profiles
-
         def _sparsechecksum(self, path):
             data = self.vfs.read(path)
             return hashlib.sha1(data).hexdigest()
@@ -521,7 +477,8 @@ def _wraprepo(ui, repo):
             matchers = []
             for rev in revs:
                 try:
-                    includes, excludes, profiles = self.getsparsepatterns(rev)
+                    includes, excludes, profiles = sparse.patternsforrev(
+                        self, rev)
 
                     if includes or excludes:
                         # Explicitly include subdirectories of includes so
@@ -566,7 +523,7 @@ def _wraprepo(ui, repo):
 
             activeprofiles = set()
             for rev in revs:
-                _, _, profiles = self.getsparsepatterns(rev)
+                _, _, profiles = sparse.patternsforrev(self, rev)
                 activeprofiles.update(profiles)
 
             return activeprofiles
@@ -817,7 +774,7 @@ def _import(ui, repo, files, opts, force=False):
         # all active rules
         aincludes, aexcludes, aprofiles = set(), set(), set()
         for rev in revs:
-            rincludes, rexcludes, rprofiles = repo.getsparsepatterns(rev)
+            rincludes, rexcludes, rprofiles = sparse.patternsforrev(repo, rev)
             aincludes.update(rincludes)
             aexcludes.update(rexcludes)
             aprofiles.update(rprofiles)

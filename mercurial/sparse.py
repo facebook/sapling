@@ -58,3 +58,60 @@ def readprofile(repo, profile, changeid):
     # TODO add some kind of cache here because this incurs a manifest
     # resolve and can be slow.
     return repo.filectx(profile, changeid=changeid).data()
+
+def patternsforrev(repo, rev):
+    """Obtain sparse checkout patterns for the given rev.
+
+    Returns a tuple of iterables representing includes, excludes, and
+    patterns.
+    """
+    # Feature isn't enabled. No-op.
+    if not enabled:
+        return set(), set(), []
+
+    raw = repo.vfs.tryread('sparse')
+    if not raw:
+        return set(), set(), []
+
+    if rev is None:
+        raise error.Abort(_('cannot parse sparse patterns from working '
+                            'directory'))
+
+    includes, excludes, profiles = parseconfig(repo.ui, raw)
+    ctx = repo[rev]
+
+    if profiles:
+        visited = set()
+        while profiles:
+            profile = profiles.pop()
+            if profile in visited:
+                continue
+
+            visited.add(profile)
+
+            try:
+                raw = readprofile(repo, profile, rev)
+            except error.ManifestLookupError:
+                msg = (
+                    "warning: sparse profile '%s' not found "
+                    "in rev %s - ignoring it\n" % (profile, ctx))
+                # experimental config: sparse.missingwarning
+                if repo.ui.configbool(
+                        'sparse', 'missingwarning', True):
+                    repo.ui.warn(msg)
+                else:
+                    repo.ui.debug(msg)
+                continue
+
+            pincludes, pexcludes, subprofs = parseconfig(repo.ui, raw)
+            includes.update(pincludes)
+            excludes.update(pexcludes)
+            for subprofile in subprofs:
+                profiles.append(subprofile)
+
+        profiles = visited
+
+    if includes:
+        includes.add('.hg*')
+
+    return includes, excludes, profiles
