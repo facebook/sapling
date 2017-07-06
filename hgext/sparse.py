@@ -510,14 +510,6 @@ def _wraprepo(ui, repo):
 
             return result
 
-        def writesparseconfig(self, include, exclude, profiles):
-            raw = '%s[include]\n%s\n[exclude]\n%s\n' % (
-                ''.join(['%%include %s\n' % p for p in sorted(profiles)]),
-                '\n'.join(sorted(include)),
-                '\n'.join(sorted(exclude)))
-            self.vfs.write("sparse", raw)
-            sparse.invalidatesignaturecache(self)
-
         def addtemporaryincludes(self, files):
             includes = self.gettemporaryincludes()
             for file in files:
@@ -722,7 +714,8 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                 newinclude.difference_update(pats)
                 newexclude.difference_update(pats)
 
-            repo.writesparseconfig(newinclude, newexclude, newprofiles)
+            sparse.writeconfig(repo, newinclude, newexclude, newprofiles)
+
             fcounts = map(
                 len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
 
@@ -735,7 +728,7 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             _verbose_output(
                 ui, opts, profilecount, includecount, excludecount, *fcounts)
         except Exception:
-            repo.writesparseconfig(oldinclude, oldexclude, oldprofiles)
+            sparse.writeconfig(repo, oldinclude, oldexclude, oldprofiles)
             raise
     finally:
         wlock.release()
@@ -784,13 +777,13 @@ def _import(ui, repo, files, opts, force=False):
 
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
-            repo.writesparseconfig(includes, excludes, profiles)
+            sparse.writeconfig(repo, includes, excludes, profiles)
 
             try:
                 fcounts = map(
                     len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
             except Exception:
-                repo.writesparseconfig(oincludes, oexcludes, oprofiles)
+                sparse.writeconfig(repo, oincludes, oexcludes, oprofiles)
                 raise
 
         _verbose_output(ui, opts, profilecount, includecount, excludecount,
@@ -804,7 +797,7 @@ def _clear(ui, repo, files, force=False):
         if includes or excludes:
             oldstatus = repo.status()
             oldsparsematch = repo.sparsematch()
-            repo.writesparseconfig(set(), set(), profiles)
+            sparse.writeconfig(repo, set(), set(), profiles)
             _refresh(ui, repo, oldstatus, oldsparsematch, force)
 
 def _refresh(ui, repo, origstatus, origsparsematch, force):

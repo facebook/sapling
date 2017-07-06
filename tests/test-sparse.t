@@ -63,8 +63,6 @@ Verify 'hg debugsparse' default output
   $ hg debugsparse
   [include]
   show*
-  [exclude]
-  
   
 Verify update only writes included files
 
@@ -150,8 +148,6 @@ Verify rebase temporarily includes excluded files
   [1]
 
   $ hg debugsparse
-  [include]
-  
   [exclude]
   hide*
   
@@ -187,8 +183,6 @@ Verify merge fails if merging excluded files
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg debugsparse
-  [include]
-  
   [exclude]
   hide*
   
@@ -199,8 +193,6 @@ Verify merge fails if merging excluded files
   cleaned up 1 temporarily added file(s) from the sparse checkout
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugsparse
-  [include]
-  
   [exclude]
   hide*
   
@@ -209,8 +201,6 @@ Verify strip -k resets dirstate correctly
 
   $ hg status
   $ hg debugsparse
-  [include]
-  
   [exclude]
   hide*
   
@@ -257,8 +247,6 @@ Test that add -s adds dirs to sparse profile
   $ hg debugsparse
   [include]
   empty
-  [exclude]
-  
   
 
   $ mkdir add
@@ -276,8 +264,6 @@ Test that add -s adds dirs to sparse profile
   [include]
   add
   empty
-  [exclude]
-  
   
   $ hg add -s add/*
   add/foo already tracked!
@@ -288,8 +274,6 @@ Test that add -s adds dirs to sparse profile
   [include]
   add
   empty
-  [exclude]
-  
   
 
   $ cd ..

@@ -129,3 +129,23 @@ def activeprofiles(repo):
 
 def invalidatesignaturecache(repo):
     repo._sparsesignaturecache.clear()
+
+def writeconfig(repo, includes, excludes, profiles):
+    """Write the sparse config file given a sparse configuration."""
+    with repo.vfs('sparse', 'wb') as fh:
+        for p in sorted(profiles):
+            fh.write('%%include %s\n' % p)
+
+        if includes:
+            fh.write('[include]\n')
+            for i in sorted(includes):
+                fh.write(i)
+                fh.write('\n')
+
+        if excludes:
+            fh.write('[exclude]\n')
+            for e in sorted(excludes):
+                fh.write(e)
+                fh.write('\n')
+
+    invalidatesignaturecache(repo)
