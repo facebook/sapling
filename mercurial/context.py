@@ -38,6 +38,7 @@ from . import (
     repoview,
     revlog,
     scmutil,
+    sparse,
     subrepo,
     util,
 )
@@ -1802,6 +1803,11 @@ class workingctx(committablectx):
                                        (self._repo.dirstate.pathto(f), msg))
             match.bad = bad
         return match
+
+    def markcommitted(self, node):
+        super(workingctx, self).markcommitted(node)
+
+        sparse.aftercommit(self._repo, node)
 
 class committablefilectx(basefilectx):
     """A committablefilectx provides common functionality for a file context

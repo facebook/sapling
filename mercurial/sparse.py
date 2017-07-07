@@ -478,3 +478,19 @@ def refreshwdir(repo, origstatus, origsparsematch, force=False):
         dirstate.normallookup(file)
 
     return added, dropped, lookup
+
+def aftercommit(repo, node):
+    """Perform actions after a working directory commit."""
+    # This function is called unconditionally, even if sparse isn't
+    # enabled.
+    ctx = repo[node]
+
+    profiles = patternsforrev(repo, ctx.rev())[2]
+
+    # profiles will only have data if sparse is enabled.
+    if set(profiles) & set(ctx.files()):
+        origstatus = repo.status()
+        origsparsematch = matcher(repo)
+        refreshwdir(repo, origstatus, origsparsematch, force=True)
+
+    prunetemporaryincludes(repo)

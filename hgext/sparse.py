@@ -79,7 +79,6 @@ from mercurial.node import nullid
 from mercurial import (
     cmdutil,
     commands,
-    context,
     dirstate,
     error,
     extensions,
@@ -99,9 +98,6 @@ testedwith = 'ships-with-hg-core'
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
-def uisetup(ui):
-    _setupcommit(ui)
 
 def extsetup(ui):
     sparse.enabled = True
@@ -133,27 +129,6 @@ def replacefilecache(cls, propname, replacement):
     if cls is object:
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
                              propname))
-
-def _setupcommit(ui):
-    def _refreshoncommit(orig, self, node):
-        """Refresh the checkout when commits touch .hgsparse
-        """
-        orig(self, node)
-        repo = self._repo
-
-        ctx = repo[node]
-        profiles = sparse.patternsforrev(repo, ctx.rev())[2]
-
-        # profiles will only have data if sparse is enabled.
-        if set(profiles) & set(ctx.files()):
-            origstatus = repo.status()
-            origsparsematch = sparse.matcher(repo)
-            sparse.refreshwdir(repo, origstatus, origsparsematch, force=True)
-
-        sparse.prunetemporaryincludes(repo)
-
-    extensions.wrapfunction(context.committablectx, 'markcommitted',
-        _refreshoncommit)
 
 def _setuplog(ui):
     entry = commands.table['^log|history']
