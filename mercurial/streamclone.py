@@ -221,13 +221,12 @@ def generatev1(repo):
                 repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
             # partially encode name over the wire for backwards compat
             yield '%s\0%d\n' % (store.encodedir(name), size)
-            if size <= 65536:
-                with svfs(name, 'rb', auditpath=False) as fp:
+            with svfs(name, 'rb', auditpath=False) as fp:
+                if size <= 65536:
                     yield fp.read(size)
-            else:
-                data = svfs(name, auditpath=False)
-                for chunk in util.filechunkiter(data, limit=size):
-                    yield chunk
+                else:
+                    for chunk in util.filechunkiter(fp, limit=size):
+                        yield chunk
 
     return len(entries), total_bytes, emitrevlogdata()
 
