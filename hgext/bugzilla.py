@@ -303,6 +303,7 @@ from mercurial import (
     cmdutil,
     error,
     mail,
+    registrar,
     url,
     util,
 )
@@ -314,6 +315,13 @@ xmlrpclib = util.xmlrpclib
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('bugzilla', 'apikey',
+    default='',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -800,7 +808,7 @@ class bzrestapi(bzaccess):
         bz = self.ui.config('bugzilla', 'bzurl',
                             'http://localhost/bugzilla/')
         self.bzroot = '/'.join([bz, 'rest'])
-        self.apikey = self.ui.config('bugzilla', 'apikey', '')
+        self.apikey = self.ui.config('bugzilla', 'apikey')
         self.user = self.ui.config('bugzilla', 'user', 'bugs')
         self.passwd = self.ui.config('bugzilla', 'password')
         self.fixstatus = self.ui.config('bugzilla', 'fixstatus', 'RESOLVED')
