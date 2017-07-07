@@ -30,8 +30,8 @@ class MaterializedQueryTest:
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
-    def edenfs_vmodule_settings(self):
-        return {'RequestData': 5}
+    def edenfs_logging_settings(self):
+        return {'eden.fs.fuse.RequestData': 'DBG5'}
 
     def setUp(self):
         super().setUp()

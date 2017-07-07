@@ -145,11 +145,11 @@ class EdenTestCase(TestParent):
         self.mounts_dir = os.path.join(self.tmp_dir, 'mounts')
         os.mkdir(self.mounts_dir)
 
-        vmodule_settings = self.edenfs_vmodule_settings()
+        logging_settings = self.edenfs_logging_settings()
         self.eden = edenclient.EdenFS(self.eden_dir,
                                       etc_eden_dir=self.etc_eden_dir,
                                       home_dir=self.home_dir,
-                                      vmodule_settings=vmodule_settings)
+                                      logging_settings=logging_settings)
         self.eden.start()
 
     def tearDown(self):
@@ -179,13 +179,13 @@ class EdenTestCase(TestParent):
         '''
         return self.eden.get_thrift_client()
 
-    def edenfs_vmodule_settings(self):
+    def edenfs_logging_settings(self):
         '''
-        Get the log settings to pass to edenfs via the --vmodule argument.
+        Get the log settings to pass to edenfs via the --logging argument.
 
-        This should return a dictionary of {module_name: level}
-        - module_name is the basename of the C++ file in question, without the
-          file extension (e.g., "TreeInode")
+        This should return a dictionary of {category_name: level}
+        - module_name is the C++ log category name.  e.g., "eden.fs.store"
+          or "eden.fs.inodes.TreeInode"
         - level is the integer vlog level to use for that module.
 
         You can return None if you do not want any extra verbose logging

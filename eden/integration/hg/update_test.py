@@ -11,8 +11,11 @@ from .lib.hg_extension_test_base import HgExtensionTestBase
 
 
 class UpdateTest(HgExtensionTestBase):
-    def edenfs_vmodule_settings(self):
-        return {'TreeInode': 5, 'CheckoutAction': 5}
+    def edenfs_logging_settings(self):
+        return {
+            'eden.fs.inodes.TreeInode': 'DBG5',
+            'eden.fs.inodes.CheckoutAction': 'DBG5',
+        }
 
     def populate_backing_repo(self, repo):
         repo.write_file('hello.txt', 'hola')

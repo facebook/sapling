@@ -23,7 +23,7 @@ class EdenFS(object):
     '''Manages an instance of the eden fuse server.'''
 
     def __init__(self, eden_dir=None, etc_eden_dir=None, home_dir=None,
-                 vmodule_settings=None):
+                 logging_settings=None):
         if eden_dir is None:
             eden_dir = tempfile.mkdtemp(prefix='eden_test.')
         self._eden_dir = eden_dir
@@ -31,7 +31,7 @@ class EdenFS(object):
         self._process = None
         self._etc_eden_dir = etc_eden_dir
         self._home_dir = home_dir
-        self._vmodule_settings = vmodule_settings
+        self._logging_settings = logging_settings
 
     @property
     def eden_dir(self):
@@ -179,11 +179,11 @@ class EdenFS(object):
 
         # Turn up the VLOG level for the fuse server so that errors are logged
         # with an explanation when they bubble up to RequestData::catchErrors
-        if self._vmodule_settings:
-            vmodule_arg = ','.join('%s=%s' % (module, level)
+        if self._logging_settings:
+            logging_arg = ','.join('%s=%s' % (module, level)
                                    for module, level in sorted(
-                                       self._vmodule_settings.items()))
-            args.extend(['--', '--vmodule=' + vmodule_arg])
+                                       self._logging_settings.items()))
+            args.extend(['--', '--logging=' + logging_arg])
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
