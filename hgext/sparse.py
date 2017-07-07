@@ -352,8 +352,8 @@ def _setupdirstate(ui):
 
             sparsematch = repo.sparsematch()
             if self.sparsematch != sparsematch or self.origignore != origignore:
-                self.func = unionmatcher([origignore,
-                                          negatematcher(sparsematch)])
+                self.func = matchmod.unionmatcher([
+                    origignore, matchmod.negatematcher(sparsematch)])
                 self.sparsematch = sparsematch
                 self.origignore = origignore
             return self.func
@@ -448,7 +448,8 @@ def _wraprepo(ui, repo):
                             include=includes, exclude=excludes,
                             default='relpath')
                         if subdirs:
-                            matcher = forceincludematcher(matcher, subdirs)
+                            matcher = matchmod.forceincludematcher(matcher,
+                                                                   subdirs)
                         matchers.append(matcher)
                 except IOError:
                     pass
@@ -459,11 +460,11 @@ def _wraprepo(ui, repo):
             elif len(matchers) == 1:
                 result = matchers[0]
             else:
-                result = unionmatcher(matchers)
+                result = matchmod.unionmatcher(matchers)
 
             if kwargs.get('includetemp', True):
                 tempincludes = sparse.readtemporaryincludes(self)
-                result = forceincludematcher(result, tempincludes)
+                result = matchmod.forceincludematcher(result, tempincludes)
 
             self._sparsematchercache[key] = result
 
@@ -861,83 +862,3 @@ def _verbose_output(ui, opts, profilecount, includecount, excludecount, added,
                          dropped)
             fm.condwrite(ui.verbose, 'files_conflicting',
                          'Files conflicting: %d\n', lookup)
-
-class forceincludematcher(object):
-    """A matcher that returns true for any of the forced includes before testing
-    against the actual matcher."""
-    def __init__(self, matcher, includes):
-        self._matcher = matcher
-        self._includes = includes
-
-    def __call__(self, value):
-        return value in self._includes or self._matcher(value)
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
-
-    def __repr__(self):
-        return ('<forceincludematcher matcher=%r, includes=%r>' %
-                (self._matcher, sorted(self._includes)))
-
-class unionmatcher(object):
-    """A matcher that is the union of several matchers."""
-    def __init__(self, matchers):
-        self._matchers = matchers
-
-    def __call__(self, value):
-        for match in self._matchers:
-            if match(value):
-                return True
-        return False
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
-
-    def __repr__(self):
-        return ('<unionmatcher matchers=%r>' % self._matchers)
-
-class negatematcher(object):
-    def __init__(self, matcher):
-        self._matcher = matcher
-
-    def __call__(self, value):
-        return not self._matcher(value)
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def __repr__(self):
-        return ('<negatematcher matcher=%r>' % self._matcher)
