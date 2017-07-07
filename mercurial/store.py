@@ -475,9 +475,9 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
-class _fncachevfs(vfsmod.abstractvfs, vfsmod.auditvfs):
+class _fncachevfs(vfsmod.abstractvfs, vfsmod.proxyvfs):
     def __init__(self, vfs, fnc, encode):
-        vfsmod.auditvfs.__init__(self, vfs)
+        vfsmod.proxyvfs.__init__(self, vfs)
         self.fncache = fnc
         self.encode = encode
 
