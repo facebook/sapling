@@ -9,9 +9,11 @@
 
 import atexit
 import inspect
+import logging
 import os
 import shutil
 import tempfile
+import time
 import unittest
 from hypothesis import settings, HealthCheck
 import hypothesis.strategies as st
@@ -104,7 +106,25 @@ class EdenTestCase(TestParent):
         else:
             return super(EdenTestCase, self).run(report)
 
+    def report_time(self, event):
+        '''
+        report_time() is a helper function for logging how long different
+        parts of the test took.
+
+        Each time it is called it logs a message containing the time since the
+        test started and the time since the last time report_time() was called.
+        '''
+        now = time.time()
+        since_last = (now - self.last_event)
+        since_start = (now - self.start)
+        logging.info('=== %s at %.03fs (+%0.3fs)',
+                     event, since_start, since_last)
+        self.last_event = now
+
     def setUp(self):
+        self.start = time.time()
+        self.last_event = self.start
+
         self.tmp_dir = None
         self.eden = None
         self.old_home = None
@@ -117,6 +137,7 @@ class EdenTestCase(TestParent):
         except Exception as ex:
             self.tearDown()
             raise
+        self.report_time('test setup done')
 
     def setup_eden_test(self):
         self.tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
@@ -144,6 +165,7 @@ class EdenTestCase(TestParent):
         # Parent directory for eden mount points
         self.mounts_dir = os.path.join(self.tmp_dir, 'mounts')
         os.mkdir(self.mounts_dir)
+        self.report_time('temporary directory creation done')
 
         logging_settings = self.edenfs_logging_settings()
         self.eden = edenclient.EdenFS(self.eden_dir,
@@ -151,8 +173,10 @@ class EdenTestCase(TestParent):
                                       home_dir=self.home_dir,
                                       logging_settings=logging_settings)
         self.eden.start()
+        self.report_time('eden daemon started')
 
     def tearDown(self):
+        self.report_time('tear down started')
         error = None
         try:
             if self.eden is not None:
@@ -167,6 +191,8 @@ class EdenTestCase(TestParent):
         if self.tmp_dir is not None:
             shutil.rmtree(self.tmp_dir, ignore_errors=True)
             self.tmp_dir = None
+
+        self.report_time('tear down done')
 
         # Re-raise any error that occurred, after we finish
         # trying to clean up our directories.
@@ -262,9 +288,11 @@ class EdenRepoTestBase(EdenTestCase):
 
         self.repo = self.create_repo(self.repo_name, self.get_repo_class())
         self.populate_repo()
+        self.report_time('repository setup done')
 
         self.eden.add_repository(self.repo_name, self.repo.path)
         self.eden.clone(self.repo_name, self.mount)
+        self.report_time('eden clone done')
 
     def populate_repo(self):
         raise NotImplementedError('individual test classes must implement '
