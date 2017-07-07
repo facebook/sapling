@@ -647,20 +647,6 @@ class subdirmatcher(basematcher):
         return ('<subdirmatcher path=%r, matcher=%r>' %
                 (self._path, self._matcher))
 
-class forceincludematcher(basematcher):
-    """A matcher that returns true for any of the forced includes before testing
-    against the actual matcher."""
-    def __init__(self, matcher, includes):
-        self._matcher = matcher
-        self._includes = includes
-
-    def matchfn(self, f):
-        return f in self._includes or self._matcher(f)
-
-    def __repr__(self):
-        return ('<forceincludematcher matcher=%r, includes=%r>' %
-                (self._matcher, sorted(self._includes)))
-
 class unionmatcher(basematcher):
     """A matcher that is the union of several matchers."""
     def __init__(self, matchers):

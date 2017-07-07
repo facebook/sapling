@@ -242,6 +242,13 @@ def prunetemporaryincludes(repo):
             'sparse checkout\n')
     repo.ui.status(msg % len(tempincludes))
 
+def forceincludematcher(matcher, includes):
+    """Returns a matcher that returns true for any of the forced includes
+    before testing against the actual matcher."""
+    kindpats = [('path', include, '') for include in includes]
+    includematcher = matchmod.includematcher('', '', kindpats)
+    return matchmod.unionmatcher([includematcher, matcher])
+
 def matcher(repo, revs=None, includetemp=True):
     """Obtain a matcher for sparse working directories for the given revs.
 
@@ -289,7 +296,7 @@ def matcher(repo, revs=None, includetemp=True):
                                          include=includes, exclude=excludes,
                                          default='relpath')
                 if subdirs:
-                    matcher = matchmod.forceincludematcher(matcher, subdirs)
+                    matcher = forceincludematcher(matcher, subdirs)
                 matchers.append(matcher)
         except IOError:
             pass
@@ -303,7 +310,7 @@ def matcher(repo, revs=None, includetemp=True):
 
     if includetemp:
         tempincludes = readtemporaryincludes(repo)
-        result = matchmod.forceincludematcher(result, tempincludes)
+        result = forceincludematcher(result, tempincludes)
 
     repo._sparsematchercache[key] = result
 
