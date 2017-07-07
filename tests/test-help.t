@@ -660,6 +660,28 @@ Test command without options
   (use 'hg help' for the full list of commands or 'hg -v' for details)
   [255]
 
+Typoed command gives suggestion
+  $ hg puls
+  hg: unknown command 'puls'
+  (did you mean one of pull, push?)
+  [255]
+
+Not enabled extension gets suggested
+
+  $ hg rebase
+  hg: unknown command 'rebase'
+  'rebase' is provided by the following extension:
+  
+      rebase        command to move sets of revisions to a different ancestor
+  
+  (use 'hg help extensions' for information on enabling extensions)
+  [255]
+
+Disabled extension gets suggested
+  $ hg --config extensions.rebase=! rebase
+  hg: unknown command 'rebase'
+  (did you mean one of rename, resolve?)
+  [255]
 
 Make sure that we don't run afoul of the help system thinking that
 this is a section and erroring out weirdly.
