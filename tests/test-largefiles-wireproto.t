@@ -112,7 +112,7 @@ used all HGPORTs, kill all daemons
 #endif
 
 vanilla clients locked out from largefiles ssh repos
-  $ hg --config extensions.largefiles=! clone -e "$PYTHON \"$TESTDIR/dummyssh\"" ssh://user@dummy/r4 r5
+  $ hg --config extensions.largefiles=! clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/r4 r5
   remote: 
   remote: This repository uses the largefiles extension.
   remote: 

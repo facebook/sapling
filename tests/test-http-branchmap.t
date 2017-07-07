@@ -87,7 +87,7 @@ verify 7e7d56fe4833 (encoding fallback in branchmap to maintain compatibility wi
   > EOF
   $ echo baz >> b/foo
   $ hg -R b ci -m baz
-  $ hg push -R b -e '$PYTHON oldhg' ssh://dummy/ --encoding latin1
+  $ hg push -R b -e "\"$PYTHON\" oldhg" ssh://dummy/ --encoding latin1
   pushing to ssh://dummy/
   searching for changes
   remote: adding changesets
