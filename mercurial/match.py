@@ -655,8 +655,8 @@ class forceincludematcher(basematcher):
         self._matcher = matcher
         self._includes = includes
 
-    def __call__(self, value):
-        return value in self._includes or self._matcher(value)
+    def matchfn(self, f):
+        return f in self._includes or self._matcher(f)
 
     def __repr__(self):
         return ('<forceincludematcher matcher=%r, includes=%r>' %
@@ -667,9 +667,9 @@ class unionmatcher(basematcher):
     def __init__(self, matchers):
         self._matchers = matchers
 
-    def __call__(self, value):
+    def matchfn(self, f):
         for match in self._matchers:
-            if match(value):
+            if match(f):
                 return True
         return False
 
@@ -680,8 +680,8 @@ class negatematcher(basematcher):
     def __init__(self, matcher):
         self._matcher = matcher
 
-    def __call__(self, value):
-        return not self._matcher(value)
+    def matchfn(self, f):
+        return not self._matcher(f)
 
     def __repr__(self):
         return ('<negatematcher matcher=%r>' % self._matcher)
