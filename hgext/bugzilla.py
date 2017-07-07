@@ -322,6 +322,9 @@ configitem = registrar.configitem(configtable)
 configitem('bugzilla', 'apikey',
     default='',
 )
+configitem('bugzilla', 'bzdir',
+    default='/var/www/html/bugzilla',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -457,8 +460,7 @@ class bzmysql(bzaccess):
         for id in bugs.keys():
             self.ui.status(_('  bug %s\n') % id)
             cmdfmt = self.ui.config('bugzilla', 'notify', self.default_notify)
-            bzdir = self.ui.config('bugzilla', 'bzdir',
-                                   '/var/www/html/bugzilla')
+            bzdir = self.ui.config('bugzilla', 'bzdir')
             try:
                 # Backwards-compatible with old notify string, which
                 # took one string. This will throw with a new format
