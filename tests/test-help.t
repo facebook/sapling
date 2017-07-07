@@ -680,7 +680,11 @@ Not enabled extension gets suggested
 Disabled extension gets suggested
   $ hg --config extensions.rebase=! rebase
   hg: unknown command 'rebase'
-  (did you mean one of rename, resolve?)
+  'rebase' is provided by the following extension:
+  
+      rebase        command to move sets of revisions to a different ancestor
+  
+  (use 'hg help extensions' for information on enabling extensions)
   [255]
 
 Make sure that we don't run afoul of the help system thinking that

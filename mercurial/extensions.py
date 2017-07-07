@@ -494,7 +494,11 @@ def _disabledpaths(strip_init=False):
         if name in exts or name in _order or name == '__init__':
             continue
         exts[name] = path
-    exts.update(_disabledextensions)
+    for name, path in _disabledextensions.iteritems():
+        # If no path was provided for a disabled extension (e.g. "color=!"),
+        # don't replace the path we already found by the scan above.
+        if path:
+            exts[name] = path
     return exts
 
 def _moduledoc(file):
