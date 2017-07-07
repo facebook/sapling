@@ -337,6 +337,9 @@ configitem('bugzilla', 'bzuser',
 configitem('bugzilla', 'db',
     default='bugs',
 )
+configitem('bugzilla', 'fixregexp',
+    default=lambda: bugzilla._default_fix_re,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -975,8 +978,7 @@ class bugzilla(object):
             self.ui.config('bugzilla', 'regexp',
                            bugzilla._default_bug_re), re.IGNORECASE)
         self.fix_re = re.compile(
-            self.ui.config('bugzilla', 'fixregexp',
-                           bugzilla._default_fix_re), re.IGNORECASE)
+            self.ui.config('bugzilla', 'fixregexp'), re.IGNORECASE)
         self.split_re = re.compile(r'\D+')
 
     def find_bugs(self, ctx):
