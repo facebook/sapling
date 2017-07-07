@@ -221,6 +221,8 @@ def generatev1(repo):
                 repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
             # partially encode name over the wire for backwards compat
             yield '%s\0%d\n' % (store.encodedir(name), size)
+            # auditing at this stage is both pointless (paths are already
+            # trusted by the local repo) and expensive
             with svfs(name, 'rb', auditpath=False) as fp:
                 if size <= 65536:
                     yield fp.read(size)
