@@ -369,6 +369,9 @@ configitem('bugzilla', 'template',
 configitem('bugzilla', 'timeout',
     default=5,
 )
+configitem('bugzilla', 'user',
+    default='bugs',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -445,7 +448,7 @@ class bzmysql(bzaccess):
         bzaccess.__init__(self, ui)
 
         host = self.ui.config('bugzilla', 'host')
-        user = self.ui.config('bugzilla', 'user', 'bugs')
+        user = self.ui.config('bugzilla', 'user')
         passwd = self.ui.config('bugzilla', 'password')
         db = self.ui.config('bugzilla', 'db')
         timeout = int(self.ui.config('bugzilla', 'timeout'))
@@ -693,7 +696,7 @@ class bzxmlrpc(bzaccess):
         bzweb = self.ui.config('bugzilla', 'bzurl')
         bzweb = bzweb.rstrip("/") + "/xmlrpc.cgi"
 
-        user = self.ui.config('bugzilla', 'user', 'bugs')
+        user = self.ui.config('bugzilla', 'user')
         passwd = self.ui.config('bugzilla', 'password')
 
         self.fixstatus = self.ui.config('bugzilla', 'fixstatus')
@@ -810,7 +813,7 @@ class bzxmlrpcemail(bzxmlrpc):
         matches = self.bzproxy.User.get({'match': [user],
                                          'token': self.bztoken})
         if not matches['users']:
-            user = self.ui.config('bugzilla', 'user', 'bugs')
+            user = self.ui.config('bugzilla', 'user')
             matches = self.bzproxy.User.get({'match': [user],
                                              'token': self.bztoken})
             if not matches['users']:
@@ -852,7 +855,7 @@ class bzrestapi(bzaccess):
         bz = self.ui.config('bugzilla', 'bzurl')
         self.bzroot = '/'.join([bz, 'rest'])
         self.apikey = self.ui.config('bugzilla', 'apikey')
-        self.user = self.ui.config('bugzilla', 'user', 'bugs')
+        self.user = self.ui.config('bugzilla', 'user')
         self.passwd = self.ui.config('bugzilla', 'password')
         self.fixstatus = self.ui.config('bugzilla', 'fixstatus')
         self.fixresolution = self.ui.config('bugzilla', 'fixresolution')
