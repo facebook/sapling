@@ -346,6 +346,9 @@ configitem('bugzilla', 'fixresolution',
 configitem('bugzilla', 'fixstatus',
     default='RESOLVED',
 )
+configitem('bugzilla', 'host',
+    default='localhost',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -421,7 +424,7 @@ class bzmysql(bzaccess):
 
         bzaccess.__init__(self, ui)
 
-        host = self.ui.config('bugzilla', 'host', 'localhost')
+        host = self.ui.config('bugzilla', 'host')
         user = self.ui.config('bugzilla', 'user', 'bugs')
         passwd = self.ui.config('bugzilla', 'password')
         db = self.ui.config('bugzilla', 'db')
