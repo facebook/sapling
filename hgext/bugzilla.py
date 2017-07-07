@@ -325,6 +325,9 @@ configitem('bugzilla', 'apikey',
 configitem('bugzilla', 'bzdir',
     default='/var/www/html/bugzilla',
 )
+configitem('bugzilla', 'bzemail',
+    default=None,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
