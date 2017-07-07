@@ -334,6 +334,9 @@ configitem('bugzilla', 'bzurl',
 configitem('bugzilla', 'bzuser',
     default=None,
 )
+configitem('bugzilla', 'db',
+    default='bugs',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -412,7 +415,7 @@ class bzmysql(bzaccess):
         host = self.ui.config('bugzilla', 'host', 'localhost')
         user = self.ui.config('bugzilla', 'user', 'bugs')
         passwd = self.ui.config('bugzilla', 'password')
-        db = self.ui.config('bugzilla', 'db', 'bugs')
+        db = self.ui.config('bugzilla', 'db')
         timeout = int(self.ui.config('bugzilla', 'timeout', 5))
         self.ui.note(_('connecting to %s:%s as %s, password %s\n') %
                      (host, db, user, '*' * len(passwd)))
