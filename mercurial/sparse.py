@@ -8,11 +8,14 @@
 from __future__ import absolute_import
 
 import hashlib
+import os
 
 from .i18n import _
 from .node import nullid
 from . import (
     error,
+    match as matchmod,
+    pycompat,
 )
 
 # Whether sparse features are enabled. This variable is intended to be
@@ -193,3 +196,70 @@ def addtemporaryincludes(repo, additional):
     for i in additional:
         includes.add(i)
     writetemporaryincludes(repo, includes)
+
+def matcher(repo, revs=None, includetemp=True):
+    """Obtain a matcher for sparse working directories for the given revs.
+
+    If multiple revisions are specified, the matcher is the union of all
+    revs.
+
+    ``includetemp`` indicates whether to use the temporary sparse profile.
+    """
+    # If sparse isn't enabled, sparse matcher matches everything.
+    if not enabled:
+        return matchmod.always(repo.root, '')
+
+    if not revs or revs == [None]:
+        revs = [repo.changelog.rev(node)
+                for node in repo.dirstate.parents() if node != nullid]
+
+    signature = configsignature(repo, includetemp=includetemp)
+
+    key = '%s %s' % (signature, ' '.join(map(pycompat.bytestr, revs)))
+
+    result = repo._sparsematchercache.get(key)
+    if result:
+        return result
+
+    matchers = []
+    for rev in revs:
+        try:
+            includes, excludes, profiles = patternsforrev(repo, rev)
+
+            if includes or excludes:
+                # Explicitly include subdirectories of includes so
+                # status will walk them down to the actual include.
+                subdirs = set()
+                for include in includes:
+                    # TODO consider using posix path functions here so Windows
+                    # \ directory separators don't come into play.
+                    dirname = os.path.dirname(include)
+                    # basename is used to avoid issues with absolute
+                    # paths (which on Windows can include the drive).
+                    while os.path.basename(dirname):
+                        subdirs.add(dirname)
+                        dirname = os.path.dirname(dirname)
+
+                matcher = matchmod.match(repo.root, '', [],
+                                         include=includes, exclude=excludes,
+                                         default='relpath')
+                if subdirs:
+                    matcher = matchmod.forceincludematcher(matcher, subdirs)
+                matchers.append(matcher)
+        except IOError:
+            pass
+
+    if not matchers:
+        result = matchmod.always(repo.root, '')
+    elif len(matchers) == 1:
+        result = matchers[0]
+    else:
+        result = matchmod.unionmatcher(matchers)
+
+    if includetemp:
+        tempincludes = readtemporaryincludes(repo)
+        result = matchmod.forceincludematcher(result, tempincludes)
+
+    repo._sparsematchercache[key] = result
+
+    return result

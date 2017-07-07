@@ -75,7 +75,6 @@ certain files::
 from __future__ import absolute_import
 
 import collections
-import os
 
 from mercurial.i18n import _
 from mercurial.node import nullid
@@ -146,22 +145,23 @@ def _setupupdates(ui):
         actions, diverge, renamedelete = orig(repo, wctx, mctx, ancestors,
                                               branchmerge, *arg, **kwargs)
 
-        if not util.safehasattr(repo, 'sparsematch'):
+        oldrevs = [pctx.rev() for pctx in wctx.parents()]
+        oldsparsematch = sparse.matcher(repo, oldrevs)
+
+        if oldsparsematch.always():
             return actions, diverge, renamedelete
 
         files = set()
         prunedactions = {}
-        oldrevs = [pctx.rev() for pctx in wctx.parents()]
-        oldsparsematch = repo.sparsematch(*oldrevs)
 
         if branchmerge:
             # If we're merging, use the wctx filter, since we're merging into
             # the wctx.
-            sparsematch = repo.sparsematch(wctx.parents()[0].rev())
+            sparsematch = sparse.matcher(repo, [wctx.parents()[0].rev()])
         else:
             # If we're updating, use the target context's filter, since we're
             # moving to the target context.
-            sparsematch = repo.sparsematch(mctx.rev())
+            sparsematch = sparse.matcher(repo, [mctx.rev()])
 
         temporaryfiles = []
         for file, action in actions.iteritems():
@@ -229,7 +229,7 @@ def _setupupdates(ui):
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
-        if not branchmerge and util.safehasattr(repo, 'sparsematch'):
+        if not branchmerge and util.safehasattr(repo, 'prunetemporaryincludes'):
             repo.prunetemporaryincludes()
         return results
 
@@ -248,7 +248,7 @@ def _setupcommit(ui):
         # profiles will only have data if sparse is enabled.
         if set(profiles) & set(ctx.files()):
             origstatus = repo.status()
-            origsparsematch = repo.sparsematch()
+            origsparsematch = sparse.matcher(repo)
             _refresh(repo.ui, repo, origstatus, origsparsematch, True)
 
         if util.safehasattr(repo, 'prunetemporaryincludes'):
@@ -265,7 +265,7 @@ def _setuplog(ui):
     def _logrevs(orig, repo, opts):
         revs = orig(repo, opts)
         if opts.get('sparse'):
-            sparsematch = repo.sparsematch()
+            sparsematch = sparse.matcher(repo)
             def ctxmatch(rev):
                 ctx = repo[rev]
                 return any(f for f in ctx.files() if sparsematch(f))
@@ -347,10 +347,11 @@ def _setupdirstate(ui):
         def __get__(self, obj, type=None):
             repo = obj.repo
             origignore = self.orig.__get__(obj)
-            if not util.safehasattr(repo, 'sparsematch'):
+
+            sparsematch = sparse.matcher(repo)
+            if sparsematch.always():
                 return origignore
 
-            sparsematch = repo.sparsematch()
             if self.sparsematch != sparsematch or self.origignore != origignore:
                 self.func = matchmod.unionmatcher([
                     origignore, matchmod.negatematcher(sparsematch)])
@@ -368,8 +369,8 @@ def _setupdirstate(ui):
 
     # dirstate.rebuild should not add non-matching files
     def _rebuild(orig, self, parent, allfiles, changedfiles=None):
-        if util.safehasattr(self.repo, 'sparsematch'):
-            matcher = self.repo.sparsematch()
+        matcher = sparse.matcher(self.repo)
+        if not matcher.always():
             allfiles = allfiles.matches(matcher)
             if changedfiles:
                 changedfiles = [f for f in changedfiles if matcher(f)]
@@ -390,9 +391,9 @@ def _setupdirstate(ui):
     for func in editfuncs:
         def _wrapper(orig, self, *args):
             repo = self.repo
-            if util.safehasattr(repo, 'sparsematch'):
+            sparsematch = sparse.matcher(repo)
+            if not sparsematch.always():
                 dirstate = repo.dirstate
-                sparsematch = repo.sparsematch()
                 for f in args:
                     if (f is not None and not sparsematch(f) and
                         f not in dirstate):
@@ -404,72 +405,6 @@ def _setupdirstate(ui):
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
-        def sparsematch(self, *revs, **kwargs):
-            """Returns the sparse match function for the given revs.
-
-            If multiple revs are specified, the match function is the union
-            of all the revs.
-
-            `includetemp` is used to indicate if the temporarily included file
-            should be part of the matcher.
-            """
-            if not revs or revs == (None,):
-                revs = [self.changelog.rev(node) for node in
-                    self.dirstate.parents() if node != nullid]
-
-            includetemp = kwargs.get('includetemp', True)
-            signature = sparse.configsignature(self, includetemp=includetemp)
-
-            key = '%s %s' % (str(signature), ' '.join([str(r) for r in revs]))
-
-            result = self._sparsematchercache.get(key, None)
-            if result:
-                return result
-
-            matchers = []
-            for rev in revs:
-                try:
-                    includes, excludes, profiles = sparse.patternsforrev(
-                        self, rev)
-
-                    if includes or excludes:
-                        # Explicitly include subdirectories of includes so
-                        # status will walk them down to the actual include.
-                        subdirs = set()
-                        for include in includes:
-                            dirname = os.path.dirname(include)
-                            # basename is used to avoid issues with absolute
-                            # paths (which on Windows can include the drive).
-                            while os.path.basename(dirname):
-                                subdirs.add(dirname)
-                                dirname = os.path.dirname(dirname)
-
-                        matcher = matchmod.match(self.root, '', [],
-                            include=includes, exclude=excludes,
-                            default='relpath')
-                        if subdirs:
-                            matcher = matchmod.forceincludematcher(matcher,
-                                                                   subdirs)
-                        matchers.append(matcher)
-                except IOError:
-                    pass
-
-            result = None
-            if not matchers:
-                result = matchmod.always(self.root, '')
-            elif len(matchers) == 1:
-                result = matchers[0]
-            else:
-                result = matchmod.unionmatcher(matchers)
-
-            if kwargs.get('includetemp', True):
-                tempincludes = sparse.readtemporaryincludes(self)
-                result = matchmod.forceincludematcher(result, tempincludes)
-
-            self._sparsematchercache[key] = result
-
-            return result
-
         def prunetemporaryincludes(self):
             if repo.vfs.exists('tempsparse'):
                 origstatus = self.status()
@@ -478,7 +413,7 @@ def _wraprepo(ui, repo):
                     # Still have pending changes. Don't bother trying to prune.
                     return
 
-                sparsematch = self.sparsematch(includetemp=False)
+                sparsematch = sparse.matcher(self, includetemp=False)
                 dirstate = self.dirstate
                 actions = []
                 dropped = []
@@ -605,7 +540,7 @@ def debugsparse(ui, repo, *pats, **opts):
             wlock = repo.wlock()
             fcounts = map(
                 len,
-                _refresh(ui, repo, repo.status(), repo.sparsematch(), force))
+                _refresh(ui, repo, repo.status(), sparse.matcher(repo), force))
             _verbose_output(ui, opts, 0, 0, 0, *fcounts)
         finally:
             wlock.release()
@@ -618,7 +553,7 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
     """
     wlock = repo.wlock()
     try:
-        oldsparsematch = repo.sparsematch()
+        oldsparsematch = sparse.matcher(repo)
 
         raw = repo.vfs.tryread('sparse')
         if raw:
@@ -718,7 +653,7 @@ def _import(ui, repo, files, opts, force=False):
             excludecount = len(excludes - aexcludes)
 
             oldstatus = repo.status()
-            oldsparsematch = repo.sparsematch()
+            oldsparsematch = sparse.matcher(repo)
             sparse.writeconfig(repo, includes, excludes, profiles)
 
             try:
@@ -738,7 +673,7 @@ def _clear(ui, repo, files, force=False):
 
         if includes or excludes:
             oldstatus = repo.status()
-            oldsparsematch = repo.sparsematch()
+            oldsparsematch = sparse.matcher(repo)
             sparse.writeconfig(repo, set(), set(), profiles)
             _refresh(ui, repo, oldstatus, oldsparsematch, force)
 
@@ -756,7 +691,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     pending.update(modified)
     pending.update(added)
     pending.update(removed)
-    sparsematch = repo.sparsematch()
+    sparsematch = sparse.matcher(repo)
     abort = False
     for file in pending:
         if not sparsematch(file):
