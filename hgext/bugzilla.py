@@ -331,6 +331,9 @@ configitem('bugzilla', 'bzemail',
 configitem('bugzilla', 'bzurl',
     default='http://localhost/bugzilla/',
 )
+configitem('bugzilla', 'bzuser',
+    default=None,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
