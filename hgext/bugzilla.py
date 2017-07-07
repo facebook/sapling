@@ -328,6 +328,9 @@ configitem('bugzilla', 'bzdir',
 configitem('bugzilla', 'bzemail',
     default=None,
 )
+configitem('bugzilla', 'bzurl',
+    default='http://localhost/bugzilla/',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -649,8 +652,7 @@ class bzxmlrpc(bzaccess):
     def __init__(self, ui):
         bzaccess.__init__(self, ui)
 
-        bzweb = self.ui.config('bugzilla', 'bzurl',
-                               'http://localhost/bugzilla/')
+        bzweb = self.ui.config('bugzilla', 'bzurl')
         bzweb = bzweb.rstrip("/") + "/xmlrpc.cgi"
 
         user = self.ui.config('bugzilla', 'user', 'bugs')
@@ -810,8 +812,7 @@ class bzrestapi(bzaccess):
     """
     def __init__(self, ui):
         bzaccess.__init__(self, ui)
-        bz = self.ui.config('bugzilla', 'bzurl',
-                            'http://localhost/bugzilla/')
+        bz = self.ui.config('bugzilla', 'bzurl')
         self.bzroot = '/'.join([bz, 'rest'])
         self.apikey = self.ui.config('bugzilla', 'apikey')
         self.user = self.ui.config('bugzilla', 'user', 'bugs')
