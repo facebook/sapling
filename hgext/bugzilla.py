@@ -357,6 +357,9 @@ configitem('bugzilla', 'regexp',
              r'(?P<ids>(?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
              r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
 )
+configitem('bugzilla', 'strip',
+    default=0,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -1055,7 +1058,7 @@ class bugzilla(object):
         def webroot(root):
             '''strip leading prefix of repo root and turn into
             url-safe path.'''
-            count = int(self.ui.config('bugzilla', 'strip', 0))
+            count = int(self.ui.config('bugzilla', 'strip'))
             root = util.pconvert(root)
             while count > 0:
                 c = root.find('/')
