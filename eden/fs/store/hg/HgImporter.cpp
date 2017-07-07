@@ -55,6 +55,11 @@ DEFINE_string(
     "this value is non-empty, the existing PYTHONPATH from the environment is "
     "replaced with this value.");
 
+DEFINE_bool(
+    use_hg_tree_manifest,
+    false, // Disabled for now until we are able to handle MissingKeyError
+    "Attempt to import mercurial trees using treemanifest");
+
 namespace {
 
 using namespace facebook::eden;
@@ -412,6 +417,10 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenBlobHash,
     RelativePathPiece path) {
+  // FIXME: We need to catch MissingKeyError here, and ask mercurial to import
+  // the tree data if it is thrown.  Currently we can often import the root
+  // tree using TreeManifest, but this results in I/O errors later on if
+  // sub-trees are not available in the data store yet.
   auto content = unionStore_->get(
       Key(path.stringPiece().data(),
           path.stringPiece().size(),
@@ -488,11 +497,13 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 }
 
 Hash HgImporter::importManifest(StringPiece revName) {
-  try {
-    return importTreeManifest(revName);
-  } catch (const MissingKeyError&) {
-    // We don't have a tree manifest available for the target rev,
-    // so let's fall through to the full flat manifest importer.
+  if (FLAGS_use_hg_tree_manifest) {
+    try {
+      return importTreeManifest(revName);
+    } catch (const MissingKeyError&) {
+      // We don't have a tree manifest available for the target rev,
+      // so let's fall through to the full flat manifest importer.
+    }
   }
 
   return importFlatManifest(revName);
