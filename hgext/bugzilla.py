@@ -349,6 +349,9 @@ configitem('bugzilla', 'fixstatus',
 configitem('bugzilla', 'host',
     default='localhost',
 )
+configitem('bugzilla', 'password',
+    default=None,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
