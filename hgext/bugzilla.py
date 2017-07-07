@@ -343,6 +343,9 @@ configitem('bugzilla', 'fixregexp',
 configitem('bugzilla', 'fixresolution',
     default='FIXED',
 )
+configitem('bugzilla', 'fixstatus',
+    default='RESOLVED',
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -670,7 +673,7 @@ class bzxmlrpc(bzaccess):
         user = self.ui.config('bugzilla', 'user', 'bugs')
         passwd = self.ui.config('bugzilla', 'password')
 
-        self.fixstatus = self.ui.config('bugzilla', 'fixstatus', 'RESOLVED')
+        self.fixstatus = self.ui.config('bugzilla', 'fixstatus')
         self.fixresolution = self.ui.config('bugzilla', 'fixresolution')
 
         self.bzproxy = xmlrpclib.ServerProxy(bzweb, self.transport(bzweb))
@@ -828,7 +831,7 @@ class bzrestapi(bzaccess):
         self.apikey = self.ui.config('bugzilla', 'apikey')
         self.user = self.ui.config('bugzilla', 'user', 'bugs')
         self.passwd = self.ui.config('bugzilla', 'password')
-        self.fixstatus = self.ui.config('bugzilla', 'fixstatus', 'RESOLVED')
+        self.fixstatus = self.ui.config('bugzilla', 'fixstatus')
         self.fixresolution = self.ui.config('bugzilla', 'fixresolution')
 
     def apiurl(self, targets, include_fields=None):
