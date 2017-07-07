@@ -200,9 +200,8 @@ def prunetemporaryincludes(repo):
     if not enabled or not repo.vfs.exists('tempsparse'):
         return
 
-    origstatus = repo.status()
-    modified, added, removed, deleted, a, b, c = origstatus
-    if modified or added or removed or deleted:
+    s = repo.status()
+    if s.modified or s.added or s.removed or s.deleted:
         # Still have pending changes. Don't bother trying to prune.
         return
 
@@ -389,13 +388,11 @@ def refreshwdir(repo, origstatus, origsparsematch, force=False):
     Will abort if a file with pending changes is being excluded or included
     unless ``force`` is True.
     """
-    modified, added, removed, deleted, unknown, ignored, clean = origstatus
-
     # Verify there are no pending changes
     pending = set()
-    pending.update(modified)
-    pending.update(added)
-    pending.update(removed)
+    pending.update(origstatus.modified)
+    pending.update(origstatus.added)
+    pending.update(origstatus.removed)
     sparsematch = matcher(repo)
     abort = False
 
