@@ -124,11 +124,22 @@ void PrivHelperServer::bindMount(
   checkUnixError(rc, "failed to mount");
 }
 
-void PrivHelperServer::fuseUnmount(const char* mountPath, bool force) {
-  int umountFlags = UMOUNT_NOFOLLOW;
-  if (force) {
-    umountFlags |= MNT_DETACH;
-  }
+void PrivHelperServer::fuseUnmount(const char* mountPath) {
+  // UMOUNT_NOFOLLOW prevents us from following symlinks.
+  // This is needed for security, to ensure that we are only unmounting mount
+  // points that we originally mounted.  (The processUnmountMsg() call checks
+  // to ensure that the path requested matches one that we know about.)
+  //
+  // MNT_DETACH asks Linux to remove this mount even if it is still "busy"--if
+  // there are other processes with open file handles, or in case we failed to
+  // unmount some of the bind mounts contained inside it for some reason.
+  // This helps ensure that the unmount actually succeeds.
+  // This is the same behavior as "umount --lazy"
+  //
+  // In the future we might want to add an option for callers to request
+  // an unforced unmount (without passing in MNT_DETACH).  However for now we
+  // always do forced unmount.
+  int umountFlags = UMOUNT_NOFOLLOW | MNT_DETACH;
   auto rc = umount2(mountPath, umountFlags);
   if (rc != 0) {
     int errnum = errno;
@@ -267,11 +278,7 @@ void PrivHelperServer::cleanupMountPoints() {
       numBindMountsRemoved++;
     }
 
-    // Pass in force=true here so that Linux will remove this mount
-    // even if some of the bind unmounts above failed or if there are other
-    // processes with open file handles still referring to this mount.
-    // (This effectively does a lazy unmount.)
-    fuseUnmount(mountPoint.c_str(), true);
+    fuseUnmount(mountPoint.c_str());
   }
 
   CHECK_EQ(bindMountPoints_.size(), numBindMountsRemoved)
