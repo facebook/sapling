@@ -3,7 +3,14 @@ mock bugzilla driver for testing template output:
   $ cat <<EOF > bzmock.py
   > from __future__ import absolute_import
   > from mercurial import extensions
+  > from mercurial import registrar
   > 
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > 
+  > configitem('bugzilla', 'mocklog',
+  >     default=None,
+  > )
   > def extsetup(ui):
   >     bugzilla = extensions.find('bugzilla')
   >     class bzmock(bugzilla.bzaccess):
