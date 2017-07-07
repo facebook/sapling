@@ -116,14 +116,6 @@ def extsetup(ui):
     _setuplog(ui)
     _setupadd(ui)
     _setupdirstate(ui)
-    # if fsmonitor is enabled, tell it to use our hash function
-    try:
-        fsmonitor = extensions.find('fsmonitor')
-        def _hashignore(orig, ignore):
-            return _hashmatcher(ignore)
-        extensions.wrapfunction(fsmonitor, '_hashignore', _hashignore)
-    except KeyError:
-        pass
 
 def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
@@ -982,8 +974,3 @@ class negatematcher(object):
 
     def __repr__(self):
         return ('<negatematcher matcher=%r>' % self._matcher)
-
-def _hashmatcher(matcher):
-    sha1 = hashlib.sha1()
-    sha1.update(repr(matcher))
-    return sha1.hexdigest()
