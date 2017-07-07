@@ -81,11 +81,6 @@ class SvnRaTransport(object):
         if ra is None or not util.safehasattr(svn.ra, 'reparent'):
             self.client = svn.client.create_context(self.pool)
             ab = _create_auth_baton(self.pool)
-            if False:
-                svn.core.svn_auth_set_parameter(
-                    ab, svn.core.SVN_AUTH_PARAM_DEFAULT_USERNAME, self.username)
-                svn.core.svn_auth_set_parameter(
-                    ab, svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD, self.password)
             self.client.auth_baton = ab
             global svn_config
             if svn_config is None:
