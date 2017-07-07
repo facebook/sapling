@@ -35,7 +35,3 @@ for line in sys.stdin:
 for line in lines:
     sys.stdout.write(line)
 print()
-
-# self test of "undefined name" detection
-if False:
-    print(undefinedname)
