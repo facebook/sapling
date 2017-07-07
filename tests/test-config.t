@@ -178,3 +178,36 @@ config affected by environment variables
 
   $ PAGER=p1 hg config --debug --config pager.pager=p2 | grep 'pager\.pager'
   --config: pager.pager=p2
+
+verify that aliases are evaluated as well
+
+  $ hg init aliastest
+  $ cd aliastest
+  $ cat > .hg/hgrc << EOF
+  > [ui]
+  > user = repo user
+  > EOF
+  $ touch index
+  $ unset HGUSER
+  $ hg ci -Am test
+  adding index
+  $ hg log --template '{author}\n'
+  repo user
+  $ cd ..
+
+alias has lower priority
+
+  $ hg init aliaspriority
+  $ cd aliaspriority
+  $ cat > .hg/hgrc << EOF
+  > [ui]
+  > user = alias user
+  > username = repo user
+  > EOF
+  $ touch index
+  $ unset HGUSER
+  $ hg ci -Am test
+  adding index
+  $ hg log --template '{author}\n'
+  repo user
+  $ cd ..

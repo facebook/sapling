@@ -448,38 +448,39 @@ class ui(object):
 
     def _config(self, section, name, default=_unset, untrusted=False):
         value = default
-        if isinstance(name, list):
-            alternates = name
-        else:
-            item = self._knownconfig.get(section, {}).get(name)
-            if default is _unset:
-                if item is None:
-                    value = default
-                elif callable(item.default):
+        item = self._knownconfig.get(section, {}).get(name)
+        alternates = [(section, name)]
+
+        if item is not None:
+            alternates.extend(item.alias)
+
+        if default is _unset:
+            if item is None:
+                value = default
+            elif callable(item.default):
                     value = item.default()
-                else:
-                    value = item.default
-            elif item is not None:
-                msg = ("specifying a default value for a registered "
-                       "config item: '%s.%s' '%s'")
-                msg %= (section, name, default)
-                self.develwarn(msg, 2, 'warn-config-default')
+            else:
+                value = item.default
+        elif item is not None:
+            msg = ("specifying a default value for a registered "
+                   "config item: '%s.%s' '%s'")
+            msg %= (section, name, default)
+            self.develwarn(msg, 2, 'warn-config-default')
 
-            alternates = [name]
-
-        for n in alternates:
-            candidate = self._data(untrusted).get(section, n, None)
+        for s, n in alternates:
+            candidate = self._data(untrusted).get(s, n, None)
             if candidate is not None:
                 value = candidate
+                section = s
                 name = n
                 break
 
         if self.debugflag and not untrusted and self._reportuntrusted:
-            for n in alternates:
-                uvalue = self._ucfg.get(section, n)
+            for s, n in alternates:
+                uvalue = self._ucfg.get(s, n)
                 if uvalue is not None and uvalue != value:
                     self.debug("ignoring untrusted configuration option "
-                               "%s.%s = %s\n" % (section, n, uvalue))
+                               "%s.%s = %s\n" % (s, n, uvalue))
         return value
 
     def configsuboptions(self, section, name, default=_unset, untrusted=False):
@@ -744,7 +745,7 @@ class ui(object):
         """
         user = encoding.environ.get("HGUSER")
         if user is None:
-            user = self.config("ui", ["username", "user"])
+            user = self.config("ui", "username")
             if user is not None:
                 user = os.path.expandvars(user)
         if user is None:

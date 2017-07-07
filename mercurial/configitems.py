@@ -32,12 +32,14 @@ class configitem(object):
     :section: the official config section where to find this item,
        :name: the official name within the section,
     :default: default value for this item,
+    :alias: optional list of tuples as alternatives.
     """
 
-    def __init__(self, section, name, default=None):
+    def __init__(self, section, name, default=None, alias=()):
         self.section = section
         self.name = name
         self.default = default
+        self.alias = list(alias)
 
 coreitems = {}
 
@@ -193,6 +195,9 @@ coreconfigitem('ui', 'interactive',
 )
 coreconfigitem('ui', 'quiet',
     default=False,
+)
+coreconfigitem('ui', 'username',
+    alias=[('ui', 'user')]
 )
 # Windows defaults to a limit of 512 open files. A buffer of 128
 # should give us enough headway.
