@@ -363,6 +363,9 @@ configitem('bugzilla', 'strip',
 configitem('bugzilla', 'style',
     default=None,
 )
+configitem('bugzilla', 'template',
+    default=None,
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
