@@ -4773,7 +4773,7 @@ def summary(ui, repo, **opts):
         s = ' '.join(e.recordtypes)
         ui.warn(
             _('warning: merge state has unsupported record types: %s\n') % s)
-        unresolved = 0
+        unresolved = []
     else:
         unresolved = list(ms.unresolved())
 
