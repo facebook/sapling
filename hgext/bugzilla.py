@@ -352,6 +352,11 @@ configitem('bugzilla', 'host',
 configitem('bugzilla', 'password',
     default=None,
 )
+configitem('bugzilla', 'regexp',
+    default=(r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
+             r'(?P<ids>(?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
+             r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
+)
 
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
@@ -963,10 +968,6 @@ class bugzilla(object):
         'restapi': bzrestapi,
         }
 
-    _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
-                       r'(?P<ids>(?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
-                       r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
-
     _default_fix_re = (r'fix(?:es)?\s*(?:bugs?\s*)?,?\s*'
                        r'(?:nos?\.?|num(?:ber)?s?)?\s*'
                        r'(?P<ids>(?:#?\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
@@ -985,8 +986,7 @@ class bugzilla(object):
         self.bzdriver = bzclass(self.ui)
 
         self.bug_re = re.compile(
-            self.ui.config('bugzilla', 'regexp',
-                           bugzilla._default_bug_re), re.IGNORECASE)
+            self.ui.config('bugzilla', 'regexp'), re.IGNORECASE)
         self.fix_re = re.compile(
             self.ui.config('bugzilla', 'fixregexp'), re.IGNORECASE)
         self.split_re = re.compile(r'\D+')
