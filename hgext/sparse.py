@@ -374,7 +374,8 @@ def debugsparse(ui, repo, *pats, **opts):
                 len,
                 sparse.refreshwdir(repo, repo.status(), sparse.matcher(repo),
                                    force=force))
-            _verbose_output(ui, opts, 0, 0, 0, *fcounts)
+            sparse.printchanges(ui, opts, added=fcounts[0], dropped=fcounts[1],
+                                conflicting=fcounts[2])
         finally:
             wlock.release()
 
@@ -437,8 +438,8 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                             len(oldinclude - newinclude))
             excludecount = (len(newexclude - oldexclude) -
                             len(oldexclude - newexclude))
-            _verbose_output(
-                ui, opts, profilecount, includecount, excludecount, *fcounts)
+            sparse.printchanges(ui, opts, profilecount, includecount,
+                                excludecount, *fcounts)
         except Exception:
             sparse.writeconfig(repo, oldinclude, oldexclude, oldprofiles)
             raise
@@ -500,32 +501,5 @@ def _import(ui, repo, files, opts, force=False):
                 sparse.writeconfig(repo, oincludes, oexcludes, oprofiles)
                 raise
 
-        _verbose_output(ui, opts, profilecount, includecount, excludecount,
-                        *fcounts)
-
-def _verbose_output(ui, opts, profilecount, includecount, excludecount, added,
-                    dropped, lookup):
-    """Produce --verbose and templatable output
-
-    This specifically enables -Tjson, providing machine-readable stats on how
-    the sparse profile changed.
-
-    """
-    with ui.formatter('sparse', opts) as fm:
-        fm.startitem()
-        fm.condwrite(ui.verbose, 'profiles_added', 'Profile # change: %d\n',
-                     profilecount)
-        fm.condwrite(ui.verbose, 'include_rules_added',
-                     'Include rule # change: %d\n', includecount)
-        fm.condwrite(ui.verbose, 'exclude_rules_added',
-                     'Exclude rule # change: %d\n', excludecount)
-        # In 'plain' verbose mode, mergemod.applyupdates already outputs what
-        # files are added or removed outside of the templating formatter
-        # framework. No point in repeating ourselves in that case.
-        if not fm.isplain():
-            fm.condwrite(ui.verbose, 'files_added', 'Files added: %d\n',
-                         added)
-            fm.condwrite(ui.verbose, 'files_dropped', 'Files dropped: %d\n',
-                         dropped)
-            fm.condwrite(ui.verbose, 'files_conflicting',
-                         'Files conflicting: %d\n', lookup)
+        sparse.printchanges(ui, opts, profilecount, includecount, excludecount,
+                            *fcounts)

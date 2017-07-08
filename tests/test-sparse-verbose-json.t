@@ -35,9 +35,9 @@ Verify basic --include and --reset
   $ hg debugsparse --clear-rules
   $ hg debugsparse --include 'hide' --verbose
   removing show
-  Profile # change: 0
-  Include rule # change: 1
-  Exclude rule # change: 0
+  Profiles changed: 0
+  Include rules changed: 1
+  Exclude rules changed: 0
 
   $ hg debugsparse --reset -Tjson
   [
@@ -53,9 +53,9 @@ Verify basic --include and --reset
   $ hg debugsparse --include 'hide'
   $ hg debugsparse --reset --verbose
   getting show
-  Profile # change: 0
-  Include rule # change: -1
-  Exclude rule # change: 0
+  Profiles changed: 0
+  Include rules changed: -1
+  Exclude rules changed: 0
 
 Verifying that problematic files still allow us to see the deltas when forcing:
 
@@ -77,6 +77,6 @@ Verifying that problematic files still allow us to see the deltas when forcing:
   pending changes to 'hide'
   $ hg debugsparse --delete 'show*' --force --verbose
   pending changes to 'hide'
-  Profile # change: 0
-  Include rule # change: -1
-  Exclude rule # change: 0
+  Profiles changed: 0
+  Include rules changed: -1
+  Exclude rules changed: 0

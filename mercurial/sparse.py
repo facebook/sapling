@@ -512,3 +512,26 @@ def clearrules(repo, force=False):
         oldmatch = matcher(repo)
         writeconfig(repo, set(), set(), profiles)
         refreshwdir(repo, oldstatus, oldmatch, force=force)
+
+def printchanges(ui, opts, profilecount=0, includecount=0, excludecount=0,
+                 added=0, dropped=0, conflicting=0):
+    """Print output summarizing sparse config changes."""
+    with ui.formatter('sparse', opts) as fm:
+        fm.startitem()
+        fm.condwrite(ui.verbose, 'profiles_added', _('Profiles changed: %d\n'),
+                     profilecount)
+        fm.condwrite(ui.verbose, 'include_rules_added',
+                     _('Include rules changed: %d\n'), includecount)
+        fm.condwrite(ui.verbose, 'exclude_rules_added',
+                     _('Exclude rules changed: %d\n'), excludecount)
+
+        # In 'plain' verbose mode, mergemod.applyupdates already outputs what
+        # files are added or removed outside of the templating formatter
+        # framework. No point in repeating ourselves in that case.
+        if not fm.isplain():
+            fm.condwrite(ui.verbose, 'files_added', _('Files added: %d\n'),
+                         added)
+            fm.condwrite(ui.verbose, 'files_dropped', _('Files dropped: %d\n'),
+                         dropped)
+            fm.condwrite(ui.verbose, 'files_conflicting',
+                         _('Files conflicting: %d\n'), conflicting)
