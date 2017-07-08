@@ -974,9 +974,12 @@ during the rebase operation
   $ hg log -r .
   3:be1832deae9a b (no-eol)
 
-Check that bookmark was moved to rev 3 although rev 2 was skipped
-during the rebase operation
+Check that bookmark was not moved to rev 3 if rev 2 was skipped during the
+rebase operation. This makes sense because if rev 2 has a successor, the
+operation generating that successor (ex. rebase) should be responsible for
+moving bookmarks. If the bookmark is on a precursor, like rev 2, that means the
+user manually moved it back. In that case we should not move it again.
   $ hg bookmarks
-     mybook                    3:be1832deae9a
+     mybook                    2:1e9a3c00cbe9
   $ hg debugobsolete --rev tip
   1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc be1832deae9ac531caa7438b8dcf6055a122cd8e 0 (*) {'user': 'test'} (glob)

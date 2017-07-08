@@ -21,15 +21,15 @@ Require a destination
   [255]
   $ hg rebase -d 1
   rebasing 2:5db65b93a12b "cc" (tip)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5db65b93a12b-4fb789ec-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5db65b93a12b-4fb789ec-rebase.hg (glob)
   $ hg rebase -d 0 -r . -q
   $ HGPLAIN=1 hg rebase
   rebasing 2:889b0bc6a730 "cc" (tip)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/889b0bc6a730-41ec4f81-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/889b0bc6a730-41ec4f81-rebase.hg (glob)
   $ hg rebase -d 0 -r . -q
   $ hg --config commands.rebase.requiredest=False rebase
   rebasing 2:279de9495438 "cc" (tip)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/279de9495438-ab0a5128-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/279de9495438-ab0a5128-rebase.hg (glob)
 
 Requiring dest should not break continue or other rebase options
   $ hg up 1 -q
@@ -56,7 +56,7 @@ Requiring dest should not break continue or other rebase options
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing 3:0537f6b50def "dc" (tip)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0537f6b50def-be4c7386-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0537f6b50def-be4c7386-rebase.hg (glob)
 
   $ cd ..
 

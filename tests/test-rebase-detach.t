@@ -49,7 +49,7 @@ Rebasing D onto H detaching from C:
   $ hg phase --force --secret 3
   $ hg rebase -s 3 -d 7
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-6f7dface-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-6f7dface-rebase.hg (glob)
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   o  7:secret 'D'
@@ -102,7 +102,7 @@ Rebasing C onto H detaching from B:
   $ hg rebase -s 2 -d 7
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/5fddd98957c8-f9244fa1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -157,7 +157,7 @@ Rebasing B onto H using detach (same as not using it):
   rebasing 1:42ccdea3bb16 "B"
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/42ccdea3bb16-3cb021d3-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg (glob)
 
   $ hg tglog
   o  7: 'D'
@@ -213,7 +213,7 @@ Rebasing C onto H detaching from B and collapsing:
   $ hg rebase --collapse -s 2 -d 7
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-f9244fa1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg (glob)
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   o  6:secret 'Collapsed revision
@@ -275,7 +275,7 @@ Rebasing across null as ancestor
   rebasing 1:42ccdea3bb16 "B"
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/42ccdea3bb16-3cb021d3-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg (glob)
 
   $ hg tglog
   o  8: 'D'
@@ -300,7 +300,7 @@ Rebasing across null as ancestor
   $ hg rebase -d 5 -s 7
   rebasing 7:13547172c9c0 "C"
   rebasing 8:4e27a76c371a "D" (tip)
-  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-35685ded-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-35685ded-rebase.hg (glob)
   $ hg tglog
   o  8: 'D'
   |
@@ -341,7 +341,7 @@ Verify that target is not selected as external rev (issue3085)
   rebasing 8:9790e768172d "I"
   rebasing 9:5d7b11f5fb97 "Merge"
   rebasing 10:9427d4d5af81 "J" (tip)
-  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/9790e768172d-c2111e9d-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/9790e768172d-c2111e9d-rebase.hg (glob)
 
   $ hg tglog
   @  8: 'Collapsed revision
@@ -395,7 +395,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg rebase -c
   rebasing 8:6215fafa5447 "H2" (tip)
   note: rebase of 8:6215fafa5447 created no changes to commit
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-5804ebd5-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-5804ebd5-rebase.hg (glob)
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   @  7:draft 'H'
   |

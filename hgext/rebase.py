@@ -139,7 +139,6 @@ class rebaseruntime(object):
         # dict will be what contains most of the rebase progress state.
         self.state = {}
         self.activebookmark = None
-        self.currentbookmarks = None
         self.dest = None
         self.skipped = set()
         self.destancestors = set()
@@ -364,8 +363,7 @@ class rebaseruntime(object):
             self.destancestors = repo.changelog.ancestors([self.dest],
                                                           inclusive=True)
 
-        # Keep track of the current bookmarks in order to reset them later
-        self.currentbookmarks = repo._bookmarks.copy()
+        # Keep track of the active bookmarks in order to reset them later
         self.activebookmark = self.activebookmark or repo._activebookmark
         if self.activebookmark:
             bookmarks.deactivate(repo)
@@ -498,19 +496,6 @@ class rebaseruntime(object):
         if 'qtip' in repo.tags():
             updatemq(repo, self.state, self.skipped, **opts)
 
-        if self.currentbookmarks:
-            # Nodeids are needed to reset bookmarks
-            nstate = {}
-            for k, v in self.state.iteritems():
-                if v > nullmerge and v != k:
-                    nstate[repo[k].node()] = repo[v].node()
-                elif v == revprecursor:
-                    succ = self.obsoletenotrebased[k]
-                    nstate[repo[k].node()] = repo[succ].node()
-            # XXX this is the same as dest.node() for the non-continue path --
-            # this should probably be cleaned up
-            destnode = repo[self.dest].node()
-
         # restore original working directory
         # (we do this before stripping)
         newwd = self.state.get(self.originalwd, self.originalwd)
@@ -522,14 +507,6 @@ class rebaseruntime(object):
         if newwd not in [c.rev() for c in repo[None].parents()]:
             ui.note(_("update back to initial working directory parent\n"))
             hg.updaterepo(repo, newwd, False)
-
-        if self.currentbookmarks:
-            with repo.transaction('bookmark') as tr:
-                updatebookmarks(repo, destnode, nstate,
-                                self.currentbookmarks, tr)
-                if self.activebookmark not in repo._bookmarks:
-                    # active bookmark was divergent one and has been deleted
-                    self.activebookmark = None
 
         if not self.keepf:
             collapsedas = None
@@ -546,7 +523,7 @@ class rebaseruntime(object):
             skippedlen = len(self.skipped)
             ui.note(_("%d revisions have been skipped\n") % skippedlen)
 
-        if (self.activebookmark and
+        if (self.activebookmark and self.activebookmark in repo._bookmarks and
             repo['.'].node() == repo._bookmarks[self.activebookmark]):
                 bookmarks.activate(repo, self.activebookmark)
 
@@ -1089,16 +1066,6 @@ def updatemq(repo, state, skipped, **opts):
         mq.seriesdirty = True
         mq.savedirty()
 
-def updatebookmarks(repo, destnode, nstate, originalbookmarks, tr):
-    'Move bookmarks to their correct changesets, and delete divergent ones'
-    marks = repo._bookmarks
-    for k, v in originalbookmarks.iteritems():
-        if v in nstate:
-            # update the bookmarks for revs that have moved
-            marks[k] = nstate[v]
-            bookmarks.deletedivergent(repo, [destnode], k)
-    marks.recordchange(tr)
-
 def storecollapsemsg(repo, collapsemsg):
     'Store the collapse message to allow recovery'
     collapsemsg = collapsemsg or ''
@@ -1325,34 +1292,19 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
     `collapsedas` node."""
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        markers = []
+    tonode = repo.changelog.node
+    mapping = {}
+    if True:
         for rev, newrev in sorted(state.items()):
             if newrev >= 0 and newrev != rev:
                 if rev in skipped:
                     succs = ()
                 elif collapsedas is not None:
-                    succs = (repo[collapsedas],)
+                    succs = (collapsedas,)
                 else:
-                    succs = (repo[newrev],)
-                markers.append((repo[rev], succs))
-        if markers:
-            obsolete.createmarkers(repo, markers, operation='rebase')
-    else:
-        rebased = [rev for rev in state
-                   if state[rev] > nullmerge and state[rev] != rev]
-        if rebased:
-            stripped = []
-            for root in repo.set('roots(%ld)', rebased):
-                if set(repo.changelog.descendants([root.rev()])) - set(state):
-                    ui.warn(_("warning: new changesets detected "
-                              "on source branch, not stripping\n"))
-                else:
-                    stripped.append(root.node())
-            if stripped:
-                # backup the old csets by default
-                repair.strip(ui, repo, stripped, "all")
-
+                    succs = (tonode(newrev),)
+                mapping[tonode(rev)] = succs
+        scmutil.cleanupnodes(repo, mapping, 'rebase')
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'

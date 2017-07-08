@@ -72,7 +72,7 @@ Branch name containing a dash (issue3181)
   rebasing 6:eea13746799a "G"
   rebasing 7:02de42196ebe "H"
   rebasing 9:cb039b7cae8e "dev-two named branch" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/24b6387c8c8c-24cb8001-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/24b6387c8c8c-24cb8001-rebase.hg (glob)
 
   $ hg tglog
   @  9: 'dev-two named branch' dev-two
@@ -101,7 +101,7 @@ Branch name containing a dash (issue3181)
   rebasing 7:4b988a958030 "G"
   rebasing 8:31d0e4ba75e6 "H"
   rebasing 9:9e70cd31750f "dev-two named branch" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-c4ee9ef5-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-c4ee9ef5-rebase.hg (glob)
 
   $ hg tglog
   @  9: 'dev-two named branch' dev-two
@@ -161,7 +161,7 @@ Branch name containing a dash (issue3181)
   rebasing 7:1a1e6f72ec38 "G"
   rebasing 8:904590360559 "H"
   rebasing 9:59c2e59309fe "dev-two named branch"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/bc8139ee757c-f11c1080-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/bc8139ee757c-f11c1080-rebase.hg (glob)
 
   $ hg tglog
   o  9: 'dev-two named branch' dev-two
@@ -190,7 +190,7 @@ Branch name containing a dash (issue3181)
   rebasing 7:549f007a9f5f "G"
   rebasing 8:12b2bc666e20 "H"
   rebasing 9:71325f8bc082 "dev-two named branch" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-6cdd1a52-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-6cdd1a52-rebase.hg (glob)
 
   $ hg tglog
   o  9: 'dev-two named branch' dev-two
@@ -221,7 +221,7 @@ Rebasing descendant onto ancestor across different named branches
   rebasing 1:42ccdea3bb16 "B"
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-3cb021d3-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-3cb021d3-rebase.hg (glob)
 
   $ hg tglog
   o  9: 'D'
@@ -253,7 +253,7 @@ Rebasing descendant onto ancestor across different named branches
   rebasing 7:3bdb949809d9 "B"
   rebasing 8:a0d543090fa4 "C"
   rebasing 9:e9f862ce8bad "D" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/3944801ae4ea-fb46ed74-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/3944801ae4ea-fb46ed74-rebase.hg (glob)
 
   $ hg tglog
   o  9: 'D'
@@ -290,7 +290,7 @@ Reopen branch by rebase
   rebasing 7:160b0930ccc6 "B"
   rebasing 8:810110211f50 "C"
   rebasing 9:e522577ccdbd "D"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/8e279d293175-b023e27c-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/8e279d293175-b023e27c-rebase.hg (glob)
 
   $ cd ..
 
@@ -329,7 +329,7 @@ rebase 'b2' to another lower branch head
   $ hg rebase
   rebasing 2:792845bb77ee "b2"
   note: rebase of 2:792845bb77ee created no changes to commit
-  saved backup bundle to $TESTTMP/case1/.hg/strip-backup/792845bb77ee-627120ee-backup.hg (glob)
+  saved backup bundle to $TESTTMP/case1/.hg/strip-backup/792845bb77ee-627120ee-rebase.hg (glob)
   $ hg tglog
   o  2: 'c1' c
   |
@@ -344,7 +344,7 @@ rebase 'b1' on top of the tip of the branch ('b2') - ignoring the tip branch ('c
   $ hg up -qr 1
   $ hg rebase
   rebasing 1:40039acb7ca5 "b1"
-  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/40039acb7ca5-342b72d1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/40039acb7ca5-342b72d1-rebase.hg (glob)
   $ hg tglog
   @  3: 'b1' b
   |
@@ -395,7 +395,7 @@ rebase 'c1' to the branch head 'c2' that is closed
   rebasing 3:76abc1c6f8c7 "b1"
   rebasing 4:8427af5d86f2 "c2 closed" (tip)
   note: rebase of 4:8427af5d86f2 created no changes to commit
-  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/76abc1c6f8c7-cd698d13-backup.hg (glob)
+  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/76abc1c6f8c7-cd698d13-rebase.hg (glob)
   $ hg tglog
   o  3: 'b1' x
   |

@@ -1205,7 +1205,7 @@ rebased or not.
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
-  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-dd1d9f80-backup.hg (glob)
+  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg (glob)
   0 largefiles cached
   $ [ -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
@@ -1264,7 +1264,7 @@ rebased or not.
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
-  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-dd1d9f80-backup.hg (glob)
+  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg (glob)
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b

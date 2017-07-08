@@ -55,7 +55,7 @@ Now b has one revision to be pulled from a:
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   rebasing 2:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
 
   $ hg tglog
   @  3: 'L1'
@@ -211,7 +211,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   adding file changes
   added 2 changesets with 2 changes to 2 files
   rebasing 3:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
   $ hg tglog
   @  5: 'L1'
   |
@@ -253,7 +253,7 @@ pull --rebase works with bundle2 turned on
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   rebasing 5:518d153c0ba3 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg (glob)
   $ hg tglog
   @  6: 'L1'
   |
@@ -306,7 +306,7 @@ pull --rebase only update if there is nothing to rebase
   added 1 changesets with 1 changes to 1 files (+1 heads)
   rebasing 6:0d0727eb7ce0 "L1"
   rebasing 7:c1f58876e3bf "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg (glob)
   $ hg tglog
   o  8: 'L2'
   |
@@ -422,7 +422,7 @@ The second local head should not confuse the `hg pull rebase`.
   added 1 changesets with 1 changes to 1 files (+1 heads)
   rebasing 7:864e0a2d2614 "L1"
   rebasing 8:6dc0ea5dcf55 "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-backup.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg (glob)
   $ hg tglog
   @  12: 'L2'
   |

@@ -104,7 +104,7 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   $ hg rebase -s 5 -d 8
   rebasing 5:635859577d0b "D"
   rebasing 6:5097051d331d "E"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/635859577d0b-89160bff-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/635859577d0b-89160bff-rebase.hg (glob)
 
   $ hg branches
   branch3                        8:466cdfb14b62
@@ -166,7 +166,7 @@ Rebase head of branch3 (8) onto branch2 (6):
   
   $ hg rebase -s 8 -d 6
   rebasing 8:4666b71e8e32 "F" (tip)
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/4666b71e8e32-fc1c4e96-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/4666b71e8e32-fc1c4e96-rebase.hg (glob)
 
   $ hg branches
   branch2                        8:6b4bdc1b5ac0
@@ -233,7 +233,7 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   rebasing 7:653b9feb4616 "branch3"
   note: rebase of 7:653b9feb4616 created no changes to commit
   rebasing 8:4666b71e8e32 "F" (tip)
-  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/653b9feb4616-3c88de16-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/653b9feb4616-3c88de16-rebase.hg (glob)
 
   $ hg branches
   branch2                        7:6b4bdc1b5ac0
@@ -480,4 +480,4 @@ Turn most changeset public
   HGEDITFORM=rebase.merge
   rebasing 8:326cfedc031c "I" (tip)
   HGEDITFORM=rebase.normal
-  saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/361a99976cc9-35e980d0-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a3/c4/.hg/strip-backup/361a99976cc9-35e980d0-rebase.hg (glob)

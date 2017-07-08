@@ -87,7 +87,7 @@ Conclude rebase:
   already rebased 3:3163e20567cc "L1" as 3e046f2ecedb
   rebasing 4:46f0b057b5c0 "L2"
   rebasing 5:8029388f38dc "L3" (mybook)
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-5ca4656e-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3163e20567cc-5ca4656e-rebase.hg (glob)
 
   $ hg tglog
   @  5:secret 'L3'  mybook
@@ -287,7 +287,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
-  saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
+  saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-rebase.hg (glob)
   3 changesets found
   list of changesets:
   4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
@@ -400,16 +400,20 @@ Test rebase with obsstore turned on and off (issue5606)
   rebasing 1:112478962961 "B" (B)
   not rebasing ignored 2:26805aba1e60 "C" (C)
   rebasing 3:f585351a92f8 "D" (D)
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-cb2a9b47-backup.hg (glob)
+  warning: orphaned descendants detected, not stripping 112478962961
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-e536a9e4-rebase.hg (glob)
 
   $ rm .hg/localtags
   $ hg tglog
-  o  3:draft 'D'
+  o  5:draft 'D'
   |
-  o  2:draft 'B'
+  o  4:draft 'B'
   |
-  @  1:draft 'E'
+  @  3:draft 'E'
   |
+  | o  2:draft 'C'
+  | |
+  | o  1:draft 'B'
+  |/
   o  0:draft 'A'
   
-Note the above graph is wrong since C got stripped incorrectly.

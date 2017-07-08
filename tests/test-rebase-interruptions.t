@@ -112,7 +112,7 @@ Solve the conflict and go on:
   $ hg rebase --continue
   already rebased 1:27547f69f254 "B" as 45396c49d53b
   rebasing 2:965c486023db "C"
-  warning: new changesets detected on source branch, not stripping
+  warning: orphaned descendants detected, not stripping 27547f69f254, 965c486023db
 
   $ hg tglogp
   o  7:draft 'C'
@@ -311,7 +311,7 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
   @  6:secret 'F'
   |
@@ -366,7 +366,7 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
   @  6:secret 'F'
   |
@@ -416,7 +416,7 @@ Test rebase interrupted by hooks
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
-  saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
   @  6:secret 'F'
   |
@@ -459,7 +459,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   $ hg rebase --continue
   rebasing 1:fdaca8533b86 "b"
   note: rebase of 1:fdaca8533b86 created no changes to commit
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fdaca8533b86-7fd70513-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fdaca8533b86-7fd70513-rebase.hg (glob)
   $ hg resolve --list
   $ test -f .hg/merge
   [1]

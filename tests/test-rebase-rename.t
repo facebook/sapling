@@ -61,7 +61,7 @@ Rebase the revision containing the rename:
 
   $ hg rebase -s 3 -d 2
   rebasing 3:73a3ee40125d "rename A" (tip)
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-1d78ebcf-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-1d78ebcf-rebase.hg (glob)
 
   $ hg tglog
   @  3: 'rename A'
@@ -152,7 +152,7 @@ Rebase the revision containing the copy:
 
   $ hg rebase -s 3 -d 2
   rebasing 3:0a8162ff18a8 "copy A" (tip)
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-dd06302a-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-dd06302a-rebase.hg (glob)
 
   $ hg tglog
   @  3: 'copy A'
@@ -236,7 +236,7 @@ Test rebase across repeating renames:
 
   $ hg rebase -s 4 -d 3
   rebasing 4:b918d683b091 "Another unrelated change" (tip)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/b918d683b091-3024bc57-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/b918d683b091-3024bc57-rebase.hg (glob)
 
   $ hg diff --stat -c .
    unrelated.txt |  1 +
@@ -287,7 +287,7 @@ Rebase the copies on top of the unrelated change.
   rebasing 1:79d255d24ad2 "File b created as copy of a and modified"
   rebasing 2:327f772bc074 "File c created as copy of b and modified"
   rebasing 3:421b7e82bb85 "File d created as copy of c and modified"
-  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/79d255d24ad2-a2265555-backup.hg (glob)
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/79d255d24ad2-a2265555-rebase.hg (glob)
   $ hg update 4
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -314,7 +314,7 @@ copy records collapse correctly.
   merging b and c to c
   rebasing 4:dbb9ba033561 "File d created as copy of c and modified"
   merging c and d to d
-  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/68bf06433839-dde37595-backup.hg (glob)
+  saved backup bundle to $TESTTMP/copy-gets-preserved/.hg/strip-backup/68bf06433839-dde37595-rebase.hg (glob)
   $ hg co tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
