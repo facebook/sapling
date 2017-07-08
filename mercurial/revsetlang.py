@@ -476,11 +476,15 @@ def _optimize(x, small):
         o = _optimize(x[1], small)
         order = x[2]
         return o[0], (op, o[1], order)
-    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
+    elif op in ('dagrange', 'range'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
         order = x[3]
         return wa + wb, (op, ta, tb, order)
+    elif op in ('parent', 'ancestor'):
+        w, t = _optimize(x[1], small)
+        order = x[3]
+        return w, (op, t, x[2], order)
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
