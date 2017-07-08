@@ -1171,13 +1171,13 @@ def _finishhistedit(ui, repo, state):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
-    safecleanupnode(ui, repo, 'temp', tmpnodes)
+    safecleanupnode(ui, repo, tmpnodes)
 
     if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
-        safecleanupnode(ui, repo, 'replaced', mapping)
+        safecleanupnode(ui, repo, mapping)
 
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
@@ -1207,8 +1207,8 @@ def _aborthistedit(ui, repo, state):
         if repo.unfiltered().revs('parents() and (%n  or %ln::)',
                                 state.parentctxnode, leafs | tmpnodes):
             hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
-        cleanupnode(ui, repo, 'created', tmpnodes)
-        cleanupnode(ui, repo, 'temp', leafs)
+        cleanupnode(ui, repo, tmpnodes)
+        cleanupnode(ui, repo, leafs)
     except Exception:
         if state.inprogress():
             ui.warn(_('warning: encountered an exception during histedit '
@@ -1589,7 +1589,7 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
         finally:
             release(tr, lock)
 
-def cleanupnode(ui, repo, name, nodes):
+def cleanupnode(ui, repo, nodes):
     """strip a group of nodes from the repository
 
     The set of node to strip may contains unknown nodes."""
@@ -1609,7 +1609,7 @@ def cleanupnode(ui, repo, name, nodes):
             # This would reduce bundle overhead
             repair.strip(ui, repo, c)
 
-def safecleanupnode(ui, repo, name, nodes):
+def safecleanupnode(ui, repo, nodes):
     """strip or obsolete nodes
 
     nodes could be either a set or dict which maps to replacements.
@@ -1635,7 +1635,7 @@ def safecleanupnode(ui, repo, name, nodes):
         if markers:
             obsolete.createmarkers(repo, markers, operation='histedit')
     else:
-        return cleanupnode(ui, repo, name, nodes)
+        return cleanupnode(ui, repo, nodes)
 
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):
