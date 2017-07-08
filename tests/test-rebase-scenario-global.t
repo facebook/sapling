@@ -762,19 +762,13 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   $ touch subfile
   $ hg add subfile
   $ hg commit -m 'second source with subdir'
-#if rmcwd
+
   $ hg rebase -b . -d 1 --traceback
   rebasing 2:779a07b1b7a0 "first source commit"
-  current directory was removed
-  (consider changing to repo root: $TESTTMP/cwd-vanish)
+  current directory was removed (rmcwd !)
+  (consider changing to repo root: $TESTTMP/cwd-vanish) (rmcwd !)
   rebasing 3:a7d6f3a00bf3 "second source with subdir" (tip)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-rebase.hg (glob)
-#else
-  $ hg rebase -b . -d 1 --traceback
-  rebasing 2:779a07b1b7a0 "first source commit"
-  rebasing 3:a7d6f3a00bf3 "second source with subdir" (tip)
-  saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-rebase.hg (glob)
-#endif
 
 Get back to the root of cwd-vanish. Note that even though `cd ..`
 works on most systems, it does not work on FreeBSD 10, so we use an
