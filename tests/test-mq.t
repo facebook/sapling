@@ -932,27 +932,17 @@ git patches
 #endif
   $ hg add new
   $ hg qrefresh
-#if execbit
+
   $ cat .hg/patches/new
   new file
   
   diff --git a/new b/new
-  new file mode 100755
+  new file mode 100755 (execbit !)
+  new file mode 100644 (no-execbit !)
   --- /dev/null
   +++ b/new
   @@ -0,0 +1,1 @@
   +foo
-#else
-  $ cat .hg/patches/new
-  new file
-  
-  diff --git a/new b/new
-  new file mode 100644
-  --- /dev/null
-  +++ b/new
-  @@ -0,0 +1,1 @@
-  +foo
-#endif
 
   $ hg qnew -m'copy file' copy
   $ hg cp new copy
