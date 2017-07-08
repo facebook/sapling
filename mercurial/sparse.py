@@ -494,3 +494,21 @@ def aftercommit(repo, node):
         refreshwdir(repo, origstatus, origsparsematch, force=True)
 
     prunetemporaryincludes(repo)
+
+def clearrules(repo, force=False):
+    """Clears include/exclude rules from the sparse config.
+
+    The remaining sparse config only has profiles, if defined. The working
+    directory is refreshed, as needed.
+    """
+    with repo.wlock():
+        raw = repo.vfs.tryread('sparse')
+        includes, excludes, profiles = parseconfig(repo.ui, raw)
+
+        if not includes and not excludes:
+            return
+
+        oldstatus = repo.status()
+        oldmatch = matcher(repo)
+        writeconfig(repo, set(), set(), profiles)
+        refreshwdir(repo, oldstatus, oldmatch, force=force)

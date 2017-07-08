@@ -365,7 +365,7 @@ def debugsparse(ui, repo, *pats, **opts):
         _import(ui, repo, pats, opts, force=force)
 
     if clearrules:
-        _clear(ui, repo, pats, force=force)
+        sparse.clearrules(repo, force=force)
 
     if refresh:
         try:
@@ -502,17 +502,6 @@ def _import(ui, repo, files, opts, force=False):
 
         _verbose_output(ui, opts, profilecount, includecount, excludecount,
                         *fcounts)
-
-def _clear(ui, repo, files, force=False):
-    with repo.wlock():
-        raw = repo.vfs.tryread('sparse')
-        includes, excludes, profiles = sparse.parseconfig(ui, raw)
-
-        if includes or excludes:
-            oldstatus = repo.status()
-            oldsparsematch = sparse.matcher(repo)
-            sparse.writeconfig(repo, set(), set(), profiles)
-            sparse.refreshwdir(repo, oldstatus, oldsparsematch, force)
 
 def _verbose_output(ui, opts, profilecount, includecount, excludecount, added,
                     dropped, lookup):
