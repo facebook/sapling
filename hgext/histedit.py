@@ -1603,11 +1603,8 @@ def cleanupnode(ui, repo, nodes):
         nm = repo.changelog.nodemap
         nodes = sorted(n for n in nodes if n in nm)
         roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
-        for c in roots:
-            # We should process node in reverse order to strip tip most first.
-            # but this trigger a bug in changegroup hook.
-            # This would reduce bundle overhead
-            repair.strip(ui, repo, c)
+        if roots:
+            repair.strip(ui, repo, roots)
 
 def safecleanupnode(ui, repo, nodes):
     """strip or obsolete nodes
