@@ -87,8 +87,7 @@
   > fold e860deea161a 4 e
   > pick 652413bf663e 5 f
   > EOF
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-3c6c5d92-backup.hg (glob)
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-48787b8d-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-45c027ab-backup.hg (glob)
   $ hg log --graph
   @  changeset:   3:cacdfd884a93
   |  bookmark:    five

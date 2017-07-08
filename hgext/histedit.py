@@ -1171,13 +1171,17 @@ def _finishhistedit(ui, repo, state):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
-    safecleanupnode(ui, repo, tmpnodes)
-
     if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
-        safecleanupnode(ui, repo, mapping)
+    else:
+        mapping = {}
+
+    for n in tmpnodes:
+        mapping[n] = ()
+
+    safecleanupnode(ui, repo, mapping)
 
     state.clear()
     if os.path.exists(repo.sjoin('undo')):

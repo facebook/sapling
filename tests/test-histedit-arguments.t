@@ -265,7 +265,6 @@ short hash. This tests issue3893.
   HG: branch 'default'
   HG: changed alpha
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
-  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg update -q 2
   $ echo x > x

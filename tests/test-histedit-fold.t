@@ -382,8 +382,7 @@ dropped revision.
   HG: user: test
   HG: branch 'default'
   HG: changed file
-  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/55c8d8dc79ce-4066cd98-backup.hg (glob)
-  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-a35700fc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-3d69522c-backup.hg (glob)
   $ hg logt -G
   @  1:10c647b2cdd5 +4
   |

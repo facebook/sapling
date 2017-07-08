@@ -170,13 +170,13 @@ Base setup for the rest of the testing
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
-  96e494a2d553dd05902ba1cee1d94d4cb7b8faed 0 {b346ab9a313db8537ecf96fca3ca3ca984ef3bd7} (*) {'user': 'test'} (glob)
-  b558abc46d09c30f57ac31e85a8a3d64d2e906e4 0 {96e494a2d553dd05902ba1cee1d94d4cb7b8faed} (*) {'user': 'test'} (glob)
   d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b} (*) {'user': 'test'} (glob)
   177f92b773850b59254aa5e923436f921b55483b b346ab9a313db8537ecf96fca3ca3ca984ef3bd7 0 (*) {'user': 'test'} (glob)
   055a42cdd88768532f9cf79daa407fc8d138de9b 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (*) {'user': 'test'} (glob)
   e860deea161a2f77de56603b340ebbb4536308ae 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (*) {'user': 'test'} (glob)
   652413bf663ef2a641cab26574e46d5f5a64a55a cacdfd884a9321ec4e1de275ef3949fa953a1f83 0 (*) {'user': 'test'} (glob)
+  96e494a2d553dd05902ba1cee1d94d4cb7b8faed 0 {b346ab9a313db8537ecf96fca3ca3ca984ef3bd7} (*) {'user': 'test'} (glob)
+  b558abc46d09c30f57ac31e85a8a3d64d2e906e4 0 {96e494a2d553dd05902ba1cee1d94d4cb7b8faed} (*) {'user': 'test'} (glob)
 
 
 Ensure hidden revision does not prevent histedit
