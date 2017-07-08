@@ -88,23 +88,14 @@ Convert CRLF -> LF for consistency
   $ cd ..
 
 Yadda is a symlink
-#if symlink
   $ f -qr dir -HB 17
-  dir: directory with 3 files
-  dir/bar:
-  0000: 31 0a 32 0a 33 0a 34 0a 35 0a 36 0a 37 0a 38 0a |1.2.3.4.5.6.7.8.|
-  0010: 39                                              |9|
-  dir/foo:
-  0000: 66 6f 6f 0a                                     |foo.|
-  dir/l:
-  0000: 79 61 64 64 61                                  |yadda|
-#else
-  $ f -qr dir -HB 17
-  dir: directory with 2 files (esc)
+  dir: directory with 3 files (symlink !)
+  dir: directory with 2 files (no-symlink !)
   dir/bar: (glob)
   0000: 31 0a 32 0a 33 0a 34 0a 35 0a 36 0a 37 0a 38 0a |1.2.3.4.5.6.7.8.|
   0010: 39                                              |9|
   dir/foo: (glob)
   0000: 66 6f 6f 0a                                     |foo.|
-#endif
+  dir/l: (symlink !)
+  0000: 79 61 64 64 61                                  |yadda| (symlink !)
 
