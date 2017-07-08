@@ -1,5 +1,16 @@
 source "$RUNTESTDIR/helpers-testrepo.sh"
 
+# some version of helpers-testrepo.sh does not do this, but we want it to
+# remove the obsstore warning. so let's check HGRCPATH and do it again.
+if grep -q createmarkers "$HGRCPATH"; then
+    :
+else
+cat >> "$HGRCPATH" << EOF
+[experimental]
+evolution = createmarkers
+EOF
+fi
+
 # go to repo root
 cd "$TESTDIR"/..
 
