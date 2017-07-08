@@ -1541,21 +1541,30 @@ def processreplacement(state):
 
     return final, tmpnodes, new, newtopmost
 
+def movetopmostbookmarks(repo, oldtopmost, newtopmost):
+    """Move bookmark from oldtopmost to newly created topmost
+
+    This is arguably a feature and we may only want that for the active
+    bookmark. But the behavior is kept compatible with the old version for now.
+    """
+    if not oldtopmost or not newtopmost:
+        return
+    oldbmarks = repo.nodebookmarks(oldtopmost)
+    if oldbmarks:
+        with repo.lock(), repo.transaction('histedit') as tr:
+            marks = repo._bookmarks
+            for name in oldbmarks:
+                marks[name] = newtopmost
+            marks.recordchange(tr)
+
 def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
     """Move bookmark from old to newly created node"""
     if not mapping:
         # if nothing got rewritten there is not purpose for this function
         return
+    movetopmostbookmarks(repo, oldtopmost, newtopmost)
     moves = []
     for bk, old in sorted(repo._bookmarks.iteritems()):
-        if old == oldtopmost:
-            # special case ensure bookmark stay on tip.
-            #
-            # This is arguably a feature and we may only want that for the
-            # active bookmark. But the behavior is kept compatible with the old
-            # version for now.
-            moves.append((bk, newtopmost))
-            continue
         base = old
         new = mapping.get(base, None)
         if new is None:
