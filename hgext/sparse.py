@@ -361,7 +361,7 @@ def debugsparse(ui, repo, *pats, **opts):
                 disableprofile=disableprofile, force=force)
 
     if importrules:
-        _import(ui, repo, pats, opts, force=force)
+        sparse.importfromfiles(repo, opts, pats, force=force)
 
     if clearrules:
         sparse.clearrules(repo, force=force)
@@ -444,51 +444,3 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             raise
     finally:
         wlock.release()
-
-def _import(ui, repo, files, opts, force=False):
-    with repo.wlock():
-        # read current configuration
-        raw = repo.vfs.tryread('sparse')
-        oincludes, oexcludes, oprofiles = sparse.parseconfig(ui, raw)
-        includes, excludes, profiles = map(
-                set, (oincludes, oexcludes, oprofiles))
-
-        aincludes, aexcludes, aprofiles = sparse.activeconfig(repo)
-
-        # import rules on top; only take in rules that are not yet
-        # part of the active rules.
-        changed = False
-        for file in files:
-            with util.posixfile(util.expandpath(file)) as importfile:
-                iincludes, iexcludes, iprofiles = sparse.parseconfig(
-                    ui, importfile.read())
-                oldsize = len(includes) + len(excludes) + len(profiles)
-                includes.update(iincludes - aincludes)
-                excludes.update(iexcludes - aexcludes)
-                profiles.update(set(iprofiles) - aprofiles)
-                if len(includes) + len(excludes) + len(profiles) > oldsize:
-                    changed = True
-
-        profilecount = includecount = excludecount = 0
-        fcounts = (0, 0, 0)
-
-        if changed:
-            profilecount = len(profiles - aprofiles)
-            includecount = len(includes - aincludes)
-            excludecount = len(excludes - aexcludes)
-
-            oldstatus = repo.status()
-            oldsparsematch = sparse.matcher(repo)
-            sparse.writeconfig(repo, includes, excludes, profiles)
-
-            try:
-                fcounts = map(
-                    len,
-                    sparse.refreshwdir(repo, oldstatus, oldsparsematch,
-                                       force=force))
-            except Exception:
-                sparse.writeconfig(repo, oincludes, oexcludes, oprofiles)
-                raise
-
-        sparse.printchanges(ui, opts, profilecount, includecount, excludecount,
-                            *fcounts)

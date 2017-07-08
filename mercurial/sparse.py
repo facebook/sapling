@@ -18,6 +18,7 @@ from . import (
     match as matchmod,
     merge as mergemod,
     pycompat,
+    util,
 )
 
 # Whether sparse features are enabled. This variable is intended to be
@@ -520,6 +521,67 @@ def clearrules(repo, force=False):
         oldmatch = matcher(repo)
         writeconfig(repo, set(), set(), profiles)
         refreshwdir(repo, oldstatus, oldmatch, force=force)
+
+def importfromfiles(repo, opts, paths, force=False):
+    """Import sparse config rules from files.
+
+    The updated sparse config is written out and the working directory
+    is refreshed, as needed.
+    """
+    with repo.wlock():
+        # read current configuration
+        raw = repo.vfs.tryread('sparse')
+        oincludes, oexcludes, oprofiles = parseconfig(repo.ui, raw)
+        includes, excludes, profiles = map(
+                set, (oincludes, oexcludes, oprofiles))
+
+        aincludes, aexcludes, aprofiles = activeconfig(repo)
+
+        # Import rules on top; only take in rules that are not yet
+        # part of the active rules.
+        changed = False
+        for p in paths:
+            with util.posixfile(util.expandpath(p)) as fh:
+                raw = fh.read()
+
+            iincludes, iexcludes, iprofiles = parseconfig(repo.ui, raw)
+            oldsize = len(includes) + len(excludes) + len(profiles)
+            includes.update(iincludes - aincludes)
+            excludes.update(iexcludes - aexcludes)
+            profiles.update(set(iprofiles) - aprofiles)
+            if len(includes) + len(excludes) + len(profiles) > oldsize:
+                changed = True
+
+        profilecount = includecount = excludecount = 0
+        fcounts = (0, 0, 0)
+
+        if changed:
+            profilecount = len(profiles - aprofiles)
+            includecount = len(includes - aincludes)
+            excludecount = len(excludes - aexcludes)
+
+            oldstatus = repo.status()
+            oldsparsematch = matcher(repo)
+
+            # TODO remove this try..except once the matcher integrates better
+            # with dirstate. We currently have to write the updated config
+            # because that will invalidate the matcher cache and force a
+            # re-read. We ideally want to update the cached matcher on the
+            # repo instance then flush the new config to disk once wdir is
+            # updated. But this requires massive rework to matcher() and its
+            # consumers.
+            writeconfig(repo, includes, excludes, profiles)
+
+            try:
+                fcounts = map(
+                    len,
+                    refreshwdir(repo, oldstatus, oldsparsematch, force=force))
+            except Exception:
+                writeconfig(repo, oincludes, oexcludes, oprofiles)
+                raise
+
+        printchanges(repo.ui, opts, profilecount, includecount, excludecount,
+                     *fcounts)
 
 def printchanges(ui, opts, profilecount=0, includecount=0, excludecount=0,
                  added=0, dropped=0, conflicting=0):
