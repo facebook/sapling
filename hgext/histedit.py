@@ -1593,8 +1593,6 @@ def cleanupnode(ui, repo, name, nodes):
     """strip a group of nodes from the repository
 
     The set of node to strip may contains unknown nodes."""
-    ui.debug('should strip %s nodes %s\n' %
-             (name, ', '.join([node.short(n) for n in nodes])))
     with repo.lock():
         # do not let filtering get in the way of the cleanse
         # we should probably get rid of obsolescence marker created during the
