@@ -373,7 +373,7 @@ class fileserverclient(object):
                                 "Success",
                                 fetched_files = count[0] - fromcache,
                                 total_to_fetch = total - fromcache)
-                except:
+                except Exception:
                     self.ui.log("remotefilefetchlog",
                                 "Fail",
                                 fetched_files = count[0] - fromcache,
@@ -425,18 +425,17 @@ class fileserverclient(object):
 
                 self._sendpackrequest(remote, fileids)
 
-                packpath = shallowutil.getcachepackpath(self.repo,
-                                                        constants.FILEPACK_CATEGORY)
-                receiveddata, receivedhistory = wirepack.receivepack(self.repo.ui,
-                                                                     remote.pipei,
-                                                                     packpath)
+                packpath = shallowutil.getcachepackpath(
+                    self.repo, constants.FILEPACK_CATEGORY)
+                receiveddata, receivedhistory = wirepack.receivepack(
+                    self.repo.ui, remote.pipei, packpath)
                 rcvd = len(receiveddata)
 
             self.ui.log("remotefilefetchlog",
                         "Success(pack)" if (rcvd==total) else "Fail(pack)",
                         fetched_files = rcvd,
                         total_to_fetch = total)
-        except:
+        except Exception:
             self.ui.log("remotefilefetchlog",
                         "Fail(pack)",
                         fetched_files = rcvd,
