@@ -211,6 +211,13 @@ void testAddFile(
   // Confirm that the tree has been updated correctly.
   auto newInode = testMount.getFileInode(newFilePath);
   EXPECT_FILE_INODE(newInode, "this is the new file contents\n", perms);
+
+  // Unmount and remount the mount point, and verify that the new file
+  // still exists as expected.
+  newInode.reset();
+  testMount.remount();
+  newInode = testMount.getFileInode(newFilePath);
+  EXPECT_FILE_INODE(newInode, "this is the new file contents\n", perms);
 }
 
 void runAddFileTests(folly::StringPiece path) {
@@ -254,6 +261,11 @@ void testRemoveFile(folly::StringPiece filePath, LoadBehavior loadType) {
   EXPECT_EQ(0, results.size());
 
   // Make sure the path doesn't exist any more.
+  EXPECT_THROW_ERRNO(testMount.getInode(filePath), ENOENT);
+
+  // Unmount and remount the mount point, and verify that the file removal
+  // persisted across remount correctly.
+  testMount.remount();
   EXPECT_THROW_ERRNO(testMount.getInode(filePath), ENOENT);
 }
 
@@ -305,6 +317,13 @@ void testModifyFile(
 
   // Make sure the path is updated as expected
   auto postInode = testMount.getFileInode(path);
+  EXPECT_FILE_INODE(postInode, contents2, perms2);
+
+  // Unmount and remount the mount point, and verify that the file changes
+  // persisted across remount correctly.
+  postInode.reset();
+  testMount.remount();
+  postInode = testMount.getFileInode(path);
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 }
 
@@ -408,6 +427,17 @@ void testModifyConflict(
     EXPECT_FILE_INODE(postInode, contents2, perms2);
   } else {
     // Make sure the path has not been changed
+    EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+  }
+
+  // Unmount and remount the mount point, and verify the changes persisted
+  // across the remount as expected.
+  postInode.reset();
+  testMount.remount();
+  postInode = testMount.getFileInode(path);
+  if (force) {
+    EXPECT_FILE_INODE(postInode, contents2, perms2);
+  } else {
     EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
   }
 }

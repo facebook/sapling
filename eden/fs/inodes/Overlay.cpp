@@ -209,18 +209,6 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
   const auto& dir = dirData.value();
 
   TreeInode::Dir result;
-  // The fact that we have a serialized data file for this dir implies that
-  // it is materialized, so ensure that we set that bit!
-  result.materialized = true;
-
-  // The treeHash, if present, identifies the Tree from which this directory
-  // was derived.
-  if (!dir.treeHash.empty()) {
-    // We can't go direct to ByteRange from a std::string without some
-    // nasty casting, so we're taking it to StringPiece then ByteRange.
-    result.treeHash = Hash(folly::ByteRange(folly::StringPiece(dir.treeHash)));
-  }
-
   for (auto& iter : dir.entries) {
     const auto& name = iter.first;
     const auto& value = iter.second;
@@ -244,11 +232,7 @@ void Overlay::saveOverlayDir(
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
-  if (dir->treeHash) {
-    auto bytes = dir->treeHash->getBytes();
-    odir.treeHash =
-        std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-  }
+  DCHECK(dir->isMaterialized());
   for (auto& entIter : dir->entries) {
     const auto& entName = entIter.first;
     const auto ent = entIter.second.get();

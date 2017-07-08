@@ -198,12 +198,23 @@ class TreeInode : public InodeBase {
   struct Dir {
     /** The direct children of this directory */
     PathMap<std::unique_ptr<Entry>> entries;
-    /** If the origin of this dir was a Tree, the hash of that tree */
+    /**
+     * If this TreeInode is unmaterialized (identical to an existing source
+     * control Tree), treeHash contains the ID of the source control Tree
+     * that this TreeInode is identical to.
+     *
+     * If this TreeInode is materialized (possibly modified from source
+     * control, and backed by the Overlay instead of a source control Tree),
+     * treeHash will be none.
+     */
     folly::Optional<Hash> treeHash;
 
-    /** true if the dir has been materialized to the overlay.
-     * If the contents match the original tree, this is false. */
-    bool materialized{false};
+    bool isMaterialized() const {
+      return !treeHash.hasValue();
+    }
+    void setMaterialized() {
+      treeHash = folly::none;
+    }
   };
 
   /** Holds the results of a create operation.

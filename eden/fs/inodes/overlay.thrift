@@ -22,10 +22,6 @@ struct OverlayEntry {
 struct OverlayDir {
   // The contents of this dir.
   1: map<PathComponent, OverlayEntry> entries
-  // For a placeholder entry that is materialized in name only (for example,
-  // renaming a directory without materializing the entire content),
-  // the key that we will use to load the source TreeEntry when needed
-  2: Hash treeHash
 }
 
 struct OverlayData {

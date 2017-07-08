@@ -200,7 +200,6 @@ def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
         return binascii.hexlify(binhash).decode('utf-8')
 
     print('Inode {}: {}'.format(inode_number, path))
-    print('  hash: {}'.format(hex(tree_data.treeHash)))
     if not tree_data.entries:
         return
     name_width = max(len(name) for name in tree_data.entries)

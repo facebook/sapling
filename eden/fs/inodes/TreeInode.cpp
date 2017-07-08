@@ -490,7 +490,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
   // to avoid acquiring it if we don't actually need to change anything.
   if (!renameLock) {
     auto contents = contents_.rlock();
-    if (contents->materialized) {
+    if (contents->isMaterialized()) {
       return;
     }
   }
@@ -527,10 +527,10 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     {
       auto contents = contents_.wlock();
       // Double check that we still need to be materialized
-      if (contents->materialized) {
+      if (contents->isMaterialized()) {
         return;
       }
-      contents->materialized = true;
+      contents->setMaterialized();
       getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
     }
 
@@ -560,13 +560,13 @@ void TreeInode::childMaterialized(
     }
 
     auto* childEntry = iter->second.get();
-    if (contents->materialized && childEntry->isMaterialized()) {
+    if (contents->isMaterialized() && childEntry->isMaterialized()) {
       // Nothing to do
       return;
     }
 
     childEntry->setMaterialized(childNodeId);
-    contents->materialized = true;
+    contents->setMaterialized();
     getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
   }
 
@@ -610,7 +610,7 @@ void TreeInode::childDematerialized(
     // checkout finishes processing all of the children it will call
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
-    contents->materialized = true;
+    contents->setMaterialized();
     getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
   }
 
@@ -627,9 +627,6 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
   // Now build out the Dir based on what we know.
   Dir dir;
   if (!tree) {
-    // There's no associated Tree, so we have to persist this to the
-    // overlay storage area
-    dir.materialized = true;
     return dir;
   }
 
@@ -904,7 +901,6 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
     // Store the overlay entry for this dir
     Dir emptyDir;
-    emptyDir.materialized = true;
     overlay->saveOverlayDir(childNumber, &emptyDir);
 
     // Add a new entry to contents_.entries
@@ -2326,7 +2322,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
 void TreeInode::saveOverlayPostCheckout(
     CheckoutContext* ctx,
     const Tree* tree) {
-  bool materialize;
+  bool isMaterialized;
   bool stateChanged;
   bool deleteSelf;
   {
@@ -2336,20 +2332,20 @@ void TreeInode::saveOverlayPostCheckout(
     //
     // If we can confirm that we are identical to the source control Tree we do
     // not need to be materialized.
-    auto shouldMaterialize = [&]() {
+    auto tryToDematerialize = [&]() -> folly::Optional<Hash> {
       // If the new tree does not exist in source control, we must be
       // materialized, since there is no source control Tree to refer to.
       // (If we are empty in this case we will set deleteSelf and try to remove
       // ourself entirely.)
       if (!tree) {
-        return true;
+        return folly::none;
       }
 
       const auto& scmEntries = tree->getTreeEntries();
       // If we have a different number of entries we must be different from the
       // Tree, and therefore must be materialized.
       if (scmEntries.size() != contents->entries.size()) {
-        return true;
+        return folly::none;
       }
 
       // This code relies on the fact that our contents->entries PathMap sorts
@@ -2367,35 +2363,41 @@ void TreeInode::saveOverlayPostCheckout(
         // control state we still want to make sure we are materialized if the
         // child is.
         if (inodeIter->second->isMaterialized()) {
-          return true;
+          return folly::none;
         }
 
         // If if the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
         if (inodeIter->second->getHash() != scmIter->getHash()) {
-          return true;
+          return folly::none;
         }
       }
 
       // If we're still here we are identical to the source control Tree.
-      // We can be dematerialized.
-      return false;
+      // We can be dematerialized and marked identical to the input Tree.
+      return tree->getHash();
     };
 
     // If we are now empty as a result of the checkout we can remove ourself
     // entirely.  For now we only delete ourself if this directory doesn't
     // exist in source control either.
     deleteSelf = (!tree && contents->entries.empty());
-    materialize = shouldMaterialize();
-    stateChanged = (materialize != contents->materialized);
-    if (materialize) {
-      // If we need to be materialized, write out our state to the overlay.
+
+    auto oldHash = contents->treeHash;
+    contents->treeHash = tryToDematerialize();
+    isMaterialized = contents->isMaterialized();
+    stateChanged = (oldHash != contents->treeHash);
+    if (contents->isMaterialized()) {
+      // If we are materialized, write out our state to the overlay.
       // (It's possible our state is unchanged from what's already on disk,
       // but for now we can't detect this, and just always write it out.)
       getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+    } else {
+      // If we are not materialized now, but we were before we'll need to
+      // remove ourself from the overlay.  However, we wait to do this until
+      // later, after we have written out our parent's overlay data.
     }
-    contents->materialized = materialize;
   }
 
   if (deleteSelf) {
@@ -2430,7 +2432,7 @@ void TreeInode::saveOverlayPostCheckout(
     // entry.
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
-      if (materialize) {
+      if (isMaterialized) {
         loc.parent->childMaterialized(ctx->renameLock(), loc.name, getNodeId());
       } else {
         loc.parent->childDematerialized(
@@ -2441,7 +2443,7 @@ void TreeInode::saveOverlayPostCheckout(
     // If we were dematerialized, remove our overlay data only after updating
     // our parent.  This ensures that we always have overlay data on disk when
     // our parent thinks we do.
-    if (!materialize) {
+    if (!isMaterialized) {
       getOverlay()->removeOverlayData(getNodeId());
     }
   }
@@ -2511,7 +2513,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
 
   {
     auto contents = contents_.wlock();
-    if (!contents->materialized) {
+    if (!contents->isMaterialized()) {
       return folly::makeFuture();
     }
 
@@ -2609,7 +2611,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   {
     auto contents = contents_.rlock();
 
-    info.materialized = contents->materialized;
+    info.materialized = contents->isMaterialized();
     info.treeHash = thriftHash(contents->treeHash);
 
     for (const auto& entry : contents->entries) {
@@ -2656,7 +2658,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       // and grab the materialization and status info now.
       {
         auto childContents = childTree->contents_.rlock();
-        infoEntry.materialized = childContents->materialized;
+        infoEntry.materialized = !childContents->treeHash.hasValue();
         infoEntry.hash = thriftHash(childContents->treeHash);
         // TODO: We don't currently store mode data for TreeInodes.  We should.
         infoEntry.mode = (S_IFDIR | 0755);
