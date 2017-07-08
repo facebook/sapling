@@ -1294,17 +1294,16 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
     `collapsedas` node."""
     tonode = repo.changelog.node
     mapping = {}
-    if True:
-        for rev, newrev in sorted(state.items()):
-            if newrev >= 0 and newrev != rev:
-                if rev in skipped:
-                    succs = ()
-                elif collapsedas is not None:
-                    succs = (collapsedas,)
-                else:
-                    succs = (tonode(newrev),)
-                mapping[tonode(rev)] = succs
-        scmutil.cleanupnodes(repo, mapping, 'rebase')
+    for rev, newrev in sorted(state.items()):
+        if newrev >= 0 and newrev != rev:
+            if rev in skipped:
+                succs = ()
+            elif collapsedas is not None:
+                succs = (collapsedas,)
+            else:
+                succs = (tonode(newrev),)
+            mapping[tonode(rev)] = succs
+    scmutil.cleanupnodes(repo, mapping, 'rebase')
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
