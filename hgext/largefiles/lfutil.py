@@ -26,6 +26,7 @@ from mercurial import (
     node,
     pycompat,
     scmutil,
+    sparse,
     util,
     vfs as vfsmod,
 )
@@ -147,7 +148,8 @@ def openlfdirstate(ui, repo, create=True):
     lfstoredir = longname
     opener = vfsmod.vfs(vfs.join(lfstoredir))
     lfdirstate = largefilesdirstate(opener, ui, repo.root,
-                                     repo.dirstate._validate)
+                                    repo.dirstate._validate,
+                                    lambda: sparse.matcher(repo))
 
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful

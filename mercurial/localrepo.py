@@ -53,6 +53,7 @@ from . import (
     revset,
     revsetlang,
     scmutil,
+    sparse,
     store,
     subrepo,
     tags as tagsmod,
@@ -570,8 +571,10 @@ class localrepository(object):
 
     @repofilecache('dirstate')
     def dirstate(self):
+        sparsematchfn = lambda: sparse.matcher(self)
+
         return dirstate.dirstate(self.vfs, self.ui, self.root,
-                                 self._dirstatevalidate)
+                                 self._dirstatevalidate, sparsematchfn)
 
     def _dirstatevalidate(self, node):
         try:

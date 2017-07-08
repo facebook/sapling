@@ -82,7 +82,6 @@ from mercurial import (
     error,
     extensions,
     hg,
-    localrepo,
     match as matchmod,
     registrar,
     sparse,
@@ -105,13 +104,6 @@ def extsetup(ui):
     _setuplog(ui)
     _setupadd(ui)
     _setupdirstate(ui)
-
-def reposetup(ui, repo):
-    if not util.safehasattr(repo, 'dirstate'):
-        return
-
-    if 'dirstate' in repo._filecache:
-        repo.dirstate.repo = repo
 
 def replacefilecache(cls, propname, replacement):
     """Replace a filecache property with a new class. This allows changing the
@@ -200,13 +192,6 @@ def _setupdirstate(ui):
     and to prevent modifications to files outside the checkout.
     """
 
-    def _dirstate(orig, repo):
-        dirstate = orig(repo)
-        dirstate.repo = repo
-        return dirstate
-    extensions.wrapfunction(
-        localrepo.localrepository.dirstate, 'func', _dirstate)
-
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.
     class ignorewrapper(object):
@@ -217,10 +202,9 @@ def _setupdirstate(ui):
             self.sparsematch = None
 
         def __get__(self, obj, type=None):
-            repo = obj.repo
             origignore = self.orig.__get__(obj)
 
-            sparsematch = sparse.matcher(repo)
+            sparsematch = obj._sparsematcher
             if sparsematch.always():
                 return origignore
 
@@ -241,7 +225,7 @@ def _setupdirstate(ui):
 
     # dirstate.rebuild should not add non-matching files
     def _rebuild(orig, self, parent, allfiles, changedfiles=None):
-        matcher = sparse.matcher(self.repo)
+        matcher = self._sparsematcher
         if not matcher.always():
             allfiles = allfiles.matches(matcher)
             if changedfiles:
@@ -262,8 +246,7 @@ def _setupdirstate(ui):
              '`hg add -s <file>` to include file directory while adding')
     for func in editfuncs:
         def _wrapper(orig, self, *args):
-            repo = self.repo
-            sparsematch = sparse.matcher(repo)
+            sparsematch = self._sparsematcher
             if not sparsematch.always():
                 for f in args:
                     if (f is not None and not sparsematch(f) and
