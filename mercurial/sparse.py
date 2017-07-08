@@ -124,15 +124,26 @@ def patternsforrev(repo, rev):
 
     return includes, excludes, profiles
 
-def activeprofiles(repo):
+def activeconfig(repo):
+    """Determine the active sparse config rules.
+
+    Rules are constructed by reading the current sparse config and bringing in
+    referenced profiles from parents of the working directory.
+    """
     revs = [repo.changelog.rev(node) for node in
             repo.dirstate.parents() if node != nullid]
 
-    profiles = set()
-    for rev in revs:
-        profiles.update(patternsforrev(repo, rev)[2])
+    allincludes = set()
+    allexcludes = set()
+    allprofiles = set()
 
-    return profiles
+    for rev in revs:
+        includes, excludes, profiles = patternsforrev(repo, rev)
+        allincludes |= includes
+        allexcludes |= excludes
+        allprofiles |= set(profiles)
+
+    return allincludes, allexcludes, allprofiles
 
 def configsignature(repo, includetemp=True):
     """Obtain the signature string for the current sparse configuration.
@@ -361,7 +372,7 @@ def filterupdatesactions(repo, wctx, mctx, branchmerge, actions):
         for file, flags, msg in actions:
             dirstate.normal(file)
 
-    profiles = activeprofiles(repo)
+    profiles = activeconfig(repo)[2]
     changedprofiles = profiles & files
     # If an active profile changed during the update, refresh the checkout.
     # Don't do this during a branch merge, since all incoming changes should

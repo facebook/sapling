@@ -75,7 +75,6 @@ certain files::
 from __future__ import absolute_import
 
 from mercurial.i18n import _
-from mercurial.node import nullid
 from mercurial import (
     cmdutil,
     commands,
@@ -448,23 +447,13 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
 
 def _import(ui, repo, files, opts, force=False):
     with repo.wlock():
-        # load union of current active profile
-        revs = [repo.changelog.rev(node) for node in
-                repo.dirstate.parents() if node != nullid]
-
         # read current configuration
         raw = repo.vfs.tryread('sparse')
         oincludes, oexcludes, oprofiles = sparse.parseconfig(ui, raw)
         includes, excludes, profiles = map(
                 set, (oincludes, oexcludes, oprofiles))
 
-        # all active rules
-        aincludes, aexcludes, aprofiles = set(), set(), set()
-        for rev in revs:
-            rincludes, rexcludes, rprofiles = sparse.patternsforrev(repo, rev)
-            aincludes.update(rincludes)
-            aexcludes.update(rexcludes)
-            aprofiles.update(rprofiles)
+        aincludes, aexcludes, aprofiles = sparse.activeconfig(repo)
 
         # import rules on top; only take in rules that are not yet
         # part of the active rules.
