@@ -1574,8 +1574,6 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
             marks = repo._bookmarks
             for mark, new in moves:
                 old = marks[mark]
-                ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
-                        % (mark, node.short(old), node.short(new)))
                 marks[mark] = new
             marks.recordchange(tr)
             tr.close()
