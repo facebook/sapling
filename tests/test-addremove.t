@@ -29,15 +29,12 @@
   $ hg -v addremove
   adding foo
   $ hg forget foo
-#if windows
+
   $ hg -v addremove nonexistent
-  nonexistent: The system cannot find the file specified
+  nonexistent: The system cannot find the file specified (windows !)
+  nonexistent: No such file or directory (no-windows !)
   [1]
-#else
-  $ hg -v addremove nonexistent
-  nonexistent: No such file or directory
-  [1]
-#endif
+
   $ cd ..
 
   $ hg init subdir
@@ -87,17 +84,13 @@
   adding c
 
   $ rm c
-#if windows
+
   $ hg ci -A -m "c" nonexistent
-  nonexistent: The system cannot find the file specified
+  nonexistent: The system cannot find the file specified (windows !)
+  nonexistent: No such file or directory (no-windows !)
   abort: failed to mark all new/missing files as added/removed
   [255]
-#else
-  $ hg ci -A -m "c" nonexistent
-  nonexistent: No such file or directory
-  abort: failed to mark all new/missing files as added/removed
-  [255]
-#endif
+
   $ hg st
   ! c
   $ cd ..
