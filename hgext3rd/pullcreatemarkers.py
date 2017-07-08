@@ -94,21 +94,8 @@ def _deinhibitancestors(repo, markers):
             if p in seen:
                 continue
             seen.add(p)
-            if _isobsolete(p):
+            if p.obsolete():
                 deinhibitset.add(p.node())
                 toprocess.add(p)
 
     return inhibit, deinhibitset
-
-def _isobsolete(ctx):
-    # A commit is obsolete if it has at least one successor marker.
-    #
-    # successormarkers() returns a generator.  generators unfortunately
-    # evaluate to True even if they are "empty", so pull one element off and
-    # see if anything exists or not.
-    i = obsolete.successormarkers(ctx)
-    try:
-        next(i)
-    except StopIteration:
-        return False
-    return True

@@ -30,7 +30,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from mercurial import obsolete, repair
+from mercurial import (
+    obsutil,
+    repair,
+)
 from mercurial.i18n import _
 
 _cleanedobsstorefile = b'cleanedobsstore'
@@ -42,7 +45,7 @@ def reposetup(ui, repo):
             _write(ui, 'your obsstore is big, checking if we can clean it')
             badusernames = ui.configlist('cleanobsstore', 'badusernames')
             for index, data in enumerate(repo.obsstore._all):
-                marker = obsolete.marker(repo, data)
+                marker = obsutil.marker(repo, data)
                 username = marker.metadata().get('user')
                 if username:
                     if username in badusernames:

@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from mercurial import (
-    obsolete,
+    obsutil,
     registrar,
     revset,
     smartset,
@@ -63,11 +63,11 @@ def precursors(repo, subset, x):
 @revsetpredicate('allsuccessors(set)')
 def allsuccessors(repo, subset, x):
     """All changesets which are successors for given set, recursively"""
-    f = lambda nodes: obsolete.allsuccessors(repo.obsstore, nodes)
+    f = lambda nodes: obsutil.allsuccessors(repo.obsstore, nodes)
     return _calculateset(repo, subset, x, f)
 
 @revsetpredicate('allprecursors(set)')
 def allprecursors(repo, subset, x):
     """All changesets which are precursors for given set, recursively"""
-    f = lambda nodes: obsolete.allprecursors(repo.obsstore, nodes)
+    f = lambda nodes: obsutil.allprecursors(repo.obsstore, nodes)
     return _calculateset(repo, subset, x, f)

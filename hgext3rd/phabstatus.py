@@ -8,7 +8,7 @@
 from mercurial import extensions, registrar
 from mercurial import util as hgutil
 from mercurial.i18n import _
-from mercurial import obsolete
+from mercurial import obsutil
 
 from phabricator import (
     arcconfig,
@@ -166,7 +166,7 @@ def showsyncstatus(repo, ctx, templ, **args):
             if local == remote:
                 return "sync"
             elif count == 1:
-                precursors = list(obsolete.allprecursors(repo.obsstore,
+                precursors = list(obsutil.allprecursors(repo.obsstore,
                     [ctx.node()]))
                 hashes = [repo.unfiltered()[h].hex() for h in precursors]
                 # hashes[0] is the current

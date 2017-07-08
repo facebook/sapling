@@ -38,7 +38,7 @@ from mercurial import (
     error,
     extensions,
     graphmod,
-    obsolete,
+    obsutil,
     phases,
     registrar,
     revlog,
@@ -171,7 +171,7 @@ def singlepublicsuccessor(repo, ctx, templ, **args):
     given node.  If there's none or more than one, return empty string.
     This is intended to be used for "Landed as" marking
     in `hg sl` output."""
-    successorssets = obsolete.successorssets(repo, ctx.node())
+    successorssets = obsutil.successorssets(repo, ctx.node())
     unfiltered = repo.unfiltered()
     ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
     public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
@@ -222,10 +222,14 @@ def showgraphnode(orig, repo, ctx, **args):
     except error.UnknownIdentifier:
         return char
 
+def successormarkers(ctx):
+    for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
+        yield obsutil.marker(ctx.repo(), data)
+
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result
     of a given modification operation"""
-    for m in obsolete.successormarkers(ctx):
+    for m in successormarkers(ctx):
         if m.metadata().get('operation') == operation:
             for node in m.succnodes():
                 yield nodemod.hex(node)
