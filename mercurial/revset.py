@@ -151,6 +151,15 @@ def orset(repo, subset, x, order):
 def notset(repo, subset, x, order):
     return subset - getset(repo, subset, x)
 
+def relationset(repo, subset, x, y, order):
+    raise error.ParseError(_("can't use a relation in this context"))
+
+def relsubscriptset(repo, subset, x, y, z, order):
+    raise error.ParseError(_("can't use a relation in this context"))
+
+def subscriptset(repo, subset, x, y, order):
+    raise error.ParseError(_("can't use a subscript in this context"))
+
 def listset(repo, subset, *xs):
     raise error.ParseError(_("can't use a list in this context"),
                            hint=_('see hg help "revsets.x or y"'))
@@ -2004,6 +2013,9 @@ methods = {
     "or": orset,
     "not": notset,
     "difference": differenceset,
+    "relation": relationset,
+    "relsubscript": relsubscriptset,
+    "subscript": subscriptset,
     "list": listset,
     "keyvalue": keyvaluepair,
     "func": func,

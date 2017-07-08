@@ -500,6 +500,151 @@ keyword arguments
   hg: parse error: can't use a key-value pair in this context
   [255]
 
+relation-subscript operator has the highest binding strength (as function call):
+
+  $ hg debugrevspec -p parsed 'tip:tip^#generations[-1]'
+  * parsed:
+  (range
+    ('symbol', 'tip')
+    (relsubscript
+      (parentpost
+        ('symbol', 'tip'))
+      ('symbol', 'generations')
+      (negate
+        ('symbol', '1'))))
+  hg: parse error: can't use a relation in this context
+  [255]
+
+  $ hg debugrevspec -p parsed --no-show-revs 'not public()#generations[0]'
+  * parsed:
+  (not
+    (relsubscript
+      (func
+        ('symbol', 'public')
+        None)
+      ('symbol', 'generations')
+      ('symbol', '0')))
+  hg: parse error: can't use a relation in this context
+  [255]
+
+left-hand side of relation-subscript operator should be optimized recursively:
+
+  $ hg debugrevspec -p analyzed -p optimized --no-show-revs \
+  > '(not public())#generations[0]'
+  * analyzed:
+  (relsubscript
+    (not
+      (func
+        ('symbol', 'public')
+        None
+        any)
+      define)
+    ('symbol', 'generations')
+    ('symbol', '0')
+    define)
+  * optimized:
+  (relsubscript
+    (func
+      ('symbol', '_notpublic')
+      None
+      any)
+    ('symbol', 'generations')
+    ('symbol', '0')
+    define)
+  hg: parse error: can't use a relation in this context
+  [255]
+
+resolution of subscript and relation-subscript ternary operators:
+
+  $ hg debugrevspec -p analyzed 'tip[0]'
+  * analyzed:
+  (subscript
+    ('symbol', 'tip')
+    ('symbol', '0')
+    define)
+  hg: parse error: can't use a subscript in this context
+  [255]
+
+  $ hg debugrevspec -p analyzed 'tip#rel[0]'
+  * analyzed:
+  (relsubscript
+    ('symbol', 'tip')
+    ('symbol', 'rel')
+    ('symbol', '0')
+    define)
+  hg: parse error: can't use a relation in this context
+  [255]
+
+  $ hg debugrevspec -p analyzed '(tip#rel)[0]'
+  * analyzed:
+  (subscript
+    (relation
+      ('symbol', 'tip')
+      ('symbol', 'rel')
+      define)
+    ('symbol', '0')
+    define)
+  hg: parse error: can't use a subscript in this context
+  [255]
+
+  $ hg debugrevspec -p analyzed 'tip#rel[0][1]'
+  * analyzed:
+  (subscript
+    (relsubscript
+      ('symbol', 'tip')
+      ('symbol', 'rel')
+      ('symbol', '0')
+      define)
+    ('symbol', '1')
+    define)
+  hg: parse error: can't use a subscript in this context
+  [255]
+
+  $ hg debugrevspec -p analyzed 'tip#rel0#rel1[1]'
+  * analyzed:
+  (relsubscript
+    (relation
+      ('symbol', 'tip')
+      ('symbol', 'rel0')
+      define)
+    ('symbol', 'rel1')
+    ('symbol', '1')
+    define)
+  hg: parse error: can't use a relation in this context
+  [255]
+
+  $ hg debugrevspec -p analyzed 'tip#rel0[0]#rel1[1]'
+  * analyzed:
+  (relsubscript
+    (relsubscript
+      ('symbol', 'tip')
+      ('symbol', 'rel0')
+      ('symbol', '0')
+      define)
+    ('symbol', 'rel1')
+    ('symbol', '1')
+    define)
+  hg: parse error: can't use a relation in this context
+  [255]
+
+parse errors of relation, subscript and relation-subscript operators:
+
+  $ hg debugrevspec '[0]'
+  hg: parse error at 0: not a prefix: [
+  [255]
+  $ hg debugrevspec '.#'
+  hg: parse error at 2: not a prefix: end
+  [255]
+  $ hg debugrevspec '#rel'
+  hg: parse error at 0: not a prefix: #
+  [255]
+  $ hg debugrevspec '.#rel[0'
+  hg: parse error at 7: unexpected token: end
+  [255]
+  $ hg debugrevspec '.]'
+  hg: parse error at 1: invalid token
+  [255]
+
 parsed tree at stages:
 
   $ hg debugrevspec -p all '()'

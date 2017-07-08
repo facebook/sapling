@@ -21,6 +21,8 @@ from . import (
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
     "(": (21, None, ("group", 1, ")"), ("func", 1, ")"), None),
+    "[": (21, None, None, ("subscript", 1, "]"), None),
+    "#": (21, None, None, ("relation", 21), None),
     "##": (20, None, None, ("_concat", 20), None),
     "~": (18, None, None, ("ancestor", 18), None),
     "^": (18, None, None, ("parent", 18), "parentpost"),
@@ -39,6 +41,7 @@ elements = {
     "=": (3, None, None, ("keyvalue", 3), None),
     ",": (2, None, None, ("list", 2), None),
     ")": (0, None, None, None, None),
+    "]": (0, None, None, None, None),
     "symbol": (0, "symbol", None, None, None),
     "string": (0, "string", None, None, None),
     "end": (0, None, None, None, None),
@@ -47,7 +50,7 @@ elements = {
 keywords = {'and', 'or', 'not'}
 
 _quoteletters = {'"', "'"}
-_simpleopletters = set(pycompat.iterbytestr("():=,-|&+!~^%"))
+_simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 
 # default set of valid characters for the initial letter of symbols
 _syminitletters = set(pycompat.iterbytestr(
@@ -331,6 +334,9 @@ def _fixops(x):
         # make number of arguments deterministic:
         # x + y + z -> (or x y z) -> (or (list x y z))
         return (op, _fixops(('list',) + x[1:]))
+    elif op == 'subscript' and x[1][0] == 'relation':
+        # x#y[z] ternary
+        return _fixops(('relsubscript', x[1][1], x[1][2], x[2]))
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
@@ -369,10 +375,16 @@ def _analyze(x, order):
         return (op, _analyze(x[1], defineorder), order)
     elif op == 'group':
         return _analyze(x[1], order)
-    elif op in ('dagrange', 'range', 'parent', 'ancestor'):
+    elif op in ('dagrange', 'range', 'parent', 'ancestor', 'relation',
+                'subscript'):
         ta = _analyze(x[1], defineorder)
         tb = _analyze(x[2], defineorder)
         return (op, ta, tb, order)
+    elif op == 'relsubscript':
+        ta = _analyze(x[1], defineorder)
+        tb = _analyze(x[2], defineorder)
+        tc = _analyze(x[3], defineorder)
+        return (op, ta, tb, tc, order)
     elif op == 'list':
         return (op,) + tuple(_analyze(y, order) for y in x[1:])
     elif op == 'keyvalue':
@@ -481,10 +493,14 @@ def _optimize(x, small):
         wb, tb = _optimize(x[2], small)
         order = x[3]
         return wa + wb, (op, ta, tb, order)
-    elif op in ('parent', 'ancestor'):
+    elif op in ('parent', 'ancestor', 'relation', 'subscript'):
         w, t = _optimize(x[1], small)
         order = x[3]
         return w, (op, t, x[2], order)
+    elif op == 'relsubscript':
+        w, t = _optimize(x[1], small)
+        order = x[4]
+        return w, (op, t, x[2], x[3], order)
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
