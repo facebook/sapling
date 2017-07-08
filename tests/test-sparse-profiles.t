@@ -246,6 +246,8 @@ warning message can be suppressed by setting missingwarning = false in
 
   $ cd ..
 
+#if unix-permissions
+
 Test file permissions changing across a sparse profile change
   $ hg init sparseperm
   $ cd sparseperm
@@ -270,3 +272,4 @@ Test file permissions changing across a sparse profile change
   $ ls -l b
   -rwxr-xr-x* b (glob)
 
+#endif
