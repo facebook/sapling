@@ -81,13 +81,10 @@ Status compared to parent of the working copy, i.e. the dirstate status
   $ hg status -A --rev 1 'glob:missing_*_missing-tracked'
   ! missing_content2_missing-tracked
   ! missing_missing_missing-tracked
-#if windows
+
   $ hg status -A --rev 1 'glob:missing_missing_missing-untracked'
-  missing_missing_missing-untracked: The system cannot find the file specified
-#else
-  $ hg status -A --rev 1 'glob:missing_missing_missing-untracked'
-  missing_missing_missing-untracked: No such file or directory
-#endif
+  missing_missing_missing-untracked: The system cannot find the file specified (windows !)
+  missing_missing_missing-untracked: No such file or directory (no-windows !)
 
 Status between first and second commit. Should ignore dirstate status.
 
