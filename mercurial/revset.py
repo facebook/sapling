@@ -155,7 +155,23 @@ def relationset(repo, subset, x, y, order):
     raise error.ParseError(_("can't use a relation in this context"))
 
 def relsubscriptset(repo, subset, x, y, z, order):
-    raise error.ParseError(_("can't use a relation in this context"))
+    # this is pretty basic implementation of 'x#y[z]' operator, still
+    # experimental so undocumented. see the wiki for further ideas.
+    # https://www.mercurial-scm.org/wiki/RevsetOperatorPlan
+    rel = getsymbol(y)
+    n = getinteger(z, _("relation subscript must be an integer"))
+
+    # TODO: perhaps this should be a table of relation functions
+    if rel in ('g', 'generations'):
+        # TODO: support range, rewrite tests, and drop startdepth argument
+        # from ancestors() and descendants() predicates
+        if n <= 0:
+            n = -n
+            return _ancestors(repo, subset, x, startdepth=n, stopdepth=n + 1)
+        else:
+            return _descendants(repo, subset, x, startdepth=n, stopdepth=n + 1)
+
+    raise error.UnknownIdentifier(rel, ['generations'])
 
 def subscriptset(repo, subset, x, y, order):
     raise error.ParseError(_("can't use a subscript in this context"))

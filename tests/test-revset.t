@@ -512,8 +512,12 @@ relation-subscript operator has the highest binding strength (as function call):
       ('symbol', 'generations')
       (negate
         ('symbol', '1'))))
-  hg: parse error: can't use a relation in this context
-  [255]
+  9
+  8
+  7
+  6
+  5
+  4
 
   $ hg debugrevspec -p parsed --no-show-revs 'not public()#generations[0]'
   * parsed:
@@ -524,8 +528,6 @@ relation-subscript operator has the highest binding strength (as function call):
         None)
       ('symbol', 'generations')
       ('symbol', '0')))
-  hg: parse error: can't use a relation in this context
-  [255]
 
 left-hand side of relation-subscript operator should be optimized recursively:
 
@@ -551,8 +553,6 @@ left-hand side of relation-subscript operator should be optimized recursively:
     ('symbol', 'generations')
     ('symbol', '0')
     define)
-  hg: parse error: can't use a relation in this context
-  [255]
 
 resolution of subscript and relation-subscript ternary operators:
 
@@ -572,7 +572,7 @@ resolution of subscript and relation-subscript ternary operators:
     ('symbol', 'rel')
     ('symbol', '0')
     define)
-  hg: parse error: can't use a relation in this context
+  hg: parse error: unknown identifier: rel
   [255]
 
   $ hg debugrevspec -p analyzed '(tip#rel)[0]'
@@ -610,7 +610,7 @@ resolution of subscript and relation-subscript ternary operators:
     ('symbol', 'rel1')
     ('symbol', '1')
     define)
-  hg: parse error: can't use a relation in this context
+  hg: parse error: unknown identifier: rel1
   [255]
 
   $ hg debugrevspec -p analyzed 'tip#rel0[0]#rel1[1]'
@@ -624,7 +624,7 @@ resolution of subscript and relation-subscript ternary operators:
     ('symbol', 'rel1')
     ('symbol', '1')
     define)
-  hg: parse error: can't use a relation in this context
+  hg: parse error: unknown identifier: rel1
   [255]
 
 parse errors of relation, subscript and relation-subscript operators:
@@ -643,6 +643,13 @@ parse errors of relation, subscript and relation-subscript operators:
   [255]
   $ hg debugrevspec '.]'
   hg: parse error at 1: invalid token
+  [255]
+
+  $ hg debugrevspec '.#generations[a]'
+  hg: parse error: relation subscript must be an integer
+  [255]
+  $ hg debugrevspec '.#generations[1-2]'
+  hg: parse error: relation subscript must be an integer
   [255]
 
 parsed tree at stages:
@@ -1179,6 +1186,27 @@ test descendants with depth limit
   4
   5
   7
+
+test ancestors/descendants relation subscript:
+
+  $ log 'tip#generations[0]'
+  9
+  $ log '.#generations[-1]'
+  8
+  $ log '.#g[(-1)]'
+  8
+
+  $ hg debugrevspec -p parsed 'roots(:)#g[2]'
+  * parsed:
+  (relsubscript
+    (func
+      ('symbol', 'roots')
+      (rangeall
+        None))
+    ('symbol', 'g')
+    ('symbol', '2'))
+  2
+  3
 
 test author
 
