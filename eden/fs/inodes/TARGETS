@@ -2,7 +2,11 @@
 
 thrift_library(
     name = "serialization",
-    languages = ["cpp2"],
+    languages = [
+        "cpp2",
+        "py",
+    ],
+    py_base_module = "facebook.eden",
     thrift_args = ["--strict"],
     thrift_srcs = {
         "overlay.thrift": [],

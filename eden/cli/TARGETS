@@ -5,6 +5,7 @@ python_binary(
     srcs = ["main.py"],
     main_module = "eden/cli/main",
     deps = [
+        "@/eden/cli:debug",
         "@/eden/cli:lib",
         "@/eden/fs/service:py-client",
     ],
@@ -16,9 +17,19 @@ python_library(
         "cmd_util.py",
         "config.py",
         "configinterpolator.py",
-        "debug.py",
         "rage.py",
         "util.py",
+    ],
+)
+
+python_library(
+    name = "debug",
+    srcs = [
+        "debug.py",
+    ],
+    deps = [
+        ":lib",
+        "@/eden/fs/inodes:serialization-py",
     ],
 )
 

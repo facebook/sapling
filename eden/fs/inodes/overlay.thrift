@@ -1,6 +1,7 @@
 include "eden/fs/inodes/hgdirstate.thrift"
 
 namespace cpp2 facebook.eden.overlay
+namespace py facebook.eden.overlay
 
 typedef binary Hash
 typedef string PathComponent

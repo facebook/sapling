@@ -12,7 +12,9 @@ import binascii
 import os
 import stat
 import sys
-from typing import Tuple
+from typing import List, Tuple
+
+from facebook.eden.overlay.ttypes import OverlayDir
 
 from . import cmd_util
 
@@ -178,6 +180,127 @@ def do_inode(args: argparse.Namespace):
         _print_inode_info(inode_info)
 
 
+def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:
+    from thrift.util import Serializer
+    from thrift.protocol import TCompactProtocol
+
+    dir_name = '{:02x}'.format(inode_number % 256)
+    overlay_file_path = os.path.join(overlay_dir, dir_name, str(inode_number))
+    with open(overlay_file_path, 'rb') as f:
+        data = f.read()
+
+    tree_data = OverlayDir()
+    protocol_factory = TCompactProtocol.TCompactProtocolFactory()
+    Serializer.deserialize(protocol_factory, data, tree_data)
+    return tree_data
+
+
+def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
+    def hex(binhash):
+        return binascii.hexlify(binhash).decode('utf-8')
+
+    print('Inode {}: {}'.format(inode_number, path))
+    print('  hash: {}'.format(hex(tree_data.treeHash)))
+    if not tree_data.entries:
+        return
+    name_width = max(len(name) for name in tree_data.entries)
+    for name, entry in tree_data.entries.items():
+        perms = entry.mode & 0o7777
+        file_type = stat.S_IFMT(entry.mode)
+        if file_type == stat.S_IFREG:
+            file_type_flag = 'f'
+        elif file_type == stat.S_IFDIR:
+            file_type_flag = 'd'
+        elif file_type == stat.S_IFLNK:
+            file_type_flag = 'l'
+        else:
+            file_type_flag = '?'
+
+        print('    {:{name_width}s} : {:12d} {} {:04o} {}'.format(
+            name, entry.inodeNumber, file_type_flag, perms, hex(entry.hash),
+            name_width=name_width))
+
+
+def _find_overlay_tree_rel(
+        overlay_dir: str,
+        root: OverlayDir,
+        path_parts: List[str]) -> int:
+    desired = path_parts[0]
+    rest = path_parts[1:]
+    for name, entry in root.entries.items():  # noqa: ignore=B007
+        if name == desired:
+            break
+    else:
+        raise Exception('path does not exist')
+
+    if stat.S_IFMT(entry.mode) != stat.S_IFDIR:
+        raise Exception('path does not not refer to a directory')
+    if entry.hash:
+        raise Exception('path is not materialized')
+    if entry.inodeNumber == 0:
+        raise Exception('path is not loaded')
+
+    if rest:
+        entry_data = _load_overlay_tree(overlay_dir, entry.inodeNumber)
+        return _find_overlay_tree_rel(overlay_dir, entry_data, rest)
+    return entry.inodeNumber
+
+
+def _find_overlay_tree(overlay_dir: str, path: str) -> int:
+    assert path
+    assert not os.path.isabs(path)
+
+    root = _load_overlay_tree(overlay_dir, 1)
+    path_parts = path.split(os.sep)
+    return _find_overlay_tree_rel(overlay_dir, root, path_parts)
+
+
+def _display_overlay(
+        args: argparse.Namespace,
+        overlay_dir: str,
+        inode_number: int,
+        path: str,
+        level: int = 0):
+    data = _load_overlay_tree(overlay_dir, inode_number)
+    _print_overlay_tree(inode_number, path, data)
+
+    # If args.depth is negative, recurse forever.
+    # Stop if args.depth is non-negative, and level reaches the maximum
+    # requested recursion depth.
+    if args.depth >= 0 and level >= args.depth:
+        return
+
+    for name, entry in data.entries.items():
+        if entry.hash or entry.inodeNumber == 0:
+            # This entry is not materialized
+            continue
+        if stat.S_IFMT(entry.mode) != stat.S_IFDIR:
+            # Only display data for directories
+            continue
+        print()
+        entry_path = os.path.join(path, name)
+        _display_overlay(args, overlay_dir, entry.inodeNumber,
+                         entry_path, level + 1)
+
+
+def do_overlay(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    mount, rel_path = get_mount_path(args.path)
+
+    # Get the path to the overlay directory for this mount point
+    client_dir = config._get_client_dir_for_mount_point(mount)
+    overlay_dir = os.path.join(client_dir, 'local')
+
+    if args.number is not None:
+        _display_overlay(args, overlay_dir, args.number, '')
+    elif rel_path:
+        rel_path = os.path.normpath(rel_path)
+        inode_number = _find_overlay_tree(overlay_dir, rel_path)
+        _display_overlay(args, overlay_dir, inode_number, rel_path)
+    else:
+        _display_overlay(args, overlay_dir, 1, '/')
+
+
 def get_loaded_inode_count(inode_info):
     count = 0
     for tree in inode_info:
@@ -186,20 +309,24 @@ def get_loaded_inode_count(inode_info):
                 count += 1
     return count
 
+
 def do_unload_inodes(args: argparse.Namespace):
     config = cmd_util.create_config(args)
     mount, rel_path = get_mount_path(args.path)
 
     with config.get_thrift_client() as client:
         inodeInfo_before_unload = client.debugInodeStatus(mount, rel_path)
-        inodeCount_before_unload = get_loaded_inode_count(inodeInfo_before_unload)
+        inodeCount_before_unload = get_loaded_inode_count(
+            inodeInfo_before_unload)
 
         client.unloadInodeForPath(mount, rel_path)
 
         inodeInfo_after_unload = client.debugInodeStatus(mount, rel_path)
         inodeCount_after_unload = get_loaded_inode_count(inodeInfo_after_unload)
         count = inodeCount_before_unload - inodeCount_after_unload
-        print('Unloaded %s Inodes under the directory : %s' % (count, args.path))
+        print('Unloaded %s Inodes under the directory : %s' %
+              (count, args.path))
+
 
 def setup_argparse(parser: argparse.ArgumentParser):
     subparsers = parser.add_subparsers(dest='subparser_name')
@@ -236,16 +363,35 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'inode', help='Show data about loaded inodes')
     parser.add_argument(
         'path',
-        help='The path to the eden mount point path.  If a subdirectory inside '
+        help='The path to the eden mount point.  If a subdirectory inside '
         'a mount point is specified, only data about inodes under the '
         'specified subdirectory will be reported.')
     parser.set_defaults(func=do_inode)
 
     parser = subparsers.add_parser(
+        'overlay', help='Show data about the overlay')
+    parser.add_argument(
+        '-n', '--number',
+        type=int,
+        help='Display information for the specified inode number.')
+    parser.add_argument(
+        '-d', '--depth',
+        type=int, default=0,
+        help='Recurse to the specified depth.')
+    parser.add_argument(
+        '-r', '--recurse',
+        action='store_const', const=-1, dest='depth', default=0,
+        help='Recursively print child entries.')
+    parser.add_argument(
+        'path',
+        help='The path to the eden mount point.')
+    parser.set_defaults(func=do_overlay)
+
+    parser = subparsers.add_parser(
         'unload', help='Unload unused inodes')
     parser.add_argument(
         'path',
-        help='The path to the eden mount point path.  If a subdirectory inside '
+        help='The path to the eden mount point.  If a subdirectory inside '
         'a mount point is specified, only inodes under the '
         'specified subdirectory will be unloaded.')
     parser.set_defaults(func=do_unload_inodes)
