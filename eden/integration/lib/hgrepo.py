@@ -114,10 +114,13 @@ class HgRepository(repobase.Repository):
                                          encoding='utf-8') as msgf:
             msgf.write(message)
             msgf.flush()
+            # Do not capture stdout or stderr when running "hg commit"
+            # This allows its output to show up in the test logs.
             self.hg('commit',
                     '--config', user_config,
                     '--date', date_str,
-                    '--logfile', msgf.name)
+                    '--logfile', msgf.name,
+                    stdout=None, stderr=None)
 
         # Get the commit ID and return it
         return self.hg('log', '-T{node}', '-r.')

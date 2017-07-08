@@ -24,6 +24,7 @@ import mercurial.error
 import mercurial.hg
 import mercurial.node
 import mercurial.scmutil
+import mercurial.txnutil
 import mercurial.ui
 from remotefilelog import shallowutil, constants
 
@@ -321,10 +322,9 @@ class HgServer(object):
             # This happens in our integration test suite.
             cache_path = ''
         else:
-            cache_path = shallowutil.getcachepackpath(self.repo,
-                                                      constants.TREEPACK_CATEGORY)
+            cache_path = shallowutil.getcachepackpath(
+                self.repo, constants.TREEPACK_CATEGORY)
         self.send_chunk(request, cache_path)
-
 
     def send_chunk(self, request, data, is_last=True):
         flags = 0
@@ -360,7 +360,7 @@ class HgServer(object):
             # revision in question has added to the repository after we
             # originally opened it.  Invalidate the repository and try again,
             # in case our cached repo data is just stale.
-            self.repo.invalidate()
+            self.repo.invalidate(clearfilecache=True)
             ctx = mercurial.scmutil.revsingle(self.repo, rev)
             mf = ctx.manifest()
 
@@ -401,7 +401,12 @@ class HgServer(object):
             # revision in question has added to the repository after we
             # originally opened it.  Invalidate the repository and try again,
             # in case our cached repo data is just stale.
-            self.repo.invalidate()
+            #
+            # clearfilecache=True is necessary so that mercurial will open
+            # 00changelog.i.a if it exists now instead of just using
+            # 00changelog.i  The .a file contains pending commit data if a
+            # transaction is in progress.
+            self.repo.invalidate(clearfilecache=True)
             ctx = mercurial.scmutil.revsingle(self.repo, rev)
             return ctx.manifestnode()
 
@@ -427,6 +432,10 @@ class HgServer(object):
         self.debug('prefetching')
         self.repo.prefetch(rev_range)
         self.debug('done prefetching')
+
+
+def always_allow_pending(root):
+    return True
 
 
 def main():
@@ -457,6 +466,18 @@ def main():
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(message)s')
+
+    # We always want to be able to access commits being created by pending
+    # transactions.
+    #
+    # Monkey-patch mercural.txnutil and replace its _mayhavepending() function
+    # with one that always returns True.  We could set the HG_PENDING
+    # environment variable to try and get it to return True without
+    # monkey-patching, but this seems a bit more fragile--it requires an exact
+    # string match on the repository path, so we would have to make sure to
+    # normalize the repository path the same way mercurial does, and make sure
+    # we use the correct repository (in case of a shared repository).
+    mercurial.txnutil.mayhavepending = always_allow_pending
 
     server = HgServer(args.repo, in_fd=args.in_fd, out_fd=args.out_fd)
 
