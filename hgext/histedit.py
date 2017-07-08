@@ -1173,7 +1173,7 @@ def _finishhistedit(ui, repo, state):
 
     if not state.keep:
         if mapping:
-            movebookmarks(ui, repo, mapping, state.topmost, ntm)
+            movetopmostbookmarks(repo, state.topmost, ntm)
             # TODO update mq state
     else:
         mapping = {}
@@ -1181,7 +1181,11 @@ def _finishhistedit(ui, repo, state):
     for n in tmpnodes:
         mapping[n] = ()
 
-    safecleanupnode(ui, repo, mapping)
+    # remove entries about unknown nodes
+    nodemap = repo.unfiltered().changelog.nodemap
+    mapping = {k: v for k, v in mapping.items()
+               if k in nodemap and all(n in nodemap for n in v)}
+    scmutil.cleanupnodes(repo, mapping, 'histedit')
 
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
@@ -1561,38 +1565,6 @@ def movetopmostbookmarks(repo, oldtopmost, newtopmost):
                 marks[name] = newtopmost
             marks.recordchange(tr)
 
-def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
-    """Move bookmark from old to newly created node"""
-    if not mapping:
-        # if nothing got rewritten there is not purpose for this function
-        return
-    movetopmostbookmarks(repo, oldtopmost, newtopmost)
-    moves = []
-    for bk, old in sorted(repo._bookmarks.iteritems()):
-        base = old
-        new = mapping.get(base, None)
-        if new is None:
-            continue
-        while not new:
-            # base is killed, trying with parent
-            base = repo[base].p1().node()
-            new = mapping.get(base, (base,))
-            # nothing to move
-        moves.append((bk, new[-1]))
-    if moves:
-        lock = tr = None
-        try:
-            lock = repo.lock()
-            tr = repo.transaction('histedit')
-            marks = repo._bookmarks
-            for mark, new in moves:
-                old = marks[mark]
-                marks[mark] = new
-            marks.recordchange(tr)
-            tr.close()
-        finally:
-            release(tr, lock)
-
 def cleanupnode(ui, repo, nodes):
     """strip a group of nodes from the repository
 
@@ -1609,34 +1581,6 @@ def cleanupnode(ui, repo, nodes):
         roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
         if roots:
             repair.strip(ui, repo, roots)
-
-def safecleanupnode(ui, repo, nodes):
-    """strip or obsolete nodes
-
-    nodes could be either a set or dict which maps to replacements.
-    nodes could be unknown (outside the repo).
-    """
-    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
-    if supportsmarkers:
-        if util.safehasattr(nodes, 'get'):
-            # nodes is a dict-like mapping
-            # use unfiltered repo for successors in case they are hidden
-            urepo = repo.unfiltered()
-            def getmarker(prec):
-                succs = tuple(urepo[n] for n in nodes.get(prec, ()))
-                return (repo[prec], succs)
-        else:
-            # nodes is a set-like
-            def getmarker(prec):
-                return (repo[prec], ())
-        # sort by revision number because it sound "right"
-        sortednodes = sorted([n for n in nodes if n in repo],
-                             key=repo.changelog.rev)
-        markers = [getmarker(t) for t in sortednodes]
-        if markers:
-            obsolete.createmarkers(repo, markers, operation='histedit')
-    else:
-        return cleanupnode(ui, repo, nodes)
 
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):

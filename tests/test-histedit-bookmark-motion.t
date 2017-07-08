@@ -87,7 +87,7 @@
   > fold e860deea161a 4 e
   > pick 652413bf663e 5 f
   > EOF
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-45c027ab-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-45c027ab-histedit.hg (glob)
   $ hg log --graph
   @  changeset:   3:cacdfd884a93
   |  bookmark:    five
@@ -141,7 +141,7 @@
   > pick cacdfd884a93 3 f
   > pick 59d9f330561f 2 d
   > EOF
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/59d9f330561f-073008af-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/59d9f330561f-073008af-histedit.hg (glob)
 
 We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.
