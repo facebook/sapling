@@ -3547,10 +3547,7 @@ def howtocontinue(repo):
     for f, msg in afterresolvedstates:
         if repo.vfs.exists(f):
             return contmsg % msg, True
-    workingctx = repo[None]
-    dirty = any(repo.status()) or any(workingctx.sub(s).dirty()
-                                         for s in workingctx.substate)
-    if dirty:
+    if repo[None].dirty(missing=True, merge=False, branch=False):
         return contmsg % _("hg commit"), False
     return None, None
 
