@@ -440,9 +440,9 @@ class rebaseruntime(object):
                     self.state[rev] = p1
                     ui.debug('next revision set to %s\n' % p1)
             elif self.state[rev] == nullmerge:
-                ui.debug('ignoring null merge rebase of %s\n' % rev)
+                pass
             elif self.state[rev] == revignored:
-                ui.status(_('not rebasing ignored %s\n') % desc)
+                pass
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[self.state[rev]]))

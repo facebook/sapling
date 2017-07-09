@@ -235,10 +235,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
   rebase onto 4bc80088dc6b starting from e31216eec445
   rebase status stored
-  ignoring null merge rebase of 3
-  ignoring null merge rebase of 4
-  ignoring null merge rebase of 6
-  ignoring null merge rebase of 8
   rebasing 9:e31216eec445 "more changes to f1"
    future parents are 2 and -1
   rebase status stored
@@ -413,7 +409,6 @@ Test rebase with obsstore turned on and off (issue5606)
   continue: hg rebase --continue
   $ hg rebase --continue --config experimental.stabilization=none
   rebasing 1:112478962961 "B" (B)
-  not rebasing ignored 2:26805aba1e60 "C" (C)
   rebasing 3:f585351a92f8 "D" (D)
   warning: orphaned descendants detected, not stripping 112478962961
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/f585351a92f8-e536a9e4-rebase.hg (glob)

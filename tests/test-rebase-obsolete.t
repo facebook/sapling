@@ -450,7 +450,6 @@ Test multiple root handling
   $ hg rebase --dest 4 --rev '7+11+9'
   rebasing 9:cf44d2f5a9f4 "D"
   rebasing 7:02de42196ebe "H"
-  not rebasing ignored 10:7c6027df6a99 "B"
   rebasing 11:0d8f238b634c "C" (tip)
   $ hg log -G
   o  14:1e8370e38cca C
@@ -491,8 +490,6 @@ Detach both parents
   $ hg rebase -d G -r 'B + D + F'
   rebasing 1:112478962961 "B" (B)
   rebasing 2:b18e25de2cf5 "D" (D)
-  not rebasing ignored 4:26805aba1e60 "C" (C)
-  not rebasing ignored 5:4b61ff5c62e2 "E" (E)
   rebasing 6:f15c3adaf214 "F" (F tip)
   abort: cannot rebase 6:f15c3adaf214 without moving at least one of its parents
   [255]
@@ -546,7 +543,6 @@ test on rebase dropping a merge
   $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
   rebasing 3:32af7686d403 "D"
   rebasing 7:02de42196ebe "H"
-  not rebasing ignored 8:53a6a128b2b7 "M"
   rebasing 9:4bde274eefcf "I" (tip)
   $ hg log -G
   @  12:acd174b7ab39 I

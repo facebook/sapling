@@ -81,7 +81,6 @@ the hole (B below), not on top of the destination (A).
   > A
   > EOF
   already rebased 1:112478962961 "B" (B)
-  not rebasing ignored 2:26805aba1e60 "C" (C)
   rebasing 3:f585351a92f8 "D" (D tip)
   o  4: D
   |
