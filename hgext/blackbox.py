@@ -197,10 +197,8 @@ def wrapui(ui):
                     ctx = ui._bbrepo[None]
                     parents = ctx.parents()
                     rev = ('+'.join([hex(p.node()) for p in parents]))
-                    if (ui.configbool('blackbox', 'dirty') and (
-                        any(ui._bbrepo.status()) or
-                        any(ctx.sub(s).dirty() for s in ctx.substate)
-                    )):
+                    if (ui.configbool('blackbox', 'dirty') and
+                        ctx.dirty(missing=True, merge=False, branch=False)):
                         changed = '+'
                 if ui.configbool('blackbox', 'logsource'):
                     src = ' [%s]' % event
