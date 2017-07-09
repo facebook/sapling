@@ -83,7 +83,7 @@ def buildmetadata(ctx):
     hex = ctx.hex()
     if ctx.rev() is None:
         hex = ctx.p1().hex()
-        if ctx.dirty():
+        if ctx.dirty(missing=True):
             hex += '+'
 
     base = 'repo: %s\nnode: %s\nbranch: %s\n' % (

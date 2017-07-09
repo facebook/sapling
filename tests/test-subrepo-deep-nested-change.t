@@ -238,6 +238,31 @@ Check that deep archiving works
   committing subrepository sub1
   committing subrepository sub1/sub2 (glob)
 
+  $ rm -r main
+  $ hg archive -S -qr 'wdir()' ../wdir
+  $ cat ../wdir/.hg_archival.txt
+  repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
+  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd+
+  branch: default
+  latesttag: null
+  latesttagdistance: 4
+  changessincelatesttag: 4
+  $ hg update -Cq .
+
+TODO: add the dirty flag for missing subrepo files
+
+  $ rm -r ../wdir sub1/sub2/folder/test.txt
+  $ hg archive -S -qr 'wdir()' ../wdir
+  $ cat ../wdir/.hg_archival.txt
+  repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
+  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd
+  branch: default
+  latesttag: null
+  latesttagdistance: 4
+  changessincelatesttag: 4
+  $ hg update -Cq .
+  $ rm -r ../wdir
+
 .. but first take a detour through some deep removal testing
 
   $ hg remove -S -I 're:.*.txt' .
