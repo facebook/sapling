@@ -156,7 +156,7 @@ user b push changes
 
   $ hg push 2>/dev/null
   pushing to $TESTTMP/t (glob)
-  pushing branch testing of subrepo s
+  pushing branch testing of subrepository "s"
   searching for changes
   adding changesets
   adding manifests
@@ -200,7 +200,7 @@ user a pulls, merges, commits
    revision f47b465e1bce645dbf37232a00574aa1546ca8d3
   $ hg push 2>/dev/null
   pushing to $TESTTMP/t (glob)
-  pushing branch testing of subrepo s
+  pushing branch testing of subrepository "s"
   searching for changes
   adding changesets
   adding manifests
@@ -224,7 +224,7 @@ make and push changes to hg without updating the subrepo
   $ hg clone . ../td 2>&1 | egrep -v '^Cloning into|^done\.'
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
-  checking out detached HEAD in subrepo s
+  checking out detached HEAD in subrepository "s"
   check out a git branch if you intend to make changes
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../td
@@ -389,10 +389,10 @@ Don't crash if the subrepo is missing
   $ hg sum | grep commit
   commit: 1 subrepos
   $ hg push -q
-  abort: subrepo s is missing (in subrepo s)
+  abort: subrepo s is missing (in subrepository "s")
   [255]
   $ hg commit --subrepos -qm missing
-  abort: subrepo s is missing (in subrepo s)
+  abort: subrepo s is missing (in subrepository "s")
   [255]
 
 #if symlink
@@ -400,10 +400,10 @@ Don't crash if subrepo is a broken symlink
   $ ln -s broken s
   $ hg status -S
   $ hg push -q
-  abort: subrepo s is missing (in subrepo s)
+  abort: subrepo s is missing (in subrepository "s")
   [255]
   $ hg commit --subrepos -qm missing
-  abort: subrepo s is missing (in subrepo s)
+  abort: subrepo s is missing (in subrepository "s")
   [255]
   $ rm s
 #endif
@@ -702,7 +702,7 @@ Test that sanitizing is omitted in meta data area:
   $ mkdir s/.git/.hg
   $ echo '.hg/hgrc in git metadata area' > s/.git/.hg/hgrc
   $ hg update -q -C af6d2edbb0d3
-  checking out detached HEAD in subrepo s
+  checking out detached HEAD in subrepository "s"
   check out a git branch if you intend to make changes
 
 check differences made by most recent change
@@ -1160,7 +1160,7 @@ test for Git CVE-2016-3068
   fatal: transport 'ext' not allowed
   updating to branch default
   cloning subrepo s from ext::sh -c echo% pwned:% $PWNED_MSG% >pwned.txt
-  abort: git clone error 128 in s (in subrepo s)
+  abort: git clone error 128 in s (in subrepository "s")
   [255]
   $ f -Dq pwned.txt
   pwned.txt: file not found
@@ -1176,7 +1176,7 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   and the repository exists.
   updating to branch default
   cloning subrepo s from ext::sh -c echo% pwned:% $PWNED_MSG% >pwned.txt
-  abort: git clone error 128 in s (in subrepo s)
+  abort: git clone error 128 in s (in subrepository "s")
   [255]
   $ f -Dq pwned.txt
   pwned: you asked for it

@@ -59,7 +59,7 @@ Test recursive diff without committing anything:
 Commits:
 
   $ hg commit -m fails
-  abort: uncommitted changes in subrepository 'foo'
+  abort: uncommitted changes in subrepository "foo"
   (use --subrepos for recursive commit)
   [255]
 
@@ -495,7 +495,7 @@ created by archive:
   $ echo f > foo/f
   $ hg archive --subrepos -r tip archive
   cloning subrepo foo from $TESTTMP/empty/foo
-  abort: destination '$TESTTMP/almost-empty/foo' is not empty (in subrepo foo) (glob)
+  abort: destination '$TESTTMP/almost-empty/foo' is not empty (in subrepository "foo") (glob)
   [255]
 
 Clone and test outgoing:

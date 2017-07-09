@@ -270,7 +270,7 @@ verify that large files in subrepos handled properly
   update: (current)
   phases: 3 draft
   $ hg ci -m "this commit should fail without -S"
-  abort: uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository "subrepo"
   (use --subrepos for recursive commit)
   [255]
 

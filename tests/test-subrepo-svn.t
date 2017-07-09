@@ -113,7 +113,7 @@ missing svn file, commit should fail
   $ rm s/alpha
   $ hg commit --subrepos -m 'abort on missing file'
   committing subrepository s
-  abort: cannot commit missing svn entries (in subrepo s)
+  abort: cannot commit missing svn entries (in subrepository "s")
   [255]
   $ svn revert s/alpha > /dev/null
 
@@ -170,7 +170,7 @@ this commit fails because of externals changes
   $ echo zzz > s/externals/other
   $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
-  abort: cannot commit svn externals (in subrepo s)
+  abort: cannot commit svn externals (in subrepository "s")
   [255]
   $ hg diff --subrepos -r 1:2 | grep -v diff
   --- a/.hgsubstate	Thu Jan 01 00:00:00 1970 +0000
@@ -192,7 +192,7 @@ this commit fails because of externals meta changes
   property 'svn:mime-type' set on 's/externals/other' (glob)
   $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
-  abort: cannot commit svn externals (in subrepo s)
+  abort: cannot commit svn externals (in subrepository "s")
   [255]
   $ svn revert -q s/externals/other
 

@@ -375,7 +375,7 @@ test saving last-message.txt
   HG: changed changed
   HG: removed removed
   ====
-  abort: precommit.test-saving-last-message hook exited with status 1 (in subrepo sub)
+  abort: precommit.test-saving-last-message hook exited with status 1 (in subrepository "sub")
   [255]
   $ cat .hg/last-message.txt
   

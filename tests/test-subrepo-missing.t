@@ -92,7 +92,7 @@ check that we can update parent repo with missing (amended) subrepo revision
   $ hg commit --amend -m "addb (amended)"
   $ cd ..
   $ hg update --clean .
-  revision 102a90ea7b4a in subrepo subrepo is hidden
+  revision 102a90ea7b4a in subrepository "subrepo" is hidden
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 check that --hidden is propagated to the subrepo

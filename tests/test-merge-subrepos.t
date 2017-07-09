@@ -21,7 +21,7 @@
 Should fail, since there are added files to subrepo:
 
   $ hg merge
-  abort: uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository "subrepo"
   [255]
 
 Deleted files trigger a '+' marker in top level repos.  Deleted files are also
@@ -80,7 +80,7 @@ Modified subrepo files are noticed by `update --check` and `summary`
   M subrepo/b
 
   $ hg up -r '.^' --check
-  abort: uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository "subrepo"
   [255]
 
   $ hg sum
@@ -103,7 +103,7 @@ discrete unit, then this should probably warn or something.
 missing file in the top level repo.
 
   $ hg up -r '.^' --check
-  abort: uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository "subrepo"
   [255]
 
   $ hg up -r '.^' --config ui.interactive=True << EOF
@@ -126,5 +126,5 @@ missing file in the top level repo.
 Merge sees deleted subrepo files as an uncommitted change
 
   $ hg merge @other
-  abort: uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository "subrepo"
   [255]

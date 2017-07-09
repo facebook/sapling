@@ -111,7 +111,7 @@ commands that require a clean repo should respect subrepos
 
   $ echo b >> s/a
   $ hg backout tip
-  abort: uncommitted changes in subrepository 's'
+  abort: uncommitted changes in subrepository "s"
   [255]
   $ hg revert -C -R s s/a
 
@@ -163,7 +163,7 @@ leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
 
   $ echo c > s/a
   $ hg --config ui.commitsubrepos=no ci -m4
-  abort: uncommitted changes in subrepository 's'
+  abort: uncommitted changes in subrepository "s"
   (use --subrepos for recursive commit)
   [255]
   $ hg id
@@ -305,7 +305,7 @@ merge tests
    subrepository t diverged (local revision: 20a0db6fbf6c, remote revision: 7af322bc1198)
   starting 4 threads for background file closing (?)
   (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
-  merging subrepo t
+  merging subrepository "t"
     searching for copies back to rev 2
   resolving manifests
    branchmerge: True, force: False, partial: False
@@ -516,7 +516,7 @@ push -f
   no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   pushing subrepo s to $TESTTMP/t/s
   searching for changes
-  abort: push creates new remote head 12a213df6fa9! (in subrepo s)
+  abort: push creates new remote head 12a213df6fa9! (in subrepository "s")
   (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg push -f
@@ -747,7 +747,7 @@ bogus subrepo path aborts
 
   $ echo 'bogus=[boguspath' >> .hgsub
   $ hg ci -m 'bogus subrepo path'
-  abort: missing ] in subrepo source
+  abort: missing ] in subrepository source
   [255]
 
 Issue1986: merge aborts when trying to merge a subrepo that
@@ -955,7 +955,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   created new head
   $ hg -R repo2 ci -m3
   $ hg -q -R repo2 push
-  abort: push creates new remote head cc505f09a8b2! (in subrepo s)
+  abort: push creates new remote head cc505f09a8b2! (in subrepository "s")
   (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg -R repo update
@@ -983,7 +983,7 @@ filesystem (see also issue4583))
   > EOF
   $ hg -R repo update
   b: untracked file differs
-  abort: untracked files in working directory differ from files in requested revision (in subrepo s)
+  abort: untracked files in working directory differ from files in requested revision (in subrepository "s")
   [255]
   $ cat >> repo/.hg/hgrc <<EOF
   > [extensions]
@@ -1055,7 +1055,7 @@ Create repo without default path, pull top repo, and see what happens on update
   added 2 changesets with 3 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hg -R issue1852b update
-  abort: default path for subrepository not found (in subrepo sub/repo) (glob)
+  abort: default path for subrepository not found (in subrepository "sub/repo") (glob)
   [255]
 
 Ensure a full traceback, not just the SubrepoAbort part

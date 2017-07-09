@@ -127,7 +127,7 @@ Abort pull early with unclean subrepo:
   $ echo a > s/a
   $ hg -R s add s/a
   $ hg pull --rebase
-  abort: uncommitted changes in subrepository 's'
+  abort: uncommitted changes in subrepository "s"
   (cannot pull with rebase: please commit or shelve your changes first)
   [255]
 

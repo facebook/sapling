@@ -73,7 +73,7 @@ def annotatesubrepoerror(func):
             raise ex
         except error.Abort as ex:
             subrepo = subrelpath(self)
-            errormsg = str(ex) + ' ' + _('(in subrepo %s)') % subrepo
+            errormsg = str(ex) + ' ' + _('(in subrepository "%s")') % subrepo
             # avoid handling this exception by raising a SubrepoAbort exception
             raise SubrepoAbort(errormsg, hint=ex.hint, subrepo=subrepo,
                                cause=sys.exc_info())
@@ -147,7 +147,7 @@ def state(ctx, ui):
         kind = 'hg'
         if src.startswith('['):
             if ']' not in src:
-                raise error.Abort(_('missing ] in subrepo source'))
+                raise error.Abort(_('missing ] in subrepository source'))
             kind, src = src.split(']', 1)
             kind = kind[1:]
             src = src.lstrip() # strip any extra whitespace after ']'
@@ -477,7 +477,7 @@ class abstractsubrepo(object):
         This returns None, otherwise.
         """
         if self.dirty(ignoreupdate=ignoreupdate, missing=missing):
-            return _("uncommitted changes in subrepository '%s'"
+            return _('uncommitted changes in subrepository "%s"'
                      ) % subrelpath(self)
 
     def bailifchanged(self, ignoreupdate=False, hint=None):
@@ -896,7 +896,7 @@ class hgsubrepo(abstractsubrepo):
             ctx = urepo[revision]
             if ctx.hidden():
                 urepo.ui.warn(
-                    _('revision %s in subrepo %s is hidden\n') \
+                    _('revision %s in subrepository "%s" is hidden\n') \
                     % (revision[0:12], self._path))
                 repo = urepo
         hg.updaterepo(repo, revision, overwrite)
@@ -910,12 +910,14 @@ class hgsubrepo(abstractsubrepo):
 
         def mergefunc():
             if anc == cur and dst.branch() == cur.branch():
-                self.ui.debug("updating subrepo %s\n" % subrelpath(self))
+                self.ui.debug('updating subrepository "%s"\n'
+                              % subrelpath(self))
                 hg.update(self._repo, state[1])
             elif anc == dst:
-                self.ui.debug("skipping subrepo %s\n" % subrelpath(self))
+                self.ui.debug('skipping subrepository "%s"\n'
+                              % subrelpath(self))
             else:
-                self.ui.debug("merging subrepo %s\n" % subrelpath(self))
+                self.ui.debug('merging subrepository "%s"\n' % subrelpath(self))
                 hg.merge(self._repo, state[1], remind=False)
 
         wctx = self._repo[None]
@@ -1555,8 +1557,8 @@ class gitsubrepo(abstractsubrepo):
         # try only origin: the originally cloned repo
         self._gitcommand(['fetch'])
         if not self._githavelocally(revision):
-            raise error.Abort(_("revision %s does not exist in subrepo %s\n") %
-                               (revision, self._relpath))
+            raise error.Abort(_('revision %s does not exist in subrepository '
+                                '"%s"\n') % (revision, self._relpath))
 
     @annotatesubrepoerror
     def dirty(self, ignoreupdate=False, missing=False):
@@ -1611,8 +1613,8 @@ class gitsubrepo(abstractsubrepo):
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
-            self.ui.warn(_('checking out detached HEAD in subrepo %s\n') %
-                          self._relpath)
+            self.ui.warn(_('checking out detached HEAD in '
+                           'subrepository "%s"\n') % self._relpath)
             self.ui.warn(_('check out a git branch if you intend '
                             'to make changes\n'))
             checkout(['-q', revision])
@@ -1731,14 +1733,14 @@ class gitsubrepo(abstractsubrepo):
             # determine if the current branch is even useful
             if not self._gitisancestor(self._state[1], current):
                 self.ui.warn(_('unrelated git branch checked out '
-                                'in subrepo %s\n') % self._relpath)
+                               'in subrepository "%s"\n') % self._relpath)
                 return False
-            self.ui.status(_('pushing branch %s of subrepo %s\n') %
+            self.ui.status(_('pushing branch %s of subrepository "%s"\n') %
                            (current.split('/', 2)[2], self._relpath))
             ret = self._gitdir(cmd + ['origin', current])
             return ret[1] == 0
         else:
-            self.ui.warn(_('no branch checked out in subrepo %s\n'
+            self.ui.warn(_('no branch checked out in subrepository "%s"\n'
                            'cannot push revision %s\n') %
                           (self._relpath, self._state[1]))
             return False
