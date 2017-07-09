@@ -347,6 +347,17 @@ class nevermatcher(basematcher):
     def __init__(self, root, cwd, badfn=None):
         super(nevermatcher, self).__init__(root, cwd, badfn)
 
+    # It's a little weird to say that the nevermatcher is an exact matcher
+    # or a prefix matcher, but it seems to make sense to let callers take
+    # fast paths based on either. There will be no exact matches, nor any
+    # prefixes (files() returns []), so fast paths iterating over them should
+    # be efficient (and correct).
+    def isexact(self):
+        return True
+
+    def prefix(self):
+        return True
+
     def __repr__(self):
         return '<nevermatcher>'
 
