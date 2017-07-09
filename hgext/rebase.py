@@ -62,10 +62,10 @@ templateopts = cmdutil.templateopts
 revtodo = -1
 nullmerge = -2
 revignored = -3
-# successor in rebase destination
-revprecursor = -4
-# plain prune (no successor)
-revpruned = -5
+
+# legacy revstates no longer needed in current code
+# -4: revprecursor, -5: revpruned
+legacystates = {'-4', '-5'}
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -231,8 +231,9 @@ class rebaseruntime(object):
                     activebookmark = l
                 else:
                     oldrev, newrev = l.split(':')
-                    if newrev in (str(nullmerge), str(revignored),
-                                  str(revprecursor), str(revpruned)):
+                    if newrev in legacystates:
+                        continue
+                    if newrev in (str(nullmerge), str(revignored)):
                         state[repo[oldrev].rev()] = int(newrev)
                     elif newrev == nullid:
                         state[repo[oldrev].rev()] = revtodo
@@ -307,9 +308,6 @@ class rebaseruntime(object):
         if isabort:
             return abort(self.repo, self.originalwd, self.dest,
                          self.state, activebookmark=self.activebookmark)
-
-        obsrevs = (r for r, st in self.state.items() if st == revprecursor)
-        self._handleskippingobsolete(self.state.keys(), obsrevs, self.dest)
 
     def _preparenewrebase(self, dest, rebaseset):
         if dest is None:
@@ -445,10 +443,6 @@ class rebaseruntime(object):
                 ui.debug('ignoring null merge rebase of %s\n' % rev)
             elif self.state[rev] == revignored:
                 ui.status(_('not rebasing ignored %s\n') % desc)
-            elif self.state[rev] == revprecursor:
-                pass
-            elif self.state[rev] == revpruned:
-                pass
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[self.state[rev]]))
@@ -499,9 +493,7 @@ class rebaseruntime(object):
         # restore original working directory
         # (we do this before stripping)
         newwd = self.state.get(self.originalwd, self.originalwd)
-        if newwd == revprecursor:
-            newwd = self.obsoletenotrebased[self.originalwd]
-        elif newwd < 0:
+        if newwd < 0:
             # original directory is a parent of rebase set root or ignored
             newwd = self.originalwd
         if newwd not in [c.rev() for c in repo[None].parents()]:
@@ -1414,14 +1406,14 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         succ = obsoletenotrebased[r]
         if succ is None:
             msg = _('note: not rebasing %s, it has no successor\n') % desc
-            state[r] = revpruned
+            del state[r]
         else:
             destctx = unfi[succ]
             destdesc = '%d:%s "%s"' % (destctx.rev(), destctx,
                                        destctx.description().split('\n', 1)[0])
             msg = (_('note: not rebasing %s, already in destination as %s\n')
                    % (desc, destdesc))
-            state[r] = revprecursor
+            del state[r]
         repo.ui.status(msg)
     return originalwd, dest.rev(), state
 

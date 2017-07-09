@@ -1152,10 +1152,10 @@ equivalents in destination
   2:1e9a3c00cbe9 b (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.stabilization.track-operation=1
   note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b"
-Check that working directory was updated to rev 3 although rev 2 was skipped
+Check that working directory was not updated to rev 3 because rev 2 was skipped
 during the rebase operation
   $ hg log -r .
-  3:be1832deae9a b (no-eol)
+  2:1e9a3c00cbe9 b (no-eol)
 
 Check that bookmark was not moved to rev 3 if rev 2 was skipped during the
 rebase operation. This makes sense because if rev 2 has a successor, the
