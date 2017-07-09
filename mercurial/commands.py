@@ -2775,8 +2775,7 @@ def identify(ui, repo, source=None, rev=None,
                 taglist.extend(p.tags())
 
             dirty = ""
-            if (any(repo.status())
-                or any(ctx.sub(s).dirty() for s in ctx.substate)):
+            if ctx.dirty(missing=True, merge=False, branch=False):
                 dirty = '+'
             fm.data(dirty=dirty)
 
