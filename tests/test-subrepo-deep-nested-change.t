@@ -249,13 +249,13 @@ Check that deep archiving works
   changessincelatesttag: 4
   $ hg update -Cq .
 
-TODO: add the dirty flag for missing subrepo files
+A deleted subrepo file is flagged as dirty, like the top level repo
 
   $ rm -r ../wdir sub1/sub2/folder/test.txt
   $ hg archive -S -qr 'wdir()' ../wdir
   $ cat ../wdir/.hg_archival.txt
   repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
-  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd
+  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd+
   branch: default
   latesttag: null
   latesttagdistance: 4

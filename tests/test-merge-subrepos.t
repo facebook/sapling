@@ -55,13 +55,13 @@ Test that dirty is consistent through subrepos
 
   $ rm subrepo/b
 
-TODO: a deleted subrepo file should be flagged as dirty, like the top level repo
+A deleted subrepo file is flagged as dirty, like the top level repo
 
   $ hg id --config extensions.blackbox= --config blackbox.dirty=True
-  9bfe45a197d7 tip
+  9bfe45a197d7+ tip
   $ cat .hg/blackbox.log
-  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5 (*)> id (glob)
-  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5 (*)> id --config "extensions.blackbox=" --config "blackbox.dirty=True" exited 0 * (glob)
+  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5+ (*)> id (glob)
+  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5+ (*)> id --config *extensions.blackbox=* --config *blackbox.dirty=True* exited 0 * (glob)
 
 TODO: a deleted file should be listed as such, like the top level repo
 
@@ -99,10 +99,14 @@ discrete unit, then this should probably warn or something.
   $ hg st -S
   ! subrepo/b
 
-TODO: --check should notice a subrepo with a missing file.  It already notices
-a modified file.
+`hg update --check` notices a subrepo with a missing file, like it notices a
+missing file in the top level repo.
 
-  $ hg up -r '.^' --check --config ui.interactive=True << EOF
+  $ hg up -r '.^' --check
+  abort: uncommitted changes in subrepository 'subrepo'
+  [255]
+
+  $ hg up -r '.^' --config ui.interactive=True << EOF
   > c
   > EOF
   other [destination] changed b which local [working copy] deleted
@@ -122,8 +126,5 @@ a modified file.
 Merge sees deleted subrepo files as an uncommitted change
 
   $ hg merge @other
-   subrepository subrepo diverged (local revision: de222c2e1eac, remote revision: 7d3f8eba8116)
-  (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
-  abort: uncommitted changes (in subrepo subrepo)
-  (use 'hg status' to list changes)
+  abort: uncommitted changes in subrepository 'subrepo'
   [255]

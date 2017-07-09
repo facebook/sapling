@@ -1509,7 +1509,7 @@ class workingctx(committablectx):
         "check whether a working directory is modified"
         # check subrepos first
         for s in sorted(self.substate):
-            if self.sub(s).dirty():
+            if self.sub(s).dirty(missing=missing):
                 return True
         # check current working dir
         return ((merge and self.p2()) or

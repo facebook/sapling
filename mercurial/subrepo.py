@@ -460,14 +460,15 @@ class abstractsubrepo(object):
         """
         return False
 
-    def dirty(self, ignoreupdate=False):
+    def dirty(self, ignoreupdate=False, missing=False):
         """returns true if the dirstate of the subrepo is dirty or does not
         match current stored state. If ignoreupdate is true, only check
-        whether the subrepo has uncommitted changes in its dirstate.
+        whether the subrepo has uncommitted changes in its dirstate.  If missing
+        is true, check for deleted files.
         """
         raise NotImplementedError
 
-    def dirtyreason(self, ignoreupdate=False):
+    def dirtyreason(self, ignoreupdate=False, missing=False):
         """return reason string if it is ``dirty()``
 
         Returned string should have enough information for the message
@@ -475,14 +476,15 @@ class abstractsubrepo(object):
 
         This returns None, otherwise.
         """
-        if self.dirty(ignoreupdate=ignoreupdate):
+        if self.dirty(ignoreupdate=ignoreupdate, missing=missing):
             return _("uncommitted changes in subrepository '%s'"
                      ) % subrelpath(self)
 
     def bailifchanged(self, ignoreupdate=False, hint=None):
         """raise Abort if subrepository is ``dirty()``
         """
-        dirtyreason = self.dirtyreason(ignoreupdate=ignoreupdate)
+        dirtyreason = self.dirtyreason(ignoreupdate=ignoreupdate,
+                                       missing=True)
         if dirtyreason:
             raise error.Abort(dirtyreason, hint=hint)
 
@@ -815,7 +817,7 @@ class hgsubrepo(abstractsubrepo):
         return total
 
     @annotatesubrepoerror
-    def dirty(self, ignoreupdate=False):
+    def dirty(self, ignoreupdate=False, missing=False):
         r = self._state[1]
         if r == '' and not ignoreupdate: # no state recorded
             return True
@@ -823,7 +825,7 @@ class hgsubrepo(abstractsubrepo):
         if r != w.p1().hex() and not ignoreupdate:
             # different version checked out
             return True
-        return w.dirty() # working directory changed
+        return w.dirty(missing=missing) # working directory changed
 
     def basestate(self):
         return self._repo['.'].hex()
@@ -1202,8 +1204,10 @@ class svnsubrepo(abstractsubrepo):
                     return True, True, bool(missing)
         return bool(changes), False, bool(missing)
 
-    def dirty(self, ignoreupdate=False):
-        if not self._wcchanged()[0]:
+    def dirty(self, ignoreupdate=False, missing=False):
+        wcchanged = self._wcchanged()
+        changed = wcchanged[0] or (missing and wcchanged[2])
+        if not changed:
             if self._state[1] in self._wcrevs() or ignoreupdate:
                 return False
         return True
@@ -1555,7 +1559,7 @@ class gitsubrepo(abstractsubrepo):
                                (revision, self._relpath))
 
     @annotatesubrepoerror
-    def dirty(self, ignoreupdate=False):
+    def dirty(self, ignoreupdate=False, missing=False):
         if self._gitmissing():
             return self._state[1] != ''
         if self._gitisbare():
