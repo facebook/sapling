@@ -107,13 +107,21 @@ missing file in the top level repo.
   [255]
 
   $ hg up -r '.^' --config ui.interactive=True << EOF
-  > c
+  > d
   > EOF
   other [destination] changed b which local [working copy] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+XXX: There's a difference between wdir() and '.', so there should be a status.
+`hg files -S` from the top is also missing 'subrepo/b'.
+
   $ hg st -S
+  $ hg st -R subrepo
+  $ hg files -R subrepo
+  [1]
+  $ hg files -R subrepo -r '.'
+  subrepo/b (glob)
 
   $ hg bookmark -r tip @other
   $ echo xyz > subrepo/c
