@@ -28,16 +28,21 @@ Deleted files trigger a '+' marker in top level repos.  Deleted files are also
 noticed by `update --check` in the top level repo.
 
   $ hg ci -Sqm 'add b'
+  $ echo change > subrepo/b
+
+  $ hg ci -Sm 'change b'
+  committing subrepository subrepo
+
   $ rm a
   $ hg id
-  cb66ec850af7+ tip
+  9bfe45a197d7+ tip
   $ hg sum
-  parent: 3:cb66ec850af7 tip
-   add b
+  parent: 4:9bfe45a197d7 tip
+   change b
   branch: default
   commit: 1 deleted (clean)
   update: 1 new changesets, 2 branch heads (merge)
-  phases: 4 draft
+  phases: 5 draft
 
   $ hg up --check -r '.^'
   abort: uncommitted changes
@@ -52,18 +57,21 @@ Test that dirty is consistent through subrepos
 
 TODO: a deleted subrepo file should be flagged as dirty, like the top level repo
 
-  $ hg id
-  cb66ec850af7 tip
+  $ hg id --config extensions.blackbox= --config blackbox.dirty=True
+  9bfe45a197d7 tip
+  $ cat .hg/blackbox.log
+  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5 (*)> id (glob)
+  * @9bfe45a197d7b0ab09bf287729dd57e9619c9da5 (*)> id --config "extensions.blackbox=" --config "blackbox.dirty=True" exited 0 * (glob)
 
 TODO: a deleted file should be listed as such, like the top level repo
 
   $ hg sum
-  parent: 3:cb66ec850af7 tip
-   add b
+  parent: 4:9bfe45a197d7 tip
+   change b
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
-  phases: 4 draft
+  phases: 5 draft
 
 Modified subrepo files are noticed by `update --check` and `summary`
 
@@ -76,12 +84,12 @@ Modified subrepo files are noticed by `update --check` and `summary`
   [255]
 
   $ hg sum
-  parent: 3:cb66ec850af7 tip
-   add b
+  parent: 4:9bfe45a197d7 tip
+   change b
   branch: default
   commit: 1 subrepos
   update: 1 new changesets, 2 branch heads (merge)
-  phases: 4 draft
+  phases: 5 draft
 
 TODO: why is -R needed here?  If it's because the subrepo is treated as a
 discrete unit, then this should probably warn or something.
@@ -94,11 +102,13 @@ discrete unit, then this should probably warn or something.
 TODO: --check should notice a subrepo with a missing file.  It already notices
 a modified file.
 
-  $ hg up -r '.^' --check
+  $ hg up -r '.^' --check --config ui.interactive=True << EOF
+  > c
+  > EOF
+  other [destination] changed b which local [working copy] deleted
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-TODO: update without --clean shouldn't restore a deleted subrepo file, since it
-doesn't restore a deleted top level repo file.
   $ hg st -S
 
   $ hg bookmark -r tip @other
@@ -112,7 +122,7 @@ doesn't restore a deleted top level repo file.
 Merge sees deleted subrepo files as an uncommitted change
 
   $ hg merge @other
-   subrepository subrepo diverged (local revision: 2b4750dcc93f, remote revision: cde40f86152f)
+   subrepository subrepo diverged (local revision: de222c2e1eac, remote revision: 7d3f8eba8116)
   (M)erge, keep (l)ocal [working copy] or keep (r)emote [merge rev]? m
   abort: uncommitted changes (in subrepo subrepo)
   (use 'hg status' to list changes)
