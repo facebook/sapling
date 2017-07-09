@@ -122,6 +122,16 @@ def _revsetdestrebase(repo, subset, x):
         sourceset = revset.getset(repo, smartset.fullreposet(repo), x)
     return subset & smartset.baseset([_destrebase(repo, sourceset)])
 
+def _ctxdesc(ctx):
+    """short description for a context"""
+    desc = '%d:%s "%s"' % (ctx.rev(), ctx,
+                           ctx.description().split('\n', 1)[0])
+    repo = ctx.repo()
+    names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+    if names:
+        desc += ' (%s)' % ' '.join(names)
+    return desc
+
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
     def __init__(self, repo, ui, opts=None):
@@ -377,11 +387,7 @@ class rebaseruntime(object):
         pos = 0
         for rev in sortedrevs:
             ctx = repo[rev]
-            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
-                                   ctx.description().split('\n', 1)[0])
-            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
-            if names:
-                desc += ' (%s)' % ' '.join(names)
+            desc = _ctxdesc(ctx)
             if self.state[rev] == rev:
                 ui.status(_('already rebased %s\n') % desc)
             elif self.state[rev] == revtodo:
