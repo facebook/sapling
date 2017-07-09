@@ -446,14 +446,9 @@ class rebaseruntime(object):
             elif self.state[rev] == revignored:
                 ui.status(_('not rebasing ignored %s\n') % desc)
             elif self.state[rev] == revprecursor:
-                destctx = repo[self.obsoletenotrebased[rev]]
-                descdest = '%d:%s "%s"' % (destctx.rev(), destctx,
-                           destctx.description().split('\n', 1)[0])
-                msg = _('note: not rebasing %s, already in destination as %s\n')
-                ui.status(msg % (desc, descdest))
+                pass
             elif self.state[rev] == revpruned:
-                msg = _('note: not rebasing %s, it has no successor\n')
-                ui.status(msg % desc)
+                pass
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[self.state[rev]]))
@@ -1413,11 +1408,21 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         rebasedomain = set(repo.revs('%ld::%ld', rebaseset, rebaseset))
         for ignored in set(rebasedomain) - set(rebaseset):
             state[ignored] = revignored
+    unfi = repo.unfiltered()
     for r in obsoletenotrebased:
-        if obsoletenotrebased[r] is None:
+        desc = _ctxdesc(unfi[r])
+        succ = obsoletenotrebased[r]
+        if succ is None:
+            msg = _('note: not rebasing %s, it has no successor\n') % desc
             state[r] = revpruned
         else:
+            destctx = unfi[succ]
+            destdesc = '%d:%s "%s"' % (destctx.rev(), destctx,
+                                       destctx.description().split('\n', 1)[0])
+            msg = (_('note: not rebasing %s, already in destination as %s\n')
+                   % (desc, destdesc))
             state[r] = revprecursor
+        repo.ui.status(msg)
     return originalwd, dest.rev(), state
 
 def clearrebased(ui, repo, dest, state, skipped, collapsedas=None):

@@ -205,8 +205,8 @@ More complex case where part of the rebase set were already rebased
   o  0:cd010b8cd998 A
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
-  rebasing 8:8877864f1edb "B"
   note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D"
+  rebasing 8:8877864f1edb "B"
   rebasing 10:5ae4c968c6ac "C"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
@@ -740,8 +740,8 @@ Even when the chain include missing node
   $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.stabilization=all
   obsoleted 1 changesets
   $ hg rebase -d 6 -r "4::"
-  rebasing 4:ff2c4d47b71d "C"
   note: not rebasing 7:360bbaa7d3ce "O", it has no successor
+  rebasing 4:ff2c4d47b71d "C"
   rebasing 8:8d47583e023f "P" (tip)
 
 If all the changeset to be rebased are obsolete and present in the destination, we
@@ -908,6 +908,7 @@ Create the changes that we will rebase
   |
   ~
   $ hg rebase -r ".^^ + .^ + ." -d 19
+  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
   rebasing 20:b82fb57ea638 "willconflict second version"
   merging willconflict
   warning: conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
@@ -919,7 +920,6 @@ Create the changes that we will rebase
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing 20:b82fb57ea638 "willconflict second version"
-  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
   rebasing 22:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
@@ -1066,8 +1066,8 @@ Rebase merge where successor of one parent is ancestor of destination
   > EOF
 
   $ hg rebase -d C -b F
-  rebasing 2:b18e25de2cf5 "D" (D)
   note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  rebasing 2:b18e25de2cf5 "D" (D)
   rebasing 5:66f1a38021c9 "F" (F tip)
   warning: rebasing 5:66f1a38021c9 may include unwanted changes from 3:7fb047a69f22
   $ hg log -G
