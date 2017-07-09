@@ -638,7 +638,7 @@ def cleanupnodes(repo, mapping, operation):
             isobs = unfi.obsstore.successors.__contains__
             torev = unfi.changelog.rev
             sortfunc = lambda ns: torev(ns[0])
-            rels = [(unfi[n], (unfi[m] for m in s))
+            rels = [(unfi[n], tuple(unfi[m] for m in s))
                     for n, s in sorted(mapping.items(), key=sortfunc)
                     if s or not isobs(n)]
             obsolete.createmarkers(repo, rels, operation=operation)
