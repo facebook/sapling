@@ -294,7 +294,17 @@ def deletedivergent(repo, deletefrom, bm):
     '''Delete divergent versions of bm on nodes in deletefrom.
 
     Return True if at least one bookmark was deleted, False otherwise.'''
-    deleted = False
+    bms = divergent2delete(repo, deletefrom, bm)
+    marks = repo._bookmarks
+    for b in bms:
+        del marks[b]
+    return bool(bms)
+
+def divergent2delete(repo, deletefrom, bm):
+    """find divergent versions of bm on nodes in deletefrom.
+
+    the list of bookmark to delete."""
+    todelete = []
     marks = repo._bookmarks
     divergent = [b for b in marks if b.split('@', 1)[0] == bm.split('@', 1)[0]]
     for mark in divergent:
@@ -303,9 +313,8 @@ def deletedivergent(repo, deletefrom, bm):
             continue
         if mark and marks[mark] in deletefrom:
             if mark != bm:
-                del marks[mark]
-                deleted = True
-    return deleted
+                todelete.append(mark)
+    return todelete
 
 def headsforactive(repo):
     """Given a repo with an active bookmark, return divergent bookmark nodes.
