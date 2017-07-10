@@ -350,6 +350,7 @@ def update(repo, parents, node):
     if not active:
         return False
 
+    bmchanges = []
     if marks[active] in parents:
         new = repo[node]
         divs = [repo[b] for b in marks
@@ -357,7 +358,7 @@ def update(repo, parents, node):
         anc = repo.changelog.ancestors([new.rev()])
         deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
         if validdest(repo, repo[marks[active]], new):
-            marks[active] = new.node()
+            bmchanges.append((active, new.node()))
             update = True
 
     if deletedivergent(repo, deletefrom, active):
@@ -368,7 +369,7 @@ def update(repo, parents, node):
         try:
             lock = repo.lock()
             tr = repo.transaction('bookmark')
-            marks.recordchange(tr)
+            marks.applychanges(repo, tr, bmchanges)
             tr.close()
         finally:
             lockmod.release(tr, lock)
