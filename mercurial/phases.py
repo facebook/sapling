@@ -283,6 +283,10 @@ class phasecache(object):
         tr.hookargs['phases_moved'] = '1'
 
     def advanceboundary(self, repo, tr, targetphase, nodes):
+        """Set all 'nodes' to phase 'targetphase'
+
+        Nodes with a phase lower than 'targetphase' are not affected.
+        """
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
 
@@ -294,9 +298,12 @@ class phasecache(object):
                      if self.phase(repo, repo[n].rev()) >= phase]
             if not nodes:
                 break # no roots to move anymore
+
             olds = self.phaseroots[phase]
+            affected = repo.revs('%ln::%ln', olds, nodes)
+
             roots = set(ctx.node() for ctx in repo.set(
-                    'roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
+                    'roots((%ln::) - %ld)', olds, affected))
             if olds != roots:
                 self._updateroots(phase, roots, tr)
                 # some roots may need to be declared for lower phases
