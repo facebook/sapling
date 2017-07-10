@@ -718,18 +718,7 @@ def bundle2rebase(op, part):
 
         prefillcaches(op, bundle, bundlerepocache)
 
-        onto = resolveonto(op.repo, params.get('onto', donotrebasemarker))
-
-        if not params['newhead']:
-            if not op.repo.revs('%r and head()', params['onto']):
-                raise error.Abort(_('rebase would create a new head on server'))
-
-        if onto is None:
-            maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))
-            if not maxcommonanc:
-                onto = op.repo[nullid]
-            else:
-                onto = maxcommonanc[0]
+        onto = getontotarget(op, params, bundle)
 
         revs, oldonto = _getrevs(bundle, onto)
 
@@ -885,6 +874,21 @@ def prefillcaches(op, bundle, bundlerepocache):
 
     newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
     bundle.manifestlog._revlog._fulltextcache = newfulltextcache
+
+def getontotarget(op, params, bundle):
+    onto = resolveonto(op.repo, params.get('onto', donotrebasemarker))
+
+    if not params['newhead']:
+        if not op.repo.revs('%r and head()', params['onto']):
+            raise error.Abort(_('rebase would create a new head on server'))
+
+    if onto is None:
+        maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))
+        if not maxcommonanc:
+            onto = op.repo[nullid]
+        else:
+            onto = maxcommonanc[0]
+    return onto
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
