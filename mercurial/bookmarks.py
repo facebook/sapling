@@ -739,11 +739,10 @@ def rename(repo, tr, old, new, force=False, inactive=False):
     if old not in marks:
         raise error.Abort(_("bookmark '%s' does not exist") % old)
     marks.checkconflict(mark, force)
-    marks[mark] = marks[old]
+    changes = [(mark, marks[old]), (old, None)]
+    marks.applychanges(repo, tr, changes)
     if repo._activebookmark == old and not inactive:
         activate(repo, mark)
-    del marks[old]
-    marks.recordchange(tr)
 
 def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
     """add a list of bookmarks
