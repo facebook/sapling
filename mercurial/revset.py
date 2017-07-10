@@ -19,6 +19,7 @@ from . import (
     match as matchmod,
     node,
     obsolete as obsmod,
+    obsutil,
     pathutil,
     phases,
     registrar,
@@ -1825,6 +1826,28 @@ def subrepo(repo, subset, x):
         return False
 
     return subset.filter(matches, condrepr=('<subrepo %r>', pat))
+
+def _mapbynodefunc(repo, s, f):
+    """(repo, smartset, [node] -> [node]) -> smartset
+
+    Helper method to map a smartset to another smartset given a function only
+    talking about nodes. Handles converting between rev numbers and nodes, and
+    filtering.
+    """
+    cl = repo.unfiltered().changelog
+    torev = cl.rev
+    tonode = cl.node
+    nodemap = cl.nodemap
+    result = set(torev(n) for n in f(tonode(r) for r in s) if n in nodemap)
+    return smartset.baseset(result - repo.changelog.filteredrevs)
+
+@predicate('successors(set)', safe=True)
+def successors(repo, subset, x):
+    """All successors for set, including the given set themselves"""
+    s = getset(repo, fullreposet(repo), x)
+    f = lambda nodes: obsutil.allsuccessors(repo.obsstore, nodes)
+    d = _mapbynodefunc(repo, s, f)
+    return subset & d
 
 def _substringmatcher(pattern, casesensitive=True):
     kind, pattern, matcher = util.stringmatcher(pattern,

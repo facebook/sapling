@@ -20,6 +20,7 @@
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > drawdag=$TESTDIR/drawdag.py
   > testrevset=$TESTTMP/testrevset.py
   > EOF
 
@@ -4283,3 +4284,56 @@ Test repo.anyrevs with customized revset overrides
   P=[3]
 
   $ cd ..
+
+Test obsstore related revsets
+
+  $ hg init repo1
+  $ cd repo1
+  $ cat <<EOF >> .hg/hgrc
+  > [experimental]
+  > evolution = createmarkers
+  > EOF
+
+  $ hg debugdrawdag <<'EOS'
+  >        F G
+  >        |/    # split: B -> E, F
+  > B C D  E     # amend: B -> C -> D
+  >  \|/   |     # amend: F -> G
+  >   A    A  Z  # amend: A -> Z
+  > EOS
+
+  $ hg log -r 'successors(Z)' -T '{desc}\n'
+  Z
+
+  $ hg log -r 'successors(F)' -T '{desc}\n'
+  F
+  G
+
+  $ hg tag --remove --local C D E F G
+
+  $ hg log -r 'successors(B)' -T '{desc}\n'
+  B
+  D
+  E
+  G
+
+  $ hg log -r 'successors(B)' -T '{desc}\n' --hidden
+  B
+  C
+  D
+  E
+  F
+  G
+
+  $ hg log -r 'successors(B)-obsolete()' -T '{desc}\n' --hidden
+  D
+  E
+  G
+
+  $ hg log -r 'successors(B+A)-divergent()' -T '{desc}\n'
+  A
+  Z
+  B
+
+  $ hg log -r 'successors(B+A)-divergent()-obsolete()' -T '{desc}\n'
+  Z
