@@ -109,6 +109,16 @@ class bmstore(dict):
         self._clean = False
         return dict.__delitem__(self, key)
 
+    def applychanges(self, repo, tr, changes):
+        """Apply a list of changes to bookmarks
+        """
+        for name, node in changes:
+            if node is None:
+                del self[name]
+            else:
+                self[name] = node
+        self.recordchange(tr)
+
     def recordchange(self, tr):
         """record that bookmarks have been changed in a transaction
 
