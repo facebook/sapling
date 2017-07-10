@@ -61,6 +61,12 @@ default values are 0 and len(changelog) - 1, respectively.
    [treemanifest]
    repackstartrev = 0
    repackendrev = 1000
+
+Setting `treemanifest.sendflat` to False will stop flat manifests from being
+sent as part of changegroups during push. It defaults to True.
+
+   [treemanifest]
+   sendflat = True
 """
 
 from mercurial import (

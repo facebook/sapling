@@ -57,6 +57,24 @@ class shallowcg1packer(changegroup.cg1packer):
         return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
                             units=units)
 
+    def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
+                          mfs, fnodes):
+        sendmanifests = self._repo.ui.configbool('treemanifest', 'sendflat',
+                                                 True)
+        chunks = super(shallowcg1packer, self).generatemanifests(commonrevs,
+                                                                clrevorder,
+                                                                fastpathlinkrev,
+                                                                mfs,
+                                                                fnodes)
+        # If sendmanifests is false, we still need to consume the generator,
+        # since it populates the list of files we need to send.
+        for val in chunks:
+            if sendmanifests:
+                yield val
+
+        if not sendmanifests:
+            yield self.close()
+
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if requirement in self._repo.requirements:
             repo = self._repo
