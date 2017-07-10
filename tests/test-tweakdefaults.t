@@ -484,7 +484,6 @@ and allowance of prune rebases
   > [extensions]
   > strip=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
   $ echo root > root && hg ci -Am root  # rev 0
   adding root

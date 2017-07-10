@@ -416,7 +416,6 @@ Push to svn server should fail
 Scratch pull of pruned commits
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > [experimental]

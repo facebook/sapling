@@ -1,12 +1,15 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
-  > evolution = createmarkers
+  > allowdivergence = True
+  > evolution = createmarkers, allowunstable
+  > [fbamend]
+  > # do not write preamend bookmarks
+  > userestack = True
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"
@@ -67,7 +70,7 @@ Test basic case of a single amend in a small stack.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -107,7 +110,7 @@ Test multiple amends of same commit.
   |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -142,7 +145,7 @@ Test conflict during rebasing.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -173,8 +176,6 @@ Test conflict during rebasing.
   |
   @  6 add b
   |
-  | o  1 add b
-  |/
   o  0 add a
 
 Test finding a stable base commit from within the old stack.
@@ -198,7 +199,7 @@ Test finding a stable base commit from within the old stack.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -235,7 +236,7 @@ Test finding a stable base commit from a new child of the amended commit.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -280,13 +281,13 @@ a commit on top of one of the obsolete intermediate commits.
   |
   | @  6 add e
   | |
-  | o  5 add b
+  | x  5 add b
   |/
   | o  3 add d
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -333,9 +334,9 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   | |
   | | @  3 add d
   | | |
-  +---o  2 add c
+  +---x  2 add c
   | |
-  o |  1 add b
+  x |  1 add b
   |/
   o  0 add a
   $ hg rebase --restack
@@ -379,7 +380,7 @@ below the current commit alone.
   | |
   | | o  4 add e
   | | |
-  | | o  3 add d
+  | | x  3 add d
   | |/
   | o  2 add c
   | |
@@ -490,12 +491,30 @@ since the successor is obsolete.
   $ hg amend
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
+  $ showgraph
+  @  4 add b
+  |
+  | o  2 add c
+  | |
+  | x  1 add b
+  |/
+  o  0 add a
   $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> b
   $ hg amend
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
+  $ showgraph
+  @  6 add b
+  |
+  | o  4 add b
+  |/
+  | o  2 add c
+  | |
+  | x  1 add b
+  |/
+  o  0 add a
   $ hg unamend
   $ hg up -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -515,6 +534,8 @@ since the successor is obsolete.
   |
   @  4 add b
   |
+  | o  1 add b
+  |/
   o  0 add a
 
 Test recursive restacking -- basic case.
@@ -544,7 +565,7 @@ Test recursive restacking -- basic case.
   | |
   | | o  3 add d
   | | |
-  +---o  2 add c
+  +---x  2 add c
   | |
   @ |  1 add b
   |/
@@ -609,7 +630,7 @@ stack is lost upon rebasing lower levels.
   |
   | o  13 add h
   | |
-  | o  12 add g
+  | x  12 add g
   |/
   o  11 add c
   |
@@ -617,13 +638,13 @@ stack is lost upon rebasing lower levels.
   | |
   | | o  7 add f
   | | |
-  | | o  6 add e
+  | | x  6 add e
   | |/
   | o  5 add b
   | |
   | | o  3 add d
   | | |
-  +---o  2 add c
+  +---x  2 add c
   | |
   @ |  1 add b
   |/

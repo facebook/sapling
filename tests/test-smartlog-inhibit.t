@@ -1,9 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > rebase=
   > smartlog=$TESTDIR/../hgext3rd/smartlog.py
   > [experimental]
   > evolution = createmarkers

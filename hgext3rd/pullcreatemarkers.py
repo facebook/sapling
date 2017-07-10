@@ -47,55 +47,17 @@ def _pull(orig, ui, repo, *args, **opts):
     # Try to find match with the drafts
     tocreate = []
     unfiltered = repo.unfiltered()
-    for rev in unfiltered.revs("draft() - hidden()"):
+    for rev in unfiltered.revs("draft() - obsolete()"):
         n = unfiltered[rev]
         diff = getdiff(n)
-        if diff in landeddiffs:
+        if diff in landeddiffs and landeddiffs[diff].rev() != n.rev():
             tocreate.append((n, (landeddiffs[diff],)))
 
     if not tocreate:
         return r
 
-    inhibit, deinhibitnodes = _deinhibitancestors(unfiltered, tocreate)
-
     with unfiltered.lock():
         with unfiltered.transaction('pullcreatemarkers'):
             obsolete.createmarkers(unfiltered, tocreate)
-            if deinhibitnodes:
-                inhibit._deinhibitmarkers(unfiltered, deinhibitnodes)
 
     return r
-
-def _deinhibitancestors(repo, markers):
-    """Compute the set of commits that already have obsolescence markers
-    which were possibly inhibited, and should be deinhibited because of this
-    new pull operation.
-
-    Returns a tuple of (inhibit module, node set).
-    Returns (None, None) if the inhibit extension is not enabled."""
-    try:
-        inhibit = extensions.find('inhibit')
-    except KeyError:
-        return None, None
-
-    if not inhibit._inhibitenabled(repo):
-        return None, None
-
-    # Commits for which we should deinhibit obsolescence markers
-    deinhibitset = set()
-    # Commits whose parents we should process
-    toprocess = set([ctx for ctx, successor in markers])
-    # Commits that are already in toprocess or have already been processed
-    seen = toprocess.copy()
-    # Commits that we deinhibit obsolescence markers for
-    while toprocess:
-        ctx = toprocess.pop()
-        for p in ctx.parents():
-            if p in seen:
-                continue
-            seen.add(p)
-            if p.obsolete():
-                deinhibitset.add(p.node())
-                toprocess.add(p)
-
-    return inhibit, deinhibitset

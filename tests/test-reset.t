@@ -180,7 +180,7 @@ Reset touches commits to revive, when inhibit is not enabled it creates
 a new hash for them (not working for now - blocked by hash-preserving obsstore)
 
   $ hg reset -C 7f3a02b3e388
-  abort: unable to revive '%s' - feature not implemented yet
+  abort: cannot revive 7f3a02b3e388 - inhibit extension is not enabled
   [255]
   $ hg log -r 7f3a02b3e388
   abort: hidden revision '7f3a02b3e388'!
@@ -195,12 +195,10 @@ Reset + Inhibit tests, with inhibit reset revives the same commit
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > rebase=
   > EOF
 
   $ hg reset -C 7f3a02b3e388
-  Warning: accessing hidden changesets 7f3a02b3e388 for write operation
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  7f3a02b3e388 foo
   |

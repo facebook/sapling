@@ -15,7 +15,6 @@ Test that hg pull creates obsolescence markers for landed diffs
   > rebaseskipobsolete=True
   > [extensions]
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > strip=
   > rebase=

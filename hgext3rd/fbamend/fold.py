@@ -131,8 +131,6 @@ def fold(ui, repo, *revs, **opts):
                 commitopts['message'] = "\n".join(msgs)
                 commitopts['edit'] = True
 
-            if common.inhibitmod:
-                common.inhibitmod.deinhibittransaction = True
             newid, unusedvariable = common.rewrite(repo, root, allctx, head,
                                                    [root.p1().node(),
                                                     root.p2().node()],
@@ -148,19 +146,13 @@ def fold(ui, repo, *revs, **opts):
 
             if torebase:
                 folded = repo.revs('allsuccessors(%ld)', revs).last()
-                common.restackonce(ui, repo, folded, inhibithack=True)
-
-            if common.inhibitmod:
-                common.inhibitmod.deinhibittransaction = False
+                common.restackonce(ui, repo, folded)
 
             tr.close()
         finally:
             tr.release()
     finally:
         lockmod.release(lock, wlock)
-
-    # clean up possibly incorrect rebasestate
-    repo.vfs.tryunlink('rebasestate')
 
 def _foldcheck(repo, revs):
     roots = repo.revs('roots(%ld)', revs)

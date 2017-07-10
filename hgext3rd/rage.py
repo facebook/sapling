@@ -21,7 +21,6 @@ from mercurial import (
 from mercurial import pycompat, scmutil
 from hgext import blackbox
 from hgext3rd import (
-    debuginhibit,
     smartlog,
     sparse,
 )
@@ -219,8 +218,6 @@ def rage(ui, repo, *pats, **opts):
                           '--getinfo', check=False))),
         ('hg debugobsolete <smartlog>',
             _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
-        ('hg debuginhibit',
-            _failsafe(lambda: hgcmd(debuginhibit.debuginhibit))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 

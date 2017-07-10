@@ -21,20 +21,6 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import nullrev
 
-inhibitmod = None
-
-def detectinhibit():
-    global inhibitmod
-    try:
-        inhibitmod = extensions.find('inhibit')
-    except KeyError:
-        pass
-
-def deinhibit(repo, contexts):
-    """Remove any inhibit markers on the given change contexts."""
-    if inhibitmod:
-        inhibitmod._deinhibitmarkers(repo, (ctx.node() for ctx in contexts))
-
 def getchildrelationships(repo, revs):
     """Build a defaultdict of child relationships between all descendants of
        revs. This information will prevent us from having to repeatedly
@@ -48,20 +34,18 @@ def getchildrelationships(repo, revs):
                 children[parent].add(rev)
     return children
 
-def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False,
-                inhibithack=False):
+def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     """Rebase all descendants of precursors of rev onto rev, thereby
        stabilzing any non-obsolete descendants of those precursors.
        Takes in an optional dict of options for the rebase command.
        If childrenonly is True, only rebases direct children of precursors
        of rev rather than all descendants of those precursors.
-
-       inhibithack: temporarily, make deinhibit override inhibit transaction
-       handling. useful to make things obsoleted inside a transaction.
     """
     # Get visible descendants of precusors of rev.
+    # Excluding obsoleted changesets avoids divergence issues.
     allprecursors = repo.revs('allprecursors(%d)', rev)
-    fmt = '%s(%%ld) - %%ld' % ('children' if childrenonly else 'descendants')
+    fmt = ('%s(%%ld) - %%ld - obsolete()'
+           % ('children' if childrenonly else 'descendants'))
     descendants = repo.revs(fmt, allprecursors, allprecursors)
 
     # Nothing to do if there are no descendants.
@@ -90,38 +74,7 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False,
 
     # Perform rebase.
     with repo.ui.configoverride(overrides, 'restack'):
-        # hack: make rebase obsolete commits
-        if inhibithack and inhibitmod:
-            inhibitmod.deinhibittransaction = True
         rebase.rebase(ui, repo, **rebaseopts)
-
-    # Remove any preamend bookmarks on precursors.
-    _clearpreamend(repo, allprecursors)
-
-    # Deinhibit the precursors so that they will be correctly shown as
-    # obsolete. Also deinhibit their ancestors to handle the situation
-    # where restackonce() is being used across several transactions
-    # (such as calls to `hg next --rebase`), because each transaction
-    # close will result in the ancestors being re-inhibited if they have
-    # unrebased (and therefore unstable) descendants. As such, the final
-    # call to restackonce() at the top of the stack should deinhibit the
-    # entire stack.
-    ancestors = repo.set('%ld %% %d', allprecursors, rev)
-    deinhibit(repo, ancestors)
-    if inhibithack and inhibitmod:
-        inhibitmod.deinhibittransaction = False
-
-def _clearpreamend(repo, revs):
-    """Remove any preamend bookmarks on the given revisions."""
-    # Use unfiltered repo in case the given revs are hidden. This should
-    # ordinarily never happen due to the inhibit extension but it's better
-    # to be resilient to this case.
-    repo = repo.unfiltered()
-    cl = repo.changelog
-    for rev in revs:
-        for bookmark in repo.nodebookmarks(cl.node(rev)):
-            if bookmark.endswith('.preamend'):
-                repo._bookmarks.pop(bookmark, None)
 
 def latest(repo, rev):
     """Find the "latest version" of the given revision -- either the

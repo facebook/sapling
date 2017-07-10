@@ -1,6 +1,5 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > histedit=
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py

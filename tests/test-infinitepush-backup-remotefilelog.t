@@ -39,7 +39,7 @@ Pull changes client-side
   pulling from ssh://user@dummy/repo
   streaming all changes
   5 files to transfer, 1.06 KB of data
-  transferred 1.06 KB in [\d.]+ seconds \([\d.]+ KB/sec\) (re)
+  transferred 1.06 KB in [\d.]+ seconds \([\d.]+ .*\) (re)
   searching for changes
   no changes found
 
@@ -95,7 +95,7 @@ Now try to restore it from different client. Make sure bookmark
   $ hgcloneshallow ssh://user@dummy/repo secondclient
   streaming all changes
   2 files to transfer, 268 bytes of data
-  transferred 268 bytes in [\d.]+ seconds \([\d.]+ KB/sec\) (re)
+  transferred 268 bytes in [\d.]+ seconds \([\d.]+ .*\) (re)
   searching for changes
   no changes found
   updating to branch default

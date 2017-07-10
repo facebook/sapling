@@ -60,17 +60,6 @@ def restack(ui, repo, rebaseopts=None):
                 if successor is not None:
                     commands.update(ui, repo, rev=successor)
 
-                # Clear cached 'visible' set so that the post-transaction
-                # hook in the inhibit extension will see a correct view of
-                # the repository. The cached contents of the visible set are
-                # after a rebase operation show the old stack as visible,
-                # which will cause the inhibit extension to always inhibit
-                # the stack even if it is entirely obsolete.
-                repo.invalidatevolatilesets()
-            # The rebasestate file is incorrectly left behind, so cleanup.
-            # See the earlier comment on util.unlinkpath for more details.
-            repo.vfs.tryunlink("rebasestate")
-
 def _findrestacktargets(repo, base):
     """Starting from the given base revision, do a BFS forwards through
        history, looking for changesets with unstable descendants on their

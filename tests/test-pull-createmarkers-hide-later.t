@@ -15,7 +15,6 @@ Test that hg pull creates obsolescence markers for landed diffs
   > rebaseskipobsolete=True
   > [extensions]
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > strip=
   > rebase=
@@ -122,10 +121,10 @@ hide them since there is a non-hidden successor.
   | o  4 "add d
   | |
   | |  Differential Revision: https://phabricator.fb.com/D131"
-  | o  3 "add c
+  | x  3 "add c
   | |
   | |  Differential Revision: https://phabricator.fb.com/D124"
-  | o  2 "add b
+  | x  2 "add b
   |/
   |    Differential Revision: https://phabricator.fb.com/D123"
   @  1 "add secondcommit"

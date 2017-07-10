@@ -1,7 +1,6 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
@@ -203,25 +202,6 @@ Test --no-rebase flag.
   | x  7 r4
   | |
   | x  6 r1
-  |/
-  o  0 r0
-
-Test case in which inhibit fails to inhibit the working copy parent, but
-does inhibit its descendants in the old stack. The fold command should
-manually inhibit any visible obsolete commits in the old stack.
-  $ hg up 7
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold --from 8
-  2 changesets folded
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ showgraph
-  @  10 r4
-  |
-  | o  9 r1
-  | |
-  +---o  7 r4
-  | |
-  o |  6 r1
   |/
   o  0 r0
 

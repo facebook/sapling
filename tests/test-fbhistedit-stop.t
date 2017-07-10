@@ -11,7 +11,6 @@ Setup
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
   > [experimental]
   > evolution = createmarkers

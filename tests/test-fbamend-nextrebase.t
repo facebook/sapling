@@ -1,10 +1,11 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
+  > [fbamend]
+  > userestack=True
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
@@ -51,9 +52,9 @@ Rebasing single changeset.
   |
   | o  3 r3
   | |
-  | o  2 r2
+  | x  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -109,11 +110,11 @@ Rebasing a stack one changeset at a time.
   |
   | o  4 r4
   | |
-  | o  3 r3
+  | x  3 r3
   | |
-  | o  2 r2
+  | x  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -158,11 +159,11 @@ Rebasing a stack two changesets at a time.
   | |
   | o  4 r4
   | |
-  | o  3 r3
+  | x  3 r3
   | |
-  | o  2 r2
+  | x  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -204,7 +205,7 @@ Rebasing after multiple amends.
   | |
   | o  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -245,7 +246,7 @@ Rebasing from below the amended changeset with the --newest flag.
   | |
   | o  3 r3
   | |
-  | o  2 r2
+  | x  2 r2
   |/
   o  1 r1
   |
@@ -297,7 +298,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   | |
   | o  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -324,7 +325,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   | |
   | o  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
   
@@ -349,7 +350,7 @@ Test a situation where there is a conflict.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   
@@ -366,7 +367,7 @@ Test a situation where there is a conflict.
   | |
   | @  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   
@@ -390,9 +391,9 @@ Now resolve the conflict and resume the rebase.
   |
   | o  3 add d
   | |
-  | o  2 add c
+  | x  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
   

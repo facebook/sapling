@@ -33,7 +33,7 @@ def unamend(ui, repo, **opts):
     `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
     try:
-        inhibitmod = extensions.find('inhibit')
+        extensions.find('inhibit')
     except KeyError:
         hint = _("please add inhibit to the list of enabled extensions")
         e = _("unamend requires inhibit extension to be enabled")
@@ -60,8 +60,6 @@ def unamend(ui, repo, **opts):
         with repo.lock():
             repobookmarks = repo._bookmarks
             ctxbookmarks = curctx.bookmarks()
-            # we want to inhibit markers that mark precnode obsolete
-            inhibitmod._inhibitmarkers(unfi, [precnode])
             changedfiles = []
             wctx = repo[None]
             wm = wctx.manifest()
@@ -83,7 +81,5 @@ def unamend(ui, repo, **opts):
             for book in ctxbookmarks:
                 repobookmarks[book] = precnode
             repobookmarks.recordchange(tr)
+            obsolete.createmarkers(repo, [(curctx, (precctx,))])
             tr.close()
-            # we want to mark the changeset from which we were unamending
-            # as obsolete
-            obsolete.createmarkers(repo, [(curctx, ())])

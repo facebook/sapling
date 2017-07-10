@@ -143,17 +143,6 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 if not noactivate and not movebookmark:
                     _activate(ui, repo, target)
 
-                # Clear cached 'visible' set so that the post-transaction hook
-                # set by the inhibit extension will see a correct view of
-                # the repository. The cached contents of the visible set are
-                # after a rebase operation show the old stack as visible,
-                # which will cause the inhibit extension to always inhibit
-                # the stack even if it is entirely obsolete and hidden.
-                repo.invalidatevolatilesets()
-            # The rebasestate file is incorrectly left behind, so cleanup.
-            # See the earlier comment on util.unlinkpath for more details.
-            repo.vfs.tryunlink('rebasestate')
-
 def _findtarget(ui, repo, n, opts, reverse):
     """Find the appropriate target changeset for `hg previous` and
        `hg next` based on the provided options. May rebase the traversed

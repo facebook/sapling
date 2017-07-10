@@ -71,16 +71,22 @@ def _revive(repo, rev):
     """Brings the given rev back into the repository. Finding it in backup
     bundles if necessary.
     """
-    if _isahash(rev):
-        # If it appears to be a hash, just read it directly.
-        try:
-            rev = scmutil.revsingle(repo, rev).node()
-            return repo[rev]
-        except error.FilteredRepoLookupError:
-            return _touch(repo, repo.unfiltered()[rev])
-        except error.RepoLookupError:
-            # It could either be a revset or a stripped commit.
-            pass
+    unfi = repo.unfiltered()
+    try:
+        ctx = unfi[rev]
+    except error.RepoLookupError:
+        # It could either be a revset or a stripped commit.
+        pass
+    else:
+        if ctx.obsolete():
+            try:
+                inhibit = extensions.find('inhibit')
+            except KeyError:
+                raise error.Abort(_('cannot revive %s - inhibit extension '
+                                    'is not enabled') % ctx)
+            else:
+                torevive = unfi.set('::%d & obsolete()', ctx.rev())
+                inhibit.revive(torevive, operation='reset')
 
     try:
         revs = scmutil.revrange(repo, [rev])
@@ -92,12 +98,6 @@ def _revive(repo, rev):
         revs = []
 
     return _pullbundle(repo, rev)
-
-def _touch(repo, rev):
-    """Touch the given rev and any of its ancestors to bring it back into the
-    repository.
-    """
-    raise error.Abort("unable to revive '%s' - feature not implemented yet")
 
 def _pullbundle(repo, rev):
     """Find the given rev in a backup bundle and pull it back into the

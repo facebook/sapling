@@ -591,7 +591,6 @@ Make sure that unamend works as expected with inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > EOF
   $ hg unamend
 

@@ -53,7 +53,6 @@ from mercurial import (
     phases,
     registrar,
     repair,
-    util,
 )
 from mercurial.node import hex
 from mercurial import lock as lockmod
@@ -94,7 +93,6 @@ amendopts = [
 
 def uisetup(ui):
     prune.uisetup(ui)
-    common.detectinhibit()
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
@@ -317,12 +315,6 @@ def fixupamend(ui, repo):
                 except error.InterventionRequired:
                     tr.close()
                     raise
-            # There's a subtly to rebase transaction close where the rebasestate
-            # file will be written to disk, even if it had already been unlinked
-            # by the rebase logic (because the file generator was already on the
-            # transaction). Until we fix it in core, let's manually unlink the
-            # rebasestate so the rebase isn't left pending.
-            util.unlinkpath(repo.vfs.join("rebasestate"), ignoremissing=True)
             return
 
         preamendname = _preamendname(repo, current.node())
@@ -358,9 +350,6 @@ def fixupamend(ui, repo):
         repo._bookmarks.recordchange(tr)
 
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            # clean up the original node if inhibit kept it alive
-            if not old.obsolete():
-                obsolete.createmarkers(repo, [(old,())])
             tr.close()
         else:
             tr.close()
@@ -402,24 +391,6 @@ def wraprebase(orig, ui, repo, **opts):
             raise error.Abort(_("cannot use both --hidden and --restack"))
 
         return restack.restack(ui, repo, opts)
-
-    # We need to create a transaction to ensure that the inhibit extension's
-    # post-transaction hook is called after the rebase is finished. This hook
-    # is responsible for inhibiting visible obsolete (suspended) changesets,
-    # which may be created if the rebased commits have descendants that were
-    # not rebased. To be less invasive, create a short transaction after the
-    # rebase call instead of wrapping the call itself in a transaction.
-    with repo.wlock():
-        with repo.lock():
-            ret = orig(ui, repo, **opts)
-            with repo.transaction('rebase'):
-                # The rebase command will cause the rebased commits to still be
-                # cached as 'visible', even if the entire stack has been
-                # rebased and everything is obsolete. We need to manaully clear
-                # the cached values to that the post-transaction callback will
-                # work correctly.
-                repo.invalidatevolatilesets()
-            return ret
 
     return orig(ui, repo, **opts)
 

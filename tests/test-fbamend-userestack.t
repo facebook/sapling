@@ -1,7 +1,6 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
@@ -50,7 +49,7 @@ Test hg amend --fixup.
   | |
   | o  2 add c
   | |
-  | o  1 add b
+  | x  1 add b
   |/
   o  0 add a
 

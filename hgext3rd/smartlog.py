@@ -161,8 +161,6 @@ def uisetup(ui):
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
 
-    extensions.wrapfunction(templatekw, 'showgraphnode', showgraphnode)
-
 templatekeyword = registrar.templatekeyword()
 
 @templatekeyword('singlepublicsuccessor')
@@ -211,16 +209,6 @@ def histeditsuccessors(repo, ctx, **args):
     """
     asnodes = list(modifysuccessors(ctx, 'histedit'))
     return templatekw.showlist('histeditsuccessor', asnodes, args)
-
-def showgraphnode(orig, repo, ctx, **args):
-    """Show obsolete nodes as 'x', even when inhibited."""
-    char = orig(repo, ctx, **args)
-    if char != 'o' or ctx.node() == '...':
-        return char
-    try:
-        return 'x' if repo.revs('allsuccessors(%d)', ctx.rev()) else char
-    except error.UnknownIdentifier:
-        return char
 
 def successormarkers(ctx):
     for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):

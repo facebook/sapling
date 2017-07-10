@@ -660,7 +660,7 @@ def _pull(orig, ui, repo, source="default", **opts):
                 repo[rev]
             except error.FilteredRepoLookupError:
                 node = unfi[rev].node()
-                inhibitmod._inhibitmarkers(repo.unfiltered(), [node])
+                inhibitmod.revive([repo.unfiltered()[node]])
             except error.RepoLookupError:
                 pass
 

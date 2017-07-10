@@ -115,10 +115,7 @@ def split(ui, repo, *revs, **opts):
 
             if torebase:
                 top = repo.revs('allsuccessors(%d)', rev).last()
-                common.restackonce(ui, repo, top, inhibithack=True)
+                common.restackonce(ui, repo, top)
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)
-
-    # clean up possibly incorrect rebasestate
-    repo.vfs.tryunlink('rebasestate')

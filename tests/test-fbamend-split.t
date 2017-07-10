@@ -1,7 +1,6 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
@@ -230,7 +229,7 @@ Split using revset.
   
   o  10 add d1 and d2
   |
-  o  0 add a1 and a2
+  x  0 add a1 and a2
 
 Test that command aborts when given multiple commits.
   $ hg split 11 12
@@ -267,7 +266,7 @@ Test --no-rebase flag.
   
   o  10 add d1 and d2
   |
-  o  0 add a1 and a2
+  x  0 add a1 and a2
   $ hg split --no-rebase << EOF
   > y
   > y
@@ -305,7 +304,7 @@ Test --no-rebase flag.
   | |
   | o  25 add c1 and c2
   | |
-  | o  24 add e1 and e2
+  | x  24 add e1 and e2
   |/
   o  19 add b1 and b2
   |
@@ -317,7 +316,7 @@ Test --no-rebase flag.
   
   o  10 add d1 and d2
   |
-  o  0 add a1 and a2
+  x  0 add a1 and a2
 
 Test that bookmarks are correctly moved.
   $ reset

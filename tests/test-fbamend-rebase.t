@@ -1,10 +1,7 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > debuginhibit=$TESTDIR/../hgext3rd/debuginhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
   > evolution = createmarkers, allowunstable
@@ -24,13 +21,9 @@ Test that rebased commits that would cause instability are inhibited.
   | o  1 r1
   |/
   o  0 r0
-  $ hg rebase -r 1 -d 3 --config "debuginhibit.printnodes=true"
+  $ hg rebase -r 1 -d 3
   rebasing 1:* "r1" (glob)
   merging mf
-  Inhibiting: ['*'] (glob)
-  Deinhibiting: ['*'] (glob)
-  Deinhibiting: []
-  Inhibiting: ['*'] (glob)
   $ showgraph
   o  4 r1
   |
@@ -38,8 +31,6 @@ Test that rebased commits that would cause instability are inhibited.
   |
   | o  2 r2
   | |
-  | o  1 r1
+  | x  1 r1
   |/
   o  0 r0
-Make sure there are no unstable commits.
-  $ hg log -r 'unstable()'
