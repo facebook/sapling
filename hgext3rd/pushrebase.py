@@ -691,9 +691,6 @@ def bundle2rebase(op, part):
 
     bundlefile = None
     bundle = None
-    clientobsmarkerversions = [
-        int(v) for v in params.get('obsmarkerversions', '').split('\0') if v]
-    markers = []
     markerdate = util.makedate()
 
     try: # guards bundlefile
@@ -707,6 +704,8 @@ def bundle2rebase(op, part):
 
         bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
+        # Opening the transaction takes the lock, so do it after prepushrebase
+        # and after we've fetched all the cache information we'll need.
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
 
@@ -733,6 +732,7 @@ def bundle2rebase(op, part):
             op.repo.manifestlog._revlog._cache = preontocache
             onto.manifest()
 
+        # Perform the rebase + commit to the main repo
         added, replacements = runrebase(op, revs, oldonto, onto)
 
         markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
@@ -746,12 +746,16 @@ def bundle2rebase(op, part):
         if bundle:
             bundle.close()
 
+    # Move public phase forward
     publishing = op.repo.ui.configbool('phases', 'publish', True)
     if publishing:
         phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
 
     addfinalhooks(op, tr, hookargs, added)
 
+    # Send new commits back to the client
+    clientobsmarkerversions = [
+        int(v) for v in params.get('obsmarkerversions', '').split('\0') if v]
     _addpushbackparts(op, replacements, markers, markerdate,
                       clientobsmarkerversions)
 
