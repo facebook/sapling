@@ -331,10 +331,14 @@ class phasecache(object):
                 delroots.extend(olds - roots)
         # declare deleted root in the target phase
         if targetphase != 0:
-            self.retractboundary(repo, tr, targetphase, delroots)
+            self._retractboundary(repo, tr, targetphase, delroots)
         repo.invalidatevolatilesets()
 
     def retractboundary(self, repo, tr, targetphase, nodes):
+        self._retractboundary(repo, tr, targetphase, nodes)
+        repo.invalidatevolatilesets()
+
+    def _retractboundary(self, repo, tr, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
 
@@ -343,6 +347,7 @@ class phasecache(object):
         newroots = [n for n in nodes
                     if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
+
             if nullid in newroots:
                 raise error.Abort(_('cannot change null revision phase'))
             currentroots = currentroots.copy()
@@ -360,7 +365,6 @@ class phasecache(object):
             finalroots.update(ctx.node() for ctx in updatedroots)
 
             self._updateroots(targetphase, finalroots, tr)
-        repo.invalidatevolatilesets()
 
     def filterunknown(self, repo):
         """remove unknown nodes from the phase boundary
