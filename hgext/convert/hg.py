@@ -425,9 +425,9 @@ class mercurial_sink(common.converter_sink):
             tr = self.repo.transaction('bookmark')
             self.ui.status(_("updating bookmarks\n"))
             destmarks = self.repo._bookmarks
-            for bookmark in updatedbookmark:
-                destmarks[bookmark] = nodemod.bin(updatedbookmark[bookmark])
-            destmarks.recordchange(tr)
+            changes = [(bookmark, nodemod.bin(updatedbookmark[bookmark]))
+                       for bookmark in updatedbookmark]
+            destmarks.applychanges(self.repo, tr, changes)
             tr.close()
         finally:
             lockmod.release(lock, wlock, tr)
