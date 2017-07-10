@@ -70,18 +70,28 @@ def reposetup(ui, repo):
     if repo.local():
         repo.journal = journalstorage(repo)
 
+        dirstate, cached = localrepo.isfilecached(repo, 'dirstate')
+        if cached:
+            # already instantiated dirstate isn't yet marked as
+            # "journal"-ing, even though repo.dirstate() was already
+            # wrapped by own wrapdirstate()
+            _setupdirstate(repo, dirstate)
+
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
     """Track the command line options for recording in the journal"""
     journalstorage.recordcommand(*fullargs)
     return orig(lui, repo, cmd, fullargs, *args)
+
+def _setupdirstate(repo, dirstate):
+    dirstate.journalstorage = repo.journal
+    dirstate.addparentchangecallback('journal', recorddirstateparents)
 
 # hooks to record dirstate changes
 def wrapdirstate(orig, repo):
     """Make journal storage available to the dirstate object"""
     dirstate = orig(repo)
     if util.safehasattr(repo, 'journal'):
-        dirstate.journalstorage = repo.journal
-        dirstate.addparentchangecallback('journal', recorddirstateparents)
+        _setupdirstate(repo, dirstate)
     return dirstate
 
 def recorddirstateparents(dirstate, old, new):
