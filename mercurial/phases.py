@@ -301,9 +301,9 @@ class phasecache(object):
                 self._updateroots(phase, roots, tr)
                 # some roots may need to be declared for lower phases
                 delroots.extend(olds - roots)
-            # declare deleted root in the target phase
-            if targetphase != 0:
-                self.retractboundary(repo, tr, targetphase, delroots)
+        # declare deleted root in the target phase
+        if targetphase != 0:
+            self.retractboundary(repo, tr, targetphase, delroots)
         repo.invalidatevolatilesets()
 
     def retractboundary(self, repo, tr, targetphase, nodes):
