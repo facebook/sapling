@@ -715,13 +715,14 @@ def delete(repo, tr, names):
     Raises an abort error if mark does not exist.
     """
     marks = repo._bookmarks
+    changes = []
     for mark in names:
         if mark not in marks:
             raise error.Abort(_("bookmark '%s' does not exist") % mark)
         if mark == repo._activebookmark:
             deactivate(repo)
-        del marks[mark]
-    marks.recordchange(tr)
+        changes.append((mark, None))
+    marks.applychanges(repo, tr, changes)
 
 def rename(repo, tr, old, new, force=False, inactive=False):
     """rename a bookmark from old to new
