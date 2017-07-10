@@ -345,8 +345,8 @@ class mercurial_sink(common.converter_sink):
                 if commit.rev != node:
                     ctx = self.repo[node]
                     if ctx.phase() < phases.draft:
-                        phases.retractboundary(self.repo, tr, phases.draft,
-                                               [ctx.node()])
+                        phases.registernew(self.repo, tr, phases.draft,
+                                           [ctx.node()])
 
             text = "(octopus merge fixup)\n"
             p2 = node
