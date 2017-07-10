@@ -44,8 +44,6 @@ from . import (
 
 parsers = policy.importmod(r'parsers')
 
-_pack = struct.pack
-_unpack = struct.unpack
 # Aliased for performance.
 _zlibdecompress = zlib.decompress
 
@@ -171,11 +169,13 @@ def hash(text, p1, p2):
 # 20 bytes: parent 1 nodeid
 # 20 bytes: parent 2 nodeid
 # 20 bytes: nodeid
-indexformatv0 = ">4l20s20s20s"
+indexformatv0 = struct.Struct(">4l20s20s20s")
+indexformatv0_pack = indexformatv0.pack
+indexformatv0_unpack = indexformatv0.unpack
 
 class revlogoldio(object):
     def __init__(self):
-        self.size = struct.calcsize(indexformatv0)
+        self.size = indexformatv0.size
 
     def parseindex(self, data, inline):
         s = self.size
@@ -186,7 +186,7 @@ class revlogoldio(object):
         while off + s <= l:
             cur = data[off:off + s]
             off += s
-            e = _unpack(indexformatv0, cur)
+            e = indexformatv0_unpack(cur)
             # transform to revlogv1 format
             e2 = (offset_type(e[0], 0), e[1], -1, e[2], e[3],
                   nodemap.get(e[4], nullrev), nodemap.get(e[5], nullrev), e[6])
@@ -204,7 +204,7 @@ class revlogoldio(object):
             raise RevlogError(_('index entry flags need revlog version 1'))
         e2 = (getoffset(entry[0]), entry[1], entry[3], entry[4],
               node(entry[5]), node(entry[6]), entry[7])
-        return _pack(indexformatv0, *e2)
+        return indexformatv0_pack(*e2)
 
 # index ng:
 #  6 bytes: offset
@@ -216,8 +216,11 @@ class revlogoldio(object):
 #  4 bytes: parent 1 rev
 #  4 bytes: parent 2 rev
 # 32 bytes: nodeid
-indexformatng = ">Qiiiiii20s12x"
-versionformat = ">I"
+indexformatng = struct.Struct(">Qiiiiii20s12x")
+indexformatng_pack = indexformatng.pack
+versionformat = struct.Struct(">I")
+versionformat_pack = versionformat.pack
+versionformat_unpack = versionformat.unpack
 
 # corresponds to uncompressed length of indexformatng (2 gigs, 4-byte
 # signed integer)
@@ -225,7 +228,7 @@ _maxentrysize = 0x7fffffff
 
 class revlogio(object):
     def __init__(self):
-        self.size = struct.calcsize(indexformatng)
+        self.size = indexformatng.size
 
     def parseindex(self, data, inline):
         # call the C implementation to parse the index data
@@ -233,9 +236,9 @@ class revlogio(object):
         return index, getattr(index, 'nodemap', None), cache
 
     def packentry(self, entry, node, version, rev):
-        p = _pack(indexformatng, *entry)
+        p = indexformatng_pack(*entry)
         if rev == 0:
-            p = _pack(versionformat, version) + p[4:]
+            p = versionformat_pack(version) + p[4:]
         return p
 
 class revlog(object):
@@ -335,7 +338,7 @@ class revlog(object):
             indexdata = f.read()
             f.close()
             if len(indexdata) > 0:
-                v = struct.unpack(versionformat, indexdata[:4])[0]
+                v = versionformat_unpack(indexdata[:4])[0]
                 self._initempty = False
         except IOError as inst:
             if inst.errno != errno.ENOENT:
