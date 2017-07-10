@@ -729,18 +729,7 @@ def bundle2rebase(op, part):
         # Seed the mapping with oldonto->onto
         mapping[oldonto.node()] = onto.node()
 
-        # Notify the user of what is being pushed
-        plural = 's' if len(revs) > 1 else ''
-        op.repo.ui.warn(_("pushing %s changset%s:\n") % (len(revs), plural))
-        maxoutput = 10
-        for i in range(0, min(len(revs), maxoutput)):
-            firstline = bundle[revs[i]].description().split('\n')[0][:50]
-            op.repo.ui.warn(("    %s  %s\n") % (revs[i], firstline))
-
-        if len(revs) > maxoutput + 1:
-            op.repo.ui.warn(("    ...\n"))
-            firstline = bundle[revs[-1]].description().split('\n')[0][:50]
-            op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
+        printpushmessage(op, revs, bundle)
 
         # Prepopulate the revlog _cache with the original onto's fulltext. This
         # means reading the new onto's manifest will likely have a much shorter
@@ -889,6 +878,20 @@ def getontotarget(op, params, bundle):
         else:
             onto = maxcommonanc[0]
     return onto
+
+def printpushmessage(op, revs, bundle):
+    # Notify the user of what is being pushed
+    plural = 's' if len(revs) > 1 else ''
+    op.repo.ui.warn(_("pushing %s changset%s:\n") % (len(revs), plural))
+    maxoutput = 10
+    for i in range(0, min(len(revs), maxoutput)):
+        firstline = bundle[revs[i]].description().split('\n')[0][:50]
+        op.repo.ui.warn(("    %s  %s\n") % (revs[i], firstline))
+
+    if len(revs) > maxoutput + 1:
+        op.repo.ui.warn(("    ...\n"))
+        firstline = bundle[revs[-1]].description().split('\n')[0][:50]
+        op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
