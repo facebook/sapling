@@ -1952,7 +1952,7 @@ class localrepository(object):
                 # be compliant anyway
                 #
                 # if minimal phase was 0 we don't need to retract anything
-                phases.retractboundary(self, tr, targetphase, [n])
+                phases.registernew(self, tr, targetphase, [n])
             tr.close()
             return n
         finally:
