@@ -356,6 +356,7 @@ class cg1unpacker(object):
                 repo.hook('pretxnchangegroup', throw=True, **hookargs)
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
+            phaseall = None
             if srctype in ('push', 'serve'):
                 # Old servers can not push the boundary themselves.
                 # New servers won't push the boundary if changeset already
@@ -364,16 +365,19 @@ class cg1unpacker(object):
                 # We should not use added here but the list of all change in
                 # the bundle
                 if repo.publishing():
-                    phases.advanceboundary(repo, tr, phases.public, cgnodes)
+                    targetphase = phaseall = phases.public
                 else:
+                    # closer target phase computation
+
                     # Those changesets have been pushed from the
                     # outside, their phases are going to be pushed
                     # alongside. Therefor `targetphase` is
                     # ignored.
-                    phases.advanceboundary(repo, tr, phases.draft, cgnodes)
-                    phases.retractboundary(repo, tr, phases.draft, added)
-            else:
-                phases.retractboundary(repo, tr, targetphase, added)
+                    targetphase = phaseall = phases.draft
+            if added:
+                phases.registernew(repo, tr, targetphase, added)
+            if phaseall is not None:
+                phases.advanceboundary(repo, tr, phaseall, cgnodes)
 
             if changesets > 0:
 
