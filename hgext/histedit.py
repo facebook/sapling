@@ -1548,9 +1548,10 @@ def movetopmostbookmarks(repo, oldtopmost, newtopmost):
     if oldbmarks:
         with repo.lock(), repo.transaction('histedit') as tr:
             marks = repo._bookmarks
+            changes = []
             for name in oldbmarks:
-                marks[name] = newtopmost
-            marks.recordchange(tr)
+                changes.append((name, newtopmost))
+            marks.applychanges(repo, tr, changes)
 
 def cleanupnode(ui, repo, nodes):
     """strip a group of nodes from the repository
