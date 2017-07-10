@@ -354,7 +354,6 @@ def calculateupdate(ui, repo, checkout):
 def update(repo, parents, node):
     deletefrom = parents
     marks = repo._bookmarks
-    update = False
     active = marks.active
     if not active:
         return False
@@ -368,12 +367,11 @@ def update(repo, parents, node):
         deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
         if validdest(repo, repo[marks[active]], new):
             bmchanges.append((active, new.node()))
-            update = True
 
-    if deletedivergent(repo, deletefrom, active):
-        update = True
+    for bm in divergent2delete(repo, deletefrom, active):
+        bmchanges.append((bm, None))
 
-    if update:
+    if bmchanges:
         lock = tr = None
         try:
             lock = repo.lock()
@@ -382,7 +380,7 @@ def update(repo, parents, node):
             tr.close()
         finally:
             lockmod.release(tr, lock)
-    return update
+    return bool(bmchanges)
 
 def listbinbookmarks(repo):
     # We may try to list bookmarks on a repo type that does not
