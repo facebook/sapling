@@ -152,10 +152,14 @@ def hash(text, p1, p2):
         s.update(p1)
     else:
         # none of the parent nodes are nullid
-        l = [p1, p2]
-        l.sort()
-        s = hashlib.sha1(l[0])
-        s.update(l[1])
+        if p1 < p2:
+            a = p1
+            b = p2
+        else:
+            a = p2
+            b = p1
+        s = hashlib.sha1(a)
+        s.update(b)
     s.update(text)
     return s.digest()
 
