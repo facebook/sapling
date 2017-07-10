@@ -183,13 +183,15 @@ class bmstore(dict):
 
         If force is supplied, then forcibly move the bookmark to a new commit
         regardless if it is a move forward.
+
+        If divergent bookmark are to be deleted, they will be returned as list.
         """
         cur = self._repo.changectx('.').node()
         if mark in self and not force:
             if target:
                 if self[mark] == target and target == cur:
                     # re-activating a bookmark
-                    return
+                    return []
                 rev = self._repo[target].rev()
                 anc = self._repo.changelog.ancestors([rev])
                 bmctx = self._repo[self[mark]]
@@ -200,17 +202,16 @@ class bmstore(dict):
                 # the bookmark across branches when a revision is specified
                 # that contains a divergent bookmark
                 if bmctx.rev() not in anc and target in divs:
-                    deletedivergent(self._repo, [target], mark)
-                    return
+                    return divergent2delete(self._repo, [target], mark)
 
                 deletefrom = [b for b in divs
                               if self._repo[b].rev() in anc or b == target]
-                deletedivergent(self._repo, deletefrom, mark)
+                delbms = divergent2delete(self._repo, deletefrom, mark)
                 if validdest(self._repo, bmctx, self._repo[target]):
                     self._repo.ui.status(
                         _("moving bookmark '%s' forward from %s\n") %
                         (mark, short(bmctx.node())))
-                    return
+                    return delbms
             raise error.Abort(_("bookmark '%s' already exists "
                                 "(use -f to force)") % mark)
         if ((mark in self._repo.branchmap() or
@@ -228,6 +229,7 @@ class bmstore(dict):
                       "(did you leave a -r out of an 'hg bookmark' "
                       "command?)\n")
                     % mark)
+        return []
 
 def _readactive(repo, marks):
     """
@@ -747,8 +749,10 @@ def rename(repo, tr, old, new, force=False, inactive=False):
     mark = checkformat(repo, new)
     if old not in marks:
         raise error.Abort(_("bookmark '%s' does not exist") % old)
-    marks.checkconflict(mark, force)
-    changes = [(mark, marks[old]), (old, None)]
+    changes = []
+    for bm in marks.checkconflict(mark, force):
+        changes.append((bm, None))
+    changes.extend([(mark, marks[old]), (old, None)])
     marks.applychanges(repo, tr, changes)
     if repo._activebookmark == old and not inactive:
         activate(repo, mark)
@@ -778,7 +782,8 @@ def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
         tgt = cur
         if rev:
             tgt = scmutil.revsingle(repo, rev).node()
-        marks.checkconflict(mark, force, tgt)
+        for bm in marks.checkconflict(mark, force, tgt):
+            changes.append((bm, None))
         changes.append((mark, tgt))
     marks.applychanges(repo, tr, changes)
     if not inactive and cur == marks[newact] and not rev:
