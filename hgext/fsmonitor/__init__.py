@@ -677,16 +677,12 @@ def reposetup(ui, repo):
                       'extension and has been disabled.\n') % ext)
             return
 
-    if util.safehasattr(repo, 'dirstate'):
-        # We don't work with subrepos either. Note that we can get passed in
-        # e.g. a statichttprepo, which throws on trying to access the substate.
-        # XXX This sucks.
-        try:
-            # if repo[None].substate can cause a dirstate parse, which is too
-            # slow. Instead, look for a file called hgsubstate,
-            if repo.wvfs.exists('.hgsubstate') or repo.wvfs.exists('.hgsub'):
-                return
-        except AttributeError:
+    if repo.local():
+        # We don't work with subrepos either.
+        #
+        # if repo[None].substate can cause a dirstate parse, which is too
+        # slow. Instead, look for a file called hgsubstate,
+        if repo.wvfs.exists('.hgsubstate') or repo.wvfs.exists('.hgsub'):
             return
 
         fsmonitorstate = state.state(repo)
