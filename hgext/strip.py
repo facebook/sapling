@@ -78,9 +78,7 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
             with repo.transaction('strip') as tr:
                 if repo._activebookmark in bookmarks:
                     bookmarksmod.deactivate(repo)
-                for bookmark in bookmarks:
-                    del repomarks[bookmark]
-                repomarks.recordchange(tr)
+                repomarks.applychanges(repo, tr, [(b, None) for b in bookmarks])
             for bookmark in sorted(bookmarks):
                 ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
@@ -157,9 +155,8 @@ def stripcmd(ui, repo, *revs, **opts):
                     revs.update(set(rsrevs))
             if not revs:
                 with repo.lock(), repo.transaction('bookmark') as tr:
-                    for bookmark in bookmarks:
-                        del repomarks[bookmark]
-                    repomarks.recordchange(tr)
+                    bmchanges = [(b, None) for b in bookmarks]
+                    repomarks.applychanges(repo, tr, bmchanges)
                 for bookmark in sorted(bookmarks):
                     ui.write(_("bookmark '%s' deleted\n") % bookmark)
 
