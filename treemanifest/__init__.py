@@ -780,25 +780,33 @@ def _registerbundle2parts():
             return
         pushop.stepsdone.add('treepack')
 
-        rootdir = ''
-        mfnodes = []
-        basemfnodes = []
-        directories = []
+        part = createtreepackpart(pushop.repo, pushop.outgoing,
+                                  TREEGROUP_PARTTYPE2)
+        bundler.addpart(part)
 
-        outgoing = pushop.outgoing
-        for node in outgoing.missing:
-            mfnode = pushop.repo[node].manifestnode()
-            mfnodes.append(mfnode)
-        basectxs = pushop.repo.set('parents(roots(%ln))', outgoing.missing)
-        for basectx in basectxs:
-            basemfnodes.append(basectx.manifestnode())
+def createtreepackpart(repo, outgoing, partname):
+    rootdir = ''
+    mfnodes = []
+    basemfnodes = []
+    directories = []
 
-        packstream = generatepackstream(pushop.repo, rootdir, mfnodes,
-                                        basemfnodes, directories)
-        part = bundler.newpart(TREEGROUP_PARTTYPE2, data=packstream)
-        part.addparam('version', '1')
-        part.addparam('cache', 'False')
-        part.addparam('category', PACK_CATEGORY)
+    for node in outgoing.missing:
+        mfnode = repo[node].manifestnode()
+        mfnodes.append(mfnode)
+    basectxs = repo.set('parents(roots(%ln))', outgoing.missing)
+    for basectx in basectxs:
+        basemfnodes.append(basectx.manifestnode())
+
+    packstream = generatepackstream(repo, rootdir, mfnodes,
+                                    basemfnodes, directories)
+    part = bundle2.bundlepart(
+        partname,
+        data = packstream)
+    part.addparam('version', '1')
+    part.addparam('cache', 'False')
+    part.addparam('category', PACK_CATEGORY)
+
+    return part
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
