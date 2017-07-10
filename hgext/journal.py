@@ -61,8 +61,8 @@ sharednamespaces = {
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
-    extensions.wrapfunction(
-        localrepo.localrepository.dirstate, 'func', wrapdirstate)
+    extensions.wrapfilecache(
+        localrepo.localrepository, 'dirstate', wrapdirstate)
     extensions.wrapfunction(hg, 'postshare', wrappostshare)
     extensions.wrapfunction(hg, 'copystore', unsharejournal)
 
