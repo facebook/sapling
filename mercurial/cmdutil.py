@@ -2750,7 +2750,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     base = old.p1()
 
     newid = None
-    with repo.wlock(), repo.lock(), repo.transaction('amend') as tr:
+    with repo.wlock(), repo.lock(), repo.transaction('amend'):
         # See if we got a message from -m or -l, if not, open the editor
         # with the message of the changeset to amend
         message = logmessage(ui, opts)
@@ -2768,7 +2768,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             node = commit(ui, repo, commitfunc, pats, opts)
         finally:
             repo._bookmarks.active = activebookmark
-            repo._bookmarks.recordchange(tr)
             ui.callhooks = True
         ctx = repo[node]
 
