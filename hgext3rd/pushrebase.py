@@ -16,6 +16,14 @@ from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
+from remotefilelog import (
+    contentstore,
+    datapack,
+    historypack,
+    metadatastore,
+    wirepack,
+)
+
 testedwith = 'ships-with-fb-hgext'
 
 cmdtable = {}
@@ -634,8 +642,46 @@ def resolveonto(repo, ontoarg):
 
 @bundle2.parthandler(rebasepackparttype, ('version', 'cache', 'category'))
 def packparthandler(op, part):
-    # Coming in a future patch.
-    pass
+    repo = op.repo
+
+    version = part.params.get('version')
+    if version != '1':
+        raise error.Abort(_("unknown rebasepack bundle2 part version: %s") %
+                          version)
+
+    temppackpath = tempfile.mkdtemp()
+    op.records.add('tempdirs', temppackpath)
+    wirepack.receivepack(repo.ui, part, temppackpath)
+    op.records.add('temp%spackdir' % part.params.get('category', ''),
+                   temppackpath)
+    # TODO: clean up
+
+def _createpackstore(ui, packpath):
+    datastore = datapack.datapackstore(ui, packpath, usecdatapack=True)
+    histstore = historypack.historypackstore(ui, packpath)
+    return datastore, histstore
+
+def _createbundlerepo(op, bundlepath):
+    bundle = repository(op.repo.ui, bundlepath)
+
+    # Create stores for any received pack files
+    bundledatastores = []
+    bundlehiststores = []
+    if op.records[treepackrecords]:
+        for path in op.records[treepackrecords]:
+            datastore, histstore = _createpackstore(op.repo.ui, path)
+            bundledatastores.append(datastore)
+            bundlehiststores.append(histstore)
+
+        # Point the bundle repo at the temp stores
+        bundle.svfs.manifestdatastore = contentstore.unioncontentstore(
+            bundle.svfs.manifestdatastore,
+            *bundledatastores)
+        bundle.svfs.manifesthistorystore = metadatastore.unionmetadatastore(
+            bundle.svfs.manifesthistorystore,
+            *bundlehiststores)
+
+    return bundle
 
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'obsmarkerversions'))
 def bundle2rebase(op, part):
@@ -653,7 +699,7 @@ def bundle2rebase(op, part):
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
-        bundle = repository(op.repo.ui, bundlepath)
+        bundle = _createbundlerepo(op, bundlepath)
 
         prelockonto = resolveonto(op.repo,
                                   params.get('onto', donotrebasemarker))
@@ -702,7 +748,7 @@ def bundle2rebase(op, part):
         # may have caused it to become out of date.
         # (but grab a copy of the cache first)
         bundle.close()
-        bundle = repository(op.repo.ui, bundlepath)
+        bundle = _createbundlerepo(op, bundlepath)
 
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
