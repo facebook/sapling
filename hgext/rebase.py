@@ -60,12 +60,10 @@ templateopts = cmdutil.templateopts
 
 # Indicates that a revision needs to be rebased
 revtodo = -1
-nullmerge = -2
-revignored = -3
 
 # legacy revstates no longer needed in current code
-# -4: revprecursor, -5: revpruned
-legacystates = {'-4', '-5'}
+# -2: nullmerge, -3: revignored, -4: revprecursor, -5: revpruned
+legacystates = {'-2', '-3', '-4', '-5'}
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -233,8 +231,6 @@ class rebaseruntime(object):
                     oldrev, newrev = l.split(':')
                     if newrev in legacystates:
                         continue
-                    if newrev in (str(nullmerge), str(revignored)):
-                        state[repo[oldrev].rev()] = int(newrev)
                     elif newrev == nullid:
                         state[repo[oldrev].rev()] = revtodo
                         # Legacy compat special case
@@ -439,10 +435,6 @@ class rebaseruntime(object):
                         self.skipped.add(rev)
                     self.state[rev] = p1
                     ui.debug('next revision set to %s\n' % p1)
-            elif self.state[rev] == nullmerge:
-                pass
-            elif self.state[rev] == revignored:
-                pass
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[self.state[rev]]))
@@ -463,7 +455,7 @@ class rebaseruntime(object):
                 commitmsg = 'Collapsed revision'
                 for rebased in sorted(self.state):
                     if rebased not in self.skipped and\
-                       self.state[rebased] > nullmerge:
+                       self.state[rebased] >= revtodo:
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
@@ -484,7 +476,7 @@ class rebaseruntime(object):
             else:
                 newrev = repo[newnode].rev()
             for oldrev in self.state.iterkeys():
-                if self.state[oldrev] > nullmerge:
+                if self.state[oldrev] >= revtodo:
                     self.state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
@@ -1318,7 +1310,6 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         raise error.Abort(_('no matching revisions'))
     roots.sort()
     state = dict.fromkeys(rebaseset, revtodo)
-    detachset = set()
     emptyrebase = True
     for root in roots:
         commonbase = root.ancestor(dest)
@@ -1340,47 +1331,6 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
 
         emptyrebase = False
         repo.ui.debug('rebase onto %s starting from %s\n' % (dest, root))
-        # Rebase tries to turn <dest> into a parent of <root> while
-        # preserving the number of parents of rebased changesets:
-        #
-        # - A changeset with a single parent will always be rebased as a
-        #   changeset with a single parent.
-        #
-        # - A merge will be rebased as merge unless its parents are both
-        #   ancestors of <dest> or are themselves in the rebased set and
-        #   pruned while rebased.
-        #
-        # If one parent of <root> is an ancestor of <dest>, the rebased
-        # version of this parent will be <dest>. This is always true with
-        # --base option.
-        #
-        # Otherwise, we need to *replace* the original parents with
-        # <dest>. This "detaches" the rebased set from its former location
-        # and rebases it onto <dest>. Changes introduced by ancestors of
-        # <root> not common with <dest> (the detachset, marked as
-        # nullmerge) are "removed" from the rebased changesets.
-        #
-        # - If <root> has a single parent, set it to <dest>.
-        #
-        # - If <root> is a merge, we cannot decide which parent to
-        #   replace, the rebase operation is not clearly defined.
-        #
-        # The table below sums up this behavior:
-        #
-        # +------------------+----------------------+-------------------------+
-        # |                  |     one parent       |  merge                  |
-        # +------------------+----------------------+-------------------------+
-        # | parent in        | new parent is <dest> | parents in ::<dest> are |
-        # | ::<dest>         |                      | remapped to <dest>      |
-        # +------------------+----------------------+-------------------------+
-        # | unrelated source | new parent is <dest> | ambiguous, abort        |
-        # +------------------+----------------------+-------------------------+
-        #
-        # The actual abort is handled by `defineparents`
-        if len(root.parents()) <= 1:
-            # ancestors of <root> not ancestors of <dest>
-            detachset.update(repo.changelog.findmissingrevs([commonbase.rev()],
-                                                            [root.rev()]))
     if emptyrebase:
         return None
     for rev in sorted(state):
@@ -1388,18 +1338,6 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         # if all parents of this revision are done, then so is this revision
         if parents and all((state.get(p) == p for p in parents)):
             state[rev] = rev
-    for r in detachset:
-        if r not in state:
-            state[r] = nullmerge
-    if len(roots) > 1:
-        # If we have multiple roots, we may have "hole" in the rebase set.
-        # Rebase roots that descend from those "hole" should not be detached as
-        # other root are. We use the special `revignored` to inform rebase that
-        # the revision should be ignored but that `defineparents` should search
-        # a rebase destination that make sense regarding rebased topology.
-        rebasedomain = set(repo.revs('%ld::%ld', rebaseset, rebaseset))
-        for ignored in set(rebasedomain) - set(rebaseset):
-            state[ignored] = revignored
     unfi = repo.unfiltered()
     for r in obsoletenotrebased:
         desc = _ctxdesc(unfi[r])
