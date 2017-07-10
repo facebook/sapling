@@ -794,7 +794,7 @@ def _regex(kind, pat, globsuffix):
         return ''
     if kind == 're':
         return pat
-    if kind == 'path':
+    if kind in ('path', 'relpath'):
         if pat == '.':
             return ''
         return util.re.escape(pat) + '(?:/|$)'
@@ -808,8 +808,6 @@ def _regex(kind, pat, globsuffix):
         return escaped + '[^/]+$'
     if kind == 'relglob':
         return '(?:|.*/)' + _globre(pat) + globsuffix
-    if kind == 'relpath':
-        return util.re.escape(pat) + '(?:/|$)'
     if kind == 'relre':
         if pat.startswith('^'):
             return pat
