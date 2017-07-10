@@ -171,6 +171,12 @@
                     single changeset. When very large files were checked in as
                     part of a changeset then the default may not be long enough.
                     The default is 60.
+      convert.cvsps.logencoding
+                    Specify encoding name to be used for transcoding CVS log
+                    messages. Multiple encoding names can be specified as a list
+                    (see 'hg help config.Syntax'), but only the first acceptable
+                    encoding in the list is used per CVS log entries. This
+                    transcoding is executed before cvslog hook below.
       convert.cvsps.mergeto
                     Specify a regular expression to which commit log messages
                     are matched. If a match occurs, then the conversion process

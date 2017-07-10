@@ -12,6 +12,7 @@ import re
 from mercurial.i18n import _
 from mercurial import (
     encoding,
+    error,
     hook,
     pycompat,
     util,
@@ -490,6 +491,35 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             log = oldlog
 
     ui.status(_('%d log entries\n') % len(log))
+
+    encodings = ui.configlist('convert', 'cvsps.logencoding')
+    if encodings:
+        def revstr(r):
+            # this is needed, because logentry.revision is a tuple of "int"
+            # (e.g. (1, 2) for "1.2")
+            return '.'.join(pycompat.maplist(pycompat.bytestr, r))
+
+        for entry in log:
+            comment = entry.comment
+            for e in encodings:
+                try:
+                    entry.comment = comment.decode(e).encode('utf-8')
+                    if ui.debugflag:
+                        ui.debug("transcoding by %s: %s of %s\n" %
+                                 (e, revstr(entry.revision), entry.file))
+                    break
+                except UnicodeDecodeError:
+                    pass # try next encoding
+                except LookupError as inst: # unknown encoding, maybe
+                    raise error.Abort(inst,
+                                      hint=_('check convert.cvsps.logencoding'
+                                             ' configuration'))
+            else:
+                raise error.Abort(_("no encoding can transcode"
+                                    " CVS log message for %s of %s")
+                                  % (revstr(entry.revision), entry.file),
+                                  hint=_('check convert.cvsps.logencoding'
+                                         ' configuration'))
 
     hook.hook(ui, None, "cvslog", True, log=log)
 

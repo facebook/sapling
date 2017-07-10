@@ -498,3 +498,157 @@ update and verify the cvsps cache
   
 
   $ cd ..
+
+Test transcoding CVS log messages (issue5597)
+=============================================
+
+To emulate commit messages in (non-ascii) multiple encodings portably,
+this test scenario writes CVS history file (*,v file) directly via
+python code.
+
+Commit messages of version 1.2 - 1.4 use u3042 in 3 encodings below.
+
+|encoding  |byte sequence | decodable as:      |
+|          |              | utf-8 euc-jp cp932 |
++----------+--------------+--------------------+
+|utf-8     |\xe3\x81\x82  |  o      x     x    |
+|euc-jp    |\xa4\xa2      |  x      o     o    |
+|cp932     |\x82\xa0      |  x      x     o    |
+
+  $ mkdir -p cvsrepo/transcoding
+  $ python <<EOF
+  > fp = open('cvsrepo/transcoding/file,v', 'w')
+  > fp.write(('''
+  > head	1.4;
+  > access;
+  > symbols
+  > 	start:1.1.1.1 INITIAL:1.1.1;
+  > locks; strict;
+  > comment	@# @;
+  > 
+  > 
+  > 1.4
+  > date	2017.07.10.00.00.04;	author nobody;	state Exp;
+  > branches;
+  > next	1.3;
+  > commitid	10059635D016A510FFA;
+  > 
+  > 1.3
+  > date	2017.07.10.00.00.03;	author nobody;	state Exp;
+  > branches;
+  > next	1.2;
+  > commitid	10059635CFF6A4FF34E;
+  > 
+  > 1.2
+  > date	2017.07.10.00.00.02;	author nobody;	state Exp;
+  > branches;
+  > next	1.1;
+  > commitid	10059635CFD6A4D5095;
+  > 
+  > 1.1
+  > date	2017.07.10.00.00.01;	author nobody;	state Exp;
+  > branches
+  > 	1.1.1.1;
+  > next	;
+  > commitid	10059635CFB6A4A3C33;
+  > 
+  > 1.1.1.1
+  > date	2017.07.10.00.00.01;	author nobody;	state Exp;
+  > branches;
+  > next	;
+  > commitid	10059635CFB6A4A3C33;
+  > 
+  > 
+  > desc
+  > @@
+  > 
+  > 
+  > 1.4
+  > log
+  > @''' + u'\u3042'.encode('cp932') + ''' (cp932)
+  > @
+  > text
+  > @1
+  > 2
+  > 3
+  > 4
+  > @
+  > 
+  > 
+  > 1.3
+  > log
+  > @''' + u'\u3042'.encode('euc-jp') + ''' (euc-jp)
+  > @
+  > text
+  > @d4 1
+  > @
+  > 
+  > 
+  > 1.2
+  > log
+  > @''' + u'\u3042'.encode('utf-8') +  ''' (utf-8)
+  > @
+  > text
+  > @d3 1
+  > @
+  > 
+  > 
+  > 1.1
+  > log
+  > @Initial revision
+  > @
+  > text
+  > @d2 1
+  > @
+  > 
+  > 
+  > 1.1.1.1
+  > log
+  > @import
+  > @
+  > text
+  > @@
+  > ''').lstrip())
+  > EOF
+
+  $ cvscall -q checkout transcoding
+  U transcoding/file
+
+Test converting in normal case
+------------------------------
+
+(filtering by grep in order to check only form of debug messages)
+
+  $ hg convert --config convert.cvsps.logencoding=utf-8,euc-jp,cp932 -q --debug transcoding transcoding-hg | grep 'transcoding by'
+  transcoding by utf-8: 1.1 of file
+  transcoding by utf-8: 1.1.1.1 of file
+  transcoding by utf-8: 1.2 of file
+  transcoding by euc-jp: 1.3 of file
+  transcoding by cp932: 1.4 of file
+  $ hg -R transcoding-hg --encoding utf-8 log -T "{rev}: {desc}\n"
+  5: update tags
+  4: import
+  3: \xe3\x81\x82 (cp932) (esc)
+  2: \xe3\x81\x82 (euc-jp) (esc)
+  1: \xe3\x81\x82 (utf-8) (esc)
+  0: Initial revision
+  $ rm -rf transcoding-hg
+
+Test converting in error cases
+------------------------------
+
+unknown encoding in convert.cvsps.logencoding
+
+  $ hg convert --config convert.cvsps.logencoding=foobar -q transcoding transcoding-hg
+  abort: unknown encoding: foobar
+  (check convert.cvsps.logencoding configuration)
+  [255]
+  $ rm -rf transcoding-hg
+
+no acceptable encoding in convert.cvsps.logencoding
+
+  $ hg convert --config convert.cvsps.logencoding=utf-8,euc-jp -q transcoding transcoding-hg
+  abort: no encoding can transcode CVS log message for 1.4 of file
+  (check convert.cvsps.logencoding configuration)
+  [255]
+  $ rm -rf transcoding-hg
