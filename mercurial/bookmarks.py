@@ -292,16 +292,6 @@ def isactivewdirparent(repo):
     parents = [p.node() for p in repo[None].parents()]
     return (mark in marks and marks[mark] in parents)
 
-def deletedivergent(repo, deletefrom, bm):
-    '''Delete divergent versions of bm on nodes in deletefrom.
-
-    Return True if at least one bookmark was deleted, False otherwise.'''
-    bms = divergent2delete(repo, deletefrom, bm)
-    marks = repo._bookmarks
-    for b in bms:
-        del marks[b]
-    return bool(bms)
-
 def divergent2delete(repo, deletefrom, bm):
     """find divergent versions of bm on nodes in deletefrom.
 
