@@ -705,29 +705,7 @@ def bundle2rebase(op, part):
 
         op.repo.ui.setconfig('pushrebase', pushrebasemarker, True)
 
-        # We will need the bundle revs after the lock is taken, so let's
-        # precache all the bundle rev manifests.
-        bundlerepocache = {}
-        bundlectxs = list(bundle.set('bundle()'))
-        manifestcachesize = op.repo.ui.configint('format',
-                                                 'manifestcachesize') or 10
-        if len(bundlectxs) < manifestcachesize:
-            for ctx in bundlectxs:
-                bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
-
-        preonto = resolveonto(bundle, params.get('onto', donotrebasemarker))
-        preontocache = None
-        if preonto:
-            cache = bundle.manifestlog._revlog._cache
-            if cache:
-                cachenode, cacherev, cachetext = cache
-                if cachenode == preonto.node():
-                    preontocache = cache
-            if not preontocache:
-                cachenode = preonto.manifestnode()
-                cacherev = bundle.manifestlog._revlog.rev(cachenode)
-                cachetext = bundle.manifestlog[cachenode].read().text()
-                preontocache = (cachenode, cacherev, cachetext)
+        bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
@@ -875,6 +853,35 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     prelockrebaseargs['node_onto'] = prelockontonode
     prelockrebaseargs['hook_bundlepath'] = bundlefile
     op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
+
+def prefetchcaches(op, params, bundle):
+    # We will need the bundle revs after the lock is taken, so let's
+    # precache all the bundle rev manifests.
+    bundlerepocache = {}
+    bundlectxs = list(bundle.set('bundle()'))
+    manifestcachesize = op.repo.ui.configint('format',
+                                             'manifestcachesize') or 10
+    if len(bundlectxs) < manifestcachesize:
+        for ctx in bundlectxs:
+            # TODO: check tree store first
+            bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
+
+    preonto = resolveonto(bundle, params.get('onto', donotrebasemarker))
+    preontocache = None
+    if preonto:
+        cache = bundle.manifestlog._revlog._cache
+        if cache:
+            cachenode, cacherev, cachetext = cache
+            if cachenode == preonto.node():
+                preontocache = cache
+        if not preontocache:
+            # TODO: skip if tree-only bundle revision
+            cachenode = preonto.manifestnode()
+            cacherev = bundle.manifestlog._revlog.rev(cachenode)
+            cachetext = bundle.manifestlog[cachenode].read().text()
+            preontocache = (cachenode, cacherev, cachetext)
+
+    return bundlerepocache, preontocache
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
