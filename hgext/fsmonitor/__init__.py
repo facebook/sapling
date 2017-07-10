@@ -536,8 +536,8 @@ class poststatus(object):
                      status.deleted + status.unknown)
         wctx.repo()._fsmonitorstate.set(clock, hashignore, notefiles)
 
-def makedirstate(cls):
-    class fsmonitordirstate(cls):
+def makedirstate(repo, dirstate):
+    class fsmonitordirstate(dirstate.__class__):
         def _fsmonitorinit(self, fsmonitorstate, watchmanclient):
             # _fsmonitordisable is used in paranoid mode
             self._fsmonitordisable = False
@@ -558,14 +558,14 @@ def makedirstate(cls):
             self._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
 
-    return fsmonitordirstate
+    dirstate.__class__ = fsmonitordirstate
+    dirstate._fsmonitorinit(repo._fsmonitorstate, repo._watchmanclient)
 
 def wrapdirstate(orig, self):
     ds = orig(self)
     # only override the dirstate when Watchman is available for the repo
     if util.safehasattr(self, '_fsmonitorstate'):
-        ds.__class__ = makedirstate(ds.__class__)
-        ds._fsmonitorinit(self._fsmonitorstate, self._watchmanclient)
+        makedirstate(self, ds)
     return ds
 
 def extsetup(ui):
@@ -701,8 +701,8 @@ def reposetup(ui, repo):
         # at this point since fsmonitorstate wasn't present, repo.dirstate is
         # not a fsmonitordirstate
         dirstate = repo.dirstate
-        dirstate.__class__ = makedirstate(dirstate.__class__)
-        dirstate._fsmonitorinit(fsmonitorstate, client)
+        makedirstate(repo, dirstate)
+
         # invalidate property cache, but keep filecache which contains the
         # wrapped dirstate object
         del repo.unfiltered().__dict__['dirstate']
