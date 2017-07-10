@@ -112,6 +112,12 @@ class bmstore(dict):
         return dict.__setitem__(self, key, value)
 
     def __delitem__(self, key):
+        msg = ("'del bookmarks[name]' is deprecated, "
+               "use 'bookmarks.applychanges'")
+        self._repo.ui.deprecwarn(msg, '4.3')
+        self._del(key)
+
+    def _del(self, key):
         self._clean = False
         return dict.__delitem__(self, key)
 
@@ -122,7 +128,7 @@ class bmstore(dict):
         for name, node in changes:
             old = self.get(name)
             if node is None:
-                del self[name]
+                self._del(name)
             else:
                 self._set(name, node)
             if bmchanges is not None:
