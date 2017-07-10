@@ -724,11 +724,6 @@ def bundle2rebase(op, part):
 
         op.repo.hook("prechangegroup", **hookargs)
 
-        mapping = {}
-
-        # Seed the mapping with oldonto->onto
-        mapping[oldonto.node()] = onto.node()
-
         printpushmessage(op, revs, bundle)
 
         # Prepopulate the revlog _cache with the original onto's fulltext. This
@@ -738,25 +733,7 @@ def bundle2rebase(op, part):
             op.repo.manifestlog._revlog._cache = preontocache
             onto.manifest()
 
-        replacements = {}
-        added = []
-
-        lastdestnode = None
-        for rev in revs:
-            newrev = _graft(op.repo, rev, mapping, lastdestnode)
-
-            new = op.repo[newrev]
-            oldnode = rev.node()
-            newnode = new.node()
-            replacements[oldnode] = newnode
-            mapping[oldnode] = newnode
-            added.append(newnode)
-
-            # Track which commit contains the original rebase destination
-            # contents, so we can preserve the appropriate side's content during
-            # merges.
-            if not lastdestnode or oldnode == lastdestnode:
-                lastdestnode = newnode
+        added, replacements = runrebase(op, revs, oldonto, onto)
 
         markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
     finally:
@@ -892,6 +869,33 @@ def printpushmessage(op, revs, bundle):
         op.repo.ui.warn(("    ...\n"))
         firstline = bundle[revs[-1]].description().split('\n')[0][:50]
         op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
+
+def runrebase(op, revs, oldonto, onto):
+    mapping = {}
+    replacements = {}
+    added = []
+
+    # Seed the mapping with oldonto->onto
+    mapping[oldonto.node()] = onto.node()
+
+    lastdestnode = None
+    for rev in revs:
+        newrev = _graft(op.repo, rev, mapping, lastdestnode)
+
+        new = op.repo[newrev]
+        oldnode = rev.node()
+        newnode = new.node()
+        replacements[oldnode] = newnode
+        mapping[oldnode] = newnode
+        added.append(newnode)
+
+        # Track which commit contains the original rebase destination
+        # contents, so we can preserve the appropriate side's content during
+        # merges.
+        if not lastdestnode or oldnode == lastdestnode:
+            lastdestnode = newnode
+
+    return added, replacements
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
