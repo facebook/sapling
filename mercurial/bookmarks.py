@@ -117,9 +117,15 @@ class bmstore(dict):
                 del self[name]
             else:
                 self[name] = node
-        self.recordchange(tr)
+        self._recordchange(tr)
 
     def recordchange(self, tr):
+        msg = ("'bookmarks.recorchange' is deprecated, "
+               "use 'bookmarks.applychanges'")
+        self._repo.ui.deprecwarn(msg, '4.3')
+        return self._recordchange(tr)
+
+    def _recordchange(self, tr):
         """record that bookmarks have been changed in a transaction
 
         The transaction is then responsible for updating the file content."""

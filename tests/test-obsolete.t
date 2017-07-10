@@ -1149,7 +1149,7 @@ bookmarks change
   >  bkmstoreinst._repo.currenttransaction().addpostclose('test_extension', trhook)
   >  orig(bkmstoreinst, *args, **kwargs)
   > def extsetup(ui):
-  >   extensions.wrapfunction(bookmarks.bmstore, 'recordchange',
+  >   extensions.wrapfunction(bookmarks.bmstore, '_recordchange',
   >                           _bookmarkchanged)
   > EOF
 
