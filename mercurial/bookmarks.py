@@ -102,8 +102,14 @@ class bmstore(dict):
         self._aclean = False
 
     def __setitem__(self, *args, **kwargs):
+        msg = ("'bookmarks[name] = node' is deprecated, "
+               "use 'bookmarks.applychanges'")
+        self._repo.ui.deprecwarn(msg, '4.3')
+        self._set(*args, **kwargs)
+
+    def _set(self, key, value):
         self._clean = False
-        return dict.__setitem__(self, *args, **kwargs)
+        return dict.__setitem__(self, key, value)
 
     def __delitem__(self, key):
         self._clean = False
@@ -118,7 +124,7 @@ class bmstore(dict):
             if node is None:
                 del self[name]
             else:
-                self[name] = node
+                self._set(name, node)
             if bmchanges is not None:
                 # if a previous value exist preserve the "initial" value
                 previous = bmchanges.get(name)
