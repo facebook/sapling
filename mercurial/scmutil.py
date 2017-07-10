@@ -591,14 +591,13 @@ def cleanupnodes(repo, mapping, operation):
     with repo.transaction('cleanup') as tr:
         # Move bookmarks
         bmarks = repo._bookmarks
-        bmarkchanged = False
+        bmarkchanges = []
         allnewnodes = [n for ns in mapping.values() for n in ns]
         for oldnode, newnodes in mapping.items():
             oldbmarks = repo.nodebookmarks(oldnode)
             if not oldbmarks:
                 continue
             from . import bookmarks # avoid import cycle
-            bmarkchanged = True
             if len(newnodes) > 1:
                 # usually a split, take the one with biggest rev number
                 newnode = next(repo.set('max(%ln)', newnodes)).node()
@@ -619,10 +618,12 @@ def cleanupnodes(repo, mapping, operation):
                                    allnewnodes, newnode, oldnode)
             deletenodes = _containsnode(repo, deleterevs)
             for name in oldbmarks:
-                bmarks[name] = newnode
-                bookmarks.deletedivergent(repo, deletenodes, name)
-        if bmarkchanged:
-            bmarks.recordchange(tr)
+                bmarkchanges.append((name, newnode))
+                for b in bookmarks.divergent2delete(repo, deletenodes, name):
+                    bmarkchanges.append((b, None))
+
+        if bmarkchanges:
+            bmarks.applychanges(repo, tr, bmarkchanges)
 
         # Obsolete or strip nodes
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
