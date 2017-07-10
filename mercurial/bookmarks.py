@@ -579,10 +579,11 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
 
     if changed:
         tr = trfunc()
+        changes = []
         for b, node, writer, msg in sorted(changed):
-            localmarks[b] = node
+            changes.append((b, node))
             writer(msg)
-        localmarks.recordchange(tr)
+        localmarks.applychanges(repo, tr, changes)
 
 def incoming(ui, repo, other):
     '''Show bookmarks incoming from other to repo
