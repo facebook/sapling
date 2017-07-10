@@ -758,6 +758,7 @@ def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
     marks = repo._bookmarks
     cur = repo.changectx('.').node()
     newact = None
+    changes = []
     for mark in names:
         mark = checkformat(repo, mark)
         if newact is None:
@@ -769,12 +770,12 @@ def addbookmarks(repo, tr, names, rev=None, force=False, inactive=False):
         if rev:
             tgt = scmutil.revsingle(repo, rev).node()
         marks.checkconflict(mark, force, tgt)
-        marks[mark] = tgt
+        changes.append((mark, tgt))
+    marks.applychanges(repo, tr, changes)
     if not inactive and cur == marks[newact] and not rev:
         activate(repo, newact)
     elif cur != tgt and newact == repo._activebookmark:
         deactivate(repo)
-    marks.recordchange(tr)
 
 def _printbookmarks(ui, repo, bmarks, **opts):
     """private method to print bookmarks
