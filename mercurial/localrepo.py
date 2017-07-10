@@ -1216,6 +1216,7 @@ class localrepository(object):
         tr.changes['revs'] = set()
         tr.changes['obsmarkers'] = set()
         tr.changes['phases'] = {}
+        tr.changes['bookmarks'] = {}
 
         tr.hookargs['txnid'] = txnid
         # note: writing the fncache only during finalize mean that the file is

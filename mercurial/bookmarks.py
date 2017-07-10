@@ -112,11 +112,19 @@ class bmstore(dict):
     def applychanges(self, repo, tr, changes):
         """Apply a list of changes to bookmarks
         """
+        bmchanges = tr.changes.get('bookmarks')
         for name, node in changes:
+            old = self.get(name)
             if node is None:
                 del self[name]
             else:
                 self[name] = node
+            if bmchanges is not None:
+                # if a previous value exist preserve the "initial" value
+                previous = bmchanges.get(name)
+                if previous is not None:
+                    old = previous[0]
+                bmchanges[name] = (old, node)
         self._recordchange(tr)
 
     def recordchange(self, tr):
