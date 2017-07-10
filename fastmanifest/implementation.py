@@ -138,7 +138,10 @@ class hybridmanifest(object):
                 store = self.opener.manifestdatastore
                 self.__treemanifest = cstore.treemanifest(store)
             else:
-                store = self.opener.manifestdatastore
+                if util.safehasattr(self.opener, 'manifestdatastore'):
+                    store = self.opener.manifestdatastore
+                else:
+                    store = self.opener.vfs.manifestdatastore
                 try:
                     store.get('', self.node)
                     self.__treemanifest = cstore.treemanifest(store,
