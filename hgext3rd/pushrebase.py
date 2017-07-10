@@ -716,24 +716,7 @@ def bundle2rebase(op, part):
         bundle.close()
         bundle = _createbundlerepo(op, bundlepath)
 
-        # Preload the caches with data we already have. We need to make copies
-        # here so that original repo caches don't get tainted with bundle
-        # specific data.
-        newdirmancache = bundle.manifestlog._dirmancache
-        for dir, dircache in op.repo.manifestlog._dirmancache.iteritems():
-            for mfnode in dircache:
-                mfctx = dircache[mfnode]
-                newmfctx = manifest.manifestctx(bundle, mfnode)
-                newmfctx._data = mfctx._data
-                newdirmancache[dir][mfnode] = newmfctx
-
-        for mfnode, mfdict in bundlerepocache.iteritems():
-            newmfctx = manifest.manifestctx(bundle, mfnode)
-            newmfctx._data = mfdict
-            newdirmancache[""][mfnode] = newmfctx
-
-        newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
-        bundle.manifestlog._revlog._fulltextcache = newfulltextcache
+        prefillcaches(op, bundle, bundlerepocache)
 
         onto = resolveonto(op.repo, params.get('onto', donotrebasemarker))
 
@@ -882,6 +865,26 @@ def prefetchcaches(op, params, bundle):
             preontocache = (cachenode, cacherev, cachetext)
 
     return bundlerepocache, preontocache
+
+def prefillcaches(op, bundle, bundlerepocache):
+    # Preload the caches with data we already have. We need to make copies
+    # here so that original repo caches don't get tainted with bundle
+    # specific data.
+    newdirmancache = bundle.manifestlog._dirmancache
+    for dir, dircache in op.repo.manifestlog._dirmancache.iteritems():
+        for mfnode in dircache:
+            mfctx = dircache[mfnode]
+            newmfctx = manifest.manifestctx(bundle, mfnode)
+            newmfctx._data = mfctx._data
+            newdirmancache[dir][mfnode] = newmfctx
+
+    for mfnode, mfdict in bundlerepocache.iteritems():
+        newmfctx = manifest.manifestctx(bundle, mfnode)
+        newmfctx._data = mfdict
+        newdirmancache[""][mfnode] = newmfctx
+
+    newfulltextcache = op.repo.manifestlog._revlog._fulltextcache.copy()
+    bundle.manifestlog._revlog._fulltextcache = newfulltextcache
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
