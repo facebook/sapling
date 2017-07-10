@@ -746,27 +746,11 @@ def bundle2rebase(op, part):
         if bundle:
             bundle.close()
 
-    hookargs['node'] = tr.hookargs['node'] = hex(added[0])
-    hookargs['node_last'] = hex(added[-1])
-
     publishing = op.repo.ui.configbool('phases', 'publish', True)
     if publishing:
         phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
 
-    p = lambda: tr.writepending() and op.repo.root or ""
-    op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
-
-    def runhooks():
-        args = hookargs.copy()
-        op.repo.hook("changegroup", **hookargs)
-        args.pop('node_last')
-        for n in added:
-            args = hookargs.copy()
-            args['node'] = hex(n)
-            op.repo.hook("incoming", **args)
-
-    tr.addpostclose('serverrebase-cg-hooks',
-                    lambda tr: op.repo._afterlock(runhooks))
+    addfinalhooks(op, tr, hookargs, added)
 
     _addpushbackparts(op, replacements, markers, markerdate,
                       clientobsmarkerversions)
@@ -896,6 +880,25 @@ def runrebase(op, revs, oldonto, onto):
             lastdestnode = newnode
 
     return added, replacements
+
+def addfinalhooks(op, tr, hookargs, added):
+    hookargs['node'] = tr.hookargs['node'] = hex(added[0])
+    hookargs['node_last'] = hex(added[-1])
+
+    p = lambda: tr.writepending() and op.repo.root or ""
+    op.repo.hook("pretxnchangegroup", throw=True, pending=p, **hookargs)
+
+    def runhooks():
+        args = hookargs.copy()
+        op.repo.hook("changegroup", **hookargs)
+        args.pop('node_last')
+        for n in added:
+            args = hookargs.copy()
+            args['node'] = hex(n)
+            op.repo.hook("incoming", **args)
+
+    tr.addpostclose('serverrebase-cg-hooks',
+                    lambda tr: op.repo._afterlock(runhooks))
 
 def bundle2pushkey(orig, op, part):
     replacements = dict(sum([record.items()
