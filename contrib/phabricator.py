@@ -139,8 +139,12 @@ _differentialrevisiontagre = re.compile('\AD([1-9][0-9]*)\Z')
 _differentialrevisiondescre = re.compile(
     '^Differential Revision:.*D([1-9][0-9]*)$', re.M)
 
-def getmapping(ctx):
-    """return (node, associated Differential Revision ID) or (None, None)
+def getoldnodedrevmap(repo, nodelist):
+    """find previous nodes that has been sent to Phabricator
+
+    return {node: (oldnode or None, Differential Revision ID)}
+    for node in nodelist with known previous sent versions, or associated
+    Differential Revision IDs.
 
     Examines all precursors and their tags. Tags with format like "D1234" are
     considered a match and the node with that tag, and the number after "D"
@@ -149,23 +153,28 @@ def getmapping(ctx):
     If tags are not found, examine commit message. The "Differential Revision:"
     line could associate this changeset to a Differential Revision.
     """
-    unfi = ctx.repo().unfiltered()
+    url, token = readurltoken(repo)
+    unfi = repo.unfiltered()
     nodemap = unfi.changelog.nodemap
 
-    # Check tags like "D123"
-    for n in obsolete.allprecursors(unfi.obsstore, [ctx.node()]):
-        if n in nodemap:
-            for tag in unfi.nodetags(n):
-                m = _differentialrevisiontagre.match(tag)
-                if m:
-                    return n, int(m.group(1))
+    result = {} # {node: (oldnode or None, drev)}
+    for node in nodelist:
+        ctx = unfi[node]
+        # Check tags like "D123"
+        for n in obsolete.allprecursors(unfi.obsstore, [node]):
+            if n in nodemap:
+                for tag in unfi.nodetags(n):
+                    m = _differentialrevisiontagre.match(tag)
+                    if m:
+                        result[node] = (n, int(m.group(1)))
+                        continue
 
-    # Check commit message
-    m = _differentialrevisiondescre.search(ctx.description())
-    if m:
-        return None, int(m.group(1))
+        # Check commit message
+        m = _differentialrevisiondescre.search(ctx.description())
+        if m:
+            result[node] = (None, int(m.group(1)))
 
-    return None, None
+    return result
 
 def getdiff(ctx, diffopts):
     """plain-text diff without header (user, commit message, etc)"""
@@ -274,6 +283,8 @@ def phabsend(ui, repo, *revs, **opts):
     if not revs:
         raise error.Abort(_('phabsend requires at least one changeset'))
 
+    oldnodedrev = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
+
     # Send patches one by one so we know their Differential Revision IDs and
     # can provide dependency relationship
     lastrevid = None
@@ -282,7 +293,7 @@ def phabsend(ui, repo, *revs, **opts):
         ctx = repo[rev]
 
         # Get Differential Revision ID
-        oldnode, revid = getmapping(ctx)
+        oldnode, revid = oldnodedrev.get(ctx.node(), (None, None))
         if oldnode != ctx.node():
             # Create or update Differential Revision
             revision = createdifferentialrevision(ctx, revid, lastrevid,
