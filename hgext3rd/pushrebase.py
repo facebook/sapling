@@ -22,7 +22,10 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 rebaseparttype = 'b2x:rebase'
+rebasepackparttype = 'b2x:rebasepackpart'
 commonheadsparttype = 'b2x:commonheads'
+
+treepackrecords = 'tempmanifestspackdir'
 
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
@@ -46,8 +49,16 @@ def extsetup(ui):
         entry[1].append(('', 'to', '', _('server revision to rebase onto')))
 
     partorder = exchange.b2partsgenorder
+
+    # rebase part must go before the changeset part, so we can mark the
+    # changeset part as done first.
     partorder.insert(partorder.index('changeset'),
                      partorder.pop(partorder.index(rebaseparttype)))
+
+    # rebase pack part must go before rebase part so it can write to the pack to
+    # disk for reading.
+    partorder.insert(partorder.index(rebaseparttype),
+                     partorder.pop(partorder.index(rebasepackparttype)))
 
     partorder.insert(0, partorder.pop(partorder.index(commonheadsparttype)))
 
@@ -120,7 +131,19 @@ def validaterevset(repo, revset):
 
     repo.ui.note(_('validated revset for rebase\n'))
 
-def getrebasepart(repo, peer, outgoing, onto, newhead):
+def getrebaseparts(repo, peer, outgoing, onto, newhead):
+    parts = []
+    if (util.safehasattr(repo.svfs, 'manifestdatastore') and
+        repo.ui.configbool("treemanifest", "sendtrees")):
+        parts.append(createtreepackpart(repo, outgoing))
+    parts.append(createrebasepart(repo, peer, outgoing, onto, newhead))
+    return parts
+
+def createtreepackpart(repo, outgoing):
+    treemod = extensions.find('treemanifest')
+    return treemod.createtreepackpart(repo, outgoing, rebasepackparttype)
+
+def createrebasepart(repo, peer, outgoing, onto, newhead):
     if not outgoing.missing:
         raise error.Abort(_('no changesets to rebase'))
 
@@ -306,8 +329,15 @@ def checkremotenames():
     except KeyError:
         return False
 
+@exchange.b2partsgenerator(rebasepackparttype)
+def packpartgen(pushop, bundler):
+    # We generate this part manually during pushrebase pushes, so this is a
+    # no-op. But it's required because bundle2 expects there to be a generator
+    # for every handler.
+    pass
+
 @exchange.b2partsgenerator(rebaseparttype)
-def partgen(pushop, bundler):
+def rebasepartgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
     if 'changesets' in pushop.stepsdone or not onto:
         return
@@ -331,13 +361,14 @@ def partgen(pushop, bundler):
     if pushop.force:
         onto = donotrebasemarker
 
-    rebasepart = getrebasepart(pushop.repo,
-                               pushop.remote,
-                               pushop.outgoing,
-                               onto,
-                               pushop.newbranch)
+    rebaseparts = getrebaseparts(pushop.repo,
+                                 pushop.remote,
+                                 pushop.outgoing,
+                                 onto,
+                                 pushop.newbranch)
 
-    bundler.addpart(rebasepart)
+    for part in rebaseparts:
+        bundler.addpart(part)
 
     # Tell the server which manifests to load before taking the lock.
     # This helps shorten the duration of the lock, which increases our potential
@@ -600,6 +631,11 @@ def resolveonto(repo, ontoarg):
         pass
     # onto is None means don't do rebasing
     return None
+
+@bundle2.parthandler(rebasepackparttype, ('version', 'cache', 'category'))
+def packparthandler(op, part):
+    # Coming in a future patch.
+    pass
 
 @bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'obsmarkerversions'))
 def bundle2rebase(op, part):
