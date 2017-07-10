@@ -1834,9 +1834,7 @@ class queue(object):
                     patchf.close()
 
                     marks = repo._bookmarks
-                    for bm in bmlist:
-                        marks[bm] = n
-                    marks.recordchange(tr)
+                    marks.applychanges(repo, tr, [(bm, n) for bm in bmlist])
                     tr.close()
 
                     self.applied.append(statusentry(n, patchfn))
