@@ -698,15 +698,11 @@ def reposetup(ui, repo):
         repo._fsmonitorstate = fsmonitorstate
         repo._watchmanclient = client
 
-        # at this point since fsmonitorstate wasn't present, repo.dirstate is
-        # not a fsmonitordirstate
-        dirstate = repo.dirstate
-        makedirstate(repo, dirstate)
-
-        # invalidate property cache, but keep filecache which contains the
-        # wrapped dirstate object
-        del repo.unfiltered().__dict__['dirstate']
-        assert dirstate is repo._filecache['dirstate'].obj
+        dirstate, cached = localrepo.isfilecached(repo, 'dirstate')
+        if cached:
+            # at this point since fsmonitorstate wasn't present,
+            # repo.dirstate is not a fsmonitordirstate
+            makedirstate(repo, dirstate)
 
         class fsmonitorrepo(repo.__class__):
             def status(self, *args, **kwargs):
