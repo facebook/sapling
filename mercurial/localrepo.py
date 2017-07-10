@@ -104,6 +104,16 @@ class storecache(_basefilecache):
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
+def isfilecached(repo, name):
+    """check if a repo has already cached "name" filecache-ed property
+
+    This returns (cachedobj-or-None, iscached) tuple.
+    """
+    cacheentry = repo.unfiltered()._filecache.get(name, None)
+    if not cacheentry:
+        return None, False
+    return cacheentry.obj, True
+
 class unfilteredpropertycache(util.propertycache):
     """propertycache that apply to unfiltered repo only"""
 
