@@ -108,6 +108,8 @@ command = registrar.command(cmdtable)
 PACK_CATEGORY='manifests'
 
 TREEGROUP_PARTTYPE = 'b2x:treegroup'
+# Temporary part type while we migrate the arguments
+TREEGROUP_PARTTYPE2 = 'b2x:treegroup2'
 RECEIVEDNODE_RECORD = 'receivednodes'
 
 # When looking for a recent manifest to consider our base during tree
@@ -730,9 +732,9 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         raise error.Abort(_('missing support for %s') % exc)
 
 def _registerbundle2parts():
-    @bundle2.parthandler(TREEGROUP_PARTTYPE, ('version', 'treecache'))
-    def treeparthandler(op, part):
-        """Handles received tree packs. If `treecache` is True, the received
+    @bundle2.parthandler(TREEGROUP_PARTTYPE2, ('version', 'cache', 'category'))
+    def treeparthandler2(op, part):
+        """Handles received tree packs. If `cache` is True, the received
         data goes in to the shared pack cache. Otherwise, the received data
         goes into the permanent repo local data.
         """
@@ -743,7 +745,12 @@ def _registerbundle2parts():
             raise error.Abort(
                 _("unknown treegroup bundle2 part version: %s") % version)
 
-        if part.params.get('treecache', 'False') == 'True':
+        category = part.params.get('category', '')
+        if category != PACK_CATEGORY:
+            raise error.Abort(_("invalid treegroup pack category: %s") %
+                              category)
+
+        if part.params.get('cache', 'False') == 'True':
             packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         else:
             packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
@@ -753,8 +760,20 @@ def _registerbundle2parts():
 
         op.records.add(RECEIVEDNODE_RECORD, receiveddata)
 
-    @exchange.b2partsgenerator('treepack')
+    @bundle2.parthandler(TREEGROUP_PARTTYPE, ('version', 'treecache'))
+    def treeparthandler(op, part):
+        treecache = part.params.pop('treecache')
+        part.params['cache'] = treecache
+        part.params['category'] = PACK_CATEGORY
+        return treeparthandler(op, part)
+
+    @exchange.b2partsgenerator(TREEGROUP_PARTTYPE)
     def gettreepackpart(pushop, bundler):
+        # We no longer generate old tree groups
+        pass
+
+    @exchange.b2partsgenerator(TREEGROUP_PARTTYPE2)
+    def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
         if ('treepack' in pushop.stepsdone or
             not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
@@ -776,9 +795,10 @@ def _registerbundle2parts():
 
         packstream = generatepackstream(pushop.repo, rootdir, mfnodes,
                                         basemfnodes, directories)
-        part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
+        part = bundler.newpart(TREEGROUP_PARTTYPE2, data=packstream)
         part.addparam('version', '1')
-        part.addparam('treecache', 'False')
+        part.addparam('cache', 'False')
+        part.addparam('category', PACK_CATEGORY)
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
@@ -907,9 +927,10 @@ def servergettreepack(repo, proto, args):
         bundler = bundle2.bundle20(repo.ui)
         packstream = generatepackstream(repo, rootdir, mfnodes,
                                         basemfnodes, directories)
-        part = bundler.newpart(TREEGROUP_PARTTYPE, data=packstream)
+        part = bundler.newpart(TREEGROUP_PARTTYPE2, data=packstream)
         part.addparam('version', '1')
-        part.addparam('treecache', 'True')
+        part.addparam('cache', 'True')
+        part.addparam('category', PACK_CATEGORY)
 
     except error.Abort as exc:
         # cleanly forward Abort error to the client
