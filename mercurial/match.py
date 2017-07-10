@@ -307,20 +307,25 @@ class basematcher(object):
         '''
         return False
 
-    def anypats(self):
-        '''Matcher uses patterns or include/exclude.'''
-        return False
-
     def always(self):
-        '''Matcher will match everything and .files() will be empty
-        - optimization might be possible and necessary.'''
+        '''Matcher will match everything and .files() will be empty --
+        optimization might be possible.'''
         return False
 
     def isexact(self):
+        '''Matcher will match exactly the list of files in .files() --
+        optimization might be possible.'''
         return False
 
     def prefix(self):
-        return not self.always() and not self.isexact() and not self.anypats()
+        '''Matcher will match the paths in .files() recursively --
+        optimization might be possible.'''
+        return False
+
+    def anypats(self):
+        '''None of .always(), .isexact(), and .prefix() is true --
+        optimizations will be difficult.'''
+        return not self.always() and not self.isexact() and not self.prefix()
 
 class alwaysmatcher(basematcher):
     '''Matches everything.'''
@@ -385,8 +390,8 @@ class patternmatcher(basematcher):
                 any(parentdir in self._fileset
                     for parentdir in util.finddirs(dir)))
 
-    def anypats(self):
-        return self._anypats
+    def prefix(self):
+        return not self._anypats
 
     def __repr__(self):
         return ('<patternmatcher patterns=%r>' % self._pats)
@@ -415,9 +420,6 @@ class includematcher(basematcher):
                 dir in self._dirs or
                 any(parentdir in self._roots
                     for parentdir in util.finddirs(dir)))
-
-    def anypats(self):
-        return True
 
     def __repr__(self):
         return ('<includematcher includes=%r>' % self._pats)
@@ -497,9 +499,6 @@ class differencematcher(basematcher):
     def isexact(self):
         return self._m1.isexact()
 
-    def anypats(self):
-        return self._m1.anypats() or self._m2.anypats()
-
     def __repr__(self):
         return ('<differencematcher m1=%r, m2=%r>' % (self._m1, self._m2))
 
@@ -565,9 +564,6 @@ class intersectionmatcher(basematcher):
 
     def isexact(self):
         return self._m1.isexact() or self._m2.isexact()
-
-    def anypats(self):
-        return self._m1.anypats() or self._m2.anypats()
 
     def __repr__(self):
         return ('<intersectionmatcher m1=%r, m2=%r>' % (self._m1, self._m2))
@@ -645,8 +641,8 @@ class subdirmatcher(basematcher):
     def always(self):
         return self._always
 
-    def anypats(self):
-        return self._matcher.anypats()
+    def prefix(self):
+        return self._matcher.prefix() and not self._always
 
     def __repr__(self):
         return ('<subdirmatcher path=%r, matcher=%r>' %
@@ -661,12 +657,6 @@ class forceincludematcher(basematcher):
 
     def __call__(self, value):
         return value in self._includes or self._matcher(value)
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
 
     def __repr__(self):
         return ('<forceincludematcher matcher=%r, includes=%r>' %
@@ -683,12 +673,6 @@ class unionmatcher(basematcher):
                 return True
         return False
 
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
-
     def __repr__(self):
         return ('<unionmatcher matchers=%r>' % self._matchers)
 
@@ -698,9 +682,6 @@ class negatematcher(basematcher):
 
     def __call__(self, value):
         return not self._matcher(value)
-
-    def anypats(self):
-        return True
 
     def __repr__(self):
         return ('<negatematcher matcher=%r>' % self._matcher)
