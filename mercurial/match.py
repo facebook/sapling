@@ -797,7 +797,7 @@ def _regex(kind, pat, globsuffix):
     if kind == 'path':
         if pat == '.':
             return ''
-        return '^' + util.re.escape(pat) + '(?:/|$)'
+        return util.re.escape(pat) + '(?:/|$)'
     if kind == 'rootfilesin':
         if pat == '.':
             escaped = ''
@@ -805,7 +805,7 @@ def _regex(kind, pat, globsuffix):
             # Pattern is a directory name.
             escaped = util.re.escape(pat) + '/'
         # Anything after the pattern must be a non-directory.
-        return '^' + escaped + '[^/]+$'
+        return escaped + '[^/]+$'
     if kind == 'relglob':
         return '(?:|.*/)' + _globre(pat) + globsuffix
     if kind == 'relpath':

@@ -109,7 +109,7 @@
   f  fenugreek      ../fenugreek
   f  mammals/skunk  skunk
   $ hg debugwalk -I 'path:beans'
-  matcher: <includematcher includes='(?:^beans(?:/|$))'>
+  matcher: <includematcher includes='(?:beans(?:/|$))'>
   f  beans/black     ../beans/black
   f  beans/borlotti  ../beans/borlotti
   f  beans/kidney    ../beans/kidney
@@ -126,27 +126,27 @@
   f  beans/turtle    ../beans/turtle
 
   $ hg debugwalk 'rootfilesin:'
-  matcher: <patternmatcher patterns='(?:^[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:[^/]+$)'>
   f  fennel      ../fennel
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk -I 'rootfilesin:'
-  matcher: <includematcher includes='(?:^[^/]+$)'>
+  matcher: <includematcher includes='(?:[^/]+$)'>
   f  fennel      ../fennel
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk 'rootfilesin:.'
-  matcher: <patternmatcher patterns='(?:^[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:[^/]+$)'>
   f  fennel      ../fennel
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk -I 'rootfilesin:.'
-  matcher: <includematcher includes='(?:^[^/]+$)'>
+  matcher: <includematcher includes='(?:[^/]+$)'>
   f  fennel      ../fennel
   f  fenugreek   ../fenugreek
   f  fiddlehead  ../fiddlehead
   $ hg debugwalk -X 'rootfilesin:'
-  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:^[^/]+$)'>>
+  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:[^/]+$)'>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -158,15 +158,15 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk 'rootfilesin:fennel'
-  matcher: <patternmatcher patterns='(?:^fennel/[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:fennel/[^/]+$)'>
   $ hg debugwalk -I 'rootfilesin:fennel'
-  matcher: <includematcher includes='(?:^fennel/[^/]+$)'>
+  matcher: <includematcher includes='(?:fennel/[^/]+$)'>
   $ hg debugwalk 'rootfilesin:skunk'
-  matcher: <patternmatcher patterns='(?:^skunk/[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:skunk/[^/]+$)'>
   $ hg debugwalk -I 'rootfilesin:skunk'
-  matcher: <includematcher includes='(?:^skunk/[^/]+$)'>
+  matcher: <includematcher includes='(?:skunk/[^/]+$)'>
   $ hg debugwalk 'rootfilesin:beans'
-  matcher: <patternmatcher patterns='(?:^beans/[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:beans/[^/]+$)'>
   f  beans/black     ../beans/black
   f  beans/borlotti  ../beans/borlotti
   f  beans/kidney    ../beans/kidney
@@ -174,7 +174,7 @@
   f  beans/pinto     ../beans/pinto
   f  beans/turtle    ../beans/turtle
   $ hg debugwalk -I 'rootfilesin:beans'
-  matcher: <includematcher includes='(?:^beans/[^/]+$)'>
+  matcher: <includematcher includes='(?:beans/[^/]+$)'>
   f  beans/black     ../beans/black
   f  beans/borlotti  ../beans/borlotti
   f  beans/kidney    ../beans/kidney
@@ -182,19 +182,19 @@
   f  beans/pinto     ../beans/pinto
   f  beans/turtle    ../beans/turtle
   $ hg debugwalk 'rootfilesin:mammals'
-  matcher: <patternmatcher patterns='(?:^mammals/[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:mammals/[^/]+$)'>
   f  mammals/skunk  skunk
   $ hg debugwalk -I 'rootfilesin:mammals'
-  matcher: <includematcher includes='(?:^mammals/[^/]+$)'>
+  matcher: <includematcher includes='(?:mammals/[^/]+$)'>
   f  mammals/skunk  skunk
   $ hg debugwalk 'rootfilesin:mammals/'
-  matcher: <patternmatcher patterns='(?:^mammals/[^/]+$)'>
+  matcher: <patternmatcher patterns='(?:mammals/[^/]+$)'>
   f  mammals/skunk  skunk
   $ hg debugwalk -I 'rootfilesin:mammals/'
-  matcher: <includematcher includes='(?:^mammals/[^/]+$)'>
+  matcher: <includematcher includes='(?:mammals/[^/]+$)'>
   f  mammals/skunk  skunk
   $ hg debugwalk -X 'rootfilesin:mammals'
-  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:^mammals/[^/]+$)'>>
+  matcher: <differencematcher m1=<alwaysmatcher>, m2=<includematcher includes='(?:mammals/[^/]+$)'>>
   f  beans/black                     ../beans/black
   f  beans/borlotti                  ../beans/borlotti
   f  beans/kidney                    ../beans/kidney
@@ -320,7 +320,7 @@
   matcher: <differencematcher m1=<patternmatcher patterns='(?:mammals(?:/|$))'>, m2=<includematcher includes='(?:[^/]*\\/Procyonidae(?:/|$))'>>
   f  mammals/skunk  mammals/skunk
   $ hg debugwalk path:mammals
-  matcher: <patternmatcher patterns='(?:^mammals(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals(?:/|$))'>
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
@@ -383,7 +383,7 @@ Test patterns:
   matcher: <patternmatcher patterns='(?:glob\\:glob$)'>
   f  glob:glob  glob:glob  exact
   $ hg debugwalk path:glob:glob
-  matcher: <patternmatcher patterns='(?:^glob\\:glob(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:glob\\:glob(?:/|$))'>
   f  glob:glob  glob:glob  exact
   $ rm glob:glob
   $ hg addremove
@@ -402,10 +402,10 @@ Test patterns:
   f  mammals/skunk  mammals/skunk
 
   $ hg debugwalk path:beans/black
-  matcher: <patternmatcher patterns='(?:^beans\\/black(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:beans\\/black(?:/|$))'>
   f  beans/black  beans/black  exact
   $ hg debugwalk path:beans//black
-  matcher: <patternmatcher patterns='(?:^beans\\/black(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:beans\\/black(?:/|$))'>
   f  beans/black  beans/black  exact
 
   $ hg debugwalk relglob:Procyonidae
