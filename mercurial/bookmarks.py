@@ -402,12 +402,12 @@ def pushbookmark(repo, key, old, new):
         if existing != old and existing != new:
             return False
         if new == '':
-            del marks[key]
+            changes = [(key, None)]
         else:
             if new not in repo:
                 return False
-            marks[key] = repo[new].node()
-        marks.recordchange(tr)
+            changes = [(key, repo[new].node())]
+        marks.applychanges(repo, tr, changes)
         tr.close()
         return True
     finally:
