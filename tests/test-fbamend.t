@@ -56,6 +56,7 @@ Test basic functions
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
+  warning: orphaned descendants detected, not stripping 86cf3bb05fcf
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg up 0
@@ -73,6 +74,7 @@ Test basic functions
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/86cf3bb05fcf-36a6cbd7-preamend-backup.hg (glob)
   $ echo a >> a
   $ hg amend --rebase
+  warning: orphaned descendants detected, not stripping 34414ab6546d
   rebasing the children of 7817096bf624.preamend
   rebasing 3:e1c831172263 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-rebase.hg (glob)
@@ -85,6 +87,7 @@ Test that current bookmark is maintained
    * bm                        2:7817096bf624
   $ echo a >> a
   $ hg amend --rebase
+  warning: orphaned descendants detected, not stripping 7817096bf624
   rebasing the children of bm.preamend
   rebasing 3:1e390e3ec656 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-rebase.hg (glob)
@@ -103,6 +106,7 @@ Test that bookmarked re-amends work well
 
   $ echo a >> a
   $ hg amend
+  warning: orphaned descendants detected, not stripping 7635008c16e1
   user education
   second line
   warning: the changeset's children were left behind
@@ -154,6 +158,7 @@ Test that unbookmarked re-amends work well
   $ hg boo -d bm
   $ echo a >> a
   $ hg amend
+  warning: orphaned descendants detected, not stripping 0889a0030a17
   user education
   second line
   warning: the changeset's children were left behind
@@ -224,6 +229,7 @@ Test interaction with histedit
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   amending from exec
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  warning: orphaned descendants detected, not stripping 83455f1f6049
   warning: the changeset's children were left behind
   (this is okay since a histedit is in progress)
   Changes commited as a2329fab3fab. You may amend the changeset now.
@@ -492,6 +498,7 @@ Test fbamend with inhibit
   $ hg up ".^" -q
   $ echo "hello" > b
   $ hg amend
+  warning: orphaned descendants detected, not stripping 7c3bad9141dc
   user education
   second line
   warning: the changeset's children were left behind
@@ -514,6 +521,7 @@ Test fbamend with inhibit
   $ hg up ".^" -q
   $ echo "hello" > c
   $ hg amend --rebase
+  warning: orphaned descendants detected, not stripping 084836c39cc1
   rebasing the children of 6d41fcaa1aa4.preamend
   rebasing 3:3a033d20b13a "add d"
   saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/3a033d20b13a-c275a49d-rebase.hg (glob)

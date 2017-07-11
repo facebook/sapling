@@ -211,8 +211,6 @@ Test amending a change where there has already been a sync before
   dir2/subdir/b
   committing manifest
   committing changelog
-  stripping intermediate changeset 32cbac0ffaa1
-  stripping amended changeset a6e4f018e982
   2 changesets found
   uncompressed size of bundle content:
        468 (changelog)
