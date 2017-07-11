@@ -372,10 +372,7 @@ class cg1unpacker(object):
                     # ignored.
                     phases.advanceboundary(repo, tr, phases.draft, cgnodes)
                     phases.retractboundary(repo, tr, phases.draft, added)
-            elif srctype != 'strip':
-                # publishing only alter behavior during push
-                #
-                # strip should not touch boundary at all
+            else:
                 phases.retractboundary(repo, tr, targetphase, added)
 
             if changesets > 0:
