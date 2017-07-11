@@ -38,7 +38,7 @@ Phases are restored when unbundling
   3 changesets found
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3'), ('targetphase', '2')])"
       26805aba1e600a82e93661149f2313866a221a7b
       f585351a92f85104bff7c284233c338b10eb1df7
       9bc730a19041f9ec7cb33c626e811aa233efb18c
@@ -227,7 +227,7 @@ Restore bundle of entire repo
   5 changesets found
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '5')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '5'), ('targetphase', '2')])"
       426bada5c67598ca65036d57d9e4b64b0c1ce7a0
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
@@ -255,7 +255,7 @@ Restore bundle of entire repo
   2 changesets found
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
       112478962961147124edd43549aedd1a335e44bf
       215e7b0814e1cac8e2614e7284f2a5dc266b4323
   phase-heads -- 'sortdict()'
@@ -265,7 +265,7 @@ Restore bundle of entire repo
   3 changesets found
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3'), ('targetphase', '2')])"
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
       215e7b0814e1cac8e2614e7284f2a5dc266b4323
@@ -277,7 +277,7 @@ Restore bundle of entire repo
   2 changesets found
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
       215e7b0814e1cac8e2614e7284f2a5dc266b4323
       03ca77807e919db8807c3749086dc36fb478cac0
   phase-heads -- 'sortdict()'

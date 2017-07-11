@@ -1401,6 +1401,9 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
     if 'clcount' in cg.extras:
         part.addparam('nbchanges', str(cg.extras['clcount']),
                       mandatory=False)
+    if opts.get('phases') and repo.revs('%ln and secret()',
+                                        outgoing.missingheads):
+        part.addparam('targetphase', '%d' % phases.secret, mandatory=False)
 
     addparttagsfnodescache(repo, bundler, outgoing)
 
