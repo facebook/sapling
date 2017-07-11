@@ -477,8 +477,6 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing 1:ed93aeac6b3c "source"
-  transaction abort!
-  rollback completed
   abort: Not a directory: '$TESTTMP/cornercases/foo/foo/foo/foo/file/subfile'
   [255]
   $ hg resolve --tool=internal:dumpjson --all
@@ -515,8 +513,6 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing 1:ec87889f5f90 "source"
-  transaction abort!
-  rollback completed
   abort: (Is a directory|Operation not permitted): '\$TESTTMP/cornercases/foo/foo/foo/foo/file' (re)
   [255]
   $ hg resolve --tool=internal:dumpjson --all
