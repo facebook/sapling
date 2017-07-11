@@ -80,4 +80,4 @@ This file tests that normal mercurial operations almost never read the flat mani
       p1text = origself.revision(p1)
   
   rebasing 2:667a26a14261 "modify b" (tip)
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/667a26a14261-d769c687-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/667a26a14261-d769c687-rebase.hg (glob)

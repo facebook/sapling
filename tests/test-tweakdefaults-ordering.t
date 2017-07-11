@@ -25,6 +25,6 @@ Run test
   $ hg bookmark C -t AB
   $ hg rebase
   rebasing 2:d5e255ef74f8 "c" (tip C)
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d5e255ef74f8-7d2cc323-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d5e255ef74f8-7d2cc323-rebase.hg (glob)
 
 

@@ -42,7 +42,7 @@ Check filename heuristics (same dirname and same basename)
   rebasing 2:557f403c0afd "mod a, mod dir/file.txt" (tip)
   merging b and a to b
   merging dir2/file.txt and dir/file.txt to dir2/file.txt
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/557f403c0afd-9926eeff-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/557f403c0afd-9926eeff-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -117,7 +117,7 @@ Test when lca didn't modified the file that was moved
   $ hg rebase -s . -d 2
   rebasing 3:9d5cf99c3d9f "mod a" (tip)
   merging b and a to b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9d5cf99c3d9f-f02358cc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9d5cf99c3d9f-f02358cc-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -154,7 +154,7 @@ Rebase "backwards"
   $ hg rebase -s . -d 0
   rebasing 3:fbe97126b396 "mod b" (tip)
   merging a and b to a
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fbe97126b396-cf5452a1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/fbe97126b396-cf5452a1-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -183,7 +183,7 @@ Rebase draft commit on top of draft commit
   $ hg rebase -s . -d 1
   rebasing 2:5268f05aa168 "mod a" (tip)
   merging b and a to b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5268f05aa168-284f6515-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/5268f05aa168-284f6515-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -219,7 +219,7 @@ Check a few potential move candidates
   $ hg rebase -s . -d 2
   rebasing 3:6b2f4cece40f "mod dir/a" (tip)
   merging dir/b and dir/a to dir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6b2f4cece40f-503efe60-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6b2f4cece40f-503efe60-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -248,7 +248,7 @@ Move file in one branch and delete it in another
 
   $ hg rebase -s 1 -d 2
   rebasing 1:472e38d57782 "mv a b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/472e38d57782-17d50e29-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/472e38d57782-17d50e29-rebase.hg (glob)
   $ hg up -q c492ed3c7e35dcd1dc938053b8adf56e2cfbd062
   $ ls
   b
@@ -327,7 +327,7 @@ Move a directory in draft branch
   $ hg rebase -s . -d 1
   rebasing 2:a33d80b6e352 "mv dir/ dir2/" (tip)
   merging dir/a and dir2/a to dir2/a
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a33d80b6e352-fecb9ada-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a33d80b6e352-fecb9ada-rebase.hg (glob)
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
@@ -359,7 +359,7 @@ Move file twice and rebase mod on top of moves
   $ hg rebase -s . -d 2
   rebasing 3:d41316942216 "mod a" (tip)
   merging c and a to c
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d41316942216-2b5949bc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d41316942216-2b5949bc-rebase.hg (glob)
 
   $ cd ..
   $ rm -rf server
@@ -394,7 +394,7 @@ Move file twice and rebase moves on top of mods
   merging a and b to b
   rebasing 2:d3efd280421d "mv b c"
   merging b and c to c
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/472e38d57782-ab8d3c58-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/472e38d57782-ab8d3c58-rebase.hg (glob)
 
   $ cd ..
   $ rm -rf server
@@ -430,7 +430,7 @@ Move one file and add another file in the same folder in one branch, modify file
   $ hg rebase -s . -d 2
   rebasing 3:ef716627c70b "mod a" (tip)
   merging b and a to b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/ef716627c70b-24681561-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/ef716627c70b-24681561-rebase.hg (glob)
   $ ls
   b
   c
@@ -501,7 +501,7 @@ Copy and move file
   rebasing 2:ef716627c70b "mod a" (tip)
   merging b and a to b
   merging c and a to c
-  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/ef716627c70b-24681561-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/ef716627c70b-24681561-rebase.hg (glob)
   $ ls
   b
   c

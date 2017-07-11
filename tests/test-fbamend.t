@@ -69,13 +69,13 @@ Test basic functions
   $ hg amend --fixup
   rebasing the children of 34414ab6546d.preamend
   rebasing 2:a764265b74cf "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a764265b74cf-c5eef4f8-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a764265b74cf-c5eef4f8-rebase.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/86cf3bb05fcf-36a6cbd7-preamend-backup.hg (glob)
   $ echo a >> a
   $ hg amend --rebase
   rebasing the children of 7817096bf624.preamend
   rebasing 3:e1c831172263 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-rebase.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34414ab6546d-72d06a8e-preamend-backup.hg (glob)
 
 Test that current bookmark is maintained
@@ -87,7 +87,7 @@ Test that current bookmark is maintained
   $ hg amend --rebase
   rebasing the children of bm.preamend
   rebasing 3:1e390e3ec656 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-rebase.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7817096bf624-d72fddeb-preamend-backup.hg (glob)
   $ hg bookmarks
    * bm                        2:7635008c16e1
@@ -120,7 +120,7 @@ Test that bookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  0889a0030a17 aa bm
   |
@@ -135,7 +135,7 @@ Test that bookmarked re-amends work well
   $ hg amend --fixup
   rebasing the children of bm.preamend
   rebasing 3:2d6884e15790 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-rebase.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7635008c16e1-65f65ff6-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   o  6ba7926ba204 b
@@ -171,7 +171,7 @@ Test that unbookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  83455f1f6049 aa
   |
@@ -186,7 +186,7 @@ Test that unbookmarked re-amends work well
   $ hg amend --fixup
   rebasing the children of 83455f1f6049.preamend
   rebasing 3:6ba7926ba204 "b"
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-rebase.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0889a0030a17-6bebea0c-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   o  455e4104f605 b
@@ -249,7 +249,7 @@ Test interaction with histedit
   (during histedit, use amend without --rebase)
   [255]
   $ hg commit --amend -m 'commit --amend message'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a2329fab3fab-e6fb940f-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a2329fab3fab-e6fb940f-amend.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  3166f3b5587d commit --amend message
   |
@@ -284,9 +284,9 @@ Test that --message is respected
   nothing changed
   [1]
   $ hg amend --message foo
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f83a9508203-7d2a99ee-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0f83a9508203-7d2a99ee-amend.hg (glob)
   $ hg amend -m bar
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/29272a1da891-35a82ce4-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/29272a1da891-35a82ce4-amend.hg (glob)
   $ hg amend
   nothing changed
   [1]
@@ -296,7 +296,7 @@ Test that --addremove/-A works
   $ echo new > new
   $ hg amend -A
   adding new
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/772f45f5a69d-90a7bd63-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/772f45f5a69d-90a7bd63-amend.hg (glob)
 
 Test that the extension disables itself when evolution is enabled
 
@@ -499,7 +499,7 @@ Test fbamend with inhibit
   $ hg amend --fixup
   rebasing the children of f2d4abddbbcd.preamend
   rebasing 2:4538525df7e2 "add c"
-  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/4538525df7e2-0bcb0716-backup.hg (glob)
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/4538525df7e2-0bcb0716-rebase.hg (glob)
   saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/7c3bad9141dc-81844e36-preamend-backup.hg (glob)
   $ hg log --template '{node|short} {desc}' --graph
   o  084836c39cc1 add c
@@ -516,7 +516,7 @@ Test fbamend with inhibit
   $ hg amend --rebase
   rebasing the children of 6d41fcaa1aa4.preamend
   rebasing 3:3a033d20b13a "add d"
-  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/3a033d20b13a-c275a49d-backup.hg (glob)
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/3a033d20b13a-c275a49d-rebase.hg (glob)
   saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/084836c39cc1-e86e0471-preamend-backup.hg (glob)
   $ hg log --template '{node|short} {desc}' --graph
   o  cc9fcfa87676 add d

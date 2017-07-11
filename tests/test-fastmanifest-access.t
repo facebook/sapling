@@ -154,7 +154,7 @@ Check diagnosis, debugging information
   $ hg rebase -r 5:: -d 4 --config extensions.rebase=
   rebasing 5:5234b99c4f1d "add e"
   rebasing 6:dd82c74514cb "add f" (tip)
-  saved backup bundle to $TESTTMP/accesspattern/.hg/strip-backup/5234b99c4f1d-c2e049ad-backup.hg (glob)
+  saved backup bundle to $TESTTMP/accesspattern/.hg/strip-backup/5234b99c4f1d-c2e049ad-rebase.hg (glob)
   $ printaccessedrevs
   =================================================
   CACHE MISS ['7', '8']

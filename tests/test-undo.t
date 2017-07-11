@@ -62,7 +62,7 @@ Test data store
   workingparent fcb754f6a51eaf982f66d0637b39f3d2e6b520d5 (no-eol)
   $ touch a3 && hg add a3
   $ hg commit --amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-e25f6bc1-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/db92053d5c83-e25f6bc1-amend.hg (glob)
   $ hg debugdata .hg/store/undolog/command.i 11
   commit\x00--amend (no-eol) (esc)
 

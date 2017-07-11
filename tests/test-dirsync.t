@@ -219,7 +219,7 @@ Test amending a change where there has already been a sync before
        442 (manifests)
        317  dir1/b
        331  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-f4dc39cf-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-f4dc39cf-amend.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        282 (changelog)
@@ -332,7 +332,7 @@ Test that rebasing applies the same change to both
   $ hg rebase --config extensions.rebase= -d 1
   rebasing 2:70b4edc7f658 "edit dir1/a with sync on" (tip)
   mirrored changes in 'dir1/a' to 'dir2/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/70b4edc7f658-c81f5ea9-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/70b4edc7f658-c81f5ea9-rebase.hg (glob)
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
@@ -384,7 +384,7 @@ Test committing part of the working copy
   $ echo a >> dir2/a
   $ hg commit --amend -m "add dir1/a" dir2/a
   mirrored changes in 'dir2/a' to 'dir1/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-2c09d2e4-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-2c09d2e4-amend.hg (glob)
   $ hg status
   A dir1/b
   $ hg log -r . --stat
@@ -408,7 +408,7 @@ Test committing part of the working copy
   $ hg commit --amend -m "add dir1/a"
   mirrored adding 'dir1/b' to 'dir2/b'
   mirrored changes in 'dir1/a' to 'dir2/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-ac54e4d9-amend-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-ac54e4d9-amend.hg (glob)
   $ hg status
   $ hg log -r . --stat
   changeset:   0:5245011388b8

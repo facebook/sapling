@@ -113,7 +113,7 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg rebase -d 0 -s '.^'
   rebasing 3:6a2476258ba5 "modify subdir/y"
   rebasing 4:f096b21e165f "modify subdir/y again" (tip)
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-rebase.hg (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
   3:0d05c20bb7eb
   4:8289b85c6a30
