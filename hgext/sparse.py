@@ -155,8 +155,8 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
         raise error.Abort(_("too many flags specified."))
     if include or exclude or enableprofile:
         def clonesparse(orig, self, node, overwrite, *args, **kwargs):
-            _config(self.ui, self.unfiltered(), pat, {}, include=include,
-                    exclude=exclude, enableprofile=enableprofile)
+            sparse.updateconfig(self.unfiltered(), pat, {}, include=include,
+                                exclude=exclude, enableprofile=enableprofile)
             return orig(self, node, overwrite, *args, **kwargs)
         extensions.wrapfunction(hg, 'updaterepo', clonesparse)
     return orig(ui, repo, *args, **opts)
@@ -182,7 +182,7 @@ def _setupadd(ui):
             for pat in pats:
                 dirname, basename = util.split(pat)
                 dirs.add(dirname)
-            _config(ui, repo, list(dirs), opts, include=True)
+            sparse.updateconfig(repo, list(dirs), opts, include=True)
         return orig(ui, repo, *pats, **opts)
 
     extensions.wrapcommand(commands.table, 'add', _add)
@@ -338,9 +338,10 @@ def debugsparse(ui, repo, *pats, **opts):
         return
 
     if include or exclude or delete or reset or enableprofile or disableprofile:
-        _config(ui, repo, pats, opts, include=include, exclude=exclude,
-                reset=reset, delete=delete, enableprofile=enableprofile,
-                disableprofile=disableprofile, force=force)
+        sparse.updateconfig(repo, pats, opts, include=include, exclude=exclude,
+                            reset=reset, delete=delete,
+                            enableprofile=enableprofile,
+                            disableprofile=disableprofile, force=force)
 
     if importrules:
         sparse.importfromfiles(repo, opts, pats, force=force)
@@ -359,70 +360,3 @@ def debugsparse(ui, repo, *pats, **opts):
                                 conflicting=fcounts[2])
         finally:
             wlock.release()
-
-def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
-            delete=False, enableprofile=False, disableprofile=False,
-            force=False):
-    """
-    Perform a sparse config update. Only one of the kwargs may be specified.
-    """
-    wlock = repo.wlock()
-    try:
-        oldsparsematch = sparse.matcher(repo)
-
-        raw = repo.vfs.tryread('sparse')
-        if raw:
-            oldinclude, oldexclude, oldprofiles = map(
-                set, sparse.parseconfig(ui, raw))
-        else:
-            oldinclude = set()
-            oldexclude = set()
-            oldprofiles = set()
-
-        try:
-            if reset:
-                newinclude = set()
-                newexclude = set()
-                newprofiles = set()
-            else:
-                newinclude = set(oldinclude)
-                newexclude = set(oldexclude)
-                newprofiles = set(oldprofiles)
-
-            oldstatus = repo.status()
-
-            if any(pat.startswith('/') for pat in pats):
-                ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
-                          % ([pat for pat in pats if pat.startswith('/')]))
-            elif include:
-                newinclude.update(pats)
-            elif exclude:
-                newexclude.update(pats)
-            elif enableprofile:
-                newprofiles.update(pats)
-            elif disableprofile:
-                newprofiles.difference_update(pats)
-            elif delete:
-                newinclude.difference_update(pats)
-                newexclude.difference_update(pats)
-
-            sparse.writeconfig(repo, newinclude, newexclude, newprofiles)
-
-            fcounts = map(
-                len,
-                sparse.refreshwdir(repo, oldstatus, oldsparsematch,
-                                   force=force))
-
-            profilecount = (len(newprofiles - oldprofiles) -
-                            len(oldprofiles - newprofiles))
-            includecount = (len(newinclude - oldinclude) -
-                            len(oldinclude - newinclude))
-            excludecount = (len(newexclude - oldexclude) -
-                            len(oldexclude - newexclude))
-            sparse.printchanges(ui, opts, profilecount, includecount,
-                                excludecount, *fcounts)
-        except Exception:
-            sparse.writeconfig(repo, oldinclude, oldexclude, oldprofiles)
-            raise
-    finally:
-        wlock.release()

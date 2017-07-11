@@ -583,6 +583,76 @@ def importfromfiles(repo, opts, paths, force=False):
         printchanges(repo.ui, opts, profilecount, includecount, excludecount,
                      *fcounts)
 
+def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
+                 delete=False, enableprofile=False, disableprofile=False,
+                 force=False):
+    """Perform a sparse config update.
+
+    Only one of the actions may be performed.
+
+    The new config is written out and a working directory refresh is performed.
+    """
+    wlock = repo.wlock()
+    try:
+        oldsparsematch = matcher(repo)
+
+        raw = repo.vfs.tryread('sparse')
+        if raw:
+            oldinclude, oldexclude, oldprofiles = map(
+                set, parseconfig(repo.ui, raw))
+        else:
+            oldinclude = set()
+            oldexclude = set()
+            oldprofiles = set()
+
+        try:
+            if reset:
+                newinclude = set()
+                newexclude = set()
+                newprofiles = set()
+            else:
+                newinclude = set(oldinclude)
+                newexclude = set(oldexclude)
+                newprofiles = set(oldprofiles)
+
+            oldstatus = repo.status()
+
+            if any(pat.startswith('/') for pat in pats):
+                repo.ui.warn(_('warning: paths cannot start with /, '
+                               'ignoring: %s\n') %
+                             ([pat for pat in pats if pat.startswith('/')]))
+            elif include:
+                newinclude.update(pats)
+            elif exclude:
+                newexclude.update(pats)
+            elif enableprofile:
+                newprofiles.update(pats)
+            elif disableprofile:
+                newprofiles.difference_update(pats)
+            elif delete:
+                newinclude.difference_update(pats)
+                newexclude.difference_update(pats)
+
+            writeconfig(repo, newinclude, newexclude, newprofiles)
+
+            fcounts = map(
+                len,
+                refreshwdir(repo, oldstatus, oldsparsematch, force=force))
+
+            profilecount = (len(newprofiles - oldprofiles) -
+                            len(oldprofiles - newprofiles))
+            includecount = (len(newinclude - oldinclude) -
+                            len(oldinclude - newinclude))
+            excludecount = (len(newexclude - oldexclude) -
+                            len(oldexclude - newexclude))
+            printchanges(repo.ui, opts, profilecount, includecount,
+                         excludecount, *fcounts)
+        except Exception:
+            writeconfig(repo, oldinclude, oldexclude, oldprofiles)
+            raise
+    finally:
+        wlock.release()
+
 def printchanges(ui, opts, profilecount=0, includecount=0, excludecount=0,
                  added=0, dropped=0, conflicting=0):
     """Print output summarizing sparse config changes."""
