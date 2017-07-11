@@ -122,6 +122,10 @@ def uisetup(ui):
     cmdutil.extraexport.append('pullurl')
     cmdutil.extraexportmap['pullurl'] = _addpullheader
 
+def reposetup(ui, repo):
+    if not repo.local():
+        return
+    repo._wlockfreeprefix.add('last-email.txt')
 
 def prompt(ui, prompt, default=None, rest=':'):
     if default:

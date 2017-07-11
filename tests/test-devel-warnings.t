@@ -44,6 +44,11 @@
   >     wl.release()
   >     lo.release()
   > 
+  > @command(b'no-wlock-write', [], '')
+  > def nowlockwrite(ui, repo):
+  >     with repo.vfs(b'branch', 'a'):
+  >         pass
+  > 
   > @command(b'stripintr', [], '')
   > def stripintr(ui, repo):
   >     lo = repo.lock()
@@ -103,6 +108,11 @@
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
   $ hg properlocking
   $ hg nowaitlocking
+
+Writing without lock
+
+  $ hg no-wlock-write
+  devel-warn: write with no wlock: "branch" at: $TESTTMP/buggylocking.py:* (nowlockwrite) (glob)
 
 Stripping from a transaction
 

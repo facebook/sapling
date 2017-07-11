@@ -300,6 +300,26 @@ class localrepository(object):
     # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
 
+    # list of prefix for file which can be written without 'wlock'
+    # Extensions should extend this list when needed
+    _wlockfreeprefix = {
+        # We migh consider requiring 'wlock' for the next
+        # two, but pretty much all the existing code assume
+        # wlock is not needed so we keep them excluded for
+        # now.
+        'hgrc',
+        'requires',
+        # XXX cache is a complicatged business someone
+        # should investigate this in depth at some point
+        'cache/',
+        # XXX shouldn't be dirstate covered by the wlock?
+        'dirstate',
+        # XXX bisect was still a bit too messy at the time
+        # this changeset was introduced. Someone should fix
+        # the remainig bit and drop this line
+        'bisect.state',
+    }
+
     def __init__(self, baseui, path, create=False):
         self.requirements = set()
         self.filtername = None
@@ -319,10 +339,13 @@ class localrepository(object):
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
                                                 realfs=False)
-        self.vfs = vfsmod.vfs(self.path)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
+        self.vfs = vfsmod.vfs(self.path)
+        if (self.ui.configbool('devel', 'all-warnings') or
+            self.ui.configbool('devel', 'check-locks')):
+            self.vfs.audit = self._getvfsward(self.vfs.audit)
         # A list of callback to shape the phase if no data were found.
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
@@ -440,6 +463,38 @@ class localrepository(object):
         self._sparsesignaturecache = {}
         # Signature to cached matcher instance.
         self._sparsematchercache = {}
+
+    def _getvfsward(self, origfunc):
+        """build a ward for self.vfs"""
+        rref = weakref.ref(self)
+        def checkvfs(path, mode=None):
+            ret = origfunc(path, mode=mode)
+            repo = rref()
+            if (repo is None
+                or not util.safehasattr(repo, '_wlockref')
+                or not util.safehasattr(repo, '_lockref')):
+                return
+            if mode in (None, 'r', 'rb'):
+                return
+            if path.startswith(repo.path):
+                # truncate name relative to the repository (.hg)
+                path = path[len(repo.path) + 1:]
+            if path.startswith('journal.'):
+                # journal is covered by 'lock'
+                if repo._currentlock(repo._lockref) is None:
+                    repo.ui.develwarn('write with no lock: "%s"' % path,
+                                      stacklevel=2)
+            elif repo._currentlock(repo._wlockref) is None:
+                # rest of vfs files are covered by 'wlock'
+                #
+                # exclude special files
+                for prefix in self._wlockfreeprefix:
+                    if path.startswith(prefix):
+                        return
+                repo.ui.develwarn('write with no wlock: "%s"' % path,
+                                  stacklevel=2)
+            return ret
+        return checkvfs
 
     def close(self):
         self._writecaches()

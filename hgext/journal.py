@@ -69,6 +69,7 @@ def extsetup(ui):
 def reposetup(ui, repo):
     if repo.local():
         repo.journal = journalstorage(repo)
+        repo._wlockfreeprefix.add('namejournal')
 
         dirstate, cached = localrepo.isfilecached(repo, 'dirstate')
         if cached:

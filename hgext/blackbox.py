@@ -234,6 +234,7 @@ def reposetup(ui, repo):
 
     if util.safehasattr(ui, 'setrepo'):
         ui.setrepo(repo)
+    repo._wlockfreeprefix.add('blackbox.log')
 
 @command('^blackbox',
     [('l', 'limit', 10, _('the number of events to show')),
