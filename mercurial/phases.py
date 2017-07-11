@@ -448,10 +448,6 @@ def subsetphaseheads(repo, subset):
 
 def updatephases(repo, tr, headsbyphase, addednodes):
     """Updates the repo with the given phase heads"""
-    # First make all the added revisions secret because changegroup.apply()
-    # currently sets the phase to draft.
-    retractboundary(repo, tr, secret, addednodes)
-
     # Now advance phase boundaries of all but secret phase
     for phase in allphases[:-1]:
         advanceboundary(repo, tr, phase, headsbyphase[phase])
