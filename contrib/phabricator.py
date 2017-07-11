@@ -413,6 +413,56 @@ def getdescfromdrev(drev):
     uri = 'Differential Revision: %s' % drev[r'uri']
     return '\n\n'.join(filter(None, [title, summary, testplan, uri]))
 
+def getdiffmeta(diff):
+    """get commit metadata (date, node, user, p1) from a diff object
+
+    The metadata could be "hg:meta", sent by phabsend, like:
+
+        "properties": {
+          "hg:meta": {
+            "date": "1499571514 25200",
+            "node": "98c08acae292b2faf60a279b4189beb6cff1414d",
+            "user": "Foo Bar <foo@example.com>",
+            "parent": "6d0abad76b30e4724a37ab8721d630394070fe16"
+          }
+        }
+
+    Or converted from "local:commits", sent by "arc", like:
+
+        "properties": {
+          "local:commits": {
+            "98c08acae292b2faf60a279b4189beb6cff1414d": {
+              "author": "Foo Bar",
+              "time": 1499546314,
+              "branch": "default",
+              "tag": "",
+              "commit": "98c08acae292b2faf60a279b4189beb6cff1414d",
+              "rev": "98c08acae292b2faf60a279b4189beb6cff1414d",
+              "local": "1000",
+              "parents": ["6d0abad76b30e4724a37ab8721d630394070fe16"],
+              "summary": "...",
+              "message": "...",
+              "authorEmail": "foo@example.com"
+            }
+          }
+        }
+
+    Note: metadata extracted from "local:commits" will lose time zone
+    information.
+    """
+    props = diff.get(r'properties') or {}
+    meta = props.get(r'hg:meta')
+    if not meta and props.get(r'local:commits'):
+        commit = sorted(props[r'local:commits'].values())[0]
+        meta = {
+            r'date': r'%d 0' % commit[r'time'],
+            r'node': commit[r'rev'],
+            r'user': r'%s <%s>' % (commit[r'author'], commit[r'authorEmail']),
+        }
+        if len(commit.get(r'parents', ())) >= 1:
+            meta[r'parent'] = commit[r'parents'][0]
+    return meta or {}
+
 def readpatch(repo, params, write, stack=False):
     """generate plain-text patch readable by 'hg import'
 
@@ -438,12 +488,10 @@ def readpatch(repo, params, write, stack=False):
         # Try to preserve metadata from hg:meta property. Write hg patch
         # headers that can be read by the "import" command. See patchheadermap
         # and extract in mercurial/patch.py for supported headers.
-        props = diffs[str(diffid)][r'properties'] # could be empty list or dict
-        if props and r'hg:meta' in props:
-            meta = props[r'hg:meta']
-            for k in _metanamemap.keys():
-                if k in meta:
-                    header += '# %s %s\n' % (_metanamemap[k], meta[k])
+        meta = getdiffmeta(diffs[str(diffid)])
+        for k in _metanamemap.keys():
+            if k in meta:
+                header += '# %s %s\n' % (_metanamemap[k], meta[k])
 
         write(('%s%s\n%s') % (header, desc, body))
 
