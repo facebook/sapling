@@ -648,8 +648,17 @@ class subdirmatcher(basematcher):
                 (self._path, self._matcher))
 
 class unionmatcher(basematcher):
-    """A matcher that is the union of several matchers."""
+    """A matcher that is the union of several matchers.
+
+    The non-matching-attributes (root, cwd, bad, explicitdir, traversedir) are
+    taken from the first matcher.
+    """
+
     def __init__(self, matchers):
+        m1 = matchers[0]
+        super(unionmatcher, self).__init__(m1._root, m1._cwd)
+        self.explicitdir = m1.explicitdir
+        self.traversedir = m1.traversedir
         self._matchers = matchers
 
     def matchfn(self, f):
@@ -657,6 +666,15 @@ class unionmatcher(basematcher):
             if match(f):
                 return True
         return False
+
+    def visitdir(self, dir):
+        r = False
+        for m in self._matchers:
+            v = m.visitdir(dir)
+            if v == 'all':
+                return v
+            r |= v
+        return r
 
     def __repr__(self):
         return ('<unionmatcher matchers=%r>' % self._matchers)
