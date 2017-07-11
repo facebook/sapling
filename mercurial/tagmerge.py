@@ -136,7 +136,7 @@ def grouptagnodesbyline(tagnodes):
             prevlinenum = linenum
     return groupednodes
 
-def writemergedtags(repo, mergedtags):
+def writemergedtags(fcd, mergedtags):
     '''
     write the merged tags while trying to minimize the diff to the first parent
 
@@ -169,9 +169,7 @@ def writemergedtags(repo, mergedtags):
     # finally we can join the sorted groups to get the final contents of the
     # merged .hgtags file, and then write it to disk
     mergedtagstring = '\n'.join([tags for rank, tags in finaltags if tags])
-    fp = repo.wvfs('.hgtags', 'wb')
-    fp.write(mergedtagstring + '\n')
-    fp.close()
+    fcd.write(mergedtagstring + '\n', fcd.flags())
 
 def singletagmerge(p1nodes, p2nodes):
     '''
@@ -268,7 +266,7 @@ def merge(repo, fcd, fco, fca):
             % (numconflicts, ', '.join(sorted(conflictedtags))))
         return True, 1
 
-    writemergedtags(repo, mergedtags)
+    writemergedtags(fcd, mergedtags)
     ui.note(_('.hgtags merged successfully\n'))
     return False, 0
 
