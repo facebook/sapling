@@ -553,7 +553,7 @@ class localrepository(object):
             # class of this repo. Give it a name containing the
             # filter name to aid debugging.
             bases = (repoview.repoview, key)
-            cls = type('%sfilteredrepo' % name, bases, {})
+            cls = type(r'%sfilteredrepo' % name, bases, {})
             self._filteredrepotypes[key] = cls
 
         return self._filteredrepotypes[key](self, name)
