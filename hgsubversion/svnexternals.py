@@ -501,10 +501,12 @@ class svnsubrepo(subrepo.svnsubrepo):
         else:
             wcrev = self._wcrev()
             wcrevs = (wcrev, wcrev)
-        if (('HEAD' in wcrevs or self._state[1] == 'HEAD' or
-            self._state[1] in wcrevs or ignoreupdate)
-            and not self._wcchanged()[0]):
-            return False
+        shouldcheck = ('HEAD' in wcrevs or self._state[1] == 'HEAD' or
+                       self._state[1] in wcrevs or ignoreupdate)
+        if shouldcheck:
+            changes, extchanges, missing = self._wcchanged()
+            if not changes:
+                return False
         return True
 
     def commit(self, text, user, date):
