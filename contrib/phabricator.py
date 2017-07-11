@@ -138,7 +138,7 @@ def getrepophid(repo):
 
 _differentialrevisiontagre = re.compile('\AD([1-9][0-9]*)\Z')
 _differentialrevisiondescre = re.compile(
-    '^Differential Revision:.*D([1-9][0-9]*)$', re.M)
+    '^Differential Revision:\s*(.*)D([1-9][0-9]*)$', re.M)
 
 def getoldnodedrevmap(repo, nodelist):
     """find previous nodes that has been sent to Phabricator
@@ -172,10 +172,14 @@ def getoldnodedrevmap(repo, nodelist):
                         toconfirm[node] = (n, set(precnodes), int(m.group(1)))
                         continue
 
-        # Check commit message
+        # Check commit message (make sure URL matches)
         m = _differentialrevisiondescre.search(ctx.description())
         if m:
-            result[node] = (None, int(m.group(1)))
+            if m.group(1).rstrip('/') == url.rstrip('/'):
+                result[node] = (None, int(m.group(2)))
+            else:
+                unfi.ui.warn(_('%s: Differential Revision URL ignored - host '
+                               'does not match config\n') % ctx)
 
     # Double check if tags are genuine by collecting all old nodes from
     # Phabricator, and expect precursors overlap with it.
