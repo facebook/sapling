@@ -679,16 +679,6 @@ class unionmatcher(basematcher):
     def __repr__(self):
         return ('<unionmatcher matchers=%r>' % self._matchers)
 
-class negatematcher(basematcher):
-    def __init__(self, matcher):
-        self._matcher = matcher
-
-    def matchfn(self, f):
-        return not self._matcher(f)
-
-    def __repr__(self):
-        return ('<negatematcher matcher=%r>' % self._matcher)
-
 def patkind(pattern, default=None):
     '''If pattern is 'kind:pat' with a known kind, return kind.'''
     return _patsplit(pattern, default)[0]
