@@ -306,7 +306,7 @@ class vfs(abstractvfs):
         if audit:
             self.audit = pathutil.pathauditor(self.base)
         else:
-            self.audit = util.always
+            self.audit = (lambda path, mode=None: True)
         self.createmode = None
         self._trustnlink = None
 
@@ -360,7 +360,7 @@ class vfs(abstractvfs):
                 r = util.checkosfilename(path)
                 if r:
                     raise error.Abort("%s: %r" % (r, path))
-            self.audit(path)
+            self.audit(path, mode=mode)
         f = self.join(path)
 
         if not text and "b" not in mode:

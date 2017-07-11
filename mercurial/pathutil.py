@@ -46,7 +46,7 @@ class pathauditor(object):
         else:
             self.normcase = lambda x: x
 
-    def __call__(self, path):
+    def __call__(self, path, mode=None):
         '''Check the relative path.
         path may contain a pattern (e.g. foodir/**.txt)'''
 
