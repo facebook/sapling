@@ -294,6 +294,19 @@ class phasecache(object):
         tr.addfilegenerator('phase', ('phaseroots',), self._write)
         tr.hookargs['phases_moved'] = '1'
 
+    def registernew(self, repo, tr, targetphase, nodes):
+        repo = repo.unfiltered()
+        self._retractboundary(repo, tr, targetphase, nodes)
+        if tr is not None and 'phases' in tr.changes:
+            phasetracking = tr.changes['phases']
+            torev = repo.changelog.rev
+            phase = self.phase
+            for n in nodes:
+                rev = torev(n)
+                revphase = phase(repo, rev)
+                _trackphasechange(phasetracking, rev, None, revphase)
+        repo.invalidatevolatilesets()
+
     def advanceboundary(self, repo, tr, targetphase, nodes):
         """Set all 'nodes' to phase 'targetphase'
 
@@ -415,6 +428,16 @@ def retractboundary(repo, tr, targetphase, nodes):
     Simplify boundary to contains phase roots only."""
     phcache = repo._phasecache.copy()
     phcache.retractboundary(repo, tr, targetphase, nodes)
+    repo._phasecache.replace(phcache)
+
+def registernew(repo, tr, targetphase, nodes):
+    """register a new revision and its phase
+
+    Code adding revisions to the repository should use this function to
+    set new changeset in their target phase (or higher).
+    """
+    phcache = repo._phasecache.copy()
+    phcache.registernew(repo, tr, targetphase, nodes)
     repo._phasecache.replace(phcache)
 
 def listphases(repo):
