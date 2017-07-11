@@ -254,6 +254,7 @@ Test extension help:
        censor        erase file content at a given revision
        churn         command to display statistics about repository history
        clonebundles  advertise pre-generated bundles to seed clones
+       commitextras  adds a new flag extras to commit
        convert       import revisions from foreign VCS repositories into
                      Mercurial
        eol           automatically manage newlines in repository files
