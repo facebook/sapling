@@ -272,7 +272,7 @@ Test interaction with histedit
   o  cb9a9f314b8b a
   
   $ hg histedit --continue
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/83455f1f6049-922a304e-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/83455f1f6049-922a304e-histedit.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  0f83a9508203 c
   |

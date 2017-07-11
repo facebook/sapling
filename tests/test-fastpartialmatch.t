@@ -186,7 +186,7 @@ Test histedit
   > pick 353c4093de9e 2 tohistedit
   > pick 51e0111a3ca1 1 afterstrip
   > EOF
-  saved backup bundle to $TESTTMP/cloned/.hg/strip-backup/51e0111a3ca1-ae8f0808-backup.hg (glob)
+  saved backup bundle to $TESTTMP/cloned/.hg/strip-backup/51e0111a3ca1-ae8f0808-histedit.hg (glob)
   $ hg log --graph
   @  changeset:   2:8dc08dfc2ed8
   |  tag:         tip
