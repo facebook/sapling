@@ -14,6 +14,11 @@
   adding a
   $ hg st
   A a
+  $ mkdir dir
+  $ cd dir
+  $ hg add ../a
+  ../a already tracked!
+  $ cd ..
 
   $ echo b > b
   $ hg add -n b

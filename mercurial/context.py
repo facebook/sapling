@@ -33,6 +33,7 @@ from . import (
     mdiff,
     obsolete as obsmod,
     patch,
+    pathutil,
     phases,
     pycompat,
     repoview,
@@ -1518,17 +1519,20 @@ class workingctx(committablectx):
                 (missing and self.deleted()))
 
     def add(self, list, prefix=""):
-        join = lambda f: os.path.join(prefix, f)
         with self._repo.wlock():
             ui, ds = self._repo.ui, self._repo.dirstate
+            uipath = lambda f: ds.pathto(pathutil.join(prefix, f))
             rejected = []
             lstat = self._repo.wvfs.lstat
             for f in list:
-                scmutil.checkportable(ui, join(f))
+                # ds.pathto() returns an absolute file when this is invoked from
+                # the keyword extension.  That gets flagged as non-portable on
+                # Windows, since it contains the drive letter and colon.
+                scmutil.checkportable(ui, os.path.join(prefix, f))
                 try:
                     st = lstat(f)
                 except OSError:
-                    ui.warn(_("%s does not exist!\n") % join(f))
+                    ui.warn(_("%s does not exist!\n") % uipath(f))
                     rejected.append(f)
                     continue
                 if st.st_size > 10000000:
@@ -1536,13 +1540,13 @@ class workingctx(committablectx):
                               "to manage this file\n"
                               "(use 'hg revert %s' to cancel the "
                               "pending addition)\n")
-                              % (f, 3 * st.st_size // 1000000, join(f)))
+                            % (f, 3 * st.st_size // 1000000, uipath(f)))
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     ui.warn(_("%s not added: only files and symlinks "
-                              "supported currently\n") % join(f))
+                              "supported currently\n") % uipath(f))
                     rejected.append(f)
                 elif ds[f] in 'amn':
-                    ui.warn(_("%s already tracked!\n") % join(f))
+                    ui.warn(_("%s already tracked!\n") % uipath(f))
                 elif ds[f] == 'r':
                     ds.normallookup(f)
                 else:
@@ -1550,12 +1554,13 @@ class workingctx(committablectx):
             return rejected
 
     def forget(self, files, prefix=""):
-        join = lambda f: os.path.join(prefix, f)
         with self._repo.wlock():
+            ds = self._repo.dirstate
+            uipath = lambda f: ds.pathto(pathutil.join(prefix, f))
             rejected = []
             for f in files:
                 if f not in self._repo.dirstate:
-                    self._repo.ui.warn(_("%s not tracked!\n") % join(f))
+                    self._repo.ui.warn(_("%s not tracked!\n") % uipath(f))
                     rejected.append(f)
                 elif self._repo.dirstate[f] != 'a':
                     self._repo.dirstate.remove(f)
@@ -1566,9 +1571,10 @@ class workingctx(committablectx):
     def undelete(self, list):
         pctxs = self.parents()
         with self._repo.wlock():
+            ds = self._repo.dirstate
             for f in list:
                 if self._repo.dirstate[f] != 'r':
-                    self._repo.ui.warn(_("%s not removed!\n") % f)
+                    self._repo.ui.warn(_("%s not removed!\n") % ds.pathto(f))
                 else:
                     fctx = f in pctxs[0] and pctxs[0][f] or pctxs[1][f]
                     t = fctx.data()
@@ -1581,11 +1587,13 @@ class workingctx(committablectx):
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
-            self._repo.ui.warn(_("%s does not exist!\n") % dest)
+            self._repo.ui.warn(_("%s does not exist!\n")
+                               % self._repo.dirstate.pathto(dest))
             return
         if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
             self._repo.ui.warn(_("copy failed: %s is not a file or a "
-                                 "symbolic link\n") % dest)
+                                 "symbolic link\n")
+                               % self._repo.dirstate.pathto(dest))
         else:
             with self._repo.wlock():
                 if self._repo.dirstate[dest] in '?':
