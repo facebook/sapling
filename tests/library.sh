@@ -16,6 +16,8 @@ ssh=python "$TESTDIR/dummyssh"
 preferuncompressed=True
 [experimental]
 changegroup3=True
+[rebase]
+singletransaction=True
 EOF
 
 hgcloneshallow() {
