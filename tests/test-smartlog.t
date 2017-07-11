@@ -502,3 +502,7 @@ Make sure the template keywords are documented correctly
       splitsuccessors
                     Return all of the node's successors created as a result of
                     split
+  --
+      successorssets
+                    Returns a string of sets of successors for a changectx
+  
