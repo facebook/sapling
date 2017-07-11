@@ -599,46 +599,48 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
         oldinclude, oldexclude, oldprofiles = parseconfig(repo.ui, raw)
         oldprofiles = set(oldprofiles)
 
+        if reset:
+            newinclude = set()
+            newexclude = set()
+            newprofiles = set()
+        else:
+            newinclude = set(oldinclude)
+            newexclude = set(oldexclude)
+            newprofiles = set(oldprofiles)
+
+        oldstatus = repo.status()
+
+        if any(pat.startswith('/') for pat in pats):
+            repo.ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
+                         % ([pat for pat in pats if pat.startswith('/')]))
+        elif include:
+            newinclude.update(pats)
+        elif exclude:
+            newexclude.update(pats)
+        elif enableprofile:
+            newprofiles.update(pats)
+        elif disableprofile:
+            newprofiles.difference_update(pats)
+        elif delete:
+            newinclude.difference_update(pats)
+            newexclude.difference_update(pats)
+
+        profilecount = (len(newprofiles - oldprofiles) -
+                        len(oldprofiles - newprofiles))
+        includecount = (len(newinclude - oldinclude) -
+                        len(oldinclude - newinclude))
+        excludecount = (len(newexclude - oldexclude) -
+                        len(oldexclude - newexclude))
+
+        # TODO clean up this writeconfig() + try..except pattern once we can.
+        # See comment in importfromfiles() explaining it.
+        writeconfig(repo, newinclude, newexclude, newprofiles)
+
         try:
-            if reset:
-                newinclude = set()
-                newexclude = set()
-                newprofiles = set()
-            else:
-                newinclude = set(oldinclude)
-                newexclude = set(oldexclude)
-                newprofiles = set(oldprofiles)
-
-            oldstatus = repo.status()
-
-            if any(pat.startswith('/') for pat in pats):
-                repo.ui.warn(_('warning: paths cannot start with /, '
-                               'ignoring: %s\n') %
-                             ([pat for pat in pats if pat.startswith('/')]))
-            elif include:
-                newinclude.update(pats)
-            elif exclude:
-                newexclude.update(pats)
-            elif enableprofile:
-                newprofiles.update(pats)
-            elif disableprofile:
-                newprofiles.difference_update(pats)
-            elif delete:
-                newinclude.difference_update(pats)
-                newexclude.difference_update(pats)
-
-            writeconfig(repo, newinclude, newexclude, newprofiles)
-
             fcounts = map(
                 len,
                 refreshwdir(repo, oldstatus, oldmatcher, force=force))
 
-            profilecount = (len(newprofiles - oldprofiles) -
-                            len(oldprofiles - newprofiles))
-            includecount = (len(newinclude - oldinclude) -
-                            len(oldinclude - newinclude))
-            excludecount = (len(newexclude - oldexclude) -
-                            len(oldexclude - newexclude))
             printchanges(repo.ui, opts, profilecount, includecount,
                          excludecount, *fcounts)
         except Exception:
