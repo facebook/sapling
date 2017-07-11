@@ -592,18 +592,12 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
 
     The new config is written out and a working directory refresh is performed.
     """
-    wlock = repo.wlock()
-    try:
-        oldsparsematch = matcher(repo)
+    with repo.wlock():
+        oldmatcher = matcher(repo)
 
         raw = repo.vfs.tryread('sparse')
-        if raw:
-            oldinclude, oldexclude, oldprofiles = map(
-                set, parseconfig(repo.ui, raw))
-        else:
-            oldinclude = set()
-            oldexclude = set()
-            oldprofiles = set()
+        oldinclude, oldexclude, oldprofiles = parseconfig(repo.ui, raw)
+        oldprofiles = set(oldprofiles)
 
         try:
             if reset:
@@ -637,7 +631,7 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
 
             fcounts = map(
                 len,
-                refreshwdir(repo, oldstatus, oldsparsematch, force=force))
+                refreshwdir(repo, oldstatus, oldmatcher, force=force))
 
             profilecount = (len(newprofiles - oldprofiles) -
                             len(oldprofiles - newprofiles))
@@ -650,8 +644,6 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
         except Exception:
             writeconfig(repo, oldinclude, oldexclude, oldprofiles)
             raise
-    finally:
-        wlock.release()
 
 def printchanges(ui, opts, profilecount=0, includecount=0, excludecount=0,
                  added=0, dropped=0, conflicting=0):
