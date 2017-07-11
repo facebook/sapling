@@ -425,6 +425,7 @@ With evolution enabled, should set obsolescence markers
   adding file changes
   added 4 changesets with 2 changes to 4 files (+1 heads)
   2 new obsolescence markers
+  obsoleted 2 changesets
 
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -690,6 +691,7 @@ Test date rewriting
   adding file changes
   added 1 changesets with 0 changes to 1 files
   1 new obsolescence markers
+  obsoleted 1 changesets
   $ hg log -G -T '{desc} {date|isodate}'
   o  c 2001-09-09 01:46 +0000
   |
@@ -722,6 +724,7 @@ Test date rewriting with a merge commit
   adding file changes
   added 3 changesets with 0 changes to 2 files (+1 heads)
   3 new obsolescence markers
+  obsoleted 3 changesets
 
   $ cd ..
 
@@ -763,6 +766,7 @@ Test pushrebase on merge commit where master is on the p2 side
   adding file changes
   added 2 changesets with 0 changes to 2 files
   2 new obsolescence markers
+  obsoleted 2 changesets
   $ hg -R ../p2mergeserver log -G -T '{rev}: {desc}'
   o    3: merge b and c
   |\
@@ -882,6 +886,7 @@ phase is updated correctly with the marker information.
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
   1 new obsolescence markers
+  obsoleted 1 changesets
   $ hg up tip -q
   $ log --hidden
   @  a2 [public:722505d780e3]
