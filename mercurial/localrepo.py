@@ -1216,6 +1216,7 @@ class localrepository(object):
                                      checkambigfiles=_cachedfiles)
         tr.changes['revs'] = set()
         tr.changes['obsmarkers'] = set()
+        tr.changes['phases'] = {}
 
         tr.hookargs['txnid'] = txnid
         # note: writing the fncache only during finalize mean that the file is

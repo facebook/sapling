@@ -154,6 +154,18 @@ def _readroots(repo, phasedefaults=None):
         dirty = True
     return roots, dirty
 
+def _trackphasechange(data, rev, old, new):
+    """add a phase move the <data> dictionnary
+
+    If data is None, nothing happens.
+    """
+    if data is None:
+        return
+    existing = data.get(rev)
+    if existing is not None:
+        old = existing[0]
+    data[rev] = (old, new)
+
 class phasecache(object):
     def __init__(self, repo, phasedefaults, _load=True):
         if _load:
@@ -289,8 +301,13 @@ class phasecache(object):
         """
         # Be careful to preserve shallow-copied values: do not update
         # phaseroots values, replace them.
+        if tr is None:
+            phasetracking = None
+        else:
+            phasetracking = tr.changes.get('phases')
 
         repo = repo.unfiltered()
+
         delroots = [] # set of root deleted by this path
         for phase in xrange(targetphase + 1, len(allphases)):
             # filter nodes that are not in a compatible phase already
@@ -300,7 +317,11 @@ class phasecache(object):
                 break # no roots to move anymore
 
             olds = self.phaseroots[phase]
+
             affected = repo.revs('%ln::%ln', olds, nodes)
+            for r in affected:
+                _trackphasechange(phasetracking, r, self.phase(repo, r),
+                                  targetphase)
 
             roots = set(ctx.node() for ctx in repo.set(
                     'roots((%ln::) - %ld)', olds, affected))
