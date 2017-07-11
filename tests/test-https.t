@@ -592,9 +592,22 @@ Test https with cert problems through proxy
 
 #if sslcontext
 
+  $ cd test
+
+Missing certificate file(s) are detected
+
+  $ hg serve -p $HGPORT --certificate=/missing/certificate \
+  > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
+  abort: referenced certificate file (/missing/certificate) does not exist
+  [255]
+
+  $ hg serve -p $HGPORT --certificate=$PRIV \
+  > --config devel.servercafile=/missing/cafile --config devel.serverrequirecert=true
+  abort: referenced certificate file (/missing/cafile) does not exist
+  [255]
+
 Start hgweb that requires client certificates:
 
-  $ cd test
   $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
   > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
   $ cat ../hg0.pid >> $DAEMON_PIDS
@@ -629,6 +642,18 @@ with client certificate:
   $ env P="$CERTSDIR" hg id https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   abort: error: * (glob)
+  [255]
+
+Missing certficate and key files result in error
+
+  $ hg id https://localhost:$HGPORT/ --config auth.l.cert=/missing/cert
+  abort: certificate file (/missing/cert) does not exist; cannot connect to localhost
+  (restore missing file or fix references in Mercurial config)
+  [255]
+
+  $ hg id https://localhost:$HGPORT/ --config auth.l.key=/missing/key
+  abort: certificate file (/missing/key) does not exist; cannot connect to localhost
+  (restore missing file or fix references in Mercurial config)
   [255]
 
 #endif

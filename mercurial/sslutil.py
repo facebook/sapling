@@ -343,6 +343,13 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     if not serverhostname:
         raise error.Abort(_('serverhostname argument is required'))
 
+    for f in (keyfile, certfile):
+        if f and not os.path.exists(f):
+            raise error.Abort(_('certificate file (%s) does not exist; '
+                                'cannot connect to %s') % (f, serverhostname),
+                              hint=_('restore missing file or fix references '
+                                     'in Mercurial config'))
+
     settings = _hostsettings(ui, serverhostname)
 
     # We can't use ssl.create_default_context() because it calls
@@ -499,6 +506,13 @@ def wrapserversocket(sock, ui, certfile=None, keyfile=None, cafile=None,
 
     Typically ``cafile`` is only defined if ``requireclientcert`` is true.
     """
+    # This function is not used much by core Mercurial, so the error messaging
+    # doesn't have to be as detailed as for wrapsocket().
+    for f in (certfile, keyfile, cafile):
+        if f and not os.path.exists(f):
+            raise error.Abort(_('referenced certificate file (%s) does not '
+                                'exist') % f)
+
     protocol, options, _protocolui = protocolsettings('tls1.0')
 
     # This config option is intended for use in tests only. It is a giant
