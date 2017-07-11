@@ -373,7 +373,7 @@ class patternmatcher(basematcher):
         super(patternmatcher, self).__init__(root, cwd, badfn)
 
         self._files = _explicitfiles(kindpats)
-        self._anypats = _anypats(kindpats)
+        self._prefix = _prefix(kindpats)
         self._pats, self.matchfn = _buildmatch(ctx, kindpats, '$', listsubrepos,
                                                root)
 
@@ -382,7 +382,7 @@ class patternmatcher(basematcher):
         return set(util.dirs(self._fileset)) | {'.'}
 
     def visitdir(self, dir):
-        if self.prefix() and dir in self._fileset:
+        if self._prefix and dir in self._fileset:
             return 'all'
         return ('.' in self._fileset or
                 dir in self._fileset or
@@ -391,7 +391,7 @@ class patternmatcher(basematcher):
                     for parentdir in util.finddirs(dir)))
 
     def prefix(self):
-        return not self._anypats
+        return self._prefix
 
     def __repr__(self):
         return ('<patternmatcher patterns=%r>' % self._pats)
@@ -404,7 +404,7 @@ class includematcher(basematcher):
 
         self._pats, self.matchfn = _buildmatch(ctx, kindpats, '(?:/|$)',
                                                listsubrepos, root)
-        self._anypats = _anypats(kindpats)
+        self._prefix = _prefix(kindpats)
         roots, dirs = _rootsanddirs(kindpats)
         # roots are directories which are recursively included.
         self._roots = set(roots)
@@ -412,8 +412,7 @@ class includematcher(basematcher):
         self._dirs = set(dirs)
 
     def visitdir(self, dir):
-        if not self._anypats and dir in self._roots:
-            # The condition above is essentially self.prefix() for includes
+        if self._prefix and dir in self._roots:
             return 'all'
         return ('.' in self._roots or
                 dir in self._roots or
@@ -948,10 +947,12 @@ def _explicitfiles(kindpats):
     filable = [kp for kp in kindpats if kp[0] not in ('rootfilesin',)]
     return _roots(filable)
 
-def _anypats(kindpats):
+def _prefix(kindpats):
+    '''Whether all the patterns match a prefix (i.e. recursively)'''
     for kind, pat, source in kindpats:
-        if kind in ('glob', 're', 'relglob', 'relre', 'set', 'rootfilesin'):
-            return True
+        if kind not in ('path', 'relpath'):
+            return False
+    return True
 
 _commentre = None
 
