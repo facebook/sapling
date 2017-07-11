@@ -144,10 +144,15 @@ Verify adding sparseness hides files
   M show
 
   $ hg up -qC .
+TODO: add an option to purge to also purge files outside the sparse config?
   $ hg purge --all --config extensions.purge=
   $ ls
+  hide
+  hide3
   show
   show2
+For now, manually remove the files
+  $ rm hide hide3
 
 Verify rebase temporarily includes excluded files
 

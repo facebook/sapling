@@ -192,36 +192,11 @@ def _setupdirstate(ui):
     and to prevent modifications to files outside the checkout.
     """
 
-    # The atrocity below is needed to wrap dirstate._ignore. It is a cached
-    # property, which means normal function wrapping doesn't work.
-    class ignorewrapper(object):
-        def __init__(self, orig):
-            self.orig = orig
-            self.origignore = None
-            self.func = None
-            self.sparsematch = None
+    def walk(orig, self, match, subrepos, unknown, ignored, full=True):
+        match = matchmod.intersectmatchers(match, self._sparsematcher)
+        return orig(self, match, subrepos, unknown, ignored, full)
 
-        def __get__(self, obj, type=None):
-            origignore = self.orig.__get__(obj)
-
-            sparsematch = obj._sparsematcher
-            if sparsematch.always():
-                return origignore
-
-            if self.sparsematch != sparsematch or self.origignore != origignore:
-                self.func = matchmod.unionmatcher([
-                    origignore, matchmod.negatematcher(sparsematch)])
-                self.sparsematch = sparsematch
-                self.origignore = origignore
-            return self.func
-
-        def __set__(self, obj, value):
-            return self.orig.__set__(obj, value)
-
-        def __delete__(self, obj):
-            return self.orig.__delete__(obj)
-
-    replacefilecache(dirstate.dirstate, '_ignore', ignorewrapper)
+    extensions.wrapfunction(dirstate.dirstate, 'walk', walk)
 
     # dirstate.rebuild should not add non-matching files
     def _rebuild(orig, self, parent, allfiles, changedfiles=None):
