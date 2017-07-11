@@ -493,7 +493,7 @@ class svnsubrepo(subrepo.svnsubrepo):
         state = (source, state[1])
         return super(svnsubrepo, self).get(state, *args, **kwargs)
 
-    def dirty(self, ignoreupdate=False):
+    def dirty(self, ignoreupdate=False, missing=False):
         # You cannot compare anything with HEAD. Just accept it
         # can be anything.
         if hgutil.safehasattr(self, '_wcrevs'):
@@ -502,10 +502,11 @@ class svnsubrepo(subrepo.svnsubrepo):
             wcrev = self._wcrev()
             wcrevs = (wcrev, wcrev)
         shouldcheck = ('HEAD' in wcrevs or self._state[1] == 'HEAD' or
-                       self._state[1] in wcrevs or ignoreupdate)
+                       self._state[1] in wcrevs or ignoreupdate or missing)
         if shouldcheck:
-            changes, extchanges, missing = self._wcchanged()
-            if not changes:
+            changes, extchanges, wcmissing = self._wcchanged()
+            changed = changes or (missing and wcmissing)
+            if not changed:
                 return False
         return True
 
