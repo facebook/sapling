@@ -35,6 +35,7 @@ from __future__ import absolute_import
 import json
 import re
 
+from mercurial.node import bin, nullid
 from mercurial.i18n import _
 from mercurial import (
     encoding,
@@ -158,21 +159,45 @@ def getoldnodedrevmap(repo, nodelist):
     nodemap = unfi.changelog.nodemap
 
     result = {} # {node: (oldnode or None, drev)}
+    toconfirm = {} # {node: (oldnode, {precnode}, drev)}
     for node in nodelist:
         ctx = unfi[node]
-        # Check tags like "D123"
-        for n in obsolete.allprecursors(unfi.obsstore, [node]):
+        # For tags like "D123", put them into "toconfirm" to verify later
+        precnodes = list(obsolete.allprecursors(unfi.obsstore, [node]))
+        for n in precnodes:
             if n in nodemap:
                 for tag in unfi.nodetags(n):
                     m = _differentialrevisiontagre.match(tag)
                     if m:
-                        result[node] = (n, int(m.group(1)))
+                        toconfirm[node] = (n, set(precnodes), int(m.group(1)))
                         continue
 
         # Check commit message
         m = _differentialrevisiondescre.search(ctx.description())
         if m:
             result[node] = (None, int(m.group(1)))
+
+    # Double check if tags are genuine by collecting all old nodes from
+    # Phabricator, and expect precursors overlap with it.
+    if toconfirm:
+        confirmed = {} # {drev: {oldnode}}
+        drevs = [drev for n, precs, drev in toconfirm.values()]
+        diffs = callconduit(unfi, 'differential.querydiffs',
+                            {'revisionIDs': drevs})
+        for diff in diffs.values():
+            drev = int(diff[r'revisionID'])
+            oldnode = bin(encoding.unitolocal(getdiffmeta(diff).get(r'node')))
+            if node:
+                confirmed.setdefault(drev, set()).add(oldnode)
+        for newnode, (oldnode, precset, drev) in toconfirm.items():
+            if bool(precset & confirmed.get(drev, set())):
+                result[newnode] = (oldnode, drev)
+            else:
+                tagname = 'D%d' % drev
+                tags.tag(repo, tagname, nullid, message=None, user=None,
+                         date=None, local=True)
+                unfi.ui.warn(_('D%s: local tag removed - does not match '
+                               'Differential history\n') % drev)
 
     return result
 
