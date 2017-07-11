@@ -236,7 +236,8 @@ def writediffproperties(ctx, diff):
     }
     callconduit(ctx.repo(), 'differential.setdiffproperty', params)
 
-def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None):
+def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
+                               actions=None):
     """create or update a Differential Revision
 
     If revid is None, create a new Differential Revision, otherwise update
@@ -244,6 +245,8 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None):
 
     If oldnode is not None, check if the patch content (without commit message
     and metadata) has changed before creating another diff.
+
+    If actions is not None, they will be appended to the transaction.
     """
     repo = ctx.repo()
     if oldnode:
@@ -268,6 +271,9 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None):
         transactions += [{'type': 'summary', 'value': summary},
                          {'type': 'summary', 'value': ' '}]
 
+    if actions:
+        transactions += actions
+
     # Parse commit message and update related fields.
     desc = ctx.description()
     info = callconduit(repo, 'differential.parsecommitmessage',
@@ -287,8 +293,23 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None):
 
     return revision
 
+def userphids(repo, names):
+    """convert user names to PHIDs"""
+    query = {'constraints': {'usernames': names}}
+    result = callconduit(repo, 'user.search', query)
+    # username not found is not an error of the API. So check if we have missed
+    # some names here.
+    data = result[r'data']
+    resolved = set(entry[r'fields'][r'username'] for entry in data)
+    unresolved = set(names) - resolved
+    if unresolved:
+        raise error.Abort(_('unknown username: %s')
+                          % ' '.join(sorted(unresolved)))
+    return [entry[r'phid'] for entry in data]
+
 @command('phabsend',
-         [('r', 'rev', [], _('revisions to send'), _('REV'))],
+         [('r', 'rev', [], _('revisions to send'), _('REV')),
+          ('', 'reviewer', [], _('specify reviewers'))],
          _('REV [OPTIONS]'))
 def phabsend(ui, repo, *revs, **opts):
     """upload changesets to Phabricator
@@ -308,6 +329,12 @@ def phabsend(ui, repo, *revs, **opts):
     if not revs:
         raise error.Abort(_('phabsend requires at least one changeset'))
 
+    actions = []
+    reviewers = opts.get('reviewer', [])
+    if reviewers:
+        phids = userphids(repo, reviewers)
+        actions.append({'type': 'reviewers.add', 'value': phids})
+
     oldnodedrev = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
 
     # Send patches one by one so we know their Differential Revision IDs and
@@ -322,7 +349,7 @@ def phabsend(ui, repo, *revs, **opts):
         if oldnode != ctx.node():
             # Create or update Differential Revision
             revision = createdifferentialrevision(ctx, revid, lastrevid,
-                                                  oldnode)
+                                                  oldnode, actions)
             newrevid = int(revision[r'object'][r'id'])
             if revid:
                 action = _('updated')
