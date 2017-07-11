@@ -1517,7 +1517,8 @@ def combinechangegroupresults(op):
         result = -1 + changedheads
     return result
 
-@parthandler('changegroup', ('version', 'nbchanges', 'treemanifest'))
+@parthandler('changegroup', ('version', 'nbchanges', 'treemanifest',
+                             'targetphase'))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -1542,8 +1543,12 @@ def handlechangegroup(op, inpart):
         op.repo.requirements.add('treemanifest')
         op.repo._applyopenerreqs()
         op.repo._writerequirements()
+    extrakwargs = {}
+    targetphase = inpart.params.get('targetphase')
+    if targetphase is not None:
+        extrakwargs['targetphase'] = int(targetphase)
     ret = _processchangegroup(op, cg, tr, 'bundle2', 'bundle2',
-                              expectedtotal=nbchangesets)
+                              expectedtotal=nbchangesets, **extrakwargs)
     if op.reply is not None:
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
