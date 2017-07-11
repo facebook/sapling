@@ -24,9 +24,6 @@ New errors are not allowed. Warnings are strongly discouraged.
       if ui.configbool("experimental", "histeditng"):
   
   conflict on experimental.histeditng: ('bool', '') != ('str', '')
-              limit = ui.configwith(fraction, 'profiling', 'showmin', 0.05)
-  
-  conflict on profiling.showmin: ('with', '0.05') != ('with', '0.005')
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
   undocumented: fastmanifest.cachecutoffdays (int) [60]
