@@ -440,10 +440,6 @@ def smartlogrevset(repo, subset, x):
     else:
         masterstring = ''
 
-    # TODO(quark): remove this after changing Nuclide's smartlog query
-    if masterstring == 'all':
-            masterstring = ''
-
     recentdays = revsetlang.getinteger(args.get('recentdays'),
             _("recentdays should be int"), -1)
 
