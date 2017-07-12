@@ -218,7 +218,7 @@ Test warning on config option access and registration
   $ cat << EOF > ${TESTTMP}/buggyconfig.py
   > """A small extension that tests our developer warnings for config"""
   > 
-  > from mercurial import registrar
+  > from mercurial import registrar, configitems
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -227,6 +227,7 @@ Test warning on config option access and registration
   > configitem = registrar.configitem(configtable)
   > 
   > configitem('test', 'some', default='foo')
+  > configitem('test', 'dynamic', default=configitems.dynamicdefault)
   > # overwrite a core config
   > configitem('ui', 'quiet', default=False)
   > configitem('ui', 'interactive', default=None)
@@ -236,6 +237,8 @@ Test warning on config option access and registration
   >     repo.ui.config('ui', 'quiet', False)
   >     repo.ui.config('ui', 'interactive', None)
   >     repo.ui.config('test', 'some', 'foo')
+  >     repo.ui.config('test', 'dynamic', 'some-required-default')
+  >     repo.ui.config('test', 'dynamic')
   > EOF
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
@@ -244,5 +247,6 @@ Test warning on config option access and registration
   devel-warn: specifying a default value for a registered config item: 'ui.quiet' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a default value for a registered config item: 'ui.interactive' 'None' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a default value for a registered config item: 'test.some' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: config item requires an explicit default value: 'test.dynamic' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..

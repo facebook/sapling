@@ -51,6 +51,9 @@ def _register(configtable, *args, **kwargs):
         raise error.ProgrammingError(msg % (item.section, item.name))
     section[item.name] = item
 
+# special value for case where the default is derived from other values
+dynamicdefault = object()
+
 # Registering actual config items
 
 def getitemregister(configtable):

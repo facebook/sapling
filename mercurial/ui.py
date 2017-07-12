@@ -457,11 +457,17 @@ class ui(object):
         if default is _unset:
             if item is None:
                 value = default
+            elif item.default is configitems.dynamicdefault:
+                value = None
+                msg = "config item requires an explicit default value: '%s.%s'"
+                msg %= (section, name)
+                self.develwarn(msg, 2, 'warn-config-default')
             elif callable(item.default):
                     value = item.default()
             else:
                 value = item.default
-        elif item is not None:
+        elif (item is not None
+              and item.default is not configitems.dynamicdefault):
             msg = ("specifying a default value for a registered "
                    "config item: '%s.%s' '%s'")
             msg %= (section, name, default)
