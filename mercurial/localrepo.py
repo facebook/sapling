@@ -1202,7 +1202,7 @@ class localrepository(object):
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
-                repo.dirstate.restorebackup(None, prefix='journal.')
+                repo.dirstate.restorebackup(None, 'journal.dirstate')
 
                 repo.invalidate(clearfilecache=True)
 
@@ -1262,7 +1262,7 @@ class localrepository(object):
 
     @unfilteredmethod
     def _writejournal(self, desc):
-        self.dirstate.savebackup(None, prefix='journal.')
+        self.dirstate.savebackup(None, 'journal.dirstate')
         self.vfs.write("journal.branch",
                           encoding.fromlocal(self.dirstate.branch()))
         self.vfs.write("journal.desc",
@@ -1350,7 +1350,7 @@ class localrepository(object):
             # prevent dirstateguard from overwriting already restored one
             dsguard.close()
 
-            self.dirstate.restorebackup(None, prefix='undo.')
+            self.dirstate.restorebackup(None, 'undo.dirstate')
             try:
                 branch = self.vfs.read('undo.branch')
                 self.dirstate.setbranch(encoding.tolocal(branch))

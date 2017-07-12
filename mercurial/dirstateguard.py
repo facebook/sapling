@@ -31,8 +31,8 @@ class dirstateguard(object):
         self._repo = repo
         self._active = False
         self._closed = False
-        self._suffix = '.backup.%s.%d' % (name, id(self))
-        repo.dirstate.savebackup(repo.currenttransaction(), self._suffix)
+        self._backupname = 'dirstate.backup.%s.%d' % (name, id(self))
+        repo.dirstate.savebackup(repo.currenttransaction(), self._backupname)
         self._active = True
 
     def __del__(self):
@@ -45,25 +45,24 @@ class dirstateguard(object):
 
     def close(self):
         if not self._active: # already inactivated
-            msg = (_("can't close already inactivated backup: dirstate%s")
-                   % self._suffix)
+            msg = (_("can't close already inactivated backup: %s")
+                   % self._backupname)
             raise error.Abort(msg)
 
         self._repo.dirstate.clearbackup(self._repo.currenttransaction(),
-                                         self._suffix)
+                                         self._backupname)
         self._active = False
         self._closed = True
 
     def _abort(self):
         self._repo.dirstate.restorebackup(self._repo.currenttransaction(),
-                                           self._suffix)
+                                           self._backupname)
         self._active = False
 
     def release(self):
         if not self._closed:
             if not self._active: # already inactivated
-                msg = (_("can't release already inactivated backup:"
-                         " dirstate%s")
-                       % self._suffix)
+                msg = (_("can't release already inactivated backup: %s")
+                       % self._backupname)
                 raise error.Abort(msg)
             self._abort()

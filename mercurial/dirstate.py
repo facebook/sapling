@@ -1300,10 +1300,10 @@ class dirstate(object):
         else:
             return self._filename
 
-    def savebackup(self, tr, suffix='', prefix=''):
-        '''Save current dirstate into backup file with suffix'''
-        assert len(suffix) > 0 or len(prefix) > 0
+    def savebackup(self, tr, backupname):
+        '''Save current dirstate into backup file'''
         filename = self._actualfilename(tr)
+        assert backupname != filename
 
         # use '_writedirstate' instead of 'write' to write changes certainly,
         # because the latter omits writing out if transaction is running.
@@ -1324,27 +1324,20 @@ class dirstate(object):
             # end of this transaction
             tr.registertmp(filename, location='plain')
 
-        backupname = prefix + self._filename + suffix
-        assert backupname != filename
         self._opener.tryunlink(backupname)
         # hardlink backup is okay because _writedirstate is always called
         # with an "atomictemp=True" file.
         util.copyfile(self._opener.join(filename),
                       self._opener.join(backupname), hardlink=True)
 
-    def restorebackup(self, tr, suffix='', prefix=''):
-        '''Restore dirstate by backup file with suffix'''
-        assert len(suffix) > 0 or len(prefix) > 0
+    def restorebackup(self, tr, backupname):
+        '''Restore dirstate by backup file'''
         # this "invalidate()" prevents "wlock.release()" from writing
         # changes of dirstate out after restoring from backup file
         self.invalidate()
         filename = self._actualfilename(tr)
-        # using self._filename to avoid having "pending" in the backup filename
-        self._opener.rename(prefix + self._filename + suffix, filename,
-                            checkambig=True)
+        self._opener.rename(backupname, filename, checkambig=True)
 
-    def clearbackup(self, tr, suffix='', prefix=''):
-        '''Clear backup file with suffix'''
-        assert len(suffix) > 0 or len(prefix) > 0
-        # using self._filename to avoid having "pending" in the backup filename
-        self._opener.unlink(prefix + self._filename + suffix)
+    def clearbackup(self, tr, backupname):
+        '''Clear backup file'''
+        self._opener.unlink(backupname)

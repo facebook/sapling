@@ -297,9 +297,10 @@ def _aborttransaction(repo):
     '''Abort current transaction for shelve/unshelve, but keep dirstate
     '''
     tr = repo.currenttransaction()
-    repo.dirstate.savebackup(tr, suffix='.shelve')
+    backupname = 'dirstate.shelve'
+    repo.dirstate.savebackup(tr, backupname)
     tr.abort()
-    repo.dirstate.restorebackup(None, suffix='.shelve')
+    repo.dirstate.restorebackup(None, backupname)
 
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
