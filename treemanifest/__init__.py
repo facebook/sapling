@@ -771,7 +771,7 @@ def _registerbundle2parts():
         treecache = part.params.pop('treecache')
         part.params['cache'] = treecache
         part.params['category'] = PACK_CATEGORY
-        return treeparthandler(op, part)
+        return treeparthandler2(op, part)
 
     @exchange.b2partsgenerator(TREEGROUP_PARTTYPE)
     def gettreepackpart(pushop, bundler):
