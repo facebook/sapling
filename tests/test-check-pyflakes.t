@@ -1,7 +1,6 @@
 #require test-repo pyflakes hg10
 
   $ . "$TESTDIR/helpers-testrepo.sh"
-  $ cd "`dirname "$TESTDIR"`"
 
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
@@ -12,6 +11,7 @@ run pyflakes on all tracked files ending in .py or without a file ending
   $ pyflakes test.py 2>/dev/null | "$TESTDIR/filterpyflakes.py"
   test.py:1: undefined name 'undefinedname'
   
+  $ cd "`dirname "$TESTDIR"`"
 
   $ testrepohg locate 'set:**.py or grep("^#!.*python")' \
   > -X hgext/fsmonitor/pywatchman \
