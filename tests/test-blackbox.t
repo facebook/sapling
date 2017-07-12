@@ -135,10 +135,17 @@ extension and python hooks - use the eol extension for a pythonhook
   $ echo '[hooks]' >> .hg/hgrc
   $ echo 'update = echo hooked' >> .hg/hgrc
   $ hg update
+  The fsmonitor extension is incompatible with the eol extension and has been disabled. (fsmonitor !)
   hooked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "d02f48003e62: c"
   1 other heads for branch "default"
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > # disable eol, because it is not needed for subsequent tests
+  > # (in addition, keeping it requires extra care for fsmonitor)
+  > eol=!
+  > EOF
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> writing .hg/cache/tags2-visible with 0 tags

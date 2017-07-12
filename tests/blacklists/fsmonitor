@@ -4,9 +4,7 @@
 # with fsmonitor, use subrepositories, or don't anticipate the extra file in
 # the .hg directory that fsmonitor adds.
 test-basic.t
-test-blackbox.t
 test-commandserver.t
-test-copy.t
 test-debugextensions.t
 test-eol-add.t
 test-eol-clone.t
