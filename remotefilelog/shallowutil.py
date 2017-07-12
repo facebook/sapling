@@ -144,8 +144,8 @@ def _buildpackmeta(metadict):
     return metabuf
 
 _metaitemtypes = {
-    constants.METAKEYFLAG: int,
-    constants.METAKEYSIZE: int,
+    constants.METAKEYFLAG: (int, long),
+    constants.METAKEYSIZE: (int, long),
 }
 
 def buildpackmeta(metadict):
@@ -156,11 +156,11 @@ def buildpackmeta(metadict):
     """
     newmeta = {}
     for k, v in (metadict or {}).iteritems():
-        expectedtype = _metaitemtypes.get(k, bytes)
+        expectedtype = _metaitemtypes.get(k, (bytes,))
         if not isinstance(v, expectedtype):
             raise error.ProgrammingError('packmeta: wrong type of key %s' % k)
         # normalize int to binary buffer
-        if expectedtype is int:
+        if int in expectedtype:
             # optimization: remove flag if it's 0 to save space
             if k == constants.METAKEYFLAG and v == 0:
                 continue
@@ -176,7 +176,7 @@ def parsepackmeta(metabuf):
     """
     metadict = _parsepackmeta(metabuf)
     for k, v in metadict.iteritems():
-        if k in _metaitemtypes and _metaitemtypes[k] is int:
+        if k in _metaitemtypes and int in _metaitemtypes[k]:
             metadict[k] = bin2int(v)
     return metadict
 

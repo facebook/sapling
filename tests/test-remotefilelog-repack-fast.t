@@ -3,13 +3,17 @@
 
   $ . "$TESTDIR/library.sh"
 
+  $ cat >> $HGRCPATH <<EOF
+  > [remotefilelog]
+  > fastdatapack=True
+  > EOF
+
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > server=True
   > serverexpiration=-1
-  > fastdatapack=True
   > EOF
   $ echo x > x
   $ hg commit -qAm x

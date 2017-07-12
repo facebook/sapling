@@ -82,7 +82,7 @@
 
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
   -r--r--r--     262 7535b6084226436bbdff33043969e7fa963e8428.histpack
-  -r--r--r--     315 d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack
+  -r--r--r--     327 be1a1ae9828d9bd09ab8ba765db358f99fd09ea7.datapack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.datapack
   
@@ -114,40 +114,40 @@
   -r--r--r--     248 5d1716bbef6e7200192de6509055d1ee31a4172c.datapack
   -r--r--r--     146 cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack
   $ hg repack
-  $ ls -l .hg/store/packs/manifests | grep datapack
-  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
+  $ ls_l .hg/store/packs/manifests | grep datapack
+  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
 
 # Test incremental repacking of trees
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
-  $ ls -l .hg/store/packs/manifests | grep datapack
-  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
-  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
-  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
+  $ ls_l .hg/store/packs/manifests | grep datapack
+  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
+  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
 - repack incremental does nothing here because there are so few packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
-  $ ls -l .hg/store/packs/manifests | grep datapack
-  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
-  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
-  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
+  $ ls_l .hg/store/packs/manifests | grep datapack
+  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
+  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
-  $ ls -l .hg/store/packs/manifests | grep datapack
-  * 248 * 21501384df03b8489b366c5218be639fa08830e4.datapack (glob)
-  * 248 * 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack (glob)
-  * 248 * 544a3b46a61732209116ae50847ec333b75e3765.datapack (glob)
-  * 248 * 863908ef8149261ab0d891c2344d8e8766c39441.datapack (glob)
-  * 362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
-  * 248 * d7e689a91ac63385be120a118af9ce8663748f28.datapack (glob)
+  $ ls_l .hg/store/packs/manifests | grep datapack
+  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
+  -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     248 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
+  -r--r--r--     248 544a3b46a61732209116ae50847ec333b75e3765.datapack
+  -r--r--r--     248 863908ef8149261ab0d891c2344d8e8766c39441.datapack
+  -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
 - repack incremental kicks in once there are a number of packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200
-  $ ls -l .hg/store/packs/manifests | grep datapack
-  * 1148 * 57360ff79b595e6474abacd912600d61b5e5c840.datapack (glob)
-  *  362 * 9e5a04938d53f5b418e4f1b6a413d250f231f60a.datapack (glob)
+  $ ls_l .hg/store/packs/manifests | grep datapack
+  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
+  -r--r--r--    1188 785af77b59c45dd43e3e0e63929d77665c505387.datapack
 
 Test repacking from revlogs to pack files on the server
   $ cd ../master
@@ -169,10 +169,10 @@ Test repacking from revlogs to pack files on the server
 
   $ hg repack
   $ ls .hg/cache/packs/manifests
+  56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a.dataidx
+  56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a.datapack
   7535b6084226436bbdff33043969e7fa963e8428.histidx
   7535b6084226436bbdff33043969e7fa963e8428.histpack
-  d24c358c968883e3b6c4bd6a85845dfb28fd8de6.dataidx
-  d24c358c968883e3b6c4bd6a85845dfb28fd8de6.datapack
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
   
   

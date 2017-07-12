@@ -6,6 +6,7 @@ cat >> $HGRCPATH <<EOF
 cachepath=$CACHEDIR
 debug=True
 historypackv1=True
+datapackversion=1
 [extensions]
 remotefilelog=
 rebase=
