@@ -3,7 +3,8 @@
 # The following tests all fail because they either use extensions that conflict
 # with fsmonitor, use subrepositories, or don't anticipate the extra file in
 # the .hg directory that fsmonitor adds.
-test-debugextensions.t
+
+#### mainly testing eol extension
 test-eol-add.t
 test-eol-clone.t
 test-eol-hook.t
@@ -12,8 +13,8 @@ test-eol-tag.t
 test-eol-update.t
 test-eol.t
 test-eolfilename.t
-test-extension.t
-test-help.t
+
+#### mainly testing largefiles extension
 test-issue3084.t
 test-largefiles-cache.t
 test-largefiles-misc.t
@@ -22,8 +23,16 @@ test-largefiles-update.t
 test-largefiles-wireproto.t
 test-largefiles.t
 test-lfconvert.t
+
+#### mainly testing nested repositories
 test-nested-repo.t
 test-push-warn.t
 test-subrepo-deep-nested-change.t
 test-subrepo-recursion.t
 test-subrepo.t
+
+#### fixing these seems redundant, because these don't focus on
+#### operations in the working directory or .hg
+test-debugextensions.t
+test-extension.t
+test-help.t
