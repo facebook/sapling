@@ -79,6 +79,9 @@ coreconfigitem('bundle', 'reorder',
 coreconfigitem('color', 'mode',
     default='auto',
 )
+coreconfigitem('color', 'pagermode',
+    default=dynamicdefault,
+)
 coreconfigitem('devel', 'all-warnings',
     default=False,
 )
