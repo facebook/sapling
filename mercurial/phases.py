@@ -357,6 +357,7 @@ class phasecache(object):
 
         repo = repo.unfiltered()
         currentroots = self.phaseroots[targetphase]
+        finalroots = oldroots = set(currentroots)
         newroots = [n for n in nodes
                     if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
@@ -376,8 +377,10 @@ class phasecache(object):
             finalroots = set(n for n in currentroots if repo[n].rev() <
                              minnewroot)
             finalroots.update(ctx.node() for ctx in updatedroots)
-
+        if finalroots != oldroots:
             self._updateroots(targetphase, finalroots, tr)
+            return True
+        return False
 
     def filterunknown(self, repo):
         """remove unknown nodes from the phase boundary
