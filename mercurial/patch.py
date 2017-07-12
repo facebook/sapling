@@ -2567,7 +2567,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     gitmode = {'l': '120000', 'x': '100755', '': '100644'}
 
-    if relroot != '' and (repo.ui.configbool('devel', 'all')
+    if relroot != '' and (repo.ui.configbool('devel', 'all-warnings')
                           or repo.ui.configbool('devel', 'check-relroot')):
         for f in modified + added + removed + copy.keys() + copy.values():
             if f is not None and not f.startswith(relroot):
