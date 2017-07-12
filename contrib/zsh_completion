@@ -672,6 +672,7 @@ _hg_cmd_import() {
   '(--force -f)'{-f,--force}'[skip check for outstanding uncommitted changes]' \
   '--bypass[apply patch without touching the working directory]' \
   '--no-commit[do not commit, just update the working directory]' \
+  '--partial[commit even if some hunks fail]' \
   '--exact[apply patch to the nodes from which it was generated]' \
   '--import-branch[use any branch information in patch (implied by --exact)]' \
   '(--date -d)'{-d+,--date=}'[record datecode as commit date]:date code:' \
