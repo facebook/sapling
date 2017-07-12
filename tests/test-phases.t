@@ -1,3 +1,9 @@
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > phasereport=$TESTDIR/testlib/ext-phase-report.py
+  > EOF
+
   $ hglog() { hg log --template "{rev} {phaseidx} {desc}\n" $*; }
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -19,6 +25,7 @@ Cannot change null revision phase
   -1: public
 
   $ mkcommit A
+  test-debug-phase: new rev 0:  x -> 1
 
 New commit are draft by default
 
@@ -28,6 +35,7 @@ New commit are draft by default
 Following commit are draft too
 
   $ mkcommit B
+  test-debug-phase: new rev 1:  x -> 1
 
   $ hglog
   1 1 B
@@ -36,6 +44,8 @@ Following commit are draft too
 Draft commit are properly created over public one:
 
   $ hg phase --public .
+  test-debug-phase: move rev 0: 1 -> 0
+  test-debug-phase: move rev 1: 1 -> 0
   $ hg phase
   1: public
   $ hglog
@@ -43,7 +53,9 @@ Draft commit are properly created over public one:
   0 0 A
 
   $ mkcommit C
+  test-debug-phase: new rev 2:  x -> 1
   $ mkcommit D
+  test-debug-phase: new rev 3:  x -> 1
 
   $ hglog
   3 1 D
@@ -54,6 +66,7 @@ Draft commit are properly created over public one:
 Test creating changeset as secret
 
   $ mkcommit E --config phases.new-commit='secret'
+  test-debug-phase: new rev 4:  x -> 2
   $ hglog
   4 2 E
   3 1 D
@@ -64,6 +77,7 @@ Test creating changeset as secret
 Test the secret property is inherited
 
   $ mkcommit H
+  test-debug-phase: new rev 5:  x -> 2
   $ hglog
   5 2 H
   4 2 E
@@ -76,6 +90,7 @@ Even on merge
 
   $ hg up -q 1
   $ mkcommit "B'"
+  test-debug-phase: new rev 6:  x -> 1
   created new head
   $ hglog
   6 1 B'
@@ -92,6 +107,8 @@ Even on merge
   6: draft
   4: secret
   $ hg ci -m "merge B' and E"
+  test-debug-phase: new rev 7:  x -> 2
+
   $ hglog
   7 2 merge B' and E
   6 1 B'
@@ -133,6 +150,11 @@ Test secret changeset are not pushed
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files (+1 heads)
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 1
+  test-debug-phase: new rev 3:  x -> 1
+  test-debug-phase: new rev 4:  x -> 1
   $ hglog
   7 2 merge B' and E
   6 1 B'
@@ -158,6 +180,7 @@ visible shared between the initial repo and the push destination.
 
   $ hg up -q 4 # B'
   $ mkcommit Z --config phases.new-commit=secret
+  test-debug-phase: new rev 5:  x -> 2
   $ hg phase .
   5: secret
 
@@ -167,6 +190,7 @@ head shadowed by the remote secret head.
   $ cd ../initialrepo
   $ hg up -q 6 #B'
   $ mkcommit I
+  test-debug-phase: new rev 8:  x -> 1
   created new head
   $ hg push ../push-dest
   pushing to ../push-dest
@@ -175,6 +199,7 @@ head shadowed by the remote secret head.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: new rev 6:  x -> 1
 
 :note: The "(+1 heads)" is wrong as we do not had any visible head
 
@@ -222,6 +247,11 @@ Test secret changeset are not pull
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files (+1 heads)
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hglog
   4 0 B'
@@ -242,6 +272,11 @@ Test secret changeset are not cloned
 (during local clone)
 
   $ hg clone -qU initialrepo clone-dest
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
   $ hglog -R clone-dest
   4 0 B'
   3 0 D
@@ -440,6 +475,7 @@ move changeset forward
 (with -r option)
 
   $ hg phase --public -r 2
+  test-debug-phase: move rev 2: 1 -> 0
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -463,6 +499,7 @@ move changeset backward
 (without -r option)
 
   $ hg phase --draft --force 2
+  test-debug-phase: move rev 2: 0 -> 1
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -484,6 +521,8 @@ move changeset backward
 move changeset forward and backward
 
   $ hg phase --draft --force 1::4
+  test-debug-phase: move rev 1: 0 -> 1
+  test-debug-phase: move rev 4: 2 -> 1
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -504,7 +543,14 @@ move changeset forward and backward
 test partial failure
 
   $ hg phase --public 7
+  test-debug-phase: move rev 1: 1 -> 0
+  test-debug-phase: move rev 2: 1 -> 0
+  test-debug-phase: move rev 3: 1 -> 0
+  test-debug-phase: move rev 4: 1 -> 0
+  test-debug-phase: move rev 6: 1 -> 0
+  test-debug-phase: move rev 7: 2 -> 0
   $ hg phase --draft '5 or 7'
+  test-debug-phase: move rev 5: 2 -> 1
   cannot move 1 changesets to a higher phase, use --force
   phase changed for 1 changesets
   [1]
@@ -555,6 +601,13 @@ test hidden changeset are not cloned as public (issue3935)
   adding manifests
   adding file changes
   added 7 changesets with 6 changes to 6 files
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
+  test-debug-phase: new rev 5:  x -> 0
+  test-debug-phase: new rev 6:  x -> 0
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clonewithobs

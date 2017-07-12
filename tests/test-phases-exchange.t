@@ -1,5 +1,10 @@
 #require killdaemons
 
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > phasereport=$TESTDIR/testlib/ext-phase-report.py
+  > EOF
+
   $ hgph() { hg log -G --template "{rev} {phase} {desc} - {node|short}\n" $*; }
 
   $ mkcommit() {
@@ -13,9 +18,13 @@
   $ hg init alpha
   $ cd alpha
   $ mkcommit a-A
+  test-debug-phase: new rev 0:  x -> 1
   $ mkcommit a-B
+  test-debug-phase: new rev 1:  x -> 1
   $ mkcommit a-C
+  test-debug-phase: new rev 2:  x -> 1
   $ mkcommit a-D
+  test-debug-phase: new rev 3:  x -> 1
   $ hgph
   @  3 draft a-D - b555f63b6063
   |
@@ -34,6 +43,10 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: move rev 0: 1 -> 0
+  test-debug-phase: move rev 1: 1 -> 0
   $ hgph
   @  3 draft a-D - b555f63b6063
   |
@@ -52,6 +65,7 @@
   
   $ hg up -q
   $ mkcommit b-A
+  test-debug-phase: new rev 2:  x -> 1
   $ hgph
   @  2 draft b-A - f54f1bb90ff3
   |
@@ -66,6 +80,8 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  4 public a-D - b555f63b6063
@@ -96,6 +112,7 @@ push from alpha to beta should update phase even if nothing is transferred
   pushing to ../beta
   searching for changes
   no changes found
+  test-debug-phase: move rev 2: 1 -> 0
   [1]
   $ hgph
   @  3 draft a-D - b555f63b6063
@@ -110,6 +127,7 @@ push from alpha to beta should update phase even if nothing is transferred
   pushing to ../beta
   searching for changes
   no changes found
+  test-debug-phase: move rev 3: 1 -> 0
   [1]
   $ hgph
   @  3 public a-D - b555f63b6063
@@ -130,6 +148,7 @@ update must update phase of common changeset too
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: new rev 4:  x -> 0
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ cd ../beta
@@ -148,6 +167,7 @@ update must update phase of common changeset too
   pulling from ../alpha
   searching for changes
   no changes found
+  test-debug-phase: move rev 2: 1 -> 0
   $ hgph
   o  4 public a-D - b555f63b6063
   |
@@ -182,6 +202,11 @@ changegroup are added without phase movement
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files (+1 heads)
+  test-debug-phase: new rev 0:  x -> 1
+  test-debug-phase: new rev 1:  x -> 1
+  test-debug-phase: new rev 2:  x -> 1
+  test-debug-phase: new rev 3:  x -> 1
+  test-debug-phase: new rev 4:  x -> 1
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  4 draft a-D - b555f63b6063
@@ -210,6 +235,9 @@ Pulling from publish=False to publish=False does not move boundary.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  test-debug-phase: new rev 0:  x -> 1
+  test-debug-phase: new rev 1:  x -> 1
+  test-debug-phase: new rev 2:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph
   o  2 draft a-C - 54acac6f23ab
@@ -228,6 +256,7 @@ Even for common
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: new rev 3:  x -> 1
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
   o  3 draft b-A - f54f1bb90ff3
@@ -250,6 +279,10 @@ we are in nu
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  test-debug-phase: move rev 0: 1 -> 0
+  test-debug-phase: move rev 1: 1 -> 0
+  test-debug-phase: move rev 2: 1 -> 0
+  test-debug-phase: new rev 4:  x -> 0
   (run 'hg update' to get a working copy)
   $ hgph # f54f1bb90ff3 stay draft, not ancestor of -r
   o  4 public a-D - b555f63b6063
@@ -267,7 +300,9 @@ pulling from Publish=False to publish=False with some public
 
   $ hg up -q f54f1bb90ff3
   $ mkcommit n-A
+  test-debug-phase: new rev 5:  x -> 1
   $ mkcommit n-B
+  test-debug-phase: new rev 6:  x -> 1
   $ hgph
   @  6 draft n-B - 145e75495359
   |
@@ -291,6 +326,12 @@ pulling from Publish=False to publish=False with some public
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: move rev 0: 1 -> 0
+  test-debug-phase: move rev 1: 1 -> 0
+  test-debug-phase: move rev 3: 1 -> 0
+  test-debug-phase: move rev 4: 1 -> 0
+  test-debug-phase: new rev 5:  x -> 1
+  test-debug-phase: new rev 6:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph
   o  6 draft n-B - 145e75495359
@@ -330,6 +371,8 @@ pulling into publish=True
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: new rev 5:  x -> 1
+  test-debug-phase: new rev 6:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph
   o  6 draft n-B - 145e75495359
@@ -355,6 +398,9 @@ pulling back into original repo
   pulling from ../alpha
   searching for changes
   no changes found
+  test-debug-phase: move rev 3: 1 -> 0
+  test-debug-phase: move rev 5: 1 -> 0
+  test-debug-phase: move rev 6: 1 -> 0
   $ hgph
   @  6 public n-B - 145e75495359
   |
@@ -385,6 +431,8 @@ Push back to alpha
   pushing to ../alpha
   searching for changes
   no changes found
+  test-debug-phase: move rev 5: 1 -> 0
+  test-debug-phase: move rev 6: 1 -> 0
   [1]
   $ cd ..
   $ cd alpha
@@ -448,10 +496,14 @@ initial setup
      summary:     a-A
   
   $ mkcommit a-E
+  test-debug-phase: new rev 7:  x -> 1
   $ mkcommit a-F
+  test-debug-phase: new rev 8:  x -> 1
   $ mkcommit a-G
+  test-debug-phase: new rev 9:  x -> 1
   $ hg up d6bcb4f74035 -q
   $ mkcommit a-H
+  test-debug-phase: new rev 10:  x -> 1
   created new head
   $ hgph
   @  10 draft a-H - 967b449fbc94
@@ -518,6 +570,8 @@ Pushing to Publish=False (unknown changeset)
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: new rev 7:  x -> 1
+  test-debug-phase: new rev 8:  x -> 1
   $ hgph
   @  10 draft a-H - 967b449fbc94
   |
@@ -573,6 +627,10 @@ Pushing to Publish=True (unknown changeset)
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: new rev 5:  x -> 0
+  test-debug-phase: new rev 6:  x -> 0
+  test-debug-phase: move rev 7: 1 -> 0
+  test-debug-phase: move rev 8: 1 -> 0
   $ hgph # again f54f1bb90ff3, d6bcb4f74035 and 145e75495359 stay draft,
   >      # not ancestor of -r
   o  8 public a-F - b740e3e5c05d
@@ -601,6 +659,8 @@ Pushing to Publish=True (common changeset)
   pushing to ../alpha
   searching for changes
   no changes found
+  test-debug-phase: move rev 7: 1 -> 0
+  test-debug-phase: move rev 8: 1 -> 0
   [1]
   $ hgph
   o  6 public a-F - b740e3e5c05d
@@ -651,6 +711,9 @@ Pushing to Publish=False (common changeset that change phase + unknown one)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: move rev 2: 1 -> 0
+  test-debug-phase: move rev 5: 1 -> 0
+  test-debug-phase: new rev 9:  x -> 1
   $ hgph
   @  10 draft a-H - 967b449fbc94
   |
@@ -706,6 +769,9 @@ Pushing to Publish=True (common changeset from publish=False)
   pushing to ../alpha
   searching for changes
   no changes found
+  test-debug-phase: move rev 10: 1 -> 0
+  test-debug-phase: move rev 6: 1 -> 0
+  test-debug-phase: move rev 9: 1 -> 0
   [1]
   $ hgph
   o  9 public a-H - 967b449fbc94
@@ -760,6 +826,8 @@ Bare push with next changeset and common changeset needing sync (issue3575)
   $ hg -R ../alpha --config extensions.strip= strip --no-backup 967b449fbc94
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg phase --force --draft b740e3e5c05d 967b449fbc94
+  test-debug-phase: move rev 8: 0 -> 1
+  test-debug-phase: move rev 9: 0 -> 1
   $ hg push -fv ../alpha
   pushing to ../alpha
   searching for changes
@@ -772,6 +840,9 @@ Bare push with next changeset and common changeset needing sync (issue3575)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: new rev 10:  x -> 0
+  test-debug-phase: move rev 8: 1 -> 0
+  test-debug-phase: move rev 9: 1 -> 0
   $ hgph
   o  9 public a-H - 967b449fbc94
   |
@@ -826,6 +897,7 @@ Discovery locally secret changeset on a remote repository:
 
   $ cd ../alpha
   $ mkcommit A-secret --config phases.new-commit=2
+  test-debug-phase: new rev 11:  x -> 2
   $ hgph
   @  11 secret A-secret - 435b5d83910c
   |
@@ -858,6 +930,7 @@ Discovery locally secret changeset on a remote repository:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  test-debug-phase: new rev 10:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph -R ../mu
   o  10 draft A-secret - 435b5d83910c
@@ -886,6 +959,7 @@ Discovery locally secret changeset on a remote repository:
   pulling from ../mu
   searching for changes
   no changes found
+  test-debug-phase: move rev 11: 2 -> 1
   $ hgph
   @  11 draft A-secret - 435b5d83910c
   |
@@ -916,6 +990,8 @@ pushing a locally public and draft changesets remotely secret should make them
 appear on the remote side.
 
   $ hg -R ../mu phase --secret --force 967b449fbc94
+  test-debug-phase: move rev 9: 0 -> 2
+  test-debug-phase: move rev 10: 1 -> 2
   $ hg push -r 435b5d83910c ../mu
   pushing to ../mu
   searching for changes
@@ -929,6 +1005,8 @@ appear on the remote side.
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 2 files
+  test-debug-phase: move rev 9: 2 -> 0
+  test-debug-phase: move rev 10: 2 -> 1
   $ hgph -R ../mu
   o  10 draft A-secret - 435b5d83910c
   |
@@ -957,6 +1035,7 @@ pull new changeset with common draft locally
 
   $ hg up -q 967b449fbc94 # create a new root for draft
   $ mkcommit 'alpha-more'
+  test-debug-phase: new rev 12:  x -> 1
   created new head
   $ hg push -fr . ../mu
   pushing to ../mu
@@ -965,10 +1044,13 @@ pull new changeset with common draft locally
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-debug-phase: new rev 11:  x -> 1
   $ cd ../mu
   $ hg phase --secret --force 1c5cfd894796
+  test-debug-phase: move rev 11: 1 -> 2
   $ hg up -q 435b5d83910c
   $ mkcommit 'mu-more'
+  test-debug-phase: new rev 12:  x -> 1
   $ cd ../alpha
   $ hg pull ../mu
   pulling from ../mu
@@ -977,6 +1059,7 @@ pull new changeset with common draft locally
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  test-debug-phase: new rev 13:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph
   o  13 draft mu-more - 5237fb433fc8
@@ -1012,6 +1095,11 @@ Test that test are properly ignored on remote event when existing locally
 
   $ cd ..
   $ hg clone -qU -r b555f63b6063 -r f54f1bb90ff3 beta gamma
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
 
 # pathological case are
 #
@@ -1020,7 +1108,9 @@ Test that test are properly ignored on remote event when existing locally
 # * repo have uncommon changeset
 
   $ hg -R beta phase --secret --force f54f1bb90ff3
+  test-debug-phase: move rev 2: 0 -> 2
   $ hg -R gamma phase --draft --force f54f1bb90ff3
+  test-debug-phase: move rev 2: 0 -> 1
 
   $ cd gamma
   $ hg pull ../beta
@@ -1030,6 +1120,8 @@ Test that test are properly ignored on remote event when existing locally
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  test-debug-phase: new rev 5:  x -> 0
+  test-debug-phase: new rev 6:  x -> 0
   (run 'hg update' to get a working copy)
   $ hg phase f54f1bb90ff3
   2: draft
@@ -1083,6 +1175,7 @@ A. Clone without secret changeset
 # make sure there is no secret so we can use a copy clone
 
   $ hg -R mu phase --draft 'secret()'
+  test-debug-phase: move rev 11: 2 -> 1
 
   $ hg clone -U mu Tau
   $ hgph -R Tau
@@ -1169,11 +1262,29 @@ server won't turn changeset public.
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 14 files (+3 heads)
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
+  test-debug-phase: new rev 5:  x -> 0
+  test-debug-phase: new rev 6:  x -> 0
+  test-debug-phase: new rev 7:  x -> 0
+  test-debug-phase: new rev 8:  x -> 0
+  test-debug-phase: new rev 9:  x -> 0
+  test-debug-phase: new rev 10:  x -> 0
+  test-debug-phase: new rev 11:  x -> 0
+  test-debug-phase: new rev 12:  x -> 0
+  test-debug-phase: new rev 13:  x -> 0
   $ chmod -R +w .hg
 
 2. Test that failed phases movement are reported
 
   $ hg phase --force --draft 3
+  test-debug-phase: move rev 3: 0 -> 1
+  test-debug-phase: move rev 7: 0 -> 1
+  test-debug-phase: move rev 8: 0 -> 1
+  test-debug-phase: move rev 9: 0 -> 1
   $ chmod -R -w .hg
   $ hg push ../Phi
   pushing to ../Phi
@@ -1191,7 +1302,13 @@ Test that clone behaves like pull and doesn't
 publish changesets as plain push does
 
   $ hg -R Upsilon phase -q --force --draft 2
+  test-debug-phase: move rev 2: 0 -> 1
   $ hg clone -q Upsilon Pi -r 7
+  test-debug-phase: new rev 0:  x -> 0
+  test-debug-phase: new rev 1:  x -> 0
+  test-debug-phase: new rev 2:  x -> 0
+  test-debug-phase: new rev 3:  x -> 0
+  test-debug-phase: new rev 4:  x -> 0
   $ hgph Upsilon -r 'min(draft())'
   o  2 draft a-C - 54acac6f23ab
   |
@@ -1201,6 +1318,9 @@ publish changesets as plain push does
   pushing to Pi
   searching for changes
   no changes found
+  test-debug-phase: move rev 2: 1 -> 0
+  test-debug-phase: move rev 3: 1 -> 0
+  test-debug-phase: move rev 7: 1 -> 0
   [1]
   $ hgph Upsilon -r 'min(draft())'
   o  8 draft a-F - b740e3e5c05d
@@ -1214,6 +1334,8 @@ publish changesets as plain push does
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  test-debug-phase: new rev 5:  x -> 0
+  test-debug-phase: move rev 8: 1 -> 0
 
   $ hgph Upsilon -r 'min(draft())'
   o  9 draft a-G - 3e27b6f1eee1
