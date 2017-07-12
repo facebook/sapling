@@ -1107,23 +1107,22 @@ def _continuehistedit(ui, repo, state):
         if action.verb == 'fold' and nextact and nextact.verb == 'fold':
             state.actions[idx].__class__ = _multifold
 
-    total = len(state.actions)
-    pos = 0
-    tr = None
-
     # Force an initial state file write, so the user can run --abort/continue
     # even if there's an exception before the first transaction serialize.
     state.write()
-    try:
-        # Don't use singletransaction by default since it rolls the entire
-        # transaction back if an unexpected exception happens (like a
-        # pretxncommit hook throws, or the user aborts the commit msg editor).
-        if ui.configbool("histedit", "singletransaction", False):
-            # Don't use a 'with' for the transaction, since actions may close
-            # and reopen a transaction. For example, if the action executes an
-            # external process it may choose to commit the transaction first.
-            tr = repo.transaction('histedit')
 
+    total = len(state.actions)
+    pos = 0
+    tr = None
+    # Don't use singletransaction by default since it rolls the entire
+    # transaction back if an unexpected exception happens (like a
+    # pretxncommit hook throws, or the user aborts the commit msg editor).
+    if ui.configbool("histedit", "singletransaction", False):
+        # Don't use a 'with' for the transaction, since actions may close
+        # and reopen a transaction. For example, if the action executes an
+        # external process it may choose to commit the transaction first.
+        tr = repo.transaction('histedit')
+    try:
         while state.actions:
             state.write(tr=tr)
             actobj = state.actions[0]
