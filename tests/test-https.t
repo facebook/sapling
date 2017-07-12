@@ -84,6 +84,7 @@ we are able to load CA certs.
   $ hg clone https://localhost:$HGPORT/ copy-pull
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
 #endif
@@ -128,6 +129,7 @@ A per-host certificate mismatching the server will fail verification
   $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/client-cert.pem" clone https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (an attempt was made to load CA certificates but none were loaded; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
 #else
@@ -295,6 +297,7 @@ cacert mismatch
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem"
   pulling from https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem" \
@@ -313,6 +316,7 @@ Test server cert which isn't valid yet
   > https://localhost:$HGPORT1/
   pulling from https://localhost:$HGPORT1/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
 
@@ -324,6 +328,7 @@ Test server cert which no longer is valid
   > https://localhost:$HGPORT2/
   pulling from https://localhost:$HGPORT2/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
 
@@ -578,12 +583,14 @@ Test https with cert problems through proxy
   > --config web.cacerts="$CERTSDIR/pub-other.pem"
   pulling from https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull \
   > --config web.cacerts="$CERTSDIR/pub-expired.pem" https://localhost:$HGPORT2/
   pulling from https://localhost:$HGPORT2/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
 
@@ -619,6 +626,7 @@ without client certificate:
 
   $ P="$CERTSDIR" hg id https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *handshake failure* (glob)
   [255]
 

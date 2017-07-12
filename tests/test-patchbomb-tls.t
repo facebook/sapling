@@ -67,6 +67,7 @@ we are able to load CA certs:
   
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 
@@ -118,6 +119,7 @@ With invalid certificates:
   
   
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
+  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 

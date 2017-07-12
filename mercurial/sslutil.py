@@ -475,6 +475,12 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                     ui.warn(_(
                         '(see https://mercurial-scm.org/wiki/SecureConnections '
                         'for more info)\n'))
+
+            elif (e.reason == 'CERTIFICATE_VERIFY_FAILED' and
+                pycompat.osname == 'nt'):
+
+                ui.warn(_('(the full certificate chain may not be available '
+                          'locally; see "hg help debugssl")\n'))
         raise
 
     # check if wrap_socket failed silently because socket had been
