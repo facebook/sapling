@@ -59,6 +59,8 @@ class _hybrid(object):
             yield makemap(x)
     def __contains__(self, x):
         return x in self._values
+    def __getitem__(self, key):
+        return self._values[key]
     def __len__(self):
         return len(self._values)
     def __iter__(self):
@@ -590,6 +592,25 @@ def showobsolete(repo, ctx, templ, **args):
     if ctx.obsolete():
         return 'obsolete'
     return ''
+
+@templatekeyword('peerpaths')
+def showpeerpaths(repo, **args):
+    """A dictionary of repository locations defined in the [paths] section
+    of your configuration file."""
+    # see commands.paths() for naming of dictionary keys
+    paths = util.sortdict()
+    for k, p in sorted(repo.ui.paths.iteritems()):
+        d = util.sortdict()
+        d['url'] = p.rawloc
+        d.update((o, v) for o, v in sorted(p.suboptions.iteritems()))
+        def f():
+            yield d['url']
+        paths[k] = hybriddict(d, gen=f())
+
+    # no hybriddict() since d['path'] can't be formatted as a string. perhaps
+    # hybriddict() should call templatefilters.stringify(d[value]).
+    return _hybrid(None, paths, lambda k: {'name': k, 'path': paths[k]},
+                   lambda d: '%s=%s' % (d['name'], d['path']['url']))
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):

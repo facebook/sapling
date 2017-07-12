@@ -84,7 +84,46 @@ formatter output with paths:
   ]
   [1]
 
-password should be masked in plain output, but not in machine-readable output:
+log template:
+
+ (behaves as a {name: path-string} dict by default)
+
+  $ hg log -rnull -T '{peerpaths}\n'
+  dupe=$TESTTMP/b#tip expand=$TESTTMP/a/$SOMETHING/bar (glob)
+  $ hg log -rnull -T '{join(peerpaths, "\n")}\n'
+  dupe=$TESTTMP/b#tip (glob)
+  expand=$TESTTMP/a/$SOMETHING/bar (glob)
+  $ hg log -rnull -T '{peerpaths % "{name}: {path}\n"}'
+  dupe: $TESTTMP/a/$SOMETHING/bar (glob)
+  expand: $TESTTMP/a/$SOMETHING/bar (glob)
+  $ hg log -rnull -T '{get(peerpaths, "dupe")}\n'
+  $TESTTMP/a/$SOMETHING/bar (glob)
+
+ (but a path is actually a dict of url and sub-options)
+
+  $ hg log -rnull -T '{join(get(peerpaths, "dupe"), "\n")}\n'
+  url=$TESTTMP/b#tip (glob)
+  pushurl=https://example.com/dupe
+  $ hg log -rnull -T '{get(peerpaths, "dupe") % "{key}: {value}\n"}'
+  url: $TESTTMP/b#tip (glob)
+  pushurl: https://example.com/dupe
+  $ hg log -rnull -T '{get(get(peerpaths, "dupe"), "pushurl")}\n'
+  https://example.com/dupe
+
+ (so there's weird behavior)
+
+  $ hg log -rnull -T '{get(peerpaths, "dupe")|count}\n'
+  2
+  $ hg log -rnull -T '{get(peerpaths, "dupe")|stringify|count}\n'
+  [0-9]{2,} (re)
+
+ (in JSON, it's a dict of dicts)
+
+  $ hg log -rnull -T '{peerpaths|json}\n'
+  {"dupe": {"pushurl": "https://example.com/dupe", "url": "$TESTTMP/b#tip"}, "expand": {"url": "$TESTTMP/a/$SOMETHING/bar"}} (glob)
+
+password should be masked in plain output, but not in machine-readable/template
+output:
 
   $ echo 'insecure = http://foo:insecure@example.com/' >> .hg/hgrc
   $ hg paths insecure
@@ -96,6 +135,8 @@ password should be masked in plain output, but not in machine-readable output:
     "url": "http://foo:insecure@example.com/"
    }
   ]
+  $ hg log -rnull -T '{get(peerpaths, "insecure")}\n'
+  http://foo:insecure@example.com/
 
 zeroconf wraps ui.configitems(), which shouldn't crash at least:
 
