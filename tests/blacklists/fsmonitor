@@ -38,13 +38,3 @@ test-subrepo-deep-nested-change.t
 test-subrepo-recursion.t
 test-subrepo.t
 test-tags.t
-
-# The following tests remain enabled; they fail *too*, but only because they
-# occasionally use blacklisted extensions and don't anticipate the warning
-# generated.
-#test-log.t
-#test-hook.t
-#test-rename.t
-#test-histedit-fold.t
-#test-fileset-generated.t
-#test-init.t
