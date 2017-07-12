@@ -40,6 +40,8 @@ infinitepush=$TESTDIR/../infinitepush
 [infinitepush]
 branchpattern=re:scratch/.+
 server=False
+[experimental]
+changegroup3=True
 [paths]
 default = ssh://user@dummy/server
 EOF
@@ -47,6 +49,8 @@ EOF
 
 setupsqlserverhgrc() {
 cat << EOF > .hg/hgrc
+[experimental]
+changegroup3=True
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [extensions]

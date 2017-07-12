@@ -1,4 +1,5 @@
   $ . $TESTDIR/require-ext.sh remotenames
+  $ . "$TESTDIR/library.sh"
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=$TESTDIR/../infinitepush
