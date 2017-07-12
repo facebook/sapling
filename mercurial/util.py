@@ -19,6 +19,7 @@ import bz2
 import calendar
 import codecs
 import collections
+import contextlib
 import datetime
 import errno
 import gc
@@ -588,6 +589,24 @@ class sortdict(collections.OrderedDict):
         if key in self:
             del self[key]
         super(sortdict, self).__setitem__(key, value)
+
+@contextlib.contextmanager
+def acceptintervention(tr=None):
+    """A context manager that closes the transaction on InterventionRequired
+
+    If no transaction was provided, this simply runs the body and returns
+    """
+    if not tr:
+        yield
+        return
+    try:
+        yield
+        tr.close()
+    except error.InterventionRequired:
+        tr.close()
+        raise
+    finally:
+        tr.release()
 
 class _lrucachenode(object):
     """A node in a doubly linked list.

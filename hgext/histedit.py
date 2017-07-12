@@ -1122,7 +1122,7 @@ def _continuehistedit(ui, repo, state):
         # and reopen a transaction. For example, if the action executes an
         # external process it may choose to commit the transaction first.
         tr = repo.transaction('histedit')
-    try:
+    with util.acceptintervention(tr):
         while state.actions:
             state.write(tr=tr)
             actobj = state.actions[0]
@@ -1135,17 +1135,6 @@ def _continuehistedit(ui, repo, state):
             state.parentctxnode = parentctx.node()
             state.replacements.extend(replacement_)
             state.actions.pop(0)
-
-        if tr is not None:
-            tr.close()
-    except error.InterventionRequired:
-        if tr is not None:
-            tr.close()
-        raise
-    except Exception:
-        if tr is not None:
-            tr.abort()
-        raise
 
     state.write()
     ui.progress(_("editing"), None)
