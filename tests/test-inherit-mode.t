@@ -69,6 +69,7 @@ new directories are setgid
   00660 ./.hg/cache/rbc-names-v1
   00660 ./.hg/cache/rbc-revs-v1
   00660 ./.hg/dirstate
+  00660 ./.hg/fsmonitor.state (fsmonitor !)
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
   00770 ./.hg/store/

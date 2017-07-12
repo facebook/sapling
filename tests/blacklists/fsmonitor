@@ -13,10 +13,7 @@ test-eol-update.t
 test-eol.t
 test-eolfilename.t
 test-extension.t
-test-fncache.t
-test-hardlinks.t
 test-help.t
-test-inherit-mode.t
 test-issue3084.t
 test-largefiles-cache.t
 test-largefiles-misc.t
