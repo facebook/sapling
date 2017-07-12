@@ -118,12 +118,16 @@ Repeat with cold tag cache:
 
 And again, but now unable to write tag cache or lock file:
 
-#if unix-permissions
+#if unix-permissions no-fsmonitor
+
   $ rm -f .hg/cache/tags2-visible .hg/cache/hgtagsfnodes1
   $ chmod 555 .hg/cache
   $ hg identify
   b9154636be93 tip
   $ chmod 755 .hg/cache
+
+(this block should be protected by no-fsmonitor, because "chmod 555 .hg"
+makes watchman fail at accessing to files under .hg)
 
   $ chmod 555 .hg
   $ hg identify

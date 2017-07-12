@@ -23,9 +23,7 @@ test-largefiles-wireproto.t
 test-largefiles.t
 test-lfconvert.t
 test-nested-repo.t
-test-permissions.t
 test-push-warn.t
 test-subrepo-deep-nested-change.t
 test-subrepo-recursion.t
 test-subrepo.t
-test-tags.t

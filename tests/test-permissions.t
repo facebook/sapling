@@ -61,9 +61,16 @@
   M a
   ? dir/a
   $ chmod -rx dir
+
+#if no-fsmonitor
+
+(fsmonitor makes "hg status" avoid accessing to "dir")
+
   $ hg status
   dir: Permission denied
   M a
+
+#endif
 
 Reenable perm to allow deletion:
 
