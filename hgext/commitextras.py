@@ -12,6 +12,7 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 from mercurial import (
     commands,
+    error,
     extensions,
     registrar,
 )
@@ -19,6 +20,19 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = 'ships-with-hg-core'
+
+usedinternally = {
+    'amend_source',
+    'branch',
+    'close',
+    'histedit_source',
+    'topic',
+    'rebase_source',
+    'intermediate-source',
+    '__touch-noise__',
+    'source',
+    'transplant_source',
+}
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'commit', _commit)
@@ -33,7 +47,15 @@ def _commit(orig, ui, repo, *pats, **opts):
             extras = opts.get('extra')
             if extras:
                 for raw in extras:
+                    if '=' not in raw:
+                        msg = _("unable to parse '%s', should follow "
+                                "KEY=VALUE format")
+                        raise error.Abort(msg % raw)
                     k, v = raw.split('=', 1)
+                    if k in usedinternally:
+                        msg = _("key '%s' is used internally, can't be set "
+                                "manually")
+                        raise error.Abort(msg % k)
                     inneropts['extra'][k] = v
             return origcommit(*innerpats, **inneropts)
 

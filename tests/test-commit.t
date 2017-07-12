@@ -124,6 +124,24 @@ An empty date was interpreted as epoch origin
   $ hg tip --template '{date|isodate}\n' | grep '1970'
   [1]
 
+Using the advanced --extra flag
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "commitextras=" >> $HGRCPATH
+  $ hg status
+  ? baz
+  ? quux
+  $ hg add baz
+  $ hg commit -m "adding extras" --extra sourcehash=foo --extra oldhash=bar
+  $ hg log -r . -T '{extras % "{extra}\n"}'
+  branch=default
+  oldhash=bar
+  sourcehash=foo
+  $ hg add quux
+  $ hg commit -m "adding internal used extras" --extra amend_source=hash
+  abort: key 'amend_source' is used internally, can't be set manually
+  [255]
+
 Make sure we do not obscure unknown requires file entries (issue2649)
 
   $ echo foo >> foo
