@@ -3,8 +3,6 @@
 # The following tests all fail because they either use extensions that conflict
 # with fsmonitor, use subrepositories, or don't anticipate the extra file in
 # the .hg directory that fsmonitor adds.
-test-basic.t
-test-commandserver.t
 test-debugextensions.t
 test-eol-add.t
 test-eol-clone.t

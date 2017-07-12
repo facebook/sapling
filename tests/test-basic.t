@@ -3,6 +3,7 @@ Create a repository:
   $ hg config
   devel.all-warnings=true
   devel.default-date=0 0
+  extensions.fsmonitor= (fsmonitor !)
   largefiles.usercache=$TESTTMP/.cache/largefiles (glob)
   ui.slash=True
   ui.interactive=False

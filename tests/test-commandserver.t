@@ -189,6 +189,7 @@ check that local configs for the cached repo aren't inherited when -R is used:
   bundle.mainreporoot=$TESTTMP/repo
   devel.all-warnings=true
   devel.default-date=0 0
+  extensions.fsmonitor= (fsmonitor !)
   largefiles.usercache=$TESTTMP/.cache/largefiles
   ui.slash=True
   ui.interactive=False
