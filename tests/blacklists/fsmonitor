@@ -5,7 +5,6 @@
 # the .hg directory that fsmonitor adds.
 test-basic.t
 test-blackbox.t
-test-check-commit.t
 test-commandserver.t
 test-copy.t
 test-debugextensions.t
@@ -30,7 +29,6 @@ test-largefiles-update.t
 test-largefiles-wireproto.t
 test-largefiles.t
 test-lfconvert.t
-test-merge-tools.t
 test-nested-repo.t
 test-permissions.t
 test-push-warn.t
