@@ -280,7 +280,6 @@ class histeditstate(object):
         self.lock = lock
         self.wlock = wlock
         self.backupfile = None
-        self.tr = None
         if replacements is None:
             self.replacements = []
         else:
@@ -1110,7 +1109,7 @@ def _continuehistedit(ui, repo, state):
 
     total = len(state.actions)
     pos = 0
-    state.tr = None
+    tr = None
 
     # Force an initial state file write, so the user can run --abort/continue
     # even if there's an exception before the first transaction serialize.
@@ -1123,10 +1122,10 @@ def _continuehistedit(ui, repo, state):
             # Don't use a 'with' for the transaction, since actions may close
             # and reopen a transaction. For example, if the action executes an
             # external process it may choose to commit the transaction first.
-            state.tr = repo.transaction('histedit')
+            tr = repo.transaction('histedit')
 
         while state.actions:
-            state.write(tr=state.tr)
+            state.write(tr=tr)
             actobj = state.actions[0]
             pos += 1
             ui.progress(_("editing"), pos, actobj.torule(),
@@ -1138,15 +1137,15 @@ def _continuehistedit(ui, repo, state):
             state.replacements.extend(replacement_)
             state.actions.pop(0)
 
-        if state.tr is not None:
-            state.tr.close()
+        if tr is not None:
+            tr.close()
     except error.InterventionRequired:
-        if state.tr is not None:
-            state.tr.close()
+        if tr is not None:
+            tr.close()
         raise
     except Exception:
-        if state.tr is not None:
-            state.tr.abort()
+        if tr is not None:
+            tr.abort()
         raise
 
     state.write()
