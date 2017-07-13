@@ -293,19 +293,28 @@ class mutablebasepack(versionmixin):
         if self._closed:
             return
 
-        sha = self.sha.hexdigest()
-        self.packfp.close()
-        self.writeindex()
+        try:
+            sha = self.sha.hexdigest()
+            self.packfp.close()
+            self.writeindex()
 
-        if len(self.entries) == 0:
-            # Empty pack
-            self.opener.unlink(self.packpath)
-            self.opener.unlink(self.idxpath)
-            self._closed = True
-            return None
+            if len(self.entries) == 0:
+                # Empty pack
+                self.opener.unlink(self.packpath)
+                self.opener.unlink(self.idxpath)
+                self._closed = True
+                return None
 
-        self.opener.rename(self.packpath, sha + self.PACKSUFFIX)
-        self.opener.rename(self.idxpath, sha + self.INDEXSUFFIX)
+            self.opener.rename(self.packpath, sha + self.PACKSUFFIX)
+            self.opener.rename(self.idxpath, sha + self.INDEXSUFFIX)
+        except Exception:
+            for path in [self.packpath, self.idxpath,
+                         sha + self.PACKSUFFIX, sha + self.INDEXSUFFIX]:
+                try:
+                    self.opener.unlink(path)
+                except Exception:
+                    pass
+            raise
 
         self._closed = True
         result = self.opener.join(sha)
