@@ -7,6 +7,7 @@
 import hashlib
 from mercurial.util import httplib
 
+import contextlib
 import json
 import os
 import time
@@ -132,7 +133,44 @@ if 'HG_ARC_CONDUIT_MOCK' in os.environ:
         mocked_responses = json.load(f)
         Client = MockClient
 
+class ClientCache(object):
+    def __init__(self):
+        self.max_idle_seconds = 10
+        self.client = None
+        self.lastuse = None
+
+    @contextlib.contextmanager
+    def getclient(self):
+        # Use the existing client if we have one and it hasn't been idle too
+        # long.
+        #
+        # We reconnect if we have been idle for too long just in case the
+        # server might have closed our connection while we were idle.  (We
+        # could potentially check the socket for readability, but that might
+        # still race with the server currently closing our socket.)
+        if (self.client is not None and
+                time.time() <= (self.lastuse + self.max_idle_seconds)):
+            client = self.client
+
+            # Reset self.client to None while we are using it.
+            # If our caller throws an exception during the yield this ensures
+            # that we do not continue to use this client later.
+            self.client = None
+            self.lastuse = None
+        else:
+            # We have to make a new connection
+            client = Client()
+            client.apply_arcconfig(arcconfig.load_for_path(os.getcwd()))
+
+        yield client
+
+        # Our caller used this client successfully and did not throw an
+        # exception.  Store it to use again next time getclient() is called.
+        self.lastuse = time.time()
+        self.client = client
+
+_clientcache = ClientCache()
+
 def call_conduit(method, args, timeout=DEFAULT_TIMEOUT):
-    client = Client()
-    client.apply_arcconfig(arcconfig.load_for_path(os.getcwd()))
-    return client.call(method, args, timeout=timeout)
+    with _clientcache.getclient() as client:
+        return client.call(method, args, timeout=timeout)
