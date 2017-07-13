@@ -24,7 +24,6 @@ outputs, which should be fixed later.
   > -X i18n/posplit \
   > -X tests/test-hgweb-auth.py \
   > -X tests/hypothesishelpers.py \
-  > -X tests/test-ctxmanager.py \
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
   > -X tests/test-hook.t \
