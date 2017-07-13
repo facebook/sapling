@@ -435,6 +435,8 @@ Test having an unamended commit.
   |
   @  4 Amended
   |
+  | x  1 add b
+  |/
   o  0 add a
 
 Test situation with divergence. Restack should rebase unstable children
@@ -475,6 +477,8 @@ onto the newest successor of their parent.
   @  4 successor 2
   |
   | o  3 successor 1
+  |/
+  | x  1 add b
   |/
   o  0 add a
 
@@ -582,6 +586,8 @@ Test recursive restacking -- basic case.
   |
   @  5 add b
   |
+  | x  1 add b
+  |/
   o  0 add a
 
 Test recursive restacking -- more complex case. This test is designed to
@@ -673,4 +679,6 @@ stack is lost upon rebasing lower levels.
   |/
   @  5 add b
   |
+  | x  1 add b
+  |/
   o  0 add a

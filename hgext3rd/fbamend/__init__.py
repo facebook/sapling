@@ -63,6 +63,7 @@ from hgext import rebase as rebasemod
 from . import (
     common,
     fold,
+    hiddenoverride,
     metaedit,
     movement,
     prune,
@@ -92,6 +93,7 @@ amendopts = [
 ]
 
 def uisetup(ui):
+    hiddenoverride.uisetup(ui)
     prune.uisetup(ui)
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:

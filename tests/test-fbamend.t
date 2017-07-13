@@ -373,6 +373,8 @@ Fbamend respects the createmarkers option
   |
   @  6 3a4d2824efc1 message from exec
   |
+  | x  2 048e86baa19d message from exec
+  |/
   | o  1 3f6197b00eba extra commit to test multiple heads
   |/
   o  0 cb9a9f314b8b a
