@@ -403,10 +403,9 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     return op
 
 def _processchangegroup(op, cg, tr, source, url, **kwargs):
-    ret, addednodes = cg.apply(op.repo, tr, source, url, **kwargs)
+    ret = cg.apply(op.repo, tr, source, url, **kwargs)
     op.records.add('changegroup', {
         'return': ret,
-        'addednodes': addednodes,
     })
     return ret
 

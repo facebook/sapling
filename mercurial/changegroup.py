@@ -412,7 +412,7 @@ class cg1unpacker(object):
             ret = deltaheads - 1
         else:
             ret = deltaheads + 1
-        return ret, added
+        return ret
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.
