@@ -160,6 +160,11 @@ def p4fastimport(ui, repo, client, **opts):
     #   //depot/foo/... //client/x/...
     #    would map the files that are stored on the
     #   server under foo/* locally under x/*.
+
+    # 0. Fail if the specified client does not exist
+    if not p4.exists_client(client):
+        raise error.Abort(_('p4 client %s does not exist.') % client)
+
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
     changelists = sorted(p4.parse_changes(client, startcl=startcl))

@@ -158,6 +158,19 @@ def parse_client(client):
             views[sview] = cview
     return views
 
+def exists_client(client):
+    cmd = 'p4 -G clients -e %s' % util.shellquote(client)
+    try:
+        with retries(num=3, sleeps=0.3):
+            stdout = util.popen(cmd, mode='rb')
+            for each in loaditer(stdout):
+                client_name = each.get('client', None)
+                if client_name is not None and client_name == client:
+                    return True
+            return False
+    except Exception:
+        raise P4Exception(stdout)
+
 def parse_fstat(clnum, client, filter=None):
     cmd = 'p4 --client %s -G fstat -e %d -T ' \
           '"depotFile,headAction,headType,headRev" "//%s/..."' % (
@@ -335,4 +348,3 @@ class P4Changelist(object):
             else:
                 assert False
         return a, m, r
-
