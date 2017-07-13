@@ -7,7 +7,6 @@
 # GNU General Public License version 2 or any later version.
 from mercurial import (
     manifest,
-    mdiff,
     registrar,
 )
 from mercurial.node import nullid
@@ -160,9 +159,6 @@ def _addtree(store, cache, pack, m, linkrev, m1, m2, forcenode=False):
         except KeyError:
             deltabase = nullid
             delta = text
-            if False and m1.node() != nullid:
-                deltabase = m1.node()
-                delta = mdiff.textdiff(m1.dirtext(usemfv2), text)
             pack.add(m._dir, n, deltabase, delta)
         cache.add(m._dir, n, text)
     m.setnode(n)
