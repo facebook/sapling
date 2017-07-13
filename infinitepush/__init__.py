@@ -286,13 +286,6 @@ def clientextsetup(ui):
 
     wrapfunction(discovery, 'checkheads', _checkheads)
 
-    def infinitepushsupported(orig, repo):
-        versions = orig(repo)
-        versions.discard('01')
-        return versions
-
-    wrapfunction(changegroup, 'supportedoutgoingversions',
-                 infinitepushsupported)
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
 
     # Move infinitepush part before pushrebase part

@@ -179,16 +179,6 @@ def _canskipupload(repo):
     # if remotestore is a null store, upload is a no-op and can be skipped
     return isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)
 
-def uploadblobsfromrevs(repo, revs):
-    '''upload lfs blobs introduced by revs
-
-    Note: also used by other extensions e. g. infinitepush. avoid renaming.
-    '''
-    if _canskipupload(repo):
-        return
-    pointers = extractpointers(repo, revs)
-    uploadblobs(repo, pointers)
-
 def prepush(pushop):
     """Prepush hook.
 
@@ -196,12 +186,18 @@ def prepush(pushop):
     deserialized into metadata so that we can block the push on their upload to
     the remote blobstore.
     """
-    return uploadblobsfromrevs(pushop.repo, pushop.outgoing.missing)
+    if _canskipupload(pushop.repo):
+        return
+    pointers = extractpointers(pushop.repo, pushop.outgoing.missing)
+    uploadblobs(pushop.repo, pointers)
 
 def writenewbundle(orig, ui, repo, source, filename, bundletype, outgoing,
                    *args, **kwargs):
     """upload LFS blobs added by outgoing revisions on 'hg bundle'"""
-    uploadblobsfromrevs(repo, outgoing.missing)
+    if _canskipupload(repo):
+        return
+    pointers = extractpointers(repo, outgoing.missing)
+    uploadblobs(repo, pointers)
     return orig(ui, repo, source, filename, bundletype, outgoing, *args,
                 **kwargs)
 
