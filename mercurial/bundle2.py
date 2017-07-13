@@ -1788,11 +1788,7 @@ def _readphaseheads(inpart):
 def handlephases(op, inpart):
     """apply phases from bundle part to repo"""
     headsbyphase = _readphaseheads(inpart)
-    addednodes = []
-    for entry in op.records['changegroup']:
-        addednodes.extend(entry['addednodes'])
-    phases.updatephases(op.repo.unfiltered(), op.gettransaction(), headsbyphase,
-                        addednodes)
+    phases.updatephases(op.repo.unfiltered(), op.gettransaction(), headsbyphase)
 
 @parthandler('reply:pushkey', ('return', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):

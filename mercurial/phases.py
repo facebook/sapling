@@ -527,7 +527,7 @@ def subsetphaseheads(repo, subset):
         headsbyphase[phase] = [cl.node(r) for r in repo.revs(revset, subset)]
     return headsbyphase
 
-def updatephases(repo, tr, headsbyphase, addednodes):
+def updatephases(repo, tr, headsbyphase):
     """Updates the repo with the given phase heads"""
     # Now advance phase boundaries of all but secret phase
     for phase in allphases[:-1]:
