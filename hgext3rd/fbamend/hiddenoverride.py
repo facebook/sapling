@@ -44,7 +44,7 @@ def loadpinnednodes(repo):
         offset += 20
 
 def savepinnednodes(repo, nodes):
-    with repo.svfs.open('obsinhibit', 'wb', atomictemp=True) as f:
+    with repo.lock(), repo.svfs.open('obsinhibit', 'wb', atomictemp=True) as f:
         f.write(''.join(nodes))
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
@@ -60,11 +60,13 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
         except Exception:
             pass
         tounpin = getattr(unfi, '_tounpinnodes', set())
-        pinned = set(loadpinnednodes(repo)) - tounpin
+        origpinned = set(loadpinnednodes(repo))
+        pinned = origpinned - tounpin
         if wnode:
             pinned.add(wnode)
         pinned.update(unfi._bookmarks.values())
-        savepinnednodes(repo, pinned)
+        if pinned != origpinned:
+            savepinnednodes(repo, pinned)
     return result
 
 def createmarkers(orig, repo, rels, *args, **kwargs):
