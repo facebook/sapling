@@ -105,6 +105,7 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 from mercurial import (
     error as hgerror,
+    localrepo,
     util,
 )
 
@@ -150,6 +151,9 @@ def uisetup(ui):
 
     if ui.configbool('fastannotate', 'useflock', _flockavailable()):
         context.pathhelper.lock = context.pathhelper._lockflock
+
+    # fastannotate has its own locking, without depending on repo lock
+    localrepo.localrepository._wlockfreeprefix.add('fastannotate/')
 
 def reposetup(ui, repo):
     client = ui.configbool('fastannotate', 'client', default=None)
