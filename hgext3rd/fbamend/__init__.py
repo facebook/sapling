@@ -58,7 +58,10 @@ from mercurial.node import hex
 from mercurial import lock as lockmod
 from mercurial.i18n import _
 
-from hgext import rebase as rebasemod
+from hgext import (
+    histedit,
+    rebase as rebasemod,
+)
 
 from . import (
     common,
@@ -72,6 +75,8 @@ from . import (
     split,
     unamend,
 )
+
+import tempfile
 
 revsetpredicate = revsets.revsetpredicate
 
@@ -90,6 +95,7 @@ testedwith = 'ships-with-fb-hgext'
 amendopts = [
     ('', 'rebase', None, _('rebases children after the amend')),
     ('', 'fixup', None, _('rebase children from a previous amend')),
+    ('', 'to', '', _('amend to a specific commit in the current stack')),
 ]
 
 def uisetup(ui):
@@ -167,6 +173,7 @@ def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
     '''
     rebase = opts.get('rebase')
+    to = opts.get('to')
 
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits
@@ -180,8 +187,22 @@ def amend(ui, repo, *pats, **opts):
                 badflags[0])
 
     fixup = opts.get('fixup')
+
+    badtoflags = [
+        'rebase', 'fixup', 'addremove', 'edit', 'interactive', 'include',
+        'exclude', 'message', 'logfile', 'date', 'user',
+        'no-move-detection', 'stack'
+    ]
+
+    if to and any(opts.get(flag, None) for flag in badtoflags):
+        raise error.Abort(_('--to cannot be used with any other options'))
+
     if fixup:
         fixupamend(ui, repo)
+        return
+
+    if to:
+        amendtocommit(ui, repo, to)
         return
 
     old = repo['.']
@@ -362,6 +383,40 @@ def fixupamend(ui, repo):
             bmactivate(repo, active)
     finally:
         lockmod.release(wlock, lock, tr)
+
+def amendtocommit(ui, repo, commit):
+    """amend to a specific commit
+    """
+    with repo.wlock(), repo.lock():
+        originalcommits = list(repo.set("::. - public()"))
+        tempcommit = repo.commit(text="tempCommit")
+
+        if not tempcommit:
+            error.Abort(_('no pending changes to amend'))
+
+        tempcommithex = hex(tempcommit)
+
+        fp = tempfile.NamedTemporaryFile()
+        try:
+            found = False
+            for line in originalcommits:
+                if str(line) == commit:
+                    fp.write("pick " + str(line) + "\n")
+                    fp.write("roll " + tempcommithex[:12] + "\n")
+                    found = True
+                else:
+                    fp.write("pick " + str(line) + "\n")
+            if not found:
+                error.Abort(_('the commit hash provided cannot be found'))
+            fp.flush()
+            try:
+                histedit.histedit(ui, repo, commands=fp.name)
+            except error.InterventionRequired:
+                ui.warn(_('amend --to encountered an issue - '
+                        'use hg histedit to continue or abort'))
+                raise
+        finally:
+            fp.close()
 
 def wraprebase(orig, ui, repo, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
