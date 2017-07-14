@@ -139,14 +139,11 @@ def bundle2getgitmeta(op, part):
         op.repo.ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n")
                         % fname)
         return
-    f = op.repo.vfs(fname, 'w+', atomictemp=True)
-    try:
+    with op.repo.wlock(), op.repo.vfs(fname, 'w+', atomictemp=True) as f:
         data = part.read()
         op.repo.ui.note(_('writing .hg/%s\n') % fname)
         f.write(data)
         op.records.add('fb:gitmeta:writebytes', len(data))
-    finally:
-        f.close()
 
 def extsetup(ui):
     wrapwireprotocommand('lookup', remotelookup)
