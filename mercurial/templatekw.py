@@ -596,7 +596,7 @@ def showobsolete(repo, ctx, templ, **args):
 @templatekeyword('peerpaths')
 def showpeerpaths(repo, **args):
     """A dictionary of repository locations defined in the [paths] section
-    of your configuration file."""
+    of your configuration file. (EXPERIMENTAL)"""
     # see commands.paths() for naming of dictionary keys
     paths = util.sortdict()
     for k, p in sorted(repo.ui.paths.iteritems()):
