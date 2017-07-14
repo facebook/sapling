@@ -98,12 +98,35 @@ Test pushing only flat fails if forcetreereceive is on
   abort: push failed on remote
   [255]
 
-Test pushing only trees (no flats) with pushrebase creates trees on the server
+Test pushing only trees with commit hooks
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > sendflat=False
   > sendtrees=True
   > EOF
+  $ cat >> $TESTTMP/myhook.sh <<EOF
+  > set -xe
+  > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'subdir2/z' ]] && exit 1
+  > exit 2
+  > EOF
+  $ chmod a+x $TESTTMP/myhook.sh
+  $ cp ../master/.hg/hgrc ../master/.hg/hgrc.bak
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase.myhook=$TESTTMP/myhook.sh
+  > EOF
+  $ hg push --to mybook
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: +++ hg log -r 15486e46ccf6947fbb0a0209e6ce479e7f87ffae -T '{file_adds}'
+  remote: ++ [[ subdir2/z == \s\u\b\d\i\r\2\/\z ]]
+  remote: ++ exit 1
+  remote: prepushrebase.myhook hook exited with status 1
+  abort: push failed on remote
+  [255]
+  $ mv ../master/.hg/hgrc.bak ../master/.hg/hgrc
+
+Test pushing only trees (no flats) with pushrebase creates trees on the server
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes

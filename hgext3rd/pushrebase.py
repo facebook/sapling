@@ -125,7 +125,31 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
     # Force hooks to use a bundle repo
     bundlepath = encoding.environ.get("HG_HOOK_BUNDLEPATH")
     if bundlepath:
-        return orig(ui, bundlepath, create=create, **kwargs)
+        packpaths = encoding.environ.get("HG_HOOK_PACKPATHS")
+        if packpaths:
+            ui.setconfig("treemanifest", "treeonly", True)
+
+        repo = orig(ui, bundlepath, create=create, **kwargs)
+
+        # Add hook pack paths to the store
+        if packpaths:
+            bundledatastores = []
+            bundlehiststores = []
+            paths = packpaths.split(':')
+            for path in paths:
+                datastore, histstore = _createpackstore(repo.ui, path)
+                bundledatastores.append(datastore)
+                bundlehiststores.append(histstore)
+
+            # Point the bundle repo at the temp stores
+            repo.svfs.manifestdatastore = contentstore.unioncontentstore(
+                repo.svfs.manifestdatastore,
+                *bundledatastores)
+            repo.svfs.manifesthistorystore = metadatastore.unionmetadatastore(
+                repo.svfs.manifesthistorystore,
+                *bundlehiststores)
+        return repo
+
     return orig(ui, path, create, **kwargs)
 
 def unbundle(orig, repo, cg, heads, source, url):
@@ -811,6 +835,13 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
                                                   'min(bundle())').hex()
     prelockrebaseargs['node_onto'] = prelockontonode
     prelockrebaseargs['hook_bundlepath'] = bundlefile
+
+    for path in op.records[treepackrecords]:
+        if ':' in path:
+            raise RuntimeError(_("tree pack path may not contain colon (%s)") %
+                               path)
+    prelockrebaseargs['hook_packpaths'] = ':'.join(op.records[treepackrecords])
+
     op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
 def prefetchcaches(op, params, bundle):
