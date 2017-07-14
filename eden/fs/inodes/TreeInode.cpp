@@ -670,12 +670,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
 
     // Since we will move this file into the underlying file data, we
     // take special care to ensure that it is opened read-write
-    auto filePath = getOverlay()->getFilePath(childNumber);
-    folly::File file(
-        filePath.c_str(),
-        O_RDWR | O_CREAT | (flags & ~(O_RDONLY | O_WRONLY)),
-        0600);
 
+    folly::File file = getOverlay()->createOverlayFile(childNumber);
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a regular file.
     mode = S_IFREG | (07777 & mode);
@@ -751,18 +747,17 @@ FileInodePtr TreeInode::symlink(
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    auto filePath = getOverlay()->getFilePath(childNumber);
+    folly::File file = getOverlay()->createOverlayFile(childNumber);
 
-    folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    SCOPE_FAIL {
-      ::unlink(filePath.c_str());
-    };
     auto wrote = folly::writeNoInt(
         file.fd(), symlinkTarget.data(), symlinkTarget.size());
+
     if (wrote == -1) {
+      auto filePath = getOverlay()->getFilePath(childNumber);
       folly::throwSystemError("writeNoInt(", filePath, ") failed");
     }
     if (wrote != symlinkTarget.size()) {
+      auto filePath = getOverlay()->getFilePath(childNumber);
       folly::throwSystemError(
           "writeNoInt(",
           filePath,
@@ -837,12 +832,7 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    auto filePath = getOverlay()->getFilePath(childNumber);
-    folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-    SCOPE_FAIL {
-      ::unlink(filePath.c_str());
-    };
-
+    folly::File file = getOverlay()->createOverlayFile(childNumber);
     auto entry = std::make_unique<Entry>(mode, childNumber, rdev);
 
     // build a corresponding FileInode

@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Portability.h>
 #include <folly/Synchronized.h>

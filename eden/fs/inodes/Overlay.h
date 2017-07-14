@@ -68,6 +68,17 @@ class Overlay {
       const struct timespec& mtime);
 
   /**
+   * Helper function that opens an existing overlay file,
+   * checks that it is valid, and returns the file.
+   */
+  static folly::File openFile(folly::StringPiece filePath);
+
+  /**
+   * Helper function that creates a new overlay file and adds header to it
+   */
+  folly::File createOverlayFile(fuse_ino_t childNumber);
+
+  /**
    * Get the maximum inode number stored in the overlay.
    *
    * This is called when opening a mount point, to make sure that new inodes
@@ -76,6 +87,14 @@ class Overlay {
    */
   fuse_ino_t getMaxRecordedInode();
 
+  /**
+   * Constants for an header in overlay file.
+   */
+  static constexpr folly::StringPiece kHeaderIdentifierDir{"OVDR"};
+  static constexpr folly::StringPiece kHeaderIdentifierFile{"OVFL"};
+  static constexpr uint32_t kHeaderVersion = 1;
+  static constexpr size_t kHeaderLength = 64;
+
  private:
   void initOverlay();
   bool isOldFormatOverlay() const;
@@ -83,6 +102,10 @@ class Overlay {
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
       fuse_ino_t inodeNumber) const;
+  /**
+   * Helper function to add header to the overlay file
+   */
+  static void addHeaderToOverlayFile(int fd);
 
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;

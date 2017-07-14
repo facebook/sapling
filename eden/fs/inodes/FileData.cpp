@@ -28,6 +28,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
@@ -35,6 +36,7 @@ using folly::checkUnixError;
 using folly::Future;
 using folly::makeFuture;
 using folly::Unit;
+using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
@@ -45,7 +47,7 @@ FileData::FileData(FileInode* inode, const folly::Optional<Hash>& hash)
   // this is a materialized file.
   if (!hash.hasValue()) {
     auto filePath = inode_->getLocalPath();
-    file_ = folly::File(filePath.c_str(), O_RDWR | O_NOFOLLOW, 0600);
+    file_ = Overlay::openFile(filePath.c_str());
   }
 }
 
@@ -86,7 +88,8 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   checkUnixError(fstat(file_.fd(), &currentStat));
 
   if (to_set & FUSE_SET_ATTR_SIZE) {
-    checkUnixError(ftruncate(file_.fd(), attr.st_size));
+    checkUnixError(
+        ftruncate(file_.fd(), attr.st_size + Overlay::kHeaderLength));
   }
 
   if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
@@ -134,6 +137,7 @@ struct stat FileData::setAttr(const struct stat& attr, int to_set) {
   struct stat returnedStat;
   checkUnixError(fstat(file_.fd(), &returnedStat));
   returnedStat.st_mode = state->mode;
+  returnedStat.st_size -= Overlay::kHeaderLength;
 
   return returnedStat;
 }
@@ -159,8 +163,17 @@ struct stat FileData::stat() {
     // Otherwise we won't be able to report the ctime accurately if we just
     // keep using the overlay file timestamps.
     checkUnixError(fstat(file_.fd(), &st));
+
+    if (st.st_size < Overlay::kHeaderLength) {
+      auto filePath = inode_->getLocalPath();
+      EDEN_BUG() << "Overlay file " << inode_->getLocalPath()
+                 << " is too short for header: size=" << st.st_size;
+    }
+
+    st.st_size -= Overlay::kHeaderLength;
     st.st_mode = state->mode;
     st.st_rdev = state->rdev;
+
     return st;
   }
 
@@ -229,7 +242,9 @@ std::unique_ptr<folly::IOBuf> FileData::readIntoBuffer(size_t size, off_t off) {
 
   if (file_) {
     auto buf = folly::IOBuf::createCombined(size);
-    auto res = ::pread(file_.fd(), buf->writableBuffer(), size, off);
+    auto res = ::pread(
+        file_.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
+
     checkUnixError(res);
     buf->append(res);
     return buf;
@@ -254,7 +269,7 @@ std::string FileData::readAll() {
   auto state = inode_->state_.rlock();
   if (file_) {
     std::string result;
-    auto rc = lseek(file_.fd(), 0, SEEK_SET);
+    auto rc = lseek(file_.fd(), Overlay::kHeaderLength, SEEK_SET);
     folly::checkUnixError(rc, "unable to seek in materialized FileData");
     folly::readFile(file_.fd(), result);
     return result;
@@ -279,7 +294,8 @@ size_t FileData::write(fusell::BufVec&& buf, off_t off) {
 
   sha1Valid_ = false;
   auto vec = buf.getIov();
-  auto xfer = ::pwritev(file_.fd(), vec.data(), vec.size(), off);
+  auto xfer = ::pwritev(
+      file_.fd(), vec.data(), vec.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
   return xfer;
 }
@@ -292,7 +308,8 @@ size_t FileData::write(folly::StringPiece data, off_t off) {
   }
 
   sha1Valid_ = false;
-  auto xfer = ::pwrite(file_.fd(), data.data(), data.size(), off);
+  auto xfer = ::pwrite(
+      file_.fd(), data.data(), data.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
   return xfer;
 }
@@ -337,20 +354,35 @@ Future<Unit> FileData::materializeForWrite(int openFlags) {
     if ((openFlags & O_TRUNC) != 0) {
       // truncating a file that we already have open
       sha1Valid_ = false;
-      checkUnixError(ftruncate(file_.fd(), 0));
+      checkUnixError(ftruncate(file_.fd(), Overlay::kHeaderLength));
       auto emptySha1 = Hash::sha1(ByteRange{});
       storeSha1(state, emptySha1);
+    } else {
+      // no truncate option,overlay file contain old header
+      // we have to update only header but not contents
     }
     return makeFuture();
   }
+
+  // Add header to the overlay File.
+  struct timespec zeroTime = {0, 0};
+  auto header = Overlay::createHeader(
+      Overlay::kHeaderIdentifierFile,
+      Overlay::kHeaderVersion,
+      zeroTime,
+      zeroTime,
+      zeroTime);
+  auto iov = header.getIov();
 
   // We must not be materialized yet
   CHECK(state->hash.hasValue());
 
   Hash sha1;
   auto filePath = inode_->getLocalPath();
+
   if ((openFlags & O_TRUNC) != 0) {
-    file_ = folly::File(filePath.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0600);
+    folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size());
+    file_ = Overlay::openFile(filePath.stringPiece());
     sha1 = Hash::sha1(ByteRange{});
   } else {
     if (!blob_) {
@@ -362,10 +394,12 @@ Future<Unit> FileData::materializeForWrite(int openFlags) {
     }
 
     // Write the blob contents out to the overlay
-    auto iov = blob_->getContents().getIov();
+    auto contents = blob_->getContents().getIov();
+    iov.insert(iov.end(), contents.begin(), contents.end());
+
     folly::writeFileAtomic(
         filePath.stringPiece(), iov.data(), iov.size(), 0600);
-    file_ = folly::File(filePath.c_str(), O_RDWR);
+    file_ = Overlay::openFile(filePath.stringPiece());
 
     sha1 = getObjectStore()->getSha1ForBlob(state->hash.value());
   }
@@ -407,7 +441,7 @@ ObjectStore* FileData::getObjectStore() const {
 Hash FileData::recomputeAndStoreSha1(
     const folly::Synchronized<FileInode::State>::LockedPtr& state) {
   uint8_t buf[8192];
-  off_t off = 0;
+  off_t off = Overlay::kHeaderLength;
   SHA_CTX ctx;
   SHA1_Init(&ctx);
 

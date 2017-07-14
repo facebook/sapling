@@ -39,9 +39,7 @@ using std::unique_ptr;
 constexpr StringPiece kMetaDir{"overlay"};
 constexpr StringPiece kMetaFile{"dirdata"};
 constexpr StringPiece kInfoFile{"info"};
-constexpr StringPiece kHeaderIdentifier{"OVDR"};
-constexpr uint32_t kHeaderVersion = 1;
-constexpr size_t kHeaderLength = 64;
+
 /**
  * 4-byte magic identifier to put at the start of the info file.
  * This merely helps confirm that we are in fact reading an overlay info file
@@ -80,6 +78,11 @@ void formatSubdirPath(MutableStringPiece subdirPath, fuse_ino_t inode) {
   subdirPath[1] = hexdigit[inode & 0xf];
 }
 }
+
+constexpr folly::StringPiece Overlay::kHeaderIdentifierDir;
+constexpr folly::StringPiece Overlay::kHeaderIdentifierFile;
+constexpr uint32_t Overlay::kHeaderVersion;
+constexpr size_t Overlay::kHeaderLength;
 
 Overlay::Overlay(AbsolutePathPiece localDir) : localDir_(localDir) {
   initOverlay();
@@ -261,7 +264,7 @@ void Overlay::saveOverlayDir(
   struct timespec zeroTime = {0, 0};
 
   auto header = createHeader(
-      kHeaderIdentifier, kHeaderVersion, zeroTime, zeroTime, zeroTime);
+      kHeaderIdentifierDir, kHeaderVersion, zeroTime, zeroTime, zeroTime);
 
   auto iov = header.getIov();
   iov.push_back(
@@ -388,8 +391,8 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
   contents.advance(kHeaderLength);
 
   // check if the header contains valid identifier and version
-  StringPiece identifier{header, 0, kHeaderIdentifier.size()};
-  header.advance(kHeaderIdentifier.size());
+  StringPiece identifier{header, 0, kHeaderIdentifierDir.size()};
+  header.advance(kHeaderIdentifierDir.size());
   StringPiece version{header, 0, sizeof(kHeaderVersion)};
 
   folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{version});
@@ -397,7 +400,7 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
   auto ver = cursor.readBE<uint32_t>();
 
   // Header doesn't contain identifier
-  if (identifier.compare(kHeaderIdentifier) != 0) {
+  if (identifier.compare(kHeaderIdentifierDir) != 0) {
     folly::throwSystemError(
         EIO,
         "unexpected overlay header identifier in ",
@@ -438,6 +441,74 @@ folly::IOBuf Overlay::createHeader(
   appender.append(paddingSize);
 
   return header;
+}
+
+// Helper function to open,validate,
+// get file pointer of an overlay file
+folly::File Overlay::openFile(folly::StringPiece filePath) {
+  // Open the overlay file
+  folly::File file(filePath, O_RDWR);
+
+  // Read the contents
+  std::string contents;
+  folly::readFile(file.fd(), contents);
+
+  StringPiece header{contents, 0, kHeaderLength};
+  StringPiece identifier{header, 0, kHeaderIdentifierFile.size()};
+  header.advance(kHeaderIdentifierFile.size());
+  StringPiece version{header, 0, sizeof(kHeaderVersion)};
+
+  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{version});
+  folly::io::Cursor cursor(&buf);
+  auto ver = cursor.readBE<uint32_t>();
+
+  // Header doesn't contain identifier
+  if (identifier.compare(kHeaderIdentifierFile) != 0) {
+    folly::throwSystemError(
+        EIO,
+        "unexpected overlay header identifier in ",
+        filePath,
+        ": ",
+        folly::hexlify(ByteRange{identifier}));
+  }
+  // Version number is different
+  if (ver != kHeaderVersion) {
+    folly::throwSystemError(
+        EIO, "Unexpected overlay version ", ver, " in ", filePath);
+  }
+
+  return file;
+}
+
+// Helper function to  add header to the materialized file
+void Overlay::addHeaderToOverlayFile(int fd) {
+  struct timespec zeroTime = {0, 0};
+  auto header = createHeader(
+      kHeaderIdentifierFile, kHeaderVersion, zeroTime, zeroTime, zeroTime);
+
+  auto data = header.coalesce();
+  auto wrote = folly::writeFull(fd, data.data(), data.size());
+
+  if (wrote == -1) {
+    folly::throwSystemError("writeNoInt failed");
+  }
+  if (wrote != data.size()) {
+    folly::throwSystemError(
+        "writeNoInt wrote only ", wrote, " of ", data.size(), " bytes");
+  }
+}
+
+// Helper function to create an overlay file
+folly::File Overlay::createOverlayFile(fuse_ino_t childNumber) {
+  auto filePath = getFilePath(childNumber);
+  folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+
+  SCOPE_FAIL {
+    ::unlink(filePath.c_str());
+  };
+
+  addHeaderToOverlayFile(file.fd());
+  return file;
 }
 }
 }
