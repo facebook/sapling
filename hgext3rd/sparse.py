@@ -988,6 +988,11 @@ class forceincludematcher(object):
     def prefix(self):
         return False
 
+    def visitdir(self, dir):
+        if any(True for path in self._includes if path.startswith(dir)):
+            return True
+        return self._matcher.visitdir(dir)
+
     def hash(self):
         sha1 = hashlib.sha1()
         sha1.update(_hashmatcher(self._matcher))
@@ -1021,6 +1026,12 @@ class unionmatcher(object):
     def prefix(self):
         return False
 
+    def visitdir(self, dir):
+        for match in self._matchers:
+            if match.visitdir(dir):
+                return True
+        return False
+
     def hash(self):
         sha1 = hashlib.sha1()
         for m in self._matchers:
@@ -1044,6 +1055,9 @@ class negatematcher(object):
         return False
 
     def anypats(self):
+        return True
+
+    def visitdir(self, dir):
         return True
 
     def hash(self):

@@ -134,3 +134,16 @@ Test rebasing a stack of commits results in a pack with all the trees
   
   Node          Delta Base    Delta Length
   8289b85c6a30  000000000000  92
+
+Test treemanifest with sparse enabled
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > sparse = $TESTDIR/../hgext3rd/sparse.py
+  > reset = $TESTDIR/../hgext3rd/reset.py
+  > EOF
+  $ hg sparse -I subdir
+  $ hg reset '.^'
+  resetting without an active bookmark
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/27a577922312-3ad85b1a-backup.hg (glob)
+  $ hg status
+  M subdir/y
