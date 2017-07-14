@@ -753,7 +753,7 @@ def _checkcollision(repo, wmf, actions):
 
     # check case-folding collision in provisional merged manifest
     foldmap = {}
-    for f in sorted(pmmf):
+    for f in pmmf:
         fold = util.normcase(f)
         if fold in foldmap:
             raise error.Abort(_("case-folding collision between %s and %s")
