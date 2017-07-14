@@ -279,12 +279,11 @@ class rebaseruntime(object):
         if not self.ui.configbool('experimental', 'rebaseskipobsolete',
                                   default=True):
             return
-        rebaseset = set(rebaserevs)
         obsoleteset = set(obsoleterevs)
         self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
                                     obsoleteset, dest)
         skippedset = set(self.obsoletenotrebased)
-        _checkobsrebase(self.repo, self.ui, obsoleteset, rebaseset, skippedset)
+        _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
     def _prepareabortorcontinue(self, isabort):
         try:
@@ -939,12 +938,11 @@ def adjustdest(repo, rev, dest, state):
         result.append(adjusted)
     return result
 
-def _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs, rebaseobsskipped):
+def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
     """
     Abort if rebase will create divergence or rebase is noop because of markers
 
     `rebaseobsrevs`: set of obsolete revision in source
-    `rebasesetrevs`: set of revisions to be rebased from source
     `rebaseobsskipped`: set of revisions from source skipped because they have
     successors in destination
     """
