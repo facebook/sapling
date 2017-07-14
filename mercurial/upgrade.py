@@ -792,35 +792,33 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     upgradeactions = [a.name for a in actions]
 
     ui.write(_('beginning upgrade...\n'))
-    with repo.wlock():
-        with repo.lock():
-            ui.write(_('repository locked and read-only\n'))
-            # Our strategy for upgrading the repository is to create a new,
-            # temporary repository, write data to it, then do a swap of the
-            # data. There are less heavyweight ways to do this, but it is easier
-            # to create a new repo object than to instantiate all the components
-            # (like the store) separately.
-            tmppath = tempfile.mkdtemp(prefix='upgrade.', dir=repo.path)
-            backuppath = None
-            try:
-                ui.write(_('creating temporary repository to stage migrated '
-                           'data: %s\n') % tmppath)
-                dstrepo = localrepo.localrepository(repo.baseui,
-                                                    path=tmppath,
-                                                    create=True)
+    with repo.wlock(), repo.lock():
+        ui.write(_('repository locked and read-only\n'))
+        # Our strategy for upgrading the repository is to create a new,
+        # temporary repository, write data to it, then do a swap of the
+        # data. There are less heavyweight ways to do this, but it is easier
+        # to create a new repo object than to instantiate all the components
+        # (like the store) separately.
+        tmppath = tempfile.mkdtemp(prefix='upgrade.', dir=repo.path)
+        backuppath = None
+        try:
+            ui.write(_('creating temporary repository to stage migrated '
+                       'data: %s\n') % tmppath)
+            dstrepo = localrepo.localrepository(repo.baseui,
+                                                path=tmppath,
+                                                create=True)
 
-                with dstrepo.wlock():
-                    with dstrepo.lock():
-                        backuppath = _upgraderepo(ui, repo, dstrepo, newreqs,
-                                                  upgradeactions)
+            with dstrepo.wlock(), dstrepo.lock():
+                backuppath = _upgraderepo(ui, repo, dstrepo, newreqs,
+                                          upgradeactions)
 
-            finally:
-                ui.write(_('removing temporary repository %s\n') % tmppath)
-                repo.vfs.rmtree(tmppath, forcibly=True)
+        finally:
+            ui.write(_('removing temporary repository %s\n') % tmppath)
+            repo.vfs.rmtree(tmppath, forcibly=True)
 
-                if backuppath:
-                    ui.warn(_('copy of old repository backed up at %s\n') %
-                            backuppath)
-                    ui.warn(_('the old repository will not be deleted; remove '
-                              'it to free up disk space once the upgraded '
-                              'repository is verified\n'))
+            if backuppath:
+                ui.warn(_('copy of old repository backed up at %s\n') %
+                        backuppath)
+                ui.warn(_('the old repository will not be deleted; remove '
+                          'it to free up disk space once the upgraded '
+                          'repository is verified\n'))

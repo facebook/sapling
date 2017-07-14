@@ -58,10 +58,9 @@ def link(src, dest):
         util.oslink(src, dest)
     except OSError:
         # if hardlinks fail, fallback on atomic copy
-        with open(src, 'rb') as srcf:
-            with util.atomictempfile(dest) as dstf:
-                for chunk in util.filechunkiter(srcf):
-                    dstf.write(chunk)
+        with open(src, 'rb') as srcf, util.atomictempfile(dest) as dstf:
+            for chunk in util.filechunkiter(srcf):
+                dstf.write(chunk)
         os.chmod(dest, os.stat(src).st_mode)
 
 def usercachepath(ui, hash):
@@ -236,10 +235,9 @@ def copyfromcache(repo, hash, filename):
     wvfs.makedirs(wvfs.dirname(wvfs.join(filename)))
     # The write may fail before the file is fully written, but we
     # don't use atomic writes in the working copy.
-    with open(path, 'rb') as srcfd:
-        with wvfs(filename, 'wb') as destfd:
-            gothash = copyandhash(
-                util.filechunkiter(srcfd), destfd)
+    with open(path, 'rb') as srcfd, wvfs(filename, 'wb') as destfd:
+        gothash = copyandhash(
+            util.filechunkiter(srcfd), destfd)
     if gothash != hash:
         repo.ui.warn(_('%s: data corruption in %s with hash %s\n')
                      % (filename, path, gothash))

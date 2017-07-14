@@ -2750,148 +2750,147 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     base = old.p1()
 
     newid = None
-    with repo.wlock(), repo.lock():
-        with repo.transaction('amend') as tr:
-            # See if we got a message from -m or -l, if not, open the editor
-            # with the message of the changeset to amend
-            message = logmessage(ui, opts)
-            # ensure logfile does not conflict with later enforcement of the
-            # message. potential logfile content has been processed by
-            # `logmessage` anyway.
-            opts.pop('logfile')
-            # First, do a regular commit to record all changes in the working
-            # directory (if there are any)
-            ui.callhooks = False
-            activebookmark = repo._bookmarks.active
-            try:
-                repo._bookmarks.active = None
-                opts['message'] = 'temporary amend commit for %s' % old
-                node = commit(ui, repo, commitfunc, pats, opts)
-            finally:
-                repo._bookmarks.active = activebookmark
-                repo._bookmarks.recordchange(tr)
-                ui.callhooks = True
-            ctx = repo[node]
+    with repo.wlock(), repo.lock(), repo.transaction('amend') as tr:
+        # See if we got a message from -m or -l, if not, open the editor
+        # with the message of the changeset to amend
+        message = logmessage(ui, opts)
+        # ensure logfile does not conflict with later enforcement of the
+        # message. potential logfile content has been processed by
+        # `logmessage` anyway.
+        opts.pop('logfile')
+        # First, do a regular commit to record all changes in the working
+        # directory (if there are any)
+        ui.callhooks = False
+        activebookmark = repo._bookmarks.active
+        try:
+            repo._bookmarks.active = None
+            opts['message'] = 'temporary amend commit for %s' % old
+            node = commit(ui, repo, commitfunc, pats, opts)
+        finally:
+            repo._bookmarks.active = activebookmark
+            repo._bookmarks.recordchange(tr)
+            ui.callhooks = True
+        ctx = repo[node]
 
-            # Participating changesets:
+        # Participating changesets:
+        #
+        # node/ctx o - new (intermediate) commit that contains changes
+        #          |   from working dir to go into amending commit
+        #          |   (or a workingctx if there were no changes)
+        #          |
+        # old      o - changeset to amend
+        #          |
+        # base     o - parent of amending changeset
+
+        # Update extra dict from amended commit (e.g. to preserve graft
+        # source)
+        extra.update(old.extra())
+
+        # Also update it from the intermediate commit or from the wctx
+        extra.update(ctx.extra())
+
+        if len(old.parents()) > 1:
+            # ctx.files() isn't reliable for merges, so fall back to the
+            # slower repo.status() method
+            files = set([fn for st in repo.status(base, old)[:3]
+                         for fn in st])
+        else:
+            files = set(old.files())
+
+        # Second, we use either the commit we just did, or if there were no
+        # changes the parent of the working directory as the version of the
+        # files in the final amend commit
+        if node:
+            ui.note(_('copying changeset %s to %s\n') % (ctx, base))
+
+            user = ctx.user()
+            date = ctx.date()
+            # Recompute copies (avoid recording a -> b -> a)
+            copied = copies.pathcopies(base, ctx)
+            if old.p2:
+                copied.update(copies.pathcopies(old.p2(), ctx))
+
+            # Prune files which were reverted by the updates: if old
+            # introduced file X and our intermediate commit, node,
+            # renamed that file, then those two files are the same and
+            # we can discard X from our list of files. Likewise if X
+            # was deleted, it's no longer relevant
+            files.update(ctx.files())
+            files = [f for f in files if not samefile(f, ctx, base)]
+
+            def filectxfn(repo, ctx_, path):
+                try:
+                    fctx = ctx[path]
+                    flags = fctx.flags()
+                    mctx = context.memfilectx(repo,
+                                              fctx.path(), fctx.data(),
+                                              islink='l' in flags,
+                                              isexec='x' in flags,
+                                              copied=copied.get(path))
+                    return mctx
+                except KeyError:
+                    return None
+        else:
+            ui.note(_('copying changeset %s to %s\n') % (old, base))
+
+            # Use version of files as in the old cset
+            def filectxfn(repo, ctx_, path):
+                try:
+                    return old.filectx(path)
+                except KeyError:
+                    return None
+
+            user = opts.get('user') or old.user()
+            date = opts.get('date') or old.date()
+        editform = mergeeditform(old, 'commit.amend')
+        editor = getcommiteditor(editform=editform,
+                                 **pycompat.strkwargs(opts))
+        if not message:
+            editor = getcommiteditor(edit=True, editform=editform)
+            message = old.description()
+
+        pureextra = extra.copy()
+        extra['amend_source'] = old.hex()
+
+        new = context.memctx(repo,
+                             parents=[base.node(), old.p2().node()],
+                             text=message,
+                             files=files,
+                             filectxfn=filectxfn,
+                             user=user,
+                             date=date,
+                             extra=extra,
+                             editor=editor)
+
+        newdesc = changelog.stripdesc(new.description())
+        if ((not node)
+            and newdesc == old.description()
+            and user == old.user()
+            and date == old.date()
+            and pureextra == old.extra()):
+            # nothing changed. continuing here would create a new node
+            # anyway because of the amend_source noise.
             #
-            # node/ctx o - new (intermediate) commit that contains changes
-            #          |   from working dir to go into amending commit
-            #          |   (or a workingctx if there were no changes)
-            #          |
-            # old      o - changeset to amend
-            #          |
-            # base     o - parent of amending changeset
+            # This not what we expect from amend.
+            return old.node()
 
-            # Update extra dict from amended commit (e.g. to preserve graft
-            # source)
-            extra.update(old.extra())
-
-            # Also update it from the intermediate commit or from the wctx
-            extra.update(ctx.extra())
-
-            if len(old.parents()) > 1:
-                # ctx.files() isn't reliable for merges, so fall back to the
-                # slower repo.status() method
-                files = set([fn for st in repo.status(base, old)[:3]
-                             for fn in st])
+        ph = repo.ui.config('phases', 'new-commit', phases.draft)
+        try:
+            if opts.get('secret'):
+                commitphase = 'secret'
             else:
-                files = set(old.files())
-
-            # Second, we use either the commit we just did, or if there were no
-            # changes the parent of the working directory as the version of the
-            # files in the final amend commit
+                commitphase = old.phase()
+            repo.ui.setconfig('phases', 'new-commit', commitphase, 'amend')
+            newid = repo.commitctx(new)
+        finally:
+            repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
+        if newid != old.node():
+            # Reroute the working copy parent to the new changeset
+            repo.setparents(newid, nullid)
+            mapping = {old.node(): (newid,)}
             if node:
-                ui.note(_('copying changeset %s to %s\n') % (ctx, base))
-
-                user = ctx.user()
-                date = ctx.date()
-                # Recompute copies (avoid recording a -> b -> a)
-                copied = copies.pathcopies(base, ctx)
-                if old.p2:
-                    copied.update(copies.pathcopies(old.p2(), ctx))
-
-                # Prune files which were reverted by the updates: if old
-                # introduced file X and our intermediate commit, node,
-                # renamed that file, then those two files are the same and
-                # we can discard X from our list of files. Likewise if X
-                # was deleted, it's no longer relevant
-                files.update(ctx.files())
-                files = [f for f in files if not samefile(f, ctx, base)]
-
-                def filectxfn(repo, ctx_, path):
-                    try:
-                        fctx = ctx[path]
-                        flags = fctx.flags()
-                        mctx = context.memfilectx(repo,
-                                                  fctx.path(), fctx.data(),
-                                                  islink='l' in flags,
-                                                  isexec='x' in flags,
-                                                  copied=copied.get(path))
-                        return mctx
-                    except KeyError:
-                        return None
-            else:
-                ui.note(_('copying changeset %s to %s\n') % (old, base))
-
-                # Use version of files as in the old cset
-                def filectxfn(repo, ctx_, path):
-                    try:
-                        return old.filectx(path)
-                    except KeyError:
-                        return None
-
-                user = opts.get('user') or old.user()
-                date = opts.get('date') or old.date()
-            editform = mergeeditform(old, 'commit.amend')
-            editor = getcommiteditor(editform=editform,
-                                     **pycompat.strkwargs(opts))
-            if not message:
-                editor = getcommiteditor(edit=True, editform=editform)
-                message = old.description()
-
-            pureextra = extra.copy()
-            extra['amend_source'] = old.hex()
-
-            new = context.memctx(repo,
-                                 parents=[base.node(), old.p2().node()],
-                                 text=message,
-                                 files=files,
-                                 filectxfn=filectxfn,
-                                 user=user,
-                                 date=date,
-                                 extra=extra,
-                                 editor=editor)
-
-            newdesc = changelog.stripdesc(new.description())
-            if ((not node)
-                and newdesc == old.description()
-                and user == old.user()
-                and date == old.date()
-                and pureextra == old.extra()):
-                # nothing changed. continuing here would create a new node
-                # anyway because of the amend_source noise.
-                #
-                # This not what we expect from amend.
-                return old.node()
-
-            ph = repo.ui.config('phases', 'new-commit', phases.draft)
-            try:
-                if opts.get('secret'):
-                    commitphase = 'secret'
-                else:
-                    commitphase = old.phase()
-                repo.ui.setconfig('phases', 'new-commit', commitphase, 'amend')
-                newid = repo.commitctx(new)
-            finally:
-                repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
-            if newid != old.node():
-                # Reroute the working copy parent to the new changeset
-                repo.setparents(newid, nullid)
-                mapping = {old.node(): (newid,)}
-                if node:
-                    mapping[node] = ()
-                scmutil.cleanupnodes(repo, mapping, 'amend')
+                mapping[node] = ()
+            scmutil.cleanupnodes(repo, mapping, 'amend')
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):

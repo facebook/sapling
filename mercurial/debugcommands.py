@@ -2177,9 +2177,8 @@ def debugtemplate(ui, repo, tmpl, **opts):
 @command('debugupdatecaches', [])
 def debugupdatecaches(ui, repo, *pats, **opts):
     """warm all known caches in the repository"""
-    with repo.wlock():
-        with repo.lock():
-            repo.updatecaches()
+    with repo.wlock(), repo.lock():
+        repo.updatecaches()
 
 @command('debugupgraderepo', [
     ('o', 'optimize', [], _('extra optimization to perform'), _('NAME')),
