@@ -1005,24 +1005,36 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         # sub-tree traversals, we can't do base node comparisons correctly.
         basemfnodes = []
 
+    # Only use the first two base trees, since the current tree
+    # implementation cannot handle more yet.
+    basemfnodes = basemfnodes[:2]
+
     mfnodeset = set(mfnodes)
     basemfnodeset = set(basemfnodes)
 
     # Count how many times we will need each comparison node, so we can keep
     # trees in memory the appropriate amount of time.
     trees = treememoizer(datastore)
+    prevmfnode = None
     for node in mfnodes:
         p1node, p2node = historystore.getnodeinfo(rootdir, node)[:2]
         if p1node != nullid and (p1node in mfnodeset or
                                  p1node in basemfnodeset):
             trees.adduse(p1node)
-        else:
+        elif basemfnodes:
             for basenode in basemfnodes:
                 trees.adduse(basenode)
+        elif prevmfnode:
+            # If there are no base nodes and the parent isn't one of the
+            # requested mfnodes, then pick another mfnode as a base.
+            trees.adduse(prevmfnode)
+
+        prevmfnode = node
         if p2node != nullid and (p2node in mfnodeset or
                                  p2node in basemfnodeset):
             trees.adduse(p2node)
 
+    prevmfnode = None
     for node in mfnodes:
         treemf = trees.get(node)
 
@@ -1032,16 +1044,21 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         if p1node != nullid and (p1node in mfnodeset or
                                  p1node in basemfnodeset):
             basetrees = [trees.get(p1node)]
-        else:
+        elif basemfnodes:
             basetrees = [trees.get(basenode) for basenode in basemfnodes]
+        elif prevmfnode:
+            # If there are no base nodes and the parent isn't one of the
+            # requested mfnodes, then pick another mfnode as a base.
+            basetrees = [trees.get(prevmfnode)]
+        else:
+            basetrees = []
+        prevmfnode = node
 
         if p2node != nullid and (p2node in mfnodeset or
                                  p2node in basemfnodeset):
             basetrees.append(trees.get(p2node))
 
-        # Only use the first two base trees, since the current tree
-        # implementation cannot handle more yet.
-        subtrees = treemf.walksubtrees(comparetrees=basetrees[:2])
+        subtrees = treemf.walksubtrees(comparetrees=basetrees)
         for subname, subnode, subtext, x, x, x in subtrees:
             # Append data
             data = [(subnode, nullid, subtext)]

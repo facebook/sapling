@@ -350,3 +350,10 @@ Test that prefetch refills just part of a tree when the cache is deleted
   $ hg cat subdir/z
   3 trees fetched over * (glob)
   z
+
+Test prefetch non-parent commits with no base node (should fetch minimal
+trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
+3 directories)
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetchtrees -r '2 + 4'
+  5 trees fetched over * (glob)
