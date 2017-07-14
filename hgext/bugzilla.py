@@ -338,7 +338,10 @@ configitem('bugzilla', 'db',
     default='bugs',
 )
 configitem('bugzilla', 'fixregexp',
-    default=lambda: bugzilla._default_fix_re,
+    default=(r'fix(?:es)?\s*(?:bugs?\s*)?,?\s*'
+             r'(?:nos?\.?|num(?:ber)?s?)?\s*'
+             r'(?P<ids>(?:#?\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
+             r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
 )
 configitem('bugzilla', 'fixresolution',
     default='FIXED',
@@ -988,11 +991,6 @@ class bugzilla(object):
         'xmlrpc+email': bzxmlrpcemail,
         'restapi': bzrestapi,
         }
-
-    _default_fix_re = (r'fix(?:es)?\s*(?:bugs?\s*)?,?\s*'
-                       r'(?:nos?\.?|num(?:ber)?s?)?\s*'
-                       r'(?P<ids>(?:#?\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
-                       r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
 
     def __init__(self, ui, repo):
         self.ui = ui
