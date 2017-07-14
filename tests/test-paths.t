@@ -119,8 +119,8 @@ log template:
 
  (in JSON, it's a dict of dicts)
 
-  $ hg log -rnull -T '{peerpaths|json}\n'
-  {"dupe": {"pushurl": "https://example.com/dupe", "url": "$TESTTMP/b#tip"}, "expand": {"url": "$TESTTMP/a/$SOMETHING/bar"}} (glob)
+  $ hg log -rnull -T '{peerpaths|json}\n' | sed 's|\\\\|/|g'
+  {"dupe": {"pushurl": "https://example.com/dupe", "url": "$TESTTMP/b#tip"}, "expand": {"url": "$TESTTMP/a/$SOMETHING/bar"}}
 
 password should be masked in plain output, but not in machine-readable/template
 output:
