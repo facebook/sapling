@@ -4,6 +4,24 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+"""rebases commits during push
+
+The pushrebase extension allows the server to rebase incoming commits as part of
+the push process. This helps solve the problem of push contention where many
+clients try to push at once and all but one fail. Instead of failing, the
+pushrebase extension will rebase the incoming commit onto the target bookmark
+(i.e. @ or master) as long as the commit doesn't touch any files that have been
+modified in the target bookmark. Put another way, pushrebase will not perform
+any file content merges. It only performs the rebase when there is no chance of
+a file merge.
+
+Configs:
+
+    ``pushrebase.forcetreereceive`` forces pushrebase to read incoming
+    treemanifests instead of incoming flat manifests. This is useful for the
+    transition to treemanifest.
+
+"""
 
 import errno, os, tempfile, mmap, time
 
@@ -489,11 +507,26 @@ def _graft(repo, rev, mapping, lastdestnode):
     oldp2 = rev.p2().node()
     newp1 = mapping.get(oldp1, oldp1)
     newp2 = mapping.get(oldp2, oldp2)
-    m = rev.manifest()
+
+    if not repo.ui.configbool("pushrebase", "forcetreereceive"):
+        m = rev.manifest()
+    else:
+        store = rev._repo.svfs.manifestdatastore
+        import cstore
+        m = cstore.treemanifest(store, rev.manifestnode())
+        if store.getmissing([('', rev.manifestnode())]):
+            raise error.Abort(_('error: pushes must contain tree manifests '
+                                'when the server has '
+                                'pushrebase.forcetreereceive enabled'))
+
     def getfilectx(repo, memctx, path):
         if path in m:
-            fctx = rev[path]
-            flags = fctx.flags()
+            # We can't use the normal rev[path] accessor here since it will try
+            # to go through the flat manifest, which may not exist.
+            fileid = m.get(path)
+            fctx = context.filectx(rev._repo, path, fileid=fileid,
+                                   changectx=rev)
+            flags = m.flags(path)
             copied = fctx.renamed()
             if copied:
                 copied = copied[0]
@@ -781,16 +814,17 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
 def prefetchcaches(op, params, bundle):
-    # We will need the bundle revs after the lock is taken, so let's
-    # precache all the bundle rev manifests.
     bundlerepocache = {}
-    bundlectxs = list(bundle.set('bundle()'))
-    manifestcachesize = op.repo.ui.configint('format',
-                                             'manifestcachesize') or 10
-    if len(bundlectxs) < manifestcachesize:
-        for ctx in bundlectxs:
-            # TODO: check tree store first
-            bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
+    # No need to cache trees from the bundle since they are already fast
+    if not op.repo.ui.configbool("pushrebase", "forcetreereceive"):
+        # We will need the bundle revs after the lock is taken, so let's
+        # precache all the bundle rev manifests.
+        bundlectxs = list(bundle.set('bundle()'))
+        manifestcachesize = op.repo.ui.configint('format',
+                                                 'manifestcachesize') or 10
+        if len(bundlectxs) < manifestcachesize:
+            for ctx in bundlectxs:
+                bundlerepocache[ctx.manifestnode()] = ctx.manifestctx().read()
 
     preonto = resolveonto(bundle, params.get('onto', donotrebasemarker))
     preontocache = None

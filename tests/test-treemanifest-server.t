@@ -20,20 +20,55 @@ Test that local commits on the server produce trees
   $ mkdir subdir
   $ echo x > subdir/x
   $ hg commit -qAm 'add subdir/x'
-  $ hg book mybook
-  $ hg debugdata .hg/store/00manifesttree.i 0
-  subdir\x00bc0c2c938b929f98b1c31a8c5994396ebb096bf0t (esc)
-  $ cd ..
 
+Create client
+  $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > [treemanifest]
+  > demanddownload=True
+  > EOF
+
+Test committing auto-downloads server trees and produces local trees
+  $ [ -d $CACHEDIR/master/packs/manifests/ ]
+  [1]
+  $ [ -d .hg/store/packs/manifests/ ]
+  [1]
+
   $ mkdir subdir2
   $ echo z >> subdir2/z
   $ hg commit -qAm "add subdir2/z"
+  2 trees fetched over * (glob)
+
+  $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
+  
+  subdir
+  Node          Delta Base    Delta Length
+  bc0c2c938b92  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  85b359fdb09e  000000000000  49
+
+  $ hg debugdatapack .hg/store/packs/manifests/*.dataidx
+  
+  subdir2
+  Node          Delta Base    Delta Length
+  ddb35f099a64  000000000000  43
+  
+  
+  Node          Delta Base    Delta Length
+  54cbf534b62b  000000000000  99
 
 Test pushing without pushrebase fails
-
   $ hg push
   pushing to ssh://user@dummy/master
   searching for changes
@@ -45,10 +80,29 @@ Test pushing without pushrebase fails
   abort: push failed on remote
   [255]
 
-Test pushing with pushrebase creates trees on the server
+Test pushing only flat fails if forcetreereceive is on
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [pushrebase]
+  > forcetreereceive=True
+  > EOF
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > EOF
+  $ hg push --to mybook
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 1 changset:
+  remote:     15486e46ccf6  add subdir2/z
+  remote: error: pushes must contain tree manifests when the server has pushrebase.forcetreereceive enabled
+  abort: push failed on remote
+  [255]
+
+Test pushing only trees (no flats) with pushrebase creates trees on the server
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > sendflat=False
+  > sendtrees=True
   > EOF
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
@@ -59,12 +113,18 @@ Test pushing with pushrebase creates trees on the server
   subdir
   subdir2
   $ cd ../master
+
+Verify flat was updated and tree was updated, even though only tree was sent
   $ hg debugdata .hg/store/00manifest.i 1
   subdir/x\x001406e74118627694268417491f018a4a883152f0 (esc)
   subdir2/z\x0069a1b67522704ec122181c0890bd16e9d3e7516a (esc)
+
   $ hg debugdata .hg/store/00manifesttree.i 1
   subdir\x00bc0c2c938b929f98b1c31a8c5994396ebb096bf0t (esc)
   subdir2\x00ddb35f099a648a43a997aef53123bce309c794fdt (esc)
+
+  $ hg debugdata .hg/store/meta/subdir2/00manifest.i 0
+  z\x0069a1b67522704ec122181c0890bd16e9d3e7516a (esc)
 
 Test stripping trees
   $ hg up -q tip
