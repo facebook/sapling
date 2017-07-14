@@ -305,7 +305,7 @@ class basematcher(object):
         This function's behavior is undefined if it has returned False for
         one of the dir's parent directories.
         '''
-        return False
+        return True
 
     def always(self):
         '''Matcher will match everything and .files() will be empty --
