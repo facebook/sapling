@@ -89,7 +89,7 @@ osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
 with_color = False
-
+pygmentspresent = False
 # ANSI color is unsupported prior to Windows 10
 if os.name != 'nt':
     try: # is pygments installed
@@ -97,6 +97,7 @@ if os.name != 'nt':
         import pygments.lexers as lexers
         import pygments.formatters as formatters
         with_color = True
+        pygmentspresent = True
     except ImportError:
         pass
 
@@ -1650,7 +1651,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if with_color:
+                        if with_color and pygmentspresent:
                             line = pygments.highlight(
                                     line,
                                     lexers.DiffLexer(),

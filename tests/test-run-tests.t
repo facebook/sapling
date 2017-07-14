@@ -121,7 +121,7 @@ test churn with globs
 
 test diff colorisation
 
-#if no-windows
+#if no-windows pygments
   $ rt test-failure.t --color always
   
   \x1b[38;5;124m--- $TESTTMP/test-failure.t\x1b[39m (esc)
