@@ -547,7 +547,7 @@ def _pushdiscoveryphase(pushop):
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys('phases')
     publishing = remotephases.get('publishing', False)
-    if (pushop.ui.configbool('ui', '_usedassubrepo', False)
+    if (pushop.ui.configbool('ui', '_usedassubrepo')
         and remotephases    # server supports phases
         and not pushop.outgoing.missing # no changesets to be pushed
         and publishing):
@@ -993,7 +993,7 @@ def _pushsyncphase(pushop):
     cheads = pushop.commonheads
     # even when we don't push, exchanging phase data is useful
     remotephases = pushop.remote.listkeys('phases')
-    if (pushop.ui.configbool('ui', '_usedassubrepo', False)
+    if (pushop.ui.configbool('ui', '_usedassubrepo')
         and remotephases    # server supports phases
         and pushop.cgresult is None # nothing was pushed
         and remotephases.get('publishing', False)):
@@ -1726,8 +1726,7 @@ def unbundle(repo, cg, heads, source, url):
     lockandtr = [None, None, None]
     recordout = None
     # quick fix for output mismatch with bundle2 in 3.4
-    captureoutput = repo.ui.configbool('experimental', 'bundle2-output-capture',
-                                       False)
+    captureoutput = repo.ui.configbool('experimental', 'bundle2-output-capture')
     if url.startswith('remote:http:') or url.startswith('remote:https:'):
         captureoutput = True
     try:
@@ -1792,7 +1791,7 @@ def _maybeapplyclonebundle(pullop):
     repo = pullop.repo
     remote = pullop.remote
 
-    if not repo.ui.configbool('ui', 'clonebundles', True):
+    if not repo.ui.configbool('ui', 'clonebundles'):
         return
 
     # Only run if local repo is empty.
@@ -1841,7 +1840,7 @@ def _maybeapplyclonebundle(pullop):
     # We abort by default to avoid the thundering herd of
     # clients flooding a server that was expecting expensive
     # clone load to be offloaded.
-    elif repo.ui.configbool('ui', 'clonebundlefallback', False):
+    elif repo.ui.configbool('ui', 'clonebundlefallback'):
         repo.ui.warn(_('falling back to normal clone\n'))
     else:
         raise error.Abort(_('error applying bundle'),

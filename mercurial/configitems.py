@@ -76,11 +76,29 @@ coreconfigitem('bundle', 'mainreporoot',
 coreconfigitem('bundle', 'reorder',
     default='auto',
 )
+coreconfigitem('censor', 'policy',
+    default='abort',
+)
+coreconfigitem('chgserver', 'idletimeout',
+    default=3600,
+)
+coreconfigitem('chgserver', 'skiphash',
+    default=False,
+)
+coreconfigitem('cmdserver', 'log',
+    default=None,
+)
 coreconfigitem('color', 'mode',
     default='auto',
 )
 coreconfigitem('color', 'pagermode',
     default=dynamicdefault,
+)
+coreconfigitem('commands', 'status.relative',
+    default=False,
+)
+coreconfigitem('commands', 'update.requiredest',
+    default=False,
 )
 coreconfigitem('devel', 'all-warnings',
     default=False,
@@ -92,6 +110,12 @@ coreconfigitem('devel', 'check-locks',
     default=False,
 )
 coreconfigitem('devel', 'check-relroot',
+    default=False,
+)
+coreconfigitem('devel', 'default-date',
+    default=None,
+)
+coreconfigitem('devel', 'deprec-warn',
     default=False,
 )
 coreconfigitem('devel', 'disableloaddefaultcerts',
@@ -111,6 +135,99 @@ coreconfigitem('devel', 'serverrequirecert',
 )
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
+)
+coreconfigitem('email', 'charsets',
+    default=list,
+)
+coreconfigitem('email', 'method',
+    default='smtp',
+)
+coreconfigitem('experimental', 'bundle-phases',
+    default=False,
+)
+coreconfigitem('experimental', 'bundle2-advertise',
+    default=True,
+)
+coreconfigitem('experimental', 'bundle2-output-capture',
+    default=False,
+)
+coreconfigitem('experimental', 'bundle2.pushback',
+    default=False,
+)
+coreconfigitem('experimental', 'bundle2lazylocking',
+    default=False,
+)
+coreconfigitem('experimental', 'bundlecomplevel',
+    default=None,
+)
+coreconfigitem('experimental', 'changegroup3',
+    default=False,
+)
+coreconfigitem('experimental', 'clientcompressionengines',
+    default=list,
+)
+coreconfigitem('experimental', 'crecordtest',
+    default=None,
+)
+coreconfigitem('experimental', 'disablecopytrace',
+    default=False,
+)
+coreconfigitem('experimental', 'editortmpinhg',
+    default=False,
+)
+coreconfigitem('experimental', 'evolution',
+    default=list,
+)
+coreconfigitem('experimental', 'evolution.bundle-obsmarker',
+    default=False,
+)
+coreconfigitem('experimental', 'evolution.track-operation',
+    default=False,
+)
+coreconfigitem('experimental', 'exportableenviron',
+    default=list,
+)
+coreconfigitem('experimental', 'extendedheader.index',
+    default=None,
+)
+coreconfigitem('experimental', 'extendedheader.similarity',
+    default=False,
+)
+coreconfigitem('experimental', 'format.compression',
+    default='zlib',
+)
+coreconfigitem('experimental', 'graphshorten',
+    default=False,
+)
+coreconfigitem('experimental', 'hook-track-tags',
+    default=False,
+)
+coreconfigitem('experimental', 'httppostargs',
+    default=False,
+)
+coreconfigitem('experimental', 'manifestv2',
+    default=False,
+)
+coreconfigitem('experimental', 'mergedriver',
+    default=None,
+)
+coreconfigitem('experimental', 'obsmarkers-exchange-debug',
+    default=False,
+)
+coreconfigitem('experimental', 'revertalternateinteractivemode',
+    default=True,
+)
+coreconfigitem('experimental', 'revlogv2',
+    default=None,
+)
+coreconfigitem('experimental', 'spacemovesdown',
+    default=False,
+)
+coreconfigitem('experimental', 'treemanifest',
+    default=False,
+)
+coreconfigitem('experimental', 'updatecheck',
+    default=None,
 )
 coreconfigitem('format', 'aggressivemergedeltas',
     default=False,
@@ -148,20 +265,89 @@ coreconfigitem('hostsecurity', 'ciphers',
 coreconfigitem('hostsecurity', 'disabletls10warning',
     default=False,
 )
+coreconfigitem('http_proxy', 'always',
+    default=False,
+)
+coreconfigitem('http_proxy', 'host',
+    default=None,
+)
+coreconfigitem('http_proxy', 'no',
+    default=list,
+)
+coreconfigitem('http_proxy', 'passwd',
+    default=None,
+)
+coreconfigitem('http_proxy', 'user',
+    default=None,
+)
+coreconfigitem('merge', 'followcopies',
+    default=True,
+)
+coreconfigitem('pager', 'ignore',
+    default=list,
+)
 coreconfigitem('patch', 'eol',
     default='strict',
 )
 coreconfigitem('patch', 'fuzz',
     default=2,
 )
+coreconfigitem('paths', 'default',
+    default=None,
+)
+coreconfigitem('paths', 'default-push',
+    default=None,
+)
+coreconfigitem('phases', 'checksubrepos',
+    default='follow',
+)
+coreconfigitem('phases', 'publish',
+    default=True,
+)
+coreconfigitem('profiling', 'enabled',
+    default=False,
+)
+coreconfigitem('profiling', 'format',
+    default='text',
+)
+coreconfigitem('profiling', 'freq',
+    default=1000,
+)
+coreconfigitem('profiling', 'limit',
+    default=30,
+)
+coreconfigitem('profiling', 'nested',
+    default=0,
+)
+coreconfigitem('profiling', 'sort',
+    default='inlinetime',
+)
+coreconfigitem('profiling', 'statformat',
+    default='hotpath',
+)
 coreconfigitem('progress', 'assume-tty',
     default=False,
+)
+coreconfigitem('progress', 'changedelay',
+    default=1,
 )
 coreconfigitem('progress', 'clear-complete',
     default=True,
 )
+coreconfigitem('progress', 'debug',
+    default=False,
+)
+coreconfigitem('progress', 'delay',
+    default=3,
+)
+coreconfigitem('progress', 'disable',
+    default=False,
+)
 coreconfigitem('progress', 'estimate',
     default=2,
+)
+coreconfigitem('progress', 'refresh',
+    default=0.1,
 )
 coreconfigitem('progress', 'width',
     default=dynamicdefault,
@@ -187,6 +373,9 @@ coreconfigitem('server', 'maxhttpheaderlen',
 coreconfigitem('server', 'preferuncompressed',
     default=False,
 )
+coreconfigitem('server', 'uncompressed',
+    default=True,
+)
 coreconfigitem('server', 'uncompressedallowsecret',
     default=False,
 )
@@ -196,17 +385,170 @@ coreconfigitem('server', 'validate',
 coreconfigitem('server', 'zliblevel',
     default=-1,
 )
+coreconfigitem('smtp', 'host',
+    default=None,
+)
+coreconfigitem('smtp', 'local_hostname',
+    default=None,
+)
+coreconfigitem('smtp', 'password',
+    default=None,
+)
+coreconfigitem('smtp', 'tls',
+    default='none',
+)
+coreconfigitem('smtp', 'username',
+    default=None,
+)
+coreconfigitem('sparse', 'missingwarning',
+    default=True,
+)
+coreconfigitem('trusted', 'groups',
+    default=list,
+)
+coreconfigitem('trusted', 'users',
+    default=list,
+)
+coreconfigitem('ui', '_usedassubrepo',
+    default=False,
+)
+coreconfigitem('ui', 'allowemptycommit',
+    default=False,
+)
+coreconfigitem('ui', 'archivemeta',
+    default=True,
+)
+coreconfigitem('ui', 'askusername',
+    default=False,
+)
+coreconfigitem('ui', 'clonebundlefallback',
+    default=False,
+)
 coreconfigitem('ui', 'clonebundleprefers',
     default=list,
+)
+coreconfigitem('ui', 'clonebundles',
+    default=True,
+)
+coreconfigitem('ui', 'commitsubrepos',
+    default=False,
+)
+coreconfigitem('ui', 'debug',
+    default=False,
+)
+coreconfigitem('ui', 'debugger',
+    default=None,
+)
+coreconfigitem('ui', 'forcemerge',
+    default=None,
+)
+coreconfigitem('ui', 'formatdebug',
+    default=False,
+)
+coreconfigitem('ui', 'formatjson',
+    default=False,
+)
+coreconfigitem('ui', 'formatted',
+    default=None,
+)
+coreconfigitem('ui', 'graphnodetemplate',
+    default=None,
+)
+coreconfigitem('ui', 'http2debuglevel',
+    default=None,
 )
 coreconfigitem('ui', 'interactive',
     default=None,
 )
+coreconfigitem('ui', 'interface',
+    default=None,
+)
+coreconfigitem('ui', 'logblockedtimes',
+    default=False,
+)
+coreconfigitem('ui', 'logtemplate',
+    default=None,
+)
+coreconfigitem('ui', 'merge',
+    default=None,
+)
+coreconfigitem('ui', 'mergemarkers',
+    default='basic',
+)
+coreconfigitem('ui', 'nontty',
+    default=False,
+)
+coreconfigitem('ui', 'origbackuppath',
+    default=None,
+)
+coreconfigitem('ui', 'paginate',
+    default=True,
+)
+coreconfigitem('ui', 'patch',
+    default=None,
+)
+coreconfigitem('ui', 'portablefilenames',
+    default='warn',
+)
+coreconfigitem('ui', 'promptecho',
+    default=False,
+)
 coreconfigitem('ui', 'quiet',
+    default=False,
+)
+coreconfigitem('ui', 'quietbookmarkmove',
+    default=False,
+)
+coreconfigitem('ui', 'remotecmd',
+    default='hg',
+)
+coreconfigitem('ui', 'report_untrusted',
+    default=True,
+)
+coreconfigitem('ui', 'rollback',
+    default=True,
+)
+coreconfigitem('ui', 'slash',
+    default=False,
+)
+coreconfigitem('ui', 'ssh',
+    default='ssh',
+)
+coreconfigitem('ui', 'statuscopies',
+    default=False,
+)
+coreconfigitem('ui', 'strict',
+    default=False,
+)
+coreconfigitem('ui', 'style',
+    default='',
+)
+coreconfigitem('ui', 'supportcontact',
+    default=None,
+)
+coreconfigitem('ui', 'textwidth',
+    default=78,
+)
+coreconfigitem('ui', 'timeout',
+    default='600',
+)
+coreconfigitem('ui', 'traceback',
+    default=False,
+)
+coreconfigitem('ui', 'tweakdefaults',
+    default=False,
+)
+coreconfigitem('ui', 'usehttp2',
     default=False,
 )
 coreconfigitem('ui', 'username',
     alias=[('ui', 'user')]
+)
+coreconfigitem('ui', 'verbose',
+    default=False,
+)
+coreconfigitem('verify', 'skipflags',
+    default=None,
 )
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,

@@ -78,7 +78,7 @@ class SMTPS(smtplib.SMTP):
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
     local_hostname = ui.config('smtp', 'local_hostname')
-    tls = ui.config('smtp', 'tls', 'none')
+    tls = ui.config('smtp', 'tls')
     # backward compatible: when tls = true, we use starttls.
     starttls = tls == 'starttls' or util.parsebool(tls)
     smtps = tls == 'smtps'
@@ -135,7 +135,7 @@ def _smtp(ui):
 
 def _sendmail(ui, sender, recipients, msg):
     '''send mail using sendmail.'''
-    program = ui.config('email', 'method', 'smtp')
+    program = ui.config('email', 'method')
     cmdline = '%s -f %s %s' % (program, util.email(sender),
                                ' '.join(map(util.email, recipients)))
     ui.note(_('sending mail: %s\n') % cmdline)
@@ -164,7 +164,7 @@ def connect(ui, mbox=None):
     if mbox:
         open(mbox, 'wb').close()
         return lambda s, r, m: _mbox(mbox, s, r, m)
-    if ui.config('email', 'method', 'smtp') == 'smtp':
+    if ui.config('email', 'method') == 'smtp':
         return _smtp(ui)
     return lambda s, r, m: _sendmail(ui, s, r, m)
 
@@ -174,7 +174,7 @@ def sendmail(ui, sender, recipients, msg, mbox=None):
 
 def validateconfig(ui):
     '''determine if we have enough config data to try sending email.'''
-    method = ui.config('email', 'method', 'smtp')
+    method = ui.config('email', 'method')
     if method == 'smtp':
         if not ui.config('smtp', 'host'):
             raise error.Abort(_('smtp specified as email transport, '

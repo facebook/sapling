@@ -146,8 +146,8 @@ class sshpeer(wireproto.wirepeer):
         self.port = u.port
         self.path = u.path or "."
 
-        sshcmd = self.ui.config("ui", "ssh", "ssh")
-        remotecmd = self.ui.config("ui", "remotecmd", "hg")
+        sshcmd = self.ui.config("ui", "ssh")
+        remotecmd = self.ui.config("ui", "remotecmd")
 
         args = util.sshargs(sshcmd,
                             _serverquote(self.host),

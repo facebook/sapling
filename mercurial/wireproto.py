@@ -764,7 +764,7 @@ def _capabilities(repo, proto):
         # otherwise, add 'streamreqs' detailing our local revlog format
         else:
             caps.append('streamreqs=%s' % ','.join(sorted(requiredformats)))
-    if repo.ui.configbool('experimental', 'bundle2-advertise', True):
+    if repo.ui.configbool('experimental', 'bundle2-advertise'):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urlreq.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(bundle2.bundlepriority))
@@ -772,7 +772,7 @@ def _capabilities(repo, proto):
     if proto.name == 'http':
         caps.append('httpheader=%d' %
                     repo.ui.configint('server', 'maxhttpheaderlen'))
-        if repo.ui.configbool('experimental', 'httppostargs', False):
+        if repo.ui.configbool('experimental', 'httppostargs'):
             caps.append('httppostargs')
 
         # FUTURE advertise 0.2rx once support is implemented

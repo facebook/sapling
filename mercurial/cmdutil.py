@@ -208,7 +208,7 @@ def recordfilter(ui, originalhunks, operation=None):
     (see patch.filterpatch).
     """
     usecurses = crecordmod.checkcurses(ui)
-    testfile = ui.config('experimental', 'crecordtest', None)
+    testfile = ui.config('experimental', 'crecordtest')
     oldwrite = setupwrapcolorwrite(ui)
     try:
         newchunks, newopts = filterchunks(ui, originalhunks, usecurses,
@@ -1687,7 +1687,7 @@ def _lookuplogtemplate(ui, tmpl, style):
         if tmpl:
             return logtemplatespec(templater.unquotestring(tmpl), None)
         else:
-            style = util.expandpath(ui.config('ui', 'style', ''))
+            style = util.expandpath(ui.config('ui', 'style'))
 
     if not tmpl and style:
         mapfile = style
@@ -3406,8 +3406,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         if node != parent:
             operation = 'revert'
             reversehunks = repo.ui.configbool('experimental',
-                                              'revertalternateinteractivemode',
-                                              True)
+                'revertalternateinteractivemode')
         if reversehunks:
             diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
         else:

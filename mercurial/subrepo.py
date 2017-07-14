@@ -401,7 +401,7 @@ def newcommitphase(ui, ctx):
     substate = getattr(ctx, "substate", None)
     if not substate:
         return commitphase
-    check = ui.config('phases', 'checksubrepos', 'follow')
+    check = ui.config('phases', 'checksubrepos')
     if check not in ('ignore', 'follow', 'abort'):
         raise error.Abort(_('invalid phases.checksubrepos configuration: %s')
                          % (check))

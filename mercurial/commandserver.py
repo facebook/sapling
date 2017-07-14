@@ -156,7 +156,7 @@ class server(object):
         self.cwd = pycompat.getcwd()
 
         # developer config: cmdserver.log
-        logpath = ui.config("cmdserver", "log", None)
+        logpath = ui.config("cmdserver", "log")
         if logpath:
             global logfile
             if logpath == '-':

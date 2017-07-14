@@ -1227,9 +1227,9 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
 
     contentopts = {'cg.version': cgversion}
-    if repo.ui.configbool('experimental', 'evolution.bundle-obsmarker', False):
+    if repo.ui.configbool('experimental', 'evolution.bundle-obsmarker'):
         contentopts['obsolescence'] = True
-    if repo.ui.configbool('experimental', 'bundle-phases', False):
+    if repo.ui.configbool('experimental', 'bundle-phases'):
         contentopts['phases'] = True
     bundle2.writenewbundle(ui, repo, 'bundle', fname, bversion, outgoing,
                            contentopts, compression=bcompression,
@@ -4524,7 +4524,7 @@ def rollback(ui, repo, **opts):
 
     Returns 0 on success, 1 if no rollback data is available.
     """
-    if not ui.configbool('ui', 'rollback', True):
+    if not ui.configbool('ui', 'rollback'):
         raise error.Abort(_('rollback is disabled because it is unsafe'),
                           hint=('see `hg help -v rollback` for information'))
     return repo.rollback(dryrun=opts.get(r'dry_run'),

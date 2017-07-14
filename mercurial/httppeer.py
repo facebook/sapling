@@ -181,7 +181,7 @@ class httppeer(wireproto.wirepeer):
             size = data.length
         elif data is not None:
             size = len(data)
-        if size and self.ui.configbool('ui', 'usehttp2', False):
+        if size and self.ui.configbool('ui', 'usehttp2'):
             headers['Expect'] = '100-Continue'
             headers['X-HgHttp2'] = '1'
         if data is not None and 'Content-Type' not in headers:

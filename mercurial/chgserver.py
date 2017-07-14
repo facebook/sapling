@@ -485,7 +485,7 @@ class chgunixservicehandler(object):
 
     def __init__(self, ui):
         self.ui = ui
-        self._idletimeout = ui.configint('chgserver', 'idletimeout', 3600)
+        self._idletimeout = ui.configint('chgserver', 'idletimeout')
         self._lastactive = time.time()
 
     def bindsocket(self, sock, address):
@@ -497,7 +497,7 @@ class chgunixservicehandler(object):
 
     def _inithashstate(self, address):
         self._baseaddress = address
-        if self.ui.configbool('chgserver', 'skiphash', False):
+        if self.ui.configbool('chgserver', 'skiphash'):
             self._hashstate = None
             self._realaddress = address
             return

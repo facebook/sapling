@@ -973,7 +973,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     archiver = archival.archivers[kind](dest, mtime or ctx.date()[0])
 
-    if repo.ui.configbool("ui", "archivemeta", True):
+    if repo.ui.configbool("ui", "archivemeta"):
         write('.hg_archival.txt', 0o644, False,
               lambda: archival.buildmetadata(ctx))
 

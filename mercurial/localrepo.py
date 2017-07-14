@@ -532,7 +532,7 @@ class localrepository(object):
             self._revbranchcache.write()
 
     def _restrictcapabilities(self, caps):
-        if self.ui.configbool('experimental', 'bundle2-advertise', True):
+        if self.ui.configbool('experimental', 'bundle2-advertise'):
             caps = set(caps)
             capsblob = bundle2.encodecaps(bundle2.getrepocaps(self))
             caps.add('bundle2=' + urlreq.quote(capsblob))
@@ -951,7 +951,7 @@ class localrepository(object):
     def publishing(self):
         # it's safe (and desirable) to trust the publish flag unconditionally
         # so that we don't finalize changes shared between users via ssh or nfs
-        return self.ui.configbool('phases', 'publish', True, untrusted=True)
+        return self.ui.configbool('phases', 'publish', untrusted=True)
 
     def cancopy(self):
         # so statichttprepo's override of local() works
@@ -1149,8 +1149,7 @@ class localrepository(object):
         #   "+M": tag is moved (new value),
         tracktags = lambda x: None
         # experimental config: experimental.hook-track-tags
-        shouldtracktags = self.ui.configbool('experimental', 'hook-track-tags',
-                                             False)
+        shouldtracktags = self.ui.configbool('experimental', 'hook-track-tags')
         if desc != 'strip' and shouldtracktags:
             oldheads = self.changelog.headrevs()
             def tracktags(tr2):
@@ -1506,7 +1505,7 @@ class localrepository(object):
                              (desc, inst.locker))
             # default to 600 seconds timeout
             l = lockmod.lock(vfs, lockname,
-                             int(self.ui.config("ui", "timeout", "600")),
+                             int(self.ui.config("ui", "timeout")),
                              releasefn=releasefn, acquirefn=acquirefn,
                              desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
@@ -2218,7 +2217,7 @@ def newreporequirements(repo):
             if ui.configbool('format', 'dotencode'):
                 requirements.add('dotencode')
 
-    compengine = ui.config('experimental', 'format.compression', 'zlib')
+    compengine = ui.config('experimental', 'format.compression')
     if compengine not in util.compengines:
         raise error.Abort(_('compression engine %s defined by '
                             'experimental.format.compression not available') %
@@ -2232,9 +2231,9 @@ def newreporequirements(repo):
 
     if scmutil.gdinitconfig(ui):
         requirements.add('generaldelta')
-    if ui.configbool('experimental', 'treemanifest', False):
+    if ui.configbool('experimental', 'treemanifest'):
         requirements.add('treemanifest')
-    if ui.configbool('experimental', 'manifestv2', False):
+    if ui.configbool('experimental', 'manifestv2'):
         requirements.add('manifestv2')
 
     revlogv2 = ui.config('experimental', 'revlogv2')

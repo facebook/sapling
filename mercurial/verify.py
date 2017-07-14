@@ -443,7 +443,7 @@ class verifier(object):
                                  (l2, l1), f)
                 except error.CensoredNodeError:
                     # experimental config: censor.policy
-                    if ui.config("censor", "policy", "abort") == "abort":
+                    if ui.config("censor", "policy") == "abort":
                         self.err(lr, _("censored file data"), f)
                 except Exception as inst:
                     self.exc(lr, _("unpacking %s") % short(n), inst, f)

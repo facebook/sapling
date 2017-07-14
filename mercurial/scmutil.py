@@ -282,7 +282,7 @@ def checkportable(ui, f):
 def checkportabilityalert(ui):
     '''check if the user's config requests nothing, a warning, or abort for
     non-portable filenames'''
-    val = ui.config('ui', 'portablefilenames', 'warn')
+    val = ui.config('ui', 'portablefilenames')
     lval = val.lower()
     bval = util.parsebool(val)
     abort = pycompat.osname == 'nt' or lval == 'abort'
@@ -553,7 +553,7 @@ def origpath(ui, repo, filepath):
     Fetch user defined path from config file: [ui] origbackuppath = <path>
     Fall back to default (filepath) if not specified
     '''
-    origbackuppath = ui.config('ui', 'origbackuppath', None)
+    origbackuppath = ui.config('ui', 'origbackuppath')
     if origbackuppath is None:
         return filepath + ".orig"
 

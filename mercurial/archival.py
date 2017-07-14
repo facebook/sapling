@@ -307,7 +307,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     ctx = repo[node]
     archiver = archivers[kind](dest, mtime or ctx.date()[0])
 
-    if repo.ui.configbool("ui", "archivemeta", True):
+    if repo.ui.configbool("ui", "archivemeta"):
         name = '.hg_archival.txt'
         if not matchfn or matchfn(name):
             write(name, 0o644, False, lambda: buildmetadata(ctx))

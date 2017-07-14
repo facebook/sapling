@@ -303,7 +303,7 @@ class journalstorage(object):
             # default to 600 seconds timeout
             l = lock.lock(
                 vfs, 'namejournal.lock',
-                int(self.ui.config("ui", "timeout", "600")), desc=desc)
+                int(self.ui.config("ui", "timeout")), desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
         self._lockref = weakref.ref(l)
         return l

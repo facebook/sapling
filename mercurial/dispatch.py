@@ -916,7 +916,7 @@ def _exceptionwarning(ui):
     # version number and try updating.
     ct = util.versiontuple(n=2)
     worst = None, ct, ''
-    if ui.config('ui', 'supportcontact', None) is None:
+    if ui.config('ui', 'supportcontact') is None:
         for name, mod in extensions.extensions():
             testedwith = getattr(mod, 'testedwith', '')
             if pycompat.ispy3 and isinstance(testedwith, str):
@@ -950,7 +950,7 @@ def _exceptionwarning(ui):
                      '** If that fixes the bug please report it to %s\n')
                    % (name, testedwith, name, report))
     else:
-        bugtracker = ui.config('ui', 'supportcontact', None)
+        bugtracker = ui.config('ui', 'supportcontact')
         if bugtracker is None:
             bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
         warning = (_("** unknown exception encountered, "

@@ -533,7 +533,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
 
     status = ui.status
     warn = ui.warn
-    if ui.configbool('ui', 'quietbookmarkmove', False):
+    if ui.configbool('ui', 'quietbookmarkmove'):
         status = warn = ui.debug
 
     explicit = set(explicit)

@@ -685,7 +685,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
     r = 1
     try:
-        markerstyle = ui.config('ui', 'mergemarkers', 'basic')
+        markerstyle = ui.config('ui', 'mergemarkers')
         if not labels:
             labels = _defaultconflictlabels
         if markerstyle != 'basic':

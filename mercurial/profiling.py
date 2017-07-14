@@ -30,10 +30,10 @@ def _loadprofiler(ui, profiler):
 
 @contextlib.contextmanager
 def lsprofile(ui, fp):
-    format = ui.config('profiling', 'format', default='text')
-    field = ui.config('profiling', 'sort', default='inlinetime')
-    limit = ui.configint('profiling', 'limit', default=30)
-    climit = ui.configint('profiling', 'nested', default=0)
+    format = ui.config('profiling', 'format')
+    field = ui.config('profiling', 'sort')
+    limit = ui.configint('profiling', 'limit')
+    climit = ui.configint('profiling', 'nested')
 
     if format not in ['text', 'kcachegrind']:
         ui.warn(_("unrecognized profiling format '%s'"
@@ -72,7 +72,7 @@ def flameprofile(ui, fp):
             'flamegraph not available - install from '
             'https://github.com/evanhempel/python-flamegraph'))
     # developer config: profiling.freq
-    freq = ui.configint('profiling', 'freq', default=1000)
+    freq = ui.configint('profiling', 'freq')
     filter_ = None
     collapse_recursion = True
     thread = flamegraph.ProfileThread(fp, 1.0 / freq,
@@ -92,7 +92,7 @@ def flameprofile(ui, fp):
 def statprofile(ui, fp):
     from . import statprof
 
-    freq = ui.configint('profiling', 'freq', default=1000)
+    freq = ui.configint('profiling', 'freq')
     if freq > 0:
         # Cannot reset when profiler is already active. So silently no-op.
         if statprof.state.profile_level == 0:
@@ -107,7 +107,7 @@ def statprofile(ui, fp):
     finally:
         data = statprof.stop()
 
-        profformat = ui.config('profiling', 'statformat', 'hotpath')
+        profformat = ui.config('profiling', 'statformat')
 
         formats = {
             'byline': statprof.DisplayFormats.ByLine,

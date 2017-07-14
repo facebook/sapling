@@ -165,7 +165,7 @@ def maybeperformlegacystreamclone(pullop):
 
 def allowservergeneration(repo):
     """Whether streaming clones are allowed from the server."""
-    if not repo.ui.configbool('server', 'uncompressed', True, untrusted=True):
+    if not repo.ui.configbool('server', 'uncompressed', untrusted=True):
         return False
 
     # The way stream clone works makes it impossible to hide secret changesets.

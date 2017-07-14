@@ -92,15 +92,15 @@ class progbar(object):
         self.startvals = {}
         self.printed = False
         self.lastprint = time.time() + float(self.ui.config(
-            'progress', 'delay', default=3))
+            'progress', 'delay'))
         self.curtopic = None
         self.lasttopic = None
         self.indetcount = 0
         self.refresh = float(self.ui.config(
-            'progress', 'refresh', default=0.1))
+            'progress', 'refresh'))
         self.changedelay = max(3 * self.refresh,
                                float(self.ui.config(
-                                   'progress', 'changedelay', default=1)))
+                                   'progress', 'changedelay')))
         self.order = self.ui.configlist(
             'progress', 'format',
             default=['topic', 'bar', 'number', 'estimate'])

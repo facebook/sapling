@@ -141,7 +141,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         self.pwmgr = pwmgr
         self._connections = {}
         # developer config: ui.http2debuglevel
-        loglevel = ui.config('ui', 'http2debuglevel', default=None)
+        loglevel = ui.config('ui', 'http2debuglevel')
         if loglevel and not _configuredlogging:
             _configuredlogging = True
             logger = logging.getLogger('mercurial.httpclient')

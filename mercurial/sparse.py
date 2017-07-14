@@ -106,7 +106,7 @@ def patternsforrev(repo, rev):
                     "in rev %s - ignoring it\n" % (profile, ctx))
                 # experimental config: sparse.missingwarning
                 if repo.ui.configbool(
-                        'sparse', 'missingwarning', True):
+                        'sparse', 'missingwarning'):
                     repo.ui.warn(msg)
                 else:
                     repo.ui.debug(msg)

@@ -991,8 +991,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     if 'user' not in metadata:
         metadata['user'] = repo.ui.username()
     useoperation = repo.ui.configbool('experimental',
-                                      'evolution.track-operation',
-                                      False)
+        'evolution.track-operation')
     if useoperation and operation:
         metadata['operation'] = operation
     tr = repo.transaction('add-obsolescence-marker')

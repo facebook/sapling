@@ -1613,7 +1613,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             pas = [p1]
 
         # deprecated config: merge.followcopies
-        followcopies = repo.ui.configbool('merge', 'followcopies', True)
+        followcopies = repo.ui.configbool('merge', 'followcopies')
         if overwrite:
             followcopies = False
         elif not pas[0]:

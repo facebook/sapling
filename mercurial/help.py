@@ -647,7 +647,7 @@ def formattedhelp(ui, commands, name, keep=None, unknowncmd=False, full=True,
                 subtopic = remaining
             else:
                 section = remaining
-    textwidth = ui.configint('ui', 'textwidth', 78)
+    textwidth = ui.configint('ui', 'textwidth')
     termwidth = ui.termwidth() - 2
     if textwidth <= 0 or termwidth < textwidth:
         textwidth = termwidth

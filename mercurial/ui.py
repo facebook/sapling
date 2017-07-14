@@ -408,8 +408,8 @@ class ui(object):
             if self.verbose and self.quiet:
                 self.quiet = self.verbose = False
             self._reportuntrusted = self.debugflag or self.configbool("ui",
-                "report_untrusted", True)
-            self.tracebackflag = self.configbool('ui', 'traceback', False)
+                "report_untrusted")
+            self.tracebackflag = self.configbool('ui', 'traceback')
             self.logblockedtimes = self.configbool('ui', 'logblockedtimes')
 
         if section in (None, 'trusted'):
@@ -924,7 +924,7 @@ class ui(object):
                 (util.timer() - starttime) * 1000
 
     def _isatty(self, fh):
-        if self.configbool('ui', 'nontty', False):
+        if self.configbool('ui', 'nontty'):
             return False
         return util.isatty(fh)
 
@@ -947,7 +947,7 @@ class ui(object):
         if (self._disablepager
             or self.pageractive
             or command in self.configlist('pager', 'ignore')
-            or not self.configbool('ui', 'paginate', True)
+            or not self.configbool('ui', 'paginate')
             or not self.configbool('pager', 'attend-' + command, True)
             # TODO: if we want to allow HGPLAINEXCEPT=pager,
             # formatted() will need some adjustment.
@@ -1112,7 +1112,7 @@ class ui(object):
 
         # Default interface for all the features
         defaultinterface = "text"
-        i = self.config("ui", "interface", None)
+        i = self.config("ui", "interface")
         if i in alldefaults:
             defaultinterface = i
 
@@ -1186,7 +1186,7 @@ class ui(object):
         if self.plain():
             return False
 
-        i = self.configbool("ui", "formatted", None)
+        i = self.configbool("ui", "formatted")
         if i is None:
             # some environments replace stdout without implementing isatty
             # usually those are non-interactive
@@ -1464,7 +1464,7 @@ class ui(object):
     def _progbar(self):
         """setup the progbar singleton to the ui object"""
         if (self.quiet or self.debugflag
-                or self.configbool('progress', 'disable', False)
+                or self.configbool('progress', 'disable')
                 or not progress.shouldprint(self)):
             return None
         return getprogbar(self)
