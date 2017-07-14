@@ -217,14 +217,16 @@ def test_lazyancestors():
 
 
 # The C gca algorithm requires a real repo. These are textual descriptions of
-# DAGs that have been known to be problematic.
+# DAGs that have been known to be problematic, and, optionally, known pairs
+# of revisions and their expected ancestor list.
 dagtests = [
-    '+2*2*2/*3/2',
-    '+3*3/*2*2/*4*4/*4/2*4/2*2',
+    ('+2*2*2/*3/2', {}),
+    ('+3*3/*2*2/*4*4/*4/2*4/2*2', {}),
+    ('+2*2*/2*4*/4*/3*2/4', {(6, 7): [3, 5]}),
 ]
 def test_gca():
     u = uimod.ui.load()
-    for i, dag in enumerate(dagtests):
+    for i, (dag, tests) in enumerate(dagtests):
         repo = hg.repository(u, b'gca%d' % i, create=1)
         cl = repo.changelog
         if not util.safehasattr(cl.index, 'ancestors'):
@@ -235,15 +237,21 @@ def test_gca():
         # Compare the results of the Python and C versions. This does not
         # include choosing a winner when more than one gca exists -- we make
         # sure both return exactly the same set of gcas.
+        # Also compare against expected results, if available.
         for a in cl:
             for b in cl:
                 cgcas = sorted(cl.index.ancestors(a, b))
                 pygcas = sorted(ancestor.ancestors(cl.parentrevs, a, b))
-                if cgcas != pygcas:
+                expected = None
+                if (a, b) in tests:
+                    expected = tests[(a, b)]
+                if cgcas != pygcas or (expected and cgcas != expected):
                     print("test_gca: for dag %s, gcas for %d, %d:"
                           % (dag, a, b))
                     print("  C returned:      %s" % cgcas)
                     print("  Python returned: %s" % pygcas)
+                    if expected:
+                        print("  expected:        %s" % expected)
 
 def main():
     seed = None

@@ -1464,7 +1464,7 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 		goto bail;
 	}
 
-	interesting = calloc(sizeof(*interesting), 2 << revcount);
+	interesting = calloc(sizeof(*interesting), 1 << revcount);
 	if (interesting == NULL) {
 		PyErr_NoMemory();
 		goto bail;
@@ -1481,6 +1481,8 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 		interesting[b] = 1;
 	}
 
+	/* invariant: ninteresting is the number of non-zero entries in
+	 * interesting. */
 	ninteresting = (int)revcount;
 
 	for (v = maxrev; v >= 0 && ninteresting > 1; v--) {
@@ -1523,8 +1525,10 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 					continue;
 				seen[p] = nsp;
 				interesting[sp] -= 1;
-				if (interesting[sp] == 0 && interesting[nsp] > 0)
+				if (interesting[sp] == 0)
 					ninteresting -= 1;
+				if (interesting[nsp] == 0)
+					ninteresting += 1;
 				interesting[nsp] += 1;
 			}
 		}
