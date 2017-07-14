@@ -67,6 +67,14 @@ sent as part of changegroups during push. It defaults to True.
 
    [treemanifest]
    sendflat = True
+
+Setting `treemanifest.treeonly` to True will force all manifest reads to use the
+tree format. This is useful in the final stages of a migration to treemanifest
+to prevent accesses of flat manifests.
+
+  [treemanifest]
+  treeonly = True
+
 """
 
 from mercurial import (
@@ -157,10 +165,13 @@ def clientreposetup(repo):
     if not repo.name:
         raise error.Abort(_("remotefilelog.reponame must be configured"))
 
-    try:
-        extensions.find('fastmanifest')
-    except KeyError:
-        raise error.Abort(_("cannot use treemanifest without fastmanifest"))
+    if not repo.ui.configbool('treemanifest', 'treeonly'):
+        # If we're not a pure-tree repo, we must be using fastmanifest to
+        # provide the hybrid manifest implementation.
+        try:
+            extensions.find('fastmanifest')
+        except KeyError:
+            raise error.Abort(_("cannot use treemanifest without fastmanifest"))
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
@@ -212,11 +223,15 @@ class treemanifestlog(manifest.manifestlog):
         assert treemanifest is False
         cachesize = 4
 
+        self._treeonly = False
+
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
+            self._treeonly = opts.get('treeonly', self._treeonly)
         self._treeinmem = True
 
+        self._opener = opener
         self._revlog = manifest.manifestrevlog(opener,
                                                indexfile='00manifesttree.i',
                                                treemanifest=True)
@@ -226,6 +241,100 @@ class treemanifestlog(manifest.manifestlog):
         self._dirmancache[''] = util.lrucachedict(cachesize)
 
         self.cachesize = cachesize
+
+    def get(self, dir, node, verify=True):
+        if self._treeonly:
+            if dir != '':
+                raise RuntimeError("native tree manifestlog doesn't support "
+                                   "subdir reads: (%s, %s)" % (dir, hex(node)))
+
+            store = self._opener.manifestdatastore
+            if not store.getmissing([(dir, node)]):
+                return treemanifestctx(self, dir, node)
+            else:
+                raise KeyError("tree node not found (%s, %s)" %
+                               (dir, hex(node)))
+
+        return super(treemanifestlog, self).get(dir, node, verify=verify)
+
+class treemanifestctx(object):
+    def __init__(self, manifestlog, dir, node):
+        self._manifestlog = manifestlog
+        self._dir = dir
+        self._node = node
+        self._data = None
+
+    def read(self):
+        if self._data is None:
+            store = self._manifestlog._opener.manifestdatastore
+            self._data = cstore.treemanifest(store, self._node)
+        return self._data
+
+    def node(self):
+        return self._node
+
+    def new(self, dir=''):
+        if dir != '':
+            raise RuntimeError("native tree manifestlog doesn't support "
+                               "subdir creation: '%s'" % dir)
+
+        store = self._manifestlog._opener.manifestdatastore
+        return cstore.treemanifest(store)
+
+    def copy(self):
+        return self.read().copy()
+
+    @util.propertycache
+    def parents(self):
+        store = self._manifestlog._opener.manifesthistorystore
+        p1, p2, linkrev, copyfrom = store.getnodeinfo((self._dir, self._node))
+        if copyfrom:
+            p1 = nullid
+        return p1, p2
+
+    def readdelta(self, shallow=False):
+        '''Returns a manifest containing just the entries that are present
+        in this manifest, but not in its p1 manifest. This is efficient to read
+        if the revlog delta is already p1.
+
+        If `shallow` is True, this will read the delta for this directory,
+        without recursively reading subdirectory manifests. Instead, any
+        subdirectory entry will be reported as it appears in the manifest, i.e.
+        the subdirectory will be reported among files and distinguished only by
+        its 't' flag.
+        '''
+        store = self._manifestlog._opener.manifestdatastore
+        p1, p2 = self.parents()
+        m1 = self.read()
+        m2 = cstore.treemanifest(store, p1)
+
+        if shallow:
+            # This appears to only be used for changegroup creation in
+            # upstream changegroup.py. Since we use pack files for all native
+            # tree exchanges, we shouldn't need to implement this.
+            raise NotImplemented("native trees don't support shallow "
+                                 "readdelta yet")
+        else:
+            md = cstore.treemanifest(store)
+            for f, ((n1, fl1), (n2, fl2)) in m1.diff(m2).iteritems():
+                if n2:
+                    md[f] = n2
+                    if fl2:
+                        md.setflag(f, fl2)
+            return md
+
+    def readfast(self, shallow=False):
+        '''Calls either readdelta or read, based on which would be less work.
+        readdelta is called if the delta is against the p1, and therefore can be
+        read quickly.
+
+        If `shallow` is True, it only returns the entries from this manifest,
+        and not any submanifests.
+        '''
+        return self.readdelta(shallow=shallow)
+
+    def find(self, key):
+        return self.read().find(key)
 
 def serverreposetup(repo):
     extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
@@ -256,8 +365,12 @@ def _addmanifestgroup(*args, **kwargs):
                         "server without pushrebase"))
 
 def getmanifestlog(orig, self):
-    mfl = orig(self)
-    mfl.treemanifestlog = treemanifestlog(self.svfs)
+    if self.ui.configbool('treemanifest', 'treeonly'):
+        self.svfs.options['treeonly'] = True
+        mfl = treemanifestlog(self.svfs)
+    else:
+        mfl = orig(self)
+        mfl.treemanifestlog = treemanifestlog(self.svfs)
     return mfl
 
 def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
