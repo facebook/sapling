@@ -473,6 +473,27 @@ Test multiple root handling
   
   $ cd ..
 
+Detach both parents
+
+  $ hg init double-detach
+  $ cd double-detach
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > C E
+  > | |
+  > B D G
+  >  \|/
+  >   A
+  > EOF
+
+BROKEN: This raises an exception
+  $ hg rebase -d G -r 'B + D + F' 2>&1 | grep '^AssertionError'
+  AssertionError: no base found to rebase on (defineparents called wrong)
+
+  $ cd ..
+
 test on rebase dropping a merge
 
 (setup)
