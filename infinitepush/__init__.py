@@ -104,6 +104,7 @@ from .bundleparts import (
     scratchbranchparttype,
 )
 from . import (
+    backupcommands,
     infinitepushcommands,
     common,
 )
@@ -220,6 +221,12 @@ def uisetup(ui):
     extensions._order = order
 
 def extsetup(ui):
+    # Allow writing backup files outside the normal lock
+    localrepo.localrepository._wlockfreeprefix.update([
+        backupcommands._backupstatefile,
+        backupcommands._backupgenerationfile,
+    ])
+
     commonsetup(ui)
     if _isserver(ui):
         serverextsetup(ui)
