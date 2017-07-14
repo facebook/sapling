@@ -82,7 +82,7 @@ Ensure that comments work:
   $ rm 'baz\#wat'
 #endif
 
-Check it does not ignore the current directory '.':
+Check that '^\.' does not ignore the root directory:
 
   $ echo "^\." > .hgignore
   $ hg status
