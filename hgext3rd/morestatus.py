@@ -121,13 +121,12 @@ def extsetup(ui):
 
 def saveupdateargs(repo, args, **kwargs):
     # args is a string containing all flags and arguments
-    repo.vfs.write(UPDATEARGS, args)
+    with repo.wlock():
+        repo.vfs.write(UPDATEARGS, args)
 
 def cleanupdateargs(repo, **kwargs):
-    try:
-        repo.vfs.unlink(UPDATEARGS)
-    except Exception:
-        pass
+    with repo.wlock():
+        repo.vfs.tryunlink(UPDATEARGS)
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """
