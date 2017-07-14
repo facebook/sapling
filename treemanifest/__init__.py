@@ -223,12 +223,9 @@ class treemanifestlog(manifest.manifestlog):
         assert treemanifest is False
         cachesize = 4
 
-        self._treeonly = False
-
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
-            self._treeonly = opts.get('treeonly', self._treeonly)
         self._treeinmem = True
 
         self._opener = opener
@@ -242,20 +239,27 @@ class treemanifestlog(manifest.manifestlog):
 
         self.cachesize = cachesize
 
+class treeonlymanifestlog(object):
+    def __init__(self, opener):
+        self._opener = opener
+
+    def __getitem__(self, node):
+        return self.get('', node)
+
     def get(self, dir, node, verify=True):
-        if self._treeonly:
-            if dir != '':
-                raise RuntimeError("native tree manifestlog doesn't support "
-                                   "subdir reads: (%s, %s)" % (dir, hex(node)))
+        if dir != '':
+            raise RuntimeError("native tree manifestlog doesn't support "
+                               "subdir reads: (%s, %s)" % (dir, hex(node)))
 
-            store = self._opener.manifestdatastore
-            if not store.getmissing([(dir, node)]):
-                return treemanifestctx(self, dir, node)
-            else:
-                raise KeyError("tree node not found (%s, %s)" %
-                               (dir, hex(node)))
+        store = self._opener.manifestdatastore
+        if not store.getmissing([(dir, node)]):
+            return treemanifestctx(self, dir, node)
+        else:
+            raise KeyError("tree node not found (%s, %s)" %
+                           (dir, hex(node)))
 
-        return super(treemanifestlog, self).get(dir, node, verify=verify)
+    def clearcaches(self):
+        pass
 
 class treemanifestctx(object):
     def __init__(self, manifestlog, dir, node):
@@ -366,8 +370,7 @@ def _addmanifestgroup(*args, **kwargs):
 
 def getmanifestlog(orig, self):
     if self.ui.configbool('treemanifest', 'treeonly'):
-        self.svfs.options['treeonly'] = True
-        mfl = treemanifestlog(self.svfs)
+        mfl = treeonlymanifestlog(self.svfs)
     else:
         mfl = orig(self)
         mfl.treemanifestlog = treemanifestlog(self.svfs)
