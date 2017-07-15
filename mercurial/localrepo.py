@@ -402,12 +402,14 @@ class localrepository(object):
                 if inst.errno != errno.ENOENT:
                     raise
 
+        cachepath = self.vfs.join('cache')
         self.sharedpath = self.path
         try:
             sharedpath = self.vfs.read("sharedpath").rstrip('\n')
             if 'relshared' in self.requirements:
                 sharedpath = self.vfs.join(sharedpath)
             vfs = vfsmod.vfs(sharedpath, realpath=True)
+            cachepath = vfs.join('cache')
             s = vfs.base
             if not vfs.exists():
                 raise error.RepoError(
@@ -423,7 +425,7 @@ class localrepository(object):
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
-        self.cachevfs = vfsmod.vfs(self.vfs.join('cache'))
+        self.cachevfs = vfsmod.vfs(cachepath)
         self.cachevfs.createmode = self.store.createmode
         if (self.ui.configbool('devel', 'all-warnings') or
             self.ui.configbool('devel', 'check-locks')):
