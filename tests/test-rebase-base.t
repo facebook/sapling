@@ -65,7 +65,7 @@ Multiple branching points caused by selecting a single merge changeset:
   > EOS
   rebasing 2:c1e6b162678d "B" (B)
   rebasing 3:d6003a550c2c "C" (C)
-  rebasing 6:5251e0cb7302 "E" (E tip)
+  rebasing 6:54c8f00cb91c "E" (E tip)
   o    6: E
   |\
   | o  5: C
@@ -92,7 +92,7 @@ Rebase should not extend the "--base" revset using "descendants":
   >   R
   > EOS
   rebasing 2:c1e6b162678d "B" (B)
-  rebasing 5:5251e0cb7302 "E" (E tip)
+  rebasing 5:54c8f00cb91c "E" (E tip)
   o    5: E
   |\
   | o  4: B
@@ -118,7 +118,7 @@ Rebase should not simplify the "--base" revset using "roots":
   > EOS
   rebasing 2:c1e6b162678d "B" (B)
   rebasing 3:d6003a550c2c "C" (C)
-  rebasing 5:5251e0cb7302 "E" (E tip)
+  rebasing 5:54c8f00cb91c "E" (E tip)
   o    5: E
   |\
   | o  4: C
@@ -208,18 +208,18 @@ Multiple branching points with multiple merges:
   >   A   A   A
   > EOS
   rebasing 2:dc0947a82db8 "C" (C)
-  rebasing 8:215e7b0814e1 "D" (D)
+  rebasing 8:4e4f9194f9f1 "D" (D)
   rebasing 9:03ca77807e91 "E" (E)
   rebasing 10:afc707c82df0 "F" (F)
-  rebasing 13:018caa673317 "G" (G)
-  rebasing 14:4f710fbd68cb "H" (H)
+  rebasing 13:690dfff91e9e "G" (G)
+  rebasing 14:2893b886bb10 "H" (H)
   rebasing 3:08ebfeb61bac "I" (I)
   rebasing 4:a0a5005cec67 "J" (J)
   rebasing 5:83780307a7e8 "K" (K)
   rebasing 6:e131637a1cb6 "L" (L)
-  rebasing 11:d6fe3d11d95d "M" (M)
-  rebasing 12:fa1e02269063 "N" (N)
-  rebasing 15:448b1a498430 "P" (P tip)
+  rebasing 11:d1f6d0c3c7e4 "M" (M)
+  rebasing 12:7aaec6f81888 "N" (N)
+  rebasing 15:325bc8f1760d "P" (P tip)
   o    15: P
   |\
   | o    14: N
@@ -269,9 +269,9 @@ Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pip
   rebasing 6:06ca5dfe3b5b "B2" (B2)
   rebasing 7:73508237b032 "C1" (C1)
   rebasing 9:fdb955e2faed "A2" (A2)
-  rebasing 11:1b2f368c3cb5 "A3" (A3)
+  rebasing 11:4e449bd1a643 "A3" (A3)
   rebasing 10:0a33b0519128 "B1" (B1)
-  rebasing 12:bd6a37b5b67a "B3" (B3 tip)
+  rebasing 12:209327807c3a "B3" (B3 tip)
   o    12: B3
   |\
   | o  11: B1
@@ -334,7 +334,7 @@ Multiple roots. One root is not an ancestor of dest:
   >  \|\|
   >   A C
   > EOF
-  nothing to rebase from 86d01f49c0d9+b70f76719894 to 262e37e34f63
+  nothing to rebase from f675d5a1c6a4+b70f76719894 to 262e37e34f63
   [1]
 
 Multiple roots. One root is not an ancestor of dest. Select using a merge:
@@ -346,8 +346,8 @@ Multiple roots. One root is not an ancestor of dest. Select using a merge:
   >  \|\|
   >   A C
   > EOF
-  rebasing 2:86d01f49c0d9 "B" (B)
-  rebasing 5:539a0ff83ea9 "E" (E tip)
+  rebasing 2:f675d5a1c6a4 "B" (B)
+  rebasing 5:f68696fe6af8 "E" (E tip)
   o    5: E
   |\
   | o    4: B
@@ -367,8 +367,8 @@ Multiple roots. Two children share two parents while dest has only one parent:
   >  \|\|\
   >   A C A
   > EOF
-  rebasing 2:86d01f49c0d9 "B" (B)
-  rebasing 3:b7df2ca01aa8 "D" (D)
+  rebasing 2:f675d5a1c6a4 "B" (B)
+  rebasing 3:c2a779e13b56 "D" (D)
   o    4: D
   |\
   +---o  3: B

@@ -974,7 +974,7 @@ Use delayedstrip to strip inside a transaction
   > EOF
   $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/delayedstrip.py
   warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
-  saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-81fa23b0-I.hg (glob)
+  saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-17475721-I.hg (glob)
   
   $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
   @  6:2f2d51af6205 J
@@ -1030,9 +1030,9 @@ Test high-level scmutil.cleanupnodes API
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  8:1473d4b996d1 G2 b-F@divergent3 b-G
   |
-  | o  7:d94e89b773b6 F2 b-F
+  | o  7:d11b3456a873 F2 b-F
   | |
-  | o  5:7fe5bac4c918 H
+  | o  5:5cb05ba470a7 H
   |/|
   | o  3:7fb047a69f22 E b-F@divergent1
   | |
@@ -1050,7 +1050,7 @@ Test high-level scmutil.cleanupnodes API
      b-B                       0:426bada5c675
      b-C                       0:426bada5c675
      b-D                       6:7c78f703e465
-     b-F                       7:d94e89b773b6
+     b-F                       7:d11b3456a873
      b-F@divergent1            3:7fb047a69f22
      b-F@divergent3            8:1473d4b996d1
      b-G                       8:1473d4b996d1
@@ -1073,9 +1073,9 @@ we have reusable code here
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  12:1473d4b996d1 G2 b-F@divergent3 b-G
   |
-  | o  11:d94e89b773b6 F2 b-F
+  | o  11:d11b3456a873 F2 b-F
   | |
-  | o  8:7fe5bac4c918 H
+  | o  8:5cb05ba470a7 H
   |/|
   | o  4:7fb047a69f22 E b-F@divergent1
   | |
@@ -1091,7 +1091,7 @@ we have reusable code here
   
   $ hg debugobsolete
   1fc8102cda6204549f031015641606ccf5513ec3 1473d4b996d1d1b121de6b39fab6a04fbf9d873e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  64a8289d249234b9886244d379f15e6b650b28e3 d94e89b773b67e72642a931159ada8d1a9246998 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
+  64a8289d249234b9886244d379f15e6b650b28e3 d11b3456a873daec7c7bc53e5622e8df6d741bd2 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
   f585351a92f85104bff7c284233c338b10eb1df7 7c78f703e465d73102cc8780667ce269c5208a40 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
   48b9aae0607f43ff110d84e6883c151942add5ab 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
   112478962961147124edd43549aedd1a335e44bf 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}

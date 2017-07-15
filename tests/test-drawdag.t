@@ -117,6 +117,18 @@ Test what said in drawdag.py docstring
    /
   o  a
   
+  $ hg manifest -r a
+  a
+  $ hg manifest -r b
+  a
+  b
+  $ hg manifest -r bar
+  a
+  b
+  $ hg manifest -r foo
+  a
+  b
+  baz
 
 Edges existed in repo are no-ops
 

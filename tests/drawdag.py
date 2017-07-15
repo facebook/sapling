@@ -235,22 +235,21 @@ class simplefilectx(object):
         return ''
 
 class simplecommitctx(context.committablectx):
-    def __init__(self, repo, name, parentctxs, added=None):
+    def __init__(self, repo, name, parentctxs, added):
         opts = {
-            'changes': scmutil.status([], added or [], [], [], [], [], []),
+            'changes': scmutil.status([], list(added), [], [], [], [], []),
             'date': '0 0',
             'extra': {'branch': 'default'},
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
         self._repo = repo
-        self._name = name
+        self._added = added
         self._parents = parentctxs
-        self._parents.sort(key=lambda c: c.node())
         while len(self._parents) < 2:
             self._parents.append(repo[node.nullid])
 
     def filectx(self, key):
-        return simplefilectx(key, self._name)
+        return simplefilectx(key, self._added[key])
 
     def commit(self):
         return self._repo.commitctx(self)
@@ -317,7 +316,17 @@ def debugdrawdag(ui, repo, **opts):
         if name in committed:
             continue
         pctxs = [repo[committed[n]] for n in parents]
-        ctx = simplecommitctx(repo, name, pctxs, [name])
+        pctxs.sort(key=lambda c: c.node())
+        added = {}
+        if len(parents) > 1:
+            # If it's a merge, take the files and contents from the parents
+            for f in pctxs[1].manifest():
+                if f not in pctxs[0].manifest():
+                    added[f] = pctxs[1][f].data()
+        else:
+            # If it's not a merge, add a single file
+            added[name] = name
+        ctx = simplecommitctx(repo, name, pctxs, added)
         n = ctx.commit()
         committed[name] = n
         tagsmod.tag(repo, name, n, message=None, user=None, date=None,

@@ -213,7 +213,7 @@ Set up repo with non-linear history
   $ hg log -G -T '{node|short} {desc} {phase}\n'
   o  03ca77807e91 E draft
   |
-  | o  215e7b0814e1 D secret
+  | o  4e4f9194f9f1 D secret
   |/|
   o |  dc0947a82db8 C public
   | |
@@ -231,7 +231,7 @@ Restore bundle of entire repo
       426bada5c67598ca65036d57d9e4b64b0c1ce7a0
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
-      215e7b0814e1cac8e2614e7284f2a5dc266b4323
+      4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
       03ca77807e919db8807c3749086dc36fb478cac0
   phase-heads -- 'sortdict()'
       dc0947a82db884575bb76ea10ac97b08536bfa03 public
@@ -242,7 +242,7 @@ Restore bundle of entire repo
   $ hg log -G -T '{node|short} {desc} {phase}\n'
   o  03ca77807e91 E draft
   |
-  | o  215e7b0814e1 D secret
+  | o  4e4f9194f9f1 D secret
   |/|
   o |  dc0947a82db8 C public
   | |
@@ -257,7 +257,7 @@ Restore bundle of entire repo
   Stream params: sortdict([('Compression', 'BZ')])
   changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
       112478962961147124edd43549aedd1a335e44bf
-      215e7b0814e1cac8e2614e7284f2a5dc266b4323
+      4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
   phase-heads -- 'sortdict()'
   $ rm bundle
 
@@ -268,7 +268,7 @@ Restore bundle of entire repo
   changegroup -- "sortdict([('version', '02'), ('nbchanges', '3'), ('targetphase', '2')])"
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
-      215e7b0814e1cac8e2614e7284f2a5dc266b4323
+      4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
   phase-heads -- 'sortdict()'
       dc0947a82db884575bb76ea10ac97b08536bfa03 public
   $ rm bundle
@@ -278,7 +278,7 @@ Restore bundle of entire repo
   $ hg debugbundle bundle
   Stream params: sortdict([('Compression', 'BZ')])
   changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
-      215e7b0814e1cac8e2614e7284f2a5dc266b4323
+      4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
       03ca77807e919db8807c3749086dc36fb478cac0
   phase-heads -- 'sortdict()'
       03ca77807e919db8807c3749086dc36fb478cac0 draft
