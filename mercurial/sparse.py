@@ -33,8 +33,10 @@ def parseconfig(ui, raw):
     """
     includes = set()
     excludes = set()
-    current = includes
     profiles = set()
+    current = None
+    havesection = False
+
     for line in raw.split('\n'):
         line = line.strip()
         if not line or line.startswith('#'):
@@ -45,14 +47,23 @@ def parseconfig(ui, raw):
             if line:
                 profiles.add(line)
         elif line == '[include]':
-            if current != includes:
+            if havesection and current != includes:
                 # TODO pass filename into this API so we can report it.
                 raise error.Abort(_('sparse config cannot have includes ' +
                                     'after excludes'))
+            havesection = True
+            current = includes
             continue
         elif line == '[exclude]':
+            havesection = True
             current = excludes
         elif line:
+            if current is None:
+                raise error.Abort(_('sparse config entry outside of '
+                                    'section: %s') % line,
+                                  hint=_('add an [include] or [exclude] line '
+                                         'to declare the entry type'))
+
             if line.strip().startswith('/'):
                 ui.warn(_('warning: sparse profile cannot use' +
                           ' paths starting with /, ignoring %s\n') % line)

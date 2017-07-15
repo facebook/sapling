@@ -35,8 +35,7 @@ to the repository root.
 
 The special lines ``[include]`` and ``[exclude]`` denote the section
 for includes and excludes that follow, respectively. It is illegal to
-have ``[include]`` after ``[exclude]``. If no sections are defined,
-entries are assumed to be in the ``[include]`` section.
+have ``[include]`` after ``[exclude]``.
 
 Non-special lines resemble file patterns to be added to either includes
 or excludes. The syntax of these lines is documented by :hg:`help patterns`.

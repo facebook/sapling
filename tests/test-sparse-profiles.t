@@ -10,6 +10,18 @@ test sparse
   > rebase=
   > EOF
 
+Config file without [section] is rejected
+
+  $ cat > bad.sparse <<EOF
+  > *.html
+  > EOF
+
+  $ hg debugsparse --import-rules bad.sparse
+  abort: sparse config entry outside of section: *.html
+  (add an [include] or [exclude] line to declare the entry type)
+  [255]
+  $ rm bad.sparse
+
   $ echo a > index.html
   $ echo x > data.py
   $ echo z > readme.txt
@@ -257,6 +269,7 @@ Test file permissions changing across a sparse profile change
   > EOF
   $ touch a b
   $ cat > .hgsparse <<EOF
+  > [include]
   > a
   > EOF
   $ hg commit -Aqm 'initial'
