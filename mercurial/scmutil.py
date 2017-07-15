@@ -23,7 +23,6 @@ from .node import (
     wdirrev,
 )
 
-from .i18n import _
 from . import (
     encoding,
     error,
