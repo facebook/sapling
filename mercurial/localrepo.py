@@ -423,6 +423,8 @@ class localrepository(object):
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
+        self.cachevfs = vfsmod.vfs(self.vfs.join('cache'))
+        self.cachevfs.createmode = self.store.createmode
         if (self.ui.configbool('devel', 'all-warnings') or
             self.ui.configbool('devel', 'check-locks')):
             if util.safehasattr(self.svfs, 'vfs'): # this is filtervfs
