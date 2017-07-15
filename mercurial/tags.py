@@ -362,7 +362,7 @@ def _updatetags(filetags, alltags, tagtype=None, tagtypes=None):
 
 def _filename(repo):
     """name of a tagcache file for a given repo or repoview"""
-    filename = 'cache/tags2'
+    filename = 'tags2'
     if repo.filtername:
         filename = '%s-%s' % (filename, repo.filtername)
     return filename
@@ -386,7 +386,7 @@ def _readtagcache(ui, repo):
     info from each returned head. (See findglobaltags().)
     '''
     try:
-        cachefile = repo.vfs(_filename(repo), 'r')
+        cachefile = repo.cachevfs(_filename(repo), 'r')
         # force reading the file for static-http
         cachelines = iter(cachefile)
     except IOError:
@@ -486,11 +486,11 @@ def _getfnodes(ui, repo, nodes):
 def _writetagcache(ui, repo, valid, cachetags):
     filename = _filename(repo)
     try:
-        cachefile = repo.vfs(filename, 'w', atomictemp=True)
+        cachefile = repo.cachevfs(filename, 'w', atomictemp=True)
     except (OSError, IOError):
         return
 
-    ui.log('tagscache', 'writing .hg/%s with %d tags\n',
+    ui.log('tagscache', 'writing .hg/cache/%s with %d tags\n',
            filename, len(cachetags))
 
     if valid[2]:
