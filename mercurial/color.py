@@ -45,8 +45,6 @@ except ImportError:
     curses = None
     _baseterminfoparams = {}
 
-_enabledbydefault = True
-
 # start and stop parameters for effects
 _effects = {
     'none': 0,
@@ -185,10 +183,7 @@ def setup(ui):
 def _modesetup(ui):
     if ui.plain():
         return None
-    default = 'never'
-    if _enabledbydefault:
-        default = 'auto'
-    config = ui.config('ui', 'color', default)
+    config = ui.config('ui', 'color', 'auto')
     if config == 'debug':
         return 'debug'
 

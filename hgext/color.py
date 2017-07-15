@@ -18,14 +18,8 @@ See :hg:`help color` for details.
 
 from __future__ import absolute_import
 
-from mercurial import color
-
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
-
-def extsetup(ui):
-    # change default color config
-    color._enabledbydefault = True
