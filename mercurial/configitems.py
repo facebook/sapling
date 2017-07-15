@@ -430,6 +430,9 @@ coreconfigitem('ui', 'clonebundleprefers',
 coreconfigitem('ui', 'clonebundles',
     default=True,
 )
+coreconfigitem('ui', 'color',
+    default='auto',
+)
 coreconfigitem('ui', 'commitsubrepos',
     default=False,
 )
