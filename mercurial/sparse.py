@@ -34,7 +34,7 @@ def parseconfig(ui, raw):
     includes = set()
     excludes = set()
     current = includes
-    profiles = []
+    profiles = set()
     for line in raw.split('\n'):
         line = line.strip()
         if not line or line.startswith('#'):
@@ -43,7 +43,7 @@ def parseconfig(ui, raw):
         elif line.startswith('%include '):
             line = line[9:].strip()
             if line:
-                profiles.append(line)
+                profiles.add(line)
         elif line == '[include]':
             if current != includes:
                 # TODO pass filename into this API so we can report it.
@@ -76,11 +76,11 @@ def patternsforrev(repo, rev):
     """
     # Feature isn't enabled. No-op.
     if not enabled:
-        return set(), set(), []
+        return set(), set(), set()
 
     raw = repo.vfs.tryread('sparse')
     if not raw:
-        return set(), set(), []
+        return set(), set(), set()
 
     if rev is None:
         raise error.Abort(_('cannot parse sparse patterns from working '
@@ -115,8 +115,7 @@ def patternsforrev(repo, rev):
             pincludes, pexcludes, subprofs = parseconfig(repo.ui, raw)
             includes.update(pincludes)
             excludes.update(pexcludes)
-            for subprofile in subprofs:
-                profiles.append(subprofile)
+            profiles.update(subprofs)
 
         profiles = visited
 
@@ -142,7 +141,7 @@ def activeconfig(repo):
         includes, excludes, profiles = patternsforrev(repo, rev)
         allincludes |= includes
         allexcludes |= excludes
-        allprofiles |= set(profiles)
+        allprofiles |= profiles
 
     return allincludes, allexcludes, allprofiles
 
@@ -504,7 +503,7 @@ def aftercommit(repo, node):
     profiles = patternsforrev(repo, ctx.rev())[2]
 
     # profiles will only have data if sparse is enabled.
-    if set(profiles) & set(ctx.files()):
+    if profiles & set(ctx.files()):
         origstatus = repo.status()
         origsparsematch = matcher(repo)
         refreshwdir(repo, origstatus, origsparsematch, force=True)
@@ -555,7 +554,7 @@ def importfromfiles(repo, opts, paths, force=False):
             oldsize = len(includes) + len(excludes) + len(profiles)
             includes.update(iincludes - aincludes)
             excludes.update(iexcludes - aexcludes)
-            profiles.update(set(iprofiles) - aprofiles)
+            profiles.update(iprofiles - aprofiles)
             if len(includes) + len(excludes) + len(profiles) > oldsize:
                 changed = True
 
@@ -604,7 +603,6 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
 
         raw = repo.vfs.tryread('sparse')
         oldinclude, oldexclude, oldprofiles = parseconfig(repo.ui, raw)
-        oldprofiles = set(oldprofiles)
 
         if reset:
             newinclude = set()
