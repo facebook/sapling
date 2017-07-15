@@ -28,14 +28,14 @@ unpack_from = struct.unpack_from
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
-    filename = "cache/branch2"
+    filename = "branch2"
     if repo.filtername:
         filename = '%s-%s' % (filename, repo.filtername)
     return filename
 
 def read(repo):
     try:
-        f = repo.vfs(_filename(repo))
+        f = repo.cachevfs(_filename(repo))
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
@@ -228,7 +228,7 @@ class branchcache(dict):
 
     def write(self, repo):
         try:
-            f = repo.vfs(_filename(repo), "w", atomictemp=True)
+            f = repo.cachevfs(_filename(repo), "w", atomictemp=True)
             cachekey = [hex(self.tipnode), '%d' % self.tiprev]
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
