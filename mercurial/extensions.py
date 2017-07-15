@@ -32,6 +32,7 @@ _order = []
 _builtin = {
     'hbisect',
     'bookmarks',
+    'color',
     'parentrevspec',
     'progress',
     'interhg',
