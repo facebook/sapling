@@ -22,6 +22,7 @@ from . import (
     encoding,
     error,
     pycompat,
+    selectors2,
     util,
 )
 
@@ -476,6 +477,8 @@ class unixforkingservice(object):
     def _mainloop(self):
         exiting = False
         h = self._servicehandler
+        selector = selectors2.DefaultSelector()
+        selector.register(self._sock, selectors2.EVENT_READ)
         while True:
             if not exiting and h.shouldexit():
                 # clients can no longer connect() to the domain socket, so
@@ -486,7 +489,7 @@ class unixforkingservice(object):
                 self._unlinksocket()
                 exiting = True
             try:
-                ready = select.select([self._sock], [], [], h.pollinterval)[0]
+                ready = selector.select(timeout=h.pollinterval)
                 if not ready:
                     # only exit if we completed all queued requests
                     if exiting:
