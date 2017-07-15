@@ -489,7 +489,7 @@ class localrepository(object):
                 # journal is covered by 'lock'
                 if repo._currentlock(repo._lockref) is None:
                     repo.ui.develwarn('write with no lock: "%s"' % path,
-                                      stacklevel=2)
+                                      stacklevel=2, config='check-locks')
             elif repo._currentlock(repo._wlockref) is None:
                 # rest of vfs files are covered by 'wlock'
                 #
@@ -498,7 +498,7 @@ class localrepository(object):
                     if path.startswith(prefix):
                         return
                 repo.ui.develwarn('write with no wlock: "%s"' % path,
-                                  stacklevel=2)
+                                  stacklevel=2, config='check-locks')
             return ret
         return checkvfs
 
