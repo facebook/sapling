@@ -866,7 +866,8 @@ def debugignore(ui, repo, *files, **opts):
         # Show all the patterns
         ui.write("%s\n" % repr(ignore))
     else:
-        for f in files:
+        m = scmutil.match(repo[None], pats=files)
+        for f in m.files():
             nf = util.normpath(f)
             ignored = None
             ignoredata = None
@@ -882,16 +883,16 @@ def debugignore(ui, repo, *files, **opts):
                             break
             if ignored:
                 if ignored == nf:
-                    ui.write(_("%s is ignored\n") % f)
+                    ui.write(_("%s is ignored\n") % m.uipath(f))
                 else:
                     ui.write(_("%s is ignored because of "
                                "containing folder %s\n")
-                             % (f, ignored))
+                             % (m.uipath(f), ignored))
                 ignorefile, lineno, line = ignoredata
                 ui.write(_("(ignore rule in %s, line %d: '%s')\n")
                          % (ignorefile, lineno, line))
             else:
-                ui.write(_("%s is not ignored\n") % f)
+                ui.write(_("%s is not ignored\n") % m.uipath(f))
 
 @command('debugindex', cmdutil.debugrevlogopts +
     [('f', 'format', 0, _('revlog format'), _('FORMAT'))],

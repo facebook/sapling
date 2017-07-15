@@ -52,6 +52,35 @@ Should display baz only:
   abort: $TESTTMP/ignorerepo/.hgignore: invalid pattern (relre): *.o (glob)
   [255]
 
+Ensure given files are relative to cwd
+
+  $ echo "dir/.*\.o" > .hgignore
+  $ hg status -i
+  I dir/c.o
+
+  $ hg debugignore dir/c.o dir/missing.o
+  dir/c.o is ignored (glob)
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
+  dir/missing.o is ignored (glob)
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
+  $ cd dir
+  $ hg debugignore c.o missing.o
+  c.o is ignored
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
+  missing.o is ignored
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
+
+For icasefs, inexact matches also work, except for missing files
+
+#if icasefs
+  $ hg debugignore c.O missing.O
+  c.o is ignored
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
+  missing.O is not ignored
+#endif
+
+  $ cd ..
+
   $ echo ".*\.o" > .hgignore
   $ hg status
   A dir/b.o
@@ -207,7 +236,7 @@ Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
   $ hg debugignore a.c
   a.c is not ignored
   $ hg debugignore dir/c.o
-  dir/c.o is ignored
+  dir/c.o is ignored (glob)
   (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 2: 'dir/**/c.o') (glob)
 
 Check using 'include:' in ignore file
@@ -293,7 +322,7 @@ Check include subignore at the same level
   $ hg status | grep file2
   [1]
   $ hg debugignore dir1/file2
-  dir1/file2 is ignored
+  dir1/file2 is ignored (glob)
   (ignore rule in dir2/.hgignore, line 1: 'file*2')
 
 #if windows
