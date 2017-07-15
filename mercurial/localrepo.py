@@ -487,6 +487,9 @@ class localrepository(object):
             if path.startswith(repo.path):
                 # truncate name relative to the repository (.hg)
                 path = path[len(repo.path) + 1:]
+            if path.startswith('cache/'):
+                msg = 'accessing cache with vfs instead of cachevfs: "%s"'
+                repo.ui.develwarn(msg % path, stacklevel=2, config="cache-vfs")
             if path.startswith('journal.'):
                 # journal is covered by 'lock'
                 if repo._currentlock(repo._lockref) is None:
