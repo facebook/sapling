@@ -874,7 +874,7 @@ def revset(context, mapping, args):
     repo = ctx.repo()
 
     def query(expr):
-        m = revsetmod.match(repo.ui, expr)
+        m = revsetmod.match(repo.ui, expr, repo=repo)
         return m(repo)
 
     if len(args) > 1:

@@ -260,7 +260,7 @@ def _search(web, req, tmpl):
         if not funcsused.issubset(revset.safesymbols):
             return MODE_KEYWORD, query
 
-        mfunc = revset.match(web.repo.ui, revdef)
+        mfunc = revset.match(web.repo.ui, revdef, repo=web.repo)
         try:
             revs = mfunc(web.repo)
             return MODE_REVSET, revs
