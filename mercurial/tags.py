@@ -617,7 +617,7 @@ def _tag(repo, names, node, message, local, user, date, extra=None,
 
     return tagnode
 
-_fnodescachefile = 'cache/hgtagsfnodes1'
+_fnodescachefile = 'hgtagsfnodes1'
 _fnodesrecsize = 4 + 20 # changeset fragment + filenode
 _fnodesmissingrec = '\xff' * 24
 
@@ -651,7 +651,7 @@ class hgtagsfnodescache(object):
 
 
         try:
-            data = repo.vfs.read(_fnodescachefile)
+            data = repo.cachevfs.read(_fnodescachefile)
         except (OSError, IOError):
             data = ""
         self._raw = bytearray(data)
@@ -759,13 +759,12 @@ class hgtagsfnodescache(object):
         try:
             lock = repo.wlock(wait=False)
         except error.LockError:
-            repo.ui.log('tagscache',
-                        'not writing .hg/%s because lock cannot be acquired\n' %
-                        (_fnodescachefile))
+            repo.ui.log('tagscache', 'not writing .hg/cache/%s because '
+                        'lock cannot be acquired\n' % (_fnodescachefile))
             return
 
         try:
-            f = repo.vfs.open(_fnodescachefile, 'ab')
+            f = repo.cachevfs.open(_fnodescachefile, 'ab')
             try:
                 # if the file has been truncated
                 actualoffset = f.tell()
@@ -775,7 +774,7 @@ class hgtagsfnodescache(object):
                 f.seek(self._dirtyoffset)
                 f.truncate()
                 repo.ui.log('tagscache',
-                            'writing %d bytes to %s\n' % (
+                            'writing %d bytes to cache/%s\n' % (
                             len(data), _fnodescachefile))
                 f.write(data)
                 self._dirtyoffset = None
@@ -783,7 +782,7 @@ class hgtagsfnodescache(object):
                 f.close()
         except (IOError, OSError) as inst:
             repo.ui.log('tagscache',
-                        "couldn't write %s: %s\n" % (
+                        "couldn't write cache/%s: %s\n" % (
                         _fnodescachefile, inst))
         finally:
             lock.release()
