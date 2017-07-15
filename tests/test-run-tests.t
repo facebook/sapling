@@ -121,6 +121,7 @@ test churn with globs
 
 test diff colorisation
 
+#if no-windows
   $ rt test-failure.t --color always
   
   \x1b[38;5;124m--- $TESTTMP/test-failure.t\x1b[39m (esc)
@@ -155,6 +156,7 @@ test diff colorisation
   Failed test-failure.t: output changed
   # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
+#endif
 
 basic failing test
   $ cat > test-failure.t << EOF

@@ -89,13 +89,16 @@ osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
 with_color = False
-try: # is pygments installed
-    import pygments
-    import pygments.lexers as lexers
-    import pygments.formatters as formatters
-    with_color = True
-except ImportError:
-    pass
+
+# ANSI color is unsupported prior to Windows 10
+if os.name != 'nt':
+    try: # is pygments installed
+        import pygments
+        import pygments.lexers as lexers
+        import pygments.formatters as formatters
+        with_color = True
+    except ImportError:
+        pass
 
 if not sys.stderr.isatty(): # check if the terminal is capable
     with_color = False
