@@ -11,7 +11,6 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > color=
   > histedit=
   > patchbomb=
   > rebase=
@@ -21,7 +20,6 @@
   > EOF
 
   $ hg debugextensions
-  color
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
@@ -30,9 +28,6 @@
   rebase
 
   $ hg debugextensions -v
-  color
-    location: */hgext/color.py* (glob)
-    bundled: yes
   ext1
     location: */extwithoutinfos.py* (glob)
     bundled: no
@@ -56,13 +51,6 @@
 
   $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
   [
-   {
-    "buglink": "",
-    "bundled": true,
-    "name": "color",
-    "source": "*/hgext/color.py*", (glob)
-    "testedwith": []
-   },
    {
     "buglink": "",
     "bundled": false,
