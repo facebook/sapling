@@ -928,7 +928,7 @@ Error during post-close callback of the strip transaction
   > def reposetup(ui, repo):
   >     class crashstriprepo(repo.__class__):
   >         def transaction(self, desc, *args, **kwargs):
-  >             tr = super(crashstriprepo, self).transaction(self, desc, *args, **kwargs)
+  >             tr = super(crashstriprepo, self).transaction(desc, *args, **kwargs)
   >             if desc == 'strip':
   >                 def crash(tra): raise error.Abort('boom')
   >                 tr.addpostclose('crash', crash)
