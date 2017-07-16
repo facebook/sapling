@@ -337,6 +337,23 @@ importing with "absolute_import" feature isn't tested, because "level
   > from .legacy import detail as legacydetail
   > EOF
 
+Setup package that re-exports an attribute of its submodule as the same
+name. This leaves 'shadowing.used' pointing to 'used.detail', but still
+the submodule 'used' should be somehow accessible. (issue5617)
+
+  $ mkdir -p $TESTTMP/extlibroot/shadowing
+  $ cat > $TESTTMP/extlibroot/shadowing/used.py <<EOF
+  > detail = "this is extlibroot.shadowing.used"
+  > EOF
+  $ cat > $TESTTMP/extlibroot/shadowing/proxied.py <<EOF
+  > from __future__ import absolute_import
+  > from extlibroot.shadowing.used import detail
+  > EOF
+  $ cat > $TESTTMP/extlibroot/shadowing/__init__.py <<EOF
+  > from __future__ import absolute_import
+  > from .used import detail as used
+  > EOF
+
 Setup extension local modules to be imported with "absolute_import"
 feature.
 
@@ -429,6 +446,7 @@ Setup main procedure of extension.
   > from extlibroot.lsub1.lsub2 import used as lused, unused as lunused
   > from extlibroot.lsub1.lsub2.called import func as lfunc
   > from extlibroot.recursedown import absdetail, legacydetail
+  > from extlibroot.shadowing import proxied
   > 
   > def uisetup(ui):
   >     result = []
@@ -436,6 +454,7 @@ Setup main procedure of extension.
   >     result.append(lfunc())
   >     result.append(absdetail)
   >     result.append(legacydetail)
+  >     result.append(proxied.detail)
   >     ui.write('LIB: %s\n' % '\nLIB: '.join(result))
   > EOF
 
@@ -446,6 +465,7 @@ Examine module importing.
   LIB: this is extlibroot.lsub1.lsub2.called.func()
   LIB: this is extlibroot.recursedown.abs.used
   LIB: this is extlibroot.recursedown.legacy.used
+  LIB: this is extlibroot.shadowing.used
   ABS: this is absextroot.xsub1.xsub2.used
   ABS: this is absextroot.xsub1.xsub2.called.func()
 
@@ -454,6 +474,7 @@ Examine module importing.
   LIB: this is extlibroot.lsub1.lsub2.called.func()
   LIB: this is extlibroot.recursedown.abs.used
   LIB: this is extlibroot.recursedown.legacy.used
+  LIB: this is extlibroot.shadowing.used
   REL: this is absextroot.xsub1.xsub2.used
   REL: this is absextroot.xsub1.xsub2.called.func()
   REL: this relimporter imports 'this is absextroot.relimportee'

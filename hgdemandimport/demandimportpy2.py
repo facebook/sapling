@@ -227,10 +227,14 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
             # recurse down the module chain, and return the leaf module
             mod = rootmod
             for comp in modname.split('.')[1:]:
-                if getattr(mod, comp, nothing) is nothing:
-                    setattr(mod, comp, _demandmod(comp, mod.__dict__,
-                                                  mod.__dict__, level=1))
-                mod = getattr(mod, comp)
+                obj = getattr(mod, comp, nothing)
+                if obj is nothing:
+                    obj = _demandmod(comp, mod.__dict__, mod.__dict__, level=1)
+                    setattr(mod, comp, obj)
+                elif mod.__name__ + '.' + comp in sys.modules:
+                    # prefer loaded module over attribute (issue5617)
+                    obj = sys.modules[mod.__name__ + '.' + comp]
+                mod = obj
             return mod
 
         if level >= 0:
