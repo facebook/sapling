@@ -161,7 +161,6 @@ from . import (
     phases,
     pushkey,
     pycompat,
-    scmutil,
     tags,
     url,
     util,
@@ -1814,7 +1813,6 @@ def handleobsmarker(op, inpart):
     if new:
         op.repo.ui.status(_('%i new obsolescence markers\n') % new)
     op.records.add('obsmarkers', {'new': new})
-    scmutil.registersummarycallback(op.repo, tr)
     if op.reply is not None:
         rpart = op.reply.newpart('reply:obsmarkers')
         rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)

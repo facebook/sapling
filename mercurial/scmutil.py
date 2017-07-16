@@ -1080,14 +1080,25 @@ class simplekeyvaluefile(object):
         with self.vfs(self.path, mode='wb', atomictemp=True) as fp:
             fp.write(''.join(lines))
 
-def registersummarycallback(repo, otr):
+_reportobsoletedsource = [
+    'pull',
+    'push',
+    'serve',
+    'unbundle',
+]
+
+def registersummarycallback(repo, otr, txnname=''):
     """register a callback to issue a summary after the transaction is closed
     """
-    reporef = weakref.ref(repo)
-    def reportsummary(tr):
-        """the actual callback reporting the summary"""
-        repo = reporef()
-        obsoleted = obsutil.getobsoleted(repo, tr)
-        if obsoleted:
-            repo.ui.status(_('obsoleted %i changesets\n') % len(obsoleted))
-    otr.addpostclose('00-txnreport', reportsummary)
+    for source in _reportobsoletedsource:
+        if txnname.startswith(source):
+            reporef = weakref.ref(repo)
+            def reportsummary(tr):
+                """the actual callback reporting the summary"""
+                repo = reporef()
+                obsoleted = obsutil.getobsoleted(repo, tr)
+                if obsoleted:
+                    repo.ui.status(_('obsoleted %i changesets\n')
+                                   % len(obsoleted))
+            otr.addpostclose('00-txnreport', reportsummary)
+            break

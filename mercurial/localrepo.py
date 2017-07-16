@@ -1099,6 +1099,7 @@ class localrepository(object):
                 raise error.ProgrammingError('transaction requires locking')
         tr = self.currenttransaction()
         if tr is not None:
+            scmutil.registersummarycallback(self, tr, desc)
             return tr.nest()
 
         # abort here if the journal already exists
@@ -1255,6 +1256,7 @@ class localrepository(object):
         # to stored data if transaction has no error.
         tr.addpostclose('refresh-filecachestats', self._refreshfilecachestats)
         self._transref = weakref.ref(tr)
+        scmutil.registersummarycallback(self, tr, desc)
         return tr
 
     def _journalfiles(self):
