@@ -70,8 +70,10 @@ initial
   created new head
   $ mkcommit B1
   $ hg debugobsolete --hidden `getid 'desc(A0)'` `getid 'desc(A1)'`
+  obsoleted 1 changesets
   $ hg debugobsolete --hidden aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa `getid 'desc(B0)'`
   $ hg debugobsolete --hidden `getid 'desc(B0)'` `getid 'desc(B1)'`
+  obsoleted 1 changesets
   $ hg prune -qd '0 0' 'desc(B1)'
   $ hg log -G --hidden
   x  069b05c3876d (draft): B1

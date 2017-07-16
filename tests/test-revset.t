@@ -1848,6 +1848,7 @@ Test short 'ff...' hash collision
   4:ffff85cff0ff78504fcdc3c0bc10de0c65379249 ffff8
   2147483647:ffffffffffffffffffffffffffffffffffffffff fffff
   $ hg debugobsolete fffbae3886c8fbb2114296380d276fd37715d571
+  obsoleted 1 changesets
 
   $ hg debugrevspec '0:wdir() & fff'
   abort: 00changelog.i@fff: ambiguous identifier!

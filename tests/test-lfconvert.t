@@ -329,6 +329,7 @@ process.
   > evolution=createmarkers
   > EOF
   $ hg debugobsolete `hg log -r tip -T "{node}"`
+  obsoleted 1 changesets
   $ cd ..
 
   $ hg -R largefiles-repo-hg verify --large --lfa

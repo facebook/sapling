@@ -64,6 +64,7 @@ make both changeset known in remote
 create a marker after this
 
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  e5ea8f9c7314 (draft): A1
   |

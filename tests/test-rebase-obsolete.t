@@ -555,6 +555,7 @@ Test hidden changesets in the rebase set (issue4504)
   $ hg add J
   $ hg commit -m J
   $ hg debugobsolete `hg log --rev . -T '{node}'`
+  obsoleted 1 changesets
 
   $ hg rebase --rev .~1::. --dest 'max(desc(D))' --traceback --config experimental.rebaseskipobsolete=off
   rebasing 9:4bde274eefcf "I"
@@ -710,6 +711,7 @@ Even when the chain include missing node
   o  0:4a2df7238c3b A
   
   $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.evolution=all
+  obsoleted 1 changesets
   $ hg rebase -d 6 -r "4::"
   rebasing 4:ff2c4d47b71d "C"
   note: not rebasing 7:360bbaa7d3ce "O", it has no successor
@@ -737,6 +739,7 @@ should display a friendly error message
   $ hg commit -m nonrelevant
   created new head
   $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=all
+  obsoleted 1 changesets
   $ hg rebase -r . -d 10
   note: not rebasing 11:f44da1f4954c "nonrelevant" (tip), it has no successor
 
@@ -861,6 +864,7 @@ Create the changes that we will rebase
   $ hg add L
   $ hg commit -m "dummy change"
   $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 19 -T '{node}'` --config experimental.evolution=all
+  obsoleted 1 changesets
 
   $ hg log -G -r 17::
   @  22:7bdc8a87673d dummy change

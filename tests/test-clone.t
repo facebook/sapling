@@ -714,6 +714,7 @@ Create repositories to test auto sharing functionality
   $ echo initial2 > foo
   $ hg -q commit -A -m initial1
   $ hg debugobsolete c05d5c47a5cf81401869999f3d05f7d699d2b29a e082c1832e09a7d1e78b7fd49a592d372de854c8
+  obsoleted 1 changesets
   $ cd ..
 
   $ hg -q clone --pull source1a source1b

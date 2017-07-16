@@ -2294,6 +2294,7 @@ Test --hidden
   > EOF
 
   $ hg debugobsolete `hg id --debug -i -r 8`
+  obsoleted 1 changesets
   $ testlog
   []
   []

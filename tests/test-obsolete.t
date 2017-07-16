@@ -51,6 +51,7 @@ Killing a single changeset without replacement
   abort: changeset references must be full hexadecimal node identifiers
   [255]
   $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
+  obsoleted 1 changesets
   $ hg debugobsolete
   97b7c2d76b1845ed3eb988cd612611e72406cef0 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'babar'}
 
@@ -84,6 +85,7 @@ Killing a single changeset with replacement
   created new head
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   $ hg debugobsolete --config format.obsstore-version=0 --flag 12 `getid original_c`  `getid new_c` -d '121 120'
+  obsoleted 1 changesets
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   2:245bde4270cd add original_c
   $ hg debugrevlog -cd
@@ -107,6 +109,7 @@ do it again (it read the obsstore before adding new changeset)
   $ mkcommit new_2_c
   created new head
   $ hg debugobsolete -d '1337 0' `getid new_c` `getid new_2_c`
+  obsoleted 1 changesets
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:17 1970 +0000) {'user': 'test'}
@@ -118,6 +121,7 @@ Register two markers with a missing node
   $ mkcommit new_3_c
   created new head
   $ hg debugobsolete -d '1338 0' `getid new_2_c` 1337133713371337133713371337133713371337
+  obsoleted 1 changesets
   $ hg debugobsolete -d '1339 0' 1337133713371337133713371337133713371337 `getid new_3_c`
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f C (Thu Jan 01 00:00:01 1970 -0002) {'user': 'test'}
@@ -256,6 +260,7 @@ We need to create a clone of 5 and add a special marker with a flag
   $ hg ci -m 'add n3w_3_c'
   created new head
   $ hg debugobsolete -d '1338 0' --flags 1 `getid new_3_c` `getid n3w_3_c`
+  obsoleted 1 changesets
   $ hg log -r 'bumped()'
   $ hg log -G
   @  6:6f9641995072 (draft) [tip ] add n3w_3_c
@@ -314,6 +319,7 @@ Revision 0 is hidden
   $ mkcommit kill0
   $ hg up -q null
   $ hg debugobsolete `getid kill0`
+  obsoleted 1 changesets
   $ mkcommit a
   $ mkcommit b
 
@@ -508,6 +514,7 @@ detect outgoing obsolete and unstable
   $ mkcommit original_d
   $ mkcommit original_e
   $ hg debugobsolete --record-parents `getid original_d` -d '0 0'
+  obsoleted 1 changesets
   $ hg debugobsolete | grep `getid original_d`
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   $ hg log -r 'obsolete()'
@@ -601,6 +608,7 @@ Do not warn about new head when the new head is a successors of a remote one
   created new head
   $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'` \
   > -u 'test <test@example.net>'
+  obsoleted 1 changesets
   $ hg outgoing ../tmpf # parasite hg outgoing testin
   comparing with ../tmpf
   searching for changes
@@ -779,6 +787,66 @@ check hgweb does not explode
   > do
   >    hg debugobsolete $node
   > done
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
+  obsoleted 1 changesets
   $ hg up tip
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -840,6 +908,7 @@ reenable for later test
 Several troubles on the same changeset (create an unstable and bumped changeset)
 
   $ hg debugobsolete `getid obsolete_e`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid original_c` `getid babar`
   $ hg log --config ui.logtemplate= -r 'bumped() and unstable()'
   changeset:   7:50c51b361e60
@@ -1084,6 +1153,7 @@ Test issue 4506
   grafting 1:1c9eddb02162 "content-1" (tip)
 
   $ hg debugobsolete `hg log -r1 -T'{node}'` `hg log -r2 -T'{node}'`
+  obsoleted 1 changesets
 
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS

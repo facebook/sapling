@@ -3590,8 +3590,11 @@ Test shortest(node) with the repo having short hash collision:
   9:c5623987d205cd6d9d8389bfc40fff9dbb670b48
   10:c562ddd9c94164376c20b86b0b4991636a3bf84f
   $ hg debugobsolete a00be79088084cb3aff086ab799f8790e01a976b
+  obsoleted 1 changesets
   $ hg debugobsolete c5623987d205cd6d9d8389bfc40fff9dbb670b48
+  obsoleted 1 changesets
   $ hg debugobsolete c562ddd9c94164376c20b86b0b4991636a3bf84f
+  obsoleted 1 changesets
 
  nodes starting with '11' (we don't have the revision number '11' though)
 

@@ -572,6 +572,7 @@ tip is obsolete
 ---------------------
 
   $ hg debugobsolete `hg id --debug -i -r tip`
+  obsoleted 1 changesets
   $ hg bisect --reset
   $ hg bisect --good 15
   $ hg bisect --bad 30

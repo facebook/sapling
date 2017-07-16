@@ -127,6 +127,7 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
+  obsoleted 1 changesets
   $ hg debugobsolete a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1 `getid 'desc("C-A1")'`
 
   $ hg up 'desc("ROOT")'
@@ -268,7 +269,9 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+  obsoleted 1 changesets
   $ hg debugobsolete --record-parents `getid 'desc("C-B0")'`
+  obsoleted 1 changesets
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log --hidden -G
@@ -450,6 +453,7 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -590,7 +594,9 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
+  obsoleted 1 changesets
   $ hg debugobsolete --record-parents `getid 'desc("C-B0")'`
+  obsoleted 1 changesets
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
 
@@ -668,6 +674,7 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
 
 (it is annoying to create prune with parent data without the changeset, so we strip it after the fact)
@@ -753,12 +760,16 @@ setup
   created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A")'`
   $ hg debugobsolete `getid 'desc("C-A")'` `getid 'desc("C-B")'` `getid 'desc("C-C")'` # record split
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc("C-A")'` `getid 'desc("C-D")'` # other divergent
   $ hg debugobsolete `getid 'desc("C-A")'` b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0
   $ hg debugobsolete b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0 `getid 'desc("C-E")'`
   $ hg debugobsolete `getid 'desc("C-B")'` `getid 'desc("C-E")'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc("C-C")'` `getid 'desc("C-E")'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc("C-D")'` `getid 'desc("C-E")'`
+  obsoleted 1 changesets
   $ hg debugobsolete c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0 `getid 'desc("C-E")'`
 
   $ hg up 'desc("ROOT")'
@@ -1289,6 +1300,7 @@ setup
   $ mkcommit 'C-A'
   $ mkcommit 'C-B'
   $ hg debugobsolete --record-parent `getid 'desc("C-B")'`
+  obsoleted 1 changesets
 
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

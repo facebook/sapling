@@ -56,6 +56,7 @@ Trigger tags cache population by doing something that accesses tags info
 Hiding a non-tip changeset should change filtered hash and cause tags recompute
 
   $ hg debugobsolete -d '0 0' c3cb30f2d2cd0aae008cc91a07876e3c5131fd22 -u dummyuser
+  obsoleted 1 changesets
 
   $ hg tags
   tip                                5:2942a772f72a
@@ -77,7 +78,9 @@ Hiding a non-tip changeset should change filtered hash and cause tags recompute
 Hiding another changeset should cause the filtered hash to change
 
   $ hg debugobsolete -d '0 0' d75775ffbc6bca1794d300f5571272879bd280da -u dummyuser
+  obsoleted 1 changesets
   $ hg debugobsolete -d '0 0' 5f97d42da03fd56f3b228b03dfe48af5c0adf75b -u dummyuser
+  obsoleted 1 changesets
 
   $ hg tags
   tip                                5:2942a772f72a

@@ -1081,6 +1081,7 @@ class simplekeyvaluefile(object):
             fp.write(''.join(lines))
 
 _reportobsoletedsource = [
+    'debugobsolete',
     'pull',
     'push',
     'serve',

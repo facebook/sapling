@@ -59,8 +59,10 @@ initial
   created new head
   $ mkcommit B1
   $ hg debugobsolete `getid 'desc(A0)'` aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  obsoleted 1 changesets
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa `getid 'desc(A1)'`
   $ hg debugobsolete `getid 'desc(B0)'` bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  obsoleted 1 changesets
   $ hg debugobsolete bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb `getid 'desc(B1)'`
   $ hg log -G --hidden
   @  069b05c3876d (draft): B1

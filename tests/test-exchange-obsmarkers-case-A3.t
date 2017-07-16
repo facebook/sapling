@@ -73,7 +73,9 @@ initial
   $ mkcommit B1
   created new head
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc(B0)'` `getid 'desc(B1)'`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  f6298a8ac3a4 (draft): B1
   |
@@ -159,7 +161,9 @@ other variant: changeset known in remote
   $ mkcommit B1
   created new head
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid 'desc(B0)'` `getid 'desc(B1)'`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  f6298a8ac3a4 (draft): B1
   |

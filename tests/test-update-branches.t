@@ -502,6 +502,7 @@ We add simple obsolescence marker between 3 and 4 (indirect successors)
   $ hg id --debug -i -r 4
   d047485b3896813b2a624e86201983520f003206
   $ hg debugobsolete 6efa171f091b00a3c35edc15d48c52a498929953 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  obsoleted 1 changesets
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa d047485b3896813b2a624e86201983520f003206
 
 Test that 5 is detected as a valid destination from 3 and also accepts moving
@@ -548,6 +549,7 @@ non-obsolete parent but that will be decided later.
   $ hg up --quiet 0
   $ hg up --quiet 2
   $ hg debugobsolete bd10386d478cd5a9faf2e604114c8e6da62d3889
+  obsoleted 1 changesets
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

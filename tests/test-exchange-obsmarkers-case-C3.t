@@ -64,6 +64,7 @@ Initial
   $ mkcommit A1
   created new head
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
+  obsoleted 1 changesets
   $ hg prune -qd '0 0' .
   $ hg log -G --hidden
   x  e5ea8f9c7314 (draft): A1

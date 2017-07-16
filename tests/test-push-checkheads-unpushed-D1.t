@@ -49,6 +49,7 @@ Test setup
   $ mkcommit A1
   created new head
   $ hg debugobsolete `getid "desc(A0)" ` `getid "desc(A1)"`
+  obsoleted 1 changesets
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit B0

@@ -65,6 +65,7 @@ Implemented as the non-split version
   $ mkcommit C
   created new head
   $ hg debugobsolete --hidden `getid 'desc(A)'` `getid 'desc(B)'`
+  obsoleted 1 changesets
   $ hg debugobsolete --hidden `getid 'desc(A)'` `getid 'desc(C)'`
   $ hg prune -qd '0 0' .
   $ hg log -G --hidden

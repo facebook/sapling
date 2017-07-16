@@ -190,6 +190,7 @@ Test templates with splitted commit
   $ hg commit -A -m "A0"
   adding b
   $ hg debugobsolete `getid "1"` `getid "2"` `getid "3"`
+  obsoleted 1 changesets
 
   $ hg log --hidden -G
   @  changeset:   3:f257fde29c7a
@@ -307,7 +308,9 @@ Simulate a fold
   adding B0
   created new head
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B0)"` `getid "desc(C0)"`
+  obsoleted 1 changesets
 
   $ hg log --hidden -G
   @  changeset:   3:eb5a0daa2192
@@ -604,7 +607,9 @@ Test setup
   adding B0
   created new head
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B1)"` `getid "desc(C0)"`
+  obsoleted 1 changesets
 
   $ hg log --hidden -G
   @  changeset:   4:eb5a0daa2192
@@ -876,7 +881,9 @@ Test setup
 Create the cycle
 
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(B0)"`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B0)"` `getid "desc(C0)"`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B0)"` `getid "desc(A0)"`
 
 Check templates
@@ -1033,6 +1040,7 @@ Split it
      summary:     ROOT
   
   $ hg debugobsolete `getid "4"` `getid "5"` `getid "6"` `getid "7"`
+  obsoleted 1 changesets
   $ hg log -G
   @  changeset:   7:ba2ed02b0c9a
   |  tag:         tip
@@ -1248,6 +1256,7 @@ Test setup
   $ mkcommit ROOT
   $ mkcommit A0
   $ hg debugobsolete --record-parent `getid "."`
+  obsoleted 1 changesets
 
 Check output
 ------------

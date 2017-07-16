@@ -47,6 +47,7 @@ setup
   $ mkcommit new
   created new head
   $ hg debugobsolete --flags 1 `getid old` `getid new`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  71e3228bffe1 (draft) add new
   |
@@ -188,6 +189,7 @@ setup. (The obsolete marker is known locally only
   $ mkcommit desc2
   created new head
   $ hg debugobsolete `getid old` `getid new`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  5fe37041cc2b (draft) add desc2
   |
@@ -296,6 +298,7 @@ setup
   $ mkcommit new-unrelated
   created new head
   $ hg debugobsolete `getid old`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  350a93b716be (draft) add new-unrelated
   |

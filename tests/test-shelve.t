@@ -685,6 +685,7 @@ test bug 4073 we need to enable obsolete markers for it
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `hg --debug id -i -r 1`
+  obsoleted 1 changesets
   $ hg unshelve
   unshelving change 'default'
 

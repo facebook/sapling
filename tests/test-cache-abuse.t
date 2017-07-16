@@ -24,6 +24,7 @@ Build a repo with some cacheable bits:
   $ echo dumb > dumb
   $ hg ci -qAmdumb
   $ hg debugobsolete b1174d11b69e63cb0c5726621a43c859f0858d7f
+  obsoleted 1 changesets
 
   $ hg phase -pr t1
   $ hg phase -fsr t2

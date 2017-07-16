@@ -59,6 +59,7 @@ A_1 have two direct and divergent successors A_1 and A_1
 
   $ newcase direct
   $ hg debugobsolete `getid A_0` `getid A_1`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg log -G --hidden
   o  3:392fd25390da A_2
@@ -117,10 +118,12 @@ indirect divergence with known changeset
 
   $ newcase indirect_known
   $ hg debugobsolete `getid A_0` `getid A_1`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ mkcommit A_3
   created new head
   $ hg debugobsolete `getid A_2` `getid A_3`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
@@ -174,6 +177,7 @@ indirect divergence with known changeset
 
   $ newcase indirect_unknown
   $ hg debugobsolete `getid A_0` aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  obsoleted 1 changesets
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa `getid A_1`
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg log -G --hidden
@@ -222,7 +226,9 @@ do not take unknown node in account if they are final
 
   $ newcase final-unknown
   $ hg debugobsolete `getid A_0` `getid A_1`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_1` `getid A_2`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ hg debugobsolete bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccccccccccccccccccc
   $ hg debugobsolete `getid A_1` dddddddddddddddddddddddddddddddddddddddd
@@ -242,11 +248,14 @@ divergence that converge again is not divergence anymore
 
   $ newcase converged_divergence
   $ hg debugobsolete `getid A_0` `getid A_1`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ mkcommit A_3
   created new head
   $ hg debugobsolete `getid A_1` `getid A_3`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_2` `getid A_3`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
@@ -294,6 +303,7 @@ split is not divergences
 
   $ newcase split
   $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   o  3:392fd25390da A_2
   |
@@ -335,16 +345,19 @@ Even when subsequent rewriting happen
   $ mkcommit A_3
   created new head
   $ hg debugobsolete `getid A_1` `getid A_3`
+  obsoleted 1 changesets
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_4
   created new head
   $ hg debugobsolete `getid A_2` `getid A_4`
+  obsoleted 1 changesets
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_5
   created new head
   $ hg debugobsolete `getid A_4` `getid A_5`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  6:e442cfc57690 A_5
   |
@@ -404,6 +417,7 @@ Check more complex obsolescence graft (with divergence)
   $ mkcommit B_0; hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg debugobsolete `getid B_0` `getid A_2`
+  obsoleted 1 changesets
   $ mkcommit A_7; hg up 0
   created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -411,6 +425,7 @@ Check more complex obsolescence graft (with divergence)
   created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid A_5` `getid A_7` `getid A_8`
+  obsoleted 1 changesets
   $ mkcommit A_9; hg up 0
   created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -512,8 +527,11 @@ fix the divergence
   created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid A_9` `getid A_A`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_7` `getid A_A`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_8` `getid A_A`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   o  11:a139f71be9da A_A
   |
@@ -609,6 +627,7 @@ successors-set. (report [A,B] not [A] + [A,B])
 
   $ newcase subset
   $ hg debugobsolete `getid A_0` `getid A_2`
+  obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
   $ hg debugsuccessorssets --hidden 'desc('A_0')'
   007dc284c1f8

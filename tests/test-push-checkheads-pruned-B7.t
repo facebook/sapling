@@ -51,7 +51,9 @@ Test setup
   $ hg up 'desc(B0)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(A1)"`
+  obsoleted 1 changesets
   $ hg debugobsolete --record-parents `getid "desc(A1)"`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   x  ba93660aff8d (draft): A1
   |

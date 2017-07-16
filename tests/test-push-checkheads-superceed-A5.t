@@ -49,6 +49,7 @@ Test setup
   created new head
   $ mkcommit A1
   $ hg debugobsolete `getid "desc(A0)" ` `getid "desc(A1)"`
+  obsoleted 1 changesets
   $ hg log -G --hidden
   @  ba93660aff8d (draft): A1
   |
