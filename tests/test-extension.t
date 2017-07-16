@@ -164,7 +164,6 @@ Check "from __future__ import absolute_import" support for external libraries
   $ touch $TESTTMP/libroot/mod/__init__.py
   $ echo "s = 'libroot/mod/ambig.py'" > $TESTTMP/libroot/mod/ambig.py
 
-#if absimport
   $ cat > $TESTTMP/libroot/mod/ambigabs.py <<EOF
   > from __future__ import absolute_import
   > import ambig # should load "libroot/ambig.py"
@@ -178,7 +177,6 @@ Check "from __future__ import absolute_import" support for external libraries
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
   ambigabs.s=libroot/ambig.py
   $TESTTMP/a (glob)
-#endif
 
 #if no-py3k
   $ cat > $TESTTMP/libroot/mod/ambigrel.py <<EOF
@@ -277,7 +275,7 @@ Check absolute/relative import of extension specific modules
   $TESTTMP/a (glob)
 #endif
 
-#if demandimport absimport
+#if demandimport
 
 Examine whether module loading is delayed until actual referring, even
 though module is imported with "absolute_import" feature.

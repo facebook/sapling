@@ -585,12 +585,6 @@ def has_debhelper():
 def has_demandimport():
     return os.environ.get('HGDEMANDIMPORT') != 'disable'
 
-@check("absimport", "absolute_import in __future__")
-def has_absimport():
-    import __future__
-    from mercurial import util
-    return util.safehasattr(__future__, "absolute_import")
-
 @check("py3k", "running with Python 3.x")
 def has_py3k():
     return 3 == sys.version_info[0]
