@@ -11,7 +11,6 @@ import errno
 import gc
 import os
 import random
-import select
 import signal
 import socket
 import struct
@@ -488,15 +487,15 @@ class unixforkingservice(object):
                 # waiting for recv() will receive ECONNRESET.
                 self._unlinksocket()
                 exiting = True
+            ready = selector.select(timeout=h.pollinterval)
+            if not ready:
+                # only exit if we completed all queued requests
+                if exiting:
+                    break
+                continue
             try:
-                ready = selector.select(timeout=h.pollinterval)
-                if not ready:
-                    # only exit if we completed all queued requests
-                    if exiting:
-                        break
-                    continue
                 conn, _addr = self._sock.accept()
-            except (select.error, socket.error) as inst:
+            except socket.error as inst:
                 if inst.args[0] == errno.EINTR:
                     continue
                 raise
