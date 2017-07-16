@@ -519,6 +519,7 @@ class unixforkingservice(object):
                         self.ui.traceback(force=True)
                     finally:
                         os._exit(255)
+        selector.close()
 
     def _sigchldhandler(self, signal, frame):
         self._reapworkers(os.WNOHANG)
