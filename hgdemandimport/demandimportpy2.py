@@ -26,26 +26,16 @@ These imports will not be delayed:
 
 from __future__ import absolute_import
 
+import __builtin__ as builtins
 import contextlib
 import os
 import sys
-
-# __builtin__ in Python 2, builtins in Python 3.
-try:
-    import __builtin__ as builtins
-except ImportError:
-    import builtins
 
 contextmanager = contextlib.contextmanager
 
 _origimport = __import__
 
 nothing = object()
-
-# Python 3 doesn't have relative imports nor level -1.
-level = -1
-if sys.version_info[0] >= 3:
-    level = 0
 
 def _hgextimport(importfunc, name, globals, *args, **kwargs):
     try:
@@ -172,7 +162,7 @@ class _demandmod(object):
 
 _pypy = '__pypy__' in sys.builtin_module_names
 
-def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
+def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
     if locals is None or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
         return _hgextimport(_origimport, name, globals, locals, fromlist, level)
