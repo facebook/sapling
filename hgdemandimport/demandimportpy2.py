@@ -46,7 +46,6 @@ nothing = object()
 level = -1
 if sys.version_info[0] >= 3:
     level = 0
-_import = _origimport
 
 def _hgextimport(importfunc, name, globals, *args, **kwargs):
     try:
@@ -99,7 +98,7 @@ class _demandmod(object):
     def _load(self):
         if not self._module:
             head, globals, locals, after, level, modrefs = self._data
-            mod = _hgextimport(_import, head, globals, locals, None, level)
+            mod = _hgextimport(_origimport, head, globals, locals, None, level)
             if mod is self:
                 # In this case, _hgextimport() above should imply
                 # _demandimport(). Otherwise, _hgextimport() never
@@ -176,14 +175,14 @@ _pypy = '__pypy__' in sys.builtin_module_names
 def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
     if locals is None or name in ignore or fromlist == ('*',):
         # these cases we can't really delay
-        return _hgextimport(_import, name, globals, locals, fromlist, level)
+        return _hgextimport(_origimport, name, globals, locals, fromlist, level)
     elif not fromlist:
         # import a [as b]
         if '.' in name: # a.b
             base, rest = name.split('.', 1)
             # email.__init__ loading email.mime
             if globals and globals.get('__name__', None) == base:
-                return _import(name, globals, locals, fromlist, level)
+                return _origimport(name, globals, locals, fromlist, level)
             # if a is already demand-loaded, add b to its submodule list
             if base in locals:
                 if isinstance(locals[base], _demandmod):

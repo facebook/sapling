@@ -1672,7 +1672,7 @@ Even though the extension fails during uisetup, hg is still basically usable:
     File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
       self._load()
     File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
-      mod = _hgextimport(_import, head, globals, locals, None, level)
+      mod = _hgextimport(_origimport, head, globals, locals, None, level)
     File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
       return importfunc(name, globals, *args, **kwargs)
   ImportError: No module named bdiff
