@@ -89,12 +89,13 @@ def wrapresolve(orig, ui, repo, *pats, **opts):
         # load up and commit the merge state again to make sure the driver gets
         # written out
         if backup is not None:
-            ms = merge.mergestate.read(repo)
-            if opts.get('skip'):
-                # force people to resolve by hand
-                for f in ms.driverresolved():
-                    ms.mark(f, 'u')
-            ms.commit()
+            with repo.wlock():
+                ms = merge.mergestate.read(repo)
+                if opts.get('skip'):
+                    # force people to resolve by hand
+                    for f in ms.driverresolved():
+                        ms.mark(f, 'u')
+                ms.commit()
         return ret
 
 def _rundriver(repo, ms, op, wctx, labels):
