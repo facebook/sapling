@@ -2074,7 +2074,7 @@ def debugssl(ui, repo, source=None, **opts):
     of the SSL error is likely another issue.
     '''
     if pycompat.osname != 'nt':
-        raise error.Abort(_('Certificate chain building is only possible on '
+        raise error.Abort(_('certificate chain building is only possible on '
                             'Windows'))
 
     if not source:
@@ -2092,7 +2092,7 @@ def debugssl(ui, repo, source=None, **opts):
     elif url.scheme == 'ssh':
         addr = (url.host, url.port or 22)
     else:
-        raise error.Abort(_("Only https and ssh connections are supported"))
+        raise error.Abort(_("only https and ssh connections are supported"))
 
     from . import win32
 
@@ -2103,19 +2103,19 @@ def debugssl(ui, repo, source=None, **opts):
         s.connect(addr)
         cert = s.getpeercert(True)
 
-        ui.status(_('Checking the certificate chain for %s.\n') % url.host)
+        ui.status(_('checking the certificate chain for %s\n') % url.host)
 
         complete = win32.checkcertificatechain(cert, build=False)
 
         if not complete:
-            ui.status(_('The certificate chain is incomplete.  Updating... '))
+            ui.status(_('certificate chain is incomplete, updating... '))
 
             if not win32.checkcertificatechain(cert):
-                ui.status(_('Failed.\n'))
+                ui.status(_('failed.\n'))
             else:
-                ui.status(_('Done.\n'))
+                ui.status(_('done.\n'))
         else:
-            ui.status(_('The full certificate chain is available.\n'))
+            ui.status(_('full certificate chain is available\n'))
     finally:
         s.close()
 
