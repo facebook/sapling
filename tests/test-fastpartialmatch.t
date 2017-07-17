@@ -325,12 +325,15 @@ Test cache rebuilding
   $ cd ../cloned2
   $ printf '[fastpartialmatch]\nunsortedthreshold=1' >> .hg/hgrc
   $ hg up -q ac536ed8bde0
+  $ [ -f .hg/partialindexneedrebuild ]
+  [1]
   $ mkcommit commit
   $ hg log -r . -T '{node}\n'
   587cd78c6d0eb0259484b09a5983bcc2973f2245
 
 Next command should set that cache needs rebuilding
   $ hg log -r 587cd78c6d0eb0259 > /dev/null
+  $ [ -f .hg/partialindexneedrebuild ]
   $ hg debugfastpartialmatchstat
   generation number: 0
   index will be rebuilt on the next pull
@@ -368,16 +371,14 @@ to be rebuilt
   file: b7, entries: 1, out of them 1 sorted
   file: fd, entries: 1, out of them 0 sorted
 
-Make a commit and change partialindex permissions to non-writabble. Then do
+Make a commit and change .hg permissions to non-writabble. Then do
 partial lookup that should write needrebuild file but it couldn't because
 of permissions. Make sure it doesn't throw and just log the problem
   $ mkcommit commitpermissionissue
-  $ chmod u-w .hg/store/partialindex
+  $ chmod u-w .hg/
   $ hg log -r . -T '{node}\n'
   2b52832374dd7e499a1fbd172f1d75e13ee32477
   $ hg log -r 2b5283237
-  error happened while triggering rebuild: [Errno 13] Permission denied: '$TESTTMP/cloned2/.hg/store/partialindex/needrebuild'
-  error happened while triggering rebuild: [Errno 13] Permission denied: '$TESTTMP/cloned2/.hg/store/partialindex/needrebuild'
   changeset:   7:2b52832374dd
   tag:         tip
   parent:      4:587cd78c6d0e
@@ -385,7 +386,8 @@ of permissions. Make sure it doesn't throw and just log the problem
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitpermissionissue
   
-  $ chmod u+w .hg/store/partialindex
+  error happened while triggering rebuild: [Errno 13] Permission denied: '$TESTTMP/cloned2/.hg/partialindexneedrebuild'
+  $ chmod u+w .hg/
 
 Temporarily disable the fastpartialmatch and make a commit.
 Bump index generation number version and check that index was deleted after next

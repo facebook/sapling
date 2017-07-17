@@ -32,6 +32,9 @@ rev numbers for nodes should be correct too.
     # if fastpartialmatch extension was temporarily disabled then index may miss
     # some entries. By bumping generationnumber we can force index to be rebuilt
     generationnumber = 0
+
+    # internal config setting. Marks index as needed to be rebuilt
+    rebuild = False
 '''
 
 from collections import defaultdict
@@ -39,6 +42,7 @@ from functools import partial
 from hgext3rd.generic_bisect import bisect
 
 from mercurial import (
+    dispatch,
     error,
     extensions,
     localrepo,
@@ -80,7 +84,7 @@ _usebisect = True
 _current_version = 1
 _tip = 'run `hg debugrebuildpartialindex` to fix the issue'
 _unsortedthreshold = 1000
-_needrebuildfile = os.path.join(_partialindexdir, 'needrebuild')
+_needrebuildfile = 'partialindexneedrebuild'
 
 def extsetup(ui):
     extensions.wrapfunction(revlog.revlog, '_partialmatch', _partialmatch)
@@ -96,6 +100,18 @@ def extsetup(ui):
     global _unsortedthreshold
     _unsortedthreshold = ui.configint('fastpartialmatch', 'unsortedthreshold',
                                       _unsortedthreshold)
+
+    def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
+        res = orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
+        if ui.config('fastpartialmatch', 'rebuild', False):
+            _markneedsrebuilding(ui, repo)
+        return res
+
+    extensions.wrapfunction(dispatch, 'runcommand', _runcommand)
+    # Add _needrebuildfile to the list of files that don't need to be protected
+    # by wlock. Race conditions on _needrebuildfile are not important because
+    # at worst it may trigger rebuilding twice or postpone index rebuilding.
+    localrepo.localrepository._wlockfreeprefix.add(_needrebuildfile)
 
 def reposetup(ui, repo):
     isbundlerepo = repo.url().startswith('bundle:')
@@ -204,7 +220,7 @@ def debugfastpartialmatchstat(ui, repo):
         return 1
     generationnum = _readgenerationnum(ui, repo.svfs)
     ui.write(_('generation number: %d\n') % generationnum)
-    if _needsrebuilding(repo.svfs):
+    if _needsrebuilding(repo):
         ui.write(_('index will be rebuilt on the next pull\n'))
     indexvfs = vfsmod.vfs(repo.svfs.join(_partialindexdir))
     for indexfile in sorted(_iterindexfile(indexvfs)):
@@ -257,6 +273,7 @@ def _rebuildpartialindex(ui, repo, skiphexnodes=None):
         vfs.rmtree(tempdir)
 
     vfs.mkdir(tempdir)
+    _unmarkneedsrebuilding(repo)
 
     filesdata = defaultdict(list)
     for rev in repo.changelog:
@@ -315,7 +332,7 @@ def _changegrouphook(ui, repo, hooktype, **hookargs):
         for rev in xrange(rev_first, rev_last + 1):
             newhexnodes.append(repo[rev].hex())
 
-        if not vfs.exists(_partialindexdir) or _needsrebuilding(vfs):
+        if not vfs.exists(_partialindexdir) or _needsrebuilding(repo):
             _rebuildpartialindex(ui, repo, skiphexnodes=set(newhexnodes))
         for i, hexnode in enumerate(newhexnodes):
             _recordcommit(ui, tr, hexnode, rev_first + i, vfs)
@@ -441,7 +458,7 @@ def _findcandidates(ui, vfs, id):
                     if hexnode.startswith(id):
                         candidates[node] = rev
                 if unsorted >= _unsortedthreshold:
-                    _markneedsrebuilding(ui, vfs)
+                    ui.setconfig('fastpartialmatch', 'rebuild', True)
     except Exception as e:
         ui.warn(_('failed to read partial index %s : %s\n') %
                 (fullpath, str(e)))
@@ -479,15 +496,18 @@ class _header(object):
         sortedcount = cls._intpacker.unpack(sortedcount)[0]
         return cls(sortedcount)
 
-def _needsrebuilding(vfs):
-    return vfs.exists(_needrebuildfile)
+def _needsrebuilding(repo):
+    return repo.vfs.exists(_needrebuildfile)
 
-def _markneedsrebuilding(ui, vfs):
+def _markneedsrebuilding(ui, repo):
     try:
-        with vfs(_needrebuildfile, 'w') as fileobj:
+        with repo.vfs(_needrebuildfile, 'w') as fileobj:
             fileobj.write('content') # content doesn't matter
     except IOError as e:
         ui.warn(_('error happened while triggering rebuild: %s\n') % e)
+
+def _unmarkneedsrebuilding(repo):
+    repo.vfs.tryunlink(_needrebuildfile)
 
 def _readgenerationnum(ui, vfs):
     generationnumfile = os.path.join(_partialindexdir, 'generationnum')
