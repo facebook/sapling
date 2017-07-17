@@ -36,20 +36,31 @@ FileInode::State::State(
     FileInode* inode,
     mode_t m,
     const folly::Optional<Hash>& h)
-    : data(std::make_shared<FileData>(inode, h)),
+    : data(std::make_shared<FileData>(inode)),
       mode(m),
       creationTime(std::chrono::system_clock::now()),
-      hash(h) {}
+      hash(h) {
+  if (!h.hasValue()) {
+    auto filePath = inode->getLocalPath();
+    file = Overlay::openFile(filePath.c_str());
+  }
+}
 
 FileInode::State::State(
     FileInode* inode,
     mode_t m,
     folly::File&& file,
     dev_t rdev)
-    : data(std::make_shared<FileData>(inode, std::move(file))),
+    : data(std::make_shared<FileData>(inode)),
       mode(m),
       rdev(rdev),
-      creationTime(std::chrono::system_clock::now()) {}
+      creationTime(std::chrono::system_clock::now()),
+      file(std::move(file)) {}
+/*
+ * Defined State Destructor explicitly to avoid including
+ * some header files in FileInode.h
+ */
+FileInode::State::~State() = default;
 
 FileInode::FileInode(
     fuse_ino_t ino,
@@ -141,7 +152,7 @@ std::shared_ptr<FileData> FileInode::getOrLoadData() {
 std::shared_ptr<FileData> FileInode::getOrLoadData(
     const folly::Synchronized<State>::LockedPtr& state) {
   if (!state->data) {
-    state->data = std::make_shared<FileData>(this, state->hash);
+    state->data = std::make_shared<FileData>(this);
   }
 
   return state->data;

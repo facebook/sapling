@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
 #include <chrono>
@@ -124,6 +125,7 @@ class FileInode : public InodeBase {
   struct State {
     State(FileInode* inode, mode_t mode, const folly::Optional<Hash>& hash);
     State(FileInode* inode, mode_t mode, folly::File&& hash, dev_t rdev = 0);
+    ~State();
 
     std::shared_ptr<FileData> data;
     mode_t mode{0};
@@ -133,6 +135,19 @@ class FileInode : public InodeBase {
      */
     std::chrono::system_clock::time_point creationTime;
     folly::Optional<Hash> hash;
+
+    /**
+     * data members from FileData
+     */
+
+    /// if backed by tree, the data from the tree, else nullptr.
+    std::unique_ptr<Blob> blob;
+
+    /// if backed by an overlay file, whether the sha1 xattr is valid
+    bool sha1Valid{false};
+
+    /// if backed by an overlay file, the open file descriptor
+    folly::File file;
   };
 
   /**

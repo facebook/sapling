@@ -44,15 +44,7 @@ class Overlay;
  */
 class FileData {
  public:
-  /** Construct a FileData from an overlay entry */
-  FileData(FileInode* inode, const folly::Optional<Hash>& hash);
-
-  /** Construct a freshly created FileData from a pre-opened File object.
-   * file must be moved in (it has no copy constructor) and must have
-   * been created by a call to Overlay::createFile.  This constructor
-   * is used in the TreeInode::create case and is required to implement
-   * O_EXCL correctly. */
-  FileData(FileInode* inode, folly::File&& file);
+  explicit FileData(FileInode* inode);
 
   /**
    * Read up to size bytes from the file at the specified offset.
@@ -129,14 +121,6 @@ class FileData {
    */
   FileInode* const inode_{nullptr};
 
-  /// if backed by tree, the data from the tree, else nullptr.
-  std::unique_ptr<Blob> blob_;
-
-  /// if backed by an overlay file, the open file descriptor
-  folly::File file_;
-
-  /// if backed by an overlay file, whether the sha1 xattr is valid
-  bool sha1Valid_{false};
 };
 }
 }
