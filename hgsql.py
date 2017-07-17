@@ -93,7 +93,7 @@ def uisetup(ui):
         if not util.safehasattr(transaction, "repo"):
             return orig(self, transaction, ifh, dfh, entry, data, link, offset)
 
-        e = struct.unpack(revlog.indexformatng, entry)
+        e = revlog.indexformatng.unpack(entry)
         node = hex(e[7])
         data0 = data[0] or ''
         transaction.repo.pendingrevs.append((self.indexfile, link,
@@ -1019,7 +1019,7 @@ def wraprepo(repo):
             expectedrevs = set()
             for revision in self.pendingrevs:
                 path, linkrev, rev, node, entry, data0, data1 = revision
-                e = struct.unpack(revlog.indexformatng, entry)
+                e = revlog.indexformatng.unpack(entry)
                 _, _, _, base, _, p1r, p2r, _ = e
 
                 if p1r != nullrev and not (path, p1r) in pending:
@@ -1247,7 +1247,7 @@ class EntryRevlog(revlog.revlog):
         curr = len(self)
         offset = self.end(curr - 1)
 
-        e = struct.unpack(revlog.indexformatng, entry)
+        e = revlog.indexformatng.unpack(entry)
         offsettype, datalen, textlen, base, link, p1r, p2r, node = e
 
         # The first rev has special metadata encoded in it that should be
@@ -1788,7 +1788,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
             linkrev = revdata[3]
             packedentry = revdata[4]
 
-            sqlentry = struct.unpack(revlog.indexformatng, packedentry)
+            sqlentry = revlog.indexformatng.unpack(packedentry)
 
             rl = revlogcache.get(path)
             if rl is None:
