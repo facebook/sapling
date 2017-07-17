@@ -197,16 +197,17 @@ class GitHandler(object):
         self._map_hg_real = map_hg_real
 
     def save_map(self, map_file):
-        file = self.repo.vfs(map_file, 'w+', atomictemp=True)
-        map_hg = self._map_hg
-        buf = cStringIO.StringIO()
-        bwrite = buf.write
-        for hgsha, gitsha in map_hg.iteritems():
-            bwrite("%s %s\n" % (gitsha, hgsha))
-        file.write(buf.getvalue())
-        buf.close()
-        # If this complains, atomictempfile no longer has close
-        file.close()
+        with self.repo.wlock():
+            file = self.repo.vfs(map_file, 'w+', atomictemp=True)
+            map_hg = self._map_hg
+            buf = cStringIO.StringIO()
+            bwrite = buf.write
+            for hgsha, gitsha in map_hg.iteritems():
+                bwrite("%s %s\n" % (gitsha, hgsha))
+            file.write(buf.getvalue())
+            buf.close()
+            # If this complains, atomictempfile no longer has close
+            file.close()
 
     def load_tags(self):
         self.tags = {}
