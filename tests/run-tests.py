@@ -413,6 +413,10 @@ def parseargs(args, parser):
         parser.error('--chg does not work when --with-hg is specified '
                      '(use --with-chg instead)')
 
+    if options.color == 'always' and not pygmentspresent:
+        sys.stderr.write('warning: --color=always ignored because '
+                         'pygments is not installed\n')
+
     global useipv6
     if options.ipv6:
         useipv6 = checksocketfamily('AF_INET6')
