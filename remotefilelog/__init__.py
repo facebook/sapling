@@ -11,6 +11,7 @@ only download them ondemand as needed.
 Configs:
 
     ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
+    ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
@@ -744,14 +745,24 @@ def pull(orig, ui, repo, *pats, **opts):
     if shallowrepo.requirement in repo.requirements:
         # prefetch if it's configured
         prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
+        bgrepack = repo.ui.configbool('remotefilelog',
+                                      'backgroundrepack', False)
+        bgprefetch = repo.ui.configbool('remotefilelog',
+                                        'backgroundprefetch', False)
+
         if prefetchrevset:
             ui.status(_("prefetching file contents\n"))
             revs = repo.revs(prefetchrevset)
             base = repo['.'].rev()
-            repo.prefetch(revs, base=base)
-
-        if repo.ui.configbool('remotefilelog', 'backgroundrepack'):
+            if bgprefetch:
+                repo.backgroundprefetch(prefetchrevset, repack=bgrepack)
+            else:
+                repo.prefetch(revs, base=base)
+                if bgrepack:
+                    repackmod.backgroundrepack(repo, incremental=True)
+        elif bgrepack:
             repackmod.backgroundrepack(repo, incremental=True)
+
     return result
 
 def exchangepull(orig, repo, remote, *args, **kwargs):
@@ -829,8 +840,14 @@ def debughistorypack(ui, path, **opts):
 def debugwaitonrepack(ui, repo, **opts):
     return debugcommands.debugwaitonrepack(repo)
 
+@command('debugwaitonprefetch', [
+    ], _('hg debugwaitonprefetch'))
+def debugwaitonprefetch(ui, repo, **opts):
+    return debugcommands.debugwaitonprefetch(repo)
+
 @command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
+    ('', 'repack', False, _('run repack after prefetch')),
     ] + commands.walkopts, _('hg prefetch [OPTIONS] [FILE...]'))
 def prefetch(ui, repo, *pats, **opts):
     """prefetch file revisions from the server
@@ -850,7 +867,7 @@ def prefetch(ui, repo, *pats, **opts):
 
     revs = scmutil.revrange(repo, opts.get('rev'))
 
-    repo.prefetch(revs, pats=pats, opts=opts)
+    repo.prefetch(revs, repack=opts.get('repack'), pats=pats, opts=opts)
 
 @command('repack', [
      ('', 'background', None, _('run in a background process'), None),

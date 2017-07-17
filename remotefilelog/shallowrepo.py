@@ -5,10 +5,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from hgext3rd.extutil import runshellcommand
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
 from mercurial import error, localrepo, util, match, scmutil
 from . import remotefilelog, remotefilectx, fileserverclient
+import repack as repackmod
 import constants, shallowutil
 from contentstore import remotefilelogcontentstore, unioncontentstore
 from contentstore import remotecontentstore
@@ -169,9 +171,36 @@ def wraprepo(repo):
             return super(shallowrepository, self).commitctx(ctx,
                                                             error=error)
 
-        def prefetch(self, revs, base=None, pats=None, opts=None):
-            """Prefetches all the necessary file revisions for the given revs
+        def backgroundprefetch(self, revs, base=None, repack=False, pats=None,
+                               opts=None):
+            """Runs prefetch in background with optional repack
             """
+            cmd = util.hgcmd() + ['-R', repo.origroot, 'prefetch']
+            if repack:
+                cmd.append('--repack')
+            if revs:
+                cmd += ['-r', revs]
+
+            cmd = ' '.join(map(util.shellquote, cmd))
+            msg = _("(running background prefetch)\n")
+
+            repo.ui.warn(msg)
+            runshellcommand(cmd, os.environ)
+
+        def prefetch(self, revs, base=None, repack=False, pats=None, opts=None):
+            """Prefetches all the necessary file revisions for the given revs
+            Optionally runs repack in background
+            """
+            with repo._lock(repo.svfs, 'prefetchlock', True, None, None,
+                            _('prefetching in %s') % repo.origroot):
+                self._prefetch(revs, base, repack, pats, opts)
+
+            # Run repack in background
+            if repack:
+                repackmod.backgroundrepack(repo, incremental=True)
+
+        def _prefetch(self, revs, base=None, repack=False, pats=None,
+                      opts=None):
             fallbackpath = self.fallbackpath
             if fallbackpath:
                 # If we know a rev is on the server, we should fetch the server

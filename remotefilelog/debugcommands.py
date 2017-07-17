@@ -272,3 +272,8 @@ def debugwaitonrepack(repo):
     with repo._lock(repo.svfs, "repacklock", True, None,
                          None, _('repacking %s') % repo.origroot):
         pass
+
+def debugwaitonprefetch(repo):
+    with repo._lock(repo.svfs, "prefetchlock", True, None,
+                         None, _('prefetching in %s') % repo.origroot):
+        pass
