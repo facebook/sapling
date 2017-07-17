@@ -101,9 +101,6 @@ if os.name != 'nt':
     except ImportError:
         pass
 
-if not sys.stderr.isatty(): # check if the terminal is capable
-    with_color = False
-
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
@@ -415,13 +412,6 @@ def parseargs(args, parser):
         # chg shares installation location with hg
         parser.error('--chg does not work when --with-hg is specified '
                      '(use --with-chg instead)')
-
-    global with_color
-    if options.color != 'auto':
-        if options.color == 'never':
-            with_color = False
-        else: # 'always', for testing purposes
-            with_color = True
 
     global useipv6
     if options.ipv6:
@@ -1573,6 +1563,17 @@ class TestResult(unittest._TextTestResult):
         # Data stored for the benefit of generating xunit reports.
         self.successes = []
         self.faildata = {}
+
+        global with_color
+        if not self.stream.isatty(): # check if the terminal is capable
+            with_color = False
+
+        if options.color != 'auto':
+            if options.color == 'never':
+                with_color = False
+            else: # 'always', for testing purposes
+                if pygmentspresent:
+                    with_color = True
 
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
