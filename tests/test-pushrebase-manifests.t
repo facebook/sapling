@@ -123,6 +123,7 @@ Add a hook to the server to make it spin until .hg/flag exists.
   > import time, sys, os, random
   > def waithook(ui, repo, **kwargs):
   >   start = time.time()
+  >   repo._wlockfreeprefix.add('hookrunning')
   >   repo.vfs.write('hookrunning', '')
   >   while not repo.vfs.exists('flag'):
   >     if time.time() - start > 5:
