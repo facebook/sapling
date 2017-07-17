@@ -1564,16 +1564,12 @@ class TestResult(unittest._TextTestResult):
         self.successes = []
         self.faildata = {}
 
-        global with_color
-        if not self.stream.isatty(): # check if the terminal is capable
-            with_color = False
-
-        if options.color != 'auto':
-            if options.color == 'never':
-                with_color = False
-            else: # 'always', for testing purposes
-                if pygmentspresent:
-                    with_color = True
+        if options.color == 'auto':
+            self.color = with_color and self.stream.isatty()
+        elif options.color == 'never':
+            self.color = False
+        else: # 'always', for testing purposes
+            self.color = pygmentspresent
 
     def addFailure(self, test, reason):
         self.failures.append((test, reason))
@@ -1652,7 +1648,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if with_color and pygmentspresent:
+                        if self.color and pygmentspresent:
                             line = pygments.highlight(
                                     line,
                                     lexers.DiffLexer(),
