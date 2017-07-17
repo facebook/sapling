@@ -656,7 +656,8 @@ def _rebase(orig, ui, repo, **opts):
         if prev == common:
             result = hg.update(repo, dest.node())
             if bmactive(repo):
-                bookmarks.update(repo, [prev.node()], dest.node())
+                with repo.wlock():
+                    bookmarks.update(repo, [prev.node()], dest.node())
             return result
 
     return orig(ui, repo, **opts)
