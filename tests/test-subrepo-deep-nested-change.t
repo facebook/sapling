@@ -263,6 +263,12 @@ A deleted subrepo file is flagged as dirty, like the top level repo
   $ hg update -Cq .
   $ rm -r ../wdir
 
+  $ hg archive -S -qr 'wdir()' ../wdir \
+  >            --config 'experimental.archivemetatemplate=archived {node|short}\n'
+  $ cat ../wdir/.hg_archival.txt
+  archived ffffffffffff
+  $ rm -r ../wdir
+
 .. but first take a detour through some deep removal testing
 
   $ hg remove -S -I 're:.*.txt' .

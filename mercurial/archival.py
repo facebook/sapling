@@ -97,7 +97,8 @@ def buildmetadata(ctx):
     )
 
     opts = {
-        'template': default
+        'template': repo.ui.config('experimental', 'archivemetatemplate',
+                                   default)
     }
 
     out = util.stringio()
