@@ -521,6 +521,31 @@ def aftercommit(repo, node):
 
     prunetemporaryincludes(repo)
 
+def _updateconfigandrefreshwdir(repo, includes, excludes, profiles,
+                                force=False):
+    """Update the sparse config and working directory state."""
+    raw = repo.vfs.tryread('sparse')
+    oldincludes, oldexcludes, oldprofiles = parseconfig(repo.ui, raw)
+
+    oldstatus = repo.status()
+    oldmatch = matcher(repo)
+
+    # TODO remove this try..except once the matcher integrates better
+    # with dirstate. We currently have to write the updated config
+    # because that will invalidate the matcher cache and force a
+    # re-read. We ideally want to update the cached matcher on the
+    # repo instance then flush the new config to disk once wdir is
+    # updated. But this requires massive rework to matcher() and its
+    # consumers.
+
+    writeconfig(repo, includes, excludes, profiles)
+
+    try:
+        return refreshwdir(repo, oldstatus, oldmatch, force=force)
+    except Exception:
+        writeconfig(repo, oldincludes, oldexcludes, oldprofiles)
+        raise
+
 def clearrules(repo, force=False):
     """Clears include/exclude rules from the sparse config.
 
@@ -534,10 +559,7 @@ def clearrules(repo, force=False):
         if not includes and not excludes:
             return
 
-        oldstatus = repo.status()
-        oldmatch = matcher(repo)
-        writeconfig(repo, set(), set(), profiles)
-        refreshwdir(repo, oldstatus, oldmatch, force=force)
+        _updateconfigandrefreshwdir(repo, set(), set(), profiles, force=force)
 
 def importfromfiles(repo, opts, paths, force=False):
     """Import sparse config rules from files.
@@ -548,10 +570,7 @@ def importfromfiles(repo, opts, paths, force=False):
     with repo.wlock():
         # read current configuration
         raw = repo.vfs.tryread('sparse')
-        oincludes, oexcludes, oprofiles = parseconfig(repo.ui, raw)
-        includes, excludes, profiles = map(
-                set, (oincludes, oexcludes, oprofiles))
-
+        includes, excludes, profiles = parseconfig(repo.ui, raw)
         aincludes, aexcludes, aprofiles = activeconfig(repo)
 
         # Import rules on top; only take in rules that are not yet
@@ -577,25 +596,8 @@ def importfromfiles(repo, opts, paths, force=False):
             includecount = len(includes - aincludes)
             excludecount = len(excludes - aexcludes)
 
-            oldstatus = repo.status()
-            oldsparsematch = matcher(repo)
-
-            # TODO remove this try..except once the matcher integrates better
-            # with dirstate. We currently have to write the updated config
-            # because that will invalidate the matcher cache and force a
-            # re-read. We ideally want to update the cached matcher on the
-            # repo instance then flush the new config to disk once wdir is
-            # updated. But this requires massive rework to matcher() and its
-            # consumers.
-            writeconfig(repo, includes, excludes, profiles)
-
-            try:
-                fcounts = map(
-                    len,
-                    refreshwdir(repo, oldstatus, oldsparsematch, force=force))
-            except Exception:
-                writeconfig(repo, oincludes, oexcludes, oprofiles)
-                raise
+            fcounts = map(len, _updateconfigandrefreshwdir(
+                repo, includes, excludes, profiles, force=force))
 
         printchanges(repo.ui, opts, profilecount, includecount, excludecount,
                      *fcounts)
@@ -610,8 +612,6 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
     The new config is written out and a working directory refresh is performed.
     """
     with repo.wlock():
-        oldmatcher = matcher(repo)
-
         raw = repo.vfs.tryread('sparse')
         oldinclude, oldexclude, oldprofiles = parseconfig(repo.ui, raw)
 
@@ -623,8 +623,6 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
             newinclude = set(oldinclude)
             newexclude = set(oldexclude)
             newprofiles = set(oldprofiles)
-
-        oldstatus = repo.status()
 
         if any(pat.startswith('/') for pat in pats):
             repo.ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
@@ -648,20 +646,11 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
         excludecount = (len(newexclude - oldexclude) -
                         len(oldexclude - newexclude))
 
-        # TODO clean up this writeconfig() + try..except pattern once we can.
-        # See comment in importfromfiles() explaining it.
-        writeconfig(repo, newinclude, newexclude, newprofiles)
+        fcounts = map(len, _updateconfigandrefreshwdir(
+            repo, newinclude, newexclude, newprofiles, force=force))
 
-        try:
-            fcounts = map(
-                len,
-                refreshwdir(repo, oldstatus, oldmatcher, force=force))
-
-            printchanges(repo.ui, opts, profilecount, includecount,
-                         excludecount, *fcounts)
-        except Exception:
-            writeconfig(repo, oldinclude, oldexclude, oldprofiles)
-            raise
+        printchanges(repo.ui, opts, profilecount, includecount,
+                     excludecount, *fcounts)
 
 def printchanges(ui, opts, profilecount=0, includecount=0, excludecount=0,
                  added=0, dropped=0, conflicting=0):
