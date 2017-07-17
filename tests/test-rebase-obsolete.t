@@ -13,6 +13,7 @@ Enable obsolete
   > publish=False
   > [extensions]
   > rebase=
+  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Setup rebase canonical repo
@@ -896,55 +897,202 @@ Create the changes that we will rebase
   rebasing 22:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
-rebase source is obsoleted (issue5198)
----------------------------------
+Rebase merge where successor of one parent is equal to destination (issue5198)
 
-  $ hg clone base amended
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd amended
-  $ hg up 9520eea781bc
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ echo 1 >> E
-  $ hg commit --amend -m "E'" -d "0 0"
+  $ hg init p1-succ-is-dest
+  $ cd p1-succ-is-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d B -s D
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  rebasing 4:66f1a38021c9 "F" (F tip)
   $ hg log -G
-  @  9:69abe8906104 E'
-  |
-  | o  7:02de42196ebe H
-  | |
-  | | o  6:eea13746799a G
-  | |/|
-  | o |  5:24b6387c8c8c F
-  |/ /
-  | x  4:9520eea781bc E
-  |/
-  | o  3:32af7686d403 D
-  | |
-  | o  2:5fddd98957c8 C
-  | |
-  | o  1:42ccdea3bb16 B
-  |/
-  o  0:cd010b8cd998 A
-  
-  $ hg rebase -d . -s 9520eea781bc
-  note: not rebasing 4:9520eea781bc "E", already in destination as 9:69abe8906104 "E'"
-  rebasing 6:eea13746799a "G"
-  $ hg log -G
-  o    10:17be06e82e95 G
+  o    5:50e9d60b99c6 F
   |\
-  | @  9:69abe8906104 E'
-  | |
-  +---o  7:02de42196ebe H
-  | |
-  o |  5:24b6387c8c8c F
+  | | x  4:66f1a38021c9 F
+  | |/|
+  | o |  3:7fb047a69f22 E
+  | | |
+  | | x  2:b18e25de2cf5 D
+  | |/
+  o |  1:112478962961 B
   |/
-  | o  3:32af7686d403 D
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of other parent is equal to destination
+
+  $ hg init p2-succ-is-dest
+  $ cd p2-succ-is-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+BROKEN: Raises an exception
+  $ hg rebase -d B -s E 2>&1 | grep AssertionError:
+  AssertionError: no base found to rebase on (defineparents called wrong)
+  $ hg log -G
+  o    4:66f1a38021c9 F
+  |\
+  | x  3:7fb047a69f22 E
   | |
-  | o  2:5fddd98957c8 C
-  | |
-  | o  1:42ccdea3bb16 B
+  o |  2:b18e25de2cf5 D
   |/
-  o  0:cd010b8cd998 A
+  | o  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of one parent is ancestor of destination
+
+  $ hg init p1-succ-in-dest
+  $ cd p1-succ-in-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -s D
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  rebasing 5:66f1a38021c9 "F" (F tip)
+BROKEN: not rebased on top of requested destination (C)
+  $ hg log -G
+  o    6:50e9d60b99c6 F
+  |\
+  | | x  5:66f1a38021c9 F
+  | |/|
+  +-----o  4:26805aba1e60 C
+  | | |
+  | o |  3:7fb047a69f22 E
+  | | |
+  | | x  2:b18e25de2cf5 D
+  | |/
+  o |  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of other parent is ancestor of destination
+
+  $ hg init p2-succ-in-dest
+  $ cd p2-succ-in-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+BROKEN: Raises an exception
+  $ hg rebase -d C -s E 2>&1 | grep AssertionError:
+  AssertionError: no base found to rebase on (defineparents called wrong)
+  $ hg log -G
+  o    5:66f1a38021c9 F
+  |\
+  | | o  4:26805aba1e60 C
+  | | |
+  | x |  3:7fb047a69f22 E
+  | | |
+  o | |  2:b18e25de2cf5 D
+  |/ /
+  | o  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of one parent is ancestor of destination
+
+  $ hg init p1-succ-in-dest-b
+  $ cd p1-succ-in-dest-b
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -b F
+  rebasing 2:b18e25de2cf5 "D" (D)
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  rebasing 5:66f1a38021c9 "F" (F tip)
+  $ hg log -G
+  o  7:9ed45af61fa0 F
+  |
+  o  6:8f47515dda15 D
+  |
+  | x    5:66f1a38021c9 F
+  | |\
+  o | |  4:26805aba1e60 C
+  | | |
+  | | x  3:7fb047a69f22 E
+  | | |
+  | x |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of other parent is ancestor of destination
+
+  $ hg init p2-succ-in-dest-b
+  $ cd p2-succ-in-dest-b
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -b F
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  rebasing 3:7fb047a69f22 "E" (E)
+  rebasing 5:66f1a38021c9 "F" (F tip)
+BROKEN: This should have resulted in a rebased F with one parent, just like in
+the test case above
+  $ hg log -G
+  o    7:c1e6f26e339d F
+  |\
+  | o  6:533690786a86 E
+  |/
+  | x    5:66f1a38021c9 F
+  | |\
+  o | |  4:26805aba1e60 C
+  | | |
+  | | x  3:7fb047a69f22 E
+  | | |
+  | x |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
   
   $ cd ..
 
