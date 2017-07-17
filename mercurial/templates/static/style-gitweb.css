@@ -175,6 +175,7 @@ pre.sourcelines.stripes > span:target {
 
 .description {
     font-family: monospace;
+    white-space: pre;
 }
 
 /* Followlines */
