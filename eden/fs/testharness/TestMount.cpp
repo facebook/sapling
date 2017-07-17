@@ -83,8 +83,12 @@ void TestMount::initialize(Hash initialCommitHash) {
   // Create edenMount_
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
-  edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
+  edenMount_ = EdenMount::create(
+                   std::move(config_),
+                   std::move(objectStore),
+                   AbsolutePathPiece(),
+                   &stats_)
+                   .get();
 }
 
 void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
@@ -94,8 +98,12 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   // Create edenMount_
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
-  edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
+  edenMount_ = EdenMount::create(
+                   std::move(config_),
+                   std::move(objectStore),
+                   AbsolutePathPiece(),
+                   &stats_)
+                   .get();
 }
 
 void TestMount::initialize(
@@ -115,8 +123,12 @@ void TestMount::initialize(
   // Create edenMount_
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
-  edenMount_ = EdenMount::makeShared(
-      std::move(config_), std::move(objectStore), AbsolutePathPiece(), &stats_);
+  edenMount_ = EdenMount::create(
+                   std::move(config_),
+                   std::move(objectStore),
+                   AbsolutePathPiece(),
+                   &stats_)
+                   .get();
 }
 
 Hash TestMount::nextCommitHash() {
@@ -168,8 +180,12 @@ void TestMount::remount() {
   edenMount_.reset();
 
   // Create a new EdenMount object.
-  edenMount_ = EdenMount::makeShared(
-      std::move(config), std::move(objectStore), AbsolutePathPiece(), &stats_);
+  edenMount_ = EdenMount::create(
+                   std::move(config),
+                   std::move(objectStore),
+                   AbsolutePathPiece(),
+                   &stats_)
+                   .get();
 }
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {

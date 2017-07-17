@@ -87,11 +87,13 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
 
-  auto edenMount = EdenMount::makeShared(
-      std::move(initialConfig),
-      std::move(objectStore),
-      server_->getSocketPath(),
-      server_->getStats());
+  // TODO: return future rather than blocking on get()
+  auto edenMount = EdenMount::create(
+                       std::move(initialConfig),
+                       std::move(objectStore),
+                       server_->getSocketPath(),
+                       server_->getStats())
+                       .get();
   // We gave ownership of initialConfig to the EdenMount.
   // Get a pointer to it that we can use for the remainder of this function.
   auto* config = edenMount->getConfig();

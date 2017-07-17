@@ -56,15 +56,16 @@ static const uint64_t globalProcessGeneration =
 // for a given mount instance.
 static std::atomic<uint16_t> mountGeneration{0};
 
-std::shared_ptr<EdenMount> EdenMount::makeShared(
+folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
     folly::ThreadLocal<fusell::EdenStats>* globalStats) {
-  return std::shared_ptr<EdenMount>{
+  auto mount = std::shared_ptr<EdenMount>{
       new EdenMount{
           std::move(config), std::move(objectStore), socketPath, globalStats},
       EdenMountDeleter{}};
+  return mount->initialize().then([mount] { return mount; });
 }
 
 EdenMount::EdenMount(
@@ -83,45 +84,46 @@ EdenMount::EdenMount(
       dirstate_(std::make_unique<Dirstate>(this)),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
-      socketPath_(socketPath) {
+      socketPath_(socketPath) {}
+
+folly::Future<folly::Unit> EdenMount::initialize() {
+  auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
+  parentCommits_.wlock()->setParents(*parents);
+
+  return createRootInode(*parents).then(
+      [this, parents](TreeInodePtr initTreeNode) {
+        auto maxInodeNumber = overlay_->getMaxRecordedInode();
+        inodeMap_->initialize(std::move(initTreeNode), maxInodeNumber);
+        XLOG(DBG2) << "Initializing eden mount " << getPath()
+                   << "; max existing inode number is " << maxInodeNumber;
+
+        // Record the transition from no snapshot to the current snapshot in
+        // the journal.  This also sets things up so that we can carry the
+        // snapshot id forward through subsequent journal entries.
+        auto delta = std::make_unique<JournalDelta>();
+        delta->toHash = parents->parent1();
+        journal_.wlock()->addDelta(std::move(delta));
+        return setupDotEden(getRootInode());
+      });
+}
+
+folly::Future<TreeInodePtr> EdenMount::createRootInode(
+    const ParentCommits& parentCommits) {
   // Load the overlay, if present.
   auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
-
-  // Load the current snapshot ID from the on-disk config
-  auto parents = config_->getParentCommits();
-  parentCommits_.wlock()->setParents(parents);
-
-  // Create the inode for the root of the tree using the hash contained
-  // within the snapshotPath file
-  TreeInodePtr rootInode;
   if (rootOverlayDir) {
-    rootInode = TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value()));
-  } else {
-    // Note: We immediately wait on the Future returned by
-    // getTreeForCommit().
-    //
-    // Loading the root tree may take a while.  It may be better to refactor
-    // the code slightly so that this is done in a helper function, before the
-    // EdenMount constructor is called.
-    auto rootTree = objectStore_->getTreeForCommit(parents.parent1()).get();
-    rootInode = TreeInodePtr::makeNew(this, std::move(rootTree));
+    return folly::makeFuture<TreeInodePtr>(
+        TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value())));
   }
-  auto maxInodeNumber = overlay_->getMaxRecordedInode();
+  return objectStore_->getTreeForCommit(parentCommits.parent1())
+      .then([this](std::unique_ptr<Tree> tree) {
+        return TreeInodePtr::makeNew(this, std::move(tree));
+      });
+}
 
-  inodeMap_->initialize(std::move(rootInode), maxInodeNumber);
-  XLOG(DBG2) << "Initializing eden mount " << getPath()
-             << "; max existing inode number is " << maxInodeNumber;
-
-  // Record the transition from no snapshot to the current snapshot in
-  // the journal.  This also sets things up so that we can carry the
-  // snapshot id forward through subsequent journal entries.
-  auto delta = std::make_unique<JournalDelta>();
-  delta->toHash = parents.parent1();
-  journal_.wlock()->addDelta(std::move(delta));
-
+folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
-  getRootInode()
-      ->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
+  return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName})
       .then([=](TreeInodePtr dotEdenInode) {
         // We could perhaps do something here to ensure that it reflects the
         // current state of the world, but for the moment we trust that it
@@ -139,8 +141,7 @@ EdenMount::EdenMount(
         dotEdenInode->symlink(
             PathComponentPiece{"client"},
             config_->getClientDirectory().stringPiece());
-      })
-      .get();
+      });
 }
 
 EdenMount::~EdenMount() {}
@@ -226,8 +227,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
 
   return folly::collect(fromTreeFuture, toTreeFuture)
-      .then([this, ctx](
-          std::tuple<unique_ptr<Tree>, unique_ptr<Tree>> treeResults) {
+      .then([this,
+             ctx](std::tuple<unique_ptr<Tree>, unique_ptr<Tree>> treeResults) {
         auto& fromTree = std::get<0>(treeResults);
         auto& toTree = std::get<1>(treeResults);
 

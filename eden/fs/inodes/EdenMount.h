@@ -62,19 +62,13 @@ class SharedRenameLock;
  */
 class EdenMount {
  public:
-  EdenMount(
-      std::unique_ptr<ClientConfig> config,
-      std::unique_ptr<ObjectStore> objectStore,
-      AbsolutePathPiece socketPath,
-      folly::ThreadLocal<fusell::EdenStats>* globalStats);
-
   /**
    * Create a shared_ptr to an EdenMount.
    *
-   * This is a convenience helper function to create the shared_ptr using an
-   * EdenMountDeleter.
+   * Create an EdenMount instance and asynchronously initialize it. We use
+   * an EdenMountDeleter.
    */
-  static std::shared_ptr<EdenMount> makeShared(
+  static folly::Future<std::shared_ptr<EdenMount>> create(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
@@ -301,9 +295,25 @@ class EdenMount {
   friend class RenameLock;
   friend class SharedRenameLock;
 
+  EdenMount(
+      std::unique_ptr<ClientConfig> config,
+      std::unique_ptr<ObjectStore> objectStore,
+      AbsolutePathPiece socketPath,
+      folly::ThreadLocal<fusell::EdenStats>* globalStats);
+
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
+
+  /**
+   * Asynchronous EdenMount initialization - post instantiation.
+   */
+  folly::Future<folly::Unit> initialize();
+
+  folly::Future<TreeInodePtr> createRootInode(
+      const ParentCommits& parentCommits);
+
+  folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
 
   /**
    * Private destructor.
