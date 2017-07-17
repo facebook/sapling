@@ -88,7 +88,6 @@ origenviron = os.environ.copy()
 osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
-with_color = False
 pygmentspresent = False
 # ANSI color is unsupported prior to Windows 10
 if os.name != 'nt':
@@ -96,7 +95,6 @@ if os.name != 'nt':
         import pygments
         import pygments.lexers as lexers
         import pygments.formatters as formatters
-        with_color = True
         pygmentspresent = True
     except ImportError:
         pass
@@ -1569,7 +1567,7 @@ class TestResult(unittest._TextTestResult):
         self.faildata = {}
 
         if options.color == 'auto':
-            self.color = with_color and self.stream.isatty()
+            self.color = pygmentspresent and self.stream.isatty()
         elif options.color == 'never':
             self.color = False
         else: # 'always', for testing purposes
