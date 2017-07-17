@@ -1,6 +1,8 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > undo = $TESTDIR/../hgext3rd/undo.py
+  > [undo]
+  > _duringundologlock=1
   > EOF
 
 Build up a repo
@@ -121,7 +123,7 @@ Test gap in data (extension dis and enabled)
   $ touch a5 && hg add a5 && hg ci -ma5
   $ hg debugundohistory -l
   0: ci -ma5
-  1: 
+  1:  -- gap in log -- 
   2: commit -m words
   3: update master
   4: commit --amend
@@ -148,7 +150,7 @@ Index out of bound error
   [255]
 
 Revset tests
-  $ hg log -G -r 'draft()' --hidden >> c1
+  $ hg log -G -r 'draft()' --hidden > /dev/null
   $ hg debugundohistory -n 0
   command:
   	ci -ma5
@@ -171,3 +173,9 @@ Test 'olddraft([NUM])' revset
   @  8[tip][master]   aa430c8afedf   1970-01-01 00:00 +0000   test
   |    a5
   ~
+
+Test undolog lock
+  $ hg log --config hooks.duringundologlock="sleep 1" > /dev/null &
+  $ sleep 0.1
+  $ hg st --time
+  time: real [1-9]*\..* (re)
