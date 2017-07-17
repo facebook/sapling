@@ -1648,7 +1648,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if self.color and pygmentspresent:
+                        if self.color:
                             line = pygments.highlight(
                                     line,
                                     lexers.DiffLexer(),
