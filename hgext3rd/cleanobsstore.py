@@ -42,6 +42,7 @@ def reposetup(ui, repo):
     if repo.obsstore:
         indicestodelete = []
         if _needtoclean(ui, repo):
+            repo._wlockfreeprefix.add(_cleanedobsstorefile)
             _write(ui, 'your obsstore is big, checking if we can clean it')
             badusernames = ui.configlist('cleanobsstore', 'badusernames')
             for index, data in enumerate(repo.obsstore._all):
