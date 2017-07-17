@@ -30,6 +30,15 @@ class fileindexapi(indexapi):
         self._nodemap = os.path.join(root, 'nodemap')
         self._bookmarkmap = os.path.join(root, 'bookmarkmap')
         self._metadatamap = os.path.join(root, 'nodemetadatamap')
+        self._lock = None
+
+    def __enter__(self):
+        self._lock = self._repo.wlock()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._lock:
+            self._lock.__exit__(exc_type, exc_val, exc_tb)
 
     def addbundle(self, bundleid, nodesctx):
         for node in nodesctx:
