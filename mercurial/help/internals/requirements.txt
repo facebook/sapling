@@ -117,3 +117,14 @@ one manifest per directory (as opposed to a single flat manifest).
 Support for this requirement was added in Mercurial 3.4 (released
 August 2015). The requirement is currently experimental and is
 disabled by default.
+
+exp-sparse
+==========
+
+The working directory is sparse (only contains a subset of files).
+
+Support for this requirement was added in Mercurial 4.3 (released
+August 2017). This requirement and feature are experimental and may
+disappear in a future Mercurial release. The requirement will only
+be present on repositories that have opted in to a sparse working
+directory.

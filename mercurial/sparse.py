@@ -18,6 +18,7 @@ from . import (
     match as matchmod,
     merge as mergemod,
     pycompat,
+    scmutil,
     util,
 )
 
@@ -522,13 +523,14 @@ def aftercommit(repo, node):
     prunetemporaryincludes(repo)
 
 def _updateconfigandrefreshwdir(repo, includes, excludes, profiles,
-                                force=False):
+                                force=False, removing=False):
     """Update the sparse config and working directory state."""
     raw = repo.vfs.tryread('sparse')
     oldincludes, oldexcludes, oldprofiles = parseconfig(repo.ui, raw)
 
     oldstatus = repo.status()
     oldmatch = matcher(repo)
+    oldrequires = set(repo.requirements)
 
     # TODO remove this try..except once the matcher integrates better
     # with dirstate. We currently have to write the updated config
@@ -538,11 +540,21 @@ def _updateconfigandrefreshwdir(repo, includes, excludes, profiles,
     # updated. But this requires massive rework to matcher() and its
     # consumers.
 
-    writeconfig(repo, includes, excludes, profiles)
+    if 'exp-sparse' in oldrequires and removing:
+        repo.requirements.discard('exp-sparse')
+        scmutil.writerequires(repo.vfs, repo.requirements)
+    elif 'exp-sparse' not in oldrequires:
+        repo.requirements.add('exp-sparse')
+        scmutil.writerequires(repo.vfs, repo.requirements)
 
     try:
+        writeconfig(repo, includes, excludes, profiles)
         return refreshwdir(repo, oldstatus, oldmatch, force=force)
     except Exception:
+        if repo.requirements != oldrequires:
+            repo.requirements.clear()
+            repo.requirements |= oldrequires
+            scmutil.writerequires(repo.vfs, repo.requirements)
         writeconfig(repo, oldincludes, oldexcludes, oldprofiles)
         raise
 
@@ -647,7 +659,8 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
                         len(oldexclude - newexclude))
 
         fcounts = map(len, _updateconfigandrefreshwdir(
-            repo, newinclude, newexclude, newprofiles, force=force))
+            repo, newinclude, newexclude, newprofiles, force=force,
+            removing=reset))
 
         printchanges(repo.ui, opts, profilecount, includecount,
                      excludecount, *fcounts)

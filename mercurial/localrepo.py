@@ -288,6 +288,7 @@ class localrepository(object):
         'shared',
         'relshared',
         'dotencode',
+        'exp-sparse',
     }
     openerreqs = {
         'revlogv1',
@@ -418,6 +419,11 @@ class localrepository(object):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+
+        if 'exp-sparse' in self.requirements and not sparse.enabled:
+            raise error.RepoError(_('repository is using sparse feature but '
+                                    'sparse is not enabled; enable the '
+                                    '"sparse" extensions to access'))
 
         self.store = store.store(
                 self.requirements, self.sharedpath, vfsmod.vfs)
