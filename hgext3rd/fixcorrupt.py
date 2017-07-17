@@ -146,19 +146,18 @@ def fixcorrupt(ui, repo, *args, **opts):
 
     # truncate revlogs
     backupprefix = '%s-' % int(time.time())
-    with repo.wlock():
-        with repo.lock():
-            repo.destroying()
-            for name, log in logs:
-                rev, linkrev = badrevs[name]
-                ui.write(_('%s: will lose %d revisions\n')
-                         % (name, len(log) - 1 - rev))
-                truncate(ui, repo, log.datafile, log.start(rev), dryrun,
-                         backupprefix)
-                truncate(ui, repo, log.indexfile, rev * 64, dryrun,
-                         backupprefix)
-            if dryrun:
-                ui.write(_('re-run with --no-dryrun to fix.\n'))
-            else:
-                ui.write(_('fix completed. re-run to check more revisions.\n'))
-            repo.destroyed()
+    with repo.wlock(), repo.lock():
+        repo.destroying()
+        for name, log in logs:
+            rev, linkrev = badrevs[name]
+            ui.write(_('%s: will lose %d revisions\n')
+                     % (name, len(log) - 1 - rev))
+            truncate(ui, repo, log.datafile, log.start(rev), dryrun,
+                     backupprefix)
+            truncate(ui, repo, log.indexfile, rev * 64, dryrun,
+                     backupprefix)
+        if dryrun:
+            ui.write(_('re-run with --no-dryrun to fix.\n'))
+        else:
+            ui.write(_('fix completed. re-run to check more revisions.\n'))
+        repo.destroyed()

@@ -54,9 +54,8 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
 
 def safelog(repo, command):
     if repo is not None:# some hg commands don't require repo
-        with repo.lock():
-            with repo.transaction("undolog"):
-                log(repo.filtered('visible'), command)
+        with repo.lock(), repo.transaction("undolog"):
+            log(repo.filtered('visible'), command)
 
 def log(repo, command):
     newnodes = {

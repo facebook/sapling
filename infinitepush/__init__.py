@@ -740,13 +740,11 @@ def _saveremotebookmarks(repo, newbookmarks, remote):
 def _savelocalbookmarks(repo, bookmarks):
     if not bookmarks:
         return
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('bookmark') as tr:
-                for scratchbook, node in bookmarks.iteritems():
-                    changectx = repo[node]
-                    repo._bookmarks[scratchbook] = changectx.node()
-                repo._bookmarks.recordchange(tr)
+    with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
+        for scratchbook, node in bookmarks.iteritems():
+            changectx = repo[node]
+            repo._bookmarks[scratchbook] = changectx.node()
+        repo._bookmarks.recordchange(tr)
 
 def _findcommonincoming(orig, *args, **kwargs):
     common, inc, remoteheads = orig(*args, **kwargs)
@@ -1014,14 +1012,13 @@ def bundle2scratchbranch(op, part):
                                     bundlesize=len(bundledata)):
                     key = store.write(bundledata)
 
-        with logservicecall(log, 'index', newheadscount=newheadscount):
-            with index:
-                if key:
-                    index.addbundle(key, nodesctx)
-                if bookmark:
-                    index.addbookmark(bookmark, bookmarknode)
-                    _maybeaddpushbackpart(op, bookmark, bookmarknode,
-                                          bookprevnode, params)
+        with logservicecall(log, 'index', newheadscount=newheadscount), index:
+            if key:
+                index.addbundle(key, nodesctx)
+            if bookmark:
+                index.addbookmark(bookmark, bookmarknode)
+                _maybeaddpushbackpart(op, bookmark, bookmarknode,
+                                      bookprevnode, params)
         log(scratchbranchparttype, eventtype='success',
             elapsedms=(time.time() - parthandlerstart) * 1000)
 
@@ -1063,12 +1060,11 @@ def bundle2scratchbookmarks(op, part):
         else:
             todelete.append(bookmark)
     log = _getorcreateinfinitepushlogger(op)
-    with logservicecall(log, scratchbookmarksparttype):
-        with index:
-            if todelete:
-                index.deletebookmarks(todelete)
-            if toinsert:
-                index.addmanybookmarks(toinsert)
+    with logservicecall(log, scratchbookmarksparttype), index:
+        if todelete:
+            index.deletebookmarks(todelete)
+        if toinsert:
+            index.addmanybookmarks(toinsert)
 
 def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
     if params.get('pushbackbookmarks'):

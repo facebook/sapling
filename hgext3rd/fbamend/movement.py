@@ -111,37 +111,36 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     elif opts.get('rebase', False):
         raise error.Abort(_("cannot use both --merge and --rebase"))
 
-    with repo.wlock():
-        with repo.lock():
-            # Record the active bookmark, if any.
-            bookmark = repo._activebookmark
-            noactivate = opts.get('no_activate_bookmark', False)
-            movebookmark = opts.get('move_bookmark', False)
+    with repo.wlock(), repo.lock():
+        # Record the active bookmark, if any.
+        bookmark = repo._activebookmark
+        noactivate = opts.get('no_activate_bookmark', False)
+        movebookmark = opts.get('move_bookmark', False)
 
-            with repo.transaction('moverelative') as tr:
-                # Find the desired changeset. May potentially perform rebase.
-                try:
-                    target = _findtarget(ui, repo, n, opts, reverse)
-                except error.InterventionRequired:
-                    # Rebase failed. Need to manually close transaction to allow
-                    # `hg rebase --continue` to work correctly.
-                    tr.close()
-                    raise
+        with repo.transaction('moverelative') as tr:
+            # Find the desired changeset. May potentially perform rebase.
+            try:
+                target = _findtarget(ui, repo, n, opts, reverse)
+            except error.InterventionRequired:
+                # Rebase failed. Need to manually close transaction to allow
+                # `hg rebase --continue` to work correctly.
+                tr.close()
+                raise
 
-                # Move the active bookmark if neccesary. Needs to happen before
-                # we update to avoid getting a 'leaving bookmark X' message.
-                if movebookmark and bookmark is not None:
-                    _setbookmark(repo, tr, bookmark, target)
+            # Move the active bookmark if neccesary. Needs to happen before
+            # we update to avoid getting a 'leaving bookmark X' message.
+            if movebookmark and bookmark is not None:
+                _setbookmark(repo, tr, bookmark, target)
 
-                # Update to the target changeset.
-                commands.update(ui, repo, rev=target)
+            # Update to the target changeset.
+            commands.update(ui, repo, rev=target)
 
-                # Print out the changeset we landed on.
-                _showchangesets(ui, repo, revs=[target])
+            # Print out the changeset we landed on.
+            _showchangesets(ui, repo, revs=[target])
 
-                # Activate the bookmark on the new changeset.
-                if not noactivate and not movebookmark:
-                    _activate(ui, repo, target)
+            # Activate the bookmark on the new changeset.
+            if not noactivate and not movebookmark:
+                _activate(ui, repo, target)
 
 def _findtarget(ui, repo, n, opts, reverse):
     """Find the appropriate target changeset for `hg previous` and

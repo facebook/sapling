@@ -475,14 +475,12 @@ def _fixbookmarks(repo, revs):
     """
     repo = repo.unfiltered()
     cl = repo.changelog
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('movebookmarks') as tr:
-                for rev in revs:
-                    latest = cl.node(common.latest(repo, rev))
-                    for bm in repo.nodebookmarks(cl.node(rev)):
-                        repo._bookmarks[bm] = latest
-                repo._bookmarks.recordchange(tr)
+    with repo.wlock(), repo.lock(), repo.transaction('movebookmarks') as tr:
+        for rev in revs:
+            latest = cl.node(common.latest(repo, rev))
+            for bm in repo.nodebookmarks(cl.node(rev)):
+                repo._bookmarks[bm] = latest
+        repo._bookmarks.recordchange(tr)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):

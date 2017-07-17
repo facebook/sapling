@@ -56,30 +56,29 @@ def unamend(ui, repo, **opts):
     if curctx.children():
         raise error.Abort(_("cannot unamend in the middle of a stack"))
 
-    with repo.wlock():
-        with repo.lock():
-            repobookmarks = repo._bookmarks
-            ctxbookmarks = curctx.bookmarks()
-            changedfiles = []
-            wctx = repo[None]
-            wm = wctx.manifest()
-            cm = precctx.manifest()
-            dirstate = repo.dirstate
-            diff = cm.diff(wm)
-            changedfiles.extend(diff.iterkeys())
+    with repo.wlock(), repo.lock():
+        repobookmarks = repo._bookmarks
+        ctxbookmarks = curctx.bookmarks()
+        changedfiles = []
+        wctx = repo[None]
+        wm = wctx.manifest()
+        cm = precctx.manifest()
+        dirstate = repo.dirstate
+        diff = cm.diff(wm)
+        changedfiles.extend(diff.iterkeys())
 
-            tr = repo.transaction('unamend')
-            with dirstate.parentchange():
-                dirstate.rebuild(precnode, cm, changedfiles)
-                # we want added and removed files to be shown
-                # properly, not with ? and ! prefixes
-                for filename, data in diff.iteritems():
-                    if data[0][0] is None:
-                        dirstate.add(filename)
-                    if data[1][0] is None:
-                        dirstate.remove(filename)
-            for book in ctxbookmarks:
-                repobookmarks[book] = precnode
-            repobookmarks.recordchange(tr)
-            obsolete.createmarkers(repo, [(curctx, (precctx,))])
-            tr.close()
+        tr = repo.transaction('unamend')
+        with dirstate.parentchange():
+            dirstate.rebuild(precnode, cm, changedfiles)
+            # we want added and removed files to be shown
+            # properly, not with ? and ! prefixes
+            for filename, data in diff.iteritems():
+                if data[0][0] is None:
+                    dirstate.add(filename)
+                if data[1][0] is None:
+                    dirstate.remove(filename)
+        for book in ctxbookmarks:
+            repobookmarks[book] = precnode
+        repobookmarks.recordchange(tr)
+        obsolete.createmarkers(repo, [(curctx, (precctx,))])
+        tr.close()

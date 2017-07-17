@@ -448,10 +448,8 @@ def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
     ('l', 'limit', '10000000', _(''))
     ], _('hg backfilltree [OPTIONS]'))
 def backfilltree(ui, repo, *args, **opts):
-    with repo.wlock():
-        with repo.lock():
-            with repo.transaction('backfilltree') as tr:
-                _backfill(tr, repo, int(opts.get('limit')))
+    with repo.wlock(), repo.lock(), repo.transaction('backfilltree') as tr:
+        _backfill(tr, repo, int(opts.get('limit')))
 
 def _backfill(tr, repo, limit):
     ui = repo.ui

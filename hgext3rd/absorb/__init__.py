@@ -642,17 +642,16 @@ class fixupstate(object):
 
     def commit(self):
         """commit changes. update self.finalnode, self.replacemap"""
-        with self.repo.wlock(): # update bookmarks
-            with self.repo.lock(): # commit
-                with self.repo.transaction('absorb') as tr:
-                    self._commitstack()
-                    self._movebookmarks(tr)
-                    if self.repo['.'].node() in self.replacemap:
-                        self._moveworkingdirectoryparent()
-                    if self._useobsolete:
-                        self._obsoleteoldcommits()
-                if not self._useobsolete: # strip must be outside transactions
-                    self._stripoldcommits()
+        with self.repo.wlock(), self.repo.lock():
+            with self.repo.transaction('absorb') as tr:
+                self._commitstack()
+                self._movebookmarks(tr)
+                if self.repo['.'].node() in self.replacemap:
+                    self._moveworkingdirectoryparent()
+                if self._useobsolete:
+                    self._obsoleteoldcommits()
+            if not self._useobsolete: # strip must be outside transactions
+                self._stripoldcommits()
         return self.finalnode
 
     def printchunkstats(self):

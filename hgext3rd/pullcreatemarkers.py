@@ -56,8 +56,7 @@ def _pull(orig, ui, repo, *args, **opts):
     if not tocreate:
         return r
 
-    with unfiltered.lock():
-        with unfiltered.transaction('pullcreatemarkers'):
-            obsolete.createmarkers(unfiltered, tocreate)
+    with unfiltered.lock(), unfiltered.transaction('pullcreatemarkers'):
+        obsolete.createmarkers(unfiltered, tocreate)
 
     return r

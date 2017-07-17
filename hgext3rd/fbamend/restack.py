@@ -26,39 +26,38 @@ def restack(ui, repo, rebaseopts=None):
     if rebaseopts is None:
         rebaseopts = {}
 
-    with repo.wlock():
-        with repo.lock():
-            cmdutil.checkunfinished(repo)
-            cmdutil.bailifchanged(repo)
+    with repo.wlock(), repo.lock():
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
 
-            # Find the latest version of the changeset at the botom of the
-            # current stack. If the current changeset is public, simply start
-            # restacking from the current changeset with the assumption
-            # that there are non-public changesets higher up.
-            base = repo.revs('::. & draft()').first()
-            latest = (common.latest(repo, base) if base is not None
-                                         else repo['.'].rev())
-            targets = _findrestacktargets(repo, latest)
+        # Find the latest version of the changeset at the botom of the
+        # current stack. If the current changeset is public, simply start
+        # restacking from the current changeset with the assumption
+        # that there are non-public changesets higher up.
+        base = repo.revs('::. & draft()').first()
+        latest = (common.latest(repo, base) if base is not None
+                                     else repo['.'].rev())
+        targets = _findrestacktargets(repo, latest)
 
-            with repo.transaction('restack') as tr:
-                # Attempt to stabilize all changesets that are or will be (after
-                # rebasing) descendants of base.
-                for rev in targets:
-                    try:
-                        common.restackonce(ui, repo, rev, rebaseopts)
-                    except error.InterventionRequired:
-                        tr.close()
-                        raise
+        with repo.transaction('restack') as tr:
+            # Attempt to stabilize all changesets that are or will be (after
+            # rebasing) descendants of base.
+            for rev in targets:
+                try:
+                    common.restackonce(ui, repo, rev, rebaseopts)
+                except error.InterventionRequired:
+                    tr.close()
+                    raise
 
-                # Ensure that we always end up on the latest version of the
-                # current changeset. Usually, this will be taken care of
-                # by the rebase operation. However, in some cases (such as
-                # if we are on the precursor of the base changeset) the
-                # rebase will not update to the latest version, so we need
-                # to do this manually.
-                successor = repo.revs('allsuccessors(.)').last()
-                if successor is not None:
-                    commands.update(ui, repo, rev=successor)
+            # Ensure that we always end up on the latest version of the
+            # current changeset. Usually, this will be taken care of
+            # by the rebase operation. However, in some cases (such as
+            # if we are on the precursor of the base changeset) the
+            # rebase will not update to the latest version, so we need
+            # to do this manually.
+            successor = repo.revs('allsuccessors(.)').last()
+            if successor is not None:
+                commands.update(ui, repo, rev=successor)
 
 def _findrestacktargets(repo, base):
     """Starting from the given base revision, do a BFS forwards through
