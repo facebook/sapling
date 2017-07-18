@@ -39,7 +39,6 @@ from mercurial import (
     commands,
     copies as copiesmod,
     dispatch,
-    error,
     extensions,
     filemerge,
     node,
