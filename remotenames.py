@@ -31,7 +31,7 @@ from mercurial import hg
 from mercurial import localrepo
 from mercurial import lock as lockmod
 from mercurial import namespaces
-from mercurial import obsolete
+from mercurial import obsutil
 from mercurial import repair
 from mercurial import repoview
 from mercurial import revset
@@ -911,7 +911,7 @@ def expushdiscoverybookmarks(pushop):
             msg = _('remote bookmark revision is not in local repo')
             hint = _('pull and merge or rebase or use --non-forward-move')
             raise error.Abort(msg, hint=hint)
-        foreground = obsolete.foreground(repo, [repo.lookup(old)])
+        foreground = obsutil.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
             msg = _('pushed rev is not in the foreground of remote bookmark')
             hint = _('use --non-forward-move flag to complete arbitrary moves')
