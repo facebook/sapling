@@ -32,7 +32,9 @@ Config::
 
 from __future__ import absolute_import
 
+import itertools
 import json
+import operator
 import re
 
 from mercurial.node import bin, nullid
@@ -44,9 +46,11 @@ from mercurial import (
     error,
     mdiff,
     obsutil,
+    parser,
     patch,
     registrar,
     scmutil,
+    smartset,
     tags,
     url as urlmod,
     util,
@@ -484,11 +488,77 @@ def _confirmbeforesend(repo, revs):
 
     return True
 
-def querydrev(repo, params, stack=False):
+# Small language to specify differential revisions. Support symbols: (), :X,
+# +, and -.
+
+_elements = {
+    # token-type: binding-strength, primary, prefix, infix, suffix
+    '(':      (12, None, ('group', 1, ')'), None, None),
+    ':':      (8, None, ('ancestors', 8), None, None),
+    '&':      (5,  None, None, ('and_', 5), None),
+    '+':      (4,  None, None, ('add', 4), None),
+    '-':      (4,  None, None, ('sub', 4), None),
+    ')':      (0,  None, None, None, None),
+    'symbol': (0, 'symbol', None, None, None),
+    'end':    (0, None, None, None, None),
+}
+
+def _tokenize(text):
+    text = text.replace(' ', '') # remove space
+    view = memoryview(text) # zero-copy slice
+    special = '():+-&'
+    pos = 0
+    length = len(text)
+    while pos < length:
+        symbol = ''.join(itertools.takewhile(lambda ch: ch not in special,
+                                             view[pos:]))
+        if symbol:
+            yield ('symbol', symbol, pos)
+            pos += len(symbol)
+        else: # special char
+            yield (text[pos], None, pos)
+            pos += 1
+    yield ('end', None, pos)
+
+def _parse(text):
+    tree, pos = parser.parser(_elements).parse(_tokenize(text))
+    if pos != len(text):
+        raise error.ParseError('invalid token', pos)
+    return tree
+
+def _parsedrev(symbol):
+    """str -> int or None, ex. 'D45' -> 45; '12' -> 12; 'x' -> None"""
+    if symbol.startswith('D') and symbol[1:].isdigit():
+        return int(symbol[1:])
+    if symbol.isdigit():
+        return int(symbol)
+
+def _prefetchdrevs(tree):
+    """return ({single-drev-id}, {ancestor-drev-id}) to prefetch"""
+    drevs = set()
+    ancestordrevs = set()
+    op = tree[0]
+    if op == 'symbol':
+        r = _parsedrev(tree[1])
+        if r:
+            drevs.add(r)
+    elif op == 'ancestors':
+        r, a = _prefetchdrevs(tree[1])
+        drevs.update(r)
+        ancestordrevs.update(r)
+        ancestordrevs.update(a)
+    else:
+        for t in tree[1:]:
+            r, a = _prefetchdrevs(t)
+            drevs.update(r)
+            ancestordrevs.update(a)
+    return drevs, ancestordrevs
+
+def querydrev(repo, spec):
     """return a list of "Differential Revision" dicts
 
-    params is the input of "differential.query" API, and is expected to match
-    just a single Differential Revision.
+    spec is a string using a simple query language, see docstring in phabread
+    for details.
 
     A "Differential Revision dict" looks like:
 
@@ -525,26 +595,13 @@ def querydrev(repo, params, stack=False):
             "repositoryPHID": "PHID-REPO-hub2hx62ieuqeheznasv",
             "sourcePath": null
         }
-
-    If stack is True, return a list of "Differential Revision dict"s in an
-    order that the latter ones depend on the former ones. Otherwise, return a
-    list of a unique "Differential Revision dict".
     """
-    prefetched = {} # {id or phid: drev}
     def fetch(params):
         """params -> single drev or None"""
         key = (params.get(r'ids') or params.get(r'phids') or [None])[0]
         if key in prefetched:
             return prefetched[key]
-        # Otherwise, send the request. If we're fetching a stack, be smarter
-        # and fetch more ids in one batch, even if it could be unnecessary.
-        batchparams = params
-        if stack and len(params.get(r'ids', [])) == 1:
-            i = int(params[r'ids'][0])
-            # developer config: phabricator.batchsize
-            batchsize = repo.ui.configint('phabricator', 'batchsize', 12)
-            batchparams = {'ids': range(max(1, i - batchsize), i + 1)}
-        drevs = callconduit(repo, 'differential.query', batchparams)
+        drevs = callconduit(repo, 'differential.query', params)
         # Fill prefetched with the result
         for drev in drevs:
             prefetched[drev[r'phid']] = drev
@@ -553,23 +610,62 @@ def querydrev(repo, params, stack=False):
             raise error.Abort(_('cannot get Differential Revision %r') % params)
         return prefetched[key]
 
-    visited = set()
-    result = []
-    queue = [params]
-    while queue:
-        params = queue.pop()
-        drev = fetch(params)
-        if drev[r'id'] in visited:
-            continue
-        visited.add(drev[r'id'])
-        result.append(drev)
-        if stack:
+    def getstack(topdrevids):
+        """given a top, get a stack from the bottom, [id] -> [id]"""
+        visited = set()
+        result = []
+        queue = [{r'ids': [i]} for i in topdrevids]
+        while queue:
+            params = queue.pop()
+            drev = fetch(params)
+            if drev[r'id'] in visited:
+                continue
+            visited.add(drev[r'id'])
+            result.append(int(drev[r'id']))
             auxiliary = drev.get(r'auxiliary', {})
             depends = auxiliary.get(r'phabricator:depends-on', [])
             for phid in depends:
                 queue.append({'phids': [phid]})
-    result.reverse()
-    return result
+        result.reverse()
+        return smartset.baseset(result)
+
+    # Initialize prefetch cache
+    prefetched = {} # {id or phid: drev}
+
+    tree = _parse(spec)
+    drevs, ancestordrevs = _prefetchdrevs(tree)
+
+    # developer config: phabricator.batchsize
+    batchsize = repo.ui.configint('phabricator', 'batchsize', 12)
+
+    # Prefetch Differential Revisions in batch
+    tofetch = set(drevs)
+    for r in ancestordrevs:
+        tofetch.update(range(max(1, r - batchsize), r + 1))
+    if drevs:
+        fetch({r'ids': list(tofetch)})
+    getstack(list(ancestordrevs))
+
+    # Walk through the tree, return smartsets
+    def walk(tree):
+        op = tree[0]
+        if op == 'symbol':
+            drev = _parsedrev(tree[1])
+            if drev:
+                return smartset.baseset([drev])
+            else:
+                raise error.Abort(_('unknown symbol: %s') % tree[1])
+        elif op in {'and_', 'add', 'sub'}:
+            assert len(tree) == 3
+            return getattr(operator, op)(walk(tree[1]), walk(tree[2]))
+        elif op == 'group':
+            return walk(tree[1])
+        elif op == 'ancestors':
+            return getstack(walk(tree[1]))
+        else:
+            raise error.ProgrammingError('illegal tree: %r' % tree)
+
+    return [prefetched[r] for r in walk(tree)]
 
 def getdescfromdrev(drev):
     """get description (commit message) from "Differential Revision"
@@ -667,18 +763,22 @@ def readpatch(repo, drevs, write):
 
 @command('phabread',
          [('', 'stack', False, _('read dependencies'))],
-         _('REVID [OPTIONS]'))
-def phabread(ui, repo, revid, **opts):
+         _('DREVSPEC [OPTIONS]'))
+def phabread(ui, repo, spec, **opts):
     """print patches from Phabricator suitable for importing
 
-    REVID could be a Differential Revision identity, like ``D123``, or just the
-    number ``123``, or a full URL like ``https://phab.example.com/D123``.
+    DREVSPEC could be a Differential Revision identity, like ``D123``, or just
+    the number ``123``. It could also have common operators like ``+``, ``-``,
+    ``&``, ``(``, ``)`` for complex queries. Prefix ``:`` could be used to
+    select a stack.
+
+    For example, ``:D6+8-(2+D4)`` selects a stack up to D6, plus D8 and exclude
+    D2 and D4.
 
     If --stack is given, follow dependencies information and read all patches.
+    It is equivalent to the ``:`` operator.
     """
-    try:
-        revid = int(revid.split('/')[-1].replace('D', ''))
-    except ValueError:
-        raise error.Abort(_('invalid Revision ID: %s') % revid)
-    drevs = querydrev(repo, {'ids': [revid]}, opts.get('stack'))
+    if opts.get('stack'):
+        spec = ':(%s)' % spec
+    drevs = querydrev(repo, spec)
     readpatch(repo, drevs, ui.write)
