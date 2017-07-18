@@ -7,12 +7,18 @@
 
 from __future__ import absolute_import
 
+import contextlib
+import os
+
 from mercurial import (
     dispatch,
     error,
     extensions,
+    lock as lockmod,
     obsolete,
     repoview,
+    util,
+    vfs as vfsmod,
 )
 
 def uisetup(ui):
@@ -43,30 +49,63 @@ def loadpinnednodes(repo):
             yield node
         offset += 20
 
-def savepinnednodes(repo, nodes):
-    with repo.lock(), repo.svfs.open('obsinhibit', 'wb', atomictemp=True) as f:
-        f.write(''.join(nodes))
+def shouldpinnodes(repo):
+    """get nodes that should be pinned: working parent + bookmarks for now"""
+    result = set()
+    if repo and repo.local():
+        # working copy parent
+        try:
+            wnode = repo.vfs('dirstate').read(20)
+            result.add(wnode)
+        except Exception:
+            pass
+        # bookmarks
+        result.update(repo._bookmarks.values())
+    return result
+
+@contextlib.contextmanager
+def flock(lockpath):
+    # best effort lightweight lock
+    try:
+        import fcntl
+        fcntl.flock
+    except ImportError:
+        # fallback to Mercurial lock
+        vfs = vfsmod.vfs(os.path.dirname(lockpath))
+        with lockmod.lock(vfs, os.path.basename(lockpath)):
+            yield
+        return
+    # make sure lock file exists
+    util.makedirs(os.path.dirname(lockpath))
+    with open(lockpath, 'a'):
+        pass
+    lockfd = os.open(lockpath, os.O_RDONLY | os.O_CREAT, 0o664)
+    fcntl.flock(lockfd, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        fcntl.flock(lockfd, fcntl.LOCK_UN)
+        os.close(lockfd)
+
+def savepinnednodes(repo, newpin, newunpin):
+    # take a narrowed lock so it does not affect repo lock
+    with flock(repo.svfs.join('obsinhibit.lock')):
+        nodes = set(loadpinnednodes(repo))
+        nodes |= set(newpin)
+        nodes -= set(newunpin)
+        with util.atomictempfile(repo.svfs.join('obsinhibit')) as f:
+            f.write(''.join(nodes))
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
+    shouldpinbefore = shouldpinnodes(repo)
     result = orig(lui, repo, cmd, fullargs, *args)
     # after a command completes, make sure working copy parent and all
     # bookmarks get "pinned".
-    if repo and repo.local():
-        unfi = repo.unfiltered()
-        wnode = None
-        try:
-            # read dirstate directly to avoid dirstate object overhead
-            wnode = repo.vfs('dirstate').read(20)
-        except Exception:
-            pass
-        tounpin = getattr(unfi, '_tounpinnodes', set())
-        origpinned = set(loadpinnednodes(repo))
-        pinned = origpinned - tounpin
-        if wnode:
-            pinned.add(wnode)
-        pinned.update(unfi._bookmarks.values())
-        if pinned != origpinned:
-            savepinnednodes(repo, pinned)
+    newpin = shouldpinnodes(repo) - shouldpinbefore
+    newunpin = getattr(repo, '_tounpinnodes', set())
+    # only do a write if something has changed
+    if newpin or newunpin:
+        savepinnednodes(repo, newpin, newunpin)
     return result
 
 def createmarkers(orig, repo, rels, *args, **kwargs):
