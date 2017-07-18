@@ -426,6 +426,7 @@ With evolution enabled, should set obsolescence markers
   added 4 changesets with 2 changes to 4 files (+1 heads)
   2 new obsolescence markers
   obsoleted 2 changesets
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -435,7 +436,7 @@ With evolution enabled, should set obsolescence markers
   9467a8ee5d0d993ba68d94946c9d4a3cae8d31ff 0d76868c25e6789734c06e056f235e1fa223da74 * (glob)
   e73acfaeee82005b2379f82efb73123cbb74a733 d53a62ed14be0980584e1f92f9c47031ef806a62 * (glob)
   $ hg up d53a62ed14be
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => foobar [public:d53a62ed14be]
   |
@@ -692,13 +693,12 @@ Test date rewriting
   added 1 changesets with 0 changes to 1 files
   1 new obsolescence markers
   obsoleted 1 changesets
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{desc} {date|isodate}'
-  o  c 2001-09-09 01:46 +0000
+  @  c 2001-09-09 01:46 +0000
   |
-  | @  c 1970-01-01 00:00 +0000
-  | |
-  o |  b 1970-01-01 00:00 +0000
-  |/
+  o  b 1970-01-01 00:00 +0000
+  |
   o  a 1970-01-01 00:00 +0000
   
 Test date rewriting with a merge commit
@@ -725,6 +725,7 @@ Test date rewriting with a merge commit
   added 3 changesets with 0 changes to 2 files (+1 heads)
   3 new obsolescence markers
   obsoleted 3 changesets
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ..
 
@@ -767,6 +768,7 @@ Test pushrebase on merge commit where master is on the p2 side
   added 2 changesets with 0 changes to 2 files
   2 new obsolescence markers
   obsoleted 2 changesets
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../p2mergeserver log -G -T '{rev}: {desc}'
   o    3: merge b and c
   |\
@@ -887,6 +889,7 @@ phase is updated correctly with the marker information.
   added 2 changesets with 1 changes to 2 files (+1 heads)
   1 new obsolescence markers
   obsoleted 1 changesets
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up tip -q
   $ log --hidden
   @  a2 [public:722505d780e3]

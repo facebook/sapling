@@ -22,15 +22,31 @@ Configs:
     transition to treemanifest.
 
 """
+from __future__ import absolute_import
 
 import errno, os, tempfile, mmap, time
 
-from mercurial import bundle2, hg, scmutil, exchange, commands
-from mercurial import util, error, discovery, changegroup, context, revsetlang
-from mercurial import obsolete, pushkey, phases, extensions, manifest
-from mercurial import encoding, registrar
+from mercurial import (
+    bundle2,
+    changegroup,
+    commands,
+    context,
+    discovery,
+    encoding,
+    error,
+    exchange,
+    extensions,
+    hg,
+    manifest,
+    obsolete,
+    phases,
+    pushkey,
+    registrar,
+    revsetlang,
+    scmutil,
+    util,
+)
 from mercurial.extensions import wrapcommand, wrapfunction, unwrapfunction
-from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
@@ -268,6 +284,7 @@ def _skipcheckheads(orig, pushop, bundler):
         return orig(pushop, bundler)
 
 def _push(orig, ui, repo, *args, **opts):
+    wnode = repo['.'].node()
     onto = opts.get('to')
     if not onto and not opts.get('rev') and not opts.get('dest'):
         try:
@@ -298,6 +315,11 @@ def _push(orig, ui, repo, *args, **opts):
         if onto:
             unwrapfunction(exchange, '_localphasemove', _phasemove)
             unwrapfunction(obsolete.obsstore, 'mergemarkers', _mergemarkers)
+
+    mapping = getattr(repo.obsstore, '_pushrebasereplaces', {})
+    if wnode in mapping:
+        with repo.wlock():
+            hg.update(repo, mapping[wnode])
 
     return result
 
@@ -719,7 +741,7 @@ def _createpackstore(ui, packpath):
     return datastore, histstore
 
 def _createbundlerepo(op, bundlepath):
-    bundle = repository(op.repo.ui, bundlepath)
+    bundle = hg.repository(op.repo.ui, bundlepath)
 
     # Create stores for any received pack files
     bundledatastores = []
