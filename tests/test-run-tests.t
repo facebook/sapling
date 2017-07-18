@@ -158,6 +158,57 @@ test diff colorisation
   python hash seed: * (glob)
 #endif
 
+  $ cat > test-failure.t << EOF
+  >   $ true
+  >   should go away (true !)
+  >   $ true
+  >   should stay (false !)
+  > 
+  > Should remove first line, not second or third
+  >   $ echo 'testing'
+  >   baz*foo (glob) (true !)
+  >   foobar*foo (glob) (false !)
+  >   te*ting (glob) (true !)
+  > 
+  > Should keep first two lines, remove third and last
+  >   $ echo 'testing'
+  >   test.ng (re) (true !)
+  >   foo.ar (re) (false !)
+  >   b.r (re) (true !)
+  >   missing (?)
+  >   awol (true !)
+  > EOF
+  $ rt test-failure.t
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,11 +1,9 @@
+     $ true
+  -  should go away (true !)
+     $ true
+     should stay (false !)
+   
+   Should remove first line, not second or third
+     $ echo 'testing'
+  -  baz*foo (glob) (true !)
+     foobar*foo (glob) (false !)
+     te*ting (glob) (true !)
+   
+  @@ -13,6 +11,4 @@
+     $ echo 'testing'
+     test.ng (re) (true !)
+     foo.ar (re) (false !)
+  -  b.r (re) (true !)
+     missing (?)
+  -  awol (true !)
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
 basic failing test
   $ cat > test-failure.t << EOF
   >   $ echo babar

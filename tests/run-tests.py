@@ -1359,7 +1359,7 @@ class TTest(Test):
                 while i < len(els):
                     el = els[i]
 
-                    r = TTest.linematch(el, lout)
+                    r = self.linematch(el, lout)
                     if isinstance(r, str):
                         if r == '+glob':
                             lout = el[:-1] + ' (glob)\n'
@@ -1385,9 +1385,7 @@ class TTest(Test):
                             if m:
                                 conditions = [c for c in m.group(2).split(' ')]
 
-                                if self._hghave(conditions)[0]:
-                                    lout = el
-                                else:
+                                if not self._hghave(conditions)[0]:
                                     optional.append(i)
 
                     i += 1
@@ -1416,9 +1414,16 @@ class TTest(Test):
                 while expected.get(pos, None):
                     el = expected[pos].pop(0)
                     if el:
-                        if (not optline.match(el)
-                            and not el.endswith(b" (?)\n")):
-                            break
+                        if not el.endswith(b" (?)\n"):
+                            m = optline.match(el)
+                            if m:
+                                conditions = [c for c in m.group(2).split(' ')]
+
+                                if self._hghave(conditions)[0]:
+                                    # Don't append as optional line
+                                    continue
+                            else:
+                                break
                     postout.append(b'  ' + el)
 
             if lcmd:
@@ -1481,8 +1486,7 @@ class TTest(Test):
                 res += re.escape(c)
         return TTest.rematch(res, l)
 
-    @staticmethod
-    def linematch(el, l):
+    def linematch(self, el, l):
         retry = False
         if el == l: # perfect match (fast)
             return True
@@ -1493,8 +1497,11 @@ class TTest(Test):
             else:
                 m = optline.match(el)
                 if m:
+                    conditions = [c for c in m.group(2).split(' ')]
+
                     el = m.group(1) + b"\n"
-                    retry = "retry"
+                    if not self._hghave(conditions)[0]:
+                        retry = "retry"    # Not required by listed features
 
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
