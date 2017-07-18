@@ -488,6 +488,13 @@ def _confirmbeforesend(repo, revs):
 
     return True
 
+_knownstatusnames = {'accepted', 'needsreview', 'needsrevision', 'closed',
+                     'abandoned'}
+
+def _getstatusname(drev):
+    """get normalized status name from a Differential Revision"""
+    return drev[r'statusName'].replace(' ', '').lower()
+
 # Small language to specify differential revisions. Support symbols: (), :X,
 # +, and -.
 
@@ -504,9 +511,8 @@ _elements = {
 }
 
 def _tokenize(text):
-    text = text.replace(' ', '') # remove space
     view = memoryview(text) # zero-copy slice
-    special = '():+-&'
+    special = '():+-& '
     pos = 0
     length = len(text)
     while pos < length:
@@ -515,8 +521,9 @@ def _tokenize(text):
         if symbol:
             yield ('symbol', symbol, pos)
             pos += len(symbol)
-        else: # special char
-            yield (text[pos], None, pos)
+        else: # special char, ignore space
+            if text[pos] != ' ':
+                yield (text[pos], None, pos)
             pos += 1
     yield ('end', None, pos)
 
@@ -644,7 +651,7 @@ def querydrev(repo, spec):
         tofetch.update(range(max(1, r - batchsize), r + 1))
     if drevs:
         fetch({r'ids': list(tofetch)})
-    getstack(list(ancestordrevs))
+    validids = sorted(set(getstack(list(ancestordrevs))) | set(drevs))
 
     # Walk through the tree, return smartsets
     def walk(tree):
@@ -653,6 +660,10 @@ def querydrev(repo, spec):
             drev = _parsedrev(tree[1])
             if drev:
                 return smartset.baseset([drev])
+            elif tree[1] in _knownstatusnames:
+                drevs = [r for r in validids
+                         if _getstatusname(prefetched[r]) == tree[1]]
+                return smartset.baseset(drevs)
             else:
                 raise error.Abort(_('unknown symbol: %s') % tree[1])
         elif op in {'and_', 'add', 'sub'}:
@@ -772,8 +783,13 @@ def phabread(ui, repo, spec, **opts):
     ``&``, ``(``, ``)`` for complex queries. Prefix ``:`` could be used to
     select a stack.
 
+    ``abandoned``, ``accepted``, ``closed``, ``needsreview``, ``needsrevision``
+    could be used to filter patches by status. For performance reason, they
+    only represent a subset of non-status selections and cannot be used alone.
+
     For example, ``:D6+8-(2+D4)`` selects a stack up to D6, plus D8 and exclude
-    D2 and D4.
+    D2 and D4. ``:D9 & needsreview`` selects "Needs Review" revisions in a
+    stack up to D9.
 
     If --stack is given, follow dependencies information and read all patches.
     It is equivalent to the ``:`` operator.
