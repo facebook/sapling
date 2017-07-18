@@ -1456,6 +1456,12 @@ def shareawarevfs(repo):
     else:
         return repo.vfs
 
+def shareawarecachevfs(repo):
+    if repo.shared():
+        return vfsmod.vfs(os.path.join(repo.sharedpath, 'cache'))
+    else:
+        return repo.cachevfs
+
 def readbookmarknames(repo, remote):
     for node, nametype, remotename, rname in readremotenames(repo):
         if nametype == 'bookmarks' and remotename == remote:
@@ -1613,8 +1619,8 @@ def calculatenamedistance(repo, fromname, toname):
 
 def writedistancecache(repo, distance):
     try:
-        vfs = shareawarevfs(repo)
-        f = vfs('cache/distance', 'w', atomictemp=True)
+        cachevfs = shareawarecachevfs(repo)
+        f = cachevfs('distance', 'w', atomictemp=True)
         for k, v in distance.iteritems():
             f.write('%s %d %d\n' % (k, v[0], v[1]))
     except (IOError, OSError):
@@ -1623,8 +1629,8 @@ def writedistancecache(repo, distance):
 def readdistancecache(repo):
     distances = {}
     try:
-        vfs = shareawarevfs(repo)
-        for line in vfs.read('cache/distance').splitlines():
+        cachevfs = shareawarecachevfs(repo)
+        for line in cachevfs.read('distance').splitlines():
             line = line.rsplit(' ', 2)
             try:
                 d = (int(line[1]), int(line[2]))
@@ -1640,17 +1646,17 @@ def readdistancecache(repo):
 def invalidatedistancecache(repo):
     """Try to invalidate any existing distance caches"""
     error = False
-    vfs = shareawarevfs(repo)
+    cachevfs = shareawarecachevfs(repo)
     try:
-        if vfs.isdir('cache/distance'):
-            shutil.rmtree(vfs.join('cache/distance'))
+        if cachevfs.isdir('distance'):
+            shutil.rmtree(cachevfs.join('distance'))
         else:
-            vfs.unlink('cache/distance')
+            cachevfs.unlink('distance')
     except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
     try:
-        vfs.unlink('cache/distance.current')
+        cachevfs.unlink('distance.current')
     except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
@@ -1695,9 +1701,8 @@ def precachedistance(repo):
                 # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
                 distance = len(repo.revs('only(%d, .)' % revs[0]))
-                vfs = shareawarevfs(repo)
-                vfs.write('cache/distance.current',
-                          '%s %d' % (bmark, distance))
+                cachevfs = shareawarecachevfs(repo)
+                cachevfs.write('distance.current', '%s %d' % (bmark, distance))
 
     finally:
         wlock.release()
