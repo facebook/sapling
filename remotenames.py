@@ -167,10 +167,11 @@ def expull(orig, repo, remote, *args, **kwargs):
     pullremotenames(repo, remote, bookmarks)
     if repo.vfs.exists(_selectivepullenabledfile):
         if not _isselectivepull(repo.ui):
-            repo.vfs.unlink(_selectivepullenabledfile)
+            with repo.wlock():
+                repo.vfs.unlink(_selectivepullenabledfile)
     else:
         if _isselectivepull(repo.ui):
-            with repo.vfs(_selectivepullenabledfile, 'w') as f:
+            with repo.wlock(), repo.vfs(_selectivepullenabledfile, 'w') as f:
                 f.write('enabled') # content doesn't matter
     return res
 
@@ -1164,11 +1165,12 @@ def _readtracking(repo):
     return tracking
 
 def _writetracking(repo, tracking):
-    data = ''
-    for book, track in tracking.iteritems():
-        data += '%s %s\n' % (book, track)
-    vfs = shareawarevfs(repo)
-    vfs.write('bookmarks.tracking', data)
+    with repo.wlock():
+        data = ''
+        for book, track in tracking.iteritems():
+            data += '%s %s\n' % (book, track)
+        vfs = shareawarevfs(repo)
+        vfs.write('bookmarks.tracking', data)
 
 def _removetracking(repo, bookmarks):
     tracking = _readtracking(repo)
