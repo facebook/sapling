@@ -9,7 +9,7 @@
 This extension provides a ``phabsend`` command which sends a stack of
 changesets to Phabricator without amending commit messages, and a ``phabread``
 command which prints a stack of revisions in a format suitable
-for :hg:`import`.
+for :hg:`import`, and a ``phabupdate`` command to update statuses in batch.
 
 By default, Phabricator requires ``Test Plan`` which might prevent some
 changeset from being sent. The requirement could be disabled by changing
@@ -798,3 +798,32 @@ def phabread(ui, repo, spec, **opts):
         spec = ':(%s)' % spec
     drevs = querydrev(repo, spec)
     readpatch(repo, drevs, ui.write)
+
+@command('phabupdate',
+         [('', 'accept', False, _('accept revisions')),
+          ('', 'reject', False, _('reject revisions')),
+          ('', 'abandon', False, _('abandon revisions')),
+          ('', 'reclaim', False, _('reclaim revisions')),
+          ('m', 'comment', '', _('comment on the last revision')),
+         ], _('DREVSPEC [OPTIONS]'))
+def phabupdate(ui, repo, spec, **opts):
+    """update Differential Revision in batch
+
+    DREVSPEC selects revisions. See :hg:`help phabread` for its usage.
+    """
+    flags = [n for n in 'accept reject abandon reclaim'.split() if opts.get(n)]
+    if len(flags) > 1:
+        raise error.Abort(_('%s cannot be used together') % ', '.join(flags))
+
+    actions = []
+    for f in flags:
+        actions.append({'type': f, 'value': 'true'})
+
+    drevs = querydrev(repo, spec)
+    for i, drev in enumerate(drevs):
+        if i + 1 == len(drevs) and opts.get('comment'):
+            actions.append({'type': 'comment', 'value': opts['comment']})
+        if actions:
+            params = {'objectIdentifier': drev[r'phid'],
+                      'transactions': actions}
+            callconduit(repo, 'differential.revision.edit', params)
