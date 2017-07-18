@@ -1302,12 +1302,17 @@ Test that clone behaves like pull and doesn't publish changesets as plain push
 does.  The conditional output accounts for changes in the conditional block
 above.
 
+#if unix-permissions no-root
   $ hg -R Upsilon phase -q --force --draft 2
   test-debug-phase: move rev 2: 0 -> 1
-  test-debug-phase: move rev 3: 0 -> 1 (unix-permissions no-root !)
-  test-debug-phase: move rev 7: 0 -> 1 (unix-permissions no-root !)
-  test-debug-phase: move rev 8: 0 -> 1 (unix-permissions no-root !)
-  test-debug-phase: move rev 9: 0 -> 1 (unix-permissions no-root !)
+#else
+  $ hg -R Upsilon phase -q --force --draft 2
+  test-debug-phase: move rev 2: 0 -> 1
+  test-debug-phase: move rev 3: 0 -> 1
+  test-debug-phase: move rev 7: 0 -> 1
+  test-debug-phase: move rev 8: 0 -> 1
+  test-debug-phase: move rev 9: 0 -> 1
+#endif
 
   $ hg clone -q Upsilon Pi -r 7
   test-debug-phase: new rev 0:  x -> 0
