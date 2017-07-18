@@ -20,10 +20,12 @@ import textwrap
 
 from mercurial.i18n import _
 from mercurial import (
+    config,
     error,
     minirst,
     registrar,
     scmutil,
+    util,
 )
 
 cmdtable = {}
@@ -111,9 +113,15 @@ class parsedreleasenotes(object):
                 self.addnontitleditem(section, paragraphs)
 
 class releasenotessections(object):
-    def __init__(self, ui):
-        # TODO support defining custom sections from config.
-        self._sections = list(DEFAULT_SECTIONS)
+    def __init__(self, ui, repo=None):
+        if repo:
+            sections = util.sortdict(DEFAULT_SECTIONS)
+            custom_sections = getcustomadmonitions(repo)
+            if custom_sections:
+                sections.update(custom_sections)
+            self._sections = list(sections.iteritems())
+        else:
+            self._sections = list(DEFAULT_SECTIONS)
 
     def __iter__(self):
         return iter(self._sections)
@@ -127,6 +135,22 @@ class releasenotessections(object):
                 return name
 
         return None
+
+def getcustomadmonitions(repo):
+    ctx = repo['.']
+    p = config.config()
+
+    def read(f, sections=None, remap=None):
+        if f in ctx:
+            data = ctx[f].data()
+            p.parse(f, data, sections, remap, read)
+        else:
+            raise error.Abort(_(".hgreleasenotes file \'%s\' not found") %
+                              repo.pathto(f))
+
+    if '.hgreleasenotes' in ctx:
+        read('.hgreleasenotes')
+    return p['sections']
 
 def parsenotesfromrevisions(repo, directives, revs):
     notes = parsedreleasenotes()
@@ -396,7 +420,7 @@ def releasenotes(ui, repo, file_, rev=None):
     that file. A particular use case for this is to tweak the wording of a
     release note after it has been added to the release notes file.
     """
-    sections = releasenotessections(ui)
+    sections = releasenotessections(ui, repo)
 
     revs = scmutil.revrange(repo, [rev or 'not public()'])
     incoming = parsenotesfromrevisions(repo, sections.names(), revs)
@@ -416,7 +440,7 @@ def releasenotes(ui, repo, file_, rev=None):
         fh.write(serializenotes(sections, notes))
 
 @command('debugparsereleasenotes', norepo=True)
-def debugparsereleasenotes(ui, path):
+def debugparsereleasenotes(ui, path, repo=None):
     """parse release notes and print resulting data structure"""
     if path == '-':
         text = sys.stdin.read()
@@ -424,7 +448,7 @@ def debugparsereleasenotes(ui, path):
         with open(path, 'rb') as fh:
             text = fh.read()
 
-    sections = releasenotessections(ui)
+    sections = releasenotessections(ui, repo)
 
     notes = parsereleasenotesfile(sections, text)
 

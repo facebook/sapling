@@ -255,6 +255,8 @@ Now add bullet points to sections having sub-sections
   
   * Short summary of fix 3
 
+  $ cd ..
+
 Multiple 'Other Changes' sub-sections for every section
 
   $ hg init multiple-otherchanges
@@ -323,4 +325,54 @@ Multiple 'Other Changes' sub-sections for every section
   -------------
   
   * Short summary of fix 2
+
+  $ cd ..
+
+Using custom sections in notes
+
+  $ hg init custom-section
+  $ cd custom-section
+  $ cat >> .hgreleasenotes << EOF
+  > [sections]
+  > testsection=Name of Section
+  > EOF
+
+  $ touch a
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. testsection::
+  > 
+  >    First paragraph under this admonition.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/relnotes-custom-section
+  $ cat $TESTTMP/relnotes-custom-section
+  Name of Section
+  ===============
+  
+  * First paragraph under this admonition.
+
+Overriding default sections (For eg. by default feature = New Features)
+
+  $ cat >> .hgreleasenotes << EOF
+  > [sections]
+  > feature=Feature Additions
+  > EOF
+
+  $ touch b
+  $ hg -q commit -A -l - << EOF
+  > commit 2
+  > 
+  > .. feature::
+  > 
+  >    Adds a new feature.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/relnotes-override-section
+  $ cat $TESTTMP/relnotes-override-section
+  Feature Additions
+  =================
+  
+  * Adds a new feature.
 
