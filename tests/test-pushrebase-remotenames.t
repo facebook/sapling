@@ -426,8 +426,6 @@ that requires pushrebase.
   $ hg push --to serverfeature
   pushing rev d2ae7f538514 to destination ssh://user@dummy/pushrebaseserver bookmark serverfeature
   searching for changes
-  devel-warn: obsolete.foreground moved to obsutil.foreground
-  (compatibility will be dropped after Mercurial-4.3, update your code.) at: * (expushdiscoverybookmarks) (glob)
   remote: error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   remote: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: push failed on remote
