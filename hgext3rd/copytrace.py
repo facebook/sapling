@@ -22,20 +22,34 @@
 
     # limits the number of heuristically found move candidates to check
     maxmovescandidatestocheck = 5
+
+    # whether to enable fast copytracing during amends (requires fastcopytrace)
+    # to be enabled.
+    enableamendcopytrace = True
+
+    # how many previous commits to search through when looking for amend
+    # copytrace data.
+    amendcopytracecommitlimit = 100
+
 '''
 
 from collections import defaultdict
 from mercurial import (
+    cmdutil,
     commands,
     copies as copiesmod,
     dispatch,
+    error,
     extensions,
     filemerge,
     node,
+    phases,
     util,
 )
 from mercurial.i18n import _
 
+import anydbm
+import json
 import os
 import time
 
@@ -71,6 +85,7 @@ def extsetup(ui):
 
     extensions.wrapfunction(filemerge, '_filemerge', _filemerge)
     extensions.wrapfunction(copiesmod, 'mergecopies', _mergecopies)
+    extensions.wrapfunction(cmdutil, 'amend', _amend)
 
 def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
                labels=None, *args, **kwargs):
@@ -109,6 +124,155 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
         ui.setconfig("experimental", "disablecopytrace",
                      False, "--tracecopies")
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
+
+def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+    """Wraps amend to collect copytrace data on amend
+
+    If a file is created in one commit, modified in a subsequent commit, and
+    then renamed or copied by amending the original commit, restacking the
+    commits that modify the file will fail:
+
+    file modified here    B     B'  restack of B to B' will fail
+                          |     :
+    file created here     A --> A'  file renamed in amended commit
+                          |    /
+                          o --
+
+    This function collects information about copies and renames from amend
+    commits, and saves it for use during rebases onto the amend commit.  This
+    lets rebases onto files that been renamed or copied in an amend commit
+    work without conflicts.
+
+    When an amend commit is created, mercurial first creates a temporary
+    intermediate commit that contains the amendments, and then merges these
+    two commits into the single amended commit:
+
+        intermediate_ctx    o
+                            |
+        orig_ctx            o   o    amended_ctx
+                            | /
+                            o        parent of original commit
+
+    This function finds the intermediate commit and stores its copytrace
+    information against the amended commit in a separate dbm file.  Later,
+    in _domergecopies, this information will be merged with the rebase
+    copytrace data to incorporate renames and copies made during the amend.
+    """
+    node = orig(ui, repo, commitfunc, old, extra, pats, opts)
+
+    # Check if amend copytracing has been disabled.
+    if not ui.configbool("copytrace", "enableamendcopytrace", True):
+        return node
+
+    # Find the amended commit context and the intermediate context that
+    # was used for the amend.  The two commits were created in sequence, so
+    # the intermediate commit will be the commit with a revision number one
+    # before the amended commit.  This commit is filtered, so look at the
+    # unfiltered view of the repo to access it.
+    amended_ctx = repo[node]
+    intermediate_ctx = repo.unfiltered()[amended_ctx.rev() - 1]
+
+    # Sanity check that both contexts have a single parent.  The intermediate
+    # context's parent is the original commit, so its parent should be the
+    # same as the amended commit's, and it should have the temporary commit
+    # message that the amend function gave it.  If any of this is not true,
+    # then bail out.  Otherwise, find the original commit.
+    if (len(amended_ctx.parents()) != 1 or
+            len(intermediate_ctx.parents()) != 1 or
+            intermediate_ctx.p1().parents() != amended_ctx.parents() or
+            intermediate_ctx.description() !=
+                    'temporary amend commit for %s' % intermediate_ctx.p1()):
+        return node
+    orig_ctx = intermediate_ctx.p1()
+
+    # Find the amend-copies, and store them against the amended context.
+    amend_copies = copiesmod.pathcopies(orig_ctx, intermediate_ctx)
+    if amend_copies:
+        path = repo.vfs.join('amendcopytrace')
+        try:
+            # Open the database, creating it if it doesn't already exist.
+            db = anydbm.open(path, 'c')
+        except anydbm.error as e:
+            # Database locked, can't record these amend-copies.
+            ui.log('copytrace', 'Failed to open amendcopytrace db: %s' % e)
+            return node
+
+        # Merge in any existing amend copies from any previous amends.
+        try:
+            orig_data = db.get(orig_ctx.node(), '{}')
+        except anydbm.error as e:
+            ui.log('copytrace',
+                   'Failed to read key %s from amendcopytrace db: %s' %
+                   (orig_ctx.hex(), e))
+            return node
+        orig_encoded = json.loads(orig_data)
+        orig_amend_copies = dict((k.decode('base64'), v.decode('base64'))
+                for (k, v) in orig_encoded.iteritems())
+
+        # Copytrace information is not valid if it refers to a file that
+        # doesn't exist in a commit.  We need to update or remove entries
+        # that refer to files that might have only existed in the previous
+        # amend commit.
+        #
+        # Find chained copies and renames (a -> b -> c) and collapse them to
+        # (a -> c).  Delete the entry for b if this was a rename.
+        for dst, src in amend_copies.iteritems():
+            if src in orig_amend_copies:
+                amend_copies[dst] = orig_amend_copies[src]
+                if src not in amended_ctx:
+                    del orig_amend_copies[src]
+
+        # Copy any left over copies from the previous context.
+        for dst, src in orig_amend_copies.iteritems():
+            if dst not in amend_copies:
+                amend_copies[dst] = src
+
+        # Write out the entry for the new amend commit.
+        encoded = dict((k.encode('base64'), v.encode('base64'))
+                for (k, v) in amend_copies.iteritems())
+        db[node] = json.dumps(encoded)
+        try:
+            db.close()
+        except Exception as e:
+            # Database corruption.  Not much we can do, so just log.
+            ui.log('copytrace', 'Failed to close amendcopytrace db: %s' % e)
+
+    return node
+
+def _getamendcopies(repo, dest, ancestor):
+    path = repo.vfs.join('amendcopytrace')
+    try:
+        db = anydbm.open(path, 'r')
+    except anydbm.error:
+        return {}
+    try:
+        ctx = dest
+        count = 0
+        limit = repo.ui.configint('copytrace', 'amendcopytracecommitlimit', 100)
+
+        # Search for the ancestor commit that has amend copytrace data.  This
+        # will be the most recent amend commit if we are rebasing onto an
+        # amend commit.  If we reach the common ancestor or a public commit,
+        # then there is no amend copytrace data to be found.
+        while ctx.node() not in db:
+            ctx = ctx.p1()
+            count += 1
+            if ctx == ancestor or count > limit or ctx.phase() == phases.public:
+                return {}
+
+        # Load the amend copytrace data from this commit.
+        encoded = json.loads(db[ctx.node()])
+        return dict((k.decode('base64'), v.decode('base64'))
+                for (k, v) in encoded.iteritems())
+    except Exception:
+        repo.ui.log('copytrace',
+                    'Failed to load amend copytrace for %s' % dest.hex())
+        return {}
+    finally:
+        try:
+            db.close()
+        except anydbm.error:
+            pass
 
 def _mergecopies(orig, repo, cdst, csrc, base):
     start = time.time()
@@ -258,6 +422,15 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                 msg = "too many moves candidates: %d" % len(movecandidates)
                 repo.ui.log("copytrace", msg=msg,
                             reponame=_getreponame(repo, repo.ui))
+
+    if repo.ui.configbool("copytrace", "enableamendcopytrace", True):
+        # Look for additional amend-copies.
+        amend_copies = _getamendcopies(repo, cdst, base.p1())
+        if amend_copies:
+            repo.ui.debug('Loaded amend copytrace for %s' % cdst)
+            for dst, src in amend_copies.iteritems():
+                if dst not in copies:
+                    copies[dst] = src
 
     return copies, {}, {}, {}, {}
 
