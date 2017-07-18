@@ -13,6 +13,7 @@ from mercurial import (
     dispatch,
     error,
     extensions,
+    localrepo,
     lock as lockmod,
     registrar,
     revlog,
@@ -36,6 +37,9 @@ command = registrar.command(cmdtable)
 
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', _runcommandwrapper)
+
+    # undo has its own locking, whitelist itself to bypass repo lock audit
+    localrepo.localrepository._wlockfreeprefix.add('undolog/')
 
 # Wrappers
 
@@ -73,8 +77,8 @@ def safelog(repo, command):
         # allows running command during other commands when
         # otherwise legal.  Could cause weird undolog states,
         # which gap handling generally covers.
-        with lockmod.lock(repo.vfs, "undologlock",
-                          desc="undolog"):
+        repo.vfs.makedirs('undolog')
+        with lockmod.lock(repo.vfs, "undolog/lock", desc="undolog"):
             # developer config: undo._duringundologlock
             if repo.ui.configbool('undo', '_duringundologlock'):
                 repo.hook("duringundologlock")
@@ -94,8 +98,8 @@ def lighttransaction(repo):
     # abandoned tr's (since we only record info) and doesn't
     # do any tag handling
     vfsmap = {'plain': repo.vfs}
-    tr = transaction.transaction(repo.ui.warn, repo.svfs, vfsmap,
-                                 "_undojournal", "_undolog")
+    tr = transaction.transaction(repo.ui.warn, repo.vfs, vfsmap,
+                                 "undolog/tr.journal", "undolog/tr.undo")
     return tr
 
 def log(repo, command, tr):
@@ -135,9 +139,6 @@ def log(repo, command, tr):
 def writelog(repo, tr, name, revstring):
     if tr is None:
         raise error.ProgrammingError
-    # the transaction code doesn't work with vfs
-    # specifically, repo.recover() assumes svfs?
-    repo.svfs.makedirs('undolog')
     rlog = _getrevlog(repo, name)
     node = rlog.addrevision(revstring, tr, 1, nullid, nullid)
     return hex(node)
@@ -316,4 +317,4 @@ def _invertindex(rlog, indexorreverseindex):
 
 def _getrevlog(repo, filename):
     path = 'undolog/' + filename
-    return revlog.revlog(repo.svfs, path)
+    return revlog.revlog(repo.vfs, path)
