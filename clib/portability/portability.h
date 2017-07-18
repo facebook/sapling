@@ -13,4 +13,11 @@
 	#define COMPOUND_LITERAL(typename_) (typename_)
 #endif /* #if defined(_MSC_VER) */
 
+#if defined(_MSC_VER)
+	#define PACKEDSTRUCT(__Declaration__) __pragma(pack(push, 1)) \
+	                                      __Declaration__ __pragma(pack(pop))
+#else
+	#define PACKEDSTRUCT(__Declaration__) __Declaration__ __attribute__((packed))
+#endif
+
 #endif /* #ifndef PORTABILITY_PORTABILITY_H */

@@ -18,8 +18,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
-#include <unistd.h>
-#include <arpa/inet.h>
 #include <sys/mman.h>
 
 #if defined(__linux__)
@@ -38,6 +36,8 @@
 #endif /* #if defined(__APPLE__) */
 
 #include <lz4.h>
+#include "portability/inet.h"
+#include "portability/unistd.h"
 
 #include "cdatapack.h"
 #include "buffer.h"
@@ -47,11 +47,8 @@
 /**
  * This is an exact representation of an index entry on disk.  Do not consume
  * the fields directly, as they may need processing.
- *
- * NOTE: this uses gcc's __attribute__((packed)) syntax to indicate a packed
- * data structure, which obviously has potential portability issues.
  */
-typedef struct _disk_index_entry_t {
+PACKEDSTRUCT(typedef struct _disk_index_entry_t {
   uint8_t node[NODE_SZ];
 
   // offset of the next element in the delta chain in the index file
@@ -61,7 +58,7 @@ typedef struct _disk_index_entry_t {
   // file.
   data_offset_t data_offset;
   data_offset_t data_sz;
-} __attribute__((packed)) disk_index_entry_t;
+}) disk_index_entry_t;
 
 /**
  * This represents offsets into the index indicating the range of a fanout
@@ -91,17 +88,14 @@ typedef struct _pack_chain_t {
 /**
  * This is an exact representation of an index file's header on disk.  Do not
  * consume the fields directly, as they may need processing.
- *
- * NOTE: this uses gcc's __attribute__((packed)) syntax to indicate a packed
- * data structure, which obviously has potential portability issues.
  */
-typedef struct _disk_index_header_t {
+PACKEDSTRUCT(typedef struct _disk_index_header_t {
 #define VERSION 0
   uint8_t version;
 
 #define LARGE_FANOUT 0x80
   uint8_t config;
-} __attribute__((packed)) disk_index_header_t;
+}) disk_index_header_t;
 
 static void unpack_disk_deltachunk(
     const disk_index_entry_t *disk_deltachunk,
