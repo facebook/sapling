@@ -177,6 +177,13 @@ test diff colorisation
   >   b.r (re) (true !)
   >   missing (?)
   >   awol (true !)
+  > 
+  > The "missing" line should stay, even though awol is dropped
+  >   $ echo 'testing'
+  >   test.ng (re) (true !)
+  >   foo.ar (?)
+  >   awol
+  >   missing (?)
   > EOF
   $ rt test-failure.t
   
@@ -194,13 +201,22 @@ test diff colorisation
      foobar*foo (glob) (false !)
      te*ting (glob) (true !)
    
-  @@ -13,6 +11,4 @@
+     foo.ar (re) (false !)
+     missing (?)
+  @@ -13,13 +11,10 @@
      $ echo 'testing'
      test.ng (re) (true !)
      foo.ar (re) (false !)
   -  b.r (re) (true !)
      missing (?)
   -  awol (true !)
+   
+   The "missing" line should stay, even though awol is dropped
+     $ echo 'testing'
+     test.ng (re) (true !)
+     foo.ar (?)
+  -  awol
+     missing (?)
   
   ERROR: test-failure.t output changed
   !

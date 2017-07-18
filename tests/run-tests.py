@@ -1423,7 +1423,7 @@ class TTest(Test):
                                     # Don't append as optional line
                                     continue
                             else:
-                                break
+                                continue
                     postout.append(b'  ' + el)
 
             if lcmd:
