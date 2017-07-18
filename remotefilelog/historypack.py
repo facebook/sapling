@@ -435,14 +435,6 @@ class mutablehistorypack(basepack.mutablebasepack):
             entries = self.fileentries[filename]
             sectionstart = self.packfp.tell()
 
-            # Write the file section header
-            self.writeraw("%s%s%s" % (
-                struct.pack('!H', len(filename)),
-                filename,
-                struct.pack('!I', len(entries)),
-            ))
-            sectionlen = constants.FILENAMESIZE + len(filename) + 4
-
             # Write the file section content
             entrymap = dict((e[0], e) for e in entries)
             def parentfunc(node):
@@ -454,9 +446,18 @@ class mutablehistorypack(basepack.mutablebasepack):
                     parents.append(p2)
                 return parents
 
-            sortednodes = reversed(shallowutil.sortnodes(
+            sortednodes = list(reversed(shallowutil.sortnodes(
                 (e[0] for e in entries),
-                parentfunc))
+                parentfunc)))
+
+            # Write the file section header
+            self.writeraw("%s%s%s" % (
+                struct.pack('!H', len(filename)),
+                filename,
+                struct.pack('!I', len(sortednodes)),
+            ))
+
+            sectionlen = constants.FILENAMESIZE + len(filename) + 4
 
             rawstrings = []
 

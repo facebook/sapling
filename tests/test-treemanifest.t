@@ -147,3 +147,33 @@ Test treemanifest with sparse enabled
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/27a577922312-3ad85b1a-backup.hg (glob)
   $ hg status
   M subdir/y
+  $ hg up -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg sparse --reset
+
+Test rebase two commits with same changes
+  $ echo >> subdir/y
+  $ hg commit -qm 'modify subdir/y #1'
+  $ hg up -q '.^'
+  $ echo >> x
+  $ echo >> subdir/y
+  $ hg commit -qm 'modify subdir/y #2'
+  $ hg up -q '.^'
+  $ echo >> noop
+  $ hg add noop
+  $ hg commit -Am 'rebase destination'
+  created new head
+  $ hg rebase -d 6 -s '4 + 5' --config rebase.singletransaction=True
+  rebasing 4:6052526a0d67 "modify subdir/y #1"
+  rebasing 5:79a69a1547d7 "modify subdir/y #2"
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/79a69a1547d7-fc6bc129-rebase.hg (glob)
+  $ hg debughistorypack .hg/store/packs/manifests/668716b2b93e2fa8151bca1a327a391746f0dcc0.histpack
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  8026e03c5a35  8011431de863  000000000000  000000000000  
+  5ca06dca517c  8011431de863  000000000000  000000000000  
+  
+  subdir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  ad0a48a2ec1e  a4e2f032ee0f  000000000000  000000000000  
