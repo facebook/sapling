@@ -635,15 +635,12 @@ def getdiffmeta(diff):
             meta[r'parent'] = commit[r'parents'][0]
     return meta or {}
 
-def readpatch(repo, params, write, stack=False):
+def readpatch(repo, drevs, write):
     """generate plain-text patch readable by 'hg import'
 
-    write is usually ui.write. params is passed to "differential.query". If
-    stack is True, also write dependent patches.
+    write is usually ui.write. drevs is what "querydrev" returns, results of
+    "differential.query".
     """
-    # Differential Revisions
-    drevs = querydrev(repo, params, stack)
-
     # Prefetch hg:meta property for all diffs
     diffids = sorted(set(max(int(v) for v in drev[r'diffs']) for drev in drevs))
     diffs = callconduit(repo, 'differential.querydiffs', {'ids': diffids})
@@ -683,4 +680,5 @@ def phabread(ui, repo, revid, **opts):
         revid = int(revid.split('/')[-1].replace('D', ''))
     except ValueError:
         raise error.Abort(_('invalid Revision ID: %s') % revid)
-    readpatch(repo, {'ids': [revid]}, ui.write, opts.get('stack'))
+    drevs = querydrev(repo, {'ids': [revid]}, opts.get('stack'))
+    readpatch(repo, drevs, ui.write)
