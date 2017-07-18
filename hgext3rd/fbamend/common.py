@@ -93,13 +93,14 @@ def bookmarksupdater(repo, oldids, tr):
     def updatebookmarks(newid):
         dirty = False
         for oldid in oldids:
+            changes = []
             oldbookmarks = repo.nodebookmarks(oldid)
             if oldbookmarks:
                 for b in oldbookmarks:
-                    repo._bookmarks[b] = newid
+                    changes.append((b, newid))
                 dirty = True
             if dirty:
-                repo._bookmarks.recordchange(tr)
+                repo._bookmarks.applychanges(repo, tr, changes)
     return updatebookmarks
 
 def rewrite(repo, old, updates, head, newbases, commitopts):

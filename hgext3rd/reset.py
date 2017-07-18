@@ -193,8 +193,8 @@ def _moveto(repo, bookmark, ctx, clean=False):
         try:
             lock = repo.lock()
             tr = repo.transaction('reset')
-            repo._bookmarks[bookmark] = ctx.node()
-            repo._bookmarks.recordchange(tr)
+            changes = [(bookmark, ctx.node())]
+            repo._bookmarks.applychanges(repo, tr, changes)
             tr.close()
         finally:
             lockmod.release(lock, tr)

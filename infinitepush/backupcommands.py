@@ -224,13 +224,14 @@ def restore(ui, repo, dest=None, **opts):
     result = pullcmd(ui, repo, **pullopts)
 
     with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
+        changes = []
         for book, hexnode in backupstate.localbookmarks.iteritems():
             if hexnode in repo:
-                repo._bookmarks[book] = bin(hexnode)
+                changes.append((book, bin(hexnode)))
             else:
                 ui.warn(_('%s not found, not creating %s bookmark') %
                         (hexnode, book))
-        repo._bookmarks.recordchange(tr)
+        repo._bookmarks.applychanges(repo, tr, changes)
 
     return result
 

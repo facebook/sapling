@@ -734,17 +734,18 @@ class fixupstate(object):
         needupdate = [(name, self.replacemap[hsh])
                       for name, hsh in repo._bookmarks.iteritems()
                       if hsh in self.replacemap]
+        changes = []
         for name, hsh in needupdate:
             if hsh:
-                repo._bookmarks[name] = hsh
+                changes.append((name, hsh))
                 if self.ui.verbose:
                     self.ui.write(_('moving bookmark %s to %s\n')
                                   % (name, node.hex(hsh)))
             else:
-                del repo._bookmarks[name]
+                changes.append((name, None))
                 if self.ui.verbose:
                     self.ui.write(_('deleting bookmark %s\n') % name)
-        repo._bookmarks.recordchange(tr)
+        repo._bookmarks.applychanges(repo, tr, changes)
 
     def _moveworkingdirectoryparent(self):
         ctx = self.repo[self.finalnode]

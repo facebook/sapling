@@ -38,9 +38,10 @@ testedwith = 'ships-with-fb-hgext'
 def _updatebookmarks(repo, oldid, newid, tr):
     oldbookmarks = repo.nodebookmarks(oldid)
     if oldbookmarks:
+        changes = []
         for b in oldbookmarks:
-            repo._bookmarks[b] = newid
-        repo._bookmarks.recordchange(tr)
+            changes.append((b, newid))
+        repo._bookmarks.applychanges(repo, tr, changes)
 
 def _commitfiltered(repo, ctx, match):
     """Recommit ctx with changed files not in match. Return the new

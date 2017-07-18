@@ -290,26 +290,25 @@ def amend(ui, repo, *pats, **opts):
                 ui.warn(msg)
                 ui.status(_("(use 'hg restack' to rebase them)\n"))
 
-        newbookmarks = repo._bookmarks
-
+        changes = []
         # move old bookmarks to new node
         for bm in oldbookmarks:
-            newbookmarks[bm] = node
+            changes.append((bm, node))
 
         userestack = ui.configbool('fbamend', 'userestack')
         if not _histediting(repo) and not userestack:
             preamendname = _preamendname(repo, node)
             if haschildren:
-                newbookmarks[preamendname] = old.node()
+                changes.append((preamendname, old.node()))
             elif not active:
                 # update bookmark if it isn't based on the active bookmark name
                 oldname = _preamendname(repo, old.node())
                 if oldname in repo._bookmarks:
-                    newbookmarks[preamendname] = repo._bookmarks[oldname]
-                    del newbookmarks[oldname]
+                    changes.append((preamendname, repo._bookmarks[oldname]))
+                    changes.append((oldname, None)) # delete the old name
 
         tr = repo.transaction('fixupamend')
-        newbookmarks.recordchange(tr)
+        repo._bookmarks.applychanges(repo, tr, changes)
         tr.close()
 
         if rebase and haschildren:
@@ -366,11 +365,11 @@ def fixupamend(ui, repo):
         if opts['rev'] and opts['rev'][0]:
             rebasemod.rebase(ui, repo, **opts)
 
+        changes = []
         for bookmark in oldbookmarks:
-            repo._bookmarks.pop(bookmark)
-
+            changes.append((bookmark, None)) # delete the bookmark
         tr = repo.transaction('fixupamend')
-        repo._bookmarks.recordchange(tr)
+        repo._bookmarks.applychanges(repo, tr, changes)
 
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
             tr.close()
@@ -476,11 +475,12 @@ def _fixbookmarks(repo, revs):
     repo = repo.unfiltered()
     cl = repo.changelog
     with repo.wlock(), repo.lock(), repo.transaction('movebookmarks') as tr:
+        changes = []
         for rev in revs:
             latest = cl.node(common.latest(repo, rev))
             for bm in repo.nodebookmarks(cl.node(rev)):
-                repo._bookmarks[bm] = latest
-        repo._bookmarks.recordchange(tr)
+                changes.append((bm, latest))
+        repo._bookmarks.applychanges(repo, tr, changes)
 
 ### bookmarks api compatibility layer ###
 def bmactivate(repo, mark):

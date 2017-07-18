@@ -159,9 +159,8 @@ Test a push that comes with out-of-date bookmark discovery
   >     try:
   >         lock = repo.lock()
   >         tr = repo.transaction("pretxnopen.movebook")
-  >         bm = repo._bookmarks
-  >         bm['bm'] = repo[1].node()
-  >         bm.recordchange(tr)
+  >         changes = [('bm', repo[1].node())]
+  >         repo._bookmarks.applychanges(repo, tr, changes)
   >         tr.close()
   >     finally:
   >         if tr:

@@ -57,7 +57,6 @@ def unamend(ui, repo, **opts):
         raise error.Abort(_("cannot unamend in the middle of a stack"))
 
     with repo.wlock(), repo.lock():
-        repobookmarks = repo._bookmarks
         ctxbookmarks = curctx.bookmarks()
         changedfiles = []
         wctx = repo[None]
@@ -77,8 +76,9 @@ def unamend(ui, repo, **opts):
                     dirstate.add(filename)
                 if data[1][0] is None:
                     dirstate.remove(filename)
+        changes = []
         for book in ctxbookmarks:
-            repobookmarks[book] = precnode
-        repobookmarks.recordchange(tr)
+            changes.append((book, precnode))
+        repo._bookmarks.applychanges(repo, tr, changes)
         obsolete.createmarkers(repo, [(curctx, (precctx,))])
         tr.close()

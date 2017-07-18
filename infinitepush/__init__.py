@@ -741,10 +741,11 @@ def _savelocalbookmarks(repo, bookmarks):
     if not bookmarks:
         return
     with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
+        changes = []
         for scratchbook, node in bookmarks.iteritems():
             changectx = repo[node]
-            repo._bookmarks[scratchbook] = changectx.node()
-        repo._bookmarks.recordchange(tr)
+            changes.append((scratchbook, changectx.node()))
+        repo._bookmarks.applychanges(repo, tr, changes)
 
 def _findcommonincoming(orig, *args, **kwargs):
     common, inc, remoteheads = orig(*args, **kwargs)

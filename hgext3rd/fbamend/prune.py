@@ -69,9 +69,10 @@ def _deletebookmark(repo, repomarks, bookmarks):
         wlock = repo.wlock()
         lock = repo.lock()
         tr = repo.transaction('prune')
+        changes = []
         for bookmark in bookmarks:
-            del repomarks[bookmark]
-        repomarks.recordchange(tr)
+            changes.append((bookmark, None)) # delete the bookmark
+        repomarks.applychanges(repo, tr, changes)
         tr.close()
         for bookmark in sorted(bookmarks):
             repo.ui.write(_("bookmark '%s' deleted\n") % bookmark)
@@ -225,8 +226,8 @@ def prune(ui, repo, *revs, **opts):
                 movebookmark = bookactive and not bookmarks
                 if movebookmark:
                     bookmarksmod.deactivate(repo)
-                    repo._bookmarks[bookactive] = newnode.node()
-                    repo._bookmarks.recordchange(tr)
+                    changes = [(bookactive, newnode.node())]
+                    repo._bookmarks.applychanges(repo, tr, changes)
                 commands.update(ui, repo, newnode.rev())
                 ui.status(_('working directory now at %s\n')
                           % ui.label(str(newnode), 'evolve.node'))
