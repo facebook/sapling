@@ -343,7 +343,7 @@ class rebaseruntime(object):
         if dest.closesbranch() and not self.keepbranchesf:
             self.ui.status(_('reopening closed branch head %s\n') % dest)
 
-    def _performrebase(self):
+    def _performrebase(self, tr):
         repo, ui, opts = self.repo, self.ui, self.opts
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
@@ -394,7 +394,7 @@ class rebaseruntime(object):
                                              self.state,
                                              self.destancestors,
                                              self.obsoletenotrebased)
-                self.storestatus()
+                self.storestatus(tr=tr)
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
@@ -641,6 +641,15 @@ def rebase(ui, repo, **opts):
       [commands]
       rebase.requiredest = True
 
+    By default, rebase will close the transaction after each commit. For
+    performance purposes, you can configure rebase to use a single transaction
+    across the entire rebase. WARNING: This setting introduces a significant
+    risk of losing the work you've done in a rebase if the rebase aborts
+    unexpectedly::
+
+      [rebase]
+      singletransaction = True
+
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -700,7 +709,12 @@ def rebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
 
-        rbsrt._performrebase()
+        tr = None
+        if ui.configbool('rebase', 'singletransaction'):
+            tr = repo.transaction('rebase')
+        with util.acceptintervention(tr):
+            rbsrt._performrebase(tr)
+
         rbsrt._finishrebase()
 
 def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
