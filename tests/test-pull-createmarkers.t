@@ -135,6 +135,7 @@ the remote
   adding file changes
   added 3 changesets with 0 changes to 3 files
   (run 'hg update' to get a working copy)
+  obsoleted 3 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   o  8 "add e
   |
