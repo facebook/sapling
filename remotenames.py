@@ -1510,14 +1510,15 @@ def transition(repo, ui):
     """
     transmarks = ui.configlist('remotenames', 'transitionbookmarks')
     localmarks = repo._bookmarks
+    changes = []
     for mark in transmarks:
         if mark in localmarks:
-            del localmarks[mark]
+            changes.append((mark, None)) # delete this bookmark
     lock = tr = None
     try:
         lock = repo.lock()
         tr = repo.transaction("remotenames")
-        localmarks.recordchange(tr)
+        localmarks.applychanges(repo, tr, changes)
         tr.close()
     finally:
         lockmod.release(lock, tr)
