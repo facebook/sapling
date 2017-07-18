@@ -190,7 +190,7 @@ def _isgooddelta(orig, self, d, textlen):
     return True
 
 def _cachefilename(name):
-    return 'cache/noderevs/%s' % name
+    return 'noderevs/%s' % name
 
 def _preloadrevs(repo):
     # Preloading the node-rev map for likely to be used revs saves 100ms on
@@ -208,7 +208,7 @@ def _preloadrevs(repo):
         try:
             for cachefile in os.listdir(cachedir):
                 filename = _cachefilename(cachefile)
-                revs.update(int(r) for r in repo.vfs.open(filename).readlines())
+                revs.update(int(r) for r in repo.cachevfs(filename))
 
             getnode = repo.changelog.node
             nodemap = repo.changelog.nodemap
@@ -237,7 +237,7 @@ def _savepreloadrevs(repo, name, revs):
 
         try:
             filename = _cachefilename(name)
-            f = repo.vfs.open(filename, mode='w+', atomictemp=True)
+            f = repo.cachevfs.open(filename, mode='w+', atomictemp=True)
             f.write('\n'.join(str(r) for r in revs))
             f.close()
         except EnvironmentError:
