@@ -48,7 +48,9 @@ def main(args):
         prevname = ''
         confsect = ''
         carryover = ''
+        linenum = 0
         for l in open(f):
+            linenum += 1
 
             # check topic-like bits
             m = re.match('\s*``(\S+)``', l)
@@ -110,9 +112,10 @@ def main(args):
                     default = '<variable>'
                 if (name in foundopts and (ctype, default) != foundopts[name]
                     and name not in allowinconsistent):
-                    print(l)
+                    print(l.rstrip())
                     print("conflict on %s: %r != %r" % (name, (ctype, default),
                                                         foundopts[name]))
+                    print("at %s:%d:" % (f, linenum))
                 foundopts[name] = (ctype, default)
                 carryover = ''
             else:
