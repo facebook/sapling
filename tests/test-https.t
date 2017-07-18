@@ -605,14 +605,12 @@ Missing certificate file(s) are detected
 
   $ hg serve -p $HGPORT --certificate=/missing/certificate \
   > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
-  abort: referenced certificate file (*/missing/certificate) does not exist (glob) (windows !)
-  abort: referenced certificate file (/missing/certificate) does not exist (no-windows !)
+  abort: referenced certificate file (*/missing/certificate) does not exist (glob)
   [255]
 
   $ hg serve -p $HGPORT --certificate=$PRIV \
   > --config devel.servercafile=/missing/cafile --config devel.serverrequirecert=true
-  abort: referenced certificate file (*/missing/cafile) does not exist (glob) (windows !)
-  abort: referenced certificate file (/missing/cafile) does not exist (no-windows !)
+  abort: referenced certificate file (*/missing/cafile) does not exist (glob)
   [255]
 
 Start hgweb that requires client certificates:
@@ -657,14 +655,12 @@ with client certificate:
 Missing certficate and key files result in error
 
   $ hg id https://localhost:$HGPORT/ --config auth.l.cert=/missing/cert
-  abort: certificate file (*/missing/cert) does not exist; cannot connect to localhost (glob) (windows !)
-  abort: certificate file (/missing/cert) does not exist; cannot connect to localhost (no-windows !)
+  abort: certificate file (*/missing/cert) does not exist; cannot connect to localhost (glob)
   (restore missing file or fix references in Mercurial config)
   [255]
 
   $ hg id https://localhost:$HGPORT/ --config auth.l.key=/missing/key
-  abort: certificate file (*/missing/key) does not exist; cannot connect to localhost (glob) (windows !)
-  abort: certificate file (/missing/key) does not exist; cannot connect to localhost (no-windows !)
+  abort: certificate file (*/missing/key) does not exist; cannot connect to localhost (glob)
   (restore missing file or fix references in Mercurial config)
   [255]
 
