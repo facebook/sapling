@@ -28,7 +28,7 @@ def uisetup(ui):
                     "editor"):
                     return "editor"
                 elif self.config("ui", "interface.%s" % feature, None) is None:
-                    if self.config("ui", "interface", None) == "editor":
+                    if self.config("ui", "interface") == "editor":
                         return "editor"
             return super(edrecordui, self).interface(feature)
 

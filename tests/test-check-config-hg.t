@@ -18,9 +18,6 @@ New errors are not allowed. Warnings are strongly discouraged.
       elif ui.configbool('p4fastimport', 'useworker', False):
   
   conflict on p4fastimport.useworker: ('bool', '') != ('str', '')
-                         repo.ui.config("paths", "default")))
-  
-  conflict on paths.default: ('str', '') != ('str', '<variable>')
       if ui.configbool("experimental", "histeditng"):
   
   conflict on experimental.histeditng: ('bool', '') != ('str', '')

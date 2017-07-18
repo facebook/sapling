@@ -24,7 +24,7 @@ from mercurial import (
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
     orig(self, baseui, path, create)
-    reponame = self.ui.config('paths', 'default', path)
+    reponame = self.ui.config('paths', 'default')
     if reponame:
         reponame = os.path.basename(reponame)
     configoptstolog = self.ui.configlist('logging', 'configoptions')

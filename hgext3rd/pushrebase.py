@@ -804,7 +804,7 @@ def bundle2rebase(op, part):
             bundle.close()
 
     # Move public phase forward
-    publishing = op.repo.ui.configbool('phases', 'publish', True)
+    publishing = op.repo.ui.configbool('phases', 'publish', untrusted=True)
     if publishing:
         phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
 

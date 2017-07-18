@@ -393,8 +393,7 @@ def _wraprepo(ui, repo):
                         msg = (
                             "warning: sparse profile '%s' not found "
                             "in rev %s - ignoring it\n" % (profile, ctx))
-                        if self.ui.configbool(
-                                'sparse', 'missingwarning', True):
+                        if self.ui.configbool('sparse', 'missingwarning'):
                             self.ui.warn(msg)
                         else:
                             self.ui.debug(msg)

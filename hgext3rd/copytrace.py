@@ -439,7 +439,7 @@ def _fastcopytraceenabled(ui):
 
 def _getreponame(repo, ui):
     reporoot = repo.origroot if util.safehasattr(repo, 'origroot') else ''
-    reponame = ui.config('paths', 'default', reporoot)
+    reponame = ui.config('paths', 'default') or reporoot
     if reponame:
         reponame = os.path.basename(reponame)
     return reponame
