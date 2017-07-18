@@ -138,28 +138,32 @@ def getrepophid(repo):
 
 _differentialrevisiontagre = re.compile('\AD([1-9][0-9]*)\Z')
 _differentialrevisiondescre = re.compile(
-    '^Differential Revision:\s*(.*)D([1-9][0-9]*)$', re.M)
+    '^Differential Revision:\s*(?:.*)D([1-9][0-9]*)$', re.M)
 
 def getoldnodedrevmap(repo, nodelist):
     """find previous nodes that has been sent to Phabricator
 
-    return {node: (oldnode or None, Differential Revision ID)}
+    return {node: (oldnode, Differential diff, Differential Revision ID)}
     for node in nodelist with known previous sent versions, or associated
-    Differential Revision IDs.
+    Differential Revision IDs. ``oldnode`` and ``Differential diff`` could
+    be ``None``.
 
-    Examines all precursors and their tags. Tags with format like "D1234" are
-    considered a match and the node with that tag, and the number after "D"
-    (ex. 1234) will be returned.
+    Examines commit messages like "Differential Revision:" to get the
+    association information.
 
-    If tags are not found, examine commit message. The "Differential Revision:"
-    line could associate this changeset to a Differential Revision.
+    If such commit message line is not found, examines all precursors and their
+    tags. Tags with format like "D1234" are considered a match and the node
+    with that tag, and the number after "D" (ex. 1234) will be returned.
+
+    The ``old node``, if not None, is guaranteed to be the last diff of
+    corresponding Differential Revision, and exist in the repo.
     """
     url, token = readurltoken(repo)
     unfi = repo.unfiltered()
     nodemap = unfi.changelog.nodemap
 
-    result = {} # {node: (oldnode or None, drev)}
-    toconfirm = {} # {node: (oldnode, {precnode}, drev)}
+    result = {} # {node: (oldnode?, lastdiff?, drev)}
+    toconfirm = {} # {node: (force, {precnode}, drev)}
     for node in nodelist:
         ctx = unfi[node]
         # For tags like "D123", put them into "toconfirm" to verify later
@@ -169,39 +173,49 @@ def getoldnodedrevmap(repo, nodelist):
                 for tag in unfi.nodetags(n):
                     m = _differentialrevisiontagre.match(tag)
                     if m:
-                        toconfirm[node] = (n, set(precnodes), int(m.group(1)))
+                        toconfirm[node] = (0, set(precnodes), int(m.group(1)))
                         continue
 
-        # Check commit message (make sure URL matches)
+        # Check commit message
         m = _differentialrevisiondescre.search(ctx.description())
         if m:
-            if m.group(1).rstrip('/') == url.rstrip('/'):
-                result[node] = (None, int(m.group(2)))
-            else:
-                unfi.ui.warn(_('%s: Differential Revision URL ignored - host '
-                               'does not match config\n') % ctx)
+            toconfirm[node] = (1, set(precnodes), int(m.group(1)))
 
     # Double check if tags are genuine by collecting all old nodes from
     # Phabricator, and expect precursors overlap with it.
     if toconfirm:
-        confirmed = {} # {drev: {oldnode}}
-        drevs = [drev for n, precs, drev in toconfirm.values()]
-        diffs = callconduit(unfi, 'differential.querydiffs',
-                            {'revisionIDs': drevs})
-        for diff in diffs.values():
-            drev = int(diff[r'revisionID'])
-            oldnode = bin(encoding.unitolocal(getdiffmeta(diff).get(r'node')))
-            if node:
-                confirmed.setdefault(drev, set()).add(oldnode)
-        for newnode, (oldnode, precset, drev) in toconfirm.items():
-            if bool(precset & confirmed.get(drev, set())):
-                result[newnode] = (oldnode, drev)
-            else:
+        drevs = [drev for force, precs, drev in toconfirm.values()]
+        alldiffs = callconduit(unfi, 'differential.querydiffs',
+                               {'revisionIDs': drevs})
+        getnode = lambda d: bin(encoding.unitolocal(
+            getdiffmeta(d).get(r'node', ''))) or None
+        for newnode, (force, precset, drev) in toconfirm.items():
+            diffs = [d for d in alldiffs.values()
+                     if int(d[r'revisionID']) == drev]
+
+            # "precursors" as known by Phabricator
+            phprecset = set(getnode(d) for d in diffs)
+
+            # Ignore if precursors (Phabricator and local repo) do not overlap,
+            # and force is not set (when commit message says nothing)
+            if not force and not bool(phprecset & precset):
                 tagname = 'D%d' % drev
                 tags.tag(repo, tagname, nullid, message=None, user=None,
                          date=None, local=True)
                 unfi.ui.warn(_('D%s: local tag removed - does not match '
                                'Differential history\n') % drev)
+                continue
+
+            # Find the last node using Phabricator metadata, and make sure it
+            # exists in the repo
+            oldnode = lastdiff = None
+            if diffs:
+                lastdiff = max(diffs, key=lambda d: int(d[r'id']))
+                oldnode = getnode(lastdiff)
+                if oldnode and oldnode not in nodemap:
+                    oldnode = None
+
+            result[newnode] = (oldnode, lastdiff, drev)
 
     return result
 
@@ -354,7 +368,8 @@ def phabsend(ui, repo, *revs, **opts):
         phids = userphids(repo, reviewers)
         actions.append({'type': 'reviewers.add', 'value': phids})
 
-    oldnodedrev = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
+    # {newnode: (oldnode, olddiff, olddrev}
+    oldmap = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
 
     # Send patches one by one so we know their Differential Revision IDs and
     # can provide dependency relationship
@@ -364,7 +379,7 @@ def phabsend(ui, repo, *revs, **opts):
         ctx = repo[rev]
 
         # Get Differential Revision ID
-        oldnode, revid = oldnodedrev.get(ctx.node(), (None, None))
+        oldnode, olddiff, revid = oldmap.get(ctx.node(), (None, None, None))
         if oldnode != ctx.node():
             # Create or update Differential Revision
             revision = createdifferentialrevision(ctx, revid, lastrevid,
