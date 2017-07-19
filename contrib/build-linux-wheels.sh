@@ -3,7 +3,7 @@
 # https://github.com/pypa/python-manylinux-demo/blob/master/travis/build-wheels.sh
 set -e -x
 
-PYTHON_TARGETS=$(ls -d /opt/python/cp2*/bin)
+PYTHON_TARGETS=$(ls -d /opt/python/cp27*/bin)
 
 # Create an user for the tests
 useradd hgbuilder
