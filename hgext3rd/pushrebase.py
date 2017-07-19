@@ -905,8 +905,10 @@ def prefillcaches(op, bundle, bundlerepocache):
         for mfnode in dircache:
             mfctx = dircache[mfnode]
             newmfctx = manifest.manifestctx(bundle, mfnode)
-            newmfctx._data = mfctx._data
-            newdirmancache[dir][mfnode] = newmfctx
+            if (util.safehasattr(mfctx, '_data') and
+                util.safehasattr(newmfctx, '_data')):
+                    newmfctx._data = mfctx._data
+                    newdirmancache[dir][mfnode] = newmfctx
 
     for mfnode, mfdict in bundlerepocache.iteritems():
         newmfctx = manifest.manifestctx(bundle, mfnode)
