@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import extensions, registrar
+from mercurial import cmdutil, extensions, registrar
 from mercurial import util as hgutil
 from mercurial.i18n import _
 from mercurial import obsutil
@@ -102,18 +102,31 @@ def getdiffstatus(repo, *diffid):
             result.append(matchingresponse)
     return result
 
-def populateresponseforphab(repo, ctx):
+def populateresponseforphab(repo, diffnum):
     """:populateresponse: Runs the memoization function
         for use of phabstatus and sync status
     """
-    if hgutil.safehasattr(repo, '_smartlogrevs'):
-        alldiffnumbers = [getdiffnum(repo, repo[rev])
-                          for rev in repo._smartlogrevs]
-        okdiffnumbers = [d for d in alldiffnumbers if d is not None]
-        # To populate the cache, the result will be used by the templater
-        getdiffstatus(repo, *okdiffnumbers)
-        # Do this once per smartlog call, not for every revs to be displayed
-        del repo._smartlogrevs
+    if not hgutil.safehasattr(repo, '_phabstatusrevs'):
+        return
+
+    if (hgutil.safehasattr(repo, '_phabstatuscache') and
+            (repo, diffnum) in repo._phabstatuscache):
+        # We already have cached data for this diff
+        return
+
+    next_revs = repo._phabstatusrevs.peekahead()
+    if repo._phabstatusrevs.done:
+        # repo._phabstatusrevs doesn't have anything else to process.
+        # Remove it so we will bail out earlier next time.
+        del repo._phabstatusrevs
+
+    alldiffnumbers = [getdiffnum(repo, repo[rev])
+                      for rev in next_revs]
+    okdiffnumbers = set(d for d in alldiffnumbers if d is not None)
+    # Make sure we always include the requested diff number
+    okdiffnumbers.add(diffnum)
+    # To populate the cache, the result will be used by the templater
+    getdiffstatus(repo, *okdiffnumbers)
 
 templatekeyword = registrar.templatekeyword()
 
@@ -121,15 +134,16 @@ templatekeyword = registrar.templatekeyword()
 def showphabstatus(repo, ctx, templ, **args):
     """String. Return the diff approval status for a given hg rev
     """
-    populateresponseforphab(repo, ctx)
-
     diffnum = getdiffnum(repo, ctx)
-    if diffnum is not None:
-        result = getdiffstatus(repo, diffnum)[0]
-        if isinstance(result, dict) and "status" in result:
-            return result.get("status")
-        else:
-            return "Error"
+    if diffnum is None:
+        return None
+    populateresponseforphab(repo, diffnum)
+
+    result = getdiffstatus(repo, diffnum)[0]
+    if isinstance(result, dict) and "status" in result:
+        return result.get("status")
+    else:
+        return "Error"
 
 """
 in order to determine whether the local changeset is in sync with the
@@ -154,7 +168,7 @@ def showsyncstatus(repo, ctx, templ, **args):
     if diffnum is None:
         return None
 
-    populateresponseforphab(repo, ctx)
+    populateresponseforphab(repo, diffnum)
     results = getdiffstatus(repo, diffnum)
     try:
         result = results[0]
@@ -186,14 +200,113 @@ def showsyncstatus(repo, ctx, templ, **args):
 def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
 
-def _getdag(orig, *args):
-    repo = args[1]
-    # We retain the smartlogrevision, this way showphabstatus knows that there
-    # are multiple revisions to resolve
-    repo._smartlogrevs = args[2]
-    return orig(*args)
+class PeekaheadRevsetIter(object):
+    """
+    PeekaheadRevsetIter is a helper class that wraps a revision set iterator,
+    and allows the phabstatus code to peek ahead in the list as the logging
+    code is iterating through it.
+
+    The main logging code uses the normal iterator interface (next()) to
+    iterate through this revision set.
+
+    The phabstatus code will call peekahead() to peek ahead in the list, so it
+    can query information for multiple revisions at once, rather than only
+    processing them one at a time as the logging code requests them.
+    """
+    def __init__(self, revs, chunksize=30):
+        self.mainiter = iter(revs)
+        # done is set to true once mainiter has thrown StopIteration
+        self.done = False
+
+        # chunk is the peekahead chunk we have returned from peekahead().
+        self.chunk = list()
+        # chunk_idx represents how far into self.chunk() the main iteration
+        # code has seen via the next() API.
+        self.chunk_idx = 0
+        self.chunksize = chunksize
+
+    def next(self):
+        if self.chunk_idx < len(self.chunk):
+            # We still have data remaining in the peekahead chunk to return
+            result = self.chunk[self.chunk_idx]
+            self.chunk_idx += 1
+            if self.chunk_idx >= len(self.chunk):
+                self.chunk = list()
+                self.chunk_idx = 0
+            return result
+
+        if self.done:
+            raise StopIteration()
+
+        try:
+            return next(self.mainiter)
+        except StopIteration:
+            self.done = True
+            raise
+
+    def peekahead(self, chunksize=None):
+        chunksize = chunksize or self.chunksize
+        while len(self.chunk) < chunksize and not self.done:
+            try:
+                self.chunk.append(next(self.mainiter))
+            except StopIteration:
+                self.done = True
+
+        return self.chunk
+
+def _getlogrevs(orig, repo, pats, opts):
+    # Call the original function
+    revs, expr, filematcher = orig(repo, pats, opts)
+
+    # Wrap the revs result so that iter(revs) returns a PeekaheadRevsetIter()
+    # the first time it is invoked, and sets repo._phabstatusrevs so that the
+    # phabstatus code will be able to peek ahead at the revs to be logged.
+    orig_type = revs.__class__
+    class wrapped_class(type(revs)):
+        def __iter__(self):
+            # The first time __iter__() is called, return a
+            # PeekaheadRevsetIter(), and assign it to repo._phabstatusrevs
+            revs.__class__ = orig_type
+            # By default, peek ahead 30 revisions at a time
+            peekahead = repo.ui.configint('phabstatus', 'logpeekahead', 30)
+            repo._phabstatusrevs = PeekaheadRevsetIter(revs, peekahead)
+            return repo._phabstatusrevs
+
+        _is_phabstatus_wrapped = True
+
+    if not hgutil.safehasattr(revs, '_is_phabstatus_wrapped'):
+        revs.__class__ = wrapped_class
+
+    return revs, expr, filematcher
+
+class PeekaheadList(object):
+    """
+    PeekaheadList exposes peekahead() and done just like PeekaheadRevsetIter,
+    but wraps a simple list instead of a revset generator.  peekahead() returns
+    the full list.
+    """
+    def __init__(self, revs):
+        self.revs = revs
+        self.done = False
+
+    def peekahead(self):
+        self.done = True
+        return self.revs
+
+def _getsmartlogdag(orig, ui, repo, revs, *args):
+    # smartlog just uses a plain list for its revisions, and not an
+    # abstractsmartset type.  We just save a copy of it.
+    repo._phabstatusrevs = PeekaheadList(revs)
+    return orig(ui, repo, revs, *args)
 
 def extsetup(ui):
+    # Wrap the APIs used to get the revisions for "hg log" so we
+    # can peekahead into the rev list and query phabricator for multiple diffs
+    # at once.
+    extensions.wrapfunction(cmdutil, 'getlogrevs', _getlogrevs)
+    extensions.wrapfunction(cmdutil, 'getgraphlogrevs', _getlogrevs)
+
+    # Also wrap the APIs used by smartlog
     def _smartlogloaded(loaded):
         smartlog = None
         try:
@@ -201,6 +314,6 @@ def extsetup(ui):
         except KeyError:
             pass
         if smartlog:
-            extensions.wrapfunction(smartlog, 'getdag', _getdag)
+            extensions.wrapfunction(smartlog, 'getdag', _getsmartlogdag)
 
     extensions.afterloaded('smartlog', _smartlogloaded)

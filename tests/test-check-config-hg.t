@@ -49,6 +49,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: perftweaks.disabletags (bool)
   undocumented: perftweaks.preferdeltas (bool)
+  undocumented: phabstatus.logpeekahead (int) [30]
   undocumented: phrevset.callsign (str)
   undocumented: pushrebase.blocknonpushrebase (bool)
   undocumented: pushrebase.rewritedates (bool)
