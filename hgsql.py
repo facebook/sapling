@@ -327,7 +327,7 @@ class sqlcontext(object):
         if not profiler:
             return
 
-        freq = self.repo.ui.configint('profiling', 'freq', default=1000)
+        freq = self.repo.ui.configint('profiling', 'freq')
         if profiler == 'ls':
             from mercurial import lsprof
             self._profiler = lsprof.Profiler()
