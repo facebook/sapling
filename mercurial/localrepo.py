@@ -1461,6 +1461,13 @@ class localrepository(object):
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
                 continue
+            if (k == 'changelog' and
+                self.currenttransaction() and
+                self.changelog._delayed):
+                # The changelog object may store unwritten revisions. We don't
+                # want to lose them.
+                # TODO: Solve the problem instead of working around it.
+                continue
 
             if clearfilecache:
                 del self._filecache[k]
