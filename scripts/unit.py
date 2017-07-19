@@ -77,6 +77,17 @@ def interestingtests(changed_files, include_checks=True):
             test_set = testwords.setdefault(word, set())
             test_set.add(t)
 
+    # Also scan test files to check if they use extensions. For example,
+    # pushrebase.py change should trigger test-pull-createmarkers.t since the
+    # latter enables pushrebase extension.
+    extre = re.compile('> ([^ ]+)\s*=\s*\$TESTDIR')
+    for t in tests:
+        with open(os.path.join(reporoot, 'tests', t)) as f:
+            content = f.read()
+        for word in extre.findall(content):
+            test_set = testwords.setdefault(word, set())
+            test_set.add(t)
+
     # A test is interesting if there is a common word in both the path of the
     # changed source file and the name of the test file. For example:
     # - test-githelp.t is interesting if githelp.py is changed
