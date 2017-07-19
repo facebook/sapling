@@ -20,6 +20,7 @@ Check help text for new options and removal of unsupported options.
   
   options:
   
+      --clean                discard uncommitted changes (no backup)
       --newest               always pick the newest child when a changeset has
                              multiple children
       --rebase               rebase each changeset if necessary
@@ -134,6 +135,26 @@ Test bookmark activation.
   (leaving bookmark bookmark)
   [c8d03c] (top) r5
 
+Test dirty working copy and --clean.
+  $ hg up bottom
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark bottom)
+  $ touch test
+  $ hg add test
+  $ hg st
+  A test
+  $ hg next
+  abort: uncommitted changes
+  (use --clean to discard uncommitted changes or --merge to bring them along)
+  [255]
+  $ hg next --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bottom)
+  [66f7d4] r1
+  $ hg st
+  ? test
+  $ rm test
+
 Test dirty working copy and --merge.
   $ hg up bottom
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -144,7 +165,7 @@ Test dirty working copy and --merge.
   A test
   $ hg next
   abort: uncommitted changes
-  (use --merge to merge uncommitted changes)
+  (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg next --merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -193,7 +214,6 @@ Test --newest flag.
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     r0
   
-
   $ hg next --top --newest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)

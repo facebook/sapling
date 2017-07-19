@@ -33,7 +33,9 @@ moveopts = [
 
 @command(
     '^previous',
-    [('', 'newest', False,
+    [('', 'clean', False,
+      _('discard uncommitted changes (no backup)')),
+     ('', 'newest', False,
       _('always pick the newest parent when a changeset has multiple parents')),
      ('', 'bottom', False,
       _('update to the lowest non-public ancestor of the current changeset')),
@@ -48,7 +50,9 @@ def previous(ui, repo, *args, **opts):
 
 @command(
     '^next',
-    [('', 'newest', False,
+    [('', 'clean', False,
+      _('discard uncommitted changes (no backup)')),
+     ('', 'newest', False,
       _('always pick the newest child when a changeset has multiple children')),
      ('', 'rebase', False, _('rebase each changeset if necessary')),
      ('', 'top', False, _('update to the head of the current stack')),
@@ -99,17 +103,23 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             raise error.Abort(_("cannot use both --bottom and --bookmark"))
     if opts.get('towards', False) and opts.get('top', False):
         raise error.Abort(_("cannot use both --top and --towards"))
+    if opts.get('merge', False) and opts.get('rebase', False):
+        raise error.Abort(_("cannot use both --merge and --rebase"))
 
     # Check if there is an outstanding operation or uncommited changes.
     cmdutil.checkunfinished(repo)
-    if not opts.get('merge', False):
+    if not opts.get('clean', False) and not opts.get('merge', False):
         try:
             cmdutil.bailifchanged(repo)
         except error.Abort as e:
-            e.hint = _("use --merge to merge uncommitted changes")
+            e.hint = _("use --clean to discard uncommitted changes "
+                       "or --merge to bring them along")
             raise
-    elif opts.get('rebase', False):
-        raise error.Abort(_("cannot use both --merge and --rebase"))
+
+    # If we have both --clean and --rebase, we need to discard any outstanding
+    # changes now before we attempt to perform any rebases.
+    if opts.get('clean') and opts.get('rebase'):
+        commands.update(ui, repo, rev=repo['.'].rev(), clean=True)
 
     with repo.wlock(), repo.lock():
         # Record the active bookmark, if any.
@@ -133,7 +143,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 _setbookmark(repo, tr, bookmark, target)
 
             # Update to the target changeset.
-            commands.update(ui, repo, rev=target)
+            commands.update(ui, repo, rev=target,
+                            clean=opts.get('clean', False))
 
             # Print out the changeset we landed on.
             _showchangesets(ui, repo, revs=[target])

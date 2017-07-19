@@ -58,6 +58,31 @@ Rebasing single changeset.
   |/
   o  0 r0
   
+Test --clean flag.
+  $ touch foo
+  $ hg add foo
+  $ hg status
+  A foo
+  $ hg next --rebase
+  abort: uncommitted changes
+  (use --clean to discard uncommitted changes or --merge to bring them along)
+  [255]
+  $ hg next --rebase --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  rebasing 3:137d867d71d5 "r3"
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [7d603c] r3
+  $ hg status
+  ? foo
+  $ showgraph
+  @  6 r3
+  |
+  o  5 r2
+  |
+  o  4 amended
+  |
+  o  0 r0
+  
 
 Rebasing multiple changesets at once.
   $ reset

@@ -17,6 +17,7 @@ Check help text for new options and removal of unsupported options.
   
   options:
   
+      --clean                discard uncommitted changes (no backup)
       --newest               always pick the newest parent when a changeset has
                              multiple parents
       --bottom               update to the lowest non-public ancestor of the
@@ -109,7 +110,7 @@ Test dirty working copy and --merge.
   A test
   $ hg previous
   abort: uncommitted changes
-  (use --merge to merge uncommitted changes)
+  (use --clean to discard uncommitted changes or --merge to bring them along)
   [255]
   $ hg previous --merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -117,3 +118,14 @@ Test dirty working copy and --merge.
   [bebd16] r4
   $ hg st
   A test
+
+Test dirty working copy and --clean.
+  $ hg previous
+  abort: uncommitted changes
+  (use --clean to discard uncommitted changes or --merge to bring them along)
+  [255]
+  $ hg previous --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [2dc09a] r3
+  $ hg st
+  ? test
