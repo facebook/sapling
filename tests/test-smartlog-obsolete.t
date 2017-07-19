@@ -165,3 +165,30 @@ Only nodes that were folded or rebased will have successors.
   r4 a14277652442 
   $ hg log --hidden -r 5 -T "{desc} {histeditsuccessors % '{short(histeditsuccessor)} '}\n"
   r5 
+
+Hidden changesets are not considered as successors
+  $ reset
+  $ hg debugbuilddag +2
+  $ hg log -T '{rev} {node|short}' -G -r 'all()'
+  o  1 66f7d451a68b
+  |
+  o  0 1ea73414a91b
+  
+  $ hg up tip -q
+  $ echo 1 > a
+  $ hg commit --amend -m a -A a -d '1 0'
+
+  $ hg up 1 --hidden -q
+  $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
+  o  3 1ef61e92c901
+  |
+  | @  1 66f7d451a68b (amend as 1ef61e92c901)
+  |/
+  o  0 1ea73414a91b
+  
+  $ hg prune 3 -q
+  $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
+  x  1 66f7d451a68b
+  |
+  @  0 1ea73414a91b
+  

@@ -217,10 +217,17 @@ def successormarkers(ctx):
 def modifysuccessors(ctx, operation):
     """Return all of the node's successors which were created as a result
     of a given modification operation"""
+    repo = ctx.repo().filtered('visible')
     for m in successormarkers(ctx):
         if m.metadata().get('operation') == operation:
             for node in m.succnodes():
-                yield nodemod.hex(node)
+                try:
+                    repo[node]
+                except Exception:
+                    # filtered or unknown node
+                    pass
+                else:
+                    yield nodemod.hex(node)
 
 def sortnodes(nodes, parentfunc, masters):
     """Topologically sorts the nodes, using the parentfunc to find
