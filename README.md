@@ -93,6 +93,14 @@ upgradegeneraldelta
 
 Upgrades manifests to generaldelta in-place, without needing to reclone.
 
+drop
+==========
+Drops specified changeset from the stack. If the changeset to drop has multiple
+children branching off of it, all of them (including their descendants)
+will be rebased onto the parent commit.
+This command does not support dropping changeset which are a result
+ of a merge (have two parent changesets). Public changesets cannot be dropped.
+
 Contributing
 ============
 
