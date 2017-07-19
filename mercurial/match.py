@@ -363,6 +363,9 @@ class nevermatcher(basematcher):
     def prefix(self):
         return True
 
+    def visitdir(self, dir):
+        return False
+
     def __repr__(self):
         return '<nevermatcher>'
 
