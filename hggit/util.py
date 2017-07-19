@@ -94,18 +94,28 @@ def isgitsshuri(uri):
             return True
     return False
 
-def recordbookmarks(repo, bms, name='git_handler'):
+def updatebookmarks(repo, changes, name='git_handler'):
     """abstract writing bookmarks for backwards compatibility"""
+    bms = repo._bookmarks
     tr = lock = wlock = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
         tr = repo.transaction(name)
-        if hgutil.safehasattr(bms, 'recordchange'):
-            # recordchange was added in mercurial 3.2
-            bms.recordchange(tr)
+        if hgutil.safehasattr(bms, 'applychanges'):
+            # applychanges was added in mercurial 4.3
+            bms.applychanges(repo, tr, changes)
         else:
-            bms.write()
+            for name, node in changes:
+                if node is None:
+                    del bms[name]
+                else:
+                    bms[name] = node
+            if hgutil.safehasattr(bms, 'recordchange'):
+                # recordchange was added in mercurial 3.2
+                bms.recordchange(tr)
+            else:
+                bms.write()
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)

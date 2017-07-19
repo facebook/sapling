@@ -300,8 +300,8 @@ class GitHandler(object):
                     # make sure the bookmark exists; at the point the remote
                     # branches has already been set up
                     suffix = self.branch_bookmark_suffix or ''
-                    self.repo._bookmarks[rhead + suffix] = rnode
-                    util.recordbookmarks(self.repo, self.repo._bookmarks)
+                    changes = [(rhead + suffix, rnode)]
+                    util.updatebookmarks(self.repo, changes)
                     bms = [rhead + suffix]
 
                 if bms:
@@ -1372,6 +1372,7 @@ class GitHandler(object):
                           if ref.startswith('refs/heads/')])
 
             suffix = self.branch_bookmark_suffix or ''
+            changes = []
             for head, sha in heads.iteritems():
                 # refs contains all the refs in the server, not just
                 # the ones we are pulling
@@ -1381,15 +1382,15 @@ class GitHandler(object):
                 hgsha = bin(hgsha)
                 if head not in bms:
                     # new branch
-                    bms[head + suffix] = hgsha
+                    changes.append((head + suffix, hgsha))
                 else:
                     bm = self.repo[bms[head]]
                     if bm.ancestor(self.repo[hgsha]) == bm:
                         # fast forward
-                        bms[head + suffix] = hgsha
+                        changes.append((head + suffix, hgsha))
 
             if heads:
-                util.recordbookmarks(self.repo, bms)
+                util.updatebookmarks(self.repo, changes)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
