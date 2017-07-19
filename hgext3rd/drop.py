@@ -55,7 +55,7 @@ def _checkextension(name, ui):
     try:
         return extensions.find(name)
     except KeyError:
-        ui.warn(_('extension %s not found\n' % name))
+        ui.warn(_('extension %s not found\n') % name)
         return None
 
 

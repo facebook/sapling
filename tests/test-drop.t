@@ -11,7 +11,7 @@ TEST: incomplete requirements handling (required extension excluded)
   $ cd a
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > drop=
+  > drop = $TESTDIR/../hgext3rd/drop.py
   > EOF
 
   $ hg drop 1
@@ -23,7 +23,7 @@ SETUP: Properly setup all required extensions
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > rebase=
-  > drop=
+  > drop = $TESTDIR/../hgext3rd/drop.py
   > [experimental]
   > evolution=all
   > EOF
@@ -50,7 +50,7 @@ RESET and SETUP
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > rebase=
-  > drop=
+  > drop = $TESTDIR/../hgext3rd/drop.py
   > [experimental]
   > evolution=all
   > EOF
@@ -87,7 +87,7 @@ RESET and SETUP
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > rebase=
-  > drop=
+  > drop = $TESTDIR/../hgext3rd/drop.py
   > [experimental]
   > evolution=all
   > EOF
@@ -179,7 +179,7 @@ RESET and SETUP
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > rebase=
-  > drop=
+  > drop = $TESTDIR/../hgext3rd/drop.py
   > [experimental]
   > evolution=all
   > EOF
