@@ -150,37 +150,38 @@ def showsyncstatus(repo, ctx, templ, **args):
     """String. Return whether the local revision is in sync
         with the remote (phabricator) revision
     """
-    populateresponseforphab(repo, ctx)
-
     diffnum = getdiffnum(repo, ctx)
+    if diffnum is None:
+        return None
+
+    populateresponseforphab(repo, ctx)
+    results = getdiffstatus(repo, diffnum)
+    try:
+        result = results[0]
+        remote = result["hash"]
+        status = result["status"]
+        count = int(result["count"])
+    except (IndexError, KeyError, ValueError, TypeError):
+        # We got no result back, or it did not contain all required fields
+        return "Error"
+
     local = ctx.hex()
-    if diffnum is not None:
-        result = getdiffstatus(repo, diffnum)[0]
-
-        if isinstance(result, dict) and "hash" in result \
-        and "status" in result and "count" in result:
-            remote = getdiffstatus(repo, diffnum)[0].get("hash")
-            status = getdiffstatus(repo, diffnum)[0].get("status")
-            count = int(getdiffstatus(repo, diffnum)[0].get("count"))
-
-            if local == remote:
-                return "sync"
-            elif count == 1:
-                precursors = list(obsutil.allprecursors(repo.obsstore,
-                    [ctx.node()]))
-                hashes = [repo.unfiltered()[h].hex() for h in precursors]
-                # hashes[0] is the current
-                # hashes[1] is the previous
-                if len(hashes) > 1 and hashes[1] == remote:
-                    return "sync"
-                else:
-                    return "unsync"
-            elif status == "Committed":
-                return "committed"
-            else:
-                return "unsync"
+    if local == remote:
+        return "sync"
+    elif count == 1:
+        precursors = list(obsutil.allprecursors(repo.obsstore,
+            [ctx.node()]))
+        hashes = [repo.unfiltered()[h].hex() for h in precursors]
+        # hashes[0] is the current
+        # hashes[1] is the previous
+        if len(hashes) > 1 and hashes[1] == remote:
+            return "sync"
         else:
-            return "Error"
+            return "unsync"
+    elif status == "Committed":
+        return "committed"
+    else:
+        return "unsync"
 
 def getdiffnum(repo, ctx):
     return diffprops.parserevfromcommitmsg(ctx.description())
