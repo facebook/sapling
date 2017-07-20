@@ -10,11 +10,13 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 
 from mercurial import (
+    cmdutil,
     dispatch,
     error,
     extensions,
     localrepo,
     lock as lockmod,
+    obsolete,
     registrar,
     revlog,
     revset,
@@ -309,6 +311,89 @@ def _olddraft(repo, subset, x):
                 _('index must be a positive integer'), 1)
     revs = _getolddrafts(repo, reverseindex)
     return smartset.baseset(revs)
+
+# Undo:
+
+@command('undo', [
+    ('n', 'index', 1, _("how many steps to undo back")),
+])
+def undo(ui, repo, *args, **opts):
+    """perform an undo
+
+    Undoes an undoable command.  An undoable command is one that changed at
+    least one of the following three: bookmarks, working copy parent or
+    changesets. Note that this specifically does not include commands like log.
+    It will include update if update changes the working copy parent (you update
+    to a changeset that isn't the current one).  Note that commands that edit
+    public repos can't be undone (specifically push).
+
+    Undo does not preserve the working copy changes.
+    """
+
+    reverseindex = opts.get("index")
+
+    with repo.wlock(), repo.lock(), repo.transaction("undo"):
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
+        repo = repo.unfiltered()
+        _undoto(ui, repo, reverseindex)
+
+def _undoto(ui, repo, reverseindex):
+    # undo to specific reverseindex
+    # requires inhibit extension
+    if repo != repo.unfilterd:
+        raise error.ProgrammingError(_("_undoto expects unfilterd repo"))
+    try:
+        nodedict = _readindex(repo, reverseindex)
+    except IndexError:
+        raise error.Abort(_("index out of bounds"))
+
+    # bookmarks
+    bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
+    booklist = bookstring.split("\n")
+    # copy implementation for bookmarks
+    itercopy = []
+    for mark in repo._bookmarks.iteritems():
+        itercopy.append(mark)
+    bmchanges = [(mark[0], None) for mark in itercopy]
+    repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmchanges)
+    bmchanges = []
+    for mark in booklist:
+        if mark:
+            kv = mark.rsplit(" ", 1)
+            bmchanges.append((kv[0], bin(kv[1])))
+    repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmchanges)
+
+    # working copy parent
+    workingcopyparent = _readnode(repo, "workingparent.i",
+                                  nodedict["workingparent"])
+    revealcommits(repo, workingcopyparent)
+    commands.update(ui, repo, rev=workingcopyparent)
+
+    # visible changesets
+    addedrevs = revsetlang.formatspec('olddraft(0) - olddraft(%d)',
+                                      reverseindex)
+    hidecommits(repo, addedrevs)
+
+    removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
+                                        reverseindex)
+    revealcommits(repo, removedrevs)
+
+# hide and reveal commits
+
+def hidecommits(repo, rev):
+    ctxts = repo.set(rev)
+    for commit in ctxts:
+        obsolete.createmarkers(repo, [[commit,[]]])
+
+def revealcommits(repo, rev):
+    try:
+        inhibit = extensions.find('inhibit')
+    except KeyError:
+        raise error.Abort(_('undo requires inhibit to work properly'))
+    else:
+        ctxts = repo.set(rev)
+        inhibit.revive(ctxts)
 
 # Tools
 
