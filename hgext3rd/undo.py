@@ -189,7 +189,7 @@ def _delundoredo(repo):
     repo.svfs.tryunlink(path)
 
 def _recordnewgap(repo, absoluteindex=None):
-    path = os.path.join('undolog', 'gap')
+    path = 'undolog' + '/' + 'gap'
     if absoluteindex is None:
         rlog = _getrevlog(repo, 'index.i')
         repo.svfs.write(path, str(len(rlog) - 1))
@@ -221,7 +221,7 @@ def _readnode(repo, filename, hexnode):
 def _gapcheck(repo, reverseindex):
     rlog = _getrevlog(repo, 'index.i')
     absoluteindex = _invertindex(rlog, reverseindex)
-    path = os.path.join('undolog', "gap")
+    path = 'undolog' + '/' + 'gap'
     try:
         result = absoluteindex >= int(repo.svfs.read(path))
     except IOError:
@@ -361,10 +361,11 @@ def _olddraft(repo, subset, x):
 # Undo:
 
 @command('undo', [
-    ('n', 'index', 1, _("how many steps to undo back")),
-    ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
     ('a', 'absolute', False, _("absolute based on command index instead of "
                                "relative undo")),
+    ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
+    ('k', 'keep', False, _("keep working copy changes")),
+    ('n', 'index', 1, _("how many steps to undo back")),
 ])
 def undo(ui, repo, *args, **opts):
     """perform an undo
@@ -402,10 +403,20 @@ def undo(ui, repo, *args, **opts):
     ability to undo to certain repo states.  Undoing to repo states before the
     missing ones can be forced, but isn't advised unless its known how the
     before and after states are connected.
-    """
 
+    Use keep to maintain working copy changes.  With keep, undo mimics hg
+    unamend and hg uncommit.  Specifically, files that exsist currently that
+    don't exist at the repo state we are undoing to will remain in your
+    working copy but not in your changeset.  Maintaining your working copy
+    has primarily two downsides: firstly your new working copy won't be clean
+    so you can't simply redo without cleaning your working copy.  Secondly,
+    the operation may be slow if your working copy is large.  If unsure,
+    its generally easier try undo without --keep first and redo if you want
+    to change this.
+    """
     reverseindex = opts.get("index")
     relativeundo = not opts.get("absolute")
+    keep = opts.get("keep")
 
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
@@ -416,7 +427,7 @@ def undo(ui, repo, *args, **opts):
         if not (opts.get("force") or _gapcheck(repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
-        _undoto(ui, repo, reverseindex)
+        _undoto(ui, repo, reverseindex, keep=keep)
         # store undo data
         # for absolute undos, think of this as a reset
         # for relative undos, think of this as an update
@@ -445,10 +456,10 @@ def redo(ui, repo, *args, **opts):
         _undoto(ui, repo, reverseindex)
         _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
 
-def _undoto(ui, repo, reverseindex):
+def _undoto(ui, repo, reverseindex, keep=False):
     # undo to specific reverseindex
     # requires inhibit extension
-    if repo != repo.unfilterd:
+    if repo != repo.unfiltered():
         raise error.ProgrammingError(_("_undoto expects unfilterd repo"))
     try:
         nodedict = _readindex(repo, reverseindex)
@@ -474,9 +485,34 @@ def _undoto(ui, repo, reverseindex):
     # working copy parent
     workingcopyparent = _readnode(repo, "workingparent.i",
                                   nodedict["workingparent"])
-    revealcommits(repo, workingcopyparent)
-    hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
-                     clean=False, updatecheck='abort')
+    if not keep:
+        revealcommits(repo, workingcopyparent)
+        hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
+                         clean=False, updatecheck='abort')
+    else:
+        # keeps working copy files
+        curctx = repo['.']
+        precnode = bin(workingcopyparent)
+        precctx = repo[precnode]
+
+        changedfiles = []
+        wctx = repo[None]
+        wctxmanifest = wctx.manifest()
+        precctxmanifest = precctx.manifest()
+        dirstate = repo.dirstate
+        diff = precctxmanifest.diff(wctxmanifest)
+        changedfiles.extend(diff.iterkeys())
+
+        with dirstate.parentchange():
+            dirstate.rebuild(precnode, precctxmanifest, changedfiles)
+            # we want added and removed files to be shown
+            # properly, not with ? and ! prefixes
+            for filename, data in diff.iteritems():
+                if data[0][0] is None:
+                    dirstate.add(filename)
+                if data[1][0] is None:
+                    dirstate.remove(filename)
+        obsolete.createmarkers(repo, [(curctx, (precctx,))])
 
     # visible changesets
     addedrevs = revsetlang.formatspec('olddraft(0) - olddraft(%d)',
@@ -503,8 +539,8 @@ def _computerelative(repo, reverseindex):
 # hide and reveal commits
 
 def hidecommits(repo, rev):
-    ctxts = repo.set(rev)
-    for commit in ctxts:
+    ctxs = repo.set(rev)
+    for commit in ctxs:
         obsolete.createmarkers(repo, [[commit,[]]])
 
 def revealcommits(repo, rev):

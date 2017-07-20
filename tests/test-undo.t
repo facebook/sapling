@@ -307,3 +307,13 @@ hg undo --force tests
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg undo -a
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+hg undo --keep tests
+  $ touch kfl1 && hg add kfl1
+  $ hg st
+  A kfl1
+  $ hg commit --amend
+  $ hg st
+  $ hg undo --keep
+  $ hg st
+  A kfl1
