@@ -12,6 +12,8 @@ Configs:
 
     ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
+    ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
+      update, and on other commands that use them. Different from pullprefetch.
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
@@ -195,6 +197,10 @@ def debugdatashallow(orig, *args, **kwds):
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
         return
+
+    # put here intentionally bc doesnt work in uisetup
+    ui.setconfig('hooks', 'update.prefetch', wcpprefetch)
+    ui.setconfig('hooks', 'commit.prefetch', wcpprefetch)
 
     isserverenabled = ui.configbool('remotefilelog', 'server')
     isshallowclient = shallowrepo.requirement in repo.requirements
@@ -738,6 +744,24 @@ def log(orig, ui, repo, *pats, **opts):
                           "use -f to speed it up\n"))
 
     return orig(ui, repo, *pats, **opts)
+
+def wcpprefetch(ui, repo, **kwargs):
+    """Prefetches in background revisions specified by bgprefetchrevs revset.
+    Does background repack if backgroundrepack flag is set in config.
+    """
+    shallow = shallowrepo.requirement in repo.requirements
+    bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
+
+    if shallow and bgprefetchrevs:
+        bgrepack = repo.ui.configbool('remotefilelog',
+                                      'backgroundrepack', False)
+        def anon():
+            if util.safehasattr(repo, 'ranprefetch') and repo.ranprefetch:
+                return
+            repo.ranprefetch = True
+            repo.backgroundprefetch(bgprefetchrevs, repack=bgrepack)
+
+        repo._afterlock(anon)
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)

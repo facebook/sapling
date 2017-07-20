@@ -180,11 +180,8 @@ def wraprepo(repo):
                 cmd.append('--repack')
             if revs:
                 cmd += ['-r', revs]
-
             cmd = ' '.join(map(util.shellquote, cmd))
-            msg = _("(running background prefetch)\n")
 
-            repo.ui.warn(msg)
             runshellcommand(cmd, os.environ)
 
         def prefetch(self, revs, base=None, repack=False, pats=None, opts=None):
