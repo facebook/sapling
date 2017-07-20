@@ -63,9 +63,6 @@
     # Name of the repository
     reponame = ''
 
-    # Client-side option
-    pushbackuplog = FILE
-
     # Client-side option. Used by --list-remote option. List of remote scratch
     # patterns to list if no patterns are specified.
     defaultremotepatterns = ['*']

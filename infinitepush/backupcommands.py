@@ -7,21 +7,9 @@
     # path to the directory where pushback logs should be stored
     logdir = path/to/dir
 
-    # max number of logs for one repo for one user
-    maxlognumber = 5
-
-    # There can be at most one backup process per repo. This config options
-    # determines how much time to wait on the lock. If timeout happens then
-    # backups process aborts.
-    waittimeout = 30
-
     # Backup at most maxheadstobackup heads, other heads are ignored.
     # Negative number means backup everything.
     maxheadstobackup = -1
-
-    # With probability 1/N confirm if current backup is consistent. If this is
-    # zero or negative then no backup checks will be performed
-    backupcheckfreq = 50
 
     # Previously there was a bug in infinitepush backup and it made separate
     # backup for the same repo if pushbackup was called from different working
@@ -46,7 +34,6 @@ from __future__ import absolute_import
 import errno
 import json
 import os
-import random
 import re
 import socket
 import stat
@@ -145,10 +132,7 @@ def backup(ui, repo, dest=None, **opts):
 
                 reporoot = repo.origroot
                 reponame = os.path.basename(reporoot)
-
-                maxlogfilenumber = ui.configint('infinitepushbackup',
-                                                'maxlognumber', 5)
-                _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber)
+                _removeoldlogfiles(userlogdir, reponame)
                 logfile = _getlogfilename(logdir, username, reponame)
             except (OSError, IOError) as e:
                 ui.debug('infinitepush backup log is disabled: %s\n' % e)
@@ -168,24 +152,14 @@ def backup(ui, repo, dest=None, **opts):
         return 0
 
     try:
-        timeout = ui.configint('infinitepushbackup', 'waittimeout', 30)
+        # Wait at most 30 seconds, because that's the average backup time
+        timeout = 30
         srcrepo = _getsrcrepo(repo)
         with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
-            backupcheckfreq = ui.configint('infinitepushbackup',
-                                           'backupcheckfreq', 50)
-            if backupcheckfreq > 0 and random.randrange(backupcheckfreq) == 0:
-                bkpstate = _readlocalbackupstate(ui, srcrepo)
-                if not _dobackupcheck(bkpstate, ui, srcrepo, dest, **opts):
-                    ui.log('infinitepushbackup',
-                           'failed infinitepush backup check',
-                           infinitepushbackupcheck='failure')
-
             return _dobackup(ui, repo, dest, **opts)
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:
             ui.warn(_('timeout waiting on backup lock\n'))
-            ui.log('infinitepushbackup', 'timeout waiting on backup lock',
-                   infinitepushbackuplock='timeout')
             return 0
         else:
             raise
@@ -765,7 +739,7 @@ def _getlogfilename(logdir, username, reponame):
     currentday = time.strftime(_timeformat)
     return os.path.join(logdir, username, reponame + currentday)
 
-def _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber):
+def _removeoldlogfiles(userlogdir, reponame):
     existinglogfiles = []
     for entry in osutil.listdir(userlogdir):
         filename = entry[0]
@@ -780,6 +754,8 @@ def _removeoldlogfiles(userlogdir, reponame, maxlogfilenumber):
     # _timeformat gives us a property that if we sort log file names in
     # descending order then newer files are going to be in the beginning
     existinglogfiles = sorted(existinglogfiles, reverse=True)
+    # Delete logs that are older than 5 days
+    maxlogfilenumber = 5
     if len(existinglogfiles) > maxlogfilenumber:
         for filename in existinglogfiles[maxlogfilenumber:]:
             os.unlink(os.path.join(userlogdir, filename))
