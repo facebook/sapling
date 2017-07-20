@@ -16,11 +16,11 @@ New errors are not allowed. Warnings are strongly discouraged.
   > ) | sed 's|\\|/|g' |
   >   $PYTHON $RUNTESTDIR/../contrib/check-config.py
       elif ui.configbool('p4fastimport', 'useworker', False):
-  
   conflict on p4fastimport.useworker: ('bool', '') != ('str', '')
+  at hgext3rd/p4fastimport/util.py:*: (glob)
       if ui.configbool("experimental", "histeditng"):
-  
   conflict on experimental.histeditng: ('bool', '') != ('str', '')
+  at */hgext/histedit.py:*: (glob)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
   undocumented: fastmanifest.cachecutoffdays (int) [60]
