@@ -403,3 +403,14 @@ checking split/divergence.
   > tweakdefaults =!
   > fbamend =!
   > EOF
+
+File corruption handling
+  $ echo 111corruptedrevlog > .hg/undolog/index.i
+#if chg
+(note: chg has issues with the below test)
+#else
+  $ hg st --debug
+  caught revlog error. undolog/index.i was probably corrupted
+#endif
+  $ hg debugundohistory -l
+  0:  -- gap in log -- 

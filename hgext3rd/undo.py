@@ -183,19 +183,19 @@ def _logindex(repo, tr, nodes):
 def _logundoredoindex(repo, tr, reverseindex):
     rlog = _getrevlog(repo, 'index.i')
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
-    return repo.svfs.write("undolog/redonode", str(hexnode))
+    return repo.vfs.write("undolog/redonode", str(hexnode))
 
 def _delundoredo(repo):
     path = 'undolog' + '/' + 'redonode'
-    repo.svfs.tryunlink(path)
+    repo.vfs.tryunlink(path)
 
 def _recordnewgap(repo, absoluteindex=None):
     path = 'undolog' + '/' + 'gap'
     if absoluteindex is None:
         rlog = _getrevlog(repo, 'index.i')
-        repo.svfs.write(path, str(len(rlog) - 1))
+        repo.vfs.write(path, str(len(rlog) - 1))
     else:
-        repo.svfs.write(path, str(absoluteindex))
+        repo.vfs.write(path, str(absoluteindex))
 
 # Read
 
@@ -224,7 +224,7 @@ def _gapcheck(repo, reverseindex):
     absoluteindex = _invertindex(rlog, reverseindex)
     path = 'undolog' + '/' + 'gap'
     try:
-        result = absoluteindex >= int(repo.svfs.read(path))
+        result = absoluteindex >= int(repo.vfs.read(path))
     except IOError:
         # recreate file
         repo.ui.debug("failed to read gap file in %s, attempting recreation\n"
@@ -525,7 +525,7 @@ def _computerelative(repo, reverseindex):
     # allows for relative undos using
     # redonode storage
     try:
-        hexnode = repo.svfs.read("undolog/redonode")
+        hexnode = repo.vfs.read("undolog/redonode")
         rlog = _getrevlog(repo, 'index.i')
         rev = rlog.rev(bin(hexnode))
         reverseindex = _invertindex(rlog, rev) + reverseindex
@@ -589,4 +589,14 @@ def _invertindex(rlog, indexorreverseindex):
 
 def _getrevlog(repo, filename):
     path = 'undolog/' + filename
-    return revlog.revlog(repo.vfs, path)
+    try:
+        return revlog.revlog(repo.vfs, path)
+    except error.RevlogError:
+        # corruption: for now, we can simply nuke all files
+        # TODO: log to Scuba
+        repo.ui.debug("caught revlog error. %s was probably corrupted\n" % path)
+        repo.vfs.rmtree('undolog')
+        repo.vfs.makedirs('undolog')
+        # if we get the error a second time
+        # then someone is actively messing with these files
+        return revlog.revlog(repo.vfs, path)
