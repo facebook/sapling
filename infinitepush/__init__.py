@@ -1008,6 +1008,11 @@ def bundle2scratchbranch(op, part):
                 bundledata = f.read()
                 with logservicecall(log, 'bundlestore',
                                     bundlesize=len(bundledata)):
+                    bundlesizelimit = 100 * 1024 * 1024  # 100 MB
+                    if len(bundledata) > bundlesizelimit:
+                        error_msg = ('bundle is too big: %d bytes. ' +
+                                     'max allowed size is 100 MB')
+                        raise error.Abort(error_msg % (len(bundledata),))
                     key = store.write(bundledata)
 
         with logservicecall(log, 'index', newheadscount=newheadscount), index:
