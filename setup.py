@@ -201,20 +201,24 @@ class hgcommand(object):
     def run(self, args):
         cmd = self.cmd + args
         returncode, out, err = runcmd(cmd, self.env)
-        # If root is executing setup.py, but the repository is owned by
-        # another user (as in "sudo python setup.py install") we will get
-        # trust warnings since the .hg/hgrc file is untrusted. That is
-        # fine, we don't want to load it anyway.  Python may warn about
-        # a missing __init__.py in mercurial/locale, we also ignore that.
-        err = [e for e in err.splitlines()
-               if not e.startswith(b'not trusting file') \
-                  and not e.startswith(b'warning: Not importing') \
-                  and not e.startswith(b'obsolete feature not enabled')]
+        err = filterhgerr(err)
         if err or returncode != 0:
             printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
-            printf(b'\n'.join([b'  ' + e for e in err]), file=sys.stderr)
+            printf(err, file=sys.stderr)
             return ''
         return out
+
+def filterhgerr(err):
+    # If root is executing setup.py, but the repository is owned by
+    # another user (as in "sudo python setup.py install") we will get
+    # trust warnings since the .hg/hgrc file is untrusted. That is
+    # fine, we don't want to load it anyway.  Python may warn about
+    # a missing __init__.py in mercurial/locale, we also ignore that.
+    err = [e for e in err.splitlines()
+           if (not e.startswith(b'not trusting file')
+               and not e.startswith(b'warning: Not importing')
+               and not e.startswith(b'obsolete feature not enabled'))]
+    return b'\n'.join(b'  ' + e for e in err)
 
 def findhg():
     """Try to figure out how we should invoke hg for examining the local
@@ -239,7 +243,7 @@ def findhg():
         retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
     except EnvironmentError:
         retcode = -1
-    if retcode == 0:
+    if retcode == 0 and not filterhgerr(err):
         return hgcommand(hgcmd, hgenv)
 
     # Fall back to trying the local hg installation.
@@ -251,7 +255,7 @@ def findhg():
         retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
     except EnvironmentError:
         retcode = -1
-    if retcode == 0:
+    if retcode == 0 and not filterhgerr(err):
         return hgcommand(hgcmd, hgenv)
 
     raise SystemExit('Unable to find a working hg binary to extract the '
