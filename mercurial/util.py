@@ -602,6 +602,10 @@ def acceptintervention(tr=None):
     finally:
         tr.release()
 
+@contextlib.contextmanager
+def nullcontextmanager():
+    yield
+
 class _lrucachenode(object):
     """A node in a doubly linked list.
 

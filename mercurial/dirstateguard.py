@@ -43,6 +43,16 @@ class dirstateguard(object):
             # ``release(tr, ....)``.
             self._abort()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                self.close()
+        finally:
+            self.release()
+
     def close(self):
         if not self._active: # already inactivated
             msg = (_("can't close already inactivated backup: %s")

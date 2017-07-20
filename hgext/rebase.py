@@ -479,12 +479,17 @@ class rebaseruntime(object):
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             revtoreuse = max(self.state)
-            newnode = concludenode(repo, revtoreuse, p1, self.external,
-                                   commitmsg=commitmsg,
-                                   extrafn=_makeextrafn(self.extrafns),
-                                   editor=editor,
-                                   keepbranches=self.keepbranchesf,
-                                   date=self.date)
+
+            dsguard = None
+            if ui.configbool('rebase', 'singletransaction'):
+                dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+            with util.acceptintervention(dsguard):
+                newnode = concludenode(repo, revtoreuse, p1, self.external,
+                                       commitmsg=commitmsg,
+                                       extrafn=_makeextrafn(self.extrafns),
+                                       editor=editor,
+                                       keepbranches=self.keepbranchesf,
+                                       date=self.date)
             if newnode is None:
                 newrev = self.dest
             else:
@@ -711,10 +716,16 @@ def rebase(ui, repo, **opts):
                 return retcode
 
         tr = None
-        if ui.configbool('rebase', 'singletransaction'):
+        dsguard = None
+
+        singletr = ui.configbool('rebase', 'singletransaction')
+        if singletr:
             tr = repo.transaction('rebase')
         with util.acceptintervention(tr):
-            rbsrt._performrebase(tr)
+            if singletr:
+                dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+            with util.acceptintervention(dsguard):
+                rbsrt._performrebase(tr)
 
         rbsrt._finishrebase()
 
@@ -841,8 +852,10 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
-    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
-    try:
+    dsguard = util.nullcontextmanager()
+    if not repo.ui.configbool('rebase', 'singletransaction'):
+        dsguard = dirstateguard.dirstateguard(repo, 'rebase')
+    with dsguard:
         repo.setparents(repo[p1].node(), repo[p2].node())
         ctx = repo[rev]
         if commitmsg is None:
@@ -864,10 +877,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
                                   date=date, extra=extra, editor=editor)
 
         repo.dirstate.setbranch(repo[newnode].branch())
-        dsguard.close()
         return newnode
-    finally:
-        release(dsguard)
 
 def rebasenode(repo, rev, p1, base, state, collapse, dest):
     'Rebase a single revision rev on top of p1 using base as merge ancestor'
