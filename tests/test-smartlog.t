@@ -506,3 +506,7 @@ Make sure the template keywords are documented correctly
       successorssets
                     Returns a string of sets of successors for a changectx
   
+  --
+      undosuccessors
+                    Return all of the node's successors created as a result of
+                    undo

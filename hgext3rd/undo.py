@@ -18,6 +18,7 @@ from mercurial import (
     localrepo,
     lock as lockmod,
     obsolete,
+    obsutil,
     registrar,
     revlog,
     revset,
@@ -486,12 +487,11 @@ def _undoto(ui, repo, reverseindex, keep=False):
     workingcopyparent = _readnode(repo, "workingparent.i",
                                   nodedict["workingparent"])
     if not keep:
-        revealcommits(repo, workingcopyparent)
+        #revealcommits(repo, workingcopyparent)
         hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
                          clean=False, updatecheck='abort')
     else:
         # keeps working copy files
-        curctx = repo['.']
         precnode = bin(workingcopyparent)
         precctx = repo[precnode]
 
@@ -512,15 +512,13 @@ def _undoto(ui, repo, reverseindex, keep=False):
                     dirstate.add(filename)
                 if data[1][0] is None:
                     dirstate.remove(filename)
-        obsolete.createmarkers(repo, [(curctx, (precctx,))])
 
     # visible changesets
     addedrevs = revsetlang.formatspec('olddraft(0) - olddraft(%d)',
                                       reverseindex)
-    hidecommits(repo, addedrevs)
-
     removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
                                         reverseindex)
+    smarthide(repo, addedrevs, removedrevs)
     revealcommits(repo, removedrevs)
 
 def _computerelative(repo, reverseindex):
@@ -537,11 +535,43 @@ def _computerelative(repo, reverseindex):
     return reverseindex
 
 # hide and reveal commits
+def smarthide(repo, revhide, revshow):
+    '''hides changecontexts and reveals some commits
 
-def hidecommits(repo, rev):
-    ctxs = repo.set(rev)
-    for commit in ctxs:
-        obsolete.createmarkers(repo, [[commit,[]]])
+    tries to connect related hides and shows with obs marker
+    when reasonable and correct
+    '''
+    hidectxs = repo.set(revhide)
+    showctxs = repo.set(revshow)
+    for ctx in hidectxs:
+        unfi = repo.unfiltered()
+        related = []
+        related = set(obsutil.allprecursors(unfi.obsstore, [ctx.node()]))
+        related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
+        related.intersection_update(x.node() for x in showctxs)
+        destinations = [repo[x] for x in related]
+        # two primary objectives:
+        # 1. correct divergence/nondivergence
+        # 2. correct visibility of changesets for the user
+        # secondary objectives:
+        # 3. usefull ui message in hg sl: "Undone to"
+        # Design choices:
+        # 1-to-1 correspondence is easy
+        # 1-to-many correspondence is hard:
+        #   it's either divergent A to B, A to C
+        #   or split A to B,C
+        #   because of undo we don't know which
+        #   without complex logic
+        # Solution: provide helpfull ui message for
+        # common and easy case (1 to 1), use simplest
+        # correct solution for complex edge case
+        if len(destinations) == 1:
+            hidecommits(repo, ctx, destinations)
+        else:
+            hidecommits(repo, ctx, [])
+
+def hidecommits(repo, curctx, precctxs):
+    obsolete.createmarkers(repo, [(curctx, precctxs)], operation='undo')
 
 def revealcommits(repo, rev):
     try:

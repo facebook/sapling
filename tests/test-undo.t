@@ -6,6 +6,8 @@
   > _duringundologlock=1
   > [experimental]
   > evolution=createmarkers
+  > [ui]
+  > interactive = true
   > EOF
 
 Build up a repo
@@ -317,3 +319,87 @@ hg undo --keep tests
   $ hg undo --keep
   $ hg st
   A kfl1
+  $ hg commit --amend
+
+hg undo informative obsmarkers
+check 1 to 1 undos have informative obsmarker
+check 1 to many undos (generally a redo of split or divergence) do not connect
+the changesets with obsmarkers as we do not differentiate between split and
+divergence cases in undo.  The original split/divergence obsmarkers suffice for
+checking split/divergence.
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > smartlog = $TESTDIR/../hgext3rd/smartlog.py
+  > tweakdefaults = $TESTDIR/../hgext3rd/tweakdefaults.py
+  > fbamend = $TESTDIR/../hgext3rd/fbamend/
+  > EOF
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg sl --all --hidden -T "{node|short} {if(undosuccessors, label('sl.undo', '(Undone as {join(undosuccessors% \'{shortest(undosuccessor, 6)}\', ', ')})'))}"
+  x  db3723da827c
+  |
+  | x  f007a7cf4c3d
+  |/
+  | x  128fe7e6098d
+  |/
+  | x  aa430c8afedf
+  |/
+  @  1dafc0b43612
+  :
+  : x  c9476255bc2a (Undone as 1dafc0)
+  :/
+  : x  2dca609174c2
+  :/
+  : o  296fda51a303
+  :/
+  : x  551c0e5b57c9
+  : |
+  : x  db92053d5c83
+  :/
+  : o  49cdb4091aca
+  :/
+  o  b68836a6e2ca
+  |
+  ~
+  $ echo "a" >> newa && echo "b" >> newb && hg add newa newb && hg ci -m "newfiles"
+  $ hg split --quiet << EOF
+  > y
+  > y
+  > n
+  > y
+  > EOF
+  diff --git a/newa b/newa
+  new file mode 100644
+  examine changes to 'newa'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +a
+  record change 1/2 to 'newa'? [Ynesfdaq?] y
+  
+  diff --git a/newb b/newb
+  new file mode 100644
+  examine changes to 'newb'? [Ynesfdaq?] n
+  
+  Done splitting? [yN] y
+  $ hg debugobsolete | tail -5
+  db3723da827c373768d500ab4e3a9c59a78314a6 0 {1dafc0b436123cab96f82a8e9e8d1d42c0301aaa} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  c9476255bc2a68672c844021397838ff4eeefcda 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa 0 (Thu Jan 01 00:00:04 1970 +0000) {'user': 'test'}
+  1dafc0b436123cab96f82a8e9e8d1d42c0301aaa c9476255bc2a68672c844021397838ff4eeefcda 0 (Thu Jan 01 00:00:05 1970 +0000) {'user': 'test'}
+  c9476255bc2a68672c844021397838ff4eeefcda 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa 0 (Thu Jan 01 00:00:06 1970 +0000) {'operation': 'undo', 'user': 'test'}
+  f86734247df6db66a810e549cc938a72cd5c6d1a d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
+  $ hg undo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugobsolete | tail -5
+  d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea f86734247df6db66a810e549cc938a72cd5c6d1a 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
+  75f63379f12bf02d40fe7444587ad67be9ae81b8 0 {d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
+  f86734247df6db66a810e549cc938a72cd5c6d1a 0 {1dafc0b436123cab96f82a8e9e8d1d42c0301aaa} (Thu Jan 01 00:00:02 1970 +0000) {'operation': 'undo', 'user': 'test'}
+  d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
+  75f63379f12bf02d40fe7444587ad67be9ae81b8 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'revive', 'user': 'test'}
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > smartlog =!
+  > tweakdefaults =!
+  > fbamend =!
+  > EOF

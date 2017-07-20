@@ -210,6 +210,12 @@ def histeditsuccessors(repo, ctx, **args):
     asnodes = list(modifysuccessors(ctx, 'histedit'))
     return templatekw.showlist('histeditsuccessor', asnodes, args)
 
+@templatekeyword('undosuccessors')
+def undosuccessors(repo, ctx, **args):
+    """Return all of the node's successors created as a result of undo"""
+    asnodes = list(modifysuccessors(ctx, 'undo'))
+    return templatekw.showlist('undosuccessor', asnodes, args)
+
 def successormarkers(ctx):
     for data in ctx.repo().obsstore.successors.get(ctx.node(), ()):
         yield obsutil.marker(ctx.repo(), data)
