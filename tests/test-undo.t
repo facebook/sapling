@@ -1,8 +1,11 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > undo = $TESTDIR/../hgext3rd/undo.py
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > [undo]
   > _duringundologlock=1
+  > [experimental]
+  > evolution=createmarkers
   > EOF
 
 Build up a repo
@@ -169,7 +172,7 @@ Revset tests
 
 Test 'olddraft([NUM])' revset
   $ hg log -G -r 'olddraft(0) - olddraft(1)' --hidden -T compact
-  @  8[tip][master]   aa430c8afedf   1970-01-01 00:00 +0000   test
+  @  10[tip][master]   aa430c8afedf   1970-01-01 00:00 +0000   test
   |    a5
   ~
 
@@ -178,3 +181,114 @@ Test undolog lock
   $ sleep 0.1
   $ hg st --time
   time: real [1-9]*\..* (re)
+
+hg undo command tests
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark master)
+  $ hg log -G -T compact -l2
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  ~
+  $ hg update 0a3dd3e15e65
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ touch c11 && hg add c11
+  $ hg commit --amend
+  $ hg log -G -T compact -l1
+  @  12[tip][master]:8   2dca609174c2   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G -T compact -l4
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  |
+  | o  7[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
+  |/     d
+  |
+  o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  ~
+  $ hg graft 296fda51a303
+  grafting 7:296fda51a303 "d" (feature2)
+  $ hg log -G -T compact -l2
+  @  13[tip]:9   f007a7cf4c3d   1970-01-01 00:00 +0000   test
+  |    d
+  |
+  o  9[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg undo
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg book test
+  $ hg undo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark test)
+  $ hg bookmarks
+     feature1                  2:49cdb4091aca
+     feature2                  7:296fda51a303
+     master                    9:1dafc0b43612
+
+hg redo test
+  $ hg redo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg undo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg undo -n 5
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg redo -n 5
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg redo -n 100
+  abort: index out of bounds
+  [255]
+
+hg undo --absolute tests
+  $ hg undo -a
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg undo -a
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg undo -n 5
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~
+  $ hg undo -a
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l1
+  @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  ~

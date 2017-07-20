@@ -14,6 +14,7 @@ from mercurial import (
     dispatch,
     error,
     extensions,
+    hg,
     localrepo,
     lock as lockmod,
     obsolete,
@@ -87,6 +88,9 @@ def safelog(repo, command):
             tr = lighttransaction(repo)
             with tr:
                 changes = log(repo.filtered('visible'), command, tr)
+                if changes and not ("undo" == command[0] or "redo" ==
+                                    command[0]):
+                    _delundoredo(repo)
     return changes
 
 def lighttransaction(repo):
@@ -172,6 +176,15 @@ def _logworkingparent(repo, tr):
 def _logindex(repo, tr, nodes):
     revstring = "\n".join(sorted('%s %s' % (k, v) for k, v in nodes.items()))
     return writelog(repo, tr, "index.i", revstring)
+
+def _logundoredoindex(repo, tr, reverseindex):
+    rlog = _getrevlog(repo, 'index.i')
+    hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
+    return repo.svfs.write("undolog/redonode", str(hexnode))
+
+def _delundoredo(repo):
+    path = 'undolog' + '/' + 'redonode'
+    repo.svfs.tryunlink(path)
 
 # Read
 
@@ -316,6 +329,8 @@ def _olddraft(repo, subset, x):
 
 @command('undo', [
     ('n', 'index', 1, _("how many steps to undo back")),
+    ('a', 'absolute', False, _("absolute based on command index instead of "
+                               "relative undo")),
 ])
 def undo(ui, repo, *args, **opts):
     """perform an undo
@@ -328,15 +343,65 @@ def undo(ui, repo, *args, **opts):
     public repos can't be undone (specifically push).
 
     Undo does not preserve the working copy changes.
+
+    To undo to a specific state use the --index and --absolute flags.
+    See hg debugundohistory to get a list of indeces and commands run.
+    By undoing to a specific index you undo to the state after that command.
+    For example, hg undo --index 0 --absolute won't do anything, while
+    hg undo -n 1 -a will bring you back to the repo state before the current
+    one.
+
+    Without the --absolute flag, your undos will be relative.  This means
+    they will behave how you expect them to.  If you run hg undo twice,
+    you will move back two repo states from where you ran your first hg undo.
+    You can use this in conjunction with hg redo to move up and down repo
+    states.  Note that as soon as you execute a different undoable command,
+    which isn't hg undo or hg redo, any new undos or redos will be relative to
+    the state after this command.  When using --index with relative undos,
+    this is equivalent to running index many undos, except for leaving your
+    repo state history (hg debugundohistory) less cluttered.
+
+    Undo states are also distinct repo states and can thereby be inspected using
+    debugundohistory and specifically jumped to using undo --index --absolute.
     """
 
     reverseindex = opts.get("index")
+    relativeundo = not opts.get("absolute")
 
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
+        if relativeundo:
+            reverseindex = _computerelative(repo, reverseindex)
         _undoto(ui, repo, reverseindex)
+        # store undo data
+        # for absolute undos, think of this as a reset
+        # for relative undos, think of this as an update
+        _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
+
+@command('redo', [
+    ('n', 'index', 1, _("how many commands to redo")),
+])
+def redo(ui, repo, *args, **opts):
+    """ perform a redo
+
+    Performs a redo.  Specifically, redo moves forward a repo state relative to
+    the previous undo or redo command.  If you run hg undo -n 10, you can redo
+    each of the 10 repo states one by one all the way back to the state from
+    which you ran undo.  You can use --index to redo across more states at once,
+    and you can use any number of undos/redos up to the current state or back to
+    when the undo extension was first active.
+    """
+    reverseindex = -1 * abs(opts.get("index"))
+    reverseindex = _computerelative(repo, reverseindex)
+
+    with repo.wlock(), repo.lock(), repo.transaction("redo"):
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
+        repo = repo.unfiltered()
+        _undoto(ui, repo, reverseindex)
+        _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
 
 def _undoto(ui, repo, reverseindex):
     # undo to specific reverseindex
@@ -368,7 +433,8 @@ def _undoto(ui, repo, reverseindex):
     workingcopyparent = _readnode(repo, "workingparent.i",
                                   nodedict["workingparent"])
     revealcommits(repo, workingcopyparent)
-    commands.update(ui, repo, rev=workingcopyparent)
+    hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
+                     clean=False, updatecheck='abort')
 
     # visible changesets
     addedrevs = revsetlang.formatspec('olddraft(0) - olddraft(%d)',
@@ -378,6 +444,19 @@ def _undoto(ui, repo, reverseindex):
     removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
                                         reverseindex)
     revealcommits(repo, removedrevs)
+
+def _computerelative(repo, reverseindex):
+    # allows for relative undos using
+    # redonode storage
+    try:
+        hexnode = repo.svfs.read("undolog/redonode")
+        rlog = _getrevlog(repo, 'index.i')
+        rev = rlog.rev(bin(hexnode))
+        reverseindex = _invertindex(rlog, rev) + reverseindex
+    except IOError:
+        # return input index
+        pass
+    return reverseindex
 
 # hide and reveal commits
 
