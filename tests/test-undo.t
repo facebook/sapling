@@ -292,3 +292,18 @@ hg undo --absolute tests
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
+
+hg undo --force tests
+  $ hg debugundohistory -l 18
+  18: undo
+  19: ci -ma5
+  20:  -- gap in log -- 
+  21: commit -m words
+  22: update master
+  $ hg undo -a -n 25
+  abort: attempted risky undo across missing history
+  [255]
+  $ hg undo -a -n 25 -f
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo -a
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved

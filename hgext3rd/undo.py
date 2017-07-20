@@ -55,7 +55,9 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # Check wether undolog is consistent
     # ie check wether the undo ext was
     # off before this command
-    safelog(repo, [""])
+    changes = safelog(repo, [""])
+    if changes:
+        _recordnewgap(repo)
 
     result = orig(lui, repo, cmd, fullargs, *args)
 
@@ -186,6 +188,14 @@ def _delundoredo(repo):
     path = 'undolog' + '/' + 'redonode'
     repo.svfs.tryunlink(path)
 
+def _recordnewgap(repo, absoluteindex=None):
+    path = os.path.join('undolog', 'gap')
+    if absoluteindex is None:
+        rlog = _getrevlog(repo, 'index.i')
+        repo.svfs.write(path, str(len(rlog) - 1))
+    else:
+        repo.svfs.write(path, str(absoluteindex))
+
 # Read
 
 def _readindex(repo, reverseindex, prefetchedrevlog=None):
@@ -207,6 +217,29 @@ def _readindex(repo, reverseindex, prefetchedrevlog=None):
 def _readnode(repo, filename, hexnode):
     rlog = _getrevlog(repo, filename)
     return rlog.revision(bin(hexnode))
+
+def _gapcheck(repo, reverseindex):
+    rlog = _getrevlog(repo, 'index.i')
+    absoluteindex = _invertindex(rlog, reverseindex)
+    path = os.path.join('undolog', "gap")
+    try:
+        result = absoluteindex >= int(repo.svfs.read(path))
+    except IOError:
+        # recreate file
+        repo.ui.debug("failed to read gap file in %s, attempting recreation\n"
+                      % path)
+        rlog = _getrevlog(repo, 'index.i')
+        i = 0
+        while i < (len(rlog)):
+            indexdict = _readindex(repo, i, rlog)
+            if "" == _readnode(repo, "command.i", indexdict["command"]):
+                break
+            i += 1
+        # defaults to before oldest command
+        _recordnewgap(repo, _invertindex(rlog, i))
+        result = absoluteindex >= _invertindex(rlog, i)
+    finally:
+        return result
 
 # Visualize
 
@@ -329,6 +362,7 @@ def _olddraft(repo, subset, x):
 
 @command('undo', [
     ('n', 'index', 1, _("how many steps to undo back")),
+    ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
     ('a', 'absolute', False, _("absolute based on command index instead of "
                                "relative undo")),
 ])
@@ -363,6 +397,11 @@ def undo(ui, repo, *args, **opts):
 
     Undo states are also distinct repo states and can thereby be inspected using
     debugundohistory and specifically jumped to using undo --index --absolute.
+
+    If the undo extension was turned off and on again, you might loose the
+    ability to undo to certain repo states.  Undoing to repo states before the
+    missing ones can be forced, but isn't advised unless its known how the
+    before and after states are connected.
     """
 
     reverseindex = opts.get("index")
@@ -374,6 +413,9 @@ def undo(ui, repo, *args, **opts):
         repo = repo.unfiltered()
         if relativeundo:
             reverseindex = _computerelative(repo, reverseindex)
+        if not (opts.get("force") or _gapcheck(repo, reverseindex)):
+            raise error.Abort(_("attempted risky undo across"
+                                " missing history"))
         _undoto(ui, repo, reverseindex)
         # store undo data
         # for absolute undos, think of this as a reset
