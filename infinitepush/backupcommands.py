@@ -650,6 +650,12 @@ def _getrevstobackup(repo, ui, other, headstobackup):
 
     revs = list(repo[hexnode].rev() for hexnode in headstobackup)
     outgoing = findcommonoutgoing(repo, other, revs)
+    nodeslimit = 1000
+    if outgoing and len(outgoing.missing) > nodeslimit:
+        # trying to push too many nodes usually means that there is a bug
+        # somewhere. Let's be safe and avoid pushing too many nodes at once
+        raise error.Abort('trying to back up too many nodes: %d' %
+                          (len(outgoing.missing),))
     return outgoing, set(filteredheads)
 
 def _localbackupstateexists(repo):
