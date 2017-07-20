@@ -29,8 +29,10 @@ def uisetup(ui):
 def pinnedrevs(orig, repo):
     revs = orig(repo)
     nodemap = repo.changelog.nodemap
-    pinned = list(nodemap[n] for n in loadpinnednodes(repo) if n in nodemap)
-    revs.update(pinned)
+    pinnednodes = set(loadpinnednodes(repo))
+    tounpin = getattr(repo, '_tounpinnodes', set())
+    pinnednodes -= tounpin
+    revs.update(nodemap[n] for n in pinnednodes)
     return revs
 
 def loadpinnednodes(repo):
