@@ -529,7 +529,10 @@ def smartlogrevset(repo, subset, x):
         else:
             branchmaster = masterrev
 
-        # Find ancestors of heads that are not in master
+        # Find all draft ancestors and latest public ancestor of heads
+        # that are not in master.
+        # We don't want to draw all public commits because there can be too
+        # many of them.
         # Don't use revsets, they are too slow
         for head in heads:
             if branchinfo(head)[0] != branch:
@@ -540,7 +543,9 @@ def smartlogrevset(repo, subset, x):
                 current = queue.pop(0)
                 if current not in revs:
                     revs.add(current)
-                    if current != anc:
+                    # stop as soon as we find public commit
+                    ispublic = repo[current].phase() == phases.public
+                    if current != anc and not ispublic:
                         parents = parentrevs(current)
                         for p in parents:
                             if p > anc:

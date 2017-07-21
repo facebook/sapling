@@ -476,6 +476,46 @@ Recent arg select days correctly
   o  -1[curr]   000000000000   1970-01-01 00:00 +0000
   
   
+Make sure public commits that are descendants of master are not drawn
+  $ cd ..
+  $ hg init repo3
+  $ cd repo3
+  $ hg debugbuilddag '+5'
+  $ hg bookmark master -r 1
+  $ hg phase --public -r 1
+  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
+    o  4[tip]   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
+    |    r4
+    |
+    o  3   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+    |    r3
+    |
+    o  2   01241442b3c2   1970-01-01 00:00 +0000   debugbuilddag
+   /     r2
+  |
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+  $ hg phase -r 3 --public --force
+  $ hg up -q 4
+  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
+    @  4[tip]   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
+   /     r4
+  |
+  o  3   2dc09a01254d   1970-01-01 00:00 +0000   debugbuilddag
+  .    r3
+  .
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
+  $ hg phase -r 4 --public --force
+  $ hg smartlog -T compact --all --config smartlog.indentnonpublic=1
+  @  4[tip]   bebd167eb94d   1970-01-01 00:00 +0000   debugbuilddag
+  .    r4
+  .
+  o  1[master]   66f7d451a68b   1970-01-01 00:00 +0000   debugbuilddag
+  |    r1
+  |
 
 Make sure the template keywords are documented correctly
   $ hg help templates | grep -A1 successor | grep -v predecessors
