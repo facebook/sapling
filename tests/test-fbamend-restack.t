@@ -1,6 +1,7 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > drawdag=$RUNTESTDIR/drawdag.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
@@ -682,3 +683,56 @@ stack is lost upon rebasing lower levels.
   | x  1 add b
   |/
   o  0 add a
+
+Suboptimal case: restack rebases "D" twice
+
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > D
+  > |
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg update B -q
+  $ hg commit --amend -m B2 -q 2>/dev/null
+  $ hg tag --local B2
+  $ hg rebase -r C -d B2 -q
+  $ hg commit --amend -m B3 -q 2>/dev/null
+  $ hg tag --local B3
+  $ showgraph
+  @  6 B3
+  |
+  | o  5 C
+  | |
+  | x  4 B2
+  |/
+  | o  3 D
+  | |
+  | x  2 C
+  | |
+  | x  1 B
+  |/
+  o  0 A
+  $ hg rebase --restack
+  rebasing 3:f585351a92f8 "D" (D)
+  rebasing 5:ca53c8ceb284 "C"
+  rebasing 7:4da953fe10f3 "D"
+  $ showgraph
+  o  9 D
+  |
+  o  8 C
+  |
+  @  6 B3
+  |
+  | x  4 B2
+  |/
+  | x  3 D
+  | |
+  | x  2 C
+  | |
+  | x  1 B
+  |/
+  o  0 A
