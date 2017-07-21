@@ -24,9 +24,6 @@ if 'HGALLOWPYTHON3':
     ])
 
 import sys, platform
-if sys.version_info < (2, 7, 0, 'final'):
-    raise SystemExit('Mercurial requires Python 2.7 or later.')
-
 if sys.version_info[0] >= 3:
     printf = eval('print')
     libdir_escape = 'unicode_escape'
@@ -36,6 +33,33 @@ else:
         f = kwargs.get('file', sys.stdout)
         end = kwargs.get('end', '\n')
         f.write(b' '.join(args) + end)
+
+# Attempt to guide users to a modern pip - this means that 2.6 users
+# should have a chance of getting a 4.2 release, and when we ratchet
+# the version requirement forward again hopefully everyone will get
+# something that works for them.
+if sys.version_info < (2, 7, 0, 'final'):
+    pip_message = ('This may be due to an out of date pip. '
+                   'Make sure you have pip >= 9.0.1.')
+    try:
+        import pip
+        pip_version = tuple([int(x) for x in pip.__version__.split('.')[:3]])
+        if pip_version < (9, 0, 1) :
+            pip_message = (
+                'Your pip version is out of date, please install '
+                'pip >= 9.0.1. pip {} detected.'.format(pip.__version__))
+        else:
+            # pip is new enough - it must be something else
+            pip_message = ''
+    except Exception:
+        pass
+    error = """
+Mercurial does not support Python older than 2.7.
+Python {py} detected.
+{pip}
+""".format(py=sys.version_info, pip=pip_message)
+    printf(error, file=sys.stderr)
+    sys.exit(1)
 
 # Solaris Python packaging brain damage
 try:
