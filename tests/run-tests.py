@@ -96,6 +96,8 @@ if os.name != 'nt':
         import pygments.lexers as lexers
         import pygments.formatters as formatters
         pygmentspresent = True
+        difflexer = lexers.DiffLexer()
+        terminal256formatter = formatters.Terminal256Formatter()
     except ImportError:
         pass
 
@@ -1651,10 +1653,9 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('\n')
                     for line in lines:
                         if self.color:
-                            line = pygments.highlight(
-                                    line,
-                                    lexers.DiffLexer(),
-                                    formatters.Terminal256Formatter())
+                            line = pygments.highlight(line,
+                                                      difflexer,
+                                                      terminal256formatter)
                         if PYTHON3:
                             self.stream.flush()
                             self.stream.buffer.write(line)
