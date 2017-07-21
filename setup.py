@@ -4,6 +4,25 @@
 # 'python setup.py install', or
 # 'python setup.py --help' for more options
 
+supportedpy = '~= 2.7'
+if 'HGALLOWPYTHON3':
+    # Mercurial will never work on Python 3 before 3.5 due to a lack
+    # of % formatting on bytestrings, and can't work on 3.6.0 or 3.6.1
+    # due to a bug in % formatting in bytestrings.
+    #
+    # TODO: when we actually work on Python 3, use this string as the
+    # actual supportedpy string.
+    supportedpy = ','.join([
+        '>=2.7',
+        '!=3.0.*',
+        '!=3.1.*',
+        '!=3.2.*',
+        '!=3.3.*',
+        '!=3.4.*',
+        '!=3.6.0',
+        '!=3.6.1',
+    ])
+
 import sys, platform
 if sys.version_info < (2, 7, 0, 'final'):
     raise SystemExit('Mercurial requires Python 2.7 or later.')
@@ -892,4 +911,5 @@ setup(name='mercurial',
                               'welcome': 'contrib/macosx/Welcome.html',
                               },
                },
+      python_requires=supportedpy,
       **extra)
