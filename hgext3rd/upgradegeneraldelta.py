@@ -30,7 +30,7 @@ The following configuration options are available:
 
 from mercurial.i18n import _
 from mercurial import commands, extensions, revlog, util
-import os, struct, weakref
+import os, weakref
 
 def wrappull(orig, ui, repo, *args, **kwargs):
     _upgrade(ui, repo)
@@ -51,7 +51,7 @@ def _upgrade(ui, repo):
 
     # probably only works with revlogng -- it became the default years ago so
     # that's fine
-    v = struct.unpack(revlog.versionformat, i)[0]
+    v = revlog.versionformat_unpack(i)[0]
     isgeneraldelta = v & revlog.FLAG_GENERALDELTA
     if isgeneraldelta:
         return
