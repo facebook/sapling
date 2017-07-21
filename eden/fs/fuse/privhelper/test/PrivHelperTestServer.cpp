@@ -53,7 +53,7 @@ string PrivHelperTestServer::getPathToMountMarker(StringPiece mountPath) const {
 // Bind mounts.
 
 void PrivHelperTestServer::bindMount(
-    const char* clientPath,
+    const char* /*clientPath*/,
     const char* mountPath) {
   // Create a single file named "bind-mounted" and write "bind-mounted" into it.
 

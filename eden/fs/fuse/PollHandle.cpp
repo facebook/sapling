@@ -13,7 +13,7 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-void PollHandle::Deleter::operator()(fuse_pollhandle* h) {
+void PollHandle::Deleter::operator()(fuse_pollhandle* /*h*/) {
 #if FUSE_MAJOR_VERSION >= 8
   fuse_pollhandle_destroy(h);
 #endif

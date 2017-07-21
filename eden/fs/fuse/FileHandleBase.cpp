@@ -18,11 +18,15 @@ namespace fusell {
 FileHandleBase::~FileHandleBase() {}
 
 folly::Future<FileHandleBase::Ioctl> FileHandleBase::ioctl(
-    int cmd, const void* arg, folly::ByteRange inputData, size_t outputSize) {
+    int /*cmd*/,
+    const void* /*arg*/,
+    folly::ByteRange /*inputData*/,
+    size_t /*outputSize*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<unsigned> FileHandleBase::poll(std::unique_ptr<PollHandle> ph) {
+folly::Future<unsigned> FileHandleBase::poll(
+    std::unique_ptr<PollHandle> /*ph*/) {
   FUSELL_NOT_IMPL();
 }
 }

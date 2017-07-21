@@ -117,11 +117,10 @@ void HgTreeInformation::loadManifest() {
           }
           return false; // Keep reading from the child
         });
-    proc.communicate(std::ref(read_cb),
-                     [](int pfd, int cfd) {
-                       // Don't write to the child
-                       return true;
-                     });
+    proc.communicate(std::ref(read_cb), [](int /*pfd*/, int /*cfd*/) {
+      // Don't write to the child
+      return true;
+    });
     proc.wait();
     XLOG(INFO) << "manifest loaded";
   });
@@ -161,11 +160,10 @@ void HgTreeInformation::buildTree() {
         }
         return false; // Keep reading from the child
       });
-  proc.communicate(std::ref(read_cb),
-                   [](int pfd, int cfd) {
-                     // Don't write to the child
-                     return true;
-                   });
+  proc.communicate(std::ref(read_cb), [](int /*pfd*/, int /*cfd*/) {
+    // Don't write to the child
+    return true;
+  });
   proc.waitChecked();
   XLOG(INFO) << "build tree with " << dirs_.size() << " dirs";
   fileInfo_.setMaxSize(num_files * 1.2);

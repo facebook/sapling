@@ -47,7 +47,7 @@ void Dispatcher::unsetMountPoint() {
   mountPoint_ = nullptr;
 }
 
-void Dispatcher::initConnection(fuse_conn_info& conn) {}
+void Dispatcher::initConnection(fuse_conn_info& /*conn*/) {}
 
 FileHandleMap& Dispatcher::getFileHandles() {
   return fileHandles_;
@@ -137,8 +137,8 @@ static void disp_destroy(void* userdata) {
 }
 
 folly::Future<fuse_entry_param> Dispatcher::lookup(
-    fuse_ino_t parent,
-    PathComponentPiece name) {
+    fuse_ino_t /*parent*/,
+    PathComponentPiece /*name*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
@@ -155,8 +155,9 @@ static void disp_lookup(fuse_req_t req, fuse_ino_t parent, const char* name) {
           }));
 }
 
-folly::Future<folly::Unit> Dispatcher::forget(fuse_ino_t ino,
-                                              unsigned long nlookup) {
+folly::Future<folly::Unit> Dispatcher::forget(
+    fuse_ino_t /*ino*/,
+    unsigned long /*nlookup*/) {
   return Unit{};
 }
 
@@ -187,7 +188,7 @@ disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data* forgets) {
 }
 #endif
 
-folly::Future<Dispatcher::Attr> Dispatcher::getattr(fuse_ino_t ino) {
+folly::Future<Dispatcher::Attr> Dispatcher::getattr(fuse_ino_t /*ino*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
@@ -217,9 +218,10 @@ static void disp_getattr(fuse_req_t req,
   }
 }
 
-folly::Future<Dispatcher::Attr> Dispatcher::setattr(fuse_ino_t ino,
-                                                    const struct stat& attr,
-                                                    int to_set) {
+folly::Future<Dispatcher::Attr> Dispatcher::setattr(
+    fuse_ino_t /*ino*/,
+    const struct stat& /*attr*/,
+    int /*to_set*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -254,7 +256,7 @@ static void disp_setattr(fuse_req_t req,
   }
 }
 
-folly::Future<std::string> Dispatcher::readlink(fuse_ino_t ino) {
+folly::Future<std::string> Dispatcher::readlink(fuse_ino_t /*ino*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -270,10 +272,10 @@ static void disp_readlink(fuse_req_t req, fuse_ino_t ino) {
 }
 
 folly::Future<fuse_entry_param> Dispatcher::mknod(
-    fuse_ino_t parent,
-    PathComponentPiece name,
-    mode_t mode,
-    dev_t rdev) {
+    fuse_ino_t /*parent*/,
+    PathComponentPiece /*name*/,
+    mode_t /*mode*/,
+    dev_t /*rdev*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -419,8 +421,8 @@ static void disp_link(fuse_req_t req,
 }
 
 folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
-    fuse_ino_t ino,
-    const struct fuse_file_info& fi) {
+    fuse_ino_t /*ino*/,
+    const struct fuse_file_info& /*fi*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -451,11 +453,12 @@ static void disp_open(fuse_req_t req,
           }));
 }
 
-static void disp_read(fuse_req_t req,
-                      fuse_ino_t ino,
-                      size_t size,
-                      off_t off,
-                      struct fuse_file_info* fi) {
+static void disp_read(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    size_t size,
+    off_t off,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -470,12 +473,13 @@ static void disp_read(fuse_req_t req,
           }));
 }
 
-static void disp_write(fuse_req_t req,
-                       fuse_ino_t ino,
-                       const char* buf,
-                       size_t size,
-                       off_t off,
-                       struct fuse_file_info* fi) {
+static void disp_write(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    const char* buf,
+    size_t size,
+    off_t off,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -488,9 +492,8 @@ static void disp_write(fuse_req_t req,
           .then([](size_t wrote) { RequestData::get().replyWrite(wrote); }));
 }
 
-static void disp_flush(fuse_req_t req,
-                       fuse_ino_t ino,
-                       struct fuse_file_info* fi) {
+static void
+disp_flush(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -503,9 +506,8 @@ static void disp_flush(fuse_req_t req,
           .then([]() { RequestData::get().replyError(0); }));
 }
 
-static void disp_release(fuse_req_t req,
-                         fuse_ino_t ino,
-                         struct fuse_file_info* fi) {
+static void
+disp_release(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -516,10 +518,11 @@ static void disp_release(fuse_req_t req,
           }));
 }
 
-static void disp_fsync(fuse_req_t req,
-                       fuse_ino_t ino,
-                       int datasync,
-                       struct fuse_file_info* fi) {
+static void disp_fsync(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    int datasync,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -532,8 +535,8 @@ static void disp_fsync(fuse_req_t req,
 }
 
 folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
-    fuse_ino_t ino,
-    const struct fuse_file_info& fi) {
+    fuse_ino_t /*ino*/,
+    const struct fuse_file_info& /*fi*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -560,11 +563,12 @@ static void disp_opendir(fuse_req_t req,
           }));
 }
 
-static void disp_readdir(fuse_req_t req,
-                         fuse_ino_t ino,
-                         size_t size,
-                         off_t off,
-                         struct fuse_file_info* fi) {
+static void disp_readdir(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    size_t size,
+    off_t off,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -579,9 +583,8 @@ static void disp_readdir(fuse_req_t req,
           }));
 }
 
-static void disp_releasedir(fuse_req_t req,
-                            fuse_ino_t ino,
-                            struct fuse_file_info* fi) {
+static void
+disp_releasedir(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -592,10 +595,11 @@ static void disp_releasedir(fuse_req_t req,
           }));
 }
 
-static void disp_fsyncdir(fuse_req_t req,
-                          fuse_ino_t ino,
-                          int datasync,
-                          struct fuse_file_info* fi) {
+static void disp_fsyncdir(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    int datasync,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -607,7 +611,7 @@ static void disp_fsyncdir(fuse_req_t req,
           .then([]() { RequestData::get().replyError(0); }));
 }
 
-folly::Future<struct statvfs> Dispatcher::statfs(fuse_ino_t ino) {
+folly::Future<struct statvfs> Dispatcher::statfs(fuse_ino_t /*ino*/) {
   struct statvfs info;
   memset(&info, 0, sizeof(info));
 
@@ -628,10 +632,11 @@ static void disp_statfs(fuse_req_t req, fuse_ino_t ino) {
           }));
 }
 
-folly::Future<folly::Unit> Dispatcher::setxattr(fuse_ino_t ino,
-                                                folly::StringPiece name,
-                                                folly::StringPiece value,
-                                                int flags) {
+folly::Future<folly::Unit> Dispatcher::setxattr(
+    fuse_ino_t /*ino*/,
+    folly::StringPiece /*name*/,
+    folly::StringPiece /*value*/,
+    int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -673,8 +678,9 @@ const int Dispatcher::kENOATTR =
 #endif
     ;
 
-folly::Future<std::string> Dispatcher::getxattr(fuse_ino_t ino,
-                                                folly::StringPiece name) {
+folly::Future<std::string> Dispatcher::getxattr(
+    fuse_ino_t /*ino*/,
+    folly::StringPiece /*name*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 
@@ -712,7 +718,8 @@ static void disp_getxattr(fuse_req_t req,
           }));
 }
 
-folly::Future<std::vector<std::string>> Dispatcher::listxattr(fuse_ino_t ino) {
+folly::Future<std::vector<std::string>> Dispatcher::listxattr(
+    fuse_ino_t /*ino*/) {
   return std::vector<std::string>();
 }
 
@@ -746,8 +753,9 @@ static void disp_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size) {
           }));
 }
 
-folly::Future<folly::Unit> Dispatcher::removexattr(fuse_ino_t ino,
-                                                   folly::StringPiece name) {
+folly::Future<folly::Unit> Dispatcher::removexattr(
+    fuse_ino_t /*ino*/,
+    folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -760,7 +768,9 @@ static void disp_removexattr(fuse_req_t req, fuse_ino_t ino, const char* name) {
           .then([]() { RequestData::get().replyError(0); }));
 }
 
-folly::Future<folly::Unit> Dispatcher::access(fuse_ino_t ino, int mask) {
+folly::Future<folly::Unit> Dispatcher::access(
+    fuse_ino_t /*ino*/,
+    int /*mask*/) {
   // Note that if you mount with the "default_permissions" kernel mount option,
   // the kernel will perform all permissions checks for you, and will never
   // invoke access() directly.
@@ -813,9 +823,8 @@ static void disp_create(fuse_req_t req,
           }));
 }
 
-folly::Future<uint64_t> Dispatcher::bmap(fuse_ino_t ino,
-                                         size_t blocksize,
-                                         uint64_t idx) {
+folly::Future<uint64_t>
+Dispatcher::bmap(fuse_ino_t /*ino*/, size_t /*blocksize*/, uint64_t /*idx*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -834,16 +843,16 @@ static void disp_bmap(fuse_req_t req,
 }
 
 #if FUSE_MINOR_VERSION >= 8
-static void disp_ioctl(fuse_req_t req,
-                       fuse_ino_t ino,
-                       int cmd,
-                       void* arg,
-                       struct fuse_file_info* fi,
-                       unsigned flags,
-                       const void* in_buf,
-                       size_t in_bufsz,
-                       size_t out_bufsz) {
-
+static void disp_ioctl(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    int cmd,
+    void* arg,
+    struct fuse_file_info* fi,
+    unsigned flags,
+    const void* in_buf,
+    size_t in_bufsz,
+    size_t out_bufsz) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
 
@@ -872,10 +881,11 @@ static void disp_ioctl(fuse_req_t req,
 #endif
 
 #if FUSE_MINOR_VERSION >= 8
-static void disp_poll(fuse_req_t req,
-                      fuse_ino_t ino,
-                      struct fuse_file_info* fi,
-                      struct fuse_pollhandle* ph) {
+static void disp_poll(
+    fuse_req_t req,
+    fuse_ino_t /*ino*/,
+    struct fuse_file_info* fi,
+    struct fuse_pollhandle* ph) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(

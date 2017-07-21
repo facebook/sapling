@@ -65,21 +65,22 @@ folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> InodeBase::setxattr(folly::StringPiece name,
-                                               folly::StringPiece value,
-                                               int flags) {
+folly::Future<folly::Unit> InodeBase::setxattr(
+    folly::StringPiece /*name*/,
+    folly::StringPiece /*value*/,
+    int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
-folly::Future<std::string> InodeBase::getxattr(folly::StringPiece name) {
+folly::Future<std::string> InodeBase::getxattr(folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
 folly::Future<std::vector<std::string>> InodeBase::listxattr() {
   FUSELL_NOT_IMPL();
 }
-folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece name) {
+folly::Future<folly::Unit> InodeBase::removexattr(folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
-folly::Future<folly::Unit> InodeBase::access(int mask) {
+folly::Future<folly::Unit> InodeBase::access(int /*mask*/) {
   FUSELL_NOT_IMPL();
 }
 

@@ -42,7 +42,7 @@ void gitCheckError(int error, Args&&... args) {
   }
 }
 
-void freeBlobIOBufData(void* blobData, void* blobObject) {
+void freeBlobIOBufData(void* /*blobData*/, void* blobObject) {
   git_blob* gitBlob = static_cast<git_blob*>(blobObject);
   git_blob_free(gitBlob);
 }

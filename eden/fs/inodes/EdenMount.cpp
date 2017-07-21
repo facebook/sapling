@@ -138,7 +138,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // still reflects how things were when we set it up.
         dotEdenInodeNumber_ = dotEdenInode->getNodeId();
       })
-      .onError([=](const InodeError& err) {
+      .onError([=](const InodeError& /*err*/) {
         auto dotEdenInode =
             getRootInode()->mkdir(PathComponentPiece{kDotEdenName}, 0744);
         dotEdenInodeNumber_ = dotEdenInode->getNodeId();

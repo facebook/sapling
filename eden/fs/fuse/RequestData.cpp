@@ -26,7 +26,7 @@ RequestData::RequestData(fuse_req_t req)
   fuse_req_interrupt_func(req, RequestData::interrupter, this);
 }
 
-void RequestData::interrupter(fuse_req_t req, void* data) {
+void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
   auto& request = *reinterpret_cast<RequestData*>(data);
 
   // Guarantee to preserve the current context

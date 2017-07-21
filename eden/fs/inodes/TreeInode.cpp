@@ -640,7 +640,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
 }
 
 folly::Future<TreeInode::CreateResult>
-TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
+TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
   std::shared_ptr<FileHandle> handle;

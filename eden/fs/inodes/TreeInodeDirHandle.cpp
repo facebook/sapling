@@ -120,12 +120,12 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 }
 
 folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::setattr(
-    const struct stat& attr,
-    int to_set) {
+    const struct stat& /*attr*/,
+    int /*to_set*/) {
   folly::throwSystemErrorExplicit(EROFS);
 }
 
-folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool datasync) {
+folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
   // We're read-only here, so there is nothing to sync
   return folly::Unit{};
 }
