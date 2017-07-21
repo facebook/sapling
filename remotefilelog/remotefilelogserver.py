@@ -214,7 +214,7 @@ def onetimesetup(ui):
 
 def _loadfileblob(repo, cachepath, path, node):
     filecachepath = os.path.join(cachepath, path, hex(node))
-    if not os.path.exists(filecachepath):
+    if not os.path.exists(filecachepath) or os.path.getsize(filecachepath) == 0:
         filectx = repo.filectx(path, fileid=node)
         if filectx.node() == nullid:
             repo.changelog = changelog.changelog(repo.svfs)
