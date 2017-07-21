@@ -204,12 +204,16 @@ Set up a rebase situation for issue5581.
   $ hg commit -m c4
   created new head
 
-Configure a merge tool that runs status in the middle of the rebase.
+Configure a merge tool that runs status in the middle of the rebase. The goal of
+the status call is to trigger a potential bug if fsmonitor's state is written
+even though the wlock is held by another process. The output of 'hg status' in
+the merge tool goes to /dev/null because we're more interested in the results of
+'hg status' run after the rebase.
 
   $ cat >> $TESTTMP/mergetool-race.sh << EOF
   > echo "custom merge tool"
   > printf "c2\nc3\nc4\n" > \$1
-  > hg --cwd "$TESTTMP/repo" status
+  > hg --cwd "$TESTTMP/repo" status > /dev/null
   > echo "custom merge tool end"
   > EOF
   $ cat >> $HGRCPATH << EOF
@@ -220,14 +224,10 @@ Configure a merge tool that runs status in the middle of the rebase.
   > test.args=$TESTTMP/mergetool-race.sh \$output
   > EOF
 
-BROKEN: the "M b" line should not be there
   $ hg rebase -s . -d 3 --tool test
   rebasing 4:b08445fd6b2a "c4" (tip)
   merging a
   custom merge tool
-  M a
-  M b
-  ? a.orig
   custom merge tool end
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/* (glob)
 
