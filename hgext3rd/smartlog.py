@@ -449,12 +449,12 @@ def smartlogrevset(repo, subset, x):
     args = revset.getargsdict(x, 'smartlogrevset', 'master recentdays')
     if 'master' in args:
         masterstring = revsetlang.getstring(args['master'],
-                _('master must be a string'))
+                                            _('master must be a string'))
     else:
         masterstring = ''
 
     recentdays = revsetlang.getinteger(args.get('recentdays'),
-            _("recentdays should be int"), -1)
+                                       _("recentdays should be int"), -1)
 
     revs = set()
     heads = set()
@@ -495,8 +495,8 @@ def smartlogrevset(repo, subset, x):
 
     allheads = set(repo.revs(headquery))
     if recentdays >= 0:
-        recentquery = revsetlang.formatspec('%r & date(-%d)',
-                headquery, recentdays)
+        recentquery = revsetlang.formatspec('%r & date(-%d)', headquery,
+                                            recentdays)
         recentrevs = set(repo.revs(recentquery))
         hiddenchanges += len(allheads - heads) - len(recentrevs - heads)
         heads.update(recentrevs)
