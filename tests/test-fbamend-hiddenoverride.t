@@ -56,3 +56,89 @@ Bookmark pins nodes even after removed
   |/
   @  0 A
   
+The order matters - putting bookmarks or moving working copy on non-obsoleted
+commits do not pin them. Test this using "debugobsolete" which will not call
+"createmarkers".
+
+Obsolete working copy, and move working copy away should make things disappear
+
+  $ rm -rf .hg && hg init && hg debugdrawdag <<'EOS'
+  > C E
+  > | |
+  > B D
+  > |/
+  > A
+  > EOS
+
+  $ hg up -q E
+  $ hg debugobsolete `HGPLAIN=1 hg log -r E -T '{node}'`
+  obsoleted 1 changesets
+  $ hg tag --local --remove E
+  $ hg log -G -T '{rev} {desc}\n'
+  @  4 E
+  |
+  | o  3 C
+  | |
+  o |  2 D
+  | |
+  | o  1 B
+  |/
+  o  0 A
+  
+  $ hg debugobsolete `HGPLAIN=1 hg log -r D -T '{node}'`
+  obsoleted 1 changesets
+  $ hg tag --local --remove D
+  $ hg log -G -T '{rev} {desc}\n'
+  @  4 E
+  |
+  | o  3 C
+  | |
+  x |  2 D
+  | |
+  | o  1 B
+  |/
+  o  0 A
+  
+  $ hg update -q C
+  $ hg log -G -T '{rev} {desc}\n'
+  @  3 C
+  |
+  o  1 B
+  |
+  o  0 A
+  
+Having a bookmark on a commit, obsolete the commit, remove the bookmark
+
+  $ rm -rf .hg && hg init && hg debugdrawdag <<'EOS'
+  > C E
+  > | |
+  > B D
+  > |/
+  > A
+  > EOS
+
+  $ hg bookmark -i book-e -r E
+  $ hg debugobsolete `HGPLAIN=1 hg log -r D -T '{node}'`
+  obsoleted 1 changesets
+  $ hg debugobsolete `HGPLAIN=1 hg log -r E -T '{node}'`
+  obsoleted 1 changesets
+  $ rm .hg/localtags
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  x  4 E book-e
+  |
+  | o  3 C
+  | |
+  x |  2 D
+  | |
+  | o  1 B
+  |/
+  o  0 A
+  
+  $ hg bookmark -d book-e
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  3 C
+  |
+  o  1 B
+  |
+  o  0 A
+  

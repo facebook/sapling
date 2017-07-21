@@ -36,18 +36,21 @@ def pinnedrevs(orig, repo):
     return revs
 
 def loadpinnednodes(repo):
-    """yield pinned nodes that should be visible"""
+    """yield pinned nodes that are obsoleted and should be visible"""
     if repo is None or not repo.local():
         return
     # the "pinned nodes" file name is "obsinhibit" for compatibility reason
     content = repo.svfs.tryread('obsinhibit') or ''
-    nodemap = repo.unfiltered().changelog.nodemap
+    unfi = repo.unfiltered()
+    nodemap = unfi.changelog.nodemap
     offset = 0
     while True:
         node = content[offset:offset + 20]
         if not node:
             break
-        if node in nodemap:
+        # remove unnecessary (non-obsoleted) nodes since pinnedrevs should only
+        # affect obsoleted revs.
+        if node in nodemap and unfi[node].obsolete():
             yield node
         offset += 20
 
@@ -99,12 +102,20 @@ def savepinnednodes(repo, newpin, newunpin):
             f.write(''.join(nodes))
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
-    shouldpinbefore = shouldpinnodes(repo)
+    # return directly for non-repo command
+    if not repo:
+        return orig(lui, repo, cmd, fullargs, *args)
+
+    shouldpinbefore = shouldpinnodes(repo) | set(loadpinnednodes(repo))
     result = orig(lui, repo, cmd, fullargs, *args)
     # after a command completes, make sure working copy parent and all
     # bookmarks get "pinned".
     newpin = shouldpinnodes(repo) - shouldpinbefore
-    newunpin = getattr(repo, '_tounpinnodes', set())
+    newunpin = getattr(repo.unfiltered(), '_tounpinnodes', set())
+    # filter newpin by obsolte - ex. if newpin is on a non-obsoleted commit,
+    # ignore it.
+    unfi = repo.unfiltered()
+    newpin = set(n for n in newpin if unfi[n].obsolete())
     # only do a write if something has changed
     if newpin or newunpin:
         savepinnednodes(repo, newpin, newunpin)
@@ -112,6 +123,7 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
 
 def createmarkers(orig, repo, rels, *args, **kwargs):
     # this is a way to unpin revs - precursors are unpinned
+    # note: hg debugobsolete does not call this function
     unfi = repo.unfiltered()
     tounpin = getattr(unfi, '_tounpinnodes', set())
     for r in rels:
