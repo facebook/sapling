@@ -34,7 +34,7 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
         if len(splitted) != 2:
             continue
         section, name = splitted
-        value = self.ui.config(section, name, None)
+        value = self.ui.config(section, name)
         if value is not None:
             kwargs[name] = value
 
