@@ -9,12 +9,12 @@
  */
 #include "eden/fs/inodes/FileHandle.h"
 
+#include <folly/experimental/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/LocalStore.h"
-
 
 namespace facebook {
 namespace eden {
@@ -34,12 +34,22 @@ FileHandle::~FileHandle() {
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
+  FB_LOGF(
+      inode_->getMount()->getLogger(),
+      DBG7,
+      "getattr({})",
+      inode_->getNodeId());
   return inode_->getattr();
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
     const struct stat& attr,
     int to_set) {
+  FB_LOGF(
+      inode_->getMount()->getLogger(),
+      DBG7,
+      "setattr({})",
+      inode_->getNodeId());
   return inode_->setattr(attr, to_set);
 }
 
@@ -52,6 +62,8 @@ bool FileHandle::isSeekable() const {
 }
 
 folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
+  FB_LOGF(
+      inode_->getMount()->getLogger(), DBG7, "read({})", inode_->getNodeId());
   return data_->read(size, off);
 }
 
@@ -63,6 +75,8 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
           std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
     }
   };
+  FB_LOGF(
+      inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
   return data_->write(std::move(buf), off);
 }
 
@@ -74,15 +88,21 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
           std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
     }
   };
+  FB_LOGF(
+      inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
   return data_->write(str, off);
 }
 
 folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
+  FB_LOGF(
+      inode_->getMount()->getLogger(), DBG7, "flush({})", inode_->getNodeId());
   data_->flush(lock_owner);
   return folly::Unit{};
 }
 
 folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
+  FB_LOGF(
+      inode_->getMount()->getLogger(), DBG7, "fsync({})", inode_->getNodeId());
   data_->fsync(datasync);
   return folly::Unit{};
 }

@@ -10,6 +10,8 @@
 #include "EdenMount.h"
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/FBString.h>
+#include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 
@@ -39,6 +41,8 @@ using folly::Unit;
 
 namespace facebook {
 namespace eden {
+
+static constexpr folly::StringPiece kEdenStracePrefix = "eden/strace";
 
 // We compute this when the process is initialized, but stash a copy
 // in each EdenMount.  We may in the future manage to propagate enough
@@ -84,7 +88,11 @@ EdenMount::EdenMount(
       dirstate_(std::make_unique<Dirstate>(this)),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
-      socketPath_(socketPath) {}
+      socketPath_(socketPath),
+      logger_(folly::sformat(
+          "{0}{1}",
+          kEdenStracePrefix,
+          config_->getMountPath().stringPiece())) {}
 
 folly::Future<folly::Unit> EdenMount::initialize() {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());

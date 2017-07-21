@@ -13,6 +13,7 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
+#include <folly/experimental/logging/Logger.h>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -291,6 +292,10 @@ class EdenMount {
    * a mount point specific instance. */
   folly::ThreadLocal<fusell::EdenStats>* getStats() const;
 
+  folly::Logger& getLogger() {
+    return logger_;
+  }
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -376,6 +381,10 @@ class EdenMount {
    * The path to the unix socket that can be used to address us via thrift
    */
   AbsolutePath socketPath_;
+
+  /** Allow logging by a category that includes mount path.
+      The category is of the following form: "eden.strace.<mount_path>"  */
+  folly::Logger logger_;
 };
 
 /**
