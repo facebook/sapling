@@ -180,3 +180,45 @@ Try to push with remotebookmarks disabled
   remote:     36667a3f76e4  newscratch
   $ hg book
      scratch/secondbranch      2:36667a3f76e4
+
+Create new bookmark and try to pull it
+  $ mkcommit newcommittoupdate1
+  $ hg push -q -r . --to scratch/branchtoupdateto1 --create
+  $ hg up -q ".^"
+  $ mkcommit newcommittoupdate2
+  created new head
+  $ hg push -q -r . --to scratch/branchtoupdateto2 --create
+  $ hg up -q ".^"
+  $ mkcommit newcommittopull
+  created new head
+  $ hg push -q -r . --to scratch/branchtopull --create
+  $ cd ../client
+  $ hg up default/scratch/branchtoupdateto1
+  'scratch/branchtoupdateto1' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  'scratch/branchtoupdateto1' found remotely
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ cat >> $HGRCPATH << EOF
+  > [remotenames]
+  > hoist=remote
+  > rename.default=remote
+  > EOF
+
+  $ hg up remote/scratch/branchtoupdateto2
+  'scratch/branchtoupdateto2' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  'scratch/branchtoupdateto2' found remotely
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved

@@ -179,6 +179,21 @@ def _getloglevel(ui):
         raise error.Abort(_('invalid log level %s') % loglevel)
     return numeric_loglevel
 
+def _tryhoist(ui, remotebookmark):
+    '''returns a bookmarks with hoisted part removed
+
+    Remotenames extension has a 'hoist' config that allows to use remote
+    bookmarks without specifying remote path. For example, 'hg update master'
+    works as well as 'hg update remote/master'. We want to allow the same in
+    infinitepush.
+    '''
+
+    if common.isremotebooksenabled(ui):
+        hoist = ui.config('remotenames', 'hoist', 'default') + '/'
+        if remotebookmark.startswith(hoist):
+            return remotebookmark[len(hoist):]
+    return remotebookmark
+
 class bundlestore(object):
     def __init__(self, repo):
         self._repo = repo
@@ -590,6 +605,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
 
     if not opts.get('date') and (rev or node) not in repo:
         mayberemote = rev or node
+        mayberemote = _tryhoist(ui, mayberemote)
         dopull = False
         kwargs = {}
         if _scratchbranchmatcher(mayberemote):
@@ -602,7 +618,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
         if dopull:
             ui.warn(
                 _("'%s' does not exist locally - looking for it " +
-                "remotely...\n") % mayberemote)
+                  "remotely...\n") % mayberemote)
             # Try pulling node from remote repo
             try:
                 cmdname = '^pull'
