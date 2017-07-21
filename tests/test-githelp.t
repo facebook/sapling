@@ -261,3 +261,12 @@ git merge-base
   Learn more about revsets with 'hg help revsets'
   
   hg log -T '{node}\n' -r 'ancestor(A,B)'
+
+githelp for git blame (tweakdefaults disabled)
+  $ hg githelp -- git blame
+  hg annotate -udl
+
+githelp for git blame (tweakdefaults enabled)
+  $ hg --config extensions.tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py githelp -- git blame
+  hg annotate -pudl
+
