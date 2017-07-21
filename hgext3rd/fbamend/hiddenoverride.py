@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import contextlib
 import os
 
+from mercurial.node import short
 from mercurial import (
     dispatch,
     error,
@@ -44,6 +45,7 @@ def loadpinnednodes(repo):
     unfi = repo.unfiltered()
     nodemap = unfi.changelog.nodemap
     offset = 0
+    result = []
     while True:
         node = content[offset:offset + 20]
         if not node:
@@ -51,8 +53,9 @@ def loadpinnednodes(repo):
         # remove unnecessary (non-obsoleted) nodes since pinnedrevs should only
         # affect obsoleted revs.
         if node in nodemap and unfi[node].obsolete():
-            yield node
+            result.append(node)
         offset += 20
+    return result
 
 def shouldpinnodes(repo):
     """get nodes that should be pinned: working parent + bookmarks for now"""
@@ -92,14 +95,20 @@ def flock(lockpath):
         fcntl.flock(lockfd, fcntl.LOCK_UN)
         os.close(lockfd)
 
-def savepinnednodes(repo, newpin, newunpin):
+def savepinnednodes(repo, newpin, newunpin, fullargs):
     # take a narrowed lock so it does not affect repo lock
     with flock(repo.svfs.join('obsinhibit.lock')):
-        nodes = set(loadpinnednodes(repo))
+        orignodes = loadpinnednodes(repo)
+        nodes = set(orignodes)
         nodes |= set(newpin)
         nodes -= set(newunpin)
         with util.atomictempfile(repo.svfs.join('obsinhibit')) as f:
             f.write(''.join(nodes))
+
+        desc = lambda s: [short(n) for n in s]
+        repo.ui.log('pinnednodes', 'pinnednodes: %r newpin=%r newunpin=%r '
+                    'before=%r after=%r\n', fullargs, desc(newpin),
+                    desc(newunpin), desc(orignodes), desc(nodes))
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
     # return directly for non-repo command
@@ -118,7 +127,7 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     newpin = set(n for n in newpin if unfi[n].obsolete())
     # only do a write if something has changed
     if newpin or newunpin:
-        savepinnednodes(repo, newpin, newunpin)
+        savepinnednodes(repo, newpin, newunpin, fullargs)
     return result
 
 def createmarkers(orig, repo, rels, *args, **kwargs):

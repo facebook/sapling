@@ -1,9 +1,13 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > blackbox=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = all
+  > [blackbox]
+  > track = command, commandfinish, commandexception,
+  >   pinnednodes
   > EOF
 
   $ hg init
@@ -56,6 +60,37 @@ Bookmark pins nodes even after removed
   |/
   @  0 A
   
+Check blackbox logs
+
+  $ hg blackbox -l 10000
+  *> debugdrawdag (glob)
+  *> pinnednodes: ['debugdrawdag'] newpin=[] newunpin=['112478962961'] before=[] after=[] (glob)
+  *> debugdrawdag exited 0 after * (glob)
+  *> log -G -T '{rev} {desc}\n' (glob)
+  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
+  *> log -G -T '{rev} {desc}\n' --hidden (glob)
+  *> log -G -T '{rev} {desc}\n' --hidden exited 0 after * (glob)
+  *> update 1 --hidden -q (glob)
+  *> pinnednodes: ['update', '1', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961'] (glob)
+  *> update 1 --hidden -q exited 0 after * (glob)
+  *> update 0 -q (glob)
+  *> update 0 -q exited 0 after * (glob)
+  *> log -G -T '{rev} {desc}\n' (glob)
+  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
+  *> prune 1 -q (glob)
+  *> pinnednodes: ['prune', '1', '-q'] newpin=[] newunpin=['112478962961'] before=['112478962961'] after=[] (glob)
+  *> prune 1 -q exited 0 after * (glob)
+  *> log -G -T '{rev} {desc}\n' (glob)
+  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
+  *> bookmark -ir 1 BOOK --hidden -q (glob)
+  *> pinnednodes: ['bookmark', '-ir', '1', 'BOOK', '--hidden', '-q'] newpin=['112478962961'] newunpin=[] before=[] after=['112478962961'] (glob)
+  *> bookmark -ir 1 BOOK --hidden -q exited 0 after * (glob)
+  *> bookmark -d BOOK -q (glob)
+  *> bookmark -d BOOK -q exited 0 after * (glob)
+  *> log -G -T '{rev} {desc}\n' (glob)
+  *> log -G -T '{rev} {desc}\n' exited 0 after * (glob)
+  *> blackbox -l 10000 (glob)
+
 The order matters - putting bookmarks or moving working copy on non-obsoleted
 commits do not pin them. Test this using "debugobsolete" which will not call
 "createmarkers".
