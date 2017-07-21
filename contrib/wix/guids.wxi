@@ -10,7 +10,7 @@
 
   <!-- dist.wxs -->
   <?define dist.guid = {CE405FE6-CD1E-4873-9C9A-7683AE5A3D90} ?>
-  <?define lib.guid = {91D53B14-E924-432A-ACA2-65F9B3F7C56A} ?>
+  <?define lib.guid = {877633b5-0b7e-4b46-8f1c-224a61733297} ?>
 
   <!-- doc.wxs -->
   <?define doc.hg.1.html.guid = {AAAA3FDA-EDC5-4220-B59D-D342722358A2} ?>

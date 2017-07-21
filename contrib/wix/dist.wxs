@@ -19,12 +19,14 @@
           <File Name="mercurial.cext.osutil.pyd" />
           <File Name="mercurial.cext.parsers.pyd" />
           <File Name="mercurial.zstd.pyd" />
+          <File Name="hgext.fsmonitor.pywatchman.bser.pyd" />
           <File Name="pyexpat.pyd" />
           <File Name="bz2.pyd" />
           <File Name="select.pyd" />
           <File Name="unicodedata.pyd" />
           <File Name="_ctypes.pyd" />
           <File Name="_elementtree.pyd" />
+          <File Name="_testcapi.pyd" />
           <File Name="_hashlib.pyd" />
           <File Name="_socket.pyd" />
           <File Name="_ssl.pyd" />
