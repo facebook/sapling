@@ -174,4 +174,29 @@ Partial uncommit in the middle
   |/
   o  0:3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
+Uncommit with draft parent
 
+  $ hg uncommit
+  $ hg phase -r .
+  10: draft
+  $ hg commit -m 'update ab again'
+
+Uncommit with public parent
+
+  $ hg phase -p "::.^"
+  $ hg uncommit
+  $ hg phase -r .
+  10: public
+
+Partial uncommit with public parent
+
+  $ echo xyz > xyz
+  $ hg add xyz
+  $ hg commit -m "update ab and add xyz"
+  $ hg uncommit xyz
+  $ hg status
+  A xyz
+  $ hg phase -r .
+  14: draft
+  $ hg phase -r ".^"
+  10: public

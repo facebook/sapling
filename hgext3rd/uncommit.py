@@ -161,9 +161,13 @@ def uncommit(ui, repo, *pats, **opts):
             if newid is None:
                 raise error.Abort(_('nothing to uncommit'))
 
-            # Move local changes on filtered changeset
-            obsolete.createmarkers(repo, [(old, (repo[newid],))])
-            phases.retractboundary(repo, tr, oldphase, [newid])
+            if newid != old.p1().node():
+                # Move local changes on filtered changeset
+                obsolete.createmarkers(repo, [(old, (repo[newid],))])
+                phases.retractboundary(repo, tr, oldphase, [newid])
+            else:
+                # Fully removed the old commit
+                obsolete.createmarkers(repo, [(old, ())])
 
             with repo.dirstate.parentchange():
                 repo.dirstate.setparents(newid, node.nullid)
