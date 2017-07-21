@@ -57,7 +57,7 @@ def _commitfiltered(repo, ctx, match):
         return None
 
     files = (initialfiles - exclude)
-    if not files:
+    if not files and not repo.ui.configbool('ui', 'allowemptycommit'):
         return ctx.parents()[0].node()
 
     # Filter copies

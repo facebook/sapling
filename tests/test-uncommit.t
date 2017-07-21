@@ -5,6 +5,7 @@ Test uncommit - set up the config
   > evolution=createmarkers
   > [extensions]
   > uncommit = $TESTDIR/../hgext3rd/uncommit.py
+  > drawdag=$RUNTESTDIR/drawdag.py
   > EOF
 
 Build up a repo
@@ -200,3 +201,25 @@ Partial uncommit with public parent
   14: draft
   $ hg phase -r ".^"
   10: public
+
+Uncommit leaving an empty changeset
+
+  $ cd $TESTTMP
+  $ hg init repo1
+  $ cd repo1
+  $ hg debugdrawdag <<'EOS'
+  > Q
+  > |
+  > P
+  > EOS
+  $ hg up Q -q
+  $ hg uncommit --config ui.allowemptycommit=1
+  $ hg log -G -T '{desc} FILES: {files}'
+  @  Q FILES:
+  |
+  | x  Q FILES: Q
+  |/
+  o  P FILES: P
+  
+  $ hg status
+  A Q
