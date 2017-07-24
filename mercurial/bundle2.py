@@ -145,7 +145,7 @@ future, dropping the stream may become an option for channel we do not care to
 preserve.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 
 import errno
 import re
@@ -1017,7 +1017,7 @@ class bundlepart(object):
         for key, value in advpar:
             parsizes.append(len(key))
             parsizes.append(len(value))
-        paramsizes = _pack(_makefpartparamsizes(len(parsizes) / 2), *parsizes)
+        paramsizes = _pack(_makefpartparamsizes(len(parsizes) // 2), *parsizes)
         header.append(paramsizes)
         # key, value
         for key, value in manpar:
