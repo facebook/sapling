@@ -1249,7 +1249,7 @@ class unbundlepart(unpackermixin):
         fparamsizes = _makefpartparamsizes(mancount + advcount)
         paramsizes = self._unpackheader(fparamsizes)
         # make it a list of couple again
-        paramsizes = zip(paramsizes[::2], paramsizes[1::2])
+        paramsizes = list(zip(paramsizes[::2], paramsizes[1::2]))
         # split mandatory from advisory
         mansizes = paramsizes[:mancount]
         advsizes = paramsizes[mancount:]
