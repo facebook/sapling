@@ -102,8 +102,6 @@ def extsetup(ui):
     # try to put in alphabetical order
     options.insert(3, ('', 'inactive', None,
         _('update without activating bookmarks')))
-    options.insert(3, ('n', 'nocheck', None,
-        _('update even with outstanding changes')))
     wrapblame()
 
     entry = wrapcommand(commands.table, 'commit', commitcmd)
@@ -357,18 +355,6 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
             ' for example "hg update master".',
             hint='If you\'re trying to move a bookmark forward, try ' +
                  '"hg rebase -d <destination>".')
-
-    # By default, never update when there are local changes unless updating to
-    # the current rev. This is useful for, eg, arc feature when the only
-    # thing changing is the bookmark.
-    if not kwargs['clean'] and not kwargs['nocheck'] and not kwargs['merge']:
-        target = node or rev
-        if target and scmutil.revsingle(repo, target, target).rev() != \
-                repo.revs('.').first():
-            kwargs['check'] = True
-
-    if 'nocheck' in kwargs:
-        del kwargs['nocheck']
 
     # Doesn't activate inactive bookmarks with this flag
     # In order to avoid submitting to upstream:

@@ -2,6 +2,8 @@
   > [extensions]
   > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > rebase=
+  > [experimental]
+  > updatecheck=noconflict
   > EOF
 
 Set up the repository.
@@ -34,20 +36,16 @@ Can always update to current commit.
   $ hg up .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-By default, --check should be set.
-  $ hg up 2
+Abort with --check set, succeed with --merge
+  $ hg up 2 --check
   abort: uncommitted changes
   [255]
-  $ hg up --nocheck 2
+  $ hg up --merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Updates to other branches should fail without --merge.
-  $ hg up 4
+  $ hg up 4 --check
   abort: uncommitted changes
-  [255]
-  $ hg up --nocheck 4
-  abort: uncommitted changes
-  (commit or update --clean to discard changes)
   [255]
   $ hg up --merge 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

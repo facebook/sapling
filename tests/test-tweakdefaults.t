@@ -3,6 +3,8 @@
   > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
+  > [experimental]
+  > updatecheck=noconflict
   > EOF
 
 Setup repo
@@ -59,20 +61,20 @@ Log is -f by default
   |/
   o  0 a
   
-Dirty update to different rev fails by default
+Dirty update to different rev fails with --check
 
   $ echo x >> a
   $ hg st
   M a
-  $ hg update ".^"
+  $ hg update ".^" --check
   abort: uncommitted changes
   [255]
 
-Dirty update allowed to same rev and with --nocheck and --clean
+Dirty update allowed to same rev, with no conflicts, and --clean
 
   $ hg update .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg update --nocheck ".^"
+  $ hg update ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg update --clean 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
