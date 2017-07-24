@@ -314,7 +314,7 @@ _fm1parentnone = 3
 _fm1parentshift = 14
 _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
-_fm1metapairsize = _calcsize('BB')
+_fm1metapairsize = _calcsize(_fm1metapair)
 
 def _fm1purereadmarkers(data, off, stop):
     # make some global constants local for performance
