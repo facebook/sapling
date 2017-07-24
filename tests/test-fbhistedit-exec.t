@@ -118,25 +118,46 @@ a failing command should drop us into the shell
   > pick 055a42cdd887 d
   > pick e860deea161a e
   > exec exit 1
-  > exec exit 1
+  > exec exit 2
   > pick 652413bf663e f
-  > exec exit 1
+  > exec exit 3
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   Command 'exit 1' failed with exit status 1
+
+retry should work
+
+  $ hg histedit --retry
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 1' failed with exit status 1
+  [1]
 
 continue should work
 
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  Command 'exit 1' failed with exit status 1
+  Command 'exit 2' failed with exit status 2
+  [1]
+
+retry after consecutive failed execs
+
+  $ hg histedit --retry
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 2' failed with exit status 2
   [1]
 
 continue after consecutive failed execs
 
   $ hg histedit --continue
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  Command 'exit 1' failed with exit status 1
+  Command 'exit 3' failed with exit status 3
+  [1]
+
+retry after the last entry
+
+  $ hg histedit --retry
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 3' failed with exit status 3
   [1]
 
 continue after the last entry
@@ -156,7 +177,72 @@ continue after the last entry
   |
   o  cb9a9f314b8b a
   
+retry should try to execute the command again and continue if succeeded
 
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > pick e860deea161a e
+  > exec exit 1
+  > pick 652413bf663e f
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  Command 'exit 1' failed with exit status 1
+
+  $ hg histedit --edit-plan --commands - 2>&1 << EOF| fixbundle
+  > exec echo "Called"
+  > exec exit 2
+  > edit 652413bf663e f
+  > EOF
+  [1]
+
+  $ hg histedit --retry
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Called
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'exit 2' failed with exit status 2
+  [1]
+
+retry should fail when working copy has pending changes
+
+  $ echo "g" >> g
+  $ hg add g
+  $ hg histedit --retry
+  abort: working copy has pending changes
+  (amend, commit, or revert them and run histedit --retry, or abort with histedit --abort)
+  [255]
+
+  $ hg revert -ar .
+  forgetting g
+
+retry should fail when used on non-exec histedit command
+
+  $ hg histedit --continue
+  adding f
+  Editing (652413bf663e), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+
+  $ hg histedit --retry
+  abort: no exec in progress
+  (if you want to continue a non-exec histedit command use "histedit --continue" instead.)
+  [255]
+  $ hg histedit --abort
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg log --template '{node|short} {desc}' --graph
+  @  652413bf663e f
+  |
+  o  e860deea161a e
+  |
+  o  055a42cdd887 d
+  |
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
 abort should work
 
   $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle

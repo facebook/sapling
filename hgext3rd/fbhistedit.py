@@ -17,6 +17,8 @@ from mercurial import encoding
 from mercurial import extensions
 from mercurial import hg
 from mercurial import lock
+from mercurial import merge as mergemod
+from mercurial import mergeutil
 from mercurial import node
 from mercurial import pycompat
 from mercurial import registrar
@@ -123,7 +125,7 @@ def defineactions():
         def continuedirty(self):
             raise error.Abort(_('working copy has pending changes'),
                 hint=_('amend, commit, or revert them and run histedit '
-                    '--continue, or abort with histedit --abort'))
+                    '--continue/--retry, or abort with histedit --abort'))
 
         def continueclean(self):
             parentctxnode = self.state.parentctxnode
@@ -142,7 +144,14 @@ def defineactions():
     return stop, execute, executerelative
 
 def extsetup(ui):
-    stop, execute, executerel = defineactions()
+    try:
+        extensions.find('histedit')
+    except KeyError:
+        raise error.Abort(
+                _('fbhistedit: please enable histedit extension as well'))
+
+    defineactions()
+    _extend_histedit(ui)
 
     if ui.config('experimental', 'histeditng'):
         rebase = extensions.find('rebase')
@@ -159,6 +168,102 @@ def extsetup(ui):
         options.append(('i', 'interactive', False, 'interactive rebase'))
         rebase.cmdtable['rebase'] = tuple(newentry)
 
+
+def _extend_histedit(ui):
+    histedit = extensions.find('histedit')
+
+    _aliases, entry = cmdutil.findcmd('histedit', histedit.cmdtable)
+    options = entry[1]
+    options.append(('x', 'retry', False,
+                    _('retry exec command that failed and try to continue')))
+    options.append(('', 'show-plan', False, _('show remaining actions list')))
+
+    extensions.wrapfunction(histedit, '_histedit', _histedit)
+
+goalretry = 'retry'
+goalshowplan = 'show-plan'
+goalorig = 'orig'
+
+def _getgoal(opts):
+    if opts.get('retry'):
+        return goalretry
+    if opts.get('show_plan'):
+        return goalshowplan
+    return goalorig
+
+def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
+    # TODO only abort if we try to histedit mq patches, not just
+    # blanket if mq patches are applied somewhere
+    mq = getattr(repo, 'mq', None)
+    if mq and mq.applied:
+        raise error.Abort(_('source has mq patches applied'))
+
+    # basic argument incompatibility processing
+    outg = opts.get('outgoing')
+    editplan = opts.get('edit_plan')
+    abort = opts.get('abort')
+
+    if goal == goalretry:
+        if any((outg, abort, revs, freeargs, rules, editplan)):
+            raise error.Abort(_('no arguments allowed with --retry'))
+    elif goal == goalshowplan:
+        if any((outg, abort, revs, freeargs, rules, editplan)):
+            raise error.Abort(_('no arguments allowed with --show-plan'))
+    elif goal == goalorig:
+        # We explicitly left the validation of arguments to orig
+        pass
+
+def _histedit(orig, ui, repo, state, *freeargs, **opts):
+    histedit = extensions.find('histedit')
+
+    goal = _getgoal(opts)
+    revs = opts.get('rev', [])
+    rules = opts.get('commands', '')
+    state.keep = opts.get('keep', False)
+
+    _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs)
+
+    if goal == goalretry:
+        state.read()
+        state = bootstrapretry(ui, state, opts)
+
+        histedit._continuehistedit(ui, repo, state)
+        histedit._finishhistedit(ui, repo, state)
+    elif goal == goalshowplan:
+        state.read()
+        showplan(ui, state)
+    else:
+        return orig(ui, repo, state, *freeargs, **opts)
+
+def bootstrapretry(ui, state, opts):
+    repo = state.repo
+
+    ms = mergemod.mergestate.read(repo)
+    mergeutil.checkunresolved(ms)
+
+    if not state.actions or state.actions[0].verb != 'exec':
+        msg = _("no exec in progress")
+        hint = _('if you want to continue a non-exec histedit command'
+                 ' use "histedit --continue" instead.')
+        raise error.Abort(msg, hint=hint)
+
+    if repo[None].dirty(missing=True):
+        raise error.Abort(_('working copy has pending changes'),
+            hint=_('amend, commit, or revert them and run histedit '
+                   '--retry, or abort with histedit --abort'))
+
+    return state
+
+def showplan(ui, state):
+    if not state.actions:
+        msg = _("no histedit actions in progress")
+        hint = _('did you meant to run histedit without "--show-plan"?')
+        raise error.Abort(msg, hint=hint)
+
+    ui.write(_('histedit plan (call "histedit --continue/--retry" to resume it'
+               ' or "histedit --abort" to abort it):\n'))
+    for action in state.actions:
+        ui.write('    %s\n' % action.torule())
 
 def _rebase(orig, ui, repo, **opts):
     histedit = extensions.find('histedit')
