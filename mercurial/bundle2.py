@@ -1045,11 +1045,12 @@ class bundlepart(object):
             ui.debug('bundle2-generatorexit\n')
             raise
         except BaseException as exc:
+            bexc = pycompat.bytestr(exc)
             # backup exception data for later
             ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
-                     % exc)
+                     % bexc)
             tb = sys.exc_info()[2]
-            msg = 'unexpected error: %s' % exc
+            msg = 'unexpected error: %s' % bexc
             interpart = bundlepart('error:abort', [('message', msg)],
                                    mandatory=False)
             interpart.id = 0
