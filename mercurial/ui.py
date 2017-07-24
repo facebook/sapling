@@ -1269,9 +1269,10 @@ class ui(object):
         m = re.match(br'(?s)(.+?)\$\$([^\$]*&[^ \$].*)', prompt)
         msg = m.group(1)
         choices = [p.strip(' ') for p in m.group(2).split('$$')]
-        return (msg,
-                [(s[s.index('&') + 1].lower(), s.replace('&', '', 1))
-                 for s in choices])
+        def choicetuple(s):
+            ampidx = s.index('&')
+            return s[ampidx + 1:ampidx + 2].lower(), s.replace('&', '', 1)
+        return (msg, [choicetuple(s) for s in choices])
 
     def promptchoice(self, prompt, default=0):
         """Prompt user with a message, read response, and ensure it matches
