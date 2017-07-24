@@ -1000,7 +1000,7 @@ class bundlepart(object):
             parttype = self.type.upper()
         else:
             parttype = self.type.lower()
-        outdebug(ui, 'part %s: "%s"' % (self.id, parttype))
+        outdebug(ui, 'part %s: "%s"' % (pycompat.bytestr(self.id), parttype))
         ## parttype
         header = [_pack(_fparttypesize, len(parttype)),
                   parttype, _pack(_fpartid, self.id),
@@ -1239,7 +1239,7 @@ class unbundlepart(unpackermixin):
         self.type = self._fromheader(typesize)
         indebug(self.ui, 'part type: "%s"' % self.type)
         self.id = self._unpackheader(_fpartid)[0]
-        indebug(self.ui, 'part id: "%s"' % self.id)
+        indebug(self.ui, 'part id: "%s"' % pycompat.bytestr(self.id))
         # extract mandatory bit from type
         self.mandatory = (self.type != self.type.lower())
         self.type = self.type.lower()
