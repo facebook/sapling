@@ -583,7 +583,7 @@ class obsstore(object):
 
         metadata = tuple(sorted(metadata.iteritems()))
 
-        marker = (str(prec), tuple(succs), int(flag), metadata, date, parents)
+        marker = (bytes(prec), tuple(succs), int(flag), metadata, date, parents)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
