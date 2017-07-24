@@ -307,7 +307,7 @@ def getobsoleted(repo, tr):
         seenrevs.add(rev)
         if phase(repo, rev) == public:
             continue
-        if set(succsmarkers(node)).issubset(addedmarkers):
+        if set(succsmarkers(node) or []).issubset(addedmarkers):
             obsoleted.add(rev)
     return obsoleted
 
