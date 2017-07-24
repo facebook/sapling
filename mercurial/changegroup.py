@@ -390,13 +390,13 @@ class cg1unpacker(object):
                     if clstart >= len(repo):
                         return
 
-                    repo.hook("changegroup", **hookargs)
+                    repo.hook("changegroup", **pycompat.strkwargs(hookargs))
 
                     for n in added:
                         args = hookargs.copy()
                         args['node'] = hex(n)
                         del args['node_last']
-                        repo.hook("incoming", **args)
+                        repo.hook("incoming", **pycompat.strkwargs(args))
 
                     newheads = [h for h in repo.heads()
                                 if h not in oldheads]
