@@ -1217,18 +1217,10 @@ class ui(object):
         self.write(prompt, prompt=True)
         self.flush()
 
-        # instead of trying to emulate raw_input, swap (self.fin,
-        # self.fout) with (sys.stdin, sys.stdout)
-        oldin = sys.stdin
-        oldout = sys.stdout
-        sys.stdin = self.fin
-        sys.stdout = self.fout
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection('stdio'):
-            line = raw_input(' ')
-        sys.stdin = oldin
-        sys.stdout = oldout
+            line = util.bytesinput(self.fin, self.fout, r' ')
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return

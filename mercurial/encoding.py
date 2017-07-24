@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import array
+import io
 import locale
 import os
 import unicodedata
@@ -573,3 +574,16 @@ def fromutf8b(s):
             c = chr(ord(c.decode("utf-8")) & 0xff)
         r += c
     return r
+
+class strio(io.TextIOWrapper):
+    """Wrapper around TextIOWrapper that respects hg's encoding assumptions.
+
+    Also works around Python closing streams.
+    """
+
+    def __init__(self, buffer, **kwargs):
+        kwargs[r'encoding'] = _sysstr(encoding)
+        super(strio, self).__init__(buffer, **kwargs)
+
+    def __del__(self):
+        """Override __del__ so it doesn't close the underlying stream."""
