@@ -24,7 +24,6 @@ test-locate.t
 test-lrucachedict.py
 test-manifest.py
 test-merge-default.t
-test-merge-subrepos.t
 test-merge2.t
 test-merge5.t
 test-revlog-packentry.t
