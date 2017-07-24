@@ -738,8 +738,9 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             oldstatus = repo.status()
 
             if any(pat.startswith('/') for pat in pats):
-                ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
-                          % ([pat for pat in pats if pat.startswith('/')]))
+                err = _('paths cannot start with /')
+                hint = _('do not use absolute paths')
+                raise error.Abort(err, hint=hint)
             elif include:
                 newinclude.update(pats)
             elif exclude:

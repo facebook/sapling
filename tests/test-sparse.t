@@ -28,11 +28,15 @@ Verify basic --include
 Absolute paths outside the repo should just be rejected
 
   $ hg sparse --include /foo/bar
-  warning: paths cannot start with /, ignoring: ['/foo/bar']
+  abort: paths cannot start with /
+  (do not use absolute paths)
+  [255]
   $ hg sparse --include '$TESTTMP/myrepo/hide'
 
   $ hg sparse --include '/root'
-  warning: paths cannot start with /, ignoring: ['/root']
+  abort: paths cannot start with /
+  (do not use absolute paths)
+  [255]
 
 Verify commiting while sparse includes other files
 
