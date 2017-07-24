@@ -648,7 +648,7 @@ class ui(object):
             if default is _unset:
                 default = 0
             value = default
-        if not isinstance(value, str):
+        if not isinstance(value, bytes):
             return value
         try:
             return util.sizetoint(value)
