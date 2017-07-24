@@ -270,9 +270,12 @@ def git_cleanup(ui, repo):
         gitsha, hgsha = line.strip().split(' ', 1)
         if hgsha in repo:
             new_map.append('%s %s\n' % (gitsha, hgsha))
-    with repo.wlock():
+    wlock = repo.wlock()
+    try:
         f = repo.vfs(GitHandler.map_file, 'wb')
         map(f.write, new_map)
+    finally:
+        wlock.release()
     ui.status(_('git commit map cleaned\n'))
 
 def findcommonoutgoing(orig, repo, other, *args, **kwargs):

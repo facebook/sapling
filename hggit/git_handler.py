@@ -197,7 +197,8 @@ class GitHandler(object):
         self._map_hg_real = map_hg_real
 
     def save_map(self, map_file):
-        with self.repo.wlock():
+        wlock = self.repo.wlock()
+        try:
             file = self.repo.vfs(map_file, 'w+', atomictemp=True)
             map_hg = self._map_hg
             buf = cStringIO.StringIO()
@@ -208,6 +209,8 @@ class GitHandler(object):
             buf.close()
             # If this complains, atomictempfile no longer has close
             file.close()
+        finally:
+            wlock.release()
 
     def load_tags(self):
         self.tags = {}
