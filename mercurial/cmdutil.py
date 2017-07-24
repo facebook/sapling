@@ -466,12 +466,12 @@ def tersestatus(root, statlist, status, ignorefn, ignore):
         return True
 
     def isignoreddir(localpath):
-        """
-        This function checks whether the directory contains only ignored files
-        and hence should the directory be considered ignored. Returns True, if
-        that should be ignored otherwise False.
+        """Return True if `localpath` directory is ignored or contains only
+        ignored files and should hence be considered ignored.
         """
         dirpath = os.path.join(root, localpath)
+        if ignorefn(dirpath):
+            return True
         for f in os.listdir(dirpath):
             filepath = os.path.join(dirpath, f)
             if os.path.isdir(filepath):
