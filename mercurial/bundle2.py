@@ -491,7 +491,8 @@ def _processpart(op, part):
             if output:
                 outpart = op.reply.newpart('output', data=output,
                                            mandatory=False)
-                outpart.addparam('in-reply-to', str(part.id), mandatory=False)
+                outpart.addparam(
+                    'in-reply-to', pycompat.bytestr(part.id), mandatory=False)
     # If exiting or interrupted, do not attempt to seek the stream in the
     # finally block below. This makes abort faster.
     except (SystemExit, KeyboardInterrupt):
@@ -1578,7 +1579,8 @@ def handlechangegroup(op, inpart):
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = op.reply.newpart('reply:changegroup', mandatory=False)
-        part.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        part.addparam(
+            'in-reply-to', pycompat.bytestr(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
     assert not inpart.read()
 
@@ -1641,7 +1643,8 @@ def handleremotechangegroup(op, inpart):
         # This is definitely not the final form of this
         # return. But one need to start somewhere.
         part = op.reply.newpart('reply:changegroup')
-        part.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        part.addparam(
+            'in-reply-to', pycompat.bytestr(inpart.id), mandatory=False)
         part.addparam('return', '%i' % ret, mandatory=False)
     try:
         real_part.validate()
@@ -1784,7 +1787,8 @@ def handlepushkey(op, inpart):
     op.records.add('pushkey', record)
     if op.reply is not None:
         rpart = op.reply.newpart('reply:pushkey')
-        rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        rpart.addparam(
+            'in-reply-to', pycompat.bytestr(inpart.id), mandatory=False)
         rpart.addparam('return', '%i' % ret, mandatory=False)
     if inpart.mandatory and not ret:
         kwargs = {}
@@ -1839,7 +1843,8 @@ def handleobsmarker(op, inpart):
     op.records.add('obsmarkers', {'new': new})
     if op.reply is not None:
         rpart = op.reply.newpart('reply:obsmarkers')
-        rpart.addparam('in-reply-to', str(inpart.id), mandatory=False)
+        rpart.addparam(
+            'in-reply-to', pycompat.bytestr(inpart.id), mandatory=False)
         rpart.addparam('new', '%i' % new, mandatory=False)
 
 
