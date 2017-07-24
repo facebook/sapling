@@ -2569,7 +2569,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     if relroot != '' and (repo.ui.configbool('devel', 'all-warnings')
                           or repo.ui.configbool('devel', 'check-relroot')):
-        for f in modified + added + removed + copy.keys() + copy.values():
+        for f in modified + added + removed + list(copy) + list(copy.values()):
             if f is not None and not f.startswith(relroot):
                 raise AssertionError(
                     "file %s doesn't start with relroot %s" % (f, relroot))
