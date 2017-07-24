@@ -58,7 +58,7 @@ Pushrebase pushes should be allowed
   $ hg push --config "extensions.bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py" --config "extensions.pushrebase=$TESTDIR/../hgext3rd/pushrebase.py" --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
-  pushing 1 changset:
+  pushing 1 changeset:
       1846eede8b68  b
   exporting bookmark master
 

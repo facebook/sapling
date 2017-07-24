@@ -92,7 +92,7 @@ Test pushing only flat fails if forcetreereceive is on
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 1 changset:
+  remote: pushing 1 changeset:
   remote:     15486e46ccf6  add subdir2/z
   remote: error: pushes must contain tree manifests when the server has pushrebase.forcetreereceive enabled
   abort: push failed on remote
@@ -130,7 +130,7 @@ Test pushing only trees (no flats) with pushrebase creates trees on the server
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 1 changset:
+  remote: pushing 1 changeset:
   remote:     15486e46ccf6  add subdir2/z
   $ ls ../master/.hg/store/meta
   subdir

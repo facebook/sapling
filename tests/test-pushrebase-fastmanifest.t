@@ -78,5 +78,5 @@ Test that pushing to a remotename gets rebased (client1 -> client2)
   $ hg push --to mybook ssh://user@dummy/client2
   pushing to ssh://user@dummy/client2
   searching for changes
-  remote: pushing 1 changset:
+  remote: pushing 1 changeset:
   remote:     eb7a4df38d10  dummy commit

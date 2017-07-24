@@ -936,7 +936,7 @@ def getontotarget(op, params, bundle):
 def printpushmessage(op, revs, bundle):
     # Notify the user of what is being pushed
     plural = 's' if len(revs) > 1 else ''
-    op.repo.ui.warn(_("pushing %s changset%s:\n") % (len(revs), plural))
+    op.repo.ui.warn(_("pushing %s changeset%s:\n") % (len(revs), plural))
     maxoutput = 10
     for i in range(0, min(len(revs), maxoutput)):
         firstline = bundle[revs[i]].description().split('\n')[0][:50]
