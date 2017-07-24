@@ -1070,7 +1070,8 @@ class bundlepart(object):
         Exists to handle the different methods to provide data to a part."""
         # we only support fixed size data now.
         # This will be improved in the future.
-        if util.safehasattr(self.data, 'next'):
+        if (util.safehasattr(self.data, 'next')
+            or util.safehasattr(self.data, '__next__')):
             buff = util.chunkbuffer(self.data)
             chunk = buff.read(preferedchunksize)
             while chunk:
