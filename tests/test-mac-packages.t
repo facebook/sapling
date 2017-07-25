@@ -9,6 +9,7 @@
   $ export KEEPMPKG
 
   $ cd "$TESTDIR"/..
+  $ contrib/genosxversion.py --selftest ignoredarg
   $ make osx > "$OUTPUTDIR/build.log" 2>&1
   $ cd "$OUTPUTDIR"
   $ ls -d *.pkg
