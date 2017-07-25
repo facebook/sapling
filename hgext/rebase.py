@@ -512,7 +512,8 @@ class rebaseruntime(object):
             collapsedas = None
             if self.collapsef:
                 collapsedas = newnode
-            clearrebased(ui, repo, self.state, self.skipped, collapsedas)
+            clearrebased(ui, repo, self.dest, self.state, self.skipped,
+                         collapsedas)
 
         clearstatus(repo)
         clearcollapsemsg(repo)
@@ -896,6 +897,58 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest):
         p1rev = repo[rev].p1().rev()
         copies.duplicatecopies(repo, rev, p1rev, skiprev=dest)
     return stats
+
+def adjustdest(repo, rev, dest, state):
+    """adjust rebase destination given the current rebase state
+
+    rev is what is being rebased. Return a list of two revs, which are the
+    adjusted destinations for rev's p1 and p2, respectively. If a parent is
+    nullrev, return dest without adjustment for it.
+
+    For example, when doing rebase -r B+E -d F, rebase will first move B to B1,
+    and E's destination will be adjusted from F to B1.
+
+        B1 <- written during rebasing B
+        |
+        F <- original destination of B, E
+        |
+        | E <- rev, which is being rebased
+        | |
+        | D <- prev, one parent of rev being checked
+        | |
+        | x <- skipped, ex. no successor or successor in (::dest)
+        | |
+        | C
+        | |
+        | B <- rebased as B1
+        |/
+        A
+
+    Another example about merge changeset, rebase -r C+G+H -d K, rebase will
+    first move C to C1, G to G1, and when it's checking H, the adjusted
+    destinations will be [C1, G1].
+
+            H       C1 G1
+           /|       | /
+          F G       |/
+        K | |  ->   K
+        | C D       |
+        | |/        |
+        | B         | ...
+        |/          |/
+        A           A
+    """
+    result = []
+    for prev in repo.changelog.parentrevs(rev):
+        adjusted = dest
+        if prev != nullrev:
+            # pick already rebased revs from state
+            source = [s for s, d in state.items() if d > 0]
+            candidate = repo.revs('max(%ld and (::%d))', source, prev).first()
+            if candidate is not None:
+                adjusted = state[candidate]
+        result.append(adjusted)
+    return result
 
 def nearestrebased(repo, rev, state):
     """return the nearest ancestors of rev in the rebase result"""
@@ -1301,12 +1354,21 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
             state[r] = revprecursor
     return originalwd, dest.rev(), state
 
-def clearrebased(ui, repo, state, skipped, collapsedas=None):
+def clearrebased(ui, repo, dest, state, skipped, collapsedas=None):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
     `collapsedas` node."""
     tonode = repo.changelog.node
+    # Move bookmark of skipped nodes to destination. This cannot be handled
+    # by scmutil.cleanupnodes since it will treat rev as removed (no successor)
+    # and move bookmark backwards.
+    bmchanges = [(name, tonode(max(adjustdest(repo, rev, dest, state))))
+                 for rev in skipped
+                 for name in repo.nodebookmarks(tonode(rev))]
+    if bmchanges:
+        with repo.transaction('rebase') as tr:
+            repo._bookmarks.applychanges(repo, tr, bmchanges)
     mapping = {}
     for rev, newrev in sorted(state.items()):
         if newrev >= 0 and newrev != rev:
