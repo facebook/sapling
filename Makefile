@@ -14,6 +14,7 @@ DOCFILES=mercurial/help/*.txt
 export LANGUAGE=C
 export LC_ALL=C
 TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
+OSXVERSIONFLAGS ?= $(shell echo $$OSXVERSIONFLAGS)
 
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
@@ -185,7 +186,7 @@ osx:
 	  PREFIX=/usr/local \
 	  clean install
 	mkdir -p $${OUTPUTDIR:-dist}
-	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
+	HGVER=$(shell python contrib/genosxversion.py $(OSXVERSIONFLAGS) build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py ) && \
 	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
 	pkgbuild --filter \\.DS_Store --root build/mercurial/ \
 	  --identifier org.mercurial-scm.mercurial \
