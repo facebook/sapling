@@ -83,7 +83,7 @@ Test that trees created during push are synced to the db
   $ hg push ssh://user@dummy/master --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 1 changset:
+  remote: pushing 1 changeset:
   remote:     c46827e4453c  c
 
   $ cd ../master-new
