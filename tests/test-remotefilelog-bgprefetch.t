@@ -239,3 +239,78 @@
   Node          Delta Base    Delta Length
   69a1b6752270  000000000000  2
 
+# Check that foregound prefetch with no arguments blocks until background prefetches finish
+
+  $ hg up -r 3
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ clearcache
+  $ hg prefetch --repack
+  waiting for lock on prefetching in $TESTTMP/shallow held by process * on host * (glob)
+  got lock after 1 seconds
+  (running background incremental repack)
+  5 files fetched over 1 fetches - (5 misses, 0.00% hit ratio) over *s (glob)
+  $ sleep 0.5
+  $ hg debugwaitonrepack >/dev/null 2>%1
+
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  $TESTTMP/hgcache/repos
+
+# Ensure that files were prefetched
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  
+  w
+  Node          Delta Base    Delta Length
+  bb6ccd5dceaa  000000000000  2
+  
+  x
+  Node          Delta Base    Delta Length
+  ef95c5376f34  000000000000  3
+  1406e7411862  ef95c5376f34  14
+  
+  y
+  Node          Delta Base    Delta Length
+  076f5e2225b3  000000000000  2
+  
+  z
+  Node          Delta Base    Delta Length
+  69a1b6752270  000000000000  2
+
+# Check that foreground prefetch fetches revs specified by '. + draft() + bgprefetchrevs + pullprefetch'
+
+  $ clearcache
+  $ hg prefetch --repack
+  (running background incremental repack)
+  5 files fetched over 1 fetches - (5 misses, 0.00% hit ratio) over *s (glob)
+  $ sleep 0.5
+  $ hg debugwaitonrepack >/dev/null 2>%1
+
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histidx
+  $TESTTMP/hgcache/master/packs/27c52c105a1ddf8c75143a6b279b04c24b1f4bee.histpack
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.dataidx
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  $TESTTMP/hgcache/repos
+
+# Ensure that files were prefetched
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
+  
+  w
+  Node          Delta Base    Delta Length
+  bb6ccd5dceaa  000000000000  2
+  
+  x
+  Node          Delta Base    Delta Length
+  ef95c5376f34  000000000000  3
+  1406e7411862  ef95c5376f34  14
+  
+  y
+  Node          Delta Base    Delta Length
+  076f5e2225b3  000000000000  2
+  
+  z
+  Node          Delta Base    Delta Length
+  69a1b6752270  000000000000  2

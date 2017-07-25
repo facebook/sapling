@@ -877,9 +877,9 @@ def prefetch(ui, repo, *pats, **opts):
     """prefetch file revisions from the server
 
     Prefetchs file revisions for the specified revs and stores them in the
-    local remotefilelog cache.  If no rev is specified, it uses your current
-    commit. File names or patterns can be used to limit which files are
-    downloaded.
+    local remotefilelog cache.  If no rev is specified, the default rev is
+    used which is the union of dot, draft, pullprefetch and bgprefetchrev.
+    File names or patterns can be used to limit which files are downloaded.
 
     Return 0 on success.
     """
@@ -887,7 +887,16 @@ def prefetch(ui, repo, *pats, **opts):
         raise error.Abort(_("repo is not shallow"))
 
     if not opts.get('rev'):
-        opts['rev'] = '.'
+        revset = ['.', 'draft()']
+
+        prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
+        if prefetchrevset:
+            revset.append('(%s)' % prefetchrevset)
+        bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
+        if bgprefetchrevs:
+            revset.append('(%s)' % bgprefetchrevs)
+
+        opts['rev'] = ['+'.join(revset)]
 
     revs = scmutil.revrange(repo, opts.get('rev'))
 
