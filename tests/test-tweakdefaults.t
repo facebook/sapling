@@ -547,6 +547,90 @@ Test diff --per-file-stat
   $ hg diff -r ".^" -r . --per-file-stat-json
   {"a": {"adds": 1, "isbinary": false, "removes": 0}, "b": {"adds": 1, "isbinary": false, "removes": 0}}
 
+Test rebase with showupdated=True
+  $ cd $TESTTMP
+  $ hg init showupdated
+  $ cd showupdated
+  $ cat >> .hg/hgrc <<EOF
+  > [tweakdefaults]
+  > showupdated=True
+  > rebasekeepdate=True
+  > EOF
+  $ touch a && hg commit -Aqm a
+  $ touch b && hg commit -Aqm b
+  $ hg up -q 0
+  $ touch c && hg commit -Aqm c
+  $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
+  @  d5e255ef74f8ec83b3a2a3f3254c699451c89e29 2
+  |
+  | o  0e067c57feba1a5694ca4844f05588bb1bf82342 1
+  |/
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
+  
+  $ hg rebase -r 1 -d 2
+  rebasing 1:0e067c57feba "b"
+  0e067c57feba -> a602e0d56f83 "b"
+  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/0e067c57feba-ca6d05e3-rebase.hg (glob)
+
+Test rebase with showupdate=True and a lot of source revisions
+  $ hg up -q 0
+  $ for i in `$TESTDIR/seq.py 11`; do touch "$i" && hg commit -Aqm "$i" && hg up -q 0; done
+  $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
+  o  6e3ddf6f49efd0a836a470a2d45e953db915c262 13
+  |
+  | o  e02ec9861284762c93b8a4c9e0bac0abfbb59ac7 12
+  |/
+  | o  14218977adef919e86466c688defa3fb893a5638 11
+  |/
+  | o  6a01a2bb0a9f7a6f01c6f49ce90e60bf85de79d0 10
+  |/
+  | o  e5ec40f709911f69eafada5746d3f5b969005738 9
+  |/
+  | o  73800d52e8ddab37a1f9177299d1fdfb563c061a 8
+  |/
+  | o  657f1516f142d51ba06b98413ce35a884f7f8af0 7
+  |/
+  | o  4e6ba707bdb81e60d96b84099c2d1c56530ee6f1 6
+  |/
+  | o  7ab24e484dafd1d2ebf51a4fa4523431b81b99aa 5
+  |/
+  | o  ee71024c6e8c4a45ee1d3e462431bfec85ac215a 4
+  |/
+  | o  46a418a0abd225d8ad876102f495d209907b79d9 3
+  |/
+  | o  a602e0d56f83e5816ebcbb78095e259ffbce94aa 2
+  | |
+  | o  d5e255ef74f8ec83b3a2a3f3254c699451c89e29 1
+  |/
+  @  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
+  
+  $ hg rebase -r 'all() - 0 - 12' -d 12
+  rebasing 1:d5e255ef74f8 "c"
+  rebasing 2:a602e0d56f83 "b"
+  rebasing 3:46a418a0abd2 "1"
+  rebasing 4:ee71024c6e8c "2"
+  rebasing 5:7ab24e484daf "3"
+  rebasing 6:4e6ba707bdb8 "4"
+  rebasing 7:657f1516f142 "5"
+  rebasing 8:73800d52e8dd "6"
+  rebasing 9:e5ec40f70991 "7"
+  rebasing 10:6a01a2bb0a9f "8"
+  rebasing 11:14218977adef "9"
+  rebasing 13:6e3ddf6f49ef "11" (tip)
+  14218977adef -> 2d12dd93bf8b "9"
+  46a418a0abd2 -> 645dc4557ba8 "1"
+  4e6ba707bdb8 -> b9598afdff23 "4"
+  657f1516f142 -> 906a55b270d4 "5"
+  6a01a2bb0a9f -> f5a7b375c4a9 "8"
+  6e3ddf6f49ef -> ad74bbdbdb75 "11"
+  73800d52e8dd -> 3145d47a5692 "6"
+  7ab24e484daf -> 03a9e0e4badc "3"
+  a602e0d56f83 -> e7a99f1fea2a "b"
+  d5e255ef74f8 -> 72d850a207d5 "c"
+  ...
+  ee71024c6e8c -> 0c42bb4bf23f "2"
+  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/6e3ddf6f49ef-4b18babd-rebase.hg (glob)
+
 Test bookmark -D
   $ cd $TESTTMP
   $ hg init book-D

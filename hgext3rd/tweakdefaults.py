@@ -48,9 +48,15 @@ Config::
     nodestmsg = ''
     rollbackhint = ''
     tagsmessage = ''
+
+    # output new hashes when nodes get updated
+    showupdated = False
 """
 
 from mercurial.i18n import _
+from mercurial.node import (
+    short,
+)
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -110,6 +116,7 @@ def extsetup(ui):
         _('reuse commit message from REV'), _('REV')))
     opawarerebase = markermetadatawritingcommand(ui, _rebase, 'rebase')
     wrapcommand(rebase.cmdtable, 'rebase', opawarerebase)
+    wrapfunction(scmutil, 'cleanupnodes', cleanupnodeswrapper)
     entry = wrapcommand(commands.table, 'pull', pull)
     options = entry[1]
     options.append(
@@ -647,6 +654,29 @@ def _rebase(orig, ui, repo, **opts):
             return result
 
     return orig(ui, repo, **opts)
+
+def cleanupnodeswrapper(orig, repo, mapping, operation):
+    if repo.ui.configbool('tweakdefaults', 'showupdated', False):
+        maxoutput = 10
+        oldnodes = sorted(mapping.keys())
+        for i in range(0, min(len(oldnodes), maxoutput)):
+            oldnode = oldnodes[i]
+            newnodes = mapping[oldnode]
+            _printupdatednode(repo, oldnode, newnodes)
+        if len(oldnodes) > maxoutput + 1:
+            repo.ui.status(_("...\n"))
+            lastoldnode = oldnodes[-1]
+            lastnewnodes = mapping[lastoldnode]
+            _printupdatednode(repo, lastoldnode, lastnewnodes)
+    return orig(repo, mapping, operation)
+
+def _printupdatednode(repo, oldnode, newnodes):
+    # oldnode was not updated if newnodes is an iterable
+    if len(newnodes) == 1:
+        newnode = newnodes[0]
+        firstline = repo[newnode].description().split("\n")[0][:50]
+        repo.ui.status(_("%s -> %s \"%s\"\n") % (
+            short(oldnode), short(newnode), firstline))
 
 def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
     """Wrapper for _computeobsoletenotrebased from rebase extensions
