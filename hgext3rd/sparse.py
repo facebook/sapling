@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg, registrar
+from mercurial import localrepo, error, hg, registrar, scmutil
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -218,8 +218,17 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
         raise error.Abort(_("too many flags specified."))
     if include or exclude or enableprofile:
         def clone_sparse(orig, self, node, overwrite, *args, **kwargs):
-            _config(self.ui, self.unfiltered(), pat, {}, include=include,
-                    exclude=exclude, enableprofile=enableprofile)
+            # sparse clone is a special snowflake as in that case always
+            # are outside of the repo's dir hierachy, yet we always want
+            # to name our includes/excludes/enables using repo-root
+            # relative paths
+            overrides = {
+                ('sparse', 'includereporootpaths'): True,
+                ('sparse', 'enablereporootpaths'): True,
+            }
+            with self.ui.configoverride(overrides, 'sparse'):
+                _config(self.ui, self.unfiltered(), pat, {}, include=include,
+                        exclude=exclude, enableprofile=enableprofile)
             return orig(self, node, overwrite, *args, **kwargs)
         extensions.wrapfunction(hg, 'updaterepo', clone_sparse)
     return orig(ui, repo, *args, **opts)
@@ -657,6 +666,20 @@ def sparse(ui, repo, *pats, **opts):
     --clear-rules removes all local include and exclude rules, while leaving
     any enabled profiles in place.
 
+    The following config option defines whether sparse treats supplied
+    paths as relative to repo root or to the current working dir for
+    include and exclude options:
+
+        [sparse]
+        includereporootpaths = off
+
+    The following config option defines whether sparse treats supplied
+    paths as relative to repo root or to the current working dir for
+    enableprofile and disableprofile options:
+
+        [sparse]
+        enablereporootpaths = on
+
     Returns 0 if editing the sparse checkout succeeds.
     """
     include = opts.get('include')
@@ -735,13 +758,25 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                 newexclude = set(oldexclude)
                 newprofiles = set(oldprofiles)
 
-            oldstatus = repo.status()
-
             if any(pat.startswith('/') for pat in pats):
                 err = _('paths cannot start with /')
                 hint = _('do not use absolute paths')
                 raise error.Abort(err, hint=hint)
-            elif include:
+
+            if (not ui.configbool('sparse', 'includereporootpaths', False)
+                and (include or exclude)):
+                # supplied file patterns should be treated as relative
+                # to current working dir, so we need to convert them first
+                pats = scmutil.match(repo['.'], pats).files()
+
+            if (not ui.configbool('sparse', 'enablereporootpaths', True)
+                and (enableprofile or disableprofile)):
+                # supplied file patterns should be treated as relative
+                # to current working dir, so we need to convert them first
+                pats = scmutil.match(repo['.'], pats).files()
+
+            oldstatus = repo.status()
+            if include:
                 newinclude.update(pats)
             elif exclude:
                 newexclude.update(pats)

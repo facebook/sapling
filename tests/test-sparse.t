@@ -38,6 +38,23 @@ Absolute paths outside the repo should just be rejected
   (do not use absolute paths)
   [255]
 
+Repo root-relaive vs. cwd-relative includes
+  $ mkdir subdir
+  $ cd subdir
+  $ hg sparse --config sparse.includereporootpaths=on --include reporoot/path
+  $ hg sparse --config sparse.includereporootpaths=off --include cwd/path
+  $ hg sparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  reporoot/path
+  subdir/cwd/path
+  [exclude]
+  
+  
+  $ cd ..
+  $ rm -rf subdir
+
 Verify commiting while sparse includes other files
 
   $ echo z > hide
