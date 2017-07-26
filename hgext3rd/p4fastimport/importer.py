@@ -159,7 +159,7 @@ class RCSImporter(collections.Mapping):
     def content(self, rev):
         text = None
         if os.path.isfile(self.rcspath):
-            cmd = 'co -q -p1.%d %s' % (rev, util.shellquote(self.rcspath))
+            cmd = 'co -kk -q -p1.%d %s' % (rev, util.shellquote(self.rcspath))
             with util.popen(cmd, mode='rb') as fp:
                 text = fp.read()
         return text
