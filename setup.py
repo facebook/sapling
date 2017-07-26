@@ -4,8 +4,10 @@
 # 'python setup.py install', or
 # 'python setup.py --help' for more options
 
+import os
+
 supportedpy = '~= 2.7'
-if 'HGALLOWPYTHON3':
+if os.environ.get('HGALLOWPYTHON3', ''):
     # Mercurial will never work on Python 3 before 3.5 due to a lack
     # of % formatting on bytestrings, and can't work on 3.6.0 or 3.6.1
     # due to a bug in % formatting in bytestrings.
@@ -101,7 +103,7 @@ else:
 ispypy = "PyPy" in sys.version
 
 import ctypes
-import os, stat, subprocess, time
+import stat, subprocess, time
 import re
 import shutil
 import tempfile
