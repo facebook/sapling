@@ -68,6 +68,7 @@ from mercurial import (
     obsolete,
     patch,
     registrar,
+    revsetlang,
     scmutil,
     templater,
     util,
@@ -122,6 +123,11 @@ def extsetup(ui):
     options.append(
         ('d', 'dest', '', _('destination for rebase or update')))
 
+    # anonymous function to pass ui object to _analyzewrapper
+    def _analyzewrap(orig, x, order='define'):
+        return _analyzewrapper(orig, x, order, ui)
+
+    wrapfunction(revsetlang, '_analyze', _analyzewrap)
     try:
         rebaseext = extensions.find('rebase')
         # tweakdefaults is already loaded before other extensions
@@ -625,6 +631,20 @@ def markermetadatawritingcommand(ui, origcmd, operationame):
         with repo.ui.configoverride(overrides, 'tweakdefaults'):
             return origcmd(*args, **kwargs)
     return cmd
+
+def _analyzewrapper(orig, x, order, ui):
+    """Wraps analyzer to detect the use of colons in the revisions
+    """
+    result = orig(x, order)
+
+    if isinstance(x, tuple) and \
+            (x[0] in ('range', 'rangepre', 'rangepost')) and \
+            x != ('rangepre', ('symbol', '.')):
+        # The last condition is added so that warnings are not shown if
+        # hg log --follow is invoked w/o arguments
+        ui.develwarn("use of ':' is deprecated\n")
+
+    return result
 
 def _rebase(orig, ui, repo, **opts):
     if not opts.get('date') and not ui.configbool('tweakdefaults',

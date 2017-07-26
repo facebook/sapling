@@ -692,3 +692,40 @@ Test bookmark -D
   |
   o  0
   
+Test that developer warning is shown whenever ':' is used implicitly or explicitly
+
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:2'
+  devel-warn: use of ':' is deprecated
+   at: *tweakdefaults.py:* (_analyzewrap) (glob)
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+  $ hg log -G -T '{rev} {bookmarks}' -r ':2'
+  devel-warn: use of ':' is deprecated
+   at: *tweakdefaults.py:* (_analyzewrap) (glob)
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:'
+  devel-warn: use of ':' is deprecated
+   at: *tweakdefaults.py:* (_analyzewrap) (glob)
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+In this testcase warning should not be shown
+  $ hg log -G -T '{rev} {bookmarks}' -r ':'
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
