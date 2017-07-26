@@ -276,13 +276,19 @@ class vfs(abstractvfs):
 
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
+
+    'cacheaudited' should be enabled only if (a) vfs object is short-lived, or
+    (b) the base directory is managed by hg and considered sort-of append-only.
+    See pathutil.pathauditor() for details.
     '''
-    def __init__(self, base, audit=True, expandpath=False, realpath=False):
+    def __init__(self, base, audit=True, cacheaudited=False, expandpath=False,
+                 realpath=False):
         if expandpath:
             base = util.expandpath(base)
         if realpath:
             base = os.path.realpath(base)
         self.base = base
+        self._cacheaudited = cacheaudited
         self.mustaudit = audit
         self.createmode = None
         self._trustnlink = None
@@ -295,7 +301,8 @@ class vfs(abstractvfs):
     def mustaudit(self, onoff):
         self._audit = onoff
         if onoff:
-            self.audit = pathutil.pathauditor(self.base)
+            self.audit = pathutil.pathauditor(
+                self.base, cached=self._cacheaudited)
         else:
             self.audit = util.always
 

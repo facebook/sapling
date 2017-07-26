@@ -667,7 +667,7 @@ def _interestingfiles(repo, matcher):
     This is different from dirstate.status because it doesn't care about
     whether files are modified or clean.'''
     added, unknown, deleted, removed, forgotten = [], [], [], [], []
-    audit_path = pathutil.pathauditor(repo.root)
+    audit_path = pathutil.pathauditor(repo.root, cached=True)
 
     ctx = repo[None]
     dirstate = repo.dirstate

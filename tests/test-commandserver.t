@@ -956,10 +956,9 @@ and the merge should fail (issue5628)
   *** runcommand up -qC 2
   *** runcommand up -qC 1
   *** runcommand merge 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  abort: path 'a/poisoned' traverses symbolic link 'a'
+   [255]
   $ ls ../merge-symlink-out
-  poisoned
 
 cache of repo.auditor should be discarded, so matcher would never traverse
 symlinks:
@@ -983,7 +982,8 @@ symlinks:
   *** runcommand up -qC 0
   *** runcommand up -qC 1
   *** runcommand files a/poisoned
-   [1]
+  abort: path 'a/poisoned' traverses symbolic link 'a'
+   [255]
 
   $ cd ..
 

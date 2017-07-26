@@ -169,9 +169,9 @@ and the rebase should fail (issue5628)
   $ hg up -qC 2
   $ hg rebase -s 2 -d 1 --config extensions.rebase=
   rebasing 2:e73c21d6b244 "file a/poisoned" (tip)
-  saved backup bundle to * (glob)
+  abort: path 'a/poisoned' traverses symbolic link 'a'
+  [255]
   $ ls ../merge-symlink-out
-  poisoned
 
   $ cd ..
 
@@ -211,10 +211,9 @@ audited first by calculateupdates(), where no symlink is created so both
 
   $ hg up -qC null
   $ hg up 1
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  abort: path 'a/b' traverses symbolic link 'a'
+  [255]
   $ ls ../update-symlink-out
-  b
-  $ rm ../update-symlink-out/b
 
 try branch update replacing directory with symlink, and its content: the
 path 'a' is audited as a directory first, which should be audited again as
@@ -223,9 +222,9 @@ a symlink.
   $ rm -f a
   $ hg up -qC 2
   $ hg up 1
-  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  abort: path 'a/b' traverses symbolic link 'a'
+  [255]
   $ ls ../update-symlink-out
-  b
 
   $ cd ..
 

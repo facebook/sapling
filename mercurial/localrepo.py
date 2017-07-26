@@ -273,8 +273,8 @@ class localrepository(object):
         self.origroot = path
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
-                                                realfs=False)
-        self.vfs = vfsmod.vfs(self.path)
+                                                realfs=False, cached=True)
+        self.vfs = vfsmod.vfs(self.path, cacheaudited=True)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
@@ -350,7 +350,8 @@ class localrepository(object):
                 raise
 
         self.store = store.store(
-                self.requirements, self.sharedpath, vfsmod.vfs)
+            self.requirements, self.sharedpath,
+            lambda base: vfsmod.vfs(base, cacheaudited=True))
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
