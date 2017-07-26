@@ -65,18 +65,18 @@ class TreeInode : public InodeBase {
    *   If the child is materialized in the overlay, then it must have an inode
    *   number allocated to it.
    */
-  struct Entry {
+  class Entry {
    public:
     /**
      * Create a hash for a non-materialized entry.
      */
-    Entry(mode_t m, Hash hash) : mode(m), hash_{hash} {}
+    Entry(mode_t m, Hash hash) : mode_(m), hash_{hash} {}
 
     /**
      * Create a hash for a materialized entry.
      */
     Entry(mode_t m, fuse_ino_t number, dev_t rdev = 0)
-        : mode(m), inodeNumber_{number}, rdev_(rdev) {}
+        : mode_(m), inodeNumber_{number}, rdev_(rdev) {}
 
     Entry(Entry&& e) = default;
     Entry& operator=(Entry&& e) = default;
@@ -106,7 +106,7 @@ class TreeInode : public InodeBase {
     }
     void setInodeNumber(fuse_ino_t number) {
       DCHECK_EQ(inodeNumber_, 0);
-      DCHECK(!inode);
+      DCHECK(!inode_);
       inodeNumber_ = number;
     }
 
@@ -123,8 +123,16 @@ class TreeInode : public InodeBase {
       // Callers should not check getMode() if an inode is loaded.
       // If the child inode is loaded it is the authoritative source for
       // the mode bits.
-      DCHECK(!inode);
-      return mode;
+      DCHECK(!inode_);
+      return mode_;
+    }
+
+    mode_t getModeUnsafe() const {
+      // TODO: T20354866 Remove this method once all callers are refactored.
+      //
+      // Callers should always call getMode() instead. This method only exists
+      // for supporting legacy code which will be refactored eventually.
+      return mode_;
     }
 
     /**
@@ -135,19 +143,32 @@ class TreeInode : public InodeBase {
      */
     bool isDirectory() const;
 
-    // TODO: Make mode private and provide an accessor method instead
-    /** The complete st_mode value for this entry */
-    mode_t mode{0};
-
     dev_t getRdev() const {
       // Callers should not check getRdev() if an inode is loaded.
       // If the child inode is loaded it is the authoritative source for
       // the mode bits.
-      DCHECK(!inode);
+      DCHECK(!inode_);
       return rdev_;
     }
 
+    InodeBase* getInode() const {
+      return inode_;
+    }
+
+    void setInode(InodeBase* inode) {
+      DCHECK(!inode_);
+      DCHECK(inode);
+      inode_ = inode;
+    }
+
+    void clearInode() {
+      inode_ = nullptr;
+    }
+
    private:
+    /** The complete st_mode value for this entry */
+    mode_t mode_{0};
+
     /**
      * If the entry is not materialized, this contains the hash
      * identifying the source control Tree (if this is a directory) or Blob
@@ -176,8 +197,6 @@ class TreeInode : public InodeBase {
      **/
     dev_t rdev_{0};
 
-   public:
-    // TODO: Make inode private and provide an accessor method instead
     /**
      * A pointer to the child inode, if it is loaded, or null if it is not
      * loaded.
@@ -192,7 +211,7 @@ class TreeInode : public InodeBase {
      *   case the parent TreeInodes responsible for triggering unloading of its
      *   children, so it resets this pointer to null when it unloads the child.
      */
-    InodeBase* inode{nullptr};
+    InodeBase* inode_{nullptr};
   };
 
   /** Represents a directory in the overlay */

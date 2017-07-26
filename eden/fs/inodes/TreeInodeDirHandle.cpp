@@ -77,7 +77,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 
     for (const auto& entry : dir->entries) {
       entries.emplace_back(
-          entry.first.value().c_str(), mode_to_dtype(entry.second->mode));
+          entry.first.value().c_str(), mode_to_dtype(entry.second->getMode()));
     }
   }
 

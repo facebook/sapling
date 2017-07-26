@@ -232,6 +232,8 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
 void Overlay::saveOverlayDir(
     fuse_ino_t inodeNumber,
     const TreeInode::Dir* dir) {
+  // TODO: T20282158 clean up access of child inode information.
+  //
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
@@ -241,7 +243,7 @@ void Overlay::saveOverlayDir(
     const auto ent = entIter.second.get();
 
     overlay::OverlayEntry oent;
-    oent.mode = ent->mode;
+    oent.mode = ent->getModeUnsafe();
     if (ent->isMaterialized()) {
       oent.inodeNumber = ent->getInodeNumber();
       DCHECK_NE(oent.inodeNumber, 0);
