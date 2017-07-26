@@ -40,7 +40,6 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using folly::Future;
@@ -114,10 +113,6 @@ class TreeInode::IncompleteInodeLoad {
   PathComponent name_;
   Future<unique_ptr<InodeBase>> future_;
 };
-
-bool TreeInode::Entry::isDirectory() const {
-  return mode_to_dtype(mode_) == dtype_t::Dir;
-}
 
 TreeInode::TreeInode(
     fuse_ino_t ino,

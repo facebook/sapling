@@ -14,6 +14,7 @@
 #include <folly/Synchronized.h>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
@@ -136,12 +137,24 @@ class TreeInode : public InodeBase {
     }
 
     /**
+     * Get the file type, as a dtype_t value as used by readdir()
+     *
+     * It is okay for callers to call getDtype() even if the inode is
+     * loaded.  The file type for an existing entry never changes.
+     */
+    dtype_t getDtype() const {
+      return mode_to_dtype(mode_);
+    }
+
+    /**
      * Check if the entry is a directory or not.
      *
      * It is okay for callers to call isDirectory() even if the inode is
      * loaded.  The file type for an existing entry never changes.
      */
-    bool isDirectory() const;
+    bool isDirectory() const {
+      return getDtype() == dtype_t::Dir;
+    }
 
     dev_t getRdev() const {
       // Callers should not check getRdev() if an inode is loaded.
