@@ -576,7 +576,7 @@ class hginstall(install):
         # Screen out egg related commands to prevent egg generation.  But allow
         # mercurial.egg-info generation, since that is part of modern
         # packaging.
-        excl = {'bdist_egg'}
+        excl = set(['bdist_egg'])
         return filter(lambda x: x not in excl, install.get_sub_commands(self))
 
 class hginstalllib(install_lib):
