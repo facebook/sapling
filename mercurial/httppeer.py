@@ -9,6 +9,7 @@
 from __future__ import absolute_import
 
 import errno
+import io
 import os
 import socket
 import struct
@@ -85,6 +86,45 @@ def _wraphttpresponse(resp):
                            'network or server operator'))
 
     resp.__class__ = readerproxy
+
+class _multifile(object):
+    def __init__(self, *fileobjs):
+        for f in fileobjs:
+            if not util.safehasattr(f, 'length'):
+                raise ValueError(
+                    '_multifile only supports file objects that '
+                    'have a length but this one does not:', type(f), f)
+        self._fileobjs = fileobjs
+        self._index = 0
+
+    @property
+    def length(self):
+        return sum(f.length for f in self._fileobjs)
+
+    def read(self, amt=None):
+        if amt <= 0:
+            return ''.join(f.read() for f in self._fileobjs)
+        parts = []
+        while amt and self._index < len(self._fileobjs):
+            parts.append(self._fileobjs[self._index].read(amt))
+            got = len(parts[-1])
+            if got < amt:
+                self._index += 1
+            amt -= got
+        return ''.join(parts)
+
+    def seek(self, offset, whence=os.SEEK_SET):
+        if whence != os.SEEK_SET:
+            raise NotImplementedError(
+                '_multifile does not support anything other'
+                ' than os.SEEK_SET for whence on seek()')
+        if offset != 0:
+            raise NotImplementedError(
+                '_multifile only supports seeking to start, but that '
+                'could be fixed if you need it')
+        for f in self._fileobjs:
+            f.seek(0)
+        self._index = 0
 
 class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
@@ -169,17 +209,19 @@ class httppeer(wireproto.wirepeer):
         # with infinite recursion when trying to look up capabilities
         # for the first time.
         postargsok = self._caps is not None and 'httppostargs' in self._caps
-        # TODO: support for httppostargs when data is a file-like
-        # object rather than a basestring
-        canmungedata = not data or isinstance(data, basestring)
-        if postargsok and canmungedata:
+        if postargsok and args:
             strargs = urlreq.urlencode(sorted(args.items()))
-            if strargs:
-                if not data:
-                    data = strargs
-                elif isinstance(data, basestring):
-                    data = strargs + data
-                headers['X-HgArgs-Post'] = len(strargs)
+            if not data:
+                data = strargs
+            else:
+                if isinstance(data, basestring):
+                    i = io.BytesIO(data)
+                    i.length = len(data)
+                    data = i
+                argsio = io.BytesIO(strargs)
+                argsio.length = len(strargs)
+                data = _multifile(argsio, data)
+            headers['X-HgArgs-Post'] = len(strargs)
         else:
             if len(args) > 0:
                 httpheader = self.capable('httpheader')

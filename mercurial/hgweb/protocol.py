@@ -75,6 +75,9 @@ class webproto(wireproto.abstractserverproto):
         return args
     def getfile(self, fp):
         length = int(self.req.env['CONTENT_LENGTH'])
+        # If httppostargs is used, we need to read Content-Length
+        # minus the amount that was consumed by args.
+        length -= int(self.req.env.get('HTTP_X_HGARGS_POST', 0))
         for s in util.filechunkiter(self.req, limit=length):
             fp.write(s)
     def redirect(self):
