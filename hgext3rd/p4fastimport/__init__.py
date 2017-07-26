@@ -61,10 +61,8 @@ def reposetup(ui, repo):
 
 def writebookmark(tr, repo, revisions, name):
     if len(revisions) > 0:
-        marks = repo._bookmarks
         __, hexnode = revisions[-1]
-        marks[name] = repo[hexnode].node()
-        marks.recordchange(tr)
+        repo._bookmarks.applychanges(repo, tr, [(name, repo[hexnode].node())])
 
 def writerevmetadata(revisions, outfile):
     """Write the LFS mappings from OID to a depotpath and it's CLnum into
