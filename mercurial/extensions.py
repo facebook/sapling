@@ -384,6 +384,7 @@ def wrapfilecache(cls, propname, wrapper):
 
     These can't be wrapped using the normal wrapfunction.
     """
+    propname = pycompat.sysstr(propname)
     assert callable(wrapper)
     for currcls in cls.__mro__:
         if propname in currcls.__dict__:
