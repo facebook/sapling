@@ -382,7 +382,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             visit.update(f for f in copymap
                          if f not in results and matchfn(f))
 
-    audit = pathutil.pathauditor(self._root).check
+    audit = pathutil.pathauditor(self._root, cached=True).check
     auditpass = [f for f in visit if audit(f)]
     auditpass.sort()
     auditfail = visit.difference(auditpass)

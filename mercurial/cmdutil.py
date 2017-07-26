@@ -3538,7 +3538,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             pass
         repo.dirstate.remove(f)
 
-    audit_path = pathutil.pathauditor(repo.root)
+    audit_path = pathutil.pathauditor(repo.root, cached=True)
     for f in actions['forget'][0]:
         if interactive:
             choice = repo.ui.promptchoice(

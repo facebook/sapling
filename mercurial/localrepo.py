@@ -339,11 +339,11 @@ class localrepository(object):
         # only used when writing this comment: basectx.match
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
-                                                realfs=False)
+                                                realfs=False, cached=True)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
-        self.vfs = vfsmod.vfs(self.path)
+        self.vfs = vfsmod.vfs(self.path, cacheaudited=True)
         if (self.ui.configbool('devel', 'all-warnings') or
             self.ui.configbool('devel', 'check-locks')):
             self.vfs.audit = self._getvfsward(self.vfs.audit)
@@ -426,12 +426,13 @@ class localrepository(object):
                                     '"sparse" extensions to access'))
 
         self.store = store.store(
-                self.requirements, self.sharedpath, vfsmod.vfs)
+            self.requirements, self.sharedpath,
+            lambda base: vfsmod.vfs(base, cacheaudited=True))
         self.spath = self.store.path
         self.svfs = self.store.vfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
-        self.cachevfs = vfsmod.vfs(cachepath)
+        self.cachevfs = vfsmod.vfs(cachepath, cacheaudited=True)
         self.cachevfs.createmode = self.store.createmode
         if (self.ui.configbool('devel', 'all-warnings') or
             self.ui.configbool('devel', 'check-locks')):

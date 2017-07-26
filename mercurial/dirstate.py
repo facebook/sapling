@@ -1153,7 +1153,7 @@ class dirstate(object):
                 # that wasn't ignored, and everything that matched was stat'ed
                 # and is already in results.
                 # The rest must thus be ignored or under a symlink.
-                audit_path = pathutil.pathauditor(self._root)
+                audit_path = pathutil.pathauditor(self._root, cached=True)
 
                 for nf in iter(visit):
                     # If a stat for the same file was already added with a
