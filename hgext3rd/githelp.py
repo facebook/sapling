@@ -67,7 +67,7 @@ def githelp(ui, repo, *args, **kwargs):
     Usage: hg githelp -- <git command>
     '''
 
-    if len(args) == 0:
+    if len(args) == 0 or (len(args) == 1 and args[0] =='git'):
         raise error.Abort(_('missing git command - '
                             'usage: hg githelp -- <git command>'))
 

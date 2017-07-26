@@ -21,6 +21,16 @@
 githelp on a single command should succeed
   $ hg githelp -- commit
   hg commit
+  $ hg githelp -- git commit
+  hg commit
+
+githelp should fail nicely if we don't give it arguments
+  $ hg githelp
+  abort: missing git command - usage: hg githelp -- <git command>
+  [255]
+  $ hg githelp -- git
+  abort: missing git command - usage: hg githelp -- <git command>
+  [255]
 
 githelp on a command with options should succeed
   $ hg githelp -- commit -pm "abc"
