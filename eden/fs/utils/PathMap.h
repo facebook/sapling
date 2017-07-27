@@ -13,7 +13,7 @@
 #include <functional>
 #include <iterator>
 #include <utility>
-#include "PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

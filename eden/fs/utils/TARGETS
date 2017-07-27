@@ -1,30 +1,53 @@
 # @autodeps
 
+PATH_SRCS = ["PathFuncs.cpp"]
+
+PATH_HEADERS = ["PathFuncs.h"]
+
 cpp_library(
     name = "utils",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
+    srcs = glob(
+        ["*.cpp"],
+        excludes = PATH_SRCS,
+    ),
+    headers = glob(
+        ["*.h"],
+        excludes = PATH_HEADERS,
+    ),
     deps = [
+        ":path",
         "@/folly:conv",
         "@/folly:dynamic",
         "@/folly:evicting_cache_map",
         "@/folly:exception",
         "@/folly:exception_wrapper",
         "@/folly:fbvector",
-        "@/folly:format",
-        "@/folly:hash",
-        "@/folly:optional",
         "@/folly:singleton",
         "@/folly:string",
         "@/folly:subprocess",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/futures:shared_promise",
+    ],
+    external_deps = [
+        "gflags",
+        "glog",
+    ],
+)
+
+cpp_library(
+    name = "path",
+    srcs = PATH_SRCS,
+    headers = PATH_HEADERS,
+    deps = [
+        "@/folly:exception",
+        "@/folly:format",
+        "@/folly:hash",
+        "@/folly:optional",
+        "@/folly:string",
         "@/folly/portability:stdlib",
     ],
     external_deps = [
         "boost",
-        "gflags",
-        "glog",
     ],
 )
