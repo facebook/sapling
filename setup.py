@@ -111,7 +111,8 @@ from distutils import log
 # We have issues with setuptools on some platforms and builders. Until
 # those are resolved, setuptools is opt-in except for platforms where
 # we don't have issues.
-if os.name == 'nt' or 'FORCE_SETUPTOOLS' in os.environ:
+issetuptools = (os.name == 'nt' or 'FORCE_SETUPTOOLS' in os.environ)
+if issetuptools:
     from setuptools import setup
 else:
     from distutils.core import setup
@@ -847,6 +848,8 @@ setupversion = version.decode('ascii')
 
 extra = {}
 
+if issetuptools:
+    extra['python_requires'] = supportedpy
 if py2exeloaded:
     extra['console'] = [
         {'script':'hg',
@@ -946,5 +949,4 @@ setup(name='mercurial',
                               'welcome': 'contrib/macosx/Welcome.html',
                               },
                },
-      python_requires=supportedpy,
       **extra)
