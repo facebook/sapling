@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = createmarkers, allowunstable
@@ -58,5 +59,27 @@ Hide multiple commits with bookmarks on them, hide wc parent
   3 changesets hidden
   2 bookmarks removed
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  @  0 A
+  
+
+Unhide stuff
+  $ hg unhide 2
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  2 C
+  |
+  o  1 B
+  |
+  @  0 A
+  
+  $ hg unhide -r 4 -r 3
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  4 E
+  |
+  | o  3 D
+  | |
+  o |  2 C
+  |/
+  o  1 B
+  |
   @  0 A
   

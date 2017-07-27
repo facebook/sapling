@@ -14,6 +14,7 @@ from mercurial import (
     cmdutil,
     error,
     hg,
+    extensions,
     obsolete,
     registrar,
     scmutil,
@@ -78,3 +79,20 @@ def hide(ui, repo, *revs, **opts):
 
         if len(bmchanges) > 0:
             ui.status(_('%i bookmarks removed\n') % len(bmchanges))
+
+@command('^unhide', [('r', 'rev', [], _("revisions to unhide"))])
+def unhide(ui, repo, *revs, **opts):
+    """unhide changesets and their ancestors
+    """
+    unfi = repo.unfiltered()
+    revs = list(revs) + opts.pop('rev', [])
+    revs = set(scmutil.revrange(unfi, revs))
+    ctxs = unfi.set("::(%ld) & obsolete()", revs)
+
+    with repo.wlock(), repo.lock(), repo.transaction('unhide'):
+        try:
+            inhibit = extensions.find('inhibit')
+            inhibit.revive(ctxs, operation='unhide')
+        except KeyError:
+            raise error.Abort(_('cannot unhide - inhibit extension '
+                                'is not enabled'))
