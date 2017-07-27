@@ -38,5 +38,5 @@ function initcontainer() {
         echo RUN groupadd $DBUILDUSER -g `id -g` -o
         echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER -o
     fi
-  ) | $DOCKER build --tag $CONTAINER -
+  ) | $DOCKER build --build-arg http_proxy --build-arg https_proxy --tag $CONTAINER -
 }

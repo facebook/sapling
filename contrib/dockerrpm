@@ -16,10 +16,10 @@ RPMBUILDDIR=$ROOTDIR/packages/$PLATFORM
 contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare $*
 
 DSHARED=/mnt/shared
-$DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
+$DOCKER run -e http_proxy -e https_proxy -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
     rpmbuild --define "_topdir $DSHARED" -ba $DSHARED/SPECS/mercurial.spec --clean
 
-$DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
+$DOCKER run -e http_proxy -e https_proxy -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
     createrepo $DSHARED
 
 cat << EOF > $RPMBUILDDIR/mercurial.repo
