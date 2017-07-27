@@ -22,10 +22,15 @@ class File;
 namespace facebook {
 namespace eden {
 
+namespace fusell {
+class BufVec;
+}
+
 class Blob;
 class FileHandle;
 class FileData;
 class Hash;
+class ObjectStore;
 
 class FileInode : public InodeBase {
  public:
@@ -69,9 +74,6 @@ class FileInode : public InodeBase {
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<Hash> getSHA1(bool failIfSymlink = true);
 
-  /// Ensure that underlying storage information is loaded
-  std::shared_ptr<FileData> getOrLoadData();
-
   /// Compute the path to the overlay file for this item.
   AbsolutePath getLocalPath() const;
 
@@ -114,6 +116,48 @@ class FileInode : public InodeBase {
    */
   folly::Optional<Hash> getBlobHash() const;
 
+  /**
+   * Read the entire file contents, and return them as a string.
+   *
+   * Note that this API generally should only be used for fairly small files.
+   */
+  std::string readAll();
+
+  /**
+   * Load the file data so it can be used for reading.
+   *
+   * If this file is materialized, this opens its file in the overlay.
+   * If the file is not materialized, this loads the Blob data from the
+   * ObjectStore.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
+
+  /**
+   * Materialize the file data.
+   * openFlags has the same meaning as the flags parameter to
+   * open(2).  Materialization depends on the write mode specified
+   * in those flags; if we are writing to the file then we need to
+   * copy it locally to the overlay.  If we are truncating we just
+   * need to create an empty file in the overlay.  Otherwise we
+   * need to go out to the LocalStore to obtain the backing data.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> materializeForWrite(int openFlags);
+
+  /**
+   * Read up to size bytes from the file at the specified offset.
+   *
+   * Returns an IOBuf containing the data.  This may return fewer bytes than
+   * requested.  If the specified offset is at or past the end of the buffer an
+   * empty IOBuf will be returned.  Otherwise between 1 and size bytes will be
+   * returned.  If fewer than size bytes are returned this does *not* guarantee
+   * that the end of the file was reached.
+   *
+   * May throw exceptions on error.
+   */
+  std::unique_ptr<folly::IOBuf> readIntoBuffer(size_t size, off_t off);
+
+  size_t write(folly::StringPiece data, off_t off);
+
  private:
   /**
    * The contents of a FileInode.
@@ -127,7 +171,6 @@ class FileInode : public InodeBase {
     State(FileInode* inode, mode_t mode, folly::File&& hash, dev_t rdev = 0);
     ~State();
 
-    std::shared_ptr<FileData> data;
     mode_t mode{0};
     dev_t rdev{0};
     /**
@@ -137,16 +180,18 @@ class FileInode : public InodeBase {
     folly::Optional<Hash> hash;
 
     /**
-     * data members from FileData
+     * If backed by tree, the data from the tree, else nullptr.
      */
-
-    /// if backed by tree, the data from the tree, else nullptr.
     std::unique_ptr<Blob> blob;
 
-    /// if backed by an overlay file, whether the sha1 xattr is valid
+    /**
+     * If backed by an overlay file, whether the sha1 xattr is valid
+     */
     bool sha1Valid{false};
 
-    /// if backed by an overlay file, the open file descriptor
+    /**
+     * If backed by an overlay file, the open file descriptor.
+     */
     folly::File file;
   };
 
@@ -162,8 +207,6 @@ class FileInode : public InodeBase {
   FileInodePtr inodePtrFromThis() {
     return FileInodePtr::newPtrFromExisting(this);
   }
-  std::shared_ptr<FileData> getOrLoadData(
-      const folly::Synchronized<State>::LockedPtr& state);
 
   /**
    * Mark this FileInode materialized in its parent directory.
@@ -179,12 +222,36 @@ class FileInode : public InodeBase {
    * Helper function for isSameAs().
    *
    * This does the initial portion of the check which never requires a Future.
-   * Returns (bool, nullptr) if the check completes immediately, or
-   * (false, data) if the contents need to be checked against the FileData.
+   * Returns Optional<bool> if the check completes immediately, or
+   * folly::none if the contents need to be checked against sha1 of file
+   * contents.
    */
-  std::pair<bool, std::shared_ptr<FileData>> isSameAsFast(
-      const Hash& blobID,
-      mode_t mode);
+  folly::Optional<bool> isSameAsFast(const Hash& blobID, mode_t mode);
+
+  /**
+   * Change attributes for this inode.
+   * attr is a standard struct stat.  Only the members indicated
+   * by to_set are valid.  Defined values for the to_set flags
+   * are found in the fuse_lowlevel.h header file and have symbolic
+   * names matching FUSE_SET_*.
+   */
+  struct stat setAttr(const struct stat& attr, int to_set);
+
+  /**
+   * Recompute the SHA1 content hash of the open file.
+   */
+  Hash recomputeAndStoreSha1(
+      const folly::Synchronized<FileInode::State>::LockedPtr& state);
+
+  ObjectStore* getObjectStore() const;
+  void storeSha1(
+      const folly::Synchronized<FileInode::State>::LockedPtr& state,
+      Hash sha1);
+  fusell::BufVec read(size_t size, off_t off);
+  size_t write(fusell::BufVec&& buf, off_t off);
+  struct stat stat();
+  void flush(uint64_t lock_owner);
+  void fsync(bool datasync);
 
   folly::Synchronized<State> state_;
 

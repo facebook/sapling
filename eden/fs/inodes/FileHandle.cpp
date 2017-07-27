@@ -11,7 +11,6 @@
 
 #include <folly/experimental/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/LocalStore.h"
@@ -19,19 +18,8 @@
 namespace facebook {
 namespace eden {
 
-FileHandle::FileHandle(
-    FileInodePtr inode,
-    std::shared_ptr<FileData> data,
-    int flags)
-    : inode_(std::move(inode)), data_(std::move(data)), openFlags_(flags) {}
-
-FileHandle::~FileHandle() {
-  // Must reset the data point prior to calling fileHandleDidClose,
-  // otherwise it will see a use count that is too high and won't
-  // reclaim resources soon enough.
-  data_.reset();
-  inode_->fileHandleDidClose();
-}
+FileHandle::FileHandle(FileInodePtr inode, int flags)
+    : inode_(std::move(inode)), openFlags_(flags) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   FB_LOGF(
@@ -64,7 +52,7 @@ bool FileHandle::isSeekable() const {
 folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
   FB_LOGF(
       inode_->getMount()->getLogger(), DBG7, "read({})", inode_->getNodeId());
-  return data_->read(size, off);
+  return inode_->read(size, off);
 }
 
 folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
@@ -77,7 +65,7 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
   };
   FB_LOGF(
       inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
-  return data_->write(std::move(buf), off);
+  return inode_->write(std::move(buf), off);
 }
 
 folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
@@ -90,20 +78,20 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
   };
   FB_LOGF(
       inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
-  return data_->write(str, off);
+  return inode_->write(str, off);
 }
 
 folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
   FB_LOGF(
       inode_->getMount()->getLogger(), DBG7, "flush({})", inode_->getNodeId());
-  data_->flush(lock_owner);
+  inode_->flush(lock_owner);
   return folly::Unit{};
 }
 
 folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
   FB_LOGF(
       inode_->getMount()->getLogger(), DBG7, "fsync({})", inode_->getNodeId());
-  data_->fsync(datasync);
+  inode_->fsync(datasync);
   return folly::Unit{};
 }
 }

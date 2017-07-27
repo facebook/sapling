@@ -13,21 +13,18 @@
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 
 /**
  * Check that a FileInode has the expected contents and permissions.
  */
-#define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)         \
-  do {                                                                    \
-    auto fileDataForCheck = (fileInode)->getOrLoadData();                 \
-    auto loadFuture = fileDataForCheck->ensureDataLoaded();               \
-    ASSERT_TRUE(loadFuture.isReady());                                    \
-    loadFuture.get();                                                     \
-    EXPECT_EQ(                                                            \
-        (expectedData), folly::StringPiece{fileDataForCheck->readAll()}); \
-    EXPECT_EQ(                                                            \
-        folly::sformat("{:#o}", (expectedPerms)),                         \
-        folly::sformat("{:#o}", (fileInode)->getPermissions()));          \
+#define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)      \
+  do {                                                                 \
+    auto loadFuture = fileInode->ensureDataLoaded();                   \
+    ASSERT_TRUE(loadFuture.isReady());                                 \
+    loadFuture.get();                                                  \
+    EXPECT_EQ(expectedData, folly::StringPiece{fileInode->readAll()}); \
+    EXPECT_EQ(                                                         \
+        folly::sformat("{:#o}", (expectedPerms)),                      \
+        folly::sformat("{:#o}", (fileInode)->getPermissions()));       \
   } while (0)

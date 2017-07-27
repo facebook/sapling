@@ -17,7 +17,6 @@
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -260,9 +259,8 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
 
 std::string TestMount::readFile(folly::StringPiece path) {
   auto file = getFileInode(path);
-  auto fileData = file->getOrLoadData();
   auto attr = file->getattr().get();
-  auto buf = fileData->readIntoBuffer(
+  auto buf = file->readIntoBuffer(
       /* size */ attr.st.st_size, /* off */ 0);
   return std::string(reinterpret_cast<const char*>(buf->data()), buf->length());
 }

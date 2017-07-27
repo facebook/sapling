@@ -23,9 +23,8 @@ class FileHandle : public fusell::FileHandle {
  public:
   explicit FileHandle(
       FileInodePtr inode,
-      std::shared_ptr<FileData> data,
       int flags);
-  ~FileHandle() override;
+  ~FileHandle() override {}
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<fusell::Dispatcher::Attr> setattr(

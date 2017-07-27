@@ -9,7 +9,6 @@
  */
 #include <gtest/gtest.h>
 
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -93,14 +92,13 @@ TEST_F(UnlinkTest, modified) {
   // Modify the child, so it is materialized before we remove it
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
-  auto fileData = file->getOrLoadData();
-  fileData->materializeForWrite(O_WRONLY).get();
+  file->materializeForWrite(O_WRONLY).get();
   auto newContents = StringPiece{
       "new contents for the file\n"
       "testing testing\n"
       "123\n"
       "testing testing\n"};
-  auto writeResult = fileData->write(newContents, 0);
+  auto writeResult = file->write(newContents, 0);
   EXPECT_EQ(newContents.size(), writeResult);
 
   // Now remove the child

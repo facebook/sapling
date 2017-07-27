@@ -24,7 +24,6 @@
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
@@ -1621,18 +1620,16 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
         isIgnored);
   }
 
-  auto data = fileInode->getOrLoadData();
   if (S_ISLNK(fileInode->getMode())) {
-    auto dataFuture = data->ensureDataLoaded();
-    return dataFuture.then(
-        [ fileInode = std::move(fileInode), data = std::move(data) ]() {
-          // auto symlinkContents = data->readAll();
-          // TODO: Look up the symlink destination and continue.
-          // The symlink might point to another path inside our mount point, or
-          // it may point outside.
-          return makeFuture<Unit>(std::runtime_error(
-              "handling .gitignore symlinks not implemented yet"));
-        });
+    auto dataFuture = fileInode->ensureDataLoaded();
+    return dataFuture.then([fileInode = std::move(fileInode)]() {
+      // auto symlinkContents = data->readAll();
+      // TODO: Look up the symlink destination and continue.
+      // The symlink might point to another path inside our mount point, or
+      // it may point outside.
+      return makeFuture<Unit>(std::runtime_error(
+          "handling .gitignore symlinks not implemented yet"));
+    });
   }
 
   // Load the file data
@@ -1641,7 +1638,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
   // move-captures.  Before C++17 the ordering is undefined here, and the
   // compiler may decide to move data away before evaluating
   // data->ensureDataLoaded().
-  auto dataFuture = data->ensureDataLoaded();
+  auto dataFuture = fileInode->ensureDataLoaded();
   return dataFuture.then([
     self = inodePtrFromThis(),
     context,
@@ -1649,9 +1646,9 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     tree = std::move(tree),
     parentIgnore,
     isIgnored,
-    data = std::move(data)
+    fileInode = std::move(fileInode)
   ]() mutable {
-    auto ignoreFileContents = data->readAll();
+    auto ignoreFileContents = fileInode->readAll();
     auto ignore = make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents);
     return self->computeDiff(
         self->contents_.wlock(),
