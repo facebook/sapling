@@ -276,13 +276,13 @@ docker-centos5:
 
 centos6:
 	mkdir -p packages/centos6
-	contrib/buildrpm
+	contrib/buildrpm --withpython
 	cp rpmbuild/RPMS/*/* packages/centos6
 	cp rpmbuild/SRPMS/* packages/centos6
 
 docker-centos6:
 	mkdir -p packages/centos6
-	contrib/dockerrpm centos6
+	contrib/dockerrpm centos6 --withpython
 
 centos7:
 	mkdir -p packages/centos7

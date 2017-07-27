@@ -7,3 +7,5 @@ RUN yum install -y gettext
 RUN yum install -y tar
 # For creating repo meta data
 RUN yum install -y createrepo
+# For python
+RUN yum install -y readline-devel openssl-devel ncurses-devel zlib-devel bzip2-devel
