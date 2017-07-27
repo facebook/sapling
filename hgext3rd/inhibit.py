@@ -11,6 +11,7 @@ from mercurial import (
     error,
     extensions,
     obsolete,
+    util,
 )
 
 def _obsoletedrevs(repo):
@@ -44,13 +45,21 @@ def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
                     date=None, metadata=None, ui=None):
     # make "prec in succs" in-marker cycle check a no-op
     succs = _nocontainslist(succs)
-    # if prec is a successor of an existing marker, make default date bigger so
-    # the old marker won't revive the precursor accidentally.
+    # we need to resolve default date
     if date is None:
-        markers = self.precursors.get(prec)
-        if markers:
-            maxdate = max(m[4] for m in markers)
-            date = (maxdate[0] + 1, maxdate[1])
+        if ui is not None:
+            date = ui.configdate('devel', 'default-date')
+        if date is None:
+            date = util.makedate()
+    # if prec is a successor of an existing marker, make default date bigger so
+    # the old marker won't revive the precursor accidentally. This helps tests
+    # where date are always (0, 0)
+    markers = self.precursors.get(prec)
+    if markers:
+        maxdate = max(m[4] for m in markers)
+        maxdate = (maxdate[0] + 1, maxdate[1])
+        if maxdate > date:
+            date = maxdate
     return orig(self, tr, prec, succs, flag, parents, date, metadata, ui)
 
 class _nocontainslist(list):
