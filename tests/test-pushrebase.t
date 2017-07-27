@@ -877,6 +877,7 @@ phase is updated correctly with the marker information.
   > default = ../server1
   > EOF
 
+  $ hg book -i BOOK
   $ hg push -r . --to default
   pushing to $TESTTMP/server1 (glob)
   searching for changes
@@ -892,11 +893,18 @@ phase is updated correctly with the marker information.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up tip -q
   $ log --hidden
-  @  a2 [public:722505d780e3]
+  @  a2 [public:722505d780e3] BOOK
   |
   o  b [public:d2ae7f538514]
   |
   | x  a2 [draft:045279cde9f0]
   |/
+  o  a [public:cb9a9f314b8b]
+  
+  $ log
+  @  a2 [public:722505d780e3] BOOK
+  |
+  o  b [public:d2ae7f538514]
+  |
   o  a [public:cb9a9f314b8b]
   

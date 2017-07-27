@@ -317,9 +317,19 @@ def _push(orig, ui, repo, *args, **opts):
             unwrapfunction(obsolete.obsstore, 'mergemarkers', _mergemarkers)
 
     mapping = getattr(repo.obsstore, '_pushrebasereplaces', {})
-    if wnode in mapping:
-        with repo.wlock():
-            hg.update(repo, mapping[wnode])
+    if mapping:
+        with repo.wlock(), repo.lock(), repo.transaction('push') as tr:
+            # move working copy parent
+            if wnode in mapping:
+                hg.update(repo, mapping[wnode])
+            # move bookmarks
+            bmarks = repo._bookmarks
+            bmarkchanges = []
+            for oldnode, newnode in mapping.items():
+                bmarkchanges.extend((name, newnode)
+                                    for name in repo.nodebookmarks(oldnode))
+            if bmarkchanges:
+                bmarks.applychanges(repo, tr, bmarkchanges)
 
     return result
 
