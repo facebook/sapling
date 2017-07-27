@@ -560,7 +560,8 @@ def readpatch(repo, params, write, stack=False):
             if k in meta:
                 header += '# %s %s\n' % (_metanamemap[k], meta[k])
 
-        write(('%s%s\n%s') % (header, desc, body))
+        content = '%s%s\n%s' % (header, desc, body)
+        write(encoding.unitolocal(content))
 
 @command('phabread',
          [('', 'stack', False, _('read dependencies'))],
