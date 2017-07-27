@@ -97,7 +97,10 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    * The caller must have already defined the root commit.
    */
-  void initialize(Hash initialCommitHash);
+  void initialize(
+      Hash initialCommitHash,
+      std::chrono::system_clock::time_point lastCheckoutTime =
+          std::chrono::system_clock::now());
 
   /**
    * Initialize the mount.

@@ -74,7 +74,9 @@ class FileInode : public InodeBase {
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<Hash> getSHA1(bool failIfSymlink = true);
 
-  /// Compute the path to the overlay file for this item.
+  /**
+   * Compute the path to the overlay file for this item.
+   */
   AbsolutePath getLocalPath() const;
 
   /**
@@ -167,8 +169,17 @@ class FileInode : public InodeBase {
    * any member variables of FileInode.
    */
   struct State {
-    State(FileInode* inode, mode_t mode, const folly::Optional<Hash>& hash);
-    State(FileInode* inode, mode_t mode, folly::File&& hash, dev_t rdev = 0);
+    State(
+        FileInode* inode,
+        mode_t mode,
+        const folly::Optional<Hash>& hash,
+        const timespec& lastCheckoutTime);
+    State(
+        FileInode* inode,
+        mode_t mode,
+        folly::File&& hash,
+        const timespec& lastCheckoutTime,
+        dev_t rdev = 0);
     ~State();
 
     mode_t mode{0};
@@ -193,6 +204,13 @@ class FileInode : public InodeBase {
      * If backed by an overlay file, the open file descriptor.
      */
     folly::File file;
+
+    /**
+     * Timestamps for FileInode.
+     */
+    struct timespec atime;
+    struct timespec ctime;
+    struct timespec mtime;
   };
 
   /**

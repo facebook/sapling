@@ -73,7 +73,9 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      folly::ThreadLocal<fusell::EdenStats>* globalStats);
+      folly::ThreadLocal<fusell::EdenStats>* globalStats,
+      std::chrono::system_clock::time_point lastCheckoutTime =
+          std::chrono::system_clock::now());
 
   /**
    * Destroy the EdenMount.
@@ -115,7 +117,7 @@ class EdenMount {
    * Get the commit IDs of the working directory's parent commit(s).
    */
   ParentCommits getParentCommits() const {
-    return *parentCommits_.rlock();
+    return parentInfo_.rlock()->parents;
   }
 
   /*
@@ -295,6 +297,15 @@ class EdenMount {
   folly::Logger& getLogger() {
     return logger_;
   }
+  /**
+   * Returns the last checkout time in the Eden mount.
+   */
+  struct timespec getLastCheckoutTime();
+
+  struct ParentInfo {
+    ParentCommits parents;
+    std::chrono::system_clock::time_point lastCheckoutTime;
+  };
 
  private:
   friend class RenameLock;
@@ -304,7 +315,9 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      folly::ThreadLocal<fusell::EdenStats>* globalStats);
+      folly::ThreadLocal<fusell::EdenStats>* globalStats,
+      std::chrono::system_clock::time_point lastCheckoutTime =
+          std::chrono::system_clock::now());
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -361,7 +374,8 @@ class EdenMount {
    * In most circumstances there will only be a single parent, but there
    * will be two parents when in the middle of resolving a merge conflict.
    */
-  folly::Synchronized<ParentCommits> parentCommits_;
+
+  folly::Synchronized<ParentInfo> parentInfo_;
 
   /*
    * Note that this config will not be updated if the user modifies the
@@ -385,6 +399,12 @@ class EdenMount {
   /** Allow logging by a category that includes mount path.
       The category is of the following form: "eden.strace.<mount_path>"  */
   folly::Logger logger_;
+  /**
+   * This needs to use system_clock rather than steady_clock
+   * since this is used for filesystem timestamps that
+   * get displayed to users.
+   */
+  std::chrono::system_clock::time_point lastCheckoutTime_;
 };
 
 /**

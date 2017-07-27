@@ -75,7 +75,9 @@ TestMount::TestMount(
 
 TestMount::~TestMount() {}
 
-void TestMount::initialize(Hash initialCommitHash) {
+void TestMount::initialize(
+    Hash initialCommitHash,
+    std::chrono::system_clock::time_point lastCheckoutTime) {
   // Set the initial commit ID
   setInitialCommit(initialCommitHash);
 
@@ -86,7 +88,8 @@ void TestMount::initialize(Hash initialCommitHash) {
                    std::move(config_),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_)
+                   &stats_,
+                   lastCheckoutTime)
                    .get();
 }
 

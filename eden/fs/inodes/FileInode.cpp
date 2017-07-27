@@ -43,8 +43,12 @@ namespace eden {
 FileInode::State::State(
     FileInode* inode,
     mode_t m,
-    const folly::Optional<Hash>& h)
+    const folly::Optional<Hash>& h,
+    const timespec& lastCheckoutTime)
     : mode(m), creationTime(std::chrono::system_clock::now()), hash(h) {
+  atime = lastCheckoutTime;
+  ctime = lastCheckoutTime;
+  mtime = lastCheckoutTime;
   if (!h.hasValue()) {
     auto filePath = inode->getLocalPath();
     file = Overlay::openFile(filePath.c_str());
@@ -55,11 +59,16 @@ FileInode::State::State(
     FileInode* inode,
     mode_t m,
     folly::File&& file,
+    const timespec& lastCheckoutTime,
     dev_t rdev)
     : mode(m),
       rdev(rdev),
       creationTime(std::chrono::system_clock::now()),
-      file(std::move(file)) {}
+      file(std::move(file)) {
+  atime = lastCheckoutTime;
+  ctime = lastCheckoutTime;
+  mtime = lastCheckoutTime;
+}
 /*
  * Defined State Destructor explicitly to avoid including
  * some header files in FileInode.h
@@ -73,7 +82,12 @@ FileInode::FileInode(
     mode_t mode,
     const folly::Optional<Hash>& hash)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(folly::in_place, this, mode, hash) {}
+      state_(
+          folly::in_place,
+          this,
+          mode,
+          hash,
+          getMount()->getLastCheckoutTime()) {}
 
 FileInode::FileInode(
     fuse_ino_t ino,
@@ -83,7 +97,13 @@ FileInode::FileInode(
     folly::File&& file,
     dev_t rdev)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(folly::in_place, this, mode, std::move(file), rdev) {}
+      state_(
+          folly::in_place,
+          this,
+          mode,
+          std::move(file),
+          getMount()->getLastCheckoutTime(),
+          rdev) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already

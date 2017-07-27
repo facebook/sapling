@@ -21,7 +21,7 @@ namespace facebook {
 namespace eden {
 
 CheckoutContext::CheckoutContext(
-    folly::Synchronized<ParentCommits>::LockedPtr&& parentsLock,
+    folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
     bool force)
     : force_{force}, parentsLock_(std::move(parentsLock)) {}
 
@@ -33,7 +33,7 @@ void CheckoutContext::start(RenameLock&& renameLock) {
 
 vector<CheckoutConflict> CheckoutContext::finish(Hash newSnapshot) {
   // Update the in-memory snapshot ID
-  parentsLock_->setParents(newSnapshot);
+  parentsLock_->parents.setParents(newSnapshot);
 
   // Release our locks.
   // This would release automatically when the CheckoutContext is destroyed,

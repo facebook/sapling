@@ -64,11 +64,14 @@ folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    folly::ThreadLocal<fusell::EdenStats>* globalStats) {
-  auto mount = std::shared_ptr<EdenMount>{
-      new EdenMount{
-          std::move(config), std::move(objectStore), socketPath, globalStats},
-      EdenMountDeleter{}};
+    folly::ThreadLocal<fusell::EdenStats>* globalStats,
+    std::chrono::system_clock::time_point lastCheckoutTime) {
+  auto mount = std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
+                                                        std::move(objectStore),
+                                                        socketPath,
+                                                        globalStats,
+                                                        lastCheckoutTime},
+                                          EdenMountDeleter{}};
   return mount->initialize().then([mount] { return mount; });
 }
 
@@ -76,7 +79,8 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    folly::ThreadLocal<fusell::EdenStats>* globalStats)
+    folly::ThreadLocal<fusell::EdenStats>* globalStats,
+    std::chrono::system_clock::time_point lastCheckOutTime)
     : globalEdenStats_(globalStats),
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
@@ -92,11 +96,12 @@ EdenMount::EdenMount(
       logger_(folly::sformat(
           "{0}{1}",
           kEdenStracePrefix,
-          config_->getMountPath().stringPiece())) {}
+          config_->getMountPath().stringPiece())),
+      lastCheckoutTime_(lastCheckOutTime) {}
 
 folly::Future<folly::Unit> EdenMount::initialize() {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
-  parentCommits_.wlock()->setParents(*parents);
+  parentInfo_.wlock()->parents.setParents(*parents);
 
   return createRootInode(*parents).then(
       [this, parents](TreeInodePtr initTreeNode) {
@@ -189,7 +194,7 @@ TreeInodePtr EdenMount::getRootInode() const {
 }
 
 folly::Future<std::unique_ptr<Tree>> EdenMount::getRootTreeFuture() const {
-  auto commitHash = Hash{parentCommits_.rlock()->parent1()};
+  auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
   return objectStore_->getTreeForCommit(commitHash);
 }
 
@@ -225,8 +230,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   // Hold the snapshot lock for the duration of the entire checkout operation.
   //
   // This prevents multiple checkout operations from running in parallel.
-  auto parentsLock = parentCommits_.wlock();
-  auto oldParents = *parentsLock;
+  auto parentsLock = parentInfo_.wlock();
+  auto oldParents = parentsLock->parents;
   auto ctx = std::make_shared<CheckoutContext>(std::move(parentsLock), force);
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
              << oldParents << " to " << snapshotHash;
@@ -303,8 +308,8 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
 
 Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
   // Hold the snapshot lock around the entire operation.
-  auto parentsLock = parentCommits_.wlock();
-  auto oldParents = *parentsLock;
+  auto parentsLock = parentInfo_.wlock();
+  auto oldParents = parentsLock->parents;
   XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
              << oldParents << " to " << parents;
 
@@ -325,13 +330,27 @@ Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
         parentsLock = std::move(parentsLock)
       ]() {
         this->config_->setParentCommits(parents);
-        parentsLock->setParents(parents);
+        parentsLock->parents.setParents(parents);
 
         auto journalDelta = make_unique<JournalDelta>();
         journalDelta->fromHash = oldParents.parent1();
         journalDelta->toHash = parents.parent1();
         journal_.wlock()->addDelta(std::move(journalDelta));
       });
+}
+
+struct timespec EdenMount::getLastCheckoutTime() {
+  auto lastCheckoutTime = lastCheckoutTime_;
+  auto epochTime = lastCheckoutTime.time_since_epoch();
+  auto epochSeconds =
+      std::chrono::duration_cast<std::chrono::seconds>(epochTime);
+  auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      epochTime - epochSeconds);
+
+  struct timespec time;
+  time.tv_sec = epochSeconds.count();
+  time.tv_nsec = nsec.count();
+  return time;
 }
 
 Future<Unit> EdenMount::resetParent(const Hash& parent) {

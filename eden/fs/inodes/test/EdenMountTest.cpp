@@ -73,5 +73,30 @@ TEST(EdenMount, resetParents) {
   EXPECT_FILE_INODE(testMount.getFileInode("src/test.c"), "testy tests", 0644);
   EXPECT_FALSE(testMount.hasFileAt("src/extra.h"));
 }
+
+// Tests if last checkout time is getting updated correctly or not.
+TEST(EdenMount, testLastCheckoutTime) {
+  TestMount testMount;
+
+  auto builder = FakeTreeBuilder();
+  builder.setFile("foo.txt", "Fooooo!!");
+  builder.finalize(testMount.getBackingStore(), true);
+  auto commit = testMount.getBackingStore()->putCommit("1", builder);
+  commit->setReady();
+
+  auto sec = std::chrono::seconds{50000};
+  auto nsec = std::chrono::nanoseconds{50000};
+  auto duration = sec + nsec;
+  std::chrono::system_clock::time_point currentTime(
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          duration));
+
+  testMount.initialize(makeTestHash("1"), currentTime);
+  const auto& edenMount = testMount.getEdenMount();
+  struct timespec lastCheckoutTime = edenMount->getLastCheckoutTime();
+
+  EXPECT_EQ(sec.count(), lastCheckoutTime.tv_sec);
+  EXPECT_EQ(nsec.count(), lastCheckoutTime.tv_nsec);
+}
 }
 }
