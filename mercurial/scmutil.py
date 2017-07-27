@@ -273,7 +273,7 @@ def checkportable(ui, f):
     if abort or warn:
         msg = util.checkwinfilename(f)
         if msg:
-            msg = "%s: %r" % (msg, f)
+            msg = "%s: %s" % (msg, util.shellquote(f))
             if abort:
                 raise error.Abort(msg)
             ui.warn(_("warning: %s\n") % msg)

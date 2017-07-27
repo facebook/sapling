@@ -44,14 +44,14 @@ should fail
   abort: ui.portablefilenames value is invalid ('jump')
   [255]
   $ hg --config ui.portablefilenames=abort add con.xml
-  abort: filename contains 'con', which is reserved on Windows: 'con.xml'
+  abort: filename contains 'con', which is reserved on Windows: con.xml
   [255]
   $ hg st
   A a
   A b
   ? con.xml
   $ hg add con.xml
-  warning: filename contains 'con', which is reserved on Windows: 'con.xml'
+  warning: filename contains 'con', which is reserved on Windows: con.xml
   $ hg st
   A a
   A b
