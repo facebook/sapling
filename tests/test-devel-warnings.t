@@ -129,7 +129,7 @@ Stripping from a transaction
   $ hg commit -m a
   $ hg stripintr 2>&1 | egrep -v '^(\*\*|  )'
   Traceback (most recent call last):
-  mercurial.error.ProgrammingError: cannot strip from inside a transaction
+  *ProgrammingError: cannot strip from inside a transaction (glob)
 
   $ hg oldanddeprecated
   devel-warn: foorbar is deprecated, go shopping
@@ -187,7 +187,7 @@ Test programming error failure:
   ** Extensions loaded: * (glob)
   ** ProgrammingError: transaction requires locking
   Traceback (most recent call last):
-  mercurial.error.ProgrammingError: transaction requires locking
+  *ProgrammingError: transaction requires locking (glob)
 
   $ hg programmingerror 2>&1 | egrep -v '^  '
   ** Unknown exception encountered with possibly-broken third-party extension buggylocking
@@ -200,7 +200,7 @@ Test programming error failure:
   ** ProgrammingError: something went wrong
   ** (try again)
   Traceback (most recent call last):
-  mercurial.error.ProgrammingError: something went wrong
+  *ProgrammingError: something went wrong (glob)
 
 Old style deprecation warning
 
