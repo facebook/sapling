@@ -67,6 +67,7 @@ from . import (
     common,
     fold,
     hiddenoverride,
+    hide,
     metaedit,
     movement,
     prune,
@@ -84,6 +85,7 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 cmdtable.update(fold.cmdtable)
+cmdtable.update(hide.cmdtable)
 cmdtable.update(metaedit.cmdtable)
 cmdtable.update(movement.cmdtable)
 cmdtable.update(prune.cmdtable)
