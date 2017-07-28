@@ -28,14 +28,12 @@ Verify basic --include
 Absolute paths outside the repo should just be rejected
 
   $ hg sparse --include /foo/bar
-  abort: paths cannot start with /
-  (do not use absolute paths)
+  abort: paths cannot be absolute
   [255]
   $ hg sparse --include '$TESTTMP/myrepo/hide'
 
   $ hg sparse --include '/root'
-  abort: paths cannot start with /
-  (do not use absolute paths)
+  abort: paths cannot be absolute
   [255]
 
 Repo root-relaive vs. cwd-relative includes

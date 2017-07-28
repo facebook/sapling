@@ -758,10 +758,9 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                 newexclude = set(oldexclude)
                 newprofiles = set(oldprofiles)
 
-            if any(pat.startswith('/') for pat in pats):
-                err = _('paths cannot start with /')
-                hint = _('do not use absolute paths')
-                raise error.Abort(err, hint=hint)
+            if any(os.path.isabs(pat) for pat in pats):
+                err = _('paths cannot be absolute')
+                raise error.Abort(err)
 
             if (not ui.configbool('sparse', 'includereporootpaths', False)
                 and (include or exclude)):
