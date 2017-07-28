@@ -6,9 +6,11 @@ cpp_unittest(
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/fuse/privhelper:privhelper",
+        "@/eden/fs/utils/test:test_lib",
         "@/folly:exception",
         "@/folly:file",
         "@/folly:file_util",
+        "@/folly:optional",
         "@/folly:range",
         "@/folly/experimental:test_util",
         "@/folly/io:iobuf",

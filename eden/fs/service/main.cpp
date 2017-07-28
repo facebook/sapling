@@ -19,6 +19,7 @@
 #include <sysexits.h>
 #include "EdenServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/UserInfo.h"
 
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
 DEFINE_string(edenDir, "", "The path to the .eden directory");
@@ -47,48 +48,6 @@ void runServer(const EdenServer& server);
 }
 }
 
-uid_t determineUid() {
-  // First check the real UID.  If it is non-root, use that.
-  // This happens if our binary is setuid root and invoked by a non-root user.
-  auto uid = getuid();
-  if (uid != 0) {
-    return uid;
-  }
-
-  // If the real UID is 0, check fo see if we are running under sudo.
-  auto sudoUid = getenv("SUDO_UID");
-  if (sudoUid != nullptr) {
-    try {
-      return folly::to<uid_t>(sudoUid);
-    } catch (const std::range_error& ex) {
-      // Bad value in the SUDO_UID environment variable.
-      // Ignore it and fall through
-    }
-  }
-
-  return uid;
-}
-
-gid_t determineGid() {
-  // Check the real GID first.
-  auto gid = getgid();
-  if (gid != 0) {
-    return gid;
-  }
-
-  auto sudoGid = getenv("SUDO_GID");
-  if (sudoGid != nullptr) {
-    try {
-      return folly::to<gid_t>(sudoGid);
-    } catch (const std::range_error& ex) {
-      // Bad value in the SUDO_GID environment variable.
-      // Ignore it and fall through
-    }
-  }
-
-  return gid;
-}
-
 int main(int argc, char **argv) {
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
@@ -98,9 +57,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "error: edenfs must be started as root\n");
     return EX_NOPERM;
   }
-  uid_t uid = determineUid();
-  gid_t gid = determineGid();
-  if (uid == 0 && !FLAGS_allowRoot) {
+
+  auto identity = UserInfo::lookup();
+  if (identity.getUid() == 0 && !FLAGS_allowRoot) {
     fprintf(
         stderr,
         "error: you appear to be running eden as root, "
@@ -126,13 +85,13 @@ int main(int argc, char **argv) {
   // parsing command line arguments.  The downside would be that we then
   // shouldn't really use glog in the privhelper process, since it won't have
   // been set up and configured based on the command line flags.)
-  fusell::startPrivHelper(uid, gid);
+  fusell::startPrivHelper(identity.getUid(), identity.getGid());
   fusell::dropPrivileges();
 
   folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
 
-  XLOG(INFO) << "Starting edenfs.  UID=" << uid << ", GID=" << gid
-             << ", PID=" << getpid();
+  XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
+             << ", GID=" << identity.getGid() << ", PID=" << getpid();
 
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
@@ -144,31 +103,13 @@ int main(int argc, char **argv) {
       ? edenDir + RelativePathPiece{"storage/rocks-db"}
       : canonicalPath(FLAGS_rocksPath);
 
+  AbsolutePath configPath;
   std::string configPathStr = FLAGS_configPath;
   if (configPathStr.empty()) {
-    auto homeDir = getenv("HOME");
-    if (homeDir) {
-      configPathStr = homeDir;
-    } else {
-      struct passwd pwd;
-      struct passwd* result;
-      char buf[1024];
-      if (getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &result) == 0) {
-        if (result != nullptr) {
-          configPathStr = pwd.pw_dir;
-        }
-      }
-    }
-    if (configPathStr.empty()) {
-      fprintf(
-          stderr,
-          "error: the --configPath argument was not specified and no "
-          "$HOME directory could be found for this user\n");
-      return EX_USAGE;
-    }
-    configPathStr.append("/.edenrc");
+    configPath = identity.getHomeDirectory() + PathComponentPiece{".edenrc"};
+  } else {
+    configPath = canonicalPath(configPathStr);
   }
-  auto configPath = canonicalPath(configPathStr);
 
   // Set the FUSE_THREAD_STACK environment variable.
   // Do this early on before we spawn any other threads, since setenv()

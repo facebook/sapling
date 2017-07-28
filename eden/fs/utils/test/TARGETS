@@ -5,6 +5,7 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     deps = [
         ":test_lib",
+        "@/eden/fs/utils:path",
         "@/eden/fs/utils:utils",
         "@/folly:exception",
         "@/folly:exception_wrapper",
@@ -25,7 +26,10 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "@/folly:conv",
+        "@/folly:exception",
         "@/folly:exception_string",
+        "@/folly:optional",
+        "@/folly:range",
     ],
     external_deps = [
         ("googletest", None, "gtest"),
