@@ -1,0 +1,87 @@
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+//! Non-blocking, buffered compression and decompression for bzip2
+
+use std::fmt::{self, Debug, Formatter};
+use std::io;
+use std::io::Read;
+
+use bzip2::read::BzDecoder;
+use tokio_io::AsyncRead;
+use zstd::Decoder as ZstdDecoder;
+
+use noop::NoopDecoder;
+use raw::RawDecoder;
+
+pub struct Decompressor<R>
+where
+    R: AsyncRead + 'static,
+{
+    d_type: DecompressorType,
+    inner: Box<RawDecoder<R>>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum DecompressorType {
+    Bzip2,
+    Gzip,
+    Zstd,
+    Uncompressed,
+}
+
+impl<R> Decompressor<R>
+where
+    R: AsyncRead + 'static,
+{
+    pub fn new(r: R, dt: DecompressorType) -> Self {
+        Decompressor {
+            d_type: dt,
+            inner: match dt {
+                DecompressorType::Bzip2 => Box::new(BzDecoder::new(r)),
+                // TODO: need
+                // https://github.com/alexcrichton/flate2-rs/issues/62 to be
+                // fixed
+                DecompressorType::Gzip => unimplemented!(),
+                // ZstdDecoder::new() should only fail on OOM, so just call unwrap here.
+                DecompressorType::Zstd => Box::new(ZstdDecoder::new(r).unwrap()),
+                DecompressorType::Uncompressed => Box::new(NoopDecoder::new(r)),
+            },
+        }
+    }
+
+    #[inline]
+    pub fn get_ref(&self) -> &R {
+        self.inner.get_ref()
+    }
+
+    #[inline]
+    pub fn get_mut(&mut self) -> &mut R {
+        self.inner.get_mut()
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> R {
+        self.inner.into_inner()
+    }
+}
+
+impl<R: AsyncRead> Read for Decompressor<R> {
+    #[inline]
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl<R: AsyncRead> AsyncRead for Decompressor<R> {}
+
+impl<R: AsyncRead> Debug for Decompressor<R> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_struct("Decompressor")
+            .field("decoder_type", &self.d_type)
+            .finish()
+    }
+}

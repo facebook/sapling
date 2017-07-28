@@ -1,0 +1,253 @@
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use std::fmt::{self, Debug, Display};
+use std::str::FromStr;
+
+use ascii::{AsciiStr, AsciiString};
+use quickcheck::{Arbitrary, Gen, single_shrinker};
+use rust_crypto::digest::Digest;
+use rust_crypto::sha1;
+
+use errors::*;
+
+pub const NULL: Sha1 = Sha1([0; 20]);
+
+/// Raw SHA-1 hash
+///
+/// Mercurial bases all its hashing on SHA-1, but this type is only used to build
+/// more specific typed hashes.
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Serialize, Deserialize, HeapSizeOf)]
+pub struct Sha1([u8; 20]);
+
+const HEX_CHARS: &[u8] = b"0123456789abcdef";
+
+impl Sha1 {
+    /// Construct a `Sha1` from an array of 20 bytes containing a
+    /// SHA-1 (ie, *not* a hash of the bytes).
+    pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Result<Sha1> {
+        let bytes = bytes.as_ref();
+        if bytes.len() != 20 {
+            bail!(ErrorKind::InvalidSha1Input("need exactly 20 bytes".into()));
+        } else {
+            let mut ret = Sha1([0; 20]);
+            &mut ret.0[..].copy_from_slice(bytes);
+            Ok(ret)
+        }
+    }
+
+    /// Construct a `Sha1` from a hex-encoded `AsciiStr`.
+    #[inline]
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<Sha1> {
+        Self::from_str(s.as_str())
+    }
+
+    pub fn to_hex(&self) -> AsciiString {
+        let mut v = Vec::with_capacity(40);
+        for &byte in self.as_ref() {
+            v.push(HEX_CHARS[(byte >> 4) as usize]);
+            v.push(HEX_CHARS[(byte & 0xf) as usize]);
+        }
+
+        unsafe {
+            // A hex string is always a pure ASCII string.
+            AsciiString::from_ascii_unchecked(v)
+        }
+    }
+}
+
+/// Context for incrementally computing a `Sha1` hash.
+#[derive(Clone)]
+pub struct Context(sha1::Sha1);
+
+/// Compute the `Sha1` for a slice of bytes.
+impl<'a> From<&'a [u8]> for Sha1 {
+    fn from(data: &[u8]) -> Sha1 {
+        let mut sha1 = sha1::Sha1::new();
+        sha1.input(data);
+
+        let mut ret = NULL;
+        sha1.result(&mut ret.0[..]);
+        ret
+    }
+}
+
+/// Get a reference to the underlying bytes of a `Sha1`
+impl AsRef<[u8]> for Sha1 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0[..]
+    }
+}
+
+impl FromStr for Sha1 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Sha1> {
+        if s.len() < 40 {
+            bail!(ErrorKind::InvalidSha1Input(
+                "need at least 40 hex digits".into()
+            ));
+        }
+
+        let mut ret = Sha1([0; 20]);
+
+        for idx in 0..ret.0.len() {
+            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
+                Ok(v) => v,
+                Err(_) => bail!(ErrorKind::InvalidSha1Input("bad digit".into())),
+            }
+        }
+
+        Ok(ret)
+    }
+}
+
+impl Display for Sha1 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+/// Custom `Debug` output for `Sha1` so it prints in hex.
+impl Debug for Sha1 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha1({})", self)
+    }
+}
+
+impl Arbitrary for Sha1 {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let mut bytes = [0; 20];
+        // The null hash is special, so give it a 5% chance of happening
+        if !g.gen_weighted_bool(20) {
+            g.fill_bytes(&mut bytes);
+        }
+        Sha1::from_bytes(&bytes).unwrap()
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+        single_shrinker(NULL)
+    }
+}
+
+impl Context {
+    /// Construct a `Context`
+    pub fn new() -> Context {
+        Context(sha1::Sha1::new())
+    }
+
+    /// Update a context from something that can be turned into a `&[u8]`
+    pub fn update<T>(&mut self, data: T)
+    where
+        T: AsRef<[u8]>,
+    {
+        self.0.input(data.as_ref())
+    }
+
+    pub fn finish(mut self) -> Sha1 {
+        let mut ret = NULL;
+        self.0.result(&mut ret.0[..]);
+        ret
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::{NULL, Sha1};
+    use std::str::FromStr;
+    use quickcheck::TestResult;
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    const NILHASH: Sha1 = Sha1([0xda, 0x39, 0xa3, 0xee,
+                                0x5e, 0x6b, 0x4b, 0x0d,
+                                0x32, 0x55, 0xbf, 0xef,
+                                0x95, 0x60, 0x18, 0x90,
+                                0xaf, 0xd8, 0x07, 0x09]);
+
+    #[test]
+    fn test_null() {
+        assert_eq!(NULL, Sha1([0_u8; 20]));
+    }
+
+    #[test]
+    fn test_nil() {
+        let nil = Sha1::from(&[][..]);
+        assert_eq!(nil, NILHASH);
+    }
+
+    #[test]
+    fn parse_ok() {
+        assert_eq!(
+            NULL,
+            Sha1::from_str("0000000000000000000000000000000000000000").unwrap()
+        );
+        assert_eq!(
+            NILHASH,
+            Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd80709").unwrap()
+        );
+        assert_eq!(
+            NILHASH,
+            Sha1::from_str("DA39A3EE5E6B4B0D3255BFEF95601890AFD80709").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_display() {
+        assert_eq!(
+            format!("{}", NULL),
+            "0000000000000000000000000000000000000000"
+        );
+        assert_eq!(
+            format!("{}", NILHASH),
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        );
+    }
+
+    #[test]
+    fn parse_bad() {
+        match Sha1::from_str("") {
+            Ok(_) => panic!("unexpected OK - zero len"),
+            Err(_) => (),
+        };
+        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070") {    // one char missing
+            Ok(_) => panic!("unexpected OK - trunc"),
+            Err(_) => (),
+        };
+        match Sha1::from_str("xda39a3ee5e6b4b0d3255bfef95601890afd8070") {    // one char bad
+            Ok(_) => panic!("unexpected OK - badchar end"),
+            Err(_) => (),
+        };
+        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070x") {    // one char bad
+            Ok(_) => panic!("unexpected OK - badchar end"),
+            Err(_) => (),
+        };
+        match Sha1::from_str("da39a3ee5e6b4b0d325Xbfef95601890afd80709") {    // one char missing
+            Ok(_) => panic!("unexpected OK - trunc"),
+            Err(_) => (),
+        };
+    }
+
+    quickcheck! {
+        fn parse_roundtrip(v: Vec<u8>) -> TestResult {
+            if v.len() != 20 {
+                return TestResult::discard()
+            }
+            let h = Sha1::from_bytes(v).unwrap();
+            let s = format!("{}", h);
+            let sh = s.parse().unwrap();
+
+            TestResult::from_bool(h == sh)
+        }
+
+        fn to_hex_roundtrip(h: Sha1) -> bool {
+            let v = h.to_hex();
+            let sh = Sha1::from_ascii_str(&v).unwrap();
+            h == sh
+        }
+    }
+}
