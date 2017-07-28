@@ -1097,3 +1097,25 @@ pooled".
   adding remote bookmark bookA
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+SEC: check for unsafe ssh url
+
+  $ hg clone 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg clone 'ssh://%2DoProxyCommand=touch${IFS}owned/path'
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg clone 'ssh://fakehost|shellcommand/path'
+  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  [255]
+  $ hg clone 'ssh://fakehost%7Cshellcommand/path'
+  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  [255]
+
+  $ hg clone 'ssh://-oProxyCommand=touch owned%20foo@example.com/nonexistent/path'
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch owned foo@example.com/nonexistent/path'
+  [255]
+We should not have created a file named owned - if it exists, the
+attack succeeded.
+  $ if test -f owned; then echo 'you got owned'; fi
