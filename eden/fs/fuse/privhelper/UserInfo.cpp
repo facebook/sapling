@@ -9,11 +9,13 @@
  */
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
+#include <grp.h>
 #include <pwd.h>
 #include <vector>
 
 #include <folly/Exception.h>
 
+using folly::checkUnixError;
 using folly::throwSystemError;
 
 namespace facebook {
@@ -23,6 +25,18 @@ struct UserInfo::PasswdEntry {
   struct passwd pwd;
   std::vector<char> buf;
 };
+
+void UserInfo::dropPrivileges() {
+  // Configure the correct supplementary groups
+  auto rc = initgroups(username_.c_str(), gid_);
+  checkUnixError(rc, "failed to set supplementary groups");
+  // Drop to the correct primary group
+  rc = setregid(gid_, gid_);
+  checkUnixError(rc, "failed to drop group privileges");
+  // Drop to the correct user ID
+  rc = setreuid(uid_, uid_);
+  checkUnixError(rc, "failed to drop user privileges");
+}
 
 UserInfo::PasswdEntry UserInfo::getPasswdUid(uid_t uid) {
   static constexpr size_t initialBufSize = 1024;

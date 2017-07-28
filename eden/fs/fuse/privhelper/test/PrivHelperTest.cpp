@@ -10,6 +10,7 @@
 #include "PrivHelperTestServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/UserInfo.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
@@ -22,6 +23,7 @@
 #include <sys/socket.h>
 
 using namespace facebook::eden::fusell;
+using facebook::eden::UserInfo;
 using folly::ByteRange;
 using folly::checkUnixError;
 using folly::File;
@@ -239,7 +241,7 @@ TEST(PrivHelper, ServerShutdownTest) {
   auto other = otherDir.string();
 
   {
-    startPrivHelper(&server, getuid(), getgid());
+    startPrivHelper(&server, UserInfo::lookup());
     SCOPE_EXIT {
       stopPrivHelper();
     };

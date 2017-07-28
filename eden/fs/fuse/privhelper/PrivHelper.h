@@ -18,6 +18,9 @@ class File;
 
 namespace facebook {
 namespace eden {
+
+class UserInfo;
+
 namespace fusell {
 
 class PrivHelperServer;
@@ -27,16 +30,17 @@ class PrivHelperServer;
  *
  * This function should be called once, very early on during program
  * initialization, before any other threads are forked.  After it is called
- * dropPrivileges() should be called to return the desired user privileges.
+ * UserInfo::dropPrivileges() should be called to return the desired user
+ * privileges.
  */
-void startPrivHelper(uid_t uid, gid_t gid);
+void startPrivHelper(const UserInfo& userInfo);
 
 /*
  * Start the privhelper process using a custom PrivHelperServer class.
  *
  * This is really only intended for use in unit tests.
  */
-void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid);
+void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo);
 
 /*
  * Explicitly stop the privhelper process.
@@ -56,16 +60,6 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid);
  * occurs.
  */
 int stopPrivHelper();
-
-/*
- * Drop privileges down to the UID and GID requested when
- * startPrivHelper() was called.
- *
- * This should also be called early on during program initialization,
- * after startPrivHelper() and any other operations that need to be done
- * while the process is still privileged.
- */
-void dropPrivileges();
 
 /*
  * Ask the privileged helper process to perform a fuse mount.

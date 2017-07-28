@@ -85,8 +85,8 @@ int main(int argc, char **argv) {
   // parsing command line arguments.  The downside would be that we then
   // shouldn't really use glog in the privhelper process, since it won't have
   // been set up and configured based on the command line flags.)
-  fusell::startPrivHelper(identity.getUid(), identity.getGid());
-  fusell::dropPrivileges();
+  fusell::startPrivHelper(identity);
+  identity.dropPrivileges();
 
   folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
 

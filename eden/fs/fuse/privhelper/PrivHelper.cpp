@@ -21,6 +21,7 @@
 
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
+#include "eden/fs/fuse/privhelper/UserInfo.h"
 
 using folly::checkUnixError;
 using std::string;
@@ -37,8 +38,8 @@ namespace {
  */
 class PrivHelper {
  public:
-  PrivHelper(PrivHelperConn&& conn, pid_t helperPid, uid_t uid, gid_t gid)
-      : conn_(std::move(conn)), helperPid_(helperPid), uid_(uid), gid_(gid) {}
+  PrivHelper(PrivHelperConn&& conn, pid_t helperPid)
+      : conn_(std::move(conn)), helperPid_(helperPid) {}
   ~PrivHelper() {
     if (!conn_.isClosed()) {
       cleanup();
@@ -76,16 +77,6 @@ class PrivHelper {
     }
     DCHECK(WIFEXITED(status)) << "unexpected exit status type: " << status;
     return folly::makeExpected<int>(WEXITSTATUS(status));
-  }
-
-  /**
-   * Drop priviliges down to those requested when creating the PrivHelper
-   */
-  void dropPrivileges() {
-    int rc = setregid(gid_, gid_);
-    checkUnixError(rc, "failed to drop group privileges");
-    rc = setreuid(uid_, uid_);
-    checkUnixError(rc, "failed to drop user privileges");
   }
 
   /**
@@ -141,8 +132,6 @@ class PrivHelper {
   std::mutex mutex_;
   PrivHelperConn conn_;
   const pid_t helperPid_{0};
-  const uid_t uid_{0};
-  const gid_t gid_{0};
   uint32_t nextXid_{1};
 };
 
@@ -151,13 +140,13 @@ std::unique_ptr<PrivHelper> gPrivHelper;
 
 } // unnamed namespace
 
-void startPrivHelper(uid_t uid, gid_t gid) {
+void startPrivHelper(const UserInfo& userInfo) {
   CHECK_EQ(geteuid(), 0) << "must be root in order to start the privhelper";
   PrivHelperServer server;
-  startPrivHelper(&server, uid, gid);
+  startPrivHelper(&server, userInfo);
 }
 
-void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
+void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo) {
   CHECK(!gPrivHelper) << "privhelper already initialized";
 
   PrivHelperConn clientConn;
@@ -169,7 +158,7 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
   if (pid > 0) {
     // Parent
     serverConn.close();
-    gPrivHelper.reset(new PrivHelper(std::move(clientConn), pid, uid, gid));
+    gPrivHelper.reset(new PrivHelper(std::move(clientConn), pid));
     XLOG(DBG1) << "Forked mount helper process: pid=" << pid;
     return;
   }
@@ -178,7 +167,7 @@ void startPrivHelper(PrivHelperServer* server, uid_t uid, gid_t gid) {
   clientConn.close();
   int rc = 1;
   try {
-    server->init(std::move(serverConn), uid, gid);
+    server->init(std::move(serverConn), userInfo.getUid(), userInfo.getGid());
     server->run();
     rc = 0;
   } catch (const std::exception& ex) {
@@ -201,10 +190,6 @@ int stopPrivHelper() {
         result.error(), "error shutting down privhelper process");
   }
   return result.value();
-}
-
-void dropPrivileges() {
-  gPrivHelper->dropPrivileges();
 }
 
 folly::File privilegedFuseMount(folly::StringPiece mountPath) {

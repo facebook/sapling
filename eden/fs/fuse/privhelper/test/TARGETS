@@ -2,8 +2,14 @@
 
 cpp_unittest(
     name = "test",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
+    srcs = [
+        "PrivHelperTest.cpp",
+        "PrivHelperTestServer.cpp",
+        "UserInfoTest.cpp",
+    ],
+    headers = [
+        "PrivHelperTestServer.h",
+    ],
     deps = [
         "@/eden/fs/fuse/privhelper:privhelper",
         "@/eden/fs/utils/test:test_lib",
@@ -17,5 +23,18 @@ cpp_unittest(
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_binary(
+    name = "drop_privs",
+    srcs = [
+        "DropPrivs.cpp",
+    ],
+    deps = [
+        "@/eden/fs/fuse/privhelper:privhelper",
+        "@/folly/experimental/logging:init",
+        "@/folly/experimental/logging:logging",
+        "@/folly/init:init",
     ],
 )

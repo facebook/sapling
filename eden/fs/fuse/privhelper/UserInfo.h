@@ -54,6 +54,17 @@ class UserInfo {
     return homeDirectory_;
   }
 
+  /**
+   * If the program is currently running with an effective user ID of root,
+   * drop privileges to the information listed in this UserInfo object.
+   *
+   * If the program is not currently running with root privileges this function
+   * will generally fail with a permissions exception (even if the current
+   * privileges are already the same as those specified in the UserInfo
+   * structure).
+   */
+  void dropPrivileges();
+
  private:
   FRIEND_TEST(UserInfo, initFromSudo);
 
