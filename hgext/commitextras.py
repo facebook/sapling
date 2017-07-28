@@ -9,6 +9,8 @@
 
 from __future__ import absolute_import
 
+import re
+
 from mercurial.i18n import _
 from mercurial import (
     commands,
@@ -52,6 +54,10 @@ def _commit(orig, ui, repo, *pats, **opts):
                                 "KEY=VALUE format")
                         raise error.Abort(msg % raw)
                     k, v = raw.split('=', 1)
+                    if re.search('[^\w-]', k):
+                        msg = _("keys can only contain ascii letters, digits,"
+                                " '_' and '-'")
+                        raise error.Abort(msg)
                     if k in usedinternally:
                         msg = _("key '%s' is used internally, can't be set "
                                 "manually")
