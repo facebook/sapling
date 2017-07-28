@@ -8,9 +8,10 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-from .client import EdenNotRunningError, create_thrift_client
+from .client import EdenClient, EdenNotRunningError, create_thrift_client
 
 __all__ = [
+    'EdenClient',
     'EdenNotRunningError',
     'create_thrift_client',
 ]
