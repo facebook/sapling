@@ -45,15 +45,15 @@ class RebaseTest(HgExtensionTestBase):
         repo.update(self._base_commit)
 
     def test_rebase_commit_with_independent_folder(self):
-        stdout = self.hg('rebase', '-s', self._c11, '-d', self._c25)
-        expected_stdout = f'''\
-rebasing 1:{self._c11[:12]} "c11"
-rebasing 2:{self._c12[:12]} "c12"
-rebasing 3:{self._c13[:12]} "c13"
-rebasing 4:{self._c14[:12]} "c14"
-rebasing 5:{self._c15[:12]} "c15"
-'''
-        self.assertEqual(expected_stdout, stdout)
+        stdout = self.hg('--debug', 'rebase', '-s', self._c11, '-d', self._c25)
+        self.assertIn(f'rebasing 1:{self._c11[:12]} "c11"\n', stdout)
+        self.assertIn(f'rebasing 2:{self._c12[:12]} "c12"\n', stdout)
+        self.assertIn(f'rebasing 3:{self._c13[:12]} "c13"\n', stdout)
+        self.assertIn(f'rebasing 4:{self._c14[:12]} "c14"\n', stdout)
+        self.assertIn(f'rebasing 5:{self._c15[:12]} "c15"\n', stdout)
+        # Note that these are empirical values, not desired values.
+        # We need to figure out why this hits the slow path and fix it!
+        self.assert_update_logic(stdout, num_fast_path=2, num_slow_path=5)
 
         # Get the hash of the new head created as a result of the rebase.
         new_head = self.hg(
@@ -71,7 +71,8 @@ rebasing 5:{self._c15[:12]} "c15"
         self.assertEqual(1, len(self.repo.log()), msg=(
             'At the base commit, `hg log` should have only one entry.'
         ))
-        self.hg('update', new_head)
+        stdout = self.hg('--debug', 'update', new_head)
+        self.assert_update_logic(stdout, num_fast_path=1)
         self.assertEqual(11, len(self.repo.log()), msg=(
             'The new head should include all the commits.'
         ))
@@ -89,3 +90,21 @@ rebasing 5:{self._c15[:12]} "c15"
             'but if we included unloaded inodes, there would be 2: one for '
             'numbers/1 and one for numbers/2.'
         ))
+
+    def assert_update_logic(self, stdout: str, num_fast_path: int=0,
+                            num_slow_path: int=0):
+        '''Helper function to examine the stdout of an `hg --debug upate` call
+        and verify the number of times our Hg extension exercised the "fast
+        path" for Eden when doing an update versus the number of times it
+        exercised the "slow path."
+        '''
+        self.assertEqual(num_fast_path, stdout.count(
+            'using eden update code path\n'), msg=(
+                'Number of times `hg update` should exercise the fast path: ' +
+                str(num_fast_path))
+        )
+        self.assertEqual(num_slow_path, stdout.count(
+            'falling back to non-eden update code path\n'), msg=(
+                'Number of times `hg update` should exercise the slow path: ' +
+                str(num_slow_path))
+        )
