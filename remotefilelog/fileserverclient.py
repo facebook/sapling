@@ -294,7 +294,6 @@ class fileserverclient(object):
 
         cache.request(request)
 
-        missing = []
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
@@ -393,7 +392,7 @@ class fileserverclient(object):
         finally:
             os.umask(oldumask)
 
-        return missing
+        return
 
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]
