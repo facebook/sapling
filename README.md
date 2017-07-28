@@ -1,9 +1,9 @@
 # Mononoke
 
-Mononoke is a next-generation source control server, meant to scale up to
-accepting thousands of commits every hour across millions of files. It is
-primarily written in the
-[Rust programming language](https://www.rust-lang.org/en-US/).
+Mononoke is a next-generation server for the [Mercurial source control
+system](https://www.mercurial-scm.org/), meant to scale up to accepting
+thousands of commits every hour across millions of files. It is primarily
+written in the [Rust programming language](https://www.rust-lang.org/en-US/).
 
 ## Caveat Emptor
 
