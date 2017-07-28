@@ -754,5 +754,13 @@ void FileInode::storeSha1(
                   << folly::exceptionStr(ex);
   }
 }
+
+// Gets the immemory timestamps of the inode.
+void FileInode::getTimestamps(struct stat& st) {
+  auto state = state_.rlock();
+  st.st_atim = state->atime;
+  st.st_ctim = state->ctime;
+  st.st_mtim = state->mtime;
+}
 }
 }

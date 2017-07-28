@@ -79,13 +79,13 @@ TEST(EdenMount, testLastCheckoutTime) {
   TestMount testMount;
 
   auto builder = FakeTreeBuilder();
-  builder.setFile("foo.txt", "Fooooo!!");
+  builder.setFile("dir/foo.txt", "Fooooo!!");
   builder.finalize(testMount.getBackingStore(), true);
   auto commit = testMount.getBackingStore()->putCommit("1", builder);
   commit->setReady();
 
   auto sec = std::chrono::seconds{50000};
-  auto nsec = std::chrono::nanoseconds{50000};
+  auto nsec = std::chrono::nanoseconds{10000};
   auto duration = sec + nsec;
   std::chrono::system_clock::time_point currentTime(
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
@@ -95,8 +95,31 @@ TEST(EdenMount, testLastCheckoutTime) {
   const auto& edenMount = testMount.getEdenMount();
   struct timespec lastCheckoutTime = edenMount->getLastCheckoutTime();
 
+  // Check if EdenMount is updating lastCheckoutTime correctly
   EXPECT_EQ(sec.count(), lastCheckoutTime.tv_sec);
   EXPECT_EQ(nsec.count(), lastCheckoutTime.tv_nsec);
+
+  // Check if FileInode is updating lastCheckoutTime correctly
+  auto fileInode = testMount.getFileInode("dir/foo.txt");
+  struct stat stFile;
+  fileInode->getTimestamps(stFile);
+  EXPECT_EQ(sec.count(), stFile.st_atim.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.st_atim.tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.st_ctim.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.st_ctim.tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.st_mtim.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.st_mtim.tv_nsec);
+
+  // Check if TreeInode is updating lastCheckoutTime correctly
+  auto treeInode = testMount.getTreeInode("dir");
+  struct stat stDir;
+  treeInode->getTimestamps(stDir);
+  EXPECT_EQ(sec.count(), stDir.st_atim.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.st_atim.tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.st_ctim.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.st_ctim.tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.st_mtim.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.st_mtim.tv_nsec);
 }
 }
 }

@@ -160,6 +160,11 @@ class FileInode : public InodeBase {
 
   size_t write(folly::StringPiece data, off_t off);
 
+  /**
+   * Get the timestamps of the inode.
+   */
+  void getTimestamps(struct stat& st);
+
  private:
   /**
    * The contents of a FileInode.

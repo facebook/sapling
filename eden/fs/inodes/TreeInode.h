@@ -231,6 +231,9 @@ class TreeInode : public InodeBase {
   struct Dir {
     /** The direct children of this directory */
     PathMap<std::unique_ptr<Entry>> entries;
+    struct timespec atime;
+    struct timespec ctime;
+    struct timespec mtime;
     /**
      * If this TreeInode is unmaterialized (identical to an existing source
      * control Tree), treeHash contains the ID of the source control Tree
@@ -531,6 +534,11 @@ class TreeInode : public InodeBase {
    * this TreeInode and all subdirectories inside of it.
    */
   void getDebugStatus(std::vector<TreeInodeDebugInfo>& results) const;
+
+  /**
+   * Get the timestamps of the inode.
+   */
+  void getTimestamps(struct stat& st);
 
  private:
   class TreeRenameLocks;

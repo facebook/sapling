@@ -127,13 +127,22 @@ TreeInode::TreeInode(
     Dir&& dir)
     : InodeBase(ino, parent, name), contents_(std::move(dir)) {
   DCHECK_NE(ino, FUSE_ROOT_ID);
+  auto lastCheckoutTime = getMount()->getLastCheckoutTime();
+  contents_->atime = lastCheckoutTime;
+  contents_->ctime = lastCheckoutTime;
+  contents_->mtime = lastCheckoutTime;
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
     : TreeInode(mount, buildDirFromTree(tree.get())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(mount), contents_(std::move(dir)) {}
+    : InodeBase(mount), contents_(std::move(dir)) {
+  auto lastCheckoutTime = mount->getLastCheckoutTime();
+  contents_->atime = lastCheckoutTime;
+  contents_->ctime = lastCheckoutTime;
+  contents_->mtime = lastCheckoutTime;
+}
 
 TreeInode::~TreeInode() {}
 
@@ -2667,6 +2676,14 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       childTree->getDebugStatus(results);
     }
   }
+}
+
+// Gets the immemory timestamps of the inode.
+void TreeInode::getTimestamps(struct stat& st) {
+  auto contents = contents_.rlock();
+  st.st_atim = contents->atime;
+  st.st_ctim = contents->ctime;
+  st.st_mtim = contents->mtime;
 }
 }
 }
