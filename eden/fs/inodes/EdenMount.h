@@ -294,8 +294,8 @@ class EdenMount {
    * a mount point specific instance. */
   folly::ThreadLocal<fusell::EdenStats>* getStats() const;
 
-  folly::Logger& getLogger() {
-    return logger_;
+  folly::Logger& getStraceLogger() {
+    return straceLogger_;
   }
   /**
    * Returns the last checkout time in the Eden mount.
@@ -396,9 +396,14 @@ class EdenMount {
    */
   AbsolutePath socketPath_;
 
-  /** Allow logging by a category that includes mount path.
-      The category is of the following form: "eden.strace.<mount_path>"  */
-  folly::Logger logger_;
+  /**
+   * A log category for logging strace-events for this mount point.
+   *
+   * All FUSE operations to this mount point will get logged to this category.
+   * The category name is of the following form: "eden.strace.<mount_path>"
+   */
+  folly::Logger straceLogger_;
+
   /**
    * This needs to use system_clock rather than steady_clock
    * since this is used for filesystem timestamps that

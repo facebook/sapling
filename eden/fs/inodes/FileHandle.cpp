@@ -23,7 +23,7 @@ FileHandle::FileHandle(FileInodePtr inode, int flags)
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   FB_LOGF(
-      inode_->getMount()->getLogger(),
+      inode_->getMount()->getStraceLogger(),
       DBG7,
       "getattr({})",
       inode_->getNodeId());
@@ -34,7 +34,7 @@ folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
     const struct stat& attr,
     int to_set) {
   FB_LOGF(
-      inode_->getMount()->getLogger(),
+      inode_->getMount()->getStraceLogger(),
       DBG7,
       "setattr({})",
       inode_->getNodeId());
@@ -51,7 +51,10 @@ bool FileHandle::isSeekable() const {
 
 folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
   FB_LOGF(
-      inode_->getMount()->getLogger(), DBG7, "read({})", inode_->getNodeId());
+      inode_->getMount()->getStraceLogger(),
+      DBG7,
+      "read({})",
+      inode_->getNodeId());
   return inode_->read(size, off);
 }
 
@@ -64,7 +67,10 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
     }
   };
   FB_LOGF(
-      inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
+      inode_->getMount()->getStraceLogger(),
+      DBG7,
+      "write({})",
+      inode_->getNodeId());
   return inode_->write(std::move(buf), off);
 }
 
@@ -77,20 +83,29 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
     }
   };
   FB_LOGF(
-      inode_->getMount()->getLogger(), DBG7, "write({})", inode_->getNodeId());
+      inode_->getMount()->getStraceLogger(),
+      DBG7,
+      "write({})",
+      inode_->getNodeId());
   return inode_->write(str, off);
 }
 
 folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
   FB_LOGF(
-      inode_->getMount()->getLogger(), DBG7, "flush({})", inode_->getNodeId());
+      inode_->getMount()->getStraceLogger(),
+      DBG7,
+      "flush({})",
+      inode_->getNodeId());
   inode_->flush(lock_owner);
   return folly::Unit{};
 }
 
 folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
   FB_LOGF(
-      inode_->getMount()->getLogger(), DBG7, "fsync({})", inode_->getNodeId());
+      inode_->getMount()->getStraceLogger(),
+      DBG7,
+      "fsync({})",
+      inode_->getNodeId());
   inode_->fsync(datasync);
   return folly::Unit{};
 }

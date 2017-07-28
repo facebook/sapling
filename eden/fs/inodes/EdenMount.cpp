@@ -42,7 +42,7 @@ using folly::Unit;
 namespace facebook {
 namespace eden {
 
-static constexpr folly::StringPiece kEdenStracePrefix = "eden/strace";
+static constexpr folly::StringPiece kEdenStracePrefix = "eden.strace.";
 
 // We compute this when the process is initialized, but stash a copy
 // in each EdenMount.  We may in the future manage to propagate enough
@@ -93,10 +93,8 @@ EdenMount::EdenMount(
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       socketPath_(socketPath),
-      logger_(folly::sformat(
-          "{0}{1}",
-          kEdenStracePrefix,
-          config_->getMountPath().stringPiece())),
+      straceLogger_{kEdenStracePrefix.str() +
+                    config_->getMountPath().value().toStdString()},
       lastCheckoutTime_(lastCheckOutTime) {}
 
 folly::Future<folly::Unit> EdenMount::initialize() {
