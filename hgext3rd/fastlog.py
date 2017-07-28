@@ -39,8 +39,6 @@ FASTLOG_MAX = 500
 FASTLOG_QUEUE_SIZE = 1000
 FASTLOG_TIMEOUT = 20
 
-USE_FASTLOG = False
-
 def extsetup(ui):
     global conduit
     try:
@@ -224,7 +222,7 @@ def getfastlogrevs(orig, repo, pats, opts):
             local = LocalIteratorThread(queue, LOCAL, rev,
                                         dirs, localmatch, repo)
             remote = FastLogThread(queue, REMOTE, reponame, 'hg', hash, dirs,
-                                    repo)
+                                   repo)
 
             # Allow debugging either remote or local path
             debug = repo.ui.config('fastlog', 'debug')
@@ -268,7 +266,7 @@ def getfastlogrevs(orig, repo, pats, opts):
 
         # Complex match - use a revset.
         complex = ['date', 'exclude', 'include', 'keyword', 'no_merges',
-                    'only_merges', 'prune', 'user']
+                   'only_merges', 'prune', 'user']
         if match.anypats() or any(opts.get(opt) for opt in complex):
             f = fastlog(repo, rev, dirs, None)
             revs = smartset.generatorset(f, iterasc=False)
@@ -372,7 +370,7 @@ class LocalIteratorThread(Thread):
 
 
 class FastLogThread(Thread):
-    """Class which talks to a remote SCMQuery or fastlog server
+    """Class which talks to a remote SCMQuery
 
     Like the above, results are sent to a queue, and tagged with the
     id passed to this class' initializer.  Same rules for termination.
@@ -429,22 +427,15 @@ class FastLogThread(Thread):
             results = None
             todo = self.gettodo()
             try:
-                if USE_FASTLOG:
-                    results = conduit.call_conduit('fastlog.log',
-                        rev = start,
-                        file_paths = [path],
-                        skip = skip,
-                        number = todo,
-                    )
-                else:
-                    results = conduit.call_conduit('scmquery.log_v2',
-                        repo = reponame,
-                        scm_type = self.scm,
-                        rev = start,
-                        file_paths = [path],
-                        skip = skip,
-                        number = todo,
-                    )
+                results = conduit.call_conduit(
+                    'scmquery.log_v2',
+                    repo=reponame,
+                    scm_type=self.scm,
+                    rev=start,
+                    file_paths=[path],
+                    skip=skip,
+                    number=todo,
+                )
             except Exception as e:
                 if self.ui.config('fastlog', 'debug'):
                     self.ui.traceback(force=True)
