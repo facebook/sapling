@@ -1168,7 +1168,7 @@ class pulloperation(object):
         # deprecated; talk to trmanager directly
         return self.trmanager.transaction()
 
-class transactionmanager(object):
+class transactionmanager(util.transactional):
     """An object to manage the life cycle of a transaction
 
     It creates the transaction on demand and calls the appropriate hooks when

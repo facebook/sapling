@@ -11,9 +11,10 @@ from .i18n import _
 
 from . import (
     error,
+    util,
 )
 
-class dirstateguard(object):
+class dirstateguard(util.transactional):
     '''Restore dirstate at unexpected failure.
 
     At the construction, this class does:
@@ -42,16 +43,6 @@ class dirstateguard(object):
             # may raise exception before ``dirstateguard.release`` in
             # ``release(tr, ....)``.
             self._abort()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            if exc_type is None:
-                self.close()
-        finally:
-            self.release()
 
     def close(self):
         if not self._active: # already inactivated

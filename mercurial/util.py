@@ -15,6 +15,7 @@ hide platform-specific details from the core.
 
 from __future__ import absolute_import
 
+import abc
 import bz2
 import calendar
 import codecs
@@ -591,6 +592,31 @@ class sortdict(collections.OrderedDict):
                 src = src.iteritems()
             for k, v in src:
                 self[k] = v
+
+class transactional(object):
+    """Base class for making a transactional type into a context manager."""
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def close(self):
+        """Successfully closes the transaction."""
+
+    @abc.abstractmethod
+    def release(self):
+        """Marks the end of the transaction.
+
+        If the transaction has not been closed, it will be aborted.
+        """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                self.close()
+        finally:
+            self.release()
 
 @contextlib.contextmanager
 def acceptintervention(tr=None):
