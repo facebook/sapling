@@ -459,7 +459,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
 
-    try:
+    with wlock or util.nullcontextmanager(), \
+            lock or util.nullcontextmanager(), \
+            pushop.trmanager or util.nullcontextmanager():
         pushop.repo.checkpush(pushop)
         _pushdiscovery(pushop)
         if not _forcebundle1(pushop):
@@ -468,16 +470,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         _pushsyncphase(pushop)
         _pushobsolete(pushop)
         _pushbookmark(pushop)
-
-        if pushop.trmanager:
-            pushop.trmanager.close()
-    finally:
-        if pushop.trmanager:
-            pushop.trmanager.release()
-        if lock is not None:
-            lock.release()
-        if wlock is not None:
-            wlock.release()
 
     return pushop
 
