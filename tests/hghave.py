@@ -652,3 +652,12 @@ def has_virtualenv():
 @check("fsmonitor", "running tests with fsmonitor")
 def has_fsmonitor():
     return 'HGFSMONITOR_TESTS' in os.environ
+
+@check("fuzzywuzzy", "Fuzzy string matching library")
+def has_fuzzywuzzy():
+    try:
+        import fuzzywuzzy
+        fuzzywuzzy.__version__
+        return True
+    except ImportError:
+        return False
