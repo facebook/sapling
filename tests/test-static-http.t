@@ -156,4 +156,43 @@ test with non-repo
   $ hg clone static-http://localhost:$HGPORT/notarepo local3
   abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!
   [255]
+
+Clone with tags and branches works
+
+  $ hg init remote-with-names
+  $ cd remote-with-names
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  $ echo 1 > foo
+  $ hg commit -m 'commit 1'
+  $ hg -q up 0
+  $ hg branch mybranch
+  marked working directory as branch mybranch
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo 2 > foo
+  $ hg commit -m 'commit 2 (mybranch)'
+  $ hg tag -r 1 'default-tag'
+  $ hg tag -r 2 'branch-tag'
+
+  $ cd ..
+
+  $ hg clone static-http://localhost:$HGPORT/remote-with-names local-with-names
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 5 changes to 2 files (+1 heads)
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Clone a specific branch works
+
+  $ hg clone -r mybranch static-http://localhost:$HGPORT/remote-with-names local-with-names-branch 2> /dev/null
+  [1]
+
+Clone a specific tag works
+
+  $ hg clone -r default-tag static-http://localhost:$HGPORT/remote-with-names local-with-names-tag 2> /dev/null
+  [1]
+
   $ killdaemons.py
