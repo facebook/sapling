@@ -187,12 +187,22 @@ Clone with tags and branches works
 
 Clone a specific branch works
 
-  $ hg clone -r mybranch static-http://localhost:$HGPORT/remote-with-names local-with-names-branch 2> /dev/null
-  [1]
+  $ hg clone -r mybranch static-http://localhost:$HGPORT/remote-with-names local-with-names-branch
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 4 changes to 2 files
+  updating to branch mybranch
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Clone a specific tag works
 
-  $ hg clone -r default-tag static-http://localhost:$HGPORT/remote-with-names local-with-names-tag 2> /dev/null
-  [1]
+  $ hg clone -r default-tag static-http://localhost:$HGPORT/remote-with-names local-with-names-tag
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ killdaemons.py

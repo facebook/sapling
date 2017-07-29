@@ -182,6 +182,10 @@ class statichttprepository(localrepo.localrepository):
     def peer(self):
         return statichttppeer(self)
 
+    def wlock(self, wait=True):
+        raise error.LockUnavailable(0, _('lock not available'), 'lock',
+                                    _('cannot lock static-http repository'))
+
     def lock(self, wait=True):
         raise error.Abort(_('cannot lock static-http repository'))
 
