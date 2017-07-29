@@ -308,8 +308,6 @@ class pushoperation(object):
         self.bookmarks = bookmarks
         # allow push of new branch
         self.newbranch = newbranch
-        # did a local lock get acquired?
-        self.locallocked = None
         # step already performed
         # (used to check what steps have been already performed through bundle2)
         self.stepsdone = set()
@@ -442,6 +440,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
 
     # get local lock as we might write phase data
     localwlock = locallock = None
+    locallocked = False
     try:
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
@@ -449,9 +448,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         if (not _forcebundle1(pushop)) and maypushback:
             localwlock = pushop.repo.wlock()
         locallock = pushop.repo.lock()
-        pushop.locallocked = True
+        locallocked = True
     except IOError as err:
-        pushop.locallocked = False
         if err.errno != errno.EACCES:
             raise
         # source repo cannot be locked.
@@ -460,7 +458,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
-        if pushop.locallocked:
+        if locallocked:
             pushop.trmanager = transactionmanager(pushop.repo,
                                                   'push-response',
                                                   pushop.remote.url())
