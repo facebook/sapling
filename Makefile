@@ -63,7 +63,7 @@ doc:
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
-	find contrib doc hgext hgext3rd i18n mercurial tests \
+	find contrib doc hgext hgext3rd i18n mercurial tests hgdemandimport \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f MANIFEST MANIFEST.in hgext/__index__.py tests/*.err
 	rm -f mercurial/__modulepolicy__.py
