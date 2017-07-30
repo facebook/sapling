@@ -763,7 +763,7 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                 raise error.Abort(err)
 
             if (not ui.configbool('sparse', 'includereporootpaths', False)
-                and (include or exclude)):
+                and (include or exclude or delete)):
                 # supplied file patterns should be treated as relative
                 # to current working dir, so we need to convert them first
                 pats = scmutil.match(repo['.'], pats).files()

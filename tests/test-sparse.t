@@ -53,6 +53,30 @@ Repo root-relaive vs. cwd-relative includes
   $ cd ..
   $ rm -rf subdir
 
+Verify deleting uses relative paths
+  $ mkdir subdir && echo foo > subdir/foo
+  $ hg sparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  reporoot/path
+  subdir/cwd/path
+  [exclude]
+  
+  
+  $ cd subdir
+  $ hg sparse --delete cwd/path
+  $ hg sparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  reporoot/path
+  [exclude]
+  
+  
+  $ cd ..
+  $ rm -rf subdir
+
 Verify commiting while sparse includes other files
 
   $ echo z > hide
