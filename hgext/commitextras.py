@@ -54,6 +54,9 @@ def _commit(orig, ui, repo, *pats, **opts):
                                 "KEY=VALUE format")
                         raise error.Abort(msg % raw)
                     k, v = raw.split('=', 1)
+                    if not k:
+                        msg = _("unable to parse '%s', keys can't be empty")
+                        raise error.Abort(msg % raw)
                     if re.search('[^\w-]', k):
                         msg = _("keys can only contain ascii letters, digits,"
                                 " '_' and '-'")
