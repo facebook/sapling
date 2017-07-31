@@ -18,6 +18,11 @@ from . import (
     pycompat,
 )
 
+charencode = policy.importmod(r'charencode')
+
+asciilower = charencode.asciilower
+asciiupper = charencode.asciiupper
+
 _sysstr = pycompat.sysstr
 
 if pycompat.ispy3:
@@ -317,38 +322,6 @@ def trim(s, width, ellipsis='', leftside=False):
         if ucolwidth(usub) <= width:
             return concat(usub.encode(_sysstr(encoding)))
     return ellipsis # no enough room for multi-column characters
-
-def _asciilower(s):
-    '''convert a string to lowercase if ASCII
-
-    Raises UnicodeDecodeError if non-ASCII characters are found.'''
-    s.decode('ascii')
-    return s.lower()
-
-def asciilower(s):
-    # delay importing avoids cyclic dependency around "parsers" in
-    # pure Python build (util => i18n => encoding => parsers => util)
-    parsers = policy.importmod(r'parsers')
-    impl = getattr(parsers, 'asciilower', _asciilower)
-    global asciilower
-    asciilower = impl
-    return impl(s)
-
-def _asciiupper(s):
-    '''convert a string to uppercase if ASCII
-
-    Raises UnicodeDecodeError if non-ASCII characters are found.'''
-    s.decode('ascii')
-    return s.upper()
-
-def asciiupper(s):
-    # delay importing avoids cyclic dependency around "parsers" in
-    # pure Python build (util => i18n => encoding => parsers => util)
-    parsers = policy.importmod(r'parsers')
-    impl = getattr(parsers, 'asciiupper', _asciiupper)
-    global asciiupper
-    asciiupper = impl
-    return impl(s)
 
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"

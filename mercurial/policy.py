@@ -80,7 +80,9 @@ _cextversions = {
 
 # map import request to other package or module
 _modredirects = {
+    (r'cext', r'charencode'): (r'cext', r'parsers'),
     (r'cffi', r'base85'): (r'pure', r'base85'),
+    (r'cffi', r'charencode'): (r'pure', r'charencode'),
     (r'cffi', r'diffhelpers'): (r'pure', r'diffhelpers'),
     (r'cffi', r'parsers'): (r'pure', r'parsers'),
 }
