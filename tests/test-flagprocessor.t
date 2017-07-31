@@ -152,6 +152,8 @@
   $ hg commit -Aqm 'fail+base64+gzip+noop'
   abort: missing processor for flag '0x1'!
   [255]
+  $ hg forget fail-base64-gzip-noop
+  $ rm fail-base64-gzip-noop
 
 # TEST: ensure we cannot register several flag processors on the same flag
   $ cat >> .hg/hgrc << EOF
@@ -162,8 +164,6 @@
   $ echo 'this should fail' > file
   $ hg commit -Aqm 'add file'
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
-  abort: missing processor for flag '0x1'!
-  [255]
 
   $ cd ..
 
