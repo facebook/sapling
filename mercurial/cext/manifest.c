@@ -38,7 +38,7 @@ typedef struct {
 #define MANIFEST_NOT_SORTED -2
 #define MANIFEST_MALFORMED -3
 
-/* defined in parsers.c */
+/* defined in charencode.c */
 PyObject *unhexlify(const char *str, int len);
 
 /* get the length of the path for a line */
