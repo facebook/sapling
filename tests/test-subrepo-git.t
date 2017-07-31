@@ -1173,3 +1173,58 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   [255]
   $ f -Dq pwned.txt
   pwned: you asked for it
+
+test for ssh exploit with git subrepos 2017-07-25
+
+  $ hg init malicious-proxycommand
+  $ cd malicious-proxycommand
+  $ echo 's = [git]ssh://-oProxyCommand=rm${IFS}non-existent/path' > .hgsub
+  $ git init s
+  Initialized empty Git repository in $TESTTMP/tc/malicious-proxycommand/s/.git/
+  $ cd s
+  $ git commit --allow-empty -m 'empty'
+  [master (root-commit) 153f934] empty
+  $ cd ..
+  $ hg add .hgsub
+  $ hg ci -m 'add subrepo'
+  $ cd ..
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=rm${IFS}non-existent/path' (in subrepo s)
+  [255]
+
+also check that a percent encoded '-' (%2D) doesn't work
+
+  $ cd malicious-proxycommand
+  $ echo 's = [git]ssh://%2DoProxyCommand=rm${IFS}non-existent/path' > .hgsub
+  $ hg ci -m 'change url to percent encoded'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=rm${IFS}non-existent/path' (in subrepo s)
+  [255]
+
+also check for a pipe
+
+  $ cd malicious-proxycommand
+  $ echo 's = [git]ssh://fakehost|shell/path' > .hgsub
+  $ hg ci -m 'change url to pipe'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepo s)
+  [255]
+
+also check that a percent encoded '|' (%7C) doesn't work
+
+  $ cd malicious-proxycommand
+  $ echo 's = [git]ssh://fakehost%7Cshell/path' > .hgsub
+  $ hg ci -m 'change url to percent encoded'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepo s)
+  [255]
