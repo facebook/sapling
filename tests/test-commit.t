@@ -157,7 +157,7 @@ Failed commit with --addremove should not update dirstate
   abort: edit failed: false exited with status 1
   [255]
   $ hg status
-  A newfile
+  ? newfile
 
 Make sure we do not obscure unknown requires file entries (issue2649)
 

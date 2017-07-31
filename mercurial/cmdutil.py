@@ -26,6 +26,7 @@ from . import (
     changelog,
     copies,
     crecord as crecordmod,
+    dirstateguard,
     encoding,
     error,
     formatter,
@@ -2888,14 +2889,23 @@ def commit(ui, repo, commitfunc, pats, opts):
     message = logmessage(ui, opts)
     matcher = scmutil.match(repo[None], pats, opts)
 
+    dsguard = None
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
-    if opts.get('addremove'):
-        if scmutil.addremove(repo, matcher, "", opts) != 0:
-            raise error.Abort(
-                _("failed to mark all new/missing files as added/removed"))
+    try:
+        if opts.get('addremove'):
+            dsguard = dirstateguard.dirstateguard(repo, 'commit')
+            if scmutil.addremove(repo, matcher, "", opts) != 0:
+                raise error.Abort(
+                    _("failed to mark all new/missing files as added/removed"))
 
-    return commitfunc(ui, repo, message, matcher, opts)
+        r = commitfunc(ui, repo, message, matcher, opts)
+        if dsguard:
+            dsguard.close()
+        return r
+    finally:
+        if dsguard:
+            dsguard.release()
 
 def samefile(f, ctx1, ctx2):
     if f in ctx1.manifest():

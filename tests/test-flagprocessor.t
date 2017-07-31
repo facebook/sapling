@@ -152,7 +152,6 @@
   $ hg commit -Aqm 'fail+base64+gzip+noop'
   abort: missing processor for flag '0x1'!
   [255]
-  $ hg forget fail-base64-gzip-noop
   $ rm fail-base64-gzip-noop
 
 # TEST: ensure we cannot register several flag processors on the same flag
