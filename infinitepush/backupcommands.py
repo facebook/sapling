@@ -11,11 +11,6 @@
     # Negative number means backup everything.
     maxheadstobackup = -1
 
-    # Previously there was a bug in infinitepush backup and it made separate
-    # backup for the same repo if pushbackup was called from different working
-    # copies. This option cleans up the mess
-    tempcleanworkingcopiesbackups = False
-
     # Nodes that should not be backed up. Ancestors of these nodes won't be
     # backed up either
     dontbackupnodes = []
@@ -309,7 +304,6 @@ def isbackedup(ui, repo, **opts):
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
-    maybesharedrepo = repo
     # to handle multiple working copies correctly
     repo = _getsrcrepo(repo)
     currentbkpgenerationvalue = _readbackupgenerationfile(repo.vfs)
@@ -355,19 +349,6 @@ def _dobackup(ui, repo, dest, **opts):
     bookmarkstobackup = _getbookmarkstobackup(
         repo, newbookmarks, removedbookmarks,
         newheads, removedheads, namingmgr)
-
-    if maybesharedrepo.origroot != repo.origroot:
-        if (ui.config('infinitepushbackup', 'tempcleanworkingcopiesbackups') and
-                _localbackupstateexists(maybesharedrepo)):
-            # Previously there was a bug in infinitepush backup and it
-            # made multiple backups for the same repo if pushbackup was called
-            # from different working copies. Let's delete bookmarks for the
-            # same working copy
-            sharedreponamingmgr = BackupBookmarkNamingManager(
-                ui, maybesharedrepo)
-            bookmarkprefixtodelete = sharedreponamingmgr.getcommonprefix()
-            bookmarkstobackup[bookmarkprefixtodelete] = ''
-            _deletebackupstate(maybesharedrepo)
 
     # Special case if backup state is empty. Clean all backup bookmarks from the
     # server.
