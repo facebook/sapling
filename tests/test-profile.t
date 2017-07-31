@@ -4,21 +4,22 @@ test --time
   $ hg init a
   $ cd a
 
+Function to check that statprof ran
+  $ statprofran () {
+  >   egrep 'Sample count:|No samples recorded' > /dev/null
+  > }
 
 test --profile
 
-  $ hg st --profile 2>&1 | grep Sample
-  Sample count: \d+ (re)
+  $ hg st --profile 2>&1 | statprofran
 
 Abreviated version
 
-  $ hg st --prof 2>&1 | grep Sample
-  Sample count: \d+ (re)
+  $ hg st --prof 2>&1 | statprofran
 
 In alias
 
-  $ hg --config "alias.profst=status --profile" profst 2>&1 | grep Sample
-  Sample count: \d+ (re)
+  $ hg --config "alias.profst=status --profile" profst 2>&1 | statprofran
 
 #if lsprof
 
@@ -81,26 +82,22 @@ Install an extension that can sleep and guarantee a profiler has time to run
 statistical profiler works
 
   $ hg --profile sleep 2>../out
-  $ grep Sample ../out
-  Sample count: \d+ (re)
+  $ cat ../out | statprofran
 
 Various statprof formatters work
 
   $ hg --profile --config profiling.statformat=byline sleep 2>../out
   $ head -n 1 ../out
     %   cumulative      self          
-  $ grep Sample ../out
-  Sample count: \d+ (re)
+  $ cat ../out | statprofran
 
   $ hg --profile --config profiling.statformat=bymethod sleep 2>../out
   $ head -n 1 ../out
     %   cumulative      self          
-  $ grep Sample ../out
-  Sample count: \d+ (re)
+  $ cat ../out | statprofran
 
   $ hg --profile --config profiling.statformat=hotpath sleep 2>../out
-  $ grep Sample ../out
-  Sample count: \d+ (re)
+  $ cat ../out | statprofran
 
   $ hg --profile --config profiling.statformat=json sleep 2>../out
   $ cat ../out
