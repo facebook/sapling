@@ -78,6 +78,13 @@ _cextversions = {
     (r'cext', r'parsers'): 1,
 }
 
+# map import request to other package or module
+_modredirects = {
+    (r'cffi', r'base85'): (r'pure', r'base85'),
+    (r'cffi', r'diffhelpers'): (r'pure', r'diffhelpers'),
+    (r'cffi', r'parsers'): (r'pure', r'parsers'),
+}
+
 def _checkmod(pkgname, modname, mod):
     expected = _cextversions.get((pkgname, modname))
     actual = getattr(mod, r'version', None)
@@ -94,11 +101,14 @@ def importmod(modname):
         raise ImportError(r'invalid HGMODULEPOLICY %r' % policy)
     assert verpkg or purepkg
     if verpkg:
+        pn, mn = _modredirects.get((verpkg, modname), (verpkg, modname))
         try:
-            mod = _importfrom(verpkg, modname)
-            _checkmod(verpkg, modname, mod)
+            mod = _importfrom(pn, mn)
+            if pn == verpkg:
+                _checkmod(pn, mn, mod)
             return mod
         except ImportError:
             if not purepkg:
                 raise
-    return _importfrom(purepkg, modname)
+    pn, mn = _modredirects.get((purepkg, modname), (purepkg, modname))
+    return _importfrom(pn, mn)
