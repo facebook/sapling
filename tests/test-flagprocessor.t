@@ -161,9 +161,11 @@
   > extension=$TESTDIR/flagprocessorext.py
   > duplicate=$TESTDIR/flagprocessorext.py
   > EOF
-  $ echo 'this should fail' > file
-  $ hg commit -Aqm 'add file'
+  $ hg debugrebuilddirstate
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
+  $ hg st 2>&1 | egrep 'cannot register multiple processors|flagprocessorext'
+  *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
+    File "*/tests/flagprocessorext.py", line *, in b64decode (glob)
 
   $ cd ..
 
