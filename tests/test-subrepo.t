@@ -1789,3 +1789,70 @@ Test that '[paths]' is configured correctly at subrepo creation
   +bar
 
   $ cd ..
+
+test for ssh exploit 2017-07-25
+
+  $ hg init malicious-proxycommand
+  $ cd malicious-proxycommand
+  $ echo 's = [hg]ssh://-oProxyCommand=touch${IFS}owned/path' > .hgsub
+  $ hg init s
+  $ cd s
+  $ echo init > init
+  $ hg add
+  adding init
+  $ hg commit -m init
+  $ cd ..
+  $ hg add .hgsub
+  $ hg ci -m 'add subrepo'
+  $ cd ..
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path' (in subrepository "s")
+  [255]
+
+also check that a percent encoded '-' (%2D) doesn't work
+
+  $ cd malicious-proxycommand
+  $ echo 's = [hg]ssh://%2DoProxyCommand=touch${IFS}owned/path' > .hgsub
+  $ hg ci -m 'change url to percent encoded'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path' (in subrepository "s")
+  [255]
+
+also check for a pipe
+
+  $ cd malicious-proxycommand
+  $ echo 's = [hg]ssh://fakehost|shell/path' > .hgsub
+  $ hg ci -m 'change url to pipe'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepository "s")
+  [255]
+
+also check that a percent encoded '|' (%7C) doesn't work
+
+  $ cd malicious-proxycommand
+  $ echo 's = [hg]ssh://fakehost%7Cshell/path' > .hgsub
+  $ hg ci -m 'change url to percent encoded pipe'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepository "s")
+  [255]
+
+and bad usernames:
+  $ cd malicious-proxycommand
+  $ echo 's = [hg]ssh://-oProxyCommand=touch owned@example.com/path' > .hgsub
+  $ hg ci -m 'owned username'
+  $ cd ..
+  $ rm -r malicious-proxycommand-clone
+  $ hg clone malicious-proxycommand malicious-proxycommand-clone
+  updating to branch default
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch owned@example.com/path' (in subrepository "s")
+  [255]
