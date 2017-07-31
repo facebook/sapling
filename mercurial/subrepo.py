@@ -1550,6 +1550,9 @@ class gitsubrepo(abstractsubrepo):
 
     def _fetch(self, source, revision):
         if self._gitmissing():
+            # SEC: check for safe ssh url
+            util.checksafessh(source)
+
             source = self._abssource(source)
             self.ui.status(_('cloning subrepo %s from %s\n') %
                             (self._relpath, source))
