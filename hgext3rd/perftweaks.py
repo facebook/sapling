@@ -41,6 +41,7 @@ def extsetup(ui):
 
     wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
     wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
+    wrapfunction(merge, 'update', _trackupdatesize)
 
     # noderev cache creation
     # The node rev cache is a cache of rev numbers that we are likely to do a
@@ -267,3 +268,12 @@ def _tracksparseprofiles(runcommand, lui, repo, *args):
             lui.log('sparse_profiles', '',
                     active_profiles=','.join(sorted(profiles)))
     return res
+
+def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
+    if not branchmerge:
+        distance = len(repo.revs('(%s %% .) + (. %% %s)', node, node))
+        repo.ui.log('update_size', '', update_distance=distance)
+
+    stats = orig(repo, node, branchmerge, *args, **kwargs)
+    repo.ui.log('update_size', '', update_filecount=sum(stats))
+    return stats
