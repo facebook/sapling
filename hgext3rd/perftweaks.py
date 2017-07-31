@@ -43,6 +43,13 @@ def extsetup(ui):
     wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
     wrapfunction(merge, 'update', _trackupdatesize)
 
+    try:
+        rebase = extensions.find('rebase')
+        wrapfunction(rebase.rebaseruntime, '_preparenewrebase',
+                     _trackrebasesize)
+    except KeyError:
+        pass
+
     # noderev cache creation
     # The node rev cache is a cache of rev numbers that we are likely to do a
     # node->rev lookup for. Since looking up rev->node is cheaper than
@@ -277,3 +284,22 @@ def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
     stats = orig(repo, node, branchmerge, *args, **kwargs)
     repo.ui.log('update_size', '', update_filecount=sum(stats))
     return stats
+
+def _trackrebasesize(orig, self, dest, rebaseset):
+    result = orig(self, dest, rebaseset)
+
+    # The code assumes the rebase source is roughly a linear stack within a
+    # single feature branch, and there is only one destination. If that is not
+    # the case, the distance might be not accurate.
+    repo = self.repo
+    destrev = dest.rev()
+    commitcount = len(rebaseset)
+    distance = len(repo.revs('(%ld %% %d) + (%d %% %ld)',
+                             rebaseset, destrev, destrev, rebaseset))
+    # 'distance' includes the commits being rebased, so subtract them to get the
+    # actual distance being traveled. Even though we log update_distance above,
+    # a rebase may run multiple updates, so that value might be not be accurate.
+    repo.ui.log('rebase_size', '', rebase_commitcount=commitcount,
+                                   rebase_distance=distance - commitcount)
+
+    return result
