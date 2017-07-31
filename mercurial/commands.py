@@ -3970,6 +3970,7 @@ def pull(ui, repo, source="default", **opts):
     ('b', 'branch', [],
      _('a specific branch you would like to push'), _('BRANCH')),
     ('', 'new-branch', False, _('allow pushing a new branch')),
+    ('', 'pushvars', [], _('variables that can be sent to server (ADVANCED)')),
     ] + remoteopts,
     _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]'))
 def push(ui, repo, dest=None, **opts):
@@ -4006,6 +4007,25 @@ def push(ui, repo, dest=None, **opts):
 
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
+
+    .. container:: verbose
+
+        The --pushvars option sends strings to the server that become
+        environment variables prepended with ``HG_USERVAR_``. For example,
+        ``--pushvars ENABLE_FEATURE=true``, provides the server side hooks with
+        ``HG_USERVAR_ENABLE_FEATURE=true`` as part of their environment.
+
+        pushvars can provide for user-overridable hooks as well as set debug
+        levels. One example is having a hook that blocks commits containing
+        conflict markers, but enables the user to override the hook if the file
+        is using conflict markers for testing purposes or the file format has
+        strings that look like conflict markers.
+
+        By default, servers will ignore `--pushvars`. To enable it add the
+        following to your configuration file
+
+            [push]
+            pushvars.server = true
 
     Returns 0 if push was successful, 1 if nothing to push.
     """
@@ -4059,10 +4079,27 @@ def push(ui, repo, dest=None, **opts):
                 return not result
     finally:
         del repo._subtoppath
+
+    pushvars = opts.get('pushvars')
+    if pushvars:
+        shellvars = {}
+        for raw in pushvars:
+            if '=' not in raw:
+                msg = ("unable to parse variable '%s', should follow "
+                        "'KEY=VALUE' or 'KEY=' format")
+                raise error.Abort(msg % raw)
+            k, v = raw.split('=', 1)
+            shellvars[k] = v
+
+        repo._shellvars = shellvars
+
     pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
                            newbranch=opts.get('new_branch'),
                            bookmarks=opts.get('bookmark', ()),
                            opargs=opts.get('opargs'))
+
+    if pushvars:
+        del repo._shellvars
 
     result = not pushop.cgresult
 

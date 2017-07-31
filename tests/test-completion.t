@@ -228,7 +228,7 @@ Show all commands + options
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
-  push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
+  push: force, rev, bookmark, branch, new-branch, pushvars, ssh, remotecmd, insecure
   remove: after, force, subrepos, include, exclude
   serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate, subrepos
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, subrepos, template

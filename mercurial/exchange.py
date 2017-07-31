@@ -893,6 +893,14 @@ def _pushb2bookmarks(pushop, bundler):
                         pushop.bkresult = 1
     return handlereply
 
+@b2partsgenerator('pushvars', idx=0)
+def _getbundlesendvars(pushop, bundler):
+    '''send shellvars via bundle2'''
+    if getattr(pushop.repo, '_shellvars', ()):
+        part = bundler.newpart('pushvars')
+
+        for key, value in pushop.repo._shellvars.iteritems():
+            part.addparam(key, value, mandatory=False)
 
 def _pushbundle2(pushop):
     """push data to the remote using bundle2

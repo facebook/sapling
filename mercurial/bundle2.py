@@ -1879,3 +1879,17 @@ def handlehgtagsfnodes(op, inpart):
 
     cache.write()
     op.ui.debug('applied %i hgtags fnodes cache entries\n' % count)
+
+@parthandler('pushvars')
+def bundle2getvars(op, part):
+    '''unbundle a bundle2 containing shellvars on the server'''
+    # An option to disable unbundling on server-side for security reasons
+    if op.ui.configbool('push', 'pushvars.server', False):
+        hookargs = {}
+        for key, value in part.advisoryparams:
+            key = key.upper()
+            # We want pushed variables to have USERVAR_ prepended so we know
+            # they came from the --pushvar flag.
+            key = "USERVAR_" + key
+            hookargs[key] = value
+        op.addhookargs(hookargs)
