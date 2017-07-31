@@ -59,6 +59,12 @@ cachecutoffdays = 60
 # The list is comma or space separated
 relevantremotenames = master
 
+# Enables the creation and use of fast cache manifests (defaults to True)
+usecache=False
+
+# Enables the use of treemanifests (defaults to False)
+usetree=True
+
 Description:
 
 `manifestaccesslogger` logs manifest accessed to a logfile specified with
@@ -186,10 +192,11 @@ class FastManifestExtension(object):
 
     @staticmethod
     def setup():
-        logger = debug.manifestaccesslogger(FastManifestExtension.get_ui())
+        ui = FastManifestExtension.get_ui()
+        logger = debug.manifestaccesslogger(ui)
         extensions.wrapfunction(manifest.manifestrevlog, 'rev', logger.revwrap)
 
-        factory = manifestfactory(FastManifestExtension.get_ui())
+        factory = manifestfactory(ui)
 
         extensions.wrapfunction(
             manifest.manifestlog, '__getitem__', factory.newgetitem)
@@ -197,38 +204,39 @@ class FastManifestExtension(object):
             manifest.manifestlog, 'get', factory.newgetdirmanifestctx)
         extensions.wrapfunction(manifest.manifestrevlog, 'add', factory.add)
 
-        revsetmod.symbols['fastmanifesttocache'] = (
-                cachemanager.fastmanifesttocache
-        )
-        revsetmod.safesymbols.add('fastmanifesttocache')
-        revsetmod.symbols['fastmanifestcached'] = (
-                cachemanager.fastmanifestcached
-        )
-        revsetmod.safesymbols.add('fastmanifestcached')
+        if ui.configbool('fastmanifest', 'usecache', True):
+            revsetmod.symbols['fastmanifesttocache'] = (
+                    cachemanager.fastmanifesttocache
+            )
+            revsetmod.safesymbols.add('fastmanifesttocache')
+            revsetmod.symbols['fastmanifestcached'] = (
+                    cachemanager.fastmanifestcached
+            )
+            revsetmod.safesymbols.add('fastmanifestcached')
 
-        # Trigger to enable caching of relevant manifests
-        extensions.wrapfunction(bookmarks.bmstore, '_write',
-                                cachemanager.triggers.onbookmarkchange)
-        extensions.wrapfunction(localrepo.localrepository, 'commitctx',
-                                cachemanager.triggers.oncommit)
-        try:
-            remotenames = extensions.find('remotenames')
-        except KeyError:
-            pass
-        else:
-            if remotenames:
-                extensions.wrapfunction(
-                    remotenames,
-                    'saveremotenames',
-                    cachemanager.triggers.onremotenameschange)
+            # Trigger to enable caching of relevant manifests
+            extensions.wrapfunction(bookmarks.bmstore, '_write',
+                                    cachemanager.triggers.onbookmarkchange)
+            extensions.wrapfunction(localrepo.localrepository, 'commitctx',
+                                    cachemanager.triggers.oncommit)
+            try:
+                remotenames = extensions.find('remotenames')
+            except KeyError:
+                pass
+            else:
+                if remotenames:
+                    extensions.wrapfunction(
+                        remotenames,
+                        'saveremotenames',
+                        cachemanager.triggers.onremotenameschange)
+
+            extensions.wrapfunction(
+                dispatch, 'runcommand',
+                cachemanager.triggers.runcommandtrigger)
 
         extensions.wrapfunction(
             dispatch, 'runcommand',
             FastManifestExtension._logonexit)
-
-        extensions.wrapfunction(
-            dispatch, 'runcommand',
-            cachemanager.triggers.runcommandtrigger)
 
 def extsetup(ui):
     # always update the ui object.  this is probably a bogus ui object, but we

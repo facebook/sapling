@@ -23,8 +23,19 @@ Check diagnosis, debugging information
   > fastmanifest=$TESTDIR/../fastmanifest
   > [fastmanifest]
   > cachecutoffdays=-1
-  > debugmetrics=True
   > randomorder=False
+  > usecache=False
+  > EOF
+
+Test usecache=False prevents cache creation
+  $ mkcommit 0
+  $ ls .hg/store/manifestcache
+  $ hg strip -q -r . --config extensions.strip=
+
+  $ cat >> .hg/hgrc <<EOF
+  > [fastmanifest]
+  > debugmetrics=True
+  > usecache=True
   > EOF
 
 Here we expect a cache hit of 100% because we are based of revision -1 that
