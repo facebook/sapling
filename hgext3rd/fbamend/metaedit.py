@@ -16,7 +16,6 @@ from mercurial import (
     error,
     hg,
     lock as lockmod,
-    obsolete,
     phases,
     registrar,
     scmutil,
@@ -140,12 +139,9 @@ def metaedit(ui, repo, *revs, **opts):
                 if p1.node() in replacemap:
                     repo.setparents(replacemap[p1.node()])
                 if len(replacemap) > 0:
-                    obsolete.createmarkers(
-                        repo,
-                        [(repo[old], (repo[new],))
-                            for old, new in replacemap.iteritems()],
-                        operation='metaedit',
-                    )
+                    mapping = dict(map(lambda oldnew: (oldnew[0], [oldnew[1]]),
+                                       replacemap.iteritems()))
+                    scmutil.cleanupnodes(repo, mapping, 'metaedit')
                     # TODO: set poroper phase boundaries (affects secret
                     # phase only)
                 else:
@@ -166,9 +162,9 @@ def metaedit(ui, repo, *revs, **opts):
                     if p1.rev() in revs:
                         newp1 = newid
                     phases.retractboundary(repo, tr, targetphase, [newid])
-                    obsolete.createmarkers(repo, [(ctx, (repo[newid],))
-                                                  for ctx in allctx],
-                                           operation='metaedit')
+                    mapping = dict(
+                        [(repo[rev].node(), [newid]) for rev in revs])
+                    scmutil.cleanupnodes(repo, mapping, 'metaedit')
                 else:
                     ui.status(_("nothing changed\n"))
                     return 1
