@@ -486,8 +486,17 @@ class FastLogThread(Thread):
             if self.stopped():
                 break
             self.queue.put((self.id, True, rev))
-
-        self.queue.put((self.id, True, None))
+        # The end marker (self.id, True, None) indicates that the thread
+        # completed successfully. Don't send it if the thread is stopped.
+        # The thread can be stopped for one of two reasons:
+        #  1. The fastlog service failed - in this case, flagging a successful
+        #     finish is harmful, because it will stop us continuing with local
+        #     results, truncating output.
+        #  2. The caller is going to ignore all future results from us. In this
+        #     case, it'll ignore the end marker anyway - it's discarding the
+        #     entire queue.
+        if not self.stopped():
+            self.queue.put((self.id, True, None))
 
 if __name__ == '__main__':
     import doctest
