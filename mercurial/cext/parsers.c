@@ -85,7 +85,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 
 		nlen = newline - zero - 1;
 
-		node = unhexlify(zero + 1, nlen > 40 ? 40 : (int)nlen);
+		node = unhexlify(zero + 1, nlen > 40 ? 40 : (Py_ssize_t)nlen);
 		if (!node)
 			goto bail;
 

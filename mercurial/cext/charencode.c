@@ -7,6 +7,7 @@
  the GNU General Public License, incorporated herein by reference.
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include "charencode.h"
@@ -57,11 +58,11 @@ static const char uppertable[128] = {
 /*
  * Turn a hex-encoded string into binary.
  */
-PyObject *unhexlify(const char *str, int len)
+PyObject *unhexlify(const char *str, Py_ssize_t len)
 {
 	PyObject *ret;
 	char *d;
-	int i;
+	Py_ssize_t i;
 
 	ret = PyBytes_FromStringAndSize(NULL, len / 2);
 
