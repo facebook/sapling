@@ -147,6 +147,18 @@ Using the advanced --extra flag
   oldhash=bar
   sourcehash=foo
 
+Failed commit with --addremove should not update dirstate
+
+  $ echo foo > newfile
+  $ hg status
+  ? newfile
+  $ HGEDITOR=false hg ci --addremove
+  adding newfile
+  abort: edit failed: false exited with status 1
+  [255]
+  $ hg status
+  A newfile
+
 Make sure we do not obscure unknown requires file entries (issue2649)
 
   $ echo foo >> foo
