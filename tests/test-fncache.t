@@ -270,7 +270,11 @@ Aborting transaction prevents fncache change
   > cmdtable = {}
   > 
   > EOF
+
+Clean cached version
   $ rm -f "${extpath}c"
+  $ rm -Rf "`dirname $extpath`/__pycache__"
+
   $ touch z
   $ hg ci -qAm z
   transaction abort!
@@ -305,7 +309,11 @@ Aborted transactions can be recovered later
   > cmdtable = {}
   > 
   > EOF
+
+Clean cached versions
   $ rm -f "${extpath}c"
+  $ rm -Rf "`dirname $extpath`/__pycache__"
+
   $ hg up -q 1
   $ touch z
   $ hg ci -qAm z 2>/dev/null

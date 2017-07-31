@@ -234,7 +234,9 @@ check that local configs for the cached repo aren't inherited when -R is used:
   *** runcommand --config hooks.pre-identify=python:hook.hook id
   eff892de26ec tip
 
+Clean hook cached version
   $ rm hook.py*
+  $ rm -Rf __pycache__
 
   $ echo a >> a
   >>> import os
