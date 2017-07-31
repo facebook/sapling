@@ -69,13 +69,17 @@ def parse_changes(client, startcl=None, endcl=None):
         revrange(startcl, endcl))
 
     stdout = util.popen(cmd, mode='rb')
+    cur_time = time.time()
     for d in loaditer(stdout):
         c = d.get("change", None)
         oc = d.get("oldChange", None)
+        user = d.get("user", None)
+        commit_time = d.get("time", None)
+        time_diff = (cur_time - int(commit_time)) if commit_time else 0
         if oc:
-            yield P4Changelist(int(oc), int(c))
+            yield P4Changelist(int(oc), int(c), user, time_diff)
         elif c:
-            yield P4Changelist(int(c), int(c))
+            yield P4Changelist(int(c), int(c), user, time_diff)
 
 def parse_filelist(client, startcl=None, endcl=None):
     if startcl is None:
@@ -271,9 +275,11 @@ ACTION_ARCHIVE = ['archive']
 SUPPORTED_ACTIONS = ACTION_EDIT + ACTION_ADD + ACTION_DELETE
 
 class P4Changelist(object):
-    def __init__(self, origclnum, clnum):
+    def __init__(self, origclnum, clnum, user, commit_time_diff):
         self._clnum = clnum
         self._origclnum = origclnum
+        self._user = user
+        self._commit_time_diff = commit_time_diff
 
     def __repr__(self):
         return '<P4Changelist %d>' % self._clnum

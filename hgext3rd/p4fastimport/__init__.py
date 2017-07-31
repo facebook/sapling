@@ -20,6 +20,7 @@ Config example:
 from __future__ import absolute_import
 
 import collections
+import itertools
 import json
 import sqlite3
 
@@ -165,7 +166,10 @@ def p4fastimport(ui, repo, client, **opts):
 
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
-    changelists = sorted(p4.parse_changes(client, startcl=startcl))
+    changelists = list(itertools.takewhile(
+        lambda cl: not (cl._user == 'git-fusion-user'
+                    and cl._commit_time_diff < 30),
+        sorted(p4.parse_changes(client, startcl=startcl))))
     ui.note(_('%d changelists to import.\n') % len(changelists))
 
     limit = len(changelists)
