@@ -297,3 +297,21 @@ Test push hook locking
   lock:  user *, process * (*s) (glob)
   wlock: user *, process * (*s) (glob)
 
+SEC: check for unsafe ssh url
+
+  $ hg -R test-revflag push 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  pushing to ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg -R test-revflag push 'ssh://%2DoProxyCommand=touch${IFS}owned/path'
+  pushing to ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg -R test-revflag push 'ssh://fakehost|shellcommand/path'
+  pushing to ssh://fakehost%7Cshellcommand/path
+  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  [255]
+  $ hg -R test-revflag push 'ssh://fakehost%7Cshellcommand/path'
+  pushing to ssh://fakehost%7Cshellcommand/path
+  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  [255]
