@@ -91,7 +91,7 @@ tracked as largefiles::
   [largefiles]
   patterns =
     *.jpg
-    re:.*\.(png|bmp)$
+    re:.*\\.(png|bmp)$
     library.zip
     content/audio/*
 
