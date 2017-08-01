@@ -442,14 +442,14 @@ Test setup
   |  parent:      0:ea207398892e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  trouble:     divergent
+  |  instability: divergent
   |  summary:     A2
   |
   | o  changeset:   2:fdf9bde5129a
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    trouble:     divergent
+  |    instability: divergent
   |    summary:     A1
   |
   | x  changeset:   1:471f378eab4c
@@ -469,7 +469,7 @@ Test setup
   |  parent:      0:ea207398892e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  trouble:     divergent
+  |  instability: divergent
   |  summary:     A3
   |
   | x  changeset:   3:65b757b745b9
@@ -482,7 +482,7 @@ Test setup
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    trouble:     divergent
+  |    instability: divergent
   |    summary:     A1
   |
   | x  changeset:   1:471f378eab4c
@@ -1086,20 +1086,20 @@ Diverge one of the splitted commit
   |  parent:      5:dd800401bd8c
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  trouble:     divergent
+  |  instability: divergent
   |  summary:     Add B only
   |
   | o  changeset:   8:b18bc8331526
   |/   parent:      5:dd800401bd8c
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    trouble:     divergent
+  |    instability: divergent
   |    summary:     Add only B
   |
   | o  changeset:   7:ba2ed02b0c9a
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  trouble:     unstable, divergent
+  | |  instability: unstable, divergent
   | |  summary:     Add A,B,C
   | |
   | x  changeset:   6:4a004186e638
@@ -1111,7 +1111,7 @@ Diverge one of the splitted commit
   |  parent:      3:f897c6137566
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  trouble:     divergent
+  |  instability: divergent
   |  summary:     Add A,B,C
   |
   o  changeset:   3:f897c6137566
