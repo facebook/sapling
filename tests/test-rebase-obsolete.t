@@ -855,7 +855,7 @@ With experimental.allowdivergence=True, rebase can create divergence
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 8 draft
-  divergent: 2 changesets
+  content-divergent: 2 changesets
 
 rebase --continue + skipped rev because their successors are in destination
 we make a change in trunk and work on conflicting changes to make rebase abort.

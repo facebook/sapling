@@ -4942,7 +4942,7 @@ def summary(ui, repo, **opts):
             # We write all the possibilities to ease translation
             troublemsg = {
                "unstable": _("orphan: %d changesets"),
-               "divergent": _("divergent: %d changesets"),
+               "divergent": _("content-divergent: %d changesets"),
                "bumped": _("bumped: %d changesets"),
             }
             if numtrouble > 0:

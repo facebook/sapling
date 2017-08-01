@@ -107,7 +107,7 @@ check that mercurial refuse to push
   $ hg push ../other
   pushing to ../other
   searching for changes
-  abort: push includes divergent changeset: 392fd25390da!
+  abort: push includes content-divergent changeset: 392fd25390da!
   [255]
 
   $ cd ..
@@ -671,9 +671,9 @@ Use scmutil.cleanupnodes API to create divergence
   $ rm .hg/localtags
   $ hg cleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
   $ hg log -G -T '{rev}:{node|short} {desc} {troubles}' -r 'sort(all(), topo)'
-  @  5:1a2a9b5b0030 B2 divergent
+  @  5:1a2a9b5b0030 B2 content-divergent
   |
-  | o  4:70d5a63ca112 B4 divergent
+  | o  4:70d5a63ca112 B4 content-divergent
   | |
   | o  1:48b9aae0607f Z
   |
