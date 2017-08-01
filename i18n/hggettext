@@ -112,14 +112,20 @@ def docstrings(path):
 
     for func, rstrip in functions:
         if func.__doc__:
+            funcmod = inspect.getmodule(func)
+            extra = ''
+            if funcmod.__package__ == funcmod.__name__:
+                extra = '/__init__'
+            actualpath = '%s%s.py' % (funcmod.__name__.replace('.', '/'), extra)
+
             src = inspect.getsource(func)
-            name = "%s.%s" % (path, func.__name__)
+            name = "%s.%s" % (actualpath, func.__name__)
             lineno = inspect.getsourcelines(func)[1]
             doc = func.__doc__
             if rstrip:
                 doc = doc.rstrip()
             lineno += offset(src, doc, name, 1)
-            print(poentry(path, lineno, doc))
+            print(poentry(actualpath, lineno, doc))
 
 
 def rawtext(path):
