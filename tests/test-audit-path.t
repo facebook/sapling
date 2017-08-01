@@ -129,3 +129,104 @@ attack /tmp/test
   [255]
 
   $ cd ..
+
+Test symlink traversal on merge:
+--------------------------------
+
+#if symlink
+
+set up symlink hell
+
+  $ mkdir merge-symlink-out
+  $ hg init merge-symlink
+  $ cd merge-symlink
+  $ touch base
+  $ hg commit -qAm base
+  $ ln -s ../merge-symlink-out a
+  $ hg commit -qAm 'symlink a -> ../merge-symlink-out'
+  $ hg up -q 0
+  $ mkdir a
+  $ touch a/poisoned
+  $ hg commit -qAm 'file a/poisoned'
+  $ hg log -G -T '{rev}: {desc}\n'
+  @  2: file a/poisoned
+  |
+  | o  1: symlink a -> ../merge-symlink-out
+  |/
+  o  0: base
+  
+
+try trivial merge
+
+  $ hg up -qC 1
+  $ hg merge 2
+  abort: path 'a/poisoned' traverses symbolic link 'a'
+  [255]
+
+try rebase onto other revision: cache of audited paths should be discarded,
+and the rebase should fail (issue5628)
+
+  $ hg up -qC 2
+  $ hg rebase -s 2 -d 1 --config extensions.rebase=
+  rebasing 2:e73c21d6b244 "file a/poisoned" (tip)
+  saved backup bundle to * (glob)
+  $ ls ../merge-symlink-out
+  poisoned
+
+  $ cd ..
+
+Test symlink traversal on update:
+---------------------------------
+
+  $ mkdir update-symlink-out
+  $ hg init update-symlink
+  $ cd update-symlink
+  $ ln -s ../update-symlink-out a
+  $ hg commit -qAm 'symlink a -> ../update-symlink-out'
+  $ hg rm a
+  $ mkdir a && touch a/b
+  $ hg ci -qAm 'file a/b' a/b
+  $ hg up -qC 0
+  $ hg rm a
+  $ mkdir a && touch a/c
+  $ hg ci -qAm 'rm a, file a/c'
+  $ hg log -G -T '{rev}: {desc}\n'
+  @  2: rm a, file a/c
+  |
+  | o  1: file a/b
+  |/
+  o  0: symlink a -> ../update-symlink-out
+  
+
+try linear update where symlink already exists:
+
+  $ hg up -qC 0
+  $ hg up 1
+  abort: path 'a/b' traverses symbolic link 'a'
+  [255]
+
+try linear update including symlinked directory and its content: paths are
+audited first by calculateupdates(), where no symlink is created so both
+'a' and 'a/b' are taken as good paths. still applyupdates() should fail.
+
+  $ hg up -qC null
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls ../update-symlink-out
+  b
+  $ rm ../update-symlink-out/b
+
+try branch update replacing directory with symlink, and its content: the
+path 'a' is audited as a directory first, which should be audited again as
+a symlink.
+
+  $ rm -f a
+  $ hg up -qC 2
+  $ hg up 1
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ ls ../update-symlink-out
+  b
+
+  $ cd ..
+
+#endif
