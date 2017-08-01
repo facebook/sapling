@@ -120,7 +120,7 @@ Extension disabled for lack of a hook
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -184,7 +184,7 @@ Extension disabled for lack of acl.sources
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -259,7 +259,7 @@ No [acl.allow]/[acl.deny]
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -742,7 +742,7 @@ barney is allowed everywhere
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -1056,7 +1056,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -1141,7 +1141,7 @@ fred is always allowed
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -1298,7 +1298,7 @@ OS-level groups
   bundle2-output-bundle: "HG20", 2 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
@@ -1502,7 +1502,7 @@ No branch acls specified
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
@@ -1798,7 +1798,7 @@ Branch acl allow other
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
@@ -1891,7 +1891,7 @@ push foobar into the remote
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
@@ -2052,7 +2052,7 @@ User 'astro' must not be denied
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-input-bundle: no-transaction
+  bundle2-input-bundle: with-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported

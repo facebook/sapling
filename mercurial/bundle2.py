@@ -296,12 +296,31 @@ class bundleoperation(object):
         self.repo = repo
         self.ui = repo.ui
         self.records = unbundlerecords()
-        self.gettransaction = transactiongetter
         self.reply = None
         self.captureoutput = captureoutput
         self.hookargs = {}
+        self._gettransaction = transactiongetter
+
+    def gettransaction(self):
+        transaction = self._gettransaction()
+
+        if self.hookargs is not None:
+            # the ones added to the transaction supercede those added
+            # to the operation.
+            self.hookargs.update(transaction.hookargs)
+            transaction.hookargs = self.hookargs
+
+            # mark the hookargs as flushed.  further attempts to add to
+            # hookargs will result in an abort.
+            self.hookargs = None
+
+        return transaction
 
     def addhookargs(self, hookargs):
+        if self.hookargs is None:
+            raise error.Abort(
+                _('attempted to add hooks to operation after transaction '
+                  'started'))
         self.hookargs.update(hookargs)
 
 class TransactionUnavailable(RuntimeError):
