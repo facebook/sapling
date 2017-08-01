@@ -139,6 +139,7 @@ configscratchpush = 'infinitepush-scratchpush'
 confignonforwardmove = 'non-forward-move'
 
 cmdtable = infinitepushcommands.cmdtable
+revsetpredicate = backupcommands.revsetpredicate
 _scratchbranchmatcher = lambda x: False
 _maybehash = re.compile(r'^[a-f0-9]+$').search
 
@@ -315,6 +316,18 @@ def clientextsetup(ui):
         index = min(index, partorder.index(pushrebaseparttype))
     partorder.insert(
         index, partorder.pop(partorder.index(scratchbranchparttype)))
+
+    def wrapsmartlog(loaded):
+        if not loaded:
+            return
+        smartlogmod = extensions.find('smartlog')
+        wrapcommand(smartlogmod.cmdtable, 'smartlog', _smartlog)
+    extensions.afterloaded('smartlog', wrapsmartlog)
+
+def _smartlog(orig, ui, repo, **opts):
+    res = orig(ui, repo, **opts)
+    backupcommands.smartlogsummary(ui, repo)
+    return res
 
 def _showbookmarks(ui, bookmarks, **opts):
     # Copy-paste from commands.py

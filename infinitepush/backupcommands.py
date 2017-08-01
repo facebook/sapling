@@ -23,6 +23,10 @@
     # Hostname value to use. If not specified then socket.gethostname() will
     # be used
     hostname = ''
+
+    # Enable reporting of infinitepush backup status as a summary at the end
+    # of smartlog.
+    enablestatus = False
 """
 
 from __future__ import absolute_import
@@ -57,13 +61,14 @@ from mercurial import (
 from collections import defaultdict, namedtuple
 from mercurial import policy
 from mercurial.extensions import wrapfunction, unwrapfunction
-from mercurial.node import bin, hex, nullrev
+from mercurial.node import bin, hex, nullrev, short
 from mercurial.i18n import _
 
 osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+revsetpredicate = registrar.revsetpredicate()
 
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])
@@ -300,6 +305,39 @@ def isbackedup(ui, repo, **opts):
         ui.write(_(unfi[r].hex() + ' '))
         ui.write(_('backed up' if r in backeduprevs else 'not backed up'))
         ui.write(_('\n'))
+
+@revsetpredicate('backedup')
+def backedup(repo, subset, x):
+    """Draft changesets that have been backed up by infinitepush"""
+    bkpstate = _readlocalbackupstate(repo.ui, repo)
+    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
+    return subset & repo.revs('draft() and ::%ls', visiblebkpheads)
+
+def smartlogsummary(ui, repo):
+    if not ui.configbool('infinitepushbackup', 'enablestatus'):
+        return
+
+    bkpstate = _readlocalbackupstate(ui, repo)
+    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
+    unbackeduprevs = repo.revs('draft() and not ::%ls', visiblebkpheads)
+
+    # Count the number of changesets that haven't been backed up for 10 minutes.
+    # If there is only one, also print out its hash.
+    backuptime = time.time() - 10 * 60  # 10 minutes ago
+    count = 0
+    singleunbackeduprev = None
+    for rev in unbackeduprevs:
+        if repo[rev].date()[0] <= backuptime:
+            singleunbackeduprev = rev
+            count += 1
+    if count > 0:
+        if count > 1:
+            ui.warn(_('note: %d changesets are not backed up.\n') % count)
+        else:
+            ui.warn(_('note: changeset %s is not backed up.\n') %
+                    short(repo[singleunbackeduprev].node()))
+        ui.warn(_('Run `hg pushbackup` to perform a backup.  If this fails,\n'
+                  'please report to the Source Control @ FB group.\n'))
 
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
@@ -657,7 +695,7 @@ def _readlocalbackupstate(ui, repo):
                 raise ValueError('bad types of bookmarks or heads')
 
             result = backupstate()
-            result.heads = set(state['heads'])
+            result.heads = set(map(str, state['heads']))
             result.localbookmarks = state['bookmarks']
             return result
         except (ValueError, KeyError, TypeError) as e:
