@@ -945,8 +945,14 @@ class ui(object):
                    not "history, "summary" not "summ", etc.
         """
         if (self._disablepager
-            or self.pageractive
-            or command in self.configlist('pager', 'ignore')
+            or self.pageractive):
+            # how pager should do is already determined
+            return
+
+        if not command.startswith('internal-always-') and (
+            # explicit --pager=on (= 'internal-always-' prefix) should
+            # take precedence over disabling factors below
+            command in self.configlist('pager', 'ignore')
             or not self.configbool('ui', 'paginate')
             or not self.configbool('pager', 'attend-' + command, True)
             # TODO: if we want to allow HGPLAINEXCEPT=pager,
