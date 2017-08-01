@@ -677,9 +677,10 @@ def _pushcheckoutgoing(pushop):
         if unfi.obsstore:
             # this message are here for 80 char limit reason
             mso = _("push includes obsolete changeset: %s!")
+            mspd = _("push includes phase-divergent changeset: %s!")
             mscd = _("push includes content-divergent changeset: %s!")
             mst = {"orphan": _("push includes orphan changeset: %s!"),
-                   "bumped": _("push includes bumped changeset: %s!"),
+                   "phase-divergent": mspd,
                    "content-divergent": mscd}
             # If we are to push if there is at least one
             # obsolete or unstable changeset in missing, at

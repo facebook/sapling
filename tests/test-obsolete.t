@@ -207,7 +207,7 @@ Check that public changeset are not accounted as obsolete:
 
   $ hg --hidden phase --public 2
   $ hg log -G
-  @  5:5601fb93a350 (draft bumped) [tip ] add new_3_c
+  @  5:5601fb93a350 (draft phase-divergent) [tip ] add new_3_c
   |
   | o  2:245bde4270cd (public) [ ] add original_c
   |/
@@ -224,7 +224,7 @@ note that the bumped changeset (5:5601fb93a350) is not a direct successor of
 the public changeset
 
   $ hg log --hidden -r 'bumped()'
-  5:5601fb93a350 (draft bumped) [tip ] add new_3_c
+  5:5601fb93a350 (draft phase-divergent) [tip ] add new_3_c
 
 And that we can't push bumped changeset
 
@@ -239,20 +239,20 @@ And that we can't push bumped changeset
   $ hg push ../tmpa
   pushing to ../tmpa
   searching for changes
-  abort: push includes bumped changeset: 5601fb93a350!
+  abort: push includes phase-divergent changeset: 5601fb93a350!
   [255]
 
 Fixing "bumped" situation
 We need to create a clone of 5 and add a special marker with a flag
 
   $ hg summary
-  parent: 5:5601fb93a350 tip (bumped)
+  parent: 5:5601fb93a350 tip (phase-divergent)
    add new_3_c
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 1 draft
-  bumped: 1 changesets
+  phase-divergent: 1 changesets
   $ hg up '5^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg revert -ar 5
@@ -914,7 +914,7 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  instability: orphan, bumped
+  instability: orphan, phase-divergent
   summary:     add babar
   
 
@@ -926,7 +926,7 @@ test the "obsolete" templatekw
 test the "troubles" templatekw
 
   $ hg log -r 'bumped() and unstable()'
-  7:50c51b361e60 (draft orphan bumped) [ ] add babar
+  7:50c51b361e60 (draft orphan phase-divergent) [ ] add babar
 
 test the default cmdline template
 
@@ -934,7 +934,7 @@ test the default cmdline template
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  trouble:     orphan, bumped
+  trouble:     orphan, phase-divergent
   summary:     add babar
   
   $ hg log -T default -r 'obsolete()'
@@ -950,14 +950,14 @@ test summary output
   $ hg up -r 'bumped() and unstable()'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg summary
-  parent: 7:50c51b361e60  (orphan, bumped)
+  parent: 7:50c51b361e60  (orphan, phase-divergent)
    add babar
   branch: default
   commit: (clean)
   update: 2 new changesets (update)
   phases: 4 draft
   orphan: 2 changesets
-  bumped: 1 changesets
+  phase-divergent: 1 changesets
   $ hg up -r 'obsolete()'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg summary
@@ -968,7 +968,7 @@ test summary output
   update: 3 new changesets (update)
   phases: 4 draft
   orphan: 2 changesets
-  bumped: 1 changesets
+  phase-divergent: 1 changesets
 
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================

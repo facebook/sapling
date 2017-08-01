@@ -230,14 +230,14 @@ class basectx(object):
 
         Troubles are returned as strings. possible values are:
         - orphan,
-        - bumped,
+        - phase-divergent,
         - content-divergent.
         """
         troubles = []
         if self.unstable():
             troubles.append('orphan')
         if self.bumped():
-            troubles.append('bumped')
+            troubles.append('phase-divergent')
         if self.divergent():
             troubles.append('content-divergent')
         return troubles

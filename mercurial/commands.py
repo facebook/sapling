@@ -4943,7 +4943,7 @@ def summary(ui, repo, **opts):
             troublemsg = {
                "unstable": _("orphan: %d changesets"),
                "divergent": _("content-divergent: %d changesets"),
-               "bumped": _("bumped: %d changesets"),
+               "bumped": _("phase-divergent: %d changesets"),
             }
             if numtrouble > 0:
                 ui.status(troublemsg[trouble] % numtrouble + "\n")
