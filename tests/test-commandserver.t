@@ -911,3 +911,80 @@ cases.
   *** runcommand log
   0 bar (bar)
   *** runcommand verify -q
+
+  $ cd ..
+
+Test symlink traversal over cached audited paths:
+-------------------------------------------------
+
+#if symlink
+
+set up symlink hell
+
+  $ mkdir merge-symlink-out
+  $ hg init merge-symlink
+  $ cd merge-symlink
+  $ touch base
+  $ hg commit -qAm base
+  $ ln -s ../merge-symlink-out a
+  $ hg commit -qAm 'symlink a -> ../merge-symlink-out'
+  $ hg up -q 0
+  $ mkdir a
+  $ touch a/poisoned
+  $ hg commit -qAm 'file a/poisoned'
+  $ hg log -G -T '{rev}: {desc}\n'
+  @  2: file a/poisoned
+  |
+  | o  1: symlink a -> ../merge-symlink-out
+  |/
+  o  0: base
+  
+
+try trivial merge after update: cache of audited paths should be discarded,
+and the merge should fail (issue5628)
+
+  $ hg up -q null
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def merge(server):
+  ...     readchannel(server)
+  ...     # audit a/poisoned as a good path
+  ...     runcommand(server, ['up', '-qC', '2'])
+  ...     runcommand(server, ['up', '-qC', '1'])
+  ...     # here a is a symlink, so a/poisoned is bad
+  ...     runcommand(server, ['merge', '2'])
+  *** runcommand up -qC 2
+  *** runcommand up -qC 1
+  *** runcommand merge 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ ls ../merge-symlink-out
+  poisoned
+
+cache of repo.auditor should be discarded, so matcher would never traverse
+symlinks:
+
+  $ hg up -qC 0
+  $ touch ../merge-symlink-out/poisoned
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def files(server):
+  ...     readchannel(server)
+  ...     runcommand(server, ['up', '-qC', '2'])
+  ...     # audit a/poisoned as a good path
+  ...     runcommand(server, ['files', 'a/poisoned'])
+  ...     runcommand(server, ['up', '-qC', '0'])
+  ...     runcommand(server, ['up', '-qC', '1'])
+  ...     # here 'a' is a symlink, so a/poisoned should be warned
+  ...     runcommand(server, ['files', 'a/poisoned'])
+  *** runcommand up -qC 2
+  *** runcommand files a/poisoned
+  a/poisoned
+  *** runcommand up -qC 0
+  *** runcommand up -qC 1
+  *** runcommand files a/poisoned
+   [1]
+
+  $ cd ..
+
+#endif
