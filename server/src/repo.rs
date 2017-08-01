@@ -106,8 +106,9 @@ impl RepoClient {
     fn create_bundle(&self, args: GetbundleArgs) -> hgproto::Result<HgCommandRes<Bytes>> {
         let writer = Cursor::new(Vec::new());
         let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // TODO: select an appropriate compressor. zstd appears to hang -- need to figure out
-        // whether it's a framing issue or something else.
+        // Mercurial currently hangs while trying to read compressed bundles over the wire:
+        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+        // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(CompressorType::Uncompressed);
 
         // TODO: generalize this to other listkey types
