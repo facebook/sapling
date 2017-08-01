@@ -299,6 +299,10 @@ class bundleoperation(object):
         self.gettransaction = transactiongetter
         self.reply = None
         self.captureoutput = captureoutput
+        self.hookargs = {}
+
+    def addhookargs(self, hookargs):
+        self.hookargs.update(hookargs)
 
 class TransactionUnavailable(RuntimeError):
     pass
