@@ -25,6 +25,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -48,6 +49,11 @@ DEFINE_int32(
     thrift_min_compress_bytes,
     200,
     "Minimum response compression size");
+DEFINE_int64(unload_interval_hours, 0, "Frequency of unloading inodes");
+DEFINE_int64(
+    start_delay_minutes,
+    10,
+    "start delay for scheduling unloading inodes job");
 
 using apache::thrift::ThriftServer;
 using folly::StringPiece;
@@ -112,7 +118,7 @@ EdenServer::EdenServer(
       rocksPath_(rocksPath) {}
 
 EdenServer::~EdenServer() {
-  unmountAll();
+  shutdown();
 }
 
 void EdenServer::unmountAll() {
@@ -138,6 +144,13 @@ void EdenServer::prepare() {
   acquireEdenLock();
   createThriftServer();
   localStore_ = make_shared<LocalStore>(rocksPath_);
+  functionScheduler_ = make_shared<folly::FunctionScheduler>();
+  functionScheduler_->setThreadName("EdenFuncSched");
+  functionScheduler_->start();
+
+  // Start stats aggregation
+  functionScheduler_->addFunction(
+      [this] { edenStats_.get()->aggregate(); }, std::chrono::seconds(1));
 
   auto pool =
       make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
@@ -195,6 +208,24 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62258
     this->mountFinished(edenMount.get());
     throw;
+  }
+
+  // Adding function for the newly added mountpoint to Schedule
+  // a periodic job to unload unused inodes based on the last access time.
+  // currently Eden doesnot have accurate timestamp tracking for inodes, so
+  // using unloadChildrenNow just to validate the behaviour. We will have to
+  // modify current unloadChildrenNow function to unload inodes based on the
+  // last access time.
+  if (FLAGS_unload_interval_hours > 0) {
+    functionScheduler_->addFunction(
+        [edenMount] {
+          auto rootInode = (edenMount.get())->getRootInode();
+          XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
+          rootInode->unloadChildrenNow();
+        },
+        std::chrono::hours(FLAGS_unload_interval_hours),
+        mountPath,
+        std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
   // Perform all of the bind mounts associated with the client.
@@ -259,6 +290,7 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
     // it.
     mountPointsCV_.notify_all();
   }
+  functionScheduler_->cancelFunction(mountPath);
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
@@ -394,6 +426,11 @@ void EdenServer::prepareThriftAddress() {
 
 void EdenServer::stop() const {
   server_->stop();
+}
+
+void EdenServer::shutdown() {
+  unmountAll();
+  functionScheduler_->shutdown();
 }
 }
 } // facebook::eden

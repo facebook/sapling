@@ -25,6 +25,7 @@
 #include "eden/fs/config/InterpolatedPropertyTree.h"
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "folly/experimental/FunctionScheduler.h"
 
 namespace apache {
 namespace thrift {
@@ -155,6 +156,15 @@ class EdenServer {
     return &edenStats_;
   }
 
+  /**
+   * Returns shared_ptr of FunctionScheduler which can be used to schedule
+   * periodic jobs in EdenServer, Currently this function scheduler is used for
+   * unloading free inodes periodically and stats aggregation
+   */
+  std::shared_ptr<folly::FunctionScheduler> getFunctionScheduler() {
+    return functionScheduler_;
+  }
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronizaiton between unmoutFinished
@@ -188,6 +198,9 @@ class EdenServer {
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(EdenMount* mountPoint);
 
+  // Called before destructing EdenServer
+  void shutdown();
+
   /*
    * Member variables.
    *
@@ -214,6 +227,11 @@ class EdenServer {
   std::condition_variable mountPointsCV_;
   MountMap mountPoints_;
   mutable folly::ThreadLocal<fusell::EdenStats> edenStats_;
+
+  /**
+   * Function scheduler to unload free inodes periodically
+   */
+  std::shared_ptr<folly::FunctionScheduler> functionScheduler_;
 };
 }
 } // facebook::eden

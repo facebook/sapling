@@ -119,24 +119,10 @@ int main(int argc, char **argv) {
       folly::to<std::string>(FLAGS_fuseThreadStack).c_str(),
       1);
 
-  // Create the eden server
   EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
-
-  // Start stats aggregation
-  folly::FunctionScheduler functionScheduler;
-  functionScheduler.addFunction(
-      [&server] { server.getStats()->get()->aggregate(); },
-      std::chrono::seconds(1));
-  functionScheduler.setThreadName("stats_aggregator");
-  functionScheduler.start();
-
   // Get the EdenServer ready, then run the thrift server.
   server.prepare();
   runServer(server);
-
-  XLOG(INFO) << "edenfs performing orderly shutdown";
-  functionScheduler.shutdown();
-
   // Clean up all the server mount points before shutting down the privhelper
   server.unmountAll();
 
