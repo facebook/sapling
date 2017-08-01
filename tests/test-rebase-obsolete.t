@@ -793,13 +793,13 @@ If a rebase is going to create divergence, it should abort
   o  0:4a2df7238c3b A
   
   $ hg summary
-  parent: 15:73568ab6879d tip (unstable)
+  parent: 15:73568ab6879d tip (orphan)
    bar foo
   branch: default
   commit: (clean)
   update: 2 new changesets, 3 branch heads (merge)
   phases: 8 draft
-  unstable: 1 changesets
+  orphan: 1 changesets
   $ hg rebase -s 10 -d 12
   abort: this rebase will cause divergences from: 121d9e3bc4c6
   (to force the rebase please set experimental.allowdivergence=True)

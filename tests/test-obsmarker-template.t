@@ -1099,7 +1099,7 @@ Diverge one of the splitted commit
   | o  changeset:   7:ba2ed02b0c9a
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  instability: unstable, divergent
+  | |  instability: orphan, divergent
   | |  summary:     Add A,B,C
   | |
   | x  changeset:   6:4a004186e638

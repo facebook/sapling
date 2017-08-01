@@ -4941,7 +4941,7 @@ def summary(ui, repo, **opts):
             numtrouble = len(repo.revs(trouble + "()"))
             # We write all the possibilities to ease translation
             troublemsg = {
-               "unstable": _("unstable: %d changesets"),
+               "unstable": _("orphan: %d changesets"),
                "divergent": _("divergent: %d changesets"),
                "bumped": _("bumped: %d changesets"),
             }

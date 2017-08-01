@@ -520,15 +520,15 @@ detect outgoing obsolete and unstable
   $ hg log -r 'obsolete()'
   4:94b33453f93b (draft *obsolete*) [ ] add original_d
   $ hg summary
-  parent: 5:cda648ca50f5 tip (unstable)
+  parent: 5:cda648ca50f5 tip (orphan)
    add original_e
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
-  unstable: 1 changesets
+  orphan: 1 changesets
   $ hg log -G -r '::unstable()'
-  @  5:cda648ca50f5 (draft unstable) [tip ] add original_e
+  @  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   |
   x  4:94b33453f93b (draft *obsolete*) [ ] add original_d
   |
@@ -552,7 +552,7 @@ refuse to push unstable changeset
   $ hg push ../tmpc/
   pushing to ../tmpc/
   searching for changes
-  abort: push includes unstable changeset: cda648ca50f5!
+  abort: push includes orphan changeset: cda648ca50f5!
   [255]
 
 Test that extinct changeset are properly detected
@@ -570,7 +570,7 @@ Don't try to push extinct changeset
   2:245bde4270cd (public) [ ] add original_c
   3:6f9641995072 (draft) [ ] add n3w_3_c
   4:94b33453f93b (draft *obsolete*) [ ] add original_d
-  5:cda648ca50f5 (draft unstable) [tip ] add original_e
+  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   $ hg push ../tmpf -f # -f because be push unstable too
   pushing to ../tmpf
   searching for changes
@@ -591,7 +591,7 @@ no warning displayed
 Do not warn about new head when the new head is a successors of a remote one
 
   $ hg log -G
-  @  5:cda648ca50f5 (draft unstable) [tip ] add original_e
+  @  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   |
   x  4:94b33453f93b (draft *obsolete*) [ ] add original_d
   |
@@ -914,7 +914,7 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  trouble:     unstable, bumped
+  instability: orphan, bumped
   summary:     add babar
   
 
@@ -926,7 +926,7 @@ test the "obsolete" templatekw
 test the "troubles" templatekw
 
   $ hg log -r 'bumped() and unstable()'
-  7:50c51b361e60 (draft unstable bumped) [ ] add babar
+  7:50c51b361e60 (draft orphan bumped) [ ] add babar
 
 test the default cmdline template
 
@@ -934,7 +934,7 @@ test the default cmdline template
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  trouble:     unstable, bumped
+  trouble:     orphan, bumped
   summary:     add babar
   
   $ hg log -T default -r 'obsolete()'
@@ -950,13 +950,13 @@ test summary output
   $ hg up -r 'bumped() and unstable()'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg summary
-  parent: 7:50c51b361e60  (unstable, bumped)
+  parent: 7:50c51b361e60  (orphan, bumped)
    add babar
   branch: default
   commit: (clean)
   update: 2 new changesets (update)
   phases: 4 draft
-  unstable: 2 changesets
+  orphan: 2 changesets
   bumped: 1 changesets
   $ hg up -r 'obsolete()'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -967,7 +967,7 @@ test summary output
   commit: (clean)
   update: 3 new changesets (update)
   phases: 4 draft
-  unstable: 2 changesets
+  orphan: 2 changesets
   bumped: 1 changesets
 
 Test incoming/outcoming with changesets obsoleted remotely, known locally

@@ -677,7 +677,7 @@ def _pushcheckoutgoing(pushop):
         if unfi.obsstore:
             # this message are here for 80 char limit reason
             mso = _("push includes obsolete changeset: %s!")
-            mst = {"unstable": _("push includes unstable changeset: %s!"),
+            mst = {"orphan": _("push includes orphan changeset: %s!"),
                    "bumped": _("push includes bumped changeset: %s!"),
                    "divergent": _("push includes divergent changeset: %s!")}
             # If we are to push if there is at least one

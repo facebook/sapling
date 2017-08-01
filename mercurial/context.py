@@ -229,13 +229,13 @@ class basectx(object):
         """return the list of troubles affecting this changesets.
 
         Troubles are returned as strings. possible values are:
-        - unstable,
+        - orphan,
         - bumped,
         - divergent.
         """
         troubles = []
         if self.unstable():
-            troubles.append('unstable')
+            troubles.append('orphan')
         if self.bumped():
             troubles.append('bumped')
         if self.divergent():
