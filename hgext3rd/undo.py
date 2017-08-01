@@ -83,17 +83,29 @@ def safelog(repo, command):
         # allows running command during other commands when
         # otherwise legal.  Could cause weird undolog states,
         # which gap handling generally covers.
-        repo.vfs.makedirs('undolog')
-        with lockmod.lock(repo.vfs, "undolog/lock", desc="undolog"):
-            # developer config: undo._duringundologlock
-            if repo.ui.configbool('undo', '_duringundologlock'):
-                repo.hook("duringundologlock")
-            tr = lighttransaction(repo)
-            with tr:
-                changes = log(repo.filtered('visible'), command, tr)
-                if changes and not ("undo" == command[0] or "redo" ==
-                                    command[0]):
-                    _delundoredo(repo)
+        try:
+            try:
+                repo.vfs.makedirs('undolog')
+            except OSError:
+                repo.ui.debug("can't make undolog folder in .hg")
+                return changes
+            with lockmod.lock(repo.vfs, "undolog/lock", desc="undolog",
+                              timeout=2):
+                # developer config: undo._duringundologlock
+                if repo.ui.configbool('undo', '_duringundologlock'):
+                    repo.hook("duringundologlock")
+                tr = lighttransaction(repo)
+                with tr:
+                    changes = log(repo.filtered('visible'), command, tr)
+                    if changes and not ("undo" == command[0] or "redo" ==
+                                        command[0]):
+                        _delundoredo(repo)
+        except error.LockUnavailable:# no write permissions
+            repo.ui.debug("undolog lacks write permission\n")
+        except error.LockHeld:# timeout, not fatal: don't abort actual command
+            # TODO: log to Scuba.  This shouldn't happen too often as it will
+            # create gaps in the undo log
+            repo.ui.debug("undolog lock timeout\n")
     return changes
 
 def lighttransaction(repo):
