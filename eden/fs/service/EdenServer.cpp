@@ -175,7 +175,7 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    auto ret = mountPoints_.emplace(mountPath, edenMount);
+    auto ret = mountPoints_.emplace(mountPath, EdenMountInfo(edenMount));
     if (!ret.second) {
       // This mount point already exists.
       throw EdenError(folly::to<string>(
@@ -218,13 +218,26 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   }
 }
 
-void EdenServer::unmount(StringPiece mountPath) {
+folly::Future<folly::Unit> EdenServer::unmount(StringPiece mountPath) {
   try {
+    auto future = folly::Future<folly::Unit>::makeEmpty();
+    {
+      std::lock_guard<std::mutex> guard(mountPointsMutex_);
+      auto it = mountPoints_.find(mountPath);
+      if (it == mountPoints_.end()) {
+        return folly::makeFuture<folly::Unit>(
+            std::out_of_range("no such mount point " + mountPath.str()));
+      }
+      future = it->second.unmountPromise.getFuture();
+    }
+
     fusell::privilegedFuseUnmount(mountPath);
+    return future;
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
               << "\": " << folly::exceptionStr(ex);
-    throw;
+    return folly::makeFuture<folly::Unit>(
+        folly::exception_wrapper(std::current_exception(), ex));
   }
 }
 
@@ -233,8 +246,10 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    auto numErased = mountPoints_.erase(mountPath);
-    CHECK_EQ(numErased, 1);
+    auto it = mountPoints_.find(mountPath);
+    CHECK(it != mountPoints_.end());
+    it->second.unmountPromise.setValue();
+    mountPoints_.erase(it);
     // This notify and the erase above MUST happen while holding
     // mountPointsMutex_ otherwise we can have a race in the case that there
     // are two threads in mountFinished().  If the erasure and the notify are
@@ -251,7 +266,7 @@ EdenServer::MountList EdenServer::getMountPoints() const {
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
     for (const auto& entry : mountPoints_) {
-      results.emplace_back(entry.second);
+      results.emplace_back(entry.second.edenMount);
     }
   }
   return results;
@@ -272,7 +287,7 @@ shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
   if (it == mountPoints_.end()) {
     return nullptr;
   }
-  return it->second;
+  return it->second.edenMount;
 }
 
 void EdenServer::reloadConfig() {

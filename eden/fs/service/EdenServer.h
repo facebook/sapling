@@ -15,6 +15,7 @@
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/experimental/StringKeyedMap.h>
+#include <folly/futures/SharedPromise.h>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -51,7 +52,6 @@ class EdenServer {
  public:
   using ConfigData = InterpolatedPropertyTree;
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
-  using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
@@ -91,7 +91,8 @@ class EdenServer {
   /**
    * Unmount an EdenMount.
    */
-  void unmount(folly::StringPiece mountPath);
+  FOLLY_NODISCARD folly::Future<folly::Unit> unmount(
+      folly::StringPiece mountPath);
 
   /**
    * Unmount all mount points maintained by this server, and wait for them to
@@ -155,9 +156,22 @@ class EdenServer {
   }
 
  private:
+  // Struct to store EdenMount along with SharedPromise that is set
+  // during unmount to allow synchronizaiton between unmoutFinished
+  // and unmount functions.
+  struct EdenMountInfo {
+    std::shared_ptr<EdenMount> edenMount;
+    folly::SharedPromise<folly::Unit> unmountPromise;
+
+    explicit EdenMountInfo(const std::shared_ptr<EdenMount>& mount)
+        : edenMount(mount),
+          unmountPromise(folly::SharedPromise<folly::Unit>()) {}
+  };
+
   using BackingStoreKey = std::pair<std::string, std::string>;
   using BackingStoreMap =
       std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
+  using MountMap = folly::StringKeyedMap<struct EdenMountInfo>;
   class ThriftServerEventHandler;
 
   // Forbidden copy constructor and assignment operator

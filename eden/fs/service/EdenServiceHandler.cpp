@@ -160,7 +160,7 @@ AbsolutePath EdenServiceHandler::getPathToDirstateStorage(
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
   try {
-    server_->unmount(*mountPoint);
+    server_->unmount(*mountPoint).get();
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
