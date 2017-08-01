@@ -122,9 +122,14 @@ def docstrings(path):
             name = "%s.%s" % (actualpath, func.__name__)
             lineno = inspect.getsourcelines(func)[1]
             doc = func.__doc__
+            origdoc = getattr(func, '_origdoc', '')
             if rstrip:
                 doc = doc.rstrip()
-            lineno += offset(src, doc, name, 1)
+                origdoc = origdoc.rstrip()
+            if origdoc:
+                lineno += offset(src, origdoc, name, 1)
+            else:
+                lineno += offset(src, doc, name, 1)
             print(poentry(actualpath, lineno, doc))
 
 
