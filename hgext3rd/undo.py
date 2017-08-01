@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import os
+
 from mercurial.i18n import _
 
 from mercurial import (
@@ -56,14 +58,24 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # Check wether undolog is consistent
     # ie check wether the undo ext was
     # off before this command
-    changes = safelog(repo, [""])
-    if changes:
-        _recordnewgap(repo)
+    if '_undologactive' not in os.environ:
+        changes = safelog(repo, [""])
+        if changes:
+            _recordnewgap(repo)
+
+    # prevent nested calls
+    if '_undologactive' not in os.environ:
+        os.environ['_undologactive'] = "active"
+        rootlog = True
+    else:
+        rootlog = False
 
     result = orig(lui, repo, cmd, fullargs, *args)
 
     # record changes to repo
-    safelog(repo, command)
+    if rootlog:
+        safelog(repo, command)
+        del os.environ['_undologactive']
     return result
 
 # Write: Log control
