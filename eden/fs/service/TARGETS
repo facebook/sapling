@@ -96,6 +96,7 @@ thrift_library(
     name = "thrift-streaming",
     languages = ["cpp2"],
     thrift_args = ["--strict"],
+    thrift_cpp2_options = "py_generator",
     thrift_srcs = {
         "streamingeden.thrift": [
             "StreamingEdenService",
