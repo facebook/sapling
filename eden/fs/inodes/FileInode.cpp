@@ -555,7 +555,9 @@ std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
 }
 
 std::string FileInode::readAll() {
-  auto state = state_.rlock();
+  // We need to take the wlock instead of the rlock because the lseek() call
+  // modifies the file offset of the file descriptor.
+  auto state = state_.wlock();
   if (state->file) {
     std::string result;
     auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
