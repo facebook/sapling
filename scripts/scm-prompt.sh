@@ -69,6 +69,14 @@ _find_most_relevant_remotebookmark()
     command echo "$(command sort -r <<< "$1" | command head -n 1)"
 }
 
+_filesize()
+{
+  # I searched far and wide for a cross platform way to get the filesize in
+  # bytes and parsing ls output is the least expensive (in terms of commands)
+  # way. du and stat both behave differently per platform.
+  LC_ALL=C command ls -dn -- "$1" | command awk '{print $5}'
+}
+
 _scm_prompt()
 {
   local dir git hg fmt
@@ -151,6 +159,31 @@ _scm_prompt()
       branch=$(command cat "$hg/.hg/branch")
       if [[ $branch != "default" ]]; then
         br="$br|$branch"
+      fi
+    fi
+    # latest successful pushbackup will record state in a file, w/ format:
+    #   backuptime=<epoch time of last backup>\n
+    #   backuprevision=<numeric revision of last backup>\n
+    local backupinfo="$hg/.hg/infinitepushlatestbackupinfo"
+    if [[ -f "$backupinfo" ]]; then
+      local backuprevision=$(command egrep '^backuprevision=(\d+)$' "$backupinfo")
+      local backuptime=$(command egrep '^backuptime=(\d+)$' "$backupinfo")
+      if [[ ! -z $backuprevision ]] && [[ ! -z $backuptime ]]; then
+        local "$backuprevision"
+        local "$backuptime"
+        # current tip revision number is derived from the state of the changelog
+        # the changelog has a number of 64 byte entries, specifically one more entry
+        # than the current tip revision, hence the math
+        local filesize=$( _filesize "$hg/.hg/store/00changelog.i" )
+        local localrevision=$((filesize/64 - 1))
+        if [[ "$localrevision" -ne "$backuprevision" ]]; then
+          # if the revision has moved on locally and we haven't successfully backed up
+          # in four hours, update the prompt
+          local localtime=$(command date +%s)
+          if [[ "$backuptime + 14400" -lt "$localtime" ]]; then
+            extra="$extra|BACKUP_NEEDED"
+          fi
+        fi
       fi
     fi
     br="$br$extra"
