@@ -4849,7 +4849,7 @@ def summary(ui, repo, **opts):
                 ui.write(_(' (no revision checked out)'))
         if p.obsolete():
             ui.write(_(' (obsolete)'))
-        if p.troubled():
+        if p.isunstable():
             instabilities = (ui.label(instability, 'trouble.%s' % instability)
                              for instability in p.instabilities())
             ui.write(' ('

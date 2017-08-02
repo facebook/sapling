@@ -240,6 +240,12 @@ class basectx(object):
         return self.rev() in obsmod.getrevs(self._repo, 'divergent')
 
     def troubled(self):
+        msg = ("'context.troubled' is deprecated, "
+               "use 'context.isunstable'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.unstable()
+
+    def isunstable(self):
         """True if the changeset is either unstable, bumped or divergent"""
         return self.orphan() or self.phasedivergent() or self.contentdivergent()
 

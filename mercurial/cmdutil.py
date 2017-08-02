@@ -1464,7 +1464,7 @@ def _changesetlabels(ctx):
     labels = ['log.changeset', 'changeset.%s' % ctx.phasestr()]
     if ctx.obsolete():
         labels.append('changeset.obsolete')
-    if ctx.troubled():
+    if ctx.isunstable():
         labels.append('changeset.troubled')
         for instability in ctx.instabilities():
             labels.append('trouble.%s' % instability)
@@ -1577,7 +1577,7 @@ class changeset_printer(object):
         self.ui.write(_("date:        %s\n") % date,
                       label='log.date')
 
-        if ctx.troubled():
+        if ctx.isunstable():
             # i18n: column positioning for "hg log"
             instabilities = ctx.instabilities()
             self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
