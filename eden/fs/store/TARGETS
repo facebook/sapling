@@ -8,7 +8,7 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/eden/fs/model/git:git",
         "@/eden/fs/rocksdb:rocksdb",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/folly:bits",
         "@/folly:conv",
         "@/folly:format",

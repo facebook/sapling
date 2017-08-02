@@ -17,7 +17,7 @@ cpp_library(
         "@/eden/fs/model:model",
         "@/eden/fs/model/git:git",
         "@/eden/fs/store:store",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/eden/hg/datastorage:datapack",
         "@/folly:array",
         "@/folly:bits",
@@ -45,7 +45,7 @@ cpp_binary(
         ":hg",
         "@/eden/fs/model:model",
         "@/eden/fs/store:store",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/folly/init:init",
     ],
     external_deps = [

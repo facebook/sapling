@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 
 import argparse
 import binascii
+import collections
 import logging
 import os
 import struct
@@ -123,8 +124,26 @@ class HgUI(mercurial.ui.ui):
 
 
 class HgServer(object):
-    def __init__(self, repo_path, in_fd=None, out_fd=None):
+    def __init__(self, repo_path, config_overrides, in_fd=None, out_fd=None):
+        '''
+        Create an HgServer.
+
+        repo_path:
+          The path to the mercurial repository
+        config_overrides:
+          A list of ConfigOption values, to be passed to ui.setconfig() when
+          initializing the mercurial UI, after loading the normal config
+          settings.  This is equivalent to specifying config options on the
+          mercurial command line with `--config section.name=value`
+        in_fd:
+          A file descriptor to use for receiving requests.
+          If in_fd is None, stdin will be used.
+        out_fd:
+          A file descriptor to use for sending responses.
+          If in_fd is None, stdout will be used.
+        '''
         self.repo_path = repo_path
+        self.config_overrides = config_overrides
         if in_fd is None:
             self.in_file = sys.stdin
         else:
@@ -150,6 +169,10 @@ class HgServer(object):
         hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
         self.ui = HgUI.load()
         self.ui.readconfig(hgrc, self.repo_path)
+        for opt in self.config_overrides:
+            self.ui.setconfig(opt.section, opt.name, opt.value,
+                              source='--config')
+
         mercurial.extensions.loadall(self.ui)
         repo = mercurial.hg.repository(self.ui, self.repo_path)
         self.repo = repo.unfiltered()
@@ -438,9 +461,46 @@ def always_allow_pending(root):
     return True
 
 
+ConfigOption = collections.namedtuple('ConfigOption',
+                                      ['section', 'name', 'value'])
+
+
+def parse_config_options(argparser, options):
+    '''
+    Parse config options specified using --config arguments.
+
+    The options parameter should be the list of --config option values.
+    Each option value should be of the form "section.name=value"
+
+    This function returns a list of ConfigOption objects.
+    '''
+    results = []
+    for option in options:
+        try:
+            name, value = [element.strip() for element in option.split('=', 1)]
+            section, name = name.split('.', 1)
+            results.append(ConfigOption(section, name, value))
+        except (IndexError, ValueError):
+            argparser.error('bad --config argument %r: must be of the form '
+                            'SECTION.NAME=VALUE' % (option,))
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('repo', help='The repository path')
+    parser.add_argument('--config',
+                        metavar='SECTION.NAME=VALUE', action='append',
+                        default=[],
+                        help='Specify mercurial configuration options')
+    parser.add_argument('--in-fd',
+                        metavar='FILENO', type=int,
+                        help='Use the specified file descriptor to receive '
+                        'commands, rather than reading on stdin')
+    parser.add_argument('--out-fd',
+                        metavar='FILENO', type=int,
+                        help='Use the specified file descriptor to send '
+                        'command output, rather than writing to stdout')
 
     # Arguments for testing and debugging.
     # These cause the helper to perform a single operation and exit,
@@ -453,16 +513,9 @@ def main():
                         metavar='PATH:REV',
                         help='Dump the file contents for the specified file '
                         'at the given file revision')
-    parser.add_argument('--in-fd',
-                        metavar='FILENO', type=int,
-                        help='Use the specified file descriptor to receive '
-                        'commands, rather than reading on stdin')
-    parser.add_argument('--out-fd',
-                        metavar='FILENO', type=int,
-                        help='Use the specified file descriptor to send '
-                        'command output, rather than writing to stdout')
 
     args = parser.parse_args()
+    config_overrides = parse_config_options(parser, args.config)
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(message)s')
@@ -479,7 +532,8 @@ def main():
     # we use the correct repository (in case of a shared repository).
     mercurial.txnutil.mayhavepending = always_allow_pending
 
-    server = HgServer(args.repo, in_fd=args.in_fd, out_fd=args.out_fd)
+    server = HgServer(args.repo, config_overrides,
+                      in_fd=args.in_fd, out_fd=args.out_fd)
 
     if args.manifest:
         server.initialize()
