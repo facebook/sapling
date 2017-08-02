@@ -43,6 +43,12 @@ from mercurial import (
     verify,
 )
 
+def extsetup():
+    # Writing multiple changelog entries in one transaction can lead to revlog
+    # caching issues when the inlined .i data is separated into a .d file. We
+    # workaround by not allowing inlined revlogs at all.
+    revlog.REVLOG_DEFAULT_VERSION = revlog.REVLOG_DEFAULT_FORMAT
+
 def reposetup(ui, repo):
     def nothing(orig, *args, **kwargs):
         pass
