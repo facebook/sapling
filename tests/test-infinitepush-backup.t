@@ -503,8 +503,8 @@ Malformed backup state file
   finished in * seconds (glob)
 
 Test backupinfo file generation.
-  $ ls .hg/infinitepushlatestbackupinfo || true
-  ls: .hg/infinitepushlatestbackupinfo: No such file or directory
+  $ [ -f .hg/infinitepushlatestbackupinfo ]
+  [1]
   $ rm .hg/infinitepushbackupstate
   $ hg pushbackup --config infinitepushbackup.savelatestbackupinfo=True
   starting backup .* (re)
