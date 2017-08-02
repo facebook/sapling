@@ -665,8 +665,16 @@ class obsstore(object):
         _addsuccessors(successors, self._all)
         return successors
 
-    @propertycache
+    @property
     def precursors(self):
+        msg = ("'obsstore.precursors' is deprecated, "
+               "use 'obsstore.predecessors'")
+        util.nouideprecwarn(msg, '4.4')
+
+        return self.predecessors
+
+    @propertycache
+    def predecessors(self):
         predecessors = {}
         _addpredecessors(predecessors, self._all)
         return predecessors
@@ -686,8 +694,8 @@ class obsstore(object):
         self._all.extend(markers)
         if self._cached('successors'):
             _addsuccessors(self.successors, markers)
-        if self._cached('precursors'):
-            _addpredecessors(self.precursors, markers)
+        if self._cached('predecessors'):
+            _addpredecessors(self.predecessors, markers)
         if self._cached('children'):
             _addchildren(self.children, markers)
         _checkinvalidmarkers(markers)
@@ -706,7 +714,7 @@ class obsstore(object):
         pendingnodes = set(nodes)
         seenmarkers = set()
         seennodes = set(pendingnodes)
-        precursorsmarkers = self.precursors
+        precursorsmarkers = self.predecessors
         succsmarkers = self.successors
         children = self.children
         while pendingnodes:
@@ -957,7 +965,7 @@ def _computedivergentset(repo):
     obsstore = repo.obsstore
     newermap = {}
     for ctx in repo.set('(not public()) - obsolete()'):
-        mark = obsstore.precursors.get(ctx.node(), ())
+        mark = obsstore.predecessors.get(ctx.node(), ())
         toprocess = set(mark)
         seen = set()
         while toprocess:
@@ -971,7 +979,7 @@ def _computedivergentset(repo):
             if len(newer) > 1:
                 divergent.add(ctx.rev())
                 break
-            toprocess.update(obsstore.precursors.get(prec, ()))
+            toprocess.update(obsstore.predecessors.get(prec, ()))
     return divergent
 
 

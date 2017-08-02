@@ -81,7 +81,7 @@ def closestpredecessors(repo, nodeid):
     considered missing.
     """
 
-    precursors = repo.obsstore.precursors
+    precursors = repo.obsstore.predecessors
     stack = [nodeid]
     seen = set(stack)
 
@@ -115,7 +115,7 @@ def allprecursors(obsstore, nodes, ignoreflags=0):
     while remaining:
         current = remaining.pop()
         yield current
-        for mark in obsstore.precursors.get(current, ()):
+        for mark in obsstore.predecessors.get(current, ()):
             # ignore marker flagged with specified flag
             if mark[2] & ignoreflags:
                 continue
@@ -207,7 +207,7 @@ def exclusivemarkers(repo, nodes):
 
     # shortcut to various useful item
     nm = unfi.changelog.nodemap
-    precursorsmarkers = unfi.obsstore.precursors
+    precursorsmarkers = unfi.obsstore.predecessors
     successormarkers = unfi.obsstore.successors
     childrenmarkers = unfi.obsstore.children
 
