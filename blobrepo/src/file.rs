@@ -49,7 +49,7 @@ where
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
         let nodeid = self.nodeid;
-        let key = format!("node:{}", self.nodeid);
+        let key = format!("node:{}.bincode", self.nodeid);
 
         self.blobstore
             .get(&key)
