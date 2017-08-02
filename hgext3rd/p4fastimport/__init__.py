@@ -8,9 +8,6 @@ Config example:
     useworker = false
     # trace copies?
     copytrace = false
-    # if LFS is enabled, write only the metadata to disk, do not write the
-    # blob itself to the local cache.
-    lfspointeronly = false
     # path to sqlite output file for lfs metadata
     lfsmetadata = PATH
     # path to sqlite output file for metadata
