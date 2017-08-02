@@ -1674,7 +1674,7 @@ Make sure a broken uisetup doesn't globally break hg:
 
 Even though the extension fails during uisetup, hg is still basically usable:
   $ hg version
-  *** failed to set up extension baduisetup: No module named bdiff
+  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
@@ -1696,8 +1696,8 @@ Even though the extension fails during uisetup, hg is still basically usable:
       mod = _hgextimport(_origimport, head, globals, locals, None, level)
     File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
       return importfunc(name, globals, *args, **kwargs)
-  ImportError: No module named bdiff
-  *** failed to set up extension baduisetup: No module named bdiff
+  ImportError: No module named (mercurial\.)?bdiff (re)
+  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
