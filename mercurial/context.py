@@ -204,6 +204,12 @@ class basectx(object):
         return self.rev() in obsmod.getrevs(self._repo, 'extinct')
 
     def unstable(self):
+        msg = ("'context.unstable' is deprecated, "
+               "use 'context.orphan'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.orphan()
+
+    def orphan(self):
         """True if the changeset is not obsolete but it's ancestor are"""
         return self.rev() in obsmod.getrevs(self._repo, 'unstable')
 
@@ -223,7 +229,7 @@ class basectx(object):
 
     def troubled(self):
         """True if the changeset is either unstable, bumped or divergent"""
-        return self.unstable() or self.bumped() or self.divergent()
+        return self.orphan() or self.bumped() or self.divergent()
 
     def troubles(self):
         """Keep the old version around in order to avoid breaking extensions
@@ -234,7 +240,7 @@ class basectx(object):
         self._repo.ui.deprecwarn(msg, '4.4')
 
         troubles = []
-        if self.unstable():
+        if self.orphan():
             troubles.append('orphan')
         if self.bumped():
             troubles.append('bumped')
@@ -251,7 +257,7 @@ class basectx(object):
         - content-divergent.
         """
         instabilities = []
-        if self.unstable():
+        if self.orphan():
             instabilities.append('orphan')
         if self.bumped():
             instabilities.append('phase-divergent')
