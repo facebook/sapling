@@ -18,6 +18,11 @@ from . import (
     util,
 )
 
+allpatternkinds = ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
+                   'listfile', 'listfile0', 'set', 'include', 'subinclude',
+                   'rootfilesin')
+cwdrelativepatternkinds = ('relpath', 'glob')
+
 propertycache = util.propertycache
 
 def _rematcher(regex):
@@ -190,7 +195,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     normalized and rooted patterns and with listfiles expanded.'''
     kindpats = []
     for kind, pat in [_patsplit(p, default) for p in patterns]:
-        if kind in ('glob', 'relpath'):
+        if kind in cwdrelativepatternkinds:
             pat = pathutil.canonpath(root, cwd, pat, auditor)
         elif kind in ('relglob', 'path', 'rootfilesin'):
             pat = util.normpath(pat)
@@ -691,9 +696,7 @@ def _patsplit(pattern, default):
     pattern."""
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
-        if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set', 'include', 'subinclude',
-                    'rootfilesin'):
+        if kind in allpatternkinds:
             return kind, pat
     return default, pattern
 
