@@ -144,12 +144,18 @@ def lowlevelcopy(rlog, tr, destname=b'_destrevlog.i'):
             text = None
             cachedelta = (deltaparent, rlog.revdiff(deltaparent, r))
         flags = rlog.flags(r)
-        ifh = dlog.opener(dlog.indexfile, 'a+')
-        dfh = None
-        if not dlog._inline:
-            dfh = dlog.opener(dlog.datafile, 'a+')
-        dlog._addrevision(rlog.node(r), text, tr, r, p1, p2, flags, cachedelta,
-                          ifh, dfh)
+        ifh = dfh = None
+        try:
+            ifh = dlog.opener(dlog.indexfile, 'a+')
+            if not dlog._inline:
+                dfh = dlog.opener(dlog.datafile, 'a+')
+            dlog._addrevision(rlog.node(r), text, tr, r, p1, p2, flags,
+                              cachedelta, ifh, dfh)
+        finally:
+            if dfh is not None:
+                dfh.close()
+            if ifh is not None:
+                ifh.close()
     return dlog
 
 # Utilities to generate revisions for testing
