@@ -14,8 +14,8 @@ class filetransaction(object):
         self.map = {}
 
     @contextlib.contextmanager
-    def _lock(self, m='w'):
-        f = self.opener.open(self.journalfile, m)
+    def _lock(self, mode):
+        f = self.opener.open(self.journalfile, mode)
         try:
             fcntl.lockf(f, fcntl.LOCK_EX)
             yield f
@@ -25,7 +25,7 @@ class filetransaction(object):
     def add(self, file, offset, data=None):
         # we need to base64 this, so we avoid newlines
         encdata = base64.b64encode(util.pickle.dumps(data))
-        with self._lock() as f:
+        with self._lock(mode='a') as f:
             f.seek(0, 2)
             writeoffset = f.tell()
             f.write('%d\0%s\0%s\n' % (offset, file, encdata))
@@ -37,7 +37,7 @@ class filetransaction(object):
 
     def _read(self):
         entries = []
-        with self._lock(m='r+') as f:
+        with self._lock(mode='r+') as f:
             for line in f.readlines():
                 e = line.split('\0', 2)
                 decdata = util.pickle.loads(base64.b64decode(e[2]))
