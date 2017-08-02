@@ -102,7 +102,16 @@ def closestpredecessors(repo, nodeid):
             else:
                 stack.append(precnodeid)
 
-def allprecursors(obsstore, nodes, ignoreflags=0):
+def allprecursors(*args, **kwargs):
+    """ (DEPRECATED)
+    """
+    msg = ("'obsutil.allprecursors' is deprecated, "
+           "use 'obsutil.allpredecessors'")
+    util.nouideprecwarn(msg, '4.4')
+
+    return allpredecessors(*args, **kwargs)
+
+def allpredecessors(obsstore, nodes, ignoreflags=0):
     """Yield node for every precursors of <nodes>.
 
     Some precursors may be unknown locally.

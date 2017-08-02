@@ -949,7 +949,7 @@ def _computebumpedset(repo):
         # We only evaluate mutable, non-obsolete revision
         node = ctx.node()
         # (future) A cache of predecessors may worth if split is very common
-        for pnode in obsutil.allprecursors(repo.obsstore, [node],
+        for pnode in obsutil.allpredecessors(repo.obsstore, [node],
                                    ignoreflags=bumpedfix):
             prev = torev(pnode) # unfiltered! but so is phasecache
             if (prev is not None) and (phase(repo, prev) <= public):

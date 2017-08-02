@@ -41,7 +41,7 @@ from mercurial import (
     encoding,
     error,
     mdiff,
-    obsolete,
+    obsutil,
     patch,
     registrar,
     scmutil,
@@ -167,7 +167,7 @@ def getoldnodedrevmap(repo, nodelist):
     for node in nodelist:
         ctx = unfi[node]
         # For tags like "D123", put them into "toconfirm" to verify later
-        precnodes = list(obsolete.allprecursors(unfi.obsstore, [node]))
+        precnodes = list(obsutil.allpredecessors(unfi.obsstore, [node]))
         for n in precnodes:
             if n in nodemap:
                 for tag in unfi.nodetags(n):
