@@ -313,7 +313,8 @@ def userphids(repo, names):
 
 @command('phabsend',
          [('r', 'rev', [], _('revisions to send'), _('REV')),
-          ('', 'reviewer', [], _('specify reviewers'))],
+          ('', 'reviewer', [], _('specify reviewers')),
+          ('', 'confirm', None, _('ask for confirmation before sending'))],
          _('REV [OPTIONS]'))
 def phabsend(ui, repo, *revs, **opts):
     """upload changesets to Phabricator
@@ -326,12 +327,26 @@ def phabsend(ui, repo, *revs, **opts):
     maintain the association. After the first time, phabsend will check
     obsstore and tags information so it can figure out whether to update an
     existing Differential Revision, or create a new one.
+
+    The --confirm option lets you confirm changesets before sending them. You
+    can also add following to your configuration file to make it default
+    behaviour.
+
+    [phabsend]
+    confirm = true
     """
     revs = list(revs) + opts.get('rev', [])
     revs = scmutil.revrange(repo, revs)
 
     if not revs:
         raise error.Abort(_('phabsend requires at least one changeset'))
+
+    confirm = ui.configbool('phabsend', 'confirm')
+    confirm |= bool(opts.get('confirm'))
+    if confirm:
+        confirmed = _confirmbeforesend(repo, revs)
+        if not confirmed:
+            raise error.Abort(_('phabsend cancelled'))
 
     actions = []
     reviewers = opts.get('reviewer', [])
@@ -378,6 +393,20 @@ def phabsend(ui, repo, *revs, **opts):
 # consistent with "hg export" output.
 _metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
                               (r'node', 'Node ID'), (r'parent', 'Parent ')])
+
+def _confirmbeforesend(repo, revs):
+    ui = repo.ui
+    for rev in revs:
+        ctx = repo[rev]
+        desc = ctx.description().splitlines()[0]
+        ui.write(('%d: ' % rev), label='phabsend.revnumber')
+        ui.write(('%s\n' % desc), label='phabsend.desc')
+
+    if ui.promptchoice(_('Phabsend the above changes (yn)?'
+                            '$$ &Yes $$ &No')):
+        return False
+
+    return True
 
 def querydrev(repo, params, stack=False):
     """return a list of "Differential Revision" dicts
