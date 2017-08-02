@@ -294,9 +294,21 @@ folded content is dropped during a merge. The folded commit should properly disa
   [1]
 There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
-  $ hg status
+
+  $ hg status -v
   M file
   ? file.orig
+  # The repository is in an unfinished *histedit* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     file
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg histedit --continue
+  # To abort:                   hg histedit --abort
+  
   $ hg resolve -l
   U file
   $ hg revert -r 'p1()' file

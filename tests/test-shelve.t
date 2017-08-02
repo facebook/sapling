@@ -342,6 +342,23 @@ force a conflicted merge to occur
   warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
+  $ hg status -v
+  M a/a
+  M b.rename/b
+  M c.copy
+  R b/b
+  ? a/a.orig
+  # The repository is in an unfinished *unshelve* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     a/a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg unshelve --continue
+  # To abort:                   hg unshelve --abort
+  
 
 ensure that we have a merge with unresolved conflicts
 

@@ -4710,6 +4710,19 @@ def status(ui, repo, *pats, **opts):
       files are not considered while tersing until 'i' is there in --terse value
       or the --ignored option is used.
 
+      --verbose option shows more context about the state of the repo
+      like the repository is in unfinised merge, shelve, rebase state etc.
+      You can have this behaviour turned on by default by following config:
+
+      [commands]
+      status.verbose = true
+
+      You can also skip some states like bisect by adding following in
+      configuration file.
+
+      [commands]
+      status.skipstates = bisect
+
       Examples:
 
       - show changes in the working directory relative to a
@@ -4799,6 +4812,10 @@ def status(ui, repo, *pats, **opts):
                 if f in copy:
                     fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
                              label='status.copied')
+
+    if ((ui.verbose or ui.configbool('commands', 'status.verbose'))
+        and not ui.plain()):
+        cmdutil.morestatus(repo, fm)
     fm.end()
 
 @command('^summary|sum',

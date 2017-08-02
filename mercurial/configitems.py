@@ -97,6 +97,12 @@ coreconfigitem('color', 'pagermode',
 coreconfigitem('commands', 'status.relative',
     default=False,
 )
+coreconfigitem('commands', 'status.skipstates',
+    default=[],
+)
+coreconfigitem('commands', 'status.verbose',
+    default=False,
+)
 coreconfigitem('commands', 'update.requiredest',
     default=False,
 )

@@ -71,6 +71,21 @@ Conflicting rebase:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
+  $ hg status --config commands.status.verbose=1
+  M common
+  ? common.orig
+  # The repository is in an unfinished *rebase* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     common
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+  
+
 Try to continue without solving the conflict:
 
   $ hg rebase --continue

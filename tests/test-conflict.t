@@ -44,6 +44,23 @@
   $ hg id
   618808747361+c0c68e4fe667+ tip
 
+  $ echo "[commands]" >> $HGRCPATH
+  $ echo "status.verbose=true" >> $HGRCPATH
+  $ hg status
+  M a
+  ? a.orig
+  # The repository is in an unfinished *merge* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  
+
   $ cat a
   Small Mathematical Series.
   1
@@ -58,7 +75,7 @@
   >>>>>>> merge rev:    c0c68e4fe667 - test: branch1
   Hop we are done.
 
-  $ hg status
+  $ hg status --config commands.status.verbose=0
   M a
   ? a.orig
 
