@@ -2353,6 +2353,12 @@ class TestRunner(object):
 
         self._testdir = osenvironb[b'TESTDIR'] = getattr(
             os, 'getcwdb', os.getcwd)()
+        # assume all tests in same folder for now
+        if testdescs:
+            pathname = os.path.dirname(testdescs[0]['path'])
+            if pathname and not osenvironb[b'TESTDIR'].endswith('/'):
+                osenvironb[b'TESTDIR'] += '/'
+            osenvironb[b'TESTDIR'] += pathname
         if self.options.outputdir:
             self._outputdir = canonpath(_bytespath(self.options.outputdir))
         else:

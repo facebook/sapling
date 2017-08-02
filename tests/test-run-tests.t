@@ -1261,6 +1261,22 @@ support for running a test outside the current directory
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 
+support for running run-tests.py from another directory
+  $ mkdir tmp && cd tmp
+  $ cat > useful-file.sh << EOF
+  > important command
+  > EOF
+
+  $ cat > test-folder.t << EOF
+  >   $ cat \$TESTDIR/useful-file.sh
+  >   important command
+  > EOF
+
+  $ cd ..
+  $ $PYTHON $TESTDIR/run-tests.py tmp/test-folder.t
+  .
+  # Ran 1 tests, 0 skipped, 0 failed.
+
 support for bisecting failed tests automatically
   $ hg init bisect
   $ cd bisect
