@@ -56,8 +56,8 @@ Simple import
   1 files to import.
   reading filelog //depot/Main/a
   importing repository.
-  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: p4, path: Main/a
-  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: p4, path: Main/a
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
   changelist 1: writing manifest. node: f495e209f723 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial_actual_user_submit
   changelist 2: writing manifest. node: c2c89b7ec832 p1: f495e209f723 p2: 000000000000 linkrev: 1
