@@ -470,11 +470,18 @@ def _addsuccessors(successors, markers):
     for mark in markers:
         successors.setdefault(mark[0], set()).add(mark)
 
+def _addprecursors(*args, **kwargs):
+    msg = ("'obsolete._addprecursors' is deprecated, "
+           "use 'obsolete._addpredecessors'")
+    util.nouideprecwarn(msg, '4.4')
+
+    return _addpredecessors(*args, **kwargs)
+
 @util.nogc
-def _addprecursors(precursors, markers):
+def _addpredecessors(predecessors, markers):
     for mark in markers:
         for suc in mark[1]:
-            precursors.setdefault(suc, set()).add(mark)
+            predecessors.setdefault(suc, set()).add(mark)
 
 @util.nogc
 def _addchildren(children, markers):
@@ -660,9 +667,9 @@ class obsstore(object):
 
     @propertycache
     def precursors(self):
-        precursors = {}
-        _addprecursors(precursors, self._all)
-        return precursors
+        predecessors = {}
+        _addpredecessors(predecessors, self._all)
+        return predecessors
 
     @propertycache
     def children(self):
@@ -680,7 +687,7 @@ class obsstore(object):
         if self._cached('successors'):
             _addsuccessors(self.successors, markers)
         if self._cached('precursors'):
-            _addprecursors(self.precursors, markers)
+            _addpredecessors(self.precursors, markers)
         if self._cached('children'):
             _addchildren(self.children, markers)
         _checkinvalidmarkers(markers)
