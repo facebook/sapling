@@ -245,6 +245,7 @@ Check absolute/relative import of extension specific modules
 
 #if no-py3k
   $ rm "$TESTTMP"/extroot/foo.*
+  $ rm -Rf "$TESTTMP/extroot/__pycache__"
   $ cat > $TESTTMP/extroot/foo.py <<EOF
   > # test relative import
   > buf = []
@@ -1238,6 +1239,7 @@ empty declaration of supported version, extension complains:
 If the extension specifies a buglink, show that:
   $ echo 'buglink = "http://example.com/bts"' >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension throw
   ** which supports versions unknown of Mercurial.
@@ -1253,6 +1255,7 @@ If the extensions declare outdated versions, accuse the older extension first:
   $ echo "testedwith = '1.9.3'" >> older.py
   $ echo "testedwith = '2.1.1'" >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension older
@@ -1266,6 +1269,7 @@ If the extensions declare outdated versions, accuse the older extension first:
 One extension only tested with older, one only with newer versions:
   $ echo "util.version = lambda:'2.1'" >> older.py
   $ rm -f older.pyc older.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension older
@@ -1279,6 +1283,7 @@ One extension only tested with older, one only with newer versions:
 Older extension is tested with current version, the other only with newer:
   $ echo "util.version = lambda:'1.9.3'" >> older.py
   $ rm -f older.pyc older.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
   >   throw 2>&1 | egrep '^\*\*'
   ** Unknown exception encountered with possibly-broken third-party extension throw
@@ -1305,6 +1310,7 @@ Declare the version as supporting this hg version, show regular bts link:
   >   echo "unable to fetch a mercurial version. Make sure __version__ is correct";
   > fi
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** unknown exception encountered, please report by visiting
   ** https://mercurial-scm.org/wiki/BugTracker
@@ -1316,6 +1322,7 @@ Patch version is ignored during compatibility check
   $ echo "testedwith = '3.2'" >> throw.py
   $ echo "util.version = lambda:'3.2.2'" >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
   ** unknown exception encountered, please report by visiting
   ** https://mercurial-scm.org/wiki/BugTracker
@@ -1326,6 +1333,7 @@ Patch version is ignored during compatibility check
 Test version number support in 'hg version':
   $ echo '__version__ = (1, 2, 3)' >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg version -v
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
@@ -1350,6 +1358,7 @@ Test version number support in 'hg version':
     throw  external  1.2.3
   $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
   $ rm -f throw.pyc throw.pyo
+  $ rm -Rf __pycache__
   $ hg version -v --config extensions.throw=throw.py --config extensions.strip=
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
