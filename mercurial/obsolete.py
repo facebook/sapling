@@ -20,12 +20,12 @@ facilitate conflict resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
-The old obsoleted changeset is called a "precursor" and possible
+The old obsoleted changeset is called a "predecessor" and possible
 replacements are called "successors". Markers that used changeset X as
-a precursor are called "successor markers of X" because they hold
+a predecessor are called "successor markers of X" because they hold
 information about the successors of X. Markers that use changeset Y as
-a successors are call "precursor markers of Y" because they hold
-information about the precursors of Y.
+a successors are call "predecessor markers of Y" because they hold
+information about the predecessors of Y.
 
 Examples:
 
@@ -294,11 +294,11 @@ def _fm0decodemeta(data):
 #
 # - uint8: number of metadata entries M
 #
-# - 20 or 32 bytes: precursor changeset identifier.
+# - 20 or 32 bytes: predecessor changeset identifier.
 #
 # - N*(20 or 32) bytes: successors changesets identifiers.
 #
-# - P*(20 or 32) bytes: parents of the precursors changesets.
+# - P*(20 or 32) bytes: parents of the predecessors changesets.
 #
 # - M*(uint8, uint8): size of all metadata entries (key and value)
 #
@@ -506,18 +506,18 @@ class obsstore(object):
     """Store obsolete markers
 
     Markers can be accessed with two mappings:
-    - precursors[x] -> set(markers on precursors edges of x)
+    - predecessors[x] -> set(markers on predecessors edges of x)
     - successors[x] -> set(markers on successors edges of x)
-    - children[x]   -> set(markers on precursors edges of children(x)
+    - children[x]   -> set(markers on predecessors edges of children(x)
     """
 
     fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
-    # prec:    nodeid, precursor changesets
+    # prec:    nodeid, predecessors changesets
     # succs:   tuple of nodeid, successor changesets (0-N length)
     # flag:    integer, flag field carrying modifier for the markers (see doc)
     # meta:    binary blob, encoded metadata dictionary
     # date:    (float, int) tuple, date of marker creation
-    # parents: (tuple of nodeid) or None, parents of precursors
+    # parents: (tuple of nodeid) or None, parents of predecessors
     #          None is used when no data has been recorded
 
     def __init__(self, svfs, defaultformat=_fm1version, readonly=False):
@@ -707,7 +707,8 @@ class obsstore(object):
 
         - marker that use this changeset as successor
         - prune marker of direct children on this changeset
-        - recursive application of the two rules on precursors of these markers
+        - recursive application of the two rules on predecessors of these
+          markers
 
         It is a set so you cannot rely on order."""
 
@@ -947,12 +948,12 @@ def _computebumpedset(repo):
         rev = ctx.rev()
         # We only evaluate mutable, non-obsolete revision
         node = ctx.node()
-        # (future) A cache of precursors may worth if split is very common
+        # (future) A cache of predecessors may worth if split is very common
         for pnode in obsutil.allprecursors(repo.obsstore, [node],
                                    ignoreflags=bumpedfix):
             prev = torev(pnode) # unfiltered! but so is phasecache
             if (prev is not None) and (phase(repo, prev) <= public):
-                # we have a public precursor
+                # we have a public predecessor
                 bumped.add(rev)
                 break # Next draft!
     return bumped
