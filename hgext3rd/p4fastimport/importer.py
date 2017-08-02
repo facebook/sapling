@@ -337,6 +337,9 @@ class FileImporter(object):
             if self._p4filelog.isexec(c.cl):
                 fileflags[c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
+                # On Linux/Unix a symlink must not have a newline. Perforce
+                # however returns a newline at the end which we must strip.
+                text = text.rstrip()
                 fileflags[c.cl] = 'l'
             if self._p4filelog.iskeyworded(c.cl):
                 text = re.sub(KEYWORD_REGEX, r'$\1$', text)

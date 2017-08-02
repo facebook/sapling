@@ -6,7 +6,7 @@ populate the depot
   $ mkdir Main
   $ mkdir Main/b
   $ echo a > Main/a
-  $ ln -s Main/a Main/b/c
+  $ ln -s ../a Main/b/c
   $ echo d > Main/d
   $ chmod +x Main/d
   $ p4 add Main/a Main/b/c Main/d
@@ -50,13 +50,14 @@ Simple import
   importing repository.
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
   writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
-  writing filelog: 8aa36f7e9a8d, p1 000000000000, linkrev 0, 7 bytes, src: *, path: Main/b/c (glob)
-  writing filelog: ee47780ebabc, p1 8aa36f7e9a8d, linkrev 1, 7 bytes, src: *, path: Main/b/c (glob)
+  updating the branch cache (?)
+  writing filelog: 1f6b5bb93f1d, p1 000000000000, linkrev 0, 4 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: 3b479db02621, p1 1f6b5bb93f1d, linkrev 1, 4 bytes, src: *, path: Main/b/c (glob)
   writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
   writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: Main/d (glob)
-  changelist 1: writing manifest. node: 9b06e09b6cf9 p1: 000000000000 p2: 000000000000 linkrev: 0
+  changelist 1: writing manifest. node: 05414d16d473 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: d5f0551e02e2 p1: 9b06e09b6cf9 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: fb65d73ad7d5 p1: 05414d16d473 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   updating the branch cache (?)
   2 revision(s), 3 file(s) imported.
@@ -72,9 +73,15 @@ Verify
 
   $ hg update tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+# Ensure that the file is a symlink (-L) and is valid (-f) this ensures
+# we correctly handle symlinks.
+
+  $ test -L Main/b/c
+  $ test -f Main/b/c
   $ hg --debug manifest
   a80d06849b333b8a3d5c445f8ba3142010dcdc9e 644   Main/a
-  ee47780ebabc4dd227d21ef3b71ca3ab381eb4cf 644 @ Main/b/c
+  3b479db02621d5ff591921d4946681bebd4b2e2e 644 @ Main/b/c
   f83f0637e55e3c48e9922f14a016761626d79d3d 755 * Main/d
 
 End Test
