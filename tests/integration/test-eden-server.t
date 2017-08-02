@@ -31,12 +31,19 @@ Curl and debugdata output should match
   $ hg debugdata -c 3903775176ed42b1458a6281db4a0ccf4d9f287a | head -n 1
   8515d4bfda768e04af4c13a69a72e28c7effbea7
 
+Send incorrect requests
   $ curl http://localhost:3000/repo/cs/hash/roottreemanifestid 2> /dev/null
   invalid sha-1 input (no-eol)
   $ curl http://localhost:3000/badrepo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   unknown repo (no-eol)
   $ curl http://localhost:3000/repo/BADURL/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   malformed url: expected /REPONAME/cs/HASH/roottreemanifestid (no-eol)
+  $ curl http://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid/more 2> /dev/null
+  malformed url: expected /REPONAME/cs/HASH/roottreemanifestid (no-eol)
+  $ curl http://localhost:3000/repo/cs/ 2> /dev/null
+  malformed url: expected /REPONAME/cs/HASH/roottreemanifestid (no-eol)
+  $ curl http://localhost:3000/ 2> /dev/null
+  malformed url: expected /REPONAME/cs/HASH/roottreemanifestid (no-eol)
 
-Make sure that there were no errors server side
+Make sure there are no errors on the server
   $ cat $TESTTMP/edenserver.out

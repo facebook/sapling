@@ -21,8 +21,14 @@ extern crate fileblob;
 extern crate filebookmarks;
 extern crate futures;
 extern crate hyper;
+#[macro_use]
+extern crate lazy_static;
 extern crate mercurial_types;
-extern crate url;
+extern crate regex;
+
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
 use ascii::AsciiStr;
 use clap::App;
@@ -30,12 +36,13 @@ use futures::Future;
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::path::Path;
-use std::sync::Arc;
+use regex::{Captures, Regex};
 
 const EXIT_CODE: i32 = 1;
+
+type NameToRepo<BlobRepo> = HashMap<String, Arc<BlobRepo>>;
+
+struct Route(Regex, fn(Captures) -> Result<ParsedUrl, String>);
 
 fn parse_hash(changeset: &str) -> Result<NodeHash, String> {
     let asciichangeset = AsciiStr::from_ascii(changeset).map_err(|e| e.to_string())?;
@@ -45,53 +52,68 @@ fn parse_hash(changeset: &str) -> Result<NodeHash, String> {
     return Result::Ok(node_id);
 }
 
-fn parse_url<'a, BlobRepo>(
-    segments: &Vec<&str>,
-    name_to_repo: &'a NameToRepo<BlobRepo>,
-) -> ParsedUrl<'a>
-where
-    BlobRepo: Repo<Error = blobrepo::Error>,
-{
-    if segments.len() == 5 && segments[2] == "cs" && segments[4] == "roottreemanifestid" {
-        let reponame = segments[1];
-        let repo_hash = name_to_repo
-            .get(reponame)
-            .ok_or("unknown repo".to_string())
-            .and_then(|repo| {
-                let hash = segments[3];
-                match parse_hash(hash) {
-                    Ok(hash) => Ok((repo, hash)),
-                    Err(err) => Err(err.to_string()),
-                }
-            });
-
-        match repo_hash {
-            Ok((repo, hash)) => ParsedUrl::RootTreeManifestId(repo.deref(), hash),
-            Err(err) => ParsedUrl::Err(err.to_string()),
-        }
-    } else {
-        let malformed_url_msg = "malformed url: expected /REPONAME/cs/HASH/roottreemanifestid";
-        ParsedUrl::Err(malformed_url_msg.to_string())
-    }
+fn parse_root_treemanifest_id_url(caps: Captures) -> Result<ParsedUrl, String> {
+    let repo = caps.get(1).expect("incorrect url parsing regex").as_str();
+    let hash = caps.get(2).expect("incorrect url parsing regex").as_str();
+    let hash = parse_hash(hash)?;
+    Ok(ParsedUrl::RootTreeManifestId(repo.to_string(), hash))
 }
 
-enum ParsedUrl<'a> {
-    RootTreeManifestId(&'a Repo<Error = blobrepo::Error>, NodeHash),
-    Err(String),
+/// Generic url-handling function
+/// Accepts vector of tuples (regex, url handling function)
+/// If url matches regex then url handling function is called
+fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl, String> {
+    for &Route(ref regex, parse_func) in routes {
+        if let Some(caps) = regex.captures(url) {
+            return parse_func(caps);
+        }
+    }
+    let malformed_url_msg = "malformed url: expected /REPONAME/cs/HASH/roottreemanifestid";
+    Err(malformed_url_msg.to_string())
+}
+
+enum ParsedUrl {
+    RootTreeManifestId(String, NodeHash),
+}
+
+lazy_static! {
+    static ref ROUTES: Vec<Route> = {
+        vec![
+            (r"^/(\w+)/cs/(\w+)/roottreemanifestid$", parse_root_treemanifest_id_url),
+        ].into_iter().map(|(re, func)| Route(Regex::new(re).expect("bad regex"), func)).collect()
+    };
 }
 
 struct EdenServer<BlobRepo> {
     name_to_repo: NameToRepo<BlobRepo>,
 }
 
-type NameToRepo<BlobRepo> = HashMap<String, Arc<BlobRepo>>;
-
 impl<BlobRepo> EdenServer<BlobRepo>
 where
     EdenServer<BlobRepo>: Service,
+    BlobRepo: Repo<Error = blobrepo::Error>,
 {
     fn new(name_to_repo: NameToRepo<BlobRepo>) -> EdenServer<BlobRepo> {
-        EdenServer::<BlobRepo> { name_to_repo: name_to_repo }
+        EdenServer { name_to_repo }
+    }
+
+    fn get_root_tree_manifest_id(
+        &self,
+        reponame: String,
+        hash: &NodeHash,
+    ) -> Box<futures::Future<Item = String, Error = String> + Send> {
+        let repo = match self.name_to_repo.get(&reponame) {
+            Some(repo) => repo,
+            None => {
+                return futures::future::err("unknown repo".to_string()).boxed();
+            }
+        };
+        repo.get_changeset_by_nodeid(&hash)
+            .then(|res| match res {
+                Ok(cs) => futures::future::ok(cs.manifestid().to_string()),
+                Err(e) => futures::future::err(e.to_string()),
+            })
+            .boxed()
     }
 }
 
@@ -105,31 +127,35 @@ where
     type Future = futures::future::BoxFuture<Self::Response, Self::Error>;
 
     fn call(&self, req: Request) -> Self::Future {
-        let segments: Vec<_> = req.uri().path().split('/').collect();
         let mut resp = Response::new();
-        match parse_url(&segments, &self.name_to_repo) {
-            ParsedUrl::RootTreeManifestId(repo, hash) => {
-                repo.get_changeset_by_nodeid(&hash)
-                    .then(|res| {
-                        match res {
-                            Ok(cs) => {
-                                resp.set_body(cs.manifestid().to_string());
-                            }
-                            Err(e) => {
-                                resp.set_body(e.to_string());
-                                resp.set_status(StatusCode::NotFound);
-                            }
-                        };
-                        futures::future::ok(resp)
-                    })
-                    .boxed()
-            }
-            ParsedUrl::Err(err) => {
+        let parsed_req = match parse_url(req.uri().path(), &ROUTES) {
+            Ok(req) => req,
+            Err(err) => {
                 resp.set_body(err);
                 resp.set_status(StatusCode::NotFound);
-                futures::future::ok(resp).boxed()
+                return futures::future::ok(resp).boxed();
             }
-        }
+        };
+
+        let result_future = match parsed_req {
+            ParsedUrl::RootTreeManifestId(reponame, hash) => {
+                self.get_root_tree_manifest_id(reponame, &hash)
+            }
+        };
+        result_future
+            .then(|res| {
+                match res {
+                    Ok(output) => {
+                        resp.set_body(output);
+                    }
+                    Err(e) => {
+                        resp.set_body(e);
+                        resp.set_status(StatusCode::NotFound);
+                    }
+                };
+                futures::future::ok(resp)
+            })
+            .boxed()
     }
 }
 
@@ -170,7 +196,6 @@ fn main() {
     map.insert(reponame, Arc::new(repo));
 
     let func = move || Ok(EdenServer::new(map.clone()));
-
     if let Ok(parsed_addr) = addr {
         match Http::new().bind(&parsed_addr, func) {
             Ok(server) => {
@@ -188,4 +213,23 @@ fn main() {
         println!("Failed to parse address");
         std::process::exit(EXIT_CODE);
     };
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_url_parsing() {
+        let routes = &ROUTES;
+        assert!(parse_url("badurl", &routes).is_err());
+
+        let hash = std::iter::repeat("a").take(40).collect::<String>();
+        let correct_url = format!("/repo/cs/{}/roottreemanifestid", hash);
+        assert!(parse_url(&correct_url, &routes).is_ok());
+
+        let badhash = std::iter::repeat("x").take(40).collect::<String>();
+        let incorrect_url = format!("/repo/cs/{}/roottreemanifestid", badhash);
+        assert!(parse_url(&incorrect_url, &routes).is_err());
+    }
 }
