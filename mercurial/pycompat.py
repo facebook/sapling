@@ -16,6 +16,7 @@ import shlex
 import sys
 
 ispy3 = (sys.version_info[0] >= 3)
+ispypy = (r'__pypy__' in sys.builtin_module_names)
 
 if not ispy3:
     import cookielib

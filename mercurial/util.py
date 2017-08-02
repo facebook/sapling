@@ -584,6 +584,14 @@ class sortdict(collections.OrderedDict):
             del self[key]
         super(sortdict, self).__setitem__(key, value)
 
+    if pycompat.ispypy:
+        # __setitem__() isn't called as of PyPy 5.8.0
+        def update(self, src):
+            if isinstance(src, dict):
+                src = src.iteritems()
+            for k, v in src:
+                self[k] = v
+
 @contextlib.contextmanager
 def acceptintervention(tr=None):
     """A context manager that closes the transaction on InterventionRequired
