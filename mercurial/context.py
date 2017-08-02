@@ -221,6 +221,12 @@ class basectx(object):
         return self.rev() in obsmod.getrevs(self._repo, 'bumped')
 
     def divergent(self):
+        msg = ("'context.divergent' is deprecated, "
+               "use 'context.contentdivergent'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.contentdivergent()
+
+    def contentdivergent(self):
         """Is a successors of a changeset with multiple possible successors set
 
         Only non-public and non-obsolete changesets may be divergent.
@@ -229,7 +235,7 @@ class basectx(object):
 
     def troubled(self):
         """True if the changeset is either unstable, bumped or divergent"""
-        return self.orphan() or self.bumped() or self.divergent()
+        return self.orphan() or self.bumped() or self.contentdivergent()
 
     def troubles(self):
         """Keep the old version around in order to avoid breaking extensions
@@ -244,7 +250,7 @@ class basectx(object):
             troubles.append('orphan')
         if self.bumped():
             troubles.append('bumped')
-        if self.divergent():
+        if self.contentdivergent():
             troubles.append('divergent')
         return troubles
 
@@ -261,7 +267,7 @@ class basectx(object):
             instabilities.append('orphan')
         if self.bumped():
             instabilities.append('phase-divergent')
-        if self.divergent():
+        if self.contentdivergent():
             instabilities.append('content-divergent')
         return instabilities
 
