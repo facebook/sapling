@@ -636,10 +636,10 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
             newexclude = set(oldexclude)
             newprofiles = set(oldprofiles)
 
-        if any(pat.startswith('/') for pat in pats):
-            repo.ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
-                         % ([pat for pat in pats if pat.startswith('/')]))
-        elif include:
+        if any(os.path.isabs(pat) for pat in pats):
+            raise error.Abort(_('paths cannot be absolute'))
+
+        if include:
             newinclude.update(pats)
         elif exclude:
             newexclude.update(pats)

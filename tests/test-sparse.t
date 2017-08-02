@@ -29,20 +29,22 @@ Absolute paths outside the repo should just be rejected
 
 #if no-windows
   $ hg debugsparse --include /foo/bar
-  warning: paths cannot start with /, ignoring: ['/foo/bar']
+  abort: paths cannot be absolute
+  [255]
   $ hg debugsparse --include '$TESTTMP/myrepo/hide'
 
   $ hg debugsparse --include '/root'
-  warning: paths cannot start with /, ignoring: ['/root']
+  abort: paths cannot be absolute
+  [255]
 #else
 TODO: See if this can be made to fail the same way as on Unix
   $ hg debugsparse --include /c/foo/bar
-  abort: c:/foo/bar not under root '$TESTTMP/myrepo' (glob)
+  abort: paths cannot be absolute
   [255]
   $ hg debugsparse --include '$TESTTMP/myrepo/hide'
 
   $ hg debugsparse --include '/c/root'
-  abort: c:/root not under root '$TESTTMP/myrepo' (glob)
+  abort: paths cannot be absolute
   [255]
 #endif
 
