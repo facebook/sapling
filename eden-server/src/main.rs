@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 /// Mononoke endpoint for Eden.
 ///
 /// Uses rest API
