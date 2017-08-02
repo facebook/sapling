@@ -231,22 +231,6 @@ Test formatting options
   $ _scm_prompt ':%s:'
   :97af35b: (no-eol)
 
-Test infinitepush state
-  $ cmd
-  (97af35b)
-  $ printf "backuprevision=123\nbackuptime=456\n" > .hg/infinitepushlatestbackupinfo
-  $ cmd
-  (97af35b|BACKUP_NEEDED)
-  $ rm .hg/infinitepushlatestbackupinfo
-
-Test corrupt infinitepush state
-  $ cmd
-  (97af35b)
-  $ printf "backuprevision=0\nba" > .hg/infinitepushlatestbackupinfo
-  $ cmd
-  (97af35b)
-  $ rm .hg/infinitepushlatestbackupinfo
-
 Test many remotenames
   $ hg log -r . -T '{node}\n'
   97af35b3648c0098cbd8114ae1b1bafab997ac20
