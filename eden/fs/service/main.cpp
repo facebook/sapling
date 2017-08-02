@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   server.prepare();
   runServer(server);
   // Clean up all the server mount points before shutting down the privhelper
-  server.unmountAll();
+  server.unmountAll().get();
 
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.

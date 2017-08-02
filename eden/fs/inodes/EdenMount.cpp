@@ -30,6 +30,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/Bug.h"
 
 using std::make_unique;
 using std::unique_ptr;
@@ -158,13 +159,53 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 EdenMount::~EdenMount() {}
 
 void EdenMount::destroy() {
-  XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
-  inodeMap_->beginShutdown();
+  auto oldState = state_.exchange(State::DESTROYING);
+  if (oldState == State::RUNNING) {
+    // Start the shutdown ourselves.
+    // Use shutdownImpl() since we have already updated state_ to DESTROYING.
+    auto shutdownFuture = shutdownImpl();
+    // We intentionally ignore the returned future.
+    // shutdown() will automatically destroy us when it completes now that
+    // we have set the state to DESTROYING
+    (void)shutdownFuture;
+    return;
+  } else if (oldState == State::SHUTTING_DOWN) {
+    // Nothing else to do.  shutdown() will destroy us when it completes.
+    return;
+  } else if (oldState == State::SHUT_DOWN) {
+    // We were already shut down, and can delete ourselves immediately.
+    XLOG(DBG1) << "destroying shut-down EdenMount " << getPath();
+    delete this;
+  } else {
+    // No other states should be possible.
+    XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
+                << " in unexpected state " << static_cast<uint32_t>(oldState);
+  }
 }
 
-void EdenMount::shutdownComplete() {
-  XLOG(DBG1) << "destruction complete for EdenMount " << getPath();
-  delete this;
+Future<Unit> EdenMount::shutdown() {
+  // shutdown() should only be called on mounts in the RUNNING state.
+  // Confirm this is the case, and move to SHUTTING_DOWN.
+  auto expected = State::RUNNING;
+  if (!state_.compare_exchange_strong(expected, State::SHUTTING_DOWN)) {
+    EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
+               << "state was " << static_cast<uint32_t>(expected);
+  }
+  return shutdownImpl();
+}
+
+Future<Unit> EdenMount::shutdownImpl() {
+  XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
+  return inodeMap_->shutdown().then([this] {
+    auto oldState = state_.exchange(State::SHUT_DOWN);
+    if (oldState == State::DESTROYING) {
+      XLOG(DBG1) << "destroying EdenMount " << getPath()
+                 << " after shutdown completion";
+      delete this;
+      return;
+    }
+    XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
+  });
 }
 
 fusell::Channel* EdenMount::getFuseChannel() const {

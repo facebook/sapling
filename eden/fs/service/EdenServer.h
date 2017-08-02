@@ -99,7 +99,7 @@ class EdenServer {
    * Unmount all mount points maintained by this server, and wait for them to
    * be completely unmounted.
    */
-  void unmountAll();
+  FOLLY_NODISCARD folly::Future<folly::Unit> unmountAll();
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
     return handler_;
@@ -225,7 +225,6 @@ class EdenServer {
   folly::Synchronized<BackingStoreMap> backingStores_;
 
   mutable std::mutex mountPointsMutex_;
-  std::condition_variable mountPointsCV_;
   MountMap mountPoints_;
   mutable folly::ThreadLocal<fusell::EdenStats> edenStats_;
 

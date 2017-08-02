@@ -23,6 +23,7 @@
 using folly::Future;
 using folly::Promise;
 using folly::throwSystemErrorExplicit;
+using folly::Unit;
 using std::string;
 
 namespace facebook {
@@ -368,10 +369,17 @@ void InodeMap::save() {
   // TODO
 }
 
-void InodeMap::beginShutdown() {
+Future<Unit> InodeMap::shutdown() {
   // Record that we are in the process of shutting down.
-  CHECK(!shuttingDown_.load(std::memory_order_acquire));
-  shuttingDown_.store(true, std::memory_order_release);
+  auto future = Future<Unit>::makeEmpty();
+  {
+    auto data = data_.wlock();
+    CHECK(!data->shutdownPromise.hasValue())
+        << "shutdown() invoked more than once on InodeMap for "
+        << mount_->getPath();
+    data->shutdownPromise.assign(Promise<Unit>{});
+    future = data->shutdownPromise->getFuture();
+  }
 
   // Walk from the root of the tree down, finding all unreferenced inodes,
   // and immediately destroy them.
@@ -421,9 +429,12 @@ void InodeMap::beginShutdown() {
   // retaining our pointer.  When onInodeUnreferenced() is called for the root
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
+
+  return future;
 }
 
-void InodeMap::shutdownComplete() {
+void InodeMap::shutdownComplete(
+    folly::Synchronized<Members>::LockedPtr&& data) {
   // We manually dropped our reference count to the root inode in
   // beginShutdown().  Destroy it now, and call resetNoDecRef() on our pointer
   // to make sure it doesn't try to decrement the reference count again when
@@ -431,7 +442,12 @@ void InodeMap::shutdownComplete() {
   delete root_.get();
   root_.resetNoDecRef();
 
-  mount_->shutdownComplete();
+  // Unlock data_ before fulfilling the shutdown promise, just in case the
+  // promise invokes a callback that calls some of our other methods that
+  // may need to acquire this lock.
+  auto* shutdownPromise = &data->shutdownPromise.value();
+  data.unlock();
+  shutdownPromise->setValue();
 }
 
 void InodeMap::onInodeUnreferenced(
@@ -450,16 +466,18 @@ void InodeMap::onInodeUnreferenced(
     return;
   }
 
-  if (inode == root_.get()) {
-    CHECK(shuttingDown_.load(std::memory_order_acquire));
-    data.unlock();
-    shutdownComplete();
-    return;
-  }
-
   // Decide if we should unload the inode now, or wait until later.
   bool unloadNow = false;
-  if (shuttingDown_.load(std::memory_order_acquire)) {
+  bool shuttingDown = data->shutdownPromise.hasValue();
+  DCHECK(shuttingDown || inode != root_.get());
+  if (shuttingDown) {
+    // Check to see if this was the root inode that got unloaded.
+    // This indicates that the shutdown is complete.
+    if (inode == root_.get()) {
+      shutdownComplete(std::move(data));
+      return;
+    }
+
     // Always unload Inode objects immediately when shutting down.
     // We can't destroy the EdenMount until all inodes get unloaded.
     unloadNow = true;

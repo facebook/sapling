@@ -80,12 +80,29 @@ class EdenMount {
   /**
    * Destroy the EdenMount.
    *
-   * This begins the destruction process for the EdenMount.  The mount will
-   * wait until all outstanding inode references are released before it is
-   * completely destroyed.  (This may or may not happen before destroy()
-   * returns.)
+   * This method generally does not need to be invoked directly, and will
+   * instead be invoked automatically by the shared_ptr<EdenMount> returned by
+   * create(), once it becomes unreferenced.
+   *
+   * If the EdenMount has not already been explicitly shutdown(), destroy()
+   * will trigger the shutdown().  destroy() blocks until the shutdown is
+   * complete, so it is advisable for callers to callers to explicitly trigger
+   * shutdown() themselves if they want to ensure that the shared_ptr
+   * destruction will not block on this operation.
    */
   void destroy();
+
+  /**
+   * Shutdown the EdenMount.
+   *
+   * This should be called *after* the FUSE mount point has been unmounted from
+   * the kernel.
+   *
+   * This cleans up the in-memory data associated with the EdenMount, and waits
+   * for all outstanding InodeBase objects to become unreferenced and be
+   * destroyed.
+   */
+  folly::Future<folly::Unit> shutdown();
 
   /**
    * Get the MountPoint object.
@@ -278,14 +295,6 @@ class EdenMount {
    */
   SharedRenameLock acquireSharedRenameLock();
 
-  /**
-   * shutdownComplete() will be called by InodeMap when all outstanding Inodes
-   * for this mount point have been deleted.
-   *
-   * This method should only be invoked by InodeMap.
-   */
-  void shutdownComplete();
-
   const AbsolutePath& getSocketPath() const;
 
   /**
@@ -311,6 +320,45 @@ class EdenMount {
   friend class RenameLock;
   friend class SharedRenameLock;
 
+  /**
+   * The current running state of the EdenMount.
+   *
+   * For now this primarily tracks the status of the shutdown process.
+   * In the future we may want to add other states to also track the status of
+   * the actual mount point in the kernel.  (e.g., a "STARTING" state before
+   * RUNNING for when the kernel mount point has not been fully set up yet, and
+   * an "UNMOUNTING" state if we have requested the kernel to unmount the mount
+   * point and that has not completed yet.  UNMOUNTING would occur between
+   * RUNNING and SHUT_DOWN.)  One possible downside of tracking
+   * STARTING/UNMOUNTING is that not every EdenMount object actually has a FUSE
+   * mount.  During unit tests we create EdenMount objects without ever
+   * actually mounting them in the kernel.
+   */
+  enum class State : uint32_t {
+    /**
+     * The EdenMount is running normally.
+     */
+    RUNNING,
+    /**
+     * EdenMount::shutdown() has been called, but it is not complete yet.
+     */
+    SHUTTING_DOWN,
+    /**
+     * EdenMount::shutdown() has completed, but there are still outstanding
+     * references so EdenMount::destroy() has not been called yet.
+     *
+     * When EdenMount::destroy() is called the object can be destroyed
+     * immediately.
+     */
+    SHUT_DOWN,
+    /**
+     * EdenMount::destroy() has been called, but the shutdown is not complete
+     * yet.  There are no remaining references to the EdenMount at this point,
+     * so when the shutdown completes it will be automatically destroyed.
+     */
+    DESTROYING
+  };
+
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
@@ -330,8 +378,8 @@ class EdenMount {
 
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
-
   folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
+  folly::Future<folly::Unit> shutdownImpl();
 
   /**
    * Private destructor.
@@ -410,6 +458,11 @@ class EdenMount {
    * get displayed to users.
    */
   std::chrono::system_clock::time_point lastCheckoutTime_;
+
+  /**
+   * The current state of the mount point.
+   */
+  std::atomic<State> state_{State::RUNNING};
 };
 
 /**

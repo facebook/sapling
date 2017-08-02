@@ -232,15 +232,17 @@ class InodeMap {
   void save();
 
   /**
-   * beginShutdown() is invoked by EdenMount::destroy()
+   * Shutdown the InodeMap.
    *
-   * The EdenMount can only be destroyed once all Inodes it contains are
-   * unreferenced.  beginShutdown() initiates this process.  Once all Inodes
-   * are destroyed the InodeMap will then delete the EdenMount.
+   * The shutdown process must wait for all Inode objects in this InodeMap to
+   * become unreferenced and be unloaded.  Returns a Future that will be
+   * fulfilled once the shutdown has completed.
    *
-   * beginShutdown() should only be called by EdenMount.
+   * This function should generally only be invoked by EdenMount::shutdown().
+   * Other callers should use EdenMount::shutdown() instead of invoking this
+   * function directly.
    */
-  void beginShutdown();
+  FOLLY_NODISCARD folly::Future<folly::Unit> shutdown();
 
   /**
    * onInodeUnreferenced() will be called when an Inode's InodePtr reference
@@ -457,12 +459,25 @@ class InodeMap {
 
     /** The next inode number to allocate */
     fuse_ino_t nextInodeNumber_{FUSE_ROOT_ID + 1};
+
+    /**
+     * A promise to fulfill once shutdown() completes.
+     *
+     * This is only initialized when shutdown() is called, and will be
+     * folly::none until we are shutting down.
+     *
+     * In the future we could update this to just use an empty promise to
+     * indicate that we are not shutting down yet.  However, currently
+     * folly::Promise does not have a simple API to check if it is empty or not,
+     * so we have to wrap it in a folly::Optional.
+     */
+    folly::Optional<folly::Promise<folly::Unit>> shutdownPromise;
   };
 
   InodeMap(InodeMap const&) = delete;
   InodeMap& operator=(InodeMap const&) = delete;
 
-  void shutdownComplete();
+  void shutdownComplete(folly::Synchronized<Members>::LockedPtr&& data);
 
   void setupParentLookupPromise(
       folly::Promise<InodePtr>& promise,
@@ -514,11 +529,6 @@ class InodeMap {
    * It is therefore safe to access without locking.
    */
   TreeInodePtr root_;
-
-  /**
-   * shuttingDown_ will be set to true once EdenMount::destroy() is called
-   */
-  std::atomic<bool> shuttingDown_{false};
 
   /**
    * The locked data.

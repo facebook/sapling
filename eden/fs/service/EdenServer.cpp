@@ -56,7 +56,10 @@ DEFINE_int64(
     "start delay for scheduling unloading inodes job");
 
 using apache::thrift::ThriftServer;
+using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -121,23 +124,33 @@ EdenServer::~EdenServer() {
   shutdown();
 }
 
-void EdenServer::unmountAll() {
-  // Stop all of the mount points.
-  // They will each call mountFinished() as they exit.
+folly::Future<Unit> EdenServer::unmountAll() {
+  std::vector<Future<Unit>> futures;
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    for (const auto& mountPoint : mountPoints_) {
-      fusell::privilegedFuseUnmount(mountPoint.first);
+    for (auto& entry : mountPoints_) {
+      const auto& mountPath = entry.first;
+      try {
+        fusell::privilegedFuseUnmount(mountPath);
+      } catch (const std::exception& ex) {
+        XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
+                  << "\": " << folly::exceptionStr(ex);
+        futures.push_back(makeFuture<Unit>(
+            folly::exception_wrapper(std::current_exception(), ex)));
+        continue;
+      }
+      futures.push_back(entry.second.unmountPromise.getFuture());
     }
   }
 
-  {
-    // Wait for all the mounts to stop, and for mountPoints_ to become empty.
-    std::unique_lock<std::mutex> lock(mountPointsMutex_);
-    while (!mountPoints_.empty()) {
-      mountPointsCV_.wait(lock);
-    }
-  }
+  // Use collectAll() rather than collect() to wait for all of the unmounts
+  // to complete, and only check for errors once everything has finished.
+  return folly::collectAll(futures).then(
+      [](const std::vector<folly::Try<Unit>>& results) {
+        for (const auto& result : results) {
+          result.throwIfFailed();
+        }
+      });
 }
 
 void EdenServer::prepare() {
@@ -249,14 +262,14 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   }
 }
 
-folly::Future<folly::Unit> EdenServer::unmount(StringPiece mountPath) {
+Future<Unit> EdenServer::unmount(StringPiece mountPath) {
   try {
-    auto future = folly::Future<folly::Unit>::makeEmpty();
+    auto future = Future<Unit>::makeEmpty();
     {
       std::lock_guard<std::mutex> guard(mountPointsMutex_);
       auto it = mountPoints_.find(mountPath);
       if (it == mountPoints_.end()) {
-        return folly::makeFuture<folly::Unit>(
+        return makeFuture<Unit>(
             std::out_of_range("no such mount point " + mountPath.str()));
       }
       future = it->second.unmountPromise.getFuture();
@@ -267,7 +280,7 @@ folly::Future<folly::Unit> EdenServer::unmount(StringPiece mountPath) {
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
               << "\": " << folly::exceptionStr(ex);
-    return folly::makeFuture<folly::Unit>(
+    return makeFuture<Unit>(
         folly::exception_wrapper(std::current_exception(), ex));
   }
 }
@@ -277,21 +290,23 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   functionScheduler_->cancelFunctionAndWait(
       getPeriodicUnloadFunctionName(edenMount));
+
+  // Erase the EdenMount from our mountPoints_ map
+  folly::SharedPromise<Unit> unmountPromise;
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
     auto it = mountPoints_.find(mountPath);
     CHECK(it != mountPoints_.end());
-    it->second.unmountPromise.setValue();
+    unmountPromise = std::move(it->second.unmountPromise);
     mountPoints_.erase(it);
-    // This notify and the erase above MUST happen while holding
-    // mountPointsMutex_ otherwise we can have a race in the case that there
-    // are two threads in mountFinished().  If the erasure and the notify are
-    // not done under the lock, the predicate check in ~EdenServer will see
-    // that mountPoints_ is empty and proceed to delete mountPointsCV_ out
-    // from under the other thread(s) as they attempt to call notify_all() on
-    // it.
-    mountPointsCV_.notify_all();
   }
+
+  // Shutdown the EdenMount, and fulfill the unmount promise
+  // when the shutdown completes
+  edenMount->shutdown()
+      .then([unmountPromise = std::move(unmountPromise)]() mutable {
+        unmountPromise.setValue();
+      });
 }
 
 string EdenServer::getPeriodicUnloadFunctionName(const EdenMount* mount) {
@@ -434,7 +449,7 @@ void EdenServer::stop() const {
 }
 
 void EdenServer::shutdown() {
-  unmountAll();
+  unmountAll().get();
   functionScheduler_->shutdown();
 }
 }
