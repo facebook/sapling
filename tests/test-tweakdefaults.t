@@ -631,6 +631,14 @@ Test rebase with showupdate=True and a lot of source revisions
   ee71024c6e8c -> 0c42bb4bf23f "2"
   saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/6e3ddf6f49ef-4b18babd-rebase.hg (glob)
 
+Test rebase with showupdate=True and a long commit message
+  $ touch longfile && hg add -q
+  $ hg commit -qm "This is a long commit message which will be truncated."
+  $ hg rebase -d 1
+  rebasing 14:e915a57d67db "This is a long commit message which will be truncated." (tip)
+  e915a57d67db -> 5444f740ff6c "This is a long commit message which will be tru..."
+  saved backup bundle to $TESTTMP/showupdated/.hg/strip-backup/e915a57d67db-ad3372b5-rebase.hg (glob)
+
 Test bookmark -D
   $ cd $TESTTMP
   $ hg init book-D

@@ -694,7 +694,8 @@ def _printupdatednode(repo, oldnode, newnodes):
     # oldnode was not updated if newnodes is an iterable
     if len(newnodes) == 1:
         newnode = newnodes[0]
-        firstline = repo[newnode].description().split("\n")[0][:50]
+        firstline = encoding.trim(
+            repo[newnode].description().split("\n")[0], 50, '...')
         repo.ui.status(_("%s -> %s \"%s\"\n") % (
             short(oldnode), short(newnode), firstline))
 
