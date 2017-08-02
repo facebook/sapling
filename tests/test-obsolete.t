@@ -3,7 +3,7 @@
   > # public changeset are not obsolete
   > publish=false
   > [ui]
-  > logtemplate="{rev}:{node|short} ({phase}{if(obsolete, ' *{obsolete}*')}{if(troubles, ' {troubles}')}) [{tags} {bookmarks}] {desc|firstline}\n"
+  > logtemplate="{rev}:{node|short} ({phase}{if(obsolete, ' *{obsolete}*')}{if(instabilities, ' {instabilities}')}) [{tags} {bookmarks}] {desc|firstline}\n"
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -934,7 +934,7 @@ test the default cmdline template
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  trouble:     orphan, phase-divergent
+  instability: orphan, phase-divergent
   summary:     add babar
   
   $ hg log -T default -r 'obsolete()'
