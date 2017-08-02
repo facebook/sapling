@@ -60,7 +60,7 @@ git = 1
 
 samplehgrcs = {
     'user':
-"""# example user config (see 'hg help config' for more info)
+b"""# example user config (see 'hg help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
@@ -82,7 +82,7 @@ username =
 """,
 
     'cloned':
-"""# example repository config (see 'hg help config' for more info)
+b"""# example repository config (see 'hg help config' for more info)
 [paths]
 default = %s
 
@@ -99,7 +99,7 @@ default = %s
 """,
 
     'local':
-"""# example repository config (see 'hg help config' for more info)
+b"""# example repository config (see 'hg help config' for more info)
 [paths]
 # path aliases to other clones of this repo in URLs or filesystem paths
 # (see 'hg help config.paths' for more info)
@@ -115,7 +115,7 @@ default = %s
 """,
 
     'global':
-"""# example system-wide hg config (see 'hg help config' for more info)
+b"""# example system-wide hg config (see 'hg help config' for more info)
 
 [ui]
 # uncomment to disable color in command output

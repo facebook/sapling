@@ -1644,8 +1644,8 @@ def config(ui, repo, *values, **opts):
                 samplehgrc = uimod.samplehgrcs['user']
 
             f = paths[0]
-            fp = open(f, "w")
-            fp.write(samplehgrc)
+            fp = open(f, "wb")
+            fp.write(util.tonativeeol(samplehgrc))
             fp.close()
 
         editor = ui.geteditor()
