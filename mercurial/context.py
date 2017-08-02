@@ -226,21 +226,38 @@ class basectx(object):
         return self.unstable() or self.bumped() or self.divergent()
 
     def troubles(self):
-        """return the list of troubles affecting this changesets.
-
-        Troubles are returned as strings. possible values are:
-        - orphan,
-        - phase-divergent,
-        - content-divergent.
+        """Keep the old version around in order to avoid breaking extensions
+        about different return values.
         """
+        msg = ("'context.troubles' is deprecated, "
+               "use 'context.instabilities'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+
         troubles = []
         if self.unstable():
             troubles.append('orphan')
         if self.bumped():
-            troubles.append('phase-divergent')
+            troubles.append('bumped')
         if self.divergent():
-            troubles.append('content-divergent')
+            troubles.append('divergent')
         return troubles
+
+    def instabilities(self):
+        """return the list of instabilities affecting this changeset.
+
+        Instabilities are returned as strings. possible values are:
+        - orphan,
+        - phase-divergent,
+        - content-divergent.
+        """
+        instabilities = []
+        if self.unstable():
+            instabilities.append('orphan')
+        if self.bumped():
+            instabilities.append('phase-divergent')
+        if self.divergent():
+            instabilities.append('content-divergent')
+        return instabilities
 
     def parents(self):
         """return contexts for each parent changeset"""

@@ -1466,8 +1466,8 @@ def _changesetlabels(ctx):
         labels.append('changeset.obsolete')
     if ctx.troubled():
         labels.append('changeset.troubled')
-        for trouble in ctx.troubles():
-            labels.append('trouble.%s' % trouble)
+        for instability in ctx.instabilities():
+            labels.append('trouble.%s' % instability)
     return ' '.join(labels)
 
 class changeset_printer(object):
@@ -1579,7 +1579,8 @@ class changeset_printer(object):
 
         if ctx.troubled():
             # i18n: column positioning for "hg log"
-            self.ui.write(_("instability: %s\n") % ', '.join(ctx.troubles()),
+            instabilities = ctx.instabilities()
+            self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
                           label='log.trouble')
 
         self._exthook(ctx)

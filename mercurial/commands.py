@@ -4850,9 +4850,10 @@ def summary(ui, repo, **opts):
         if p.obsolete():
             ui.write(_(' (obsolete)'))
         if p.troubled():
+            instabilities = (ui.label(instability, 'trouble.%s' % instability)
+                             for instability in p.instabilities())
             ui.write(' ('
-                     + ', '.join(ui.label(trouble, 'trouble.%s' % trouble)
-                                 for trouble in p.troubles())
+                     + ', '.join(instabilities)
                      + ')')
         ui.write('\n')
         if p.description():

@@ -681,7 +681,9 @@ def _pushcheckoutgoing(pushop):
                 if ctx.obsolete():
                     raise error.Abort(mso % ctx)
                 elif ctx.troubled():
-                    raise error.Abort(mst[ctx.troubles()[0]] % ctx)
+                    # TODO print more than one instability in the abort
+                    # message
+                    raise error.Abort(mst[ctx.instabilities()[0]] % ctx)
 
         discovery.checkheads(pushop)
     return True
