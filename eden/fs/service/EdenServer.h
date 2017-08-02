@@ -197,6 +197,7 @@ class EdenServer {
 
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(EdenMount* mountPoint);
+  std::string getPeriodicUnloadFunctionName(const EdenMount* mount);
 
   // Called before destructing EdenServer
   void shutdown();

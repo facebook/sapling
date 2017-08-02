@@ -224,7 +224,7 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
           rootInode->unloadChildrenNow();
         },
         std::chrono::hours(FLAGS_unload_interval_hours),
-        mountPath,
+        getPeriodicUnloadFunctionName(edenMount.get()),
         std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
@@ -275,6 +275,8 @@ folly::Future<folly::Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
+  functionScheduler_->cancelFunctionAndWait(
+      getPeriodicUnloadFunctionName(edenMount));
   {
     std::lock_guard<std::mutex> guard(mountPointsMutex_);
     auto it = mountPoints_.find(mountPath);
@@ -290,7 +292,10 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
     // it.
     mountPointsCV_.notify_all();
   }
-  functionScheduler_->cancelFunction(mountPath);
+}
+
+string EdenServer::getPeriodicUnloadFunctionName(const EdenMount* mount) {
+  return folly::to<string>("unload:", mount->getPath().stringPiece());
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
