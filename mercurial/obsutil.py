@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 from . import (
     phases,
+    util
 )
 
 class marker(object):
@@ -29,7 +30,13 @@ class marker(object):
         return self._data == other._data
 
     def precnode(self):
-        """Precursor changeset node identifier"""
+        msg = ("'marker.precnode' is deprecated, "
+               "use 'marker.precnode'")
+        util.nouideprecwarn(msg, '4.4')
+        return self.prednode()
+
+    def prednode(self):
+        """Predecessor changeset node identifier"""
         return self._data[0]
 
     def succnodes(self):
@@ -37,7 +44,7 @@ class marker(object):
         return self._data[1]
 
     def parentnodes(self):
-        """Parents of the precursors (None if not recorded)"""
+        """Parents of the predecessors (None if not recorded)"""
         return self._data[5]
 
     def metadata(self):
