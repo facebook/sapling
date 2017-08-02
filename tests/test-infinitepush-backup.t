@@ -501,3 +501,17 @@ Malformed backup state file
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
   finished in * seconds (glob)
+
+Test backupinfo file generation.
+  $ ls .hg/infinitepushlatestbackupinfo || true
+  ls: .hg/infinitepushlatestbackupinfo: No such file or directory
+  $ rm .hg/infinitepushbackupstate
+  $ hg pushbackup --config infinitepushbackup.savelatestbackupinfo=True
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     cf2adfba1469  headone
+  finished in \d+\.(\d+)? seconds (re)
+  $ cat .hg/infinitepushlatestbackupinfo
+  backuprevision=(\d+) (re)
+  backuptime=(\d+) (re)

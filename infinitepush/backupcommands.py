@@ -27,6 +27,11 @@
     # Enable reporting of infinitepush backup status as a summary at the end
     # of smartlog.
     enablestatus = False
+
+    # Whether or not to save information about the latest successful backup.
+    # This information includes the local revision number and unix timestamp
+    # of the last time we successfully made a backup.
+    savelatestbackupinfo = False
 """
 
 from __future__ import absolute_import
@@ -357,6 +362,11 @@ def _dobackup(ui, repo, dest, **opts):
                                     'maxheadstobackup', -1)
 
     revset = 'head() & draft() & not obsolete()'
+
+    # this variable stores the local store info (tip numeric revision and date)
+    # which we use to quickly tell if our backup is stale
+    afterbackupinfo = _getlocalinfo(repo)
+
     # This variable will store what heads will be saved in backup state file
     # if backup finishes successfully
     afterbackupheads = [ctx.hex() for ctx in repo.set(revset)]
@@ -415,6 +425,8 @@ def _dobackup(ui, repo, dest, **opts):
             _sendbundle(bundler, other)
             _writelocalbackupstate(repo.vfs, afterbackupheads,
                                    afterbackuplocalbooks)
+            if ui.config('infinitepushbackup', 'savelatestbackupinfo'):
+                _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
         else:
             ui.status(_('nothing to backup\n'))
     finally:
@@ -447,10 +459,16 @@ def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
         ui.warn(_('%s\n') % e)
         return False
 
+_backuplatestinfofile = 'infinitepushlatestbackupinfo'
 _backupstatefile = 'infinitepushbackupstate'
 _backupgenerationfile = 'infinitepushbackupgeneration'
 
 # Common helper functions
+def _getlocalinfo(repo):
+    localinfo = {}
+    localinfo['rev'] = repo[repo.changelog.tip()].rev()
+    localinfo['time'] = int(time.time())
+    return localinfo
 
 def _getlocalbookmarks(repo):
     localbookmarks = {}
@@ -717,6 +735,10 @@ def _readbackupgenerationfile(vfs):
 def _writebackupgenerationfile(vfs, backupgenerationvalue):
     with vfs(_backupgenerationfile, 'w', atomictemp=True) as f:
         f.write(str(backupgenerationvalue))
+
+def _writelocalbackupinfo(vfs, rev, time):
+    with vfs(_backuplatestinfofile, 'w', atomictemp=True) as f:
+        f.write(('backuprevision=%d\nbackuptime=%d\n') % (rev, time))
 
 # Restore helper functions
 def _parsebackupbookmark(backupbookmark, namingmgr):

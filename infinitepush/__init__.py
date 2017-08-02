@@ -238,6 +238,7 @@ def extsetup(ui):
     localrepo.localrepository._wlockfreeprefix.update([
         backupcommands._backupstatefile,
         backupcommands._backupgenerationfile,
+        backupcommands._backuplatestinfofile,
     ])
 
     commonsetup(ui)
