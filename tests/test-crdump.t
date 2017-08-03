@@ -9,7 +9,7 @@ Create repo
   $ cd repo
   $ hg init
   $ echo A > a
-  $ echo -e "A\0" > bin1
+  $ printf "A\0\n" > bin1
   $ hg addremove
   adding a
   adding bin1
@@ -17,8 +17,8 @@ Create repo
   $ hg phase -p .
 
   $ printf "A\nB\nC\nD\nE\nF\n" > a
-  $ echo -e "a\0b" > bin1
-  $ echo -e "b\0" > bin2
+  $ printf "a\0b\n" > bin1
+  $ printf "b\0\n" > bin2
   $ hg addremove
   adding bin2
   $ hg commit -m "b
