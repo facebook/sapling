@@ -711,11 +711,19 @@ def destination(repo, subset, x):
 
 @predicate('divergent()', safe=True)
 def divergent(repo, subset, x):
+    msg = ("'divergent()' is deprecated, "
+           "use 'contentdivergent()'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return contentdivergent(repo, subset, x)
+
+@predicate('contentdivergent()', safe=True)
+def contentdivergent(repo, subset, x):
     """
     Final successors of changesets with an alternative set of final successors.
     """
-    # i18n: "divergent" is a keyword
-    getargs(x, 0, 0, _("divergent takes no arguments"))
+    # i18n: "contentdivergent" is a keyword
+    getargs(x, 0, 0, _("contentdivergent takes no arguments"))
     divergent = obsmod.getrevs(repo, 'divergent')
     return subset & divergent
 

@@ -80,7 +80,7 @@ A_1 have two direct and divergent successors A_1 and A_1
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
   $ hg debugsuccessorssets 'all()' --closest
@@ -147,7 +147,7 @@ indirect divergence with known changeset
       01f36c5a8fda
   01f36c5a8fda
       01f36c5a8fda
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   4:01f36c5a8fda A_3
   $ hg debugsuccessorssets 'all()' --closest
@@ -199,7 +199,7 @@ indirect divergence with known changeset
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
   $ hg debugsuccessorssets 'all()' --closest
@@ -278,7 +278,7 @@ divergence that converge again is not divergence anymore
       01f36c5a8fda
   01f36c5a8fda
       01f36c5a8fda
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   $ hg debugsuccessorssets 'all()' --closest
   d20a80d4def3
       d20a80d4def3
@@ -322,7 +322,7 @@ split is not divergences
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   $ hg debugsuccessorssets 'all()' --closest
   d20a80d4def3
       d20a80d4def3
@@ -410,7 +410,7 @@ Even when subsequent rewriting happen
       e442cfc57690
   e442cfc57690
       e442cfc57690
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
 
 Check more complex obsolescence graft (with divergence)
 
@@ -515,7 +515,7 @@ Check more complex obsolescence graft (with divergence)
       14608b260df8
   bed64f5d2f5a
       bed64f5d2f5a
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   4:01f36c5a8fda A_3
   8:7ae126973a96 A_7
   9:14608b260df8 A_8
@@ -614,7 +614,7 @@ fix the divergence
       a139f71be9da
   a139f71be9da
       a139f71be9da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
 
   $ cd ..
 

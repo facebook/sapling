@@ -4504,10 +4504,10 @@ Test obsstore related revsets
   E
   G
 
-  $ hg log -r 'successors(B+A)-divergent()' -T '{desc}\n'
+  $ hg log -r 'successors(B+A)-contentdivergent()' -T '{desc}\n'
   A
   Z
   B
 
-  $ hg log -r 'successors(B+A)-divergent()-obsolete()' -T '{desc}\n'
+  $ hg log -r 'successors(B+A)-contentdivergent()-obsolete()' -T '{desc}\n'
   Z
