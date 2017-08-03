@@ -945,6 +945,40 @@ test the default cmdline template
   summary:     add obsolete_e
   
 
+test the obsolete labels
+
+  $ hg log --config ui.logtemplate= --color=debug -r 'phasedivergent()'
+  [log.changeset changeset.draft changeset.troubled trouble.orphan trouble.phase-divergent|changeset:   7:50c51b361e60]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.trouble|instability: orphan, phase-divergent]
+  [log.summary|summary:     add babar]
+  
+
+  $ hg log -T default -r 'phasedivergent()' --color=debug
+  [log.changeset changeset.draft changeset.troubled trouble.orphantrouble.phase-divergent|changeset:   7:50c51b361e60]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.trouble|instability: orphan, phase-divergent]
+  [log.summary|summary:     add babar]
+  
+
+  $ hg log --config ui.logtemplate= --color=debug -r "obsolete()"
+  [log.changeset changeset.draft changeset.obsolete|changeset:   6:3de5eca88c00]
+  [log.parent changeset.draft|parent:      3:6f9641995072]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     add obsolete_e]
+  
+
+  $ hg log -T default -r 'obsolete()' --color=debug
+  [log.changeset changeset.draft changeset.obsolete|changeset:   6:3de5eca88c00]
+  [log.parent changeset.draft|parent:      3:6f9641995072]
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     add obsolete_e]
+  
+
 test summary output
 
   $ hg up -r 'phasedivergent() and orphan()'
