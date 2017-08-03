@@ -182,9 +182,8 @@ def _logdate(repo, tr):
     return writelog(repo, tr, "date.i", revstring)
 
 def _logdraftheads(repo, tr):
-    revs = repo.revs('heads(draft())')
-    tonode = repo.changelog.node
-    hexnodes = [hex(tonode(x)) for x in revs]
+    spec = revsetlang.formatspec('heads(draft())')
+    hexnodes = tohexnode(repo, spec)
     revstring = "\n".join(sorted(hexnodes))
     return writelog(repo, tr, "draftheads.i", revstring)
 
@@ -538,9 +537,8 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
     booklist = bookstring.split("\n")
     if branch:
-        revs = repo.revs(revsetlang.formatspec('_localbranch(%s)', branch))
-        tonode = repo.changelog.node
-        branchcommits = [tonode(x) for x in revs]
+        spec = revsetlang.formatspec('_localbranch(%s)', branch)
+        branchcommits = tohexnode(repo, spec)
     else:
         branchcommits = False
 
@@ -550,7 +548,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         itercopy.append(mark)
     bmremove = []
     for mark in itercopy:
-        if not branchcommits or mark[1] in branchcommits:
+        if not branchcommits or hex(mark[1]) in branchcommits:
             bmremove.append((mark[0], None))
     repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmremove)
     bmchanges = []
@@ -558,7 +556,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         if mark:
             kv = mark.rsplit(" ", 1)
             if not branchcommits or\
-                bin(kv[1]) in branchcommits or\
+                kv[1] in branchcommits or\
                 (kv[0], None) in bmremove:
                 bmchanges.append((kv[0], bin(kv[1])))
     repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmchanges)
@@ -567,10 +565,10 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     workingcopyparent = _readnode(repo, "workingparent.i",
                                   nodedict["workingparent"])
     if not keep:
-        if not branchcommits or bin(workingcopyparent) in branchcommits:
+        if not branchcommits or workingcopyparent in branchcommits:
             hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
                              clean=False, updatecheck='abort')
-    elif not branchcommits or bin(workingcopyparent) in branchcommits:
+    elif not branchcommits or workingcopyparent in branchcommits:
         # keeps working copy files
         precnode = bin(workingcopyparent)
         precctx = repo[precnode]
@@ -683,10 +681,8 @@ def _findnextdelta(repo, reverseindex, branch, direction):
                                 nodedict["bookmarks"])
     incrementalindex = reverseindex
 
-    localbranch = repo.revs(
-        revsetlang.formatspec("_localbranch(%s)", branch))
-    tonode = repo.changelog.node
-    hexnodes = [hex(tonode(x)) for x in localbranch]
+    spec = revsetlang.formatspec("_localbranch(%s)", branch)
+    hexnodes = tohexnode(repo, spec)
 
     done = False
     while not done:
@@ -805,3 +801,9 @@ def _getrevlog(repo, filename):
         # if we get the error a second time
         # then someone is actively messing with these files
         return revlog.revlog(repo.vfs, path)
+
+def tohexnode(repo, spec):
+    revs = repo.revs(spec)
+    tonode = repo.changelog.node
+    hexnodes = [hex(tonode(x)) for x in revs]
+    return hexnodes
