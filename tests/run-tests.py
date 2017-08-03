@@ -2080,9 +2080,14 @@ class TextTestRunner(unittest.TextTestRunner):
                     nooutput(['hg', 'bisect', '--bad', '.'])
                     nooutput(['hg', 'bisect', '--good',
                               self._runner.options.known_good_rev])
-                    # TODO: we probably need to forward some options
+                    # TODO: we probably need to forward more options
                     # that alter hg's behavior inside the tests.
-                    rtc = '%s %s %s' % (sys.executable, sys.argv[0], test)
+                    opts = ''
+                    withhg = self._runner.options.with_hg
+                    if withhg:
+                        opts += ' --with-hg=%s ' % shellquote(withhg)
+                    rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
+                                           test)
                     sub = subprocess.Popen(['hg', 'bisect', '--command', rtc],
                                            stderr=subprocess.STDOUT,
                                            stdout=subprocess.PIPE)
