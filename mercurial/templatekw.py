@@ -783,7 +783,7 @@ def showinstabilities(**args):
     (EXPERIMENTAL)
     """
     args = pycompat.byteskwargs(args)
-    return showlist('trouble', args['ctx'].instabilities(), args)
+    return showlist('instability', args['ctx'].instabilities(), args)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

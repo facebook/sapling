@@ -1573,7 +1573,7 @@ def _changesetlabels(ctx):
     if ctx.isunstable():
         labels.append('changeset.unstable')
         for instability in ctx.instabilities():
-            labels.append('trouble.%s' % instability)
+            labels.append('instability.%s' % instability)
     return ' '.join(labels)
 
 class changeset_printer(object):
