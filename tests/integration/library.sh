@@ -2,7 +2,7 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 function mononoke {
-  $MONONOKE_SERVER "$@" >> "$TESTTMP/mononoke.out" 2>&1 &
+  $MONONOKE_SERVER --repotype revlog "$@" >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 

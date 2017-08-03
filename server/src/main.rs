@@ -27,13 +27,20 @@ extern crate kvfilter;
 extern crate maplit;
 
 extern crate async_compression;
-extern crate bookmarks;
 extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
 extern crate sshrelay;
 extern crate futures_ext;
+extern crate heads;
+extern crate fileheads;
+extern crate bookmarks;
+extern crate filebookmarks;
+extern crate blobstore;
+extern crate fileblob;
+extern crate rocksblob;
+extern crate blobrepo;
 
 use std::thread;
 use std::path::{Path, PathBuf};
@@ -45,7 +52,7 @@ use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
 
-use clap::App;
+use clap::{App, Arg};
 
 use slog::{Drain, Level, LevelFilter, Logger};
 use kvfilter::KVFilter;
@@ -64,13 +71,14 @@ use errors::*;
 
 use listener::{Stdio, ssh_server_mux};
 
-fn init_repo<P: AsRef<Path>>(parent_logger: &Logger, repopath: P) -> Result<(PathBuf, repo::Repo)> {
-    let repopath = repopath.as_ref();
+use repo::RepoType;
 
-    let mut sock = PathBuf::from(repopath);
-    sock.push(".hg");
+fn init_repo(parent_logger: &Logger, repotype: &RepoType) -> Result<(PathBuf, repo::HgRepo)> {
+    let repopath = repotype.path();
 
-    let repo = repo::Repo::new(parent_logger, &sock)
+    let mut sock = repopath.join(".hg");
+
+    let repo = repo::HgRepo::new(parent_logger, repotype)
         .chain_err(|| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
@@ -98,7 +106,7 @@ impl io::Write for SenderBytesWrite {
 }
 
 // Listener thread for a specific repo
-fn repo_listen(sockname: &Path, repo: repo::Repo, listen_log: &Logger) -> Result<()> {
+fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Result<()> {
     let mut core = tokio_core::reactor::Core::new()?;
     let handle = core.handle();
     let repo = Arc::new(repo);
@@ -118,7 +126,9 @@ fn repo_listen(sockname: &Path, repo: repo::Repo, listen_log: &Logger) -> Result
                 stderr,
             } = ssh_server_mux(sock, &handle);
 
-            let stderr_write = SenderBytesWrite { chan: stderr.clone().wait() };
+            let stderr_write = SenderBytesWrite {
+                chan: stderr.clone().wait(),
+            };
             let drain = slog_term::PlainSyncDecorator::new(stderr_write);
             let drain = slog_term::FullFormat::new(drain).build();
             let drain = KVFilter::new(
@@ -173,7 +183,7 @@ fn repo_listen(sockname: &Path, repo: repo::Repo, listen_log: &Logger) -> Result
 
 fn run<'a, I>(repos: I, root_log: &Logger) -> Result<()>
 where
-    I: IntoIterator<Item = &'a str>,
+    I: IntoIterator<Item = RepoType>,
 {
     // Given the list of paths to repos:
     // - initialize the repo
@@ -181,10 +191,10 @@ where
     // - wait for connections in that thread
     let threads = repos
         .into_iter()
-        .map(|repopath| {
-            init_repo(root_log, &repopath).and_then(|(sockname, repo)| {
-                let repopath = PathBuf::from(repopath);
-                let listen_log = root_log.new(o!("repo" => format!("{:?}", repopath)));
+        .map(|repotype| {
+            init_repo(root_log, &repotype).and_then(move |(sockname, repo)| {
+                let repopath = repotype.path().to_owned();
+                let listen_log = root_log.new(o!("repo" => format!("{}", repopath.display())));
                 info!(listen_log, "Listening for connections");
 
                 // start a thread for each repo to own the reactor and start listening for
@@ -199,8 +209,8 @@ where
                         Err(err) => {
                             crit!(
                                 listen_log,
-                                "Listener thread {:?} paniced: {:?}",
-                                repopath,
+                                "Listener thread {} paniced: {:?}",
+                                repopath.display(),
                                 err
                             );
                             Ok(())
@@ -236,9 +246,16 @@ fn main() {
         .version("0.0.0")
         .about("serve repos")
         .args_from_usage("[debug] -d, --debug     'print debug level output'")
-        .args_from_usage(
-            "<REPODIR>...            'paths to repo dirs (parent of .hg)'",
+        .arg(
+            Arg::with_name("repotype")
+                .long("repotype")
+                .short("T")
+                .takes_value(true)
+                .possible_values(&["revlog", "blob:files", "blob:rocks"])
+                .required(true)
+                .help("repo type"),
         )
+        .args_from_usage("<REPODIR>...            'paths to repo dirs'")
         .get_matches();
 
     let level = if matches.is_present("debug") {
@@ -255,7 +272,14 @@ fn main() {
 
     info!(root_log, "Starting up");
 
-    let repos = matches.values_of("REPODIR").unwrap();
+    let repos = matches.values_of("REPODIR").unwrap().map(
+        |p| match matches.value_of("repotype").unwrap() {
+            "revlog" => RepoType::Revlog(p.into()),
+            "blob:files" => RepoType::BlobFiles(p.into()),
+            "blob:rocks" => RepoType::BlobRocks(p.into()),
+            bad => panic!("unexpected repotype {}", bad),
+        },
+    );
 
     if let Err(ref e) = run(repos, &root_log) {
         error!(root_log, "Failed: {}", e);

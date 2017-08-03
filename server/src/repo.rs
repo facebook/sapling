@@ -8,7 +8,7 @@
 
 use std::fmt::{self, Debug};
 use std::io::Cursor;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -16,25 +16,84 @@ use std::mem;
 use bytes::Bytes;
 use futures::{Async, BoxFuture, Future, IntoFuture, Poll, Stream, future, stream};
 use futures_ext::StreamExt;
+use error_chain::ChainedError;
 
 use slog::Logger;
 
 use async_compression::CompressorType;
 use bookmarks::Bookmarks;
 use mercurial;
-use mercurial::changeset;
 use mercurial_bundles::{Bundle2EncodeBuilder, parts};
-use mercurial_types::{Changeset, NULL_HASH, NodeHash, Parents, percent_encode};
+use mercurial_types::{BoxRepo, Changeset, NULL_HASH, NodeHash, Parents, Repo, percent_encode};
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
 
+use fileheads::FileHeads;
+use filebookmarks::FileBookmarks;
+use fileblob::Fileblob;
+use rocksblob::Rocksblob;
+use blobrepo::BlobRepo;
+
 use errors::Result;
 
-pub struct Repo {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RepoType {
+    Revlog(PathBuf),
+    BlobFiles(PathBuf),
+    BlobRocks(PathBuf),
+    // BlobManifold...
+}
+
+impl RepoType {
+    pub fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>> {
+        use self::RepoType::*;
+        use hgproto::{Error, ErrorKind};
+
+        fn repo_chain<E: ChainedError>(err: E) -> Error {
+            ChainedError::with_chain(err, ErrorKind::Repo)
+        }
+
+        let ret = match *self {
+            Revlog(ref path) => {
+                BoxRepo::new_with_cvterr(mercurial::RevlogRepo::open(path.join(".hg"))?, repo_chain)
+            }
+
+            BlobFiles(ref path) => {
+                let heads = FileHeads::open(path.with_extension("heads"))?;
+                let bookmarks: FileBookmarks<NodeHash> =
+                    FileBookmarks::open(path.with_extension("books"))?;
+                let blobs: Fileblob<String, Vec<u8>> =
+                    Fileblob::open(path.with_extension("blobs"))?;
+
+                BoxRepo::new_with_cvterr(BlobRepo::new(heads, bookmarks, blobs), repo_chain)
+            }
+
+            BlobRocks(ref path) => {
+                let heads = FileHeads::open(path.with_extension("heads"))?;
+                let bookmarks: FileBookmarks<NodeHash> =
+                    FileBookmarks::open(path.with_extension("books"))?;
+                let blobs = Rocksblob::open(path.with_extension("rocks"))?;
+
+                BoxRepo::new_with_cvterr(BlobRepo::new(heads, bookmarks, blobs), repo_chain)
+            }
+        };
+
+        Ok(ret)
+    }
+
+    pub fn path(&self) -> &Path {
+        use self::RepoType::*;
+
+        match *self {
+            Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
+        }
+    }
+}
+
+pub struct HgRepo {
     path: String,
-    hgrepo: mercurial::RevlogRepo,
-    #[allow(dead_code)]
-    logger: Logger,
+    hgrepo: Arc<Box<Repo<Error = hgproto::Error> + Send + Sync>>,
+    _logger: Logger,
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -67,31 +126,31 @@ fn bundle2caps() -> String {
     percent_encode(&encodedcaps.join("\n"))
 }
 
-impl Repo {
-    pub fn new<P: AsRef<Path>>(parent_logger: &Logger, path: P) -> Result<Self> {
-        let path = path.as_ref();
+impl HgRepo {
+    pub fn new(parent_logger: &Logger, repo: &RepoType) -> Result<Self> {
+        let path = repo.path().to_owned();
 
-        Ok(Repo {
-            path: format!("{:?}", path),
-            hgrepo: mercurial::RevlogRepo::open(&path)?,
-            logger: parent_logger.new(o!("repo" => format!("{:?}", path))),
+        Ok(HgRepo {
+            path: format!("{}", path.display()),
+            hgrepo: Arc::new(repo.open()?),
+            _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
         })
     }
 }
 
-impl Debug for Repo {
+impl Debug for HgRepo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "Repo({})", self.path)
     }
 }
 
 pub struct RepoClient {
-    repo: Arc<Repo>,
+    repo: Arc<HgRepo>,
     logger: Logger,
 }
 
 impl RepoClient {
-    pub fn new(repo: Arc<Repo>, parent_logger: &Logger) -> Self {
+    pub fn new(repo: Arc<HgRepo>, parent_logger: &Logger) -> Self {
         RepoClient {
             repo: repo,
             logger: parent_logger.new(o!()), // connection details?
@@ -114,7 +173,7 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let bookmarks = self.repo.hgrepo.bookmarks()?;
+            let bookmarks = self.repo.hgrepo.get_bookmarks()?;
             let bookmark_names = bookmarks.keys();
             let items = bookmark_names.and_then(move |name| {
                 // For each bookmark name, grab the corresponding value.
@@ -153,16 +212,16 @@ impl HgCommands for RepoClient {
         info!(self.logger, "between pairs {:?}", pairs);
 
         struct ParentStream<CS> {
-            repo: Arc<Repo>,
+            repo: Arc<HgRepo>,
             n: NodeHash,
             bottom: NodeHash,
             wait_cs: Option<CS>,
         };
 
         impl<CS> ParentStream<CS> {
-            fn new(repo: Arc<Repo>, top: NodeHash, bottom: NodeHash) -> Self {
+            fn new(repo: &Arc<HgRepo>, top: NodeHash, bottom: NodeHash) -> Self {
                 ParentStream {
-                    repo: repo,
+                    repo: repo.clone(),
                     n: top,
                     bottom: bottom,
                     wait_cs: None,
@@ -170,7 +229,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl Stream for ParentStream<BoxFuture<changeset::RevlogChangeset, mercurial::Error>> {
+        impl Stream for ParentStream<BoxFuture<Box<Changeset>, hgproto::Error>> {
             type Item = NodeHash;
             type Error = hgproto::Error;
 
@@ -203,7 +262,7 @@ impl HgCommands for RepoClient {
         stream::iter(pairs.into_iter().map(|p| Ok(p)))
             .and_then(move |(top, bottom)| {
                 let mut f = 1;
-                ParentStream::new(repo.clone(), top, bottom)
+                ParentStream::new(&repo, top, bottom)
                     .enumerate()
                     .filter(move |&(i, _)| if i == f {
                         f *= 2;
