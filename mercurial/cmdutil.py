@@ -1687,7 +1687,7 @@ class changeset_printer(object):
             # i18n: column positioning for "hg log"
             instabilities = ctx.instabilities()
             self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
-                          label='log.trouble')
+                          label='log.instability')
 
         self._exthook(ctx)
 

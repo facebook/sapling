@@ -951,7 +951,7 @@ test the obsolete labels
   [log.changeset changeset.draft changeset.unstable instability.orphan instability.phase-divergent|changeset:   7:50c51b361e60]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
-  [log.trouble|instability: orphan, phase-divergent]
+  [log.instability|instability: orphan, phase-divergent]
   [log.summary|summary:     add babar]
   
 
@@ -959,7 +959,7 @@ test the obsolete labels
   [log.changeset changeset.draft changeset.unstable instability.orphaninstability.phase-divergent|changeset:   7:50c51b361e60]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
-  [log.trouble|instability: orphan, phase-divergent]
+  [log.instability|instability: orphan, phase-divergent]
   [log.summary|summary:     add babar]
   
 
