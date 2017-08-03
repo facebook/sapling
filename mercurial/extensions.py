@@ -19,7 +19,6 @@ from .i18n import (
 from . import (
     cmdutil,
     configitems,
-    encoding,
     error,
     pycompat,
     util,
@@ -114,16 +113,11 @@ def _importext(name, path=None, reportfunc=None):
                 mod = _importh(name)
     return mod
 
-def _forbytes(inst):
-    """Portably format an import error into a form suitable for
-    %-formatting into bytestrings."""
-    return encoding.strtolocal(str(inst))
-
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,
     #       Use --config ui.debug=1 to see them.
     ui.debug('could not import %s (%s): trying %s\n'
-             % (failed, _forbytes(err), next))
+             % (failed, util.forcebytestr(err), next))
     if ui.debugflag:
         ui.traceback()
 
@@ -180,7 +174,7 @@ def _runuisetup(name, ui):
             uisetup(ui)
         except Exception as inst:
             ui.traceback()
-            msg = _forbytes(inst)
+            msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False
     return True
@@ -197,7 +191,7 @@ def _runextsetup(name, ui):
                 extsetup() # old extsetup with no ui argument
         except Exception as inst:
             ui.traceback()
-            msg = _forbytes(inst)
+            msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False
     return True
@@ -215,7 +209,7 @@ def loadall(ui, whitelist=None):
         try:
             load(ui, name, path)
         except Exception as inst:
-            msg = _forbytes(inst)
+            msg = util.forcebytestr(inst)
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
                         % (name, path, msg))

@@ -2268,6 +2268,15 @@ def escapestr(s):
 def unescapestr(s):
     return codecs.escape_decode(s)[0]
 
+def forcebytestr(obj):
+    """Portably format an arbitrary object (e.g. exception) into a byte
+    string."""
+    try:
+        return pycompat.bytestr(obj)
+    except UnicodeEncodeError:
+        # non-ascii string, may be lossy
+        return pycompat.bytestr(encoding.strtolocal(str(obj)))
+
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
     return repr(s).replace('\\\\', '\\')

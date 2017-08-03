@@ -1045,7 +1045,7 @@ class bundlepart(object):
             ui.debug('bundle2-generatorexit\n')
             raise
         except BaseException as exc:
-            bexc = pycompat.bytestr(exc)
+            bexc = util.forcebytestr(exc)
             # backup exception data for later
             ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
                      % bexc)
