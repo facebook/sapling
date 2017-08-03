@@ -130,7 +130,7 @@ _defaultstyles = {
 def loadcolortable(ui, extname, colortable):
     _defaultstyles.update(colortable)
 
-def _terminfosetup(ui, mode):
+def _terminfosetup(ui, mode, formatted):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
     # If we failed to load curses, we go ahead and return.
@@ -164,8 +164,8 @@ def _terminfosetup(ui, mode):
             del ui._terminfoparams[key]
     if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
         # Only warn about missing terminfo entries if we explicitly asked for
-        # terminfo mode.
-        if mode == "terminfo":
+        # terminfo mode and we're in a formatted terminal.
+        if mode == "terminfo" and formatted:
             ui.warn(_("no terminfo entry for setab/setaf: reverting to "
               "ECMA-48 color\n"))
         ui._terminfoparams.clear()
@@ -242,7 +242,7 @@ def _modesetup(ui):
     def modewarn():
         # only warn if color.mode was explicitly set and we're in
         # a formatted terminal
-        if mode == realmode and ui.formatted():
+        if mode == realmode and formatted:
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
@@ -253,7 +253,7 @@ def _modesetup(ui):
     elif realmode == 'ansi':
         ui._terminfoparams.clear()
     elif realmode == 'terminfo':
-        _terminfosetup(ui, mode)
+        _terminfosetup(ui, mode, formatted)
         if not ui._terminfoparams:
             ## FIXME Shouldn't we return None in this case too?
             modewarn()
