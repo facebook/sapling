@@ -406,6 +406,10 @@ def getparser():
                       metavar="known_good_rev",
                       help=("Automatically bisect any failures using this "
                             "revision as a known-good revision."))
+    parser.add_option('--bisect-repo', type="string",
+                      metavar='bisect_repo',
+                      help=("Path of a repo to bisect. Use together with "
+                            "--known-good-rev"))
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -457,6 +461,9 @@ def parseargs(args, parser):
     if options.color == 'always' and not pygmentspresent:
         sys.stderr.write('warning: --color=always ignored because '
                          'pygments is not installed\n')
+
+    if options.bisect_repo and not options.known_good_rev:
+        parser.error("--bisect-repo cannot be used without --known-good-rev")
 
     global useipv6
     if options.ipv6:
@@ -2071,6 +2078,9 @@ class TextTestRunner(unittest.TextTestRunner):
 
             if failed and self._runner.options.known_good_rev:
                 bisectcmd = ['hg', 'bisect']
+                bisectrepo = self._runner.options.bisect_repo
+                if bisectrepo:
+                    bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
                 def nooutput(args):
                     p = subprocess.Popen(args, stderr=subprocess.STDOUT,
                                          stdout=subprocess.PIPE)

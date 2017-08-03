@@ -1285,6 +1285,58 @@ support for bisecting failed tests automatically
 
   $ cd ..
 
+support bisecting a separate repo
+
+  $ hg init bisect-dependent
+  $ cd bisect-dependent
+  $ cat > test-bisect-dependent.t <<EOF
+  >   $ tail -1 \$TESTDIR/../bisect/test-bisect.t
+  >     pass
+  > EOF
+  $ hg commit -Am dependent test-bisect-dependent.t
+
+  $ rt --known-good-rev=0 test-bisect-dependent.t
+  
+  --- $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t
+  +++ $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t.err
+  @@ -1,2 +1,2 @@
+     $ tail -1 $TESTDIR/../bisect/test-bisect.t
+  -    pass
+  +    fail
+  
+  ERROR: test-bisect-dependent.t output changed
+  !
+  Failed test-bisect-dependent.t: output changed
+  Failed to identify failure point for test-bisect-dependent.t
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ rt --bisect-repo=../test-bisect test-bisect-dependent.t
+  Usage: run-tests.py [options] [tests]
+  
+  run-tests.py: error: --bisect-repo cannot be used without --known-good-rev
+  [2]
+
+  $ rt --known-good-rev=0 --bisect-repo=../bisect test-bisect-dependent.t
+  
+  --- $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t
+  +++ $TESTTMP/anothertests/bisect-dependent/test-bisect-dependent.t.err
+  @@ -1,2 +1,2 @@
+     $ tail -1 $TESTDIR/../bisect/test-bisect.t
+  -    pass
+  +    fail
+  
+  ERROR: test-bisect-dependent.t output changed
+  !
+  Failed test-bisect-dependent.t: output changed
+  test-bisect-dependent.t broken by 72cbf122d116 (bad)
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+  $ cd ..
+
 Test a broken #if statement doesn't break run-tests threading.
 ==============================================================
   $ mkdir broken
