@@ -948,7 +948,7 @@ test the default cmdline template
 test the obsolete labels
 
   $ hg log --config ui.logtemplate= --color=debug -r 'phasedivergent()'
-  [log.changeset changeset.draft changeset.troubled trouble.orphan trouble.phase-divergent|changeset:   7:50c51b361e60]
+  [log.changeset changeset.draft changeset.unstable trouble.orphan trouble.phase-divergent|changeset:   7:50c51b361e60]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.trouble|instability: orphan, phase-divergent]
@@ -956,7 +956,7 @@ test the obsolete labels
   
 
   $ hg log -T default -r 'phasedivergent()' --color=debug
-  [log.changeset changeset.draft changeset.troubled trouble.orphantrouble.phase-divergent|changeset:   7:50c51b361e60]
+  [log.changeset changeset.draft changeset.unstable trouble.orphantrouble.phase-divergent|changeset:   7:50c51b361e60]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.trouble|instability: orphan, phase-divergent]

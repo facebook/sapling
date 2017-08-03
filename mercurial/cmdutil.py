@@ -1571,7 +1571,7 @@ def _changesetlabels(ctx):
     if ctx.obsolete():
         labels.append('changeset.obsolete')
     if ctx.isunstable():
-        labels.append('changeset.troubled')
+        labels.append('changeset.unstable')
         for instability in ctx.instabilities():
             labels.append('trouble.%s' % instability)
     return ' '.join(labels)
