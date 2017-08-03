@@ -64,7 +64,7 @@ where
 
 impl<B> Entry for BlobEntry<B>
 where
-    B: Blobstore<Key = String> + Clone,
+    B: Blobstore<Key = String> + Sync + Clone,
     B::ValueOut: AsRef<[u8]>,
 {
     type Error = Error;

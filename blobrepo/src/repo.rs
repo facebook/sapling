@@ -88,7 +88,7 @@ where
     fn get_manifest_by_nodeid(
         &self,
         nodeid: &NodeHash,
-    ) -> BoxFuture<Box<Manifest<Error = Self::Error>>, Self::Error> {
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         let nodeid = *nodeid;
         BlobManifest::load(&self.inner.blobstore, &nodeid)
             .and_then(move |mf| {

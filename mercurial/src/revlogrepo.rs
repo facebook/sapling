@@ -334,10 +334,8 @@ impl Repo for RevlogRepo {
             .boxed()
     }
 
-    fn get_manifest_by_nodeid(
-        &self,
-        nodeid: &NodeHash,
-    ) -> BoxFuture<Box<Manifest<Error = Self::Error>>, Self::Error> {
+    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash)
+        -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         RevlogRepo::get_manifest_by_nodeid(self, nodeid)
             .map(|m| m.boxed())
             .boxed()

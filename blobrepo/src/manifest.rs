@@ -54,10 +54,8 @@ where
 }
 
 impl<B> Manifest for BlobManifest<B>
-where
-    B: Blobstore<Key = String> + Clone,
-    B::ValueOut: AsRef<[u8]> + Send,
-{
+    where B: Blobstore<Key=String> + Sync + Clone,
+          B::ValueOut: AsRef<[u8]> + Send, {
     type Error = Error;
 
     fn lookup(
