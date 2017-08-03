@@ -177,6 +177,32 @@ Test 'olddraft([NUM])' revset
   @  10[tip][master]   aa430c8afedf   1970-01-01 00:00 +0000   test
   |    a5
   ~
+  $ hg log -G -r 'olddraft(1) and draft()' -T compact
+  o  9   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  |
+  | o  7[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
+  |/     d
+  |
+  o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
+       a1
+  
+  $ hg log -G -r 'olddraft(1) and public()' -T compact
 
 Test undolog lock
   $ hg log --config hooks.duringundologlock="sleep 1" > /dev/null &
@@ -414,3 +440,104 @@ File corruption handling
 #endif
   $ hg debugundohistory -l
   0:  -- gap in log -- 
+
+_localbranch revset tests
+  $ hg log -r '_localbranch(75f63379f12b)'
+  changeset:   0:df4fd610a3d6
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a1
+  
+  changeset:   1:b68836a6e2ca
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a2
+  
+  changeset:   2:49cdb4091aca
+  bookmark:    feature1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  changeset:   3:ec7553f7b382
+  parent:      1:b68836a6e2ca
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c1
+  
+  changeset:   4:38d85b506754
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c2
+  
+  changeset:   7:296fda51a303
+  bookmark:    feature2
+  parent:      4:38d85b506754
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     d
+  
+  changeset:   8:0a3dd3e15e65
+  parent:      4:38d85b506754
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     words
+  
+  changeset:   9:1dafc0b43612
+  bookmark:    master
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     cmiss
+  
+  changeset:   17:d0fdb9510dbf
+  parent:      9:1dafc0b43612
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  changeset:   18:75f63379f12b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+Test with public commit
+  $ hg phase -r 0a3dd3e15e65 -p
+  $ hg log -r '_localbranch(75f63379f12b)'
+  changeset:   9:1dafc0b43612
+  bookmark:    master
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     cmiss
+  
+  changeset:   17:d0fdb9510dbf
+  parent:      9:1dafc0b43612
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  changeset:   18:75f63379f12b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  $ hg log -r '_localbranch(0a3dd3e15e65)'
+  changeset:   9:1dafc0b43612
+  bookmark:    master
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     cmiss
+  
+  changeset:   17:d0fdb9510dbf
+  parent:      9:1dafc0b43612
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  changeset:   18:75f63379f12b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  

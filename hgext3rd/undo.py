@@ -21,6 +21,7 @@ from mercurial import (
     lock as lockmod,
     obsolete,
     obsutil,
+    phases,
     registrar,
     revlog,
     revset,
@@ -381,7 +382,30 @@ def _olddraft(repo, subset, x):
     reverseindex = revsetlang.getinteger(args.get('reverseindex'),
                 _('index must be a positive integer'), 1)
     revs = _getolddrafts(repo, reverseindex)
-    return smartset.baseset(revs)
+    return subset & smartset.baseset(revs)
+
+@revsetpredicate('_localbranch')
+def _localbranch(repo, subset, x):
+    """``_localbranch(changectx)``
+    localbranch changesets
+
+    Returns all commits within the same localbranch as the changeset(s). A local
+    branch is all draft changesets that are connected, uninterupted by public
+    changesets.  Any draft commit within a branch, or a public commit at the
+    base of the branch, can be passed used to identify localbranches.
+    """
+    # executed on an filtered repo
+    args = revset.getargsdict(x, 'branchrevset', 'changectx')
+    revstring = revsetlang.getstring(args.get('changectx'),
+                               _('localbranch argument must be a changectx'))
+    revs = repo.revs(revstring)
+    # we assume that there is only a single rev
+    if repo[revs.first()].phase() == phases.public:
+        querystring = revsetlang.formatspec('(children(%d) & draft())::',
+                                            revs.first())
+    else:
+        querystring = revsetlang.formatspec('((::%ld) & draft())::', revs)
+    return subset & smartset.baseset(repo.revs(querystring))
 
 # Undo:
 
