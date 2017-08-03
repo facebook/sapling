@@ -412,6 +412,8 @@ def _localbranch(repo, subset, x):
 @command('undo', [
     ('a', 'absolute', False, _("absolute based on command index instead of "
                                "relative undo")),
+    ('b', 'branch', "", _("local branch undo, accepts commit hash "
+                          "(ADVANCED)")),
     ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
     ('k', 'keep', False, _("keep working copy changes")),
     ('n', 'index', 1, _("how many steps to undo back")),
@@ -466,6 +468,7 @@ def undo(ui, repo, *args, **opts):
     reverseindex = opts.get("index")
     relativeundo = not opts.get("absolute")
     keep = opts.get("keep")
+    branch = opts.get("branch")
 
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
@@ -476,7 +479,8 @@ def undo(ui, repo, *args, **opts):
         if not (opts.get("force") or _gapcheck(repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
-        _undoto(ui, repo, reverseindex, keep=keep)
+        _undoto(ui, repo, reverseindex, keep=keep, branch=branch)
+
         # store undo data
         # for absolute undos, think of this as a reset
         # for relative undos, think of this as an update
@@ -505,9 +509,11 @@ def redo(ui, repo, *args, **opts):
         _undoto(ui, repo, reverseindex)
         _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
 
-def _undoto(ui, repo, reverseindex, keep=False):
+def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
     # requires inhibit extension
+    # branch is a changectx hash (potentially short form)
+    # which identifies its branch via localbranch revset
     if repo != repo.unfiltered():
         raise error.ProgrammingError(_("_undoto expects unfilterd repo"))
     try:
@@ -518,27 +524,40 @@ def _undoto(ui, repo, reverseindex, keep=False):
     # bookmarks
     bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
     booklist = bookstring.split("\n")
+    if branch:
+        revs = repo.revs(revsetlang.formatspec('_localbranch(%s)', branch))
+        tonode = repo.changelog.node
+        branchcommits = [tonode(x) for x in revs]
+    else:
+        branchcommits = False
+
     # copy implementation for bookmarks
     itercopy = []
     for mark in repo._bookmarks.iteritems():
         itercopy.append(mark)
-    bmchanges = [(mark[0], None) for mark in itercopy]
-    repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmchanges)
+    bmremove = []
+    for mark in itercopy:
+        if not branchcommits or mark[1] in branchcommits:
+            bmremove.append((mark[0], None))
+    repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmremove)
     bmchanges = []
     for mark in booklist:
         if mark:
             kv = mark.rsplit(" ", 1)
-            bmchanges.append((kv[0], bin(kv[1])))
+            if not branchcommits or\
+                bin(kv[1]) in branchcommits or\
+                (kv[0], None) in bmremove:
+                bmchanges.append((kv[0], bin(kv[1])))
     repo._bookmarks.applychanges(repo, repo.currenttransaction(), bmchanges)
 
     # working copy parent
     workingcopyparent = _readnode(repo, "workingparent.i",
                                   nodedict["workingparent"])
     if not keep:
-        #revealcommits(repo, workingcopyparent)
-        hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
-                         clean=False, updatecheck='abort')
-    else:
+        if not branchcommits or bin(workingcopyparent) in branchcommits:
+            hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
+                             clean=False, updatecheck='abort')
+    elif not branchcommits or bin(workingcopyparent) in branchcommits:
         # keeps working copy files
         precnode = bin(workingcopyparent)
         precctx = repo[precnode]
@@ -566,8 +585,19 @@ def _undoto(ui, repo, reverseindex, keep=False):
                                       reverseindex)
     removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
                                         reverseindex)
-    smarthide(repo, addedrevs, removedrevs)
-    revealcommits(repo, removedrevs)
+    if not branch:
+        smarthide(repo, addedrevs, removedrevs)
+        revealcommits(repo, removedrevs)
+    else:
+        localadds = revsetlang.formatspec('(olddraft(0) - olddraft(%d)) and'
+                                          ' _localbranch(%s)',
+                                          reverseindex, branch)
+        localremoves = revsetlang.formatspec('(olddraft(%d) - olddraft(0)) and'
+                                          ' _localbranch(%s)',
+                                          reverseindex, branch)
+        smarthide(repo, localadds, removedrevs)
+        smarthide(repo, addedrevs, localremoves, local=True)
+        revealcommits(repo, localremoves)
 
 def _computerelative(repo, reverseindex):
     # allows for relative undos using
@@ -583,11 +613,13 @@ def _computerelative(repo, reverseindex):
     return reverseindex
 
 # hide and reveal commits
-def smarthide(repo, revhide, revshow):
+def smarthide(repo, revhide, revshow, local=False):
     '''hides changecontexts and reveals some commits
 
     tries to connect related hides and shows with obs marker
     when reasonable and correct
+
+    use local to not hide revhides without corresponding revshows
     '''
     hidectxs = repo.set(revhide)
     showctxs = repo.set(revshow)
@@ -615,8 +647,11 @@ def smarthide(repo, revhide, revshow):
         # correct solution for complex edge case
         if len(destinations) == 1:
             hidecommits(repo, ctx, destinations)
-        else:
+        elif len(destinations) > 1:# split
             hidecommits(repo, ctx, [])
+        elif len(destinations) == 0:
+            if not local:
+                hidecommits(repo, ctx, [])
 
 def hidecommits(repo, curctx, precctxs):
     obsolete.createmarkers(repo, [(curctx, precctxs)], operation='undo')

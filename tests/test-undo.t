@@ -541,3 +541,95 @@ Test with public commit
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     newfiles
   
+
+localbranch undos
+Make changes on two branches (old and new)
+Undo only changes in one branch (old)
+Includes commit and book changes
+  $ hg book "oldbook"
+  $ touch oldbranch
+  $ hg add oldbranch && hg ci -moldbranch
+  $ hg update null
+  0 files updated, 0 files merged, 8 files removed, 0 files unresolved
+  (leaving bookmark oldbook)
+  $ touch newbranch
+  $ hg add newbranch && hg ci -mnewbranch
+  created new head
+  $ hg book "newbook"
+  $ hg log -l 2
+  changeset:   20:805791ba4bcd
+  bookmark:    newbook
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+  changeset:   19:7b0ef4f2a1ae
+  bookmark:    oldbook
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     oldbranch
+  
+  $ hg up 75f63379f12b
+  7 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark newbook)
+  $ hg undo -b 75f63379f12b -n 6
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -l 2
+  changeset:   20:805791ba4bcd
+  bookmark:    newbook
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+  changeset:   18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+Check rebase local undos of rebases
+Make sure bookmarks and commits are not lost
+and commits are not duplicated
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > rebase =
+  > EOF
+  $ hg rebase -s 8057 -d 75f6
+  rebasing 20:805791ba4bcd "newbranch" (tip newbook)
+  $ hg log -l 2
+  changeset:   21:35324a911c0d
+  bookmark:    newbook
+  tag:         tip
+  parent:      18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+  changeset:   18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  $ hg undo -b 3532
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -l 2
+  changeset:   20:805791ba4bcd
+  bookmark:    newbook
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+  changeset:   18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > rebase = !
+  > EOF
