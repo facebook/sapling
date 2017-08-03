@@ -20,7 +20,7 @@ use futures_ext::StreamExt;
 use slog::Logger;
 
 use async_compression::CompressorType;
-use bookmarks::{Bookmarks, ListBookmarks};
+use bookmarks::Bookmarks;
 use mercurial;
 use mercurial::changeset;
 use mercurial_bundles::{Bundle2EncodeBuilder, parts};

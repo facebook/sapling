@@ -19,7 +19,7 @@ use std::sync::atomic::{ATOMIC_USIZE_INIT, AtomicUsize, Ordering};
 use futures::future::{FutureResult, ok};
 use futures::stream::{BoxStream, Stream, iter};
 
-use bookmarks::{Bookmarks, BookmarksMut, ListBookmarks, Version};
+use bookmarks::{Bookmarks, BookmarksMut, Version};
 
 mod errors {
     // Create Error, ErrorKind, ResultExt, and Result types.
@@ -52,6 +52,7 @@ where
     type Error = Error;
 
     type Get = FutureResult<Option<(Self::Value, Version)>, Self::Error>;
+    type Keys = BoxStream<Vec<u8>, Self::Error>;
 
     fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
         ok(
@@ -61,6 +62,12 @@ where
                 .get(key.as_ref())
                 .map(Clone::clone),
         )
+    }
+
+    fn keys(&self) -> Self::Keys {
+        let guard = self.bookmarks.lock().unwrap();
+        let keys = guard.keys().map(|k| k.clone()).collect::<Vec<_>>();
+        iter(keys.into_iter().map(|k| Ok(k))).boxed()
     }
 }
 
@@ -115,19 +122,6 @@ where
                 }
             }
         }
-    }
-}
-
-impl<V> ListBookmarks for MemBookmarks<V>
-where
-    V: Clone + Send + 'static,
-{
-    type Keys = BoxStream<Vec<u8>, Self::Error>;
-
-    fn keys(&self) -> Self::Keys {
-        let guard = self.bookmarks.lock().unwrap();
-        let keys = guard.keys().map(|k| k.clone()).collect::<Vec<_>>();
-        iter(keys.into_iter().map(|k| Ok(k))).boxed()
     }
 }
 

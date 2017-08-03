@@ -46,7 +46,7 @@ use ascii::AsciiStr;
 use futures::future::{self, FutureResult};
 use futures::stream::{self, BoxStream, Stream};
 
-use bookmarks::{Bookmarks, ListBookmarks, Version};
+use bookmarks::{Bookmarks, Version};
 use mercurial_types::NodeHash;
 
 pub use errors::*;
@@ -129,6 +129,7 @@ where
     type Error = E;
 
     type Get = FutureResult<Option<(NodeHash, Version)>, E>;
+    type Keys = BoxStream<Vec<u8>, E>;
 
     fn get(&self, name: &AsRef<[u8]>) -> Self::Get {
         let value = match self.bookmarks.get(name.as_ref()) {
@@ -137,10 +138,6 @@ where
         };
         future::result(Ok(value))
     }
-}
-
-impl ListBookmarks for StockBookmarks {
-    type Keys = BoxStream<Vec<u8>, Error>;
 
     fn keys(&self) -> Self::Keys {
         // collect forces evaluation early, so that the stream can safely outlive self

@@ -43,9 +43,11 @@ pub trait Bookmarks: Send + 'static {
     // Return type for getting a bookmark value. Must be a future that resolves to
     // a tuple of the current value and current version of the bookmark.
     type Get: Future<Item = Option<(Self::Value, Version)>, Error = Self::Error> + Send + 'static;
+    type Keys: Stream<Item = Vec<u8>, Error = Self::Error> + Send + 'static;
 
     // Basic operations.
     fn get(&self, key: &AsRef<[u8]>) -> Self::Get;
+    fn keys(&self) -> Self::Keys;
 }
 
 /// Trait representing write operations on a bookmark store. Consistency is maintained using
@@ -65,16 +67,6 @@ pub trait BookmarksMut: Bookmarks {
     }
 }
 
-/// Bookmark stores that implement this trait support efficiently enumerating all of
-/// the stored bookmarks. Bookmarks are not guaranteed to be returned in any particular order.
-pub trait ListBookmarks: Bookmarks {
-    type Keys: Stream<Item = Vec<u8>, Error = Self::Error> + Send + 'static;
-    fn keys(&self) -> Self::Keys;
-}
-
-/// Convenience trait to capture listing bookmarks and write operations.
-pub trait ListBookmarksMut: ListBookmarks + BookmarksMut {}
-
 /// Ensure that trait objects can be created from the traits here.
 fn _assert_objects() {
     use std::io;
@@ -90,20 +82,19 @@ fn _assert_objects() {
     // to make set, delete and create to have an AsRef type param rather than taking an AsRef trait
     // object.
 
-    let _: Box<Bookmarks<Value = Vec<u8>, Error = io::Error, Get = GetFuture>>;
     let _: Box<
-        BookmarksMut<Value = Vec<u8>, Error = io::Error, Get = GetFuture, Set = SetFuture>,
+        Bookmarks<Value = Vec<u8>, Error = io::Error, Get = GetFuture, Keys = KeysStream>,
     >;
     let _: Box<
-        ListBookmarks<Value = Vec<u8>, Error = io::Error, Get = GetFuture, Keys = KeysStream>,
+        Bookmarks<Value = Vec<u8>, Error = io::Error, Get = GetFuture, Keys = KeysStream>,
     >;
     let _: Box<
-        ListBookmarksMut<
+        BookmarksMut<
             Value = Vec<u8>,
             Error = io::Error,
             Get = GetFuture,
-            Set = SetFuture,
             Keys = KeysStream,
+            Set = SetFuture,
         >,
     >;
 }

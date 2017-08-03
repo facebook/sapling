@@ -43,7 +43,7 @@ use serde::de::DeserializeOwned;
 // url. Switch to that crate.
 use url::percent_encoding::{DEFAULT_ENCODE_SET, percent_decode, percent_encode};
 
-use bookmarks::{Bookmarks, BookmarksMut, ListBookmarks, Version};
+use bookmarks::{Bookmarks, BookmarksMut, Version};
 
 mod errors {
     error_chain!{
@@ -124,6 +124,7 @@ where
     type Error = Error;
 
     type Get = BoxFuture<Option<(Self::Value, Version)>, Self::Error>;
+    type Keys = BoxStream<Vec<u8>, Self::Error>;
 
     fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
         let pool = self.pool.clone();
@@ -134,6 +135,33 @@ where
                 pool.spawn(future)
             })
             .boxed()
+    }
+
+    fn keys(&self) -> Self::Keys {
+        // XXX: This traversal of the directory entries is unsynchronized and depends on
+        // platform-specific behavior with respect to the underlying directory entries.
+        // As a result, concurrent writes from other threads may produce strange results here.
+        let names = fs::read_dir(&self.base).map(|entries| {
+            entries
+                .map(|result| {
+                    result
+                        .map_err(From::from)
+                        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                })
+                .filter(|result| match result {
+                    &Ok(ref name) => name.starts_with(PREFIX),
+                    &Err(_) => true,
+                })
+                .map(|result| {
+                    result.and_then(|name| {
+                        Ok(percent_decode(&name[PREFIX.len()..].as_bytes()).collect())
+                    })
+                })
+        });
+        match names {
+            Ok(v) => stream::iter(v).boxed(),
+            Err(e) => stream::once(Err(e.into())).boxed(),
+        }
     }
 }
 
@@ -312,40 +340,6 @@ fn poll_delete(
     };
 
     result.map(Async::Ready)
-}
-
-impl<V> ListBookmarks for FileBookmarks<V>
-where
-    V: Clone + Serialize + DeserializeOwned + Send + 'static,
-{
-    type Keys = BoxStream<Vec<u8>, Self::Error>;
-
-    fn keys(&self) -> Self::Keys {
-        // XXX: This traversal of the directory entries is unsynchronized and depends on
-        // platform-specific behavior with respect to the underlying directory entries.
-        // As a result, concurrent writes from other threads may produce strange results here.
-        let names = fs::read_dir(&self.base).map(|entries| {
-            entries
-                .map(|result| {
-                    result
-                        .map_err(From::from)
-                        .map(|entry| entry.file_name().to_string_lossy().into_owned())
-                })
-                .filter(|result| match result {
-                    &Ok(ref name) => name.starts_with(PREFIX),
-                    &Err(_) => true,
-                })
-                .map(|result| {
-                    result.and_then(|name| {
-                        Ok(percent_decode(&name[PREFIX.len()..].as_bytes()).collect())
-                    })
-                })
-        });
-        match names {
-            Ok(v) => stream::iter(v).boxed(),
-            Err(e) => stream::once(Err(e.into())).boxed(),
-        }
-    }
 }
 
 
