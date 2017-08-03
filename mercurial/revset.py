@@ -1919,10 +1919,18 @@ def tagged(repo, subset, x):
 
 @predicate('unstable()', safe=True)
 def unstable(repo, subset, x):
+    msg = ("'unstable()' is deprecated, "
+           "use 'orphan()'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return orphan(repo, subset, x)
+
+@predicate('orphan()', safe=True)
+def orphan(repo, subset, x):
     """Non-obsolete changesets with obsolete ancestors.
     """
-    # i18n: "unstable" is a keyword
-    getargs(x, 0, 0, _("unstable takes no arguments"))
+    # i18n: "orphan" is a keyword
+    getargs(x, 0, 0, _("orphan takes no arguments"))
     unstables = obsmod.getrevs(repo, 'unstable')
     return subset & unstables
 

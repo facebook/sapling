@@ -223,12 +223,12 @@ Test that rewriting leaving instability behind is allowed
   $ echo c >> c
   $ hg histedit --continue
 
-  $ hg log -r 'unstable()'
+  $ hg log -r 'orphan()'
   11:c13eb81022ca f (no-eol)
 
 stabilise
 
-  $ hg rebase  -r 'unstable()' -d .
+  $ hg rebase  -r 'orphan()' -d .
   rebasing 11:c13eb81022ca "f"
   $ hg up tip -q
 

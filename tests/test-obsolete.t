@@ -527,7 +527,7 @@ detect outgoing obsolete and unstable
   update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
   orphan: 1 changesets
-  $ hg log -G -r '::unstable()'
+  $ hg log -G -r '::orphan()'
   @  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   |
   x  4:94b33453f93b (draft *obsolete*) [ ] add original_d
@@ -910,7 +910,7 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
   $ hg debugobsolete `getid obsolete_e`
   obsoleted 1 changesets
   $ hg debugobsolete `getid original_c` `getid babar`
-  $ hg log --config ui.logtemplate= -r 'bumped() and unstable()'
+  $ hg log --config ui.logtemplate= -r 'bumped() and orphan()'
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -925,7 +925,7 @@ test the "obsolete" templatekw
 
 test the "troubles" templatekw
 
-  $ hg log -r 'bumped() and unstable()'
+  $ hg log -r 'bumped() and orphan()'
   7:50c51b361e60 (draft orphan phase-divergent) [ ] add babar
 
 test the default cmdline template
@@ -947,7 +947,7 @@ test the default cmdline template
 
 test summary output
 
-  $ hg up -r 'bumped() and unstable()'
+  $ hg up -r 'bumped() and orphan()'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg summary
   parent: 7:50c51b361e60  (orphan, phase-divergent)
