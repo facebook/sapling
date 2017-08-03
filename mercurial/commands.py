@@ -4992,13 +4992,13 @@ def summary(ui, repo, **opts):
         ui.status(_('phases: %s\n') % ', '.join(t))
 
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        for trouble in ("orphan", "contentdivergent", "bumped"):
+        for trouble in ("orphan", "contentdivergent", "phasedivergent"):
             numtrouble = len(repo.revs(trouble + "()"))
             # We write all the possibilities to ease translation
             troublemsg = {
                "orphan": _("orphan: %d changesets"),
                "contentdivergent": _("content-divergent: %d changesets"),
-               "bumped": _("phase-divergent: %d changesets"),
+               "phasedivergent": _("phase-divergent: %d changesets"),
             }
             if numtrouble > 0:
                 ui.status(troublemsg[trouble] % numtrouble + "\n")

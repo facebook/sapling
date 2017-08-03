@@ -223,7 +223,7 @@ If we didn't filtered obsolete changesets out, 3 and 4 would show up too. Also
 note that the bumped changeset (5:5601fb93a350) is not a direct successor of
 the public changeset
 
-  $ hg log --hidden -r 'bumped()'
+  $ hg log --hidden -r 'phasedivergent()'
   5:5601fb93a350 (draft phase-divergent) [tip ] add new_3_c
 
 And that we can't push bumped changeset
@@ -261,7 +261,7 @@ We need to create a clone of 5 and add a special marker with a flag
   created new head
   $ hg debugobsolete -d '1338 0' --flags 1 `getid new_3_c` `getid n3w_3_c`
   obsoleted 1 changesets
-  $ hg log -r 'bumped()'
+  $ hg log -r 'phasedivergent()'
   $ hg log -G
   @  6:6f9641995072 (draft) [tip ] add n3w_3_c
   |
@@ -910,7 +910,7 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
   $ hg debugobsolete `getid obsolete_e`
   obsoleted 1 changesets
   $ hg debugobsolete `getid original_c` `getid babar`
-  $ hg log --config ui.logtemplate= -r 'bumped() and orphan()'
+  $ hg log --config ui.logtemplate= -r 'phasedivergent() and orphan()'
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -925,12 +925,12 @@ test the "obsolete" templatekw
 
 test the "troubles" templatekw
 
-  $ hg log -r 'bumped() and orphan()'
+  $ hg log -r 'phasedivergent() and orphan()'
   7:50c51b361e60 (draft orphan phase-divergent) [ ] add babar
 
 test the default cmdline template
 
-  $ hg log -T default -r 'bumped()'
+  $ hg log -T default -r 'phasedivergent()'
   changeset:   7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -947,7 +947,7 @@ test the default cmdline template
 
 test summary output
 
-  $ hg up -r 'bumped() and orphan()'
+  $ hg up -r 'phasedivergent() and orphan()'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg summary
   parent: 7:50c51b361e60  (orphan, phase-divergent)

@@ -459,12 +459,20 @@ def branch(repo, subset, x):
 
 @predicate('bumped()', safe=True)
 def bumped(repo, subset, x):
+    msg = ("'bumped()' is deprecated, "
+           "use 'phasedivergent()'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return phasedivergent(repo, subset, x)
+
+@predicate('phasedivergent()', safe=True)
+def phasedivergent(repo, subset, x):
     """Mutable changesets marked as successors of public changesets.
 
-    Only non-public and non-obsolete changesets can be `bumped`.
+    Only non-public and non-obsolete changesets can be `phasedivergent`.
     """
-    # i18n: "bumped" is a keyword
-    getargs(x, 0, 0, _("bumped takes no arguments"))
+    # i18n: "phasedivergent" is a keyword
+    getargs(x, 0, 0, _("phasedivergent takes no arguments"))
     bumped = obsmod.getrevs(repo, 'bumped')
     return subset & bumped
 
