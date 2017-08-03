@@ -2070,15 +2070,16 @@ class TextTestRunner(unittest.TextTestRunner):
             savetimes(self._runner._outputdir, result)
 
             if failed and self._runner.options.known_good_rev:
+                bisectcmd = ['hg', 'bisect']
                 def nooutput(args):
                     p = subprocess.Popen(args, stderr=subprocess.STDOUT,
                                          stdout=subprocess.PIPE)
                     p.stdout.read()
                     p.wait()
                 for test, msg in result.failures:
-                    nooutput(['hg', 'bisect', '--reset']),
-                    nooutput(['hg', 'bisect', '--bad', '.'])
-                    nooutput(['hg', 'bisect', '--good',
+                    nooutput(bisectcmd + ['--reset']),
+                    nooutput(bisectcmd + ['--bad', '.'])
+                    nooutput(bisectcmd + ['--good',
                               self._runner.options.known_good_rev])
                     # TODO: we probably need to forward more options
                     # that alter hg's behavior inside the tests.
@@ -2088,7 +2089,7 @@ class TextTestRunner(unittest.TextTestRunner):
                         opts += ' --with-hg=%s ' % shellquote(withhg)
                     rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
                                            test)
-                    sub = subprocess.Popen(['hg', 'bisect', '--command', rtc],
+                    sub = subprocess.Popen(bisectcmd + ['--command', rtc],
                                            stderr=subprocess.STDOUT,
                                            stdout=subprocess.PIPE)
                     data = sub.stdout.read()
