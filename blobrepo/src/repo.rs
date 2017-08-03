@@ -55,15 +55,17 @@ where
 
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
         BlobChangesetStream {
-            repo: BlobRepo { inner: self.inner.clone() },
-            heads: self.inner.heads.heads().map_err(head_err).boxed(),
+            repo: BlobRepo {
+                inner: self.inner.clone(),
+            },
+            heads: self.inner.heads.heads().map_err(heads_err).boxed(),
             state: BCState::Idle,
             seen: HashSet::new(),
         }.boxed()
     }
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.inner.heads.heads().map_err(head_err).boxed()
+        self.inner.heads.heads().map_err(heads_err).boxed()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {

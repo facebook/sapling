@@ -6,18 +6,18 @@
 
 use std::error;
 
+use error_chain::ChainedError;
+
 use mercurial_types::{NodeHash, hash};
 
 #[recursion_limit = "1024"]
 error_chain! {
     errors {
-        Head(err: Box<error::Error + Send + 'static>) {
-            description("Head error")
-            display("Head error: {}", err)
+        Heads {
+            description("Heads error")
         }
-        Blobstore(err: Box<error::Error + Send + 'static>) {
+        Blobstore {
             description("Blobstore error")
-            display("Blobstore error: {}", err)
         }
         ChangesetMissing(nodeid: NodeHash) {
             description("Missing Changeset")
@@ -47,19 +47,14 @@ error_chain! {
     }
 }
 
-// We don't know the concrete type of the Heads or Blobstore errors, and we
-// can't currently parameterize Error even if we did, so make do with boxing
-// those errors up.
-pub fn head_err<E>(err: E) -> Error
-where
-    E: error::Error + Send + 'static,
-{
-    ErrorKind::Head(Box::new(err)).into()
+// The specific Heads implementation we're using can have its own Error type,
+// so we can't treat it as a foreign link. Instead, have a local ErrorKind for
+// representing Heads errors which is chained onto the underlying error.
+pub fn heads_err<E: error::Error + Send + 'static>(err: E) -> Error {
+    ChainedError::with_chain(err, ErrorKind::Heads)
 }
 
-pub fn blobstore_err<E>(err: E) -> Error
-where
-    E: error::Error + Send + 'static,
-{
-    ErrorKind::Blobstore(Box::new(err)).into()
+// Handle Blobstore errors in the same way as Heads.
+pub fn blobstore_err<E: error::Error + Send + 'static>(err: E) -> Error {
+    ChainedError::with_chain(err, ErrorKind::Blobstore)
 }
