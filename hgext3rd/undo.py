@@ -91,7 +91,7 @@ def safelog(repo, command):
         True if changes have been recorded, False otherwise
     '''
     changes = False
-    if repo is not None:# some hg commands don't require repo
+    if repo is not None: # some hg commands don't require repo
         # undolog specific lock
         # allows running command during other commands when
         # otherwise legal.  Could cause weird undolog states,
@@ -113,9 +113,9 @@ def safelog(repo, command):
                     if changes and not ("undo" == command[0] or "redo" ==
                                         command[0]):
                         _delundoredo(repo)
-        except error.LockUnavailable:# no write permissions
+        except error.LockUnavailable: # no write permissions
             repo.ui.debug("undolog lacks write permission\n")
-        except error.LockHeld:# timeout, not fatal: don't abort actual command
+        except error.LockHeld: # timeout, not fatal: don't abort actual command
             # TODO: log to Scuba.  This shouldn't happen too often as it will
             # create gaps in the undo log
             repo.ui.debug("undolog lock timeout\n")
@@ -205,10 +205,10 @@ def _logindex(repo, tr, nodes):
     revstring = "\n".join(sorted('%s %s' % (k, v) for k, v in nodes.items()))
     return writelog(repo, tr, "index.i", revstring)
 
-def _logundoredoindex(repo, tr, reverseindex):
+def _logundoredoindex(repo, tr, reverseindex, branch=""):
     rlog = _getrevlog(repo, 'index.i')
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
-    return repo.vfs.write("undolog/redonode", str(hexnode))
+    return repo.vfs.write("undolog/redonode", str(hexnode) + "\0" + branch)
 
 def _delundoredo(repo):
     path = 'undolog' + '/' + 'redonode'
@@ -464,18 +464,25 @@ def undo(ui, repo, *args, **opts):
     the operation may be slow if your working copy is large.  If unsure,
     its generally easier try undo without --keep first and redo if you want
     to change this.
+
+    Branch limits the scope of an undo to a group of local (draft) changectxs,
+    identified by any one member of this group.
     """
     reverseindex = opts.get("index")
     relativeundo = not opts.get("absolute")
     keep = opts.get("keep")
     branch = opts.get("branch")
 
+    if branch and reverseindex != 1:
+        raise error.Abort(_("--branch with --index not supported"))
+
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
-        if relativeundo:
-            reverseindex = _computerelative(repo, reverseindex)
+        reverseindex = _computerelative(repo, reverseindex,
+                                        absolute=not relativeundo,
+                                        branch=branch)
         if not (opts.get("force") or _gapcheck(repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
@@ -484,9 +491,11 @@ def undo(ui, repo, *args, **opts):
         # store undo data
         # for absolute undos, think of this as a reset
         # for relative undos, think of this as an update
-        _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
+        _logundoredoindex(repo, repo.currenttransaction(), reverseindex, branch)
 
 @command('redo', [
+    ('b', 'branch', "", _("single branch undo, accepts commit hash "
+                          "(ADVANCED)")),
     ('n', 'index', 1, _("how many commands to redo")),
 ])
 def redo(ui, repo, *args, **opts):
@@ -499,15 +508,19 @@ def redo(ui, repo, *args, **opts):
     and you can use any number of undos/redos up to the current state or back to
     when the undo extension was first active.
     """
+    branch = opts.get("branch")
     reverseindex = -1 * abs(opts.get("index"))
-    reverseindex = _computerelative(repo, reverseindex)
+
+    if branch and reverseindex != -1:
+        raise error.Abort(_("--branch with --index not supported"))
 
     with repo.wlock(), repo.lock(), repo.transaction("redo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
-        _undoto(ui, repo, reverseindex)
-        _logundoredoindex(repo, repo.currenttransaction(), reverseindex)
+        reverseindex = _computerelative(repo, reverseindex, branch=branch)
+        _undoto(ui, repo, reverseindex, branch=branch)
+        _logundoredoindex(repo, repo.currenttransaction(), reverseindex, branch)
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
@@ -599,18 +612,127 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         smarthide(repo, addedrevs, localremoves, local=True)
         revealcommits(repo, localremoves)
 
-def _computerelative(repo, reverseindex):
+def _computerelative(repo, reverseindex, absolute=False, branch=""):
     # allows for relative undos using
     # redonode storage
-    try:
-        hexnode = repo.vfs.read("undolog/redonode")
-        rlog = _getrevlog(repo, 'index.i')
-        rev = rlog.rev(bin(hexnode))
-        reverseindex = _invertindex(rlog, rev) + reverseindex
-    except IOError:
-        # return input index
-        pass
+    # allows for branch undos using
+    # findnextdelta logic
+    if not absolute:
+        try: # attempt to get relative shift
+            nodebranch = repo.vfs.read("undolog/redonode").split("\0")
+            hexnode = nodebranch[0]
+            try:
+                oldbranch = nodebranch[1]
+            except IndexError:
+                oldbranch = ""
+            rlog = _getrevlog(repo, 'index.i')
+            rev = rlog.rev(bin(hexnode))
+            shiftedindex = _invertindex(rlog, rev)
+        except IOError, error.RevlogError:
+            # no shift
+            shiftedindex = 0
+            oldbranch = ""
+    else:
+        shiftedindex = 0
+        oldbranch = ""
+
+    if not branch:
+        reverseindex = shiftedindex + reverseindex
+    else:
+        # check if relative branch
+        if (branch != oldbranch) and (oldbranch != ""):
+            rootdelta = revsetlang.formatspec(
+                'roots(_localbranch(%s)) - roots(_localbranch(%s))',
+                branch, oldbranch)
+            if repo.revs(rootdelta):
+                # different group of commits
+                shiftedindex = 0
+
+        # from shifted index, find reverse index # of states that change
+        # branch
+        # remember that reverseindex can be negative
+        sign = reverseindex / abs(reverseindex)
+        for count in range(abs(reverseindex)):
+            shiftedindex = _findnextdelta(repo, shiftedindex, branch,
+                                          direction=sign)
+        reverseindex = shiftedindex
     return reverseindex
+
+def _findnextdelta(repo, reverseindex, branch, direction):
+    # finds closest repos state making changes to branch in direction
+    # input:
+    #   repo: mercurial.localrepo
+    #   reverseindex: positive int for index.i
+    #   branch: string changectx (commit hash)
+    #   direction: positive or negative int
+    # output:
+    #   int index with next branch delta
+    #   this is the first repo state that makes a changectx, bookmark or working
+    #   copy parent change that effects the given branch
+    if 0 == direction: # no infinite cycles guarantee
+        raise error.ProgrammingError
+    repo = repo.unfiltered()
+    # current state
+    try:
+        nodedict = _readindex(repo, reverseindex)
+    except IndexError:
+        raise error.Abort(_("index out of bounds"))
+    alphaworkingcopyparent = _readnode(repo, "workingparent.i",
+                                       nodedict["workingparent"])
+    alphabookstring = _readnode(repo, "bookmarks.i",
+                                nodedict["bookmarks"])
+    incrementalindex = reverseindex
+
+    localbranch = repo.revs(
+        revsetlang.formatspec("_localbranch(%s)", branch))
+    tonode = repo.changelog.node
+    hexnodes = [hex(tonode(x)) for x in localbranch]
+
+    done = False
+    while not done:
+        # move index
+        incrementalindex += direction
+        # check this index
+        try:
+            nodedict = _readindex(repo, incrementalindex)
+        except IndexError:
+            raise error.Abort(_("index out of bounds"))
+        # check wkp, commits, bookmarks
+        workingcopyparent = _readnode(repo, "workingparent.i",
+                                      nodedict["workingparent"])
+        bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
+        # local changes in respect to visible changectxs
+        # disjunctive union of present and old = changes
+        # intersection of changes and local = localchanges
+        localctxchanges = revsetlang.formatspec(
+            '((olddraft(%d) + olddraft(%d)) -'
+            '(olddraft(%d) and olddraft(%d)))'
+            ' and _localbranch(%s)',
+            incrementalindex, reverseindex,
+            incrementalindex, reverseindex,
+            branch)
+        done = done or repo.revs(localctxchanges)
+        if done: # perf boost
+            break
+        # bookmark changes
+        if alphabookstring != bookstring:
+            diff = set(alphabookstring.split("\n")) ^\
+                   set(bookstring.split("\n"))
+            for mark in diff:
+                if mark:
+                    kv = mark.rsplit(" ", 1)
+                    # was or will the mark be in the localbranch
+                    if kv[1] in hexnodes:
+                        done = True
+                        break
+
+        # working copy parent changes
+        # for workingcopyparent, only changes within the scope are interesting
+        if alphaworkingcopyparent != workingcopyparent:
+            done = done or (workingcopyparent in hexnodes and
+                            alphaworkingcopyparent in hexnodes)
+
+    return incrementalindex
 
 # hide and reveal commits
 def smarthide(repo, revhide, revshow, local=False):
@@ -647,7 +769,7 @@ def smarthide(repo, revhide, revshow, local=False):
         # correct solution for complex edge case
         if len(destinations) == 1:
             hidecommits(repo, ctx, destinations)
-        elif len(destinations) > 1:# split
+        elif len(destinations) > 1: # split
             hidecommits(repo, ctx, [])
         elif len(destinations) == 0:
             if not local:

@@ -574,7 +574,12 @@ Includes commit and book changes
   $ hg up 75f63379f12b
   7 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark newbook)
-  $ hg undo -b 75f63379f12b -n 6
+3 changes within local scope: commit, book, update
+  $ hg undo -b 75f63379f12b
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg undo -b 75f63379f12b
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo -b 75f63379f12b
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -l 2
   changeset:   20:805791ba4bcd
@@ -632,4 +637,70 @@ and commits are not duplicated
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase = !
+  > EOF
+
+Check local redo works
+Simple test should be sufficient, as per usual, redo is an undo with some index
+logic
+  $ hg redo -b 3532
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -l 2
+  changeset:   21:35324a911c0d
+  bookmark:    newbook
+  tag:         tip
+  parent:      18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+  changeset:   18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newfiles
+  
+  $ touch a9 && hg add a9 && hg ci -m a9
+  created new head
+  $ hg log -r . -T {node}
+  3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
+  $ hg undo -b 3532
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo -b 3532
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo -b 75f6
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo -b 75f6
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -l 2
+  changeset:   22:3ee6a6880888
+  tag:         tip
+  parent:      18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a9
+  
+  changeset:   21:35324a911c0d
+  bookmark:    newbook
+  parent:      18:75f63379f12b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     newbranch
+  
+Check local undo with facebook style strip
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > strip =
+  > fbamend =
+  > EOF
+  $ hg strip 3ee6
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at 75f63379f12b
+  1 changesets pruned
+  $ hg undo -b 3532
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > strip =!
+  > fbamend =!
   > EOF
