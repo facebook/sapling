@@ -181,14 +181,17 @@ coreconfigitem('experimental', 'disablecopytrace',
 coreconfigitem('experimental', 'editortmpinhg',
     default=False,
 )
-coreconfigitem('experimental', 'evolution',
+coreconfigitem('experimental', 'stabilization',
     default=list,
+    alias=[('experimental', 'evolution')],
 )
-coreconfigitem('experimental', 'evolution.bundle-obsmarker',
+coreconfigitem('experimental', 'stabilization.bundle-obsmarker',
     default=False,
+    alias=[('experimental', 'evolution.bundle-obsmarker')],
 )
-coreconfigitem('experimental', 'evolution.track-operation',
+coreconfigitem('experimental', 'stabilization.track-operation',
     default=False,
+    alias=[('experimental', 'evolution.track-operation')]
 )
 coreconfigitem('experimental', 'exportableenviron',
     default=list,
