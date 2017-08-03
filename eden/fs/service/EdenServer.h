@@ -224,8 +224,7 @@ class EdenServer {
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
 
-  mutable std::mutex mountPointsMutex_;
-  MountMap mountPoints_;
+  folly::Synchronized<MountMap> mountPoints_;
   mutable folly::ThreadLocal<fusell::EdenStats> edenStats_;
 
   /**

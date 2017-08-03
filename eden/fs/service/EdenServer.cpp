@@ -127,8 +127,8 @@ EdenServer::~EdenServer() {
 folly::Future<Unit> EdenServer::unmountAll() {
   std::vector<Future<Unit>> futures;
   {
-    std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    for (auto& entry : mountPoints_) {
+    auto mountPoints = mountPoints_.wlock();
+    for (auto& entry : *mountPoints) {
       const auto& mountPath = entry.first;
       try {
         fusell::privilegedFuseUnmount(mountPath);
@@ -200,8 +200,8 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
   {
-    std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    auto ret = mountPoints_.emplace(mountPath, EdenMountInfo(edenMount));
+    auto mountPoints = mountPoints_.wlock();
+    auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
     if (!ret.second) {
       // This mount point already exists.
       throw EdenError(folly::to<string>(
@@ -266,9 +266,9 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
   try {
     auto future = Future<Unit>::makeEmpty();
     {
-      std::lock_guard<std::mutex> guard(mountPointsMutex_);
-      auto it = mountPoints_.find(mountPath);
-      if (it == mountPoints_.end()) {
+      auto mountPoints = mountPoints_.wlock();
+      auto it = mountPoints->find(mountPath);
+      if (it == mountPoints->end()) {
         return makeFuture<Unit>(
             std::out_of_range("no such mount point " + mountPath.str()));
       }
@@ -294,11 +294,11 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
   // Erase the EdenMount from our mountPoints_ map
   folly::SharedPromise<Unit> unmountPromise;
   {
-    std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    auto it = mountPoints_.find(mountPath);
-    CHECK(it != mountPoints_.end());
+    auto mountPoints = mountPoints_.wlock();
+    auto it = mountPoints->find(mountPath);
+    CHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
-    mountPoints_.erase(it);
+    mountPoints->erase(it);
   }
 
   // Shutdown the EdenMount, and fulfill the unmount promise
@@ -316,8 +316,8 @@ string EdenServer::getPeriodicUnloadFunctionName(const EdenMount* mount) {
 EdenServer::MountList EdenServer::getMountPoints() const {
   MountList results;
   {
-    std::lock_guard<std::mutex> guard(mountPointsMutex_);
-    for (const auto& entry : mountPoints_) {
+    auto mountPoints = mountPoints_.rlock();
+    for (const auto& entry : *mountPoints) {
       results.emplace_back(entry.second.edenMount);
     }
   }
@@ -334,9 +334,9 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
-  std::lock_guard<std::mutex> guard(mountPointsMutex_);
-  auto it = mountPoints_.find(mountPath);
-  if (it == mountPoints_.end()) {
+  auto mountPoints = mountPoints_.rlock();
+  auto it = mountPoints->find(mountPath);
+  if (it == mountPoints->end()) {
     return nullptr;
   }
   return it->second.edenMount;
