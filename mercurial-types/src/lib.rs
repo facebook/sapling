@@ -23,6 +23,8 @@ extern crate error_chain;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 
+extern crate bookmarks;
+
 #[macro_use]
 extern crate heapsize_derive;
 extern crate heapsize;

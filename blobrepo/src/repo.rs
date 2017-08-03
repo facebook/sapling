@@ -5,29 +5,29 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::error;
 use std::mem;
+use std::sync::Arc;
 
 use futures::{Async, Poll};
 use futures::future::{BoxFuture, Future};
 use futures::stream::{self, BoxStream, Stream};
 
-use mercurial_types::{Changeset, Manifest, NodeHash, Repo};
 use blobstore::Blobstore;
-use bookmarks::Bookmarks;
+use bookmarks::{Bookmarks, BoxedBookmarks};
 use heads::Heads;
+use mercurial_types::{Changeset, Manifest, NodeHash, Repo, repo};
 
-use errors::*;
-use BlobManifest;
 use BlobChangeset;
+use BlobManifest;
+use errors::*;
 
 pub struct BlobRepo<Head, Book, Blob> {
     inner: Arc<BlobRepoInner<Head, Book, Blob>>,
 }
 
 struct BlobRepoInner<Head, Book, Blob> {
-    #[allow(dead_code)]
-    bookmarks: Book,
+    bookmarks: Arc<Book>,
     heads: Head,
     blobstore: Blob,
 }
@@ -37,7 +37,7 @@ impl<Head, Book, Blob> BlobRepo<Head, Book, Blob> {
         Self {
             inner: Arc::new(BlobRepoInner {
                 heads,
-                bookmarks,
+                bookmarks: Arc::new(bookmarks),
                 blobstore,
             }),
         }
@@ -47,7 +47,8 @@ impl<Head, Book, Blob> BlobRepo<Head, Book, Blob> {
 impl<Head, Book, Blob> Repo for BlobRepo<Head, Book, Blob>
 where
     Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks + Sync,
+    Book: Bookmarks<Value = NodeHash> + Sync,
+    Book::Error: error::Error,
     Blob: Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]> + Send,
 {
@@ -96,11 +97,19 @@ where
             .map(|m| m.boxed())
             .boxed()
     }
+
+    fn get_bookmarks(&self) -> Result<repo::BoxedBookmarks<Self::Error>> {
+        let res = self.inner.bookmarks.clone();
+
+        Ok(BoxedBookmarks::new_cvt(res, bookmarks_err))
+    }
 }
 
 impl<Head, Book, Blob> Clone for BlobRepo<Head, Book, Blob> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -125,7 +134,8 @@ enum BCState {
 impl<Head, Book, Blob> Stream for BlobChangesetStream<Head, Book, Blob>
 where
     Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks + Sync,
+    Book: Bookmarks<Value = NodeHash> + Sync,
+    Book::Error: error::Error,
     Blob: Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]>,
 {

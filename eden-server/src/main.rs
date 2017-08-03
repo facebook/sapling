@@ -188,7 +188,7 @@ fn main() {
 
     let heads = fileheads::FileHeads::<NodeHash>::open(heads_path.clone())
         .expect("couldn't open heads store");
-    let bookmarks = filebookmarks::FileBookmarks::<String>::open(bookmarks_path.clone())
+    let bookmarks = filebookmarks::FileBookmarks::<NodeHash>::open(bookmarks_path.clone())
         .expect("counldn't open bookmarks store");
     let blobstore = fileblob::Fileblob::<String, Vec<u8>>::open(blobstore_path.clone())
         .expect("couldn't open blob store");

@@ -34,6 +34,7 @@ extern crate quickcheck;
 extern crate asyncmemo;
 extern crate mercurial_types;
 extern crate stockbookmarks;
+extern crate bookmarks;
 
 pub mod revlog;
 pub mod manifest;

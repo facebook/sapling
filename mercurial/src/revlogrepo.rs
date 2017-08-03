@@ -20,6 +20,7 @@ use futures::stream::{self, BoxStream};
 use asyncmemo::Filler;
 use mercurial_types::{BlobNode, Changeset, Manifest, NodeHash, Path, Repo};
 use stockbookmarks::StockBookmarks;
+use bookmarks::{Bookmarks, BoxedBookmarks, Version};
 
 use errors::*;
 use revlog::{Revlog, RevlogIter};
@@ -300,6 +301,23 @@ impl Repo for RevlogRepo {
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
         self.get_heads().boxed()
+    }
+
+    fn get_bookmarks(
+        &self,
+    ) -> Result<
+        Box<
+            Bookmarks<
+                Error = Self::Error,
+                Value = NodeHash,
+                Get = BoxFuture<Option<(NodeHash, Version)>, Self::Error>,
+                Keys = BoxStream<Vec<u8>, Self::Error>,
+            >,
+        >,
+    > {
+        let res = StockBookmarks::<Error>::read(self.basepath.clone())?;
+
+        Ok(BoxedBookmarks::new(res))
     }
 
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {

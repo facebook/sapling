@@ -10,8 +10,18 @@ use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 
 use manifest::Manifest;
+use bookmarks::{Bookmarks, Version};
 use changeset::Changeset;
 use nodehash::NodeHash;
+
+pub type BoxedBookmarks<E> = Box<
+    Bookmarks<
+        Error=E,
+        Value=NodeHash,
+        Get=BoxFuture<Option<(NodeHash, Version)>, E>,
+        Keys=BoxStream<Vec<u8>, E>,
+    >
+>;
 
 pub trait Repo: 'static {
     type Error: Send + 'static;
@@ -27,6 +37,7 @@ pub trait Repo: 'static {
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error>;
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error>;
+    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error>;
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error>;
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error>;
     fn get_manifest_by_nodeid(
@@ -54,6 +65,10 @@ where
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
         (**self).get_heads()
+    }
+
+    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+        (**self).get_bookmarks()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -84,6 +99,10 @@ where
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
         (**self).get_heads()
+    }
+
+    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+        (**self).get_bookmarks()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {

@@ -19,6 +19,9 @@ error_chain! {
         Blobstore {
             description("Blobstore error")
         }
+        Bookmarks {
+            description("Bookmarks error")
+        }
         ChangesetMissing(nodeid: NodeHash) {
             description("Missing Changeset")
             display("Changeset id {} is missing", nodeid)
@@ -57,4 +60,8 @@ pub fn heads_err<E: error::Error + Send + 'static>(err: E) -> Error {
 // Handle Blobstore errors in the same way as Heads.
 pub fn blobstore_err<E: error::Error + Send + 'static>(err: E) -> Error {
     ChainedError::with_chain(err, ErrorKind::Blobstore)
+}
+
+pub fn bookmarks_err<E: error::Error + Send + 'static>(err: E) -> Error {
+    ChainedError::with_chain(err, ErrorKind::Bookmarks)
 }
