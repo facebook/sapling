@@ -28,6 +28,9 @@ error_chain! {
             description("unknown escape character in batch command")
             display("unknown escape character in batch command '{}'", ch)
         }
+        Repo {
+            description("Repo error")
+        }
     }
 
     links {
