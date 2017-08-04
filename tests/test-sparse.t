@@ -39,14 +39,16 @@ Absolute paths outside the repo should just be rejected
 Repo root-relaive vs. cwd-relative includes
   $ mkdir subdir
   $ cd subdir
-  $ hg sparse --config sparse.includereporootpaths=on --include reporoot/path
-  $ hg sparse --config sparse.includereporootpaths=off --include cwd/path
+  $ hg sparse --config sparse.includereporootpaths=on --include notinsubdir/path
+  $ hg sparse --config sparse.includereporootpaths=off --include **/path
+  $ hg sparse --config sparse.includereporootpaths=off --include path:abspath
   $ hg sparse
   [include]
   $TESTTMP/myrepo/hide
   hide
-  reporoot/path
-  subdir/cwd/path
+  notinsubdir/path
+  path:abspath
+  subdir/**/path
   [exclude]
   
   
@@ -59,18 +61,20 @@ Verify deleting uses relative paths
   [include]
   $TESTTMP/myrepo/hide
   hide
-  reporoot/path
-  subdir/cwd/path
+  notinsubdir/path
+  path:abspath
+  subdir/**/path
   [exclude]
   
   
   $ cd subdir
-  $ hg sparse --delete cwd/path
+  $ hg sparse --delete **/path
   $ hg sparse
   [include]
   $TESTTMP/myrepo/hide
   hide
-  reporoot/path
+  notinsubdir/path
+  path:abspath
   [exclude]
   
   

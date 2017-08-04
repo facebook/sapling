@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg, registrar, scmutil
+from mercurial import localrepo, error, hg, pathutil, registrar
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -19,6 +19,8 @@ import os, collections, hashlib
 cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
+
+cwdrealtivepatkinds = ('glob', 'relpath')
 
 def uisetup(ui):
     _setupupdates(ui)
@@ -762,17 +764,22 @@ def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
                 err = _('paths cannot be absolute')
                 raise error.Abort(err)
 
-            if (not ui.configbool('sparse', 'includereporootpaths', False)
-                and (include or exclude or delete)):
+            adjustpats = ((include or exclude or delete) and
+                    not ui.configbool('sparse', 'includereporootpaths', False))
+            adjustpats |= ((enableprofile or disableprofile) and
+                    not ui.configbool('sparse', 'enablereporootpaths', True))
+            if adjustpats:
                 # supplied file patterns should be treated as relative
                 # to current working dir, so we need to convert them first
-                pats = scmutil.match(repo['.'], pats).files()
-
-            if (not ui.configbool('sparse', 'enablereporootpaths', True)
-                and (enableprofile or disableprofile)):
-                # supplied file patterns should be treated as relative
-                # to current working dir, so we need to convert them first
-                pats = scmutil.match(repo['.'], pats).files()
+                root, cwd = repo.root, repo.getcwd()
+                abspats = []
+                for kindpat in pats:
+                    kind, pat = matchmod._patsplit(kindpat, None)
+                    if kind in cwdrealtivepatkinds or kind is None:
+                        kindpat = ((kind + ':' if kind else '') +
+                                pathutil.canonpath(root, cwd, pat))
+                    abspats.append(kindpat)
+                pats = abspats
 
             oldstatus = repo.status()
             if include:
