@@ -75,10 +75,10 @@ def gignore(root, files, warn, extrapatterns=None):
     pats = []
     if ignoremod:
         pats = ignore.readpats(root, files, warn)
-        for f, patlist in pats:
-            allpats.extend(patlist)
     else:
-        allpats.extend(['include:%s' % f for f in files])
+        pats = [(f, ['include:%s' % f]) for f in files]
+    for f, patlist in pats:
+        allpats.extend(patlist)
 
     if extrapatterns:
         allpats.extend(extrapatterns)
@@ -91,6 +91,10 @@ def gignore(root, files, warn, extrapatterns=None):
             try:
                 matchmod.match(root, '', [], patlist)
             except util.Abort, inst:
+                if not ignoremod:
+                    # in this case, patlist is ['include: FILE'], and
+                    # inst[0] should already include FILE
+                    raise
                 raise util.Abort('%s: %s' % (f, inst[0]))
         if extrapatterns:
             try:
