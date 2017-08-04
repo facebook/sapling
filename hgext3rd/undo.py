@@ -626,7 +626,7 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
             rlog = _getrevlog(repo, 'index.i')
             rev = rlog.rev(bin(hexnode))
             shiftedindex = _invertindex(rlog, rev)
-        except IOError, error.RevlogError:
+        except (IOError, error.RevlogError):
             # no shift
             shiftedindex = 0
             oldbranch = ""

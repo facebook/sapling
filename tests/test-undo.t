@@ -689,7 +689,7 @@ Check local undo with facebook style strip
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > strip =
-  > fbamend =
+  > fbamend = $TESTDIR/../hgext3rd/fbamend/
   > EOF
   $ hg strip 3ee6
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
