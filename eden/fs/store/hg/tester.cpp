@@ -20,6 +20,7 @@
 #include <rocksdb/utilities/options_util.h> // @manual=@/rocksdb:rocksdb
 #include <sysexits.h>
 
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
@@ -37,6 +38,10 @@ DEFINE_string(
     "",
     "Import flat manifest data from a manifest dump in the specified file.");
 DEFINE_string(
+    subdir,
+    "",
+    "A subdirectory to import when using --import_type=tree.");
+DEFINE_string(
     rocksdb_options_file,
     "",
     "A path to a rocksdb options file to use when creating a "
@@ -48,7 +53,10 @@ using folly::test::TemporaryDirectory;
 using folly::Endian;
 using folly::IOBuf;
 using folly::io::Cursor;
+using folly::StringPiece;
 using std::string;
+
+namespace {
 
 std::unique_ptr<rocksdb::DB> createRocksDb(AbsolutePathPiece dbPath) {
   rocksdb::Options options;
@@ -81,6 +89,40 @@ std::unique_ptr<rocksdb::DB> createRocksDb(AbsolutePathPiece dbPath) {
   }
 
   return std::unique_ptr<rocksdb::DB>(db);
+}
+
+int importTree(
+    LocalStore* store,
+    AbsolutePathPiece repoPath,
+    StringPiece revName,
+    RelativePath subdir) {
+  HgImporter importer(repoPath, store);
+
+  printf(
+      "Importing revision \"%s\" using tree manifest\n", revName.str().c_str());
+  auto rootHash = importer.importTreeManifest(revName);
+  printf("/: %s\n", rootHash.toString().c_str());
+
+  auto tree = store->getTree(rootHash);
+  for (const auto& component : subdir.components()) {
+    auto entry = tree->getEntryPtr(component);
+    if (!entry) {
+      printf("%s: not found\n", component.stringPiece().str().c_str());
+      return EX_DATAERR;
+    }
+    if (entry->getFileType() != FileType::DIRECTORY) {
+      printf("%s: not a tree\n", component.stringPiece().str().c_str());
+      return EX_DATAERR;
+    }
+    printf(
+        "%s: %s\n",
+        component.stringPiece().str().c_str(),
+        entry->getHash().toString().c_str());
+    tree = importer.importTree(entry->getHash());
+  }
+
+  return EX_OK;
+}
 }
 
 int main(int argc, char* argv[]) {
@@ -117,6 +159,7 @@ int main(int argc, char* argv[]) {
 
   LocalStore store(rocksPath);
 
+  int returnCode = EX_OK;
   if (!FLAGS_flat_import_file.empty()) {
     folly::File inputFile(FLAGS_flat_import_file);
     HgImporter::importFlatManifest(inputFile.fd(), &store);
@@ -126,10 +169,8 @@ int main(int argc, char* argv[]) {
     auto rootHash = importer.importFlatManifest(revName);
     printf("Imported root tree: %s\n", rootHash.toString().c_str());
   } else if (FLAGS_import_type == "tree") {
-    HgImporter importer(repoPath, &store);
-    printf("Importing revision \"%s\" using tree manifest\n", revName.c_str());
-    auto rootHash = importer.importTreeManifest(revName);
-    printf("Imported root tree: %s\n", rootHash.toString().c_str());
+    RelativePath path{FLAGS_subdir};
+    returnCode = importTree(&store, repoPath, revName, path);
   } else {
     fprintf(
         stderr,
@@ -138,5 +179,5 @@ int main(int argc, char* argv[]) {
     return EX_USAGE;
   }
 
-  return EX_OK;
+  return returnCode;
 }
