@@ -52,6 +52,7 @@ Config::
     # output new hashes when nodes get updated
     showupdated = False
 """
+from __future__ import absolute_import
 
 from mercurial.i18n import _
 from mercurial.node import (
