@@ -255,7 +255,7 @@ def writediffproperties(ctx, diff):
     callconduit(ctx.repo(), 'differential.setdiffproperty', params)
 
 def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
-                               actions=None):
+                               olddiff=None, actions=None):
     """create or update a Differential Revision
 
     If revid is None, create a new Differential Revision, otherwise update
@@ -279,6 +279,13 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
         diff = creatediff(ctx)
         writediffproperties(ctx, diff)
         transactions.append({'type': 'update', 'value': diff[r'phid']})
+    else:
+        # Even if we don't need to upload a new diff because the patch content
+        # does not change. We might still need to update its metadata so
+        # pushers could know the correct node metadata.
+        assert olddiff
+        diff = olddiff
+    writediffproperties(ctx, diff)
 
     # Use a temporary summary to set dependency. There might be better ways but
     # I cannot find them for now. But do not do that if we are updating an
@@ -383,7 +390,7 @@ def phabsend(ui, repo, *revs, **opts):
         if oldnode != ctx.node():
             # Create or update Differential Revision
             revision = createdifferentialrevision(ctx, revid, lastrevid,
-                                                  oldnode, actions)
+                                                  oldnode, olddiff, actions)
             newrevid = int(revision[r'object'][r'id'])
             if revid:
                 action = _('updated')
