@@ -2617,7 +2617,8 @@ def _graphnodeformatter(ui, displayer):
     return formatnode
 
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
-                 filematcher=None):
+                 filematcher=None, props=None):
+    props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
     state = graphmod.asciistate()
     styles = state['styles']
@@ -2658,7 +2659,7 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         firstedge = next(edges)
         width = firstedge[2]
         displayer.show(ctx, copies=copies, matchfn=revmatchfn,
-                       _graphwidth=width)
+                       _graphwidth=width, **props)
         lines = displayer.hunk.pop(rev).split('\n')
         if not lines[-1]:
             del lines[-1]
