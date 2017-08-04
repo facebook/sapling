@@ -39,7 +39,7 @@ Enabling it
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers,exchange
+  > stabilization=createmarkers,exchange
   > EOF
 
 Killing a single changeset without replacement
@@ -892,7 +892,7 @@ check that web.view config option:
 Checking _enable=False warning if obsolete marker exists
 
   $ echo '[experimental]' >> $HGRCPATH
-  $ echo "evolution=" >> $HGRCPATH
+  $ echo "stabilization=" >> $HGRCPATH
   $ hg log -r tip
   obsolete feature not enabled but 68 markers found!
   68:c15e9edfca13 (draft) [tip ] add celestine
@@ -900,7 +900,7 @@ Checking _enable=False warning if obsolete marker exists
 reenable for later test
 
   $ echo '[experimental]' >> $HGRCPATH
-  $ echo "evolution=createmarkers,exchange" >> $HGRCPATH
+  $ echo "stabilization=createmarkers,exchange" >> $HGRCPATH
 
   $ rm hg.pid access.log errors.log
 #endif
@@ -1263,7 +1263,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ hg ci -m '2'
 
   $ echo bar > f2
-  $ hg commit --amend --config experimetnal.evolution=createmarkers
+  $ hg commit --amend --config experimetnal.stabilization=createmarkers
   $ hg log -G
   @  4:b0551702f918 (draft) [tip ] 2
   |
@@ -1402,7 +1402,7 @@ only a subset of those are displayed (because of --rev option)
   $ echo d > d
   $ hg ci -Am d
   adding d
-  $ hg ci --amend -m dd --config experimental.evolution.track-operation=1
+  $ hg ci --amend -m dd --config experimental.stabilization.track-operation=1
   $ hg debugobsolete --index --rev "3+7"
   1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 \(.*\) {'user': 'test'} (re)
   3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 \(.*\) {'operation': 'amend', 'user': 'test'} (re)

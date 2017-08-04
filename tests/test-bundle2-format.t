@@ -227,7 +227,7 @@ Create an extension to test bundle2 API
   > [extensions]
   > bundle2=$TESTTMP/bundle2.py
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > [ui]
   > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}

@@ -1063,8 +1063,8 @@ we have reusable code here
   $ cd $TESTTMP/scmutilcleanup.obsstore
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > evolution=all
-  > evolution.track-operation=1
+  > stabilization=all
+  > stabilization.track-operation=1
   > EOF
 
   $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/scmutilcleanup.py

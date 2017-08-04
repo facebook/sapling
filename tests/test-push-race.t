@@ -98,7 +98,7 @@ A set of extension and shell functions ensures this scheduling.
   > [phases]
   > publish = no
   > [experimental]
-  > evolution = all
+  > stabilization = all
   > [alias]
   > graph = log -G --rev 'sort(all(), "topo")'
   > EOF

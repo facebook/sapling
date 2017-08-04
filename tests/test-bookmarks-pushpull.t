@@ -6,7 +6,7 @@
   > [phases]
   > publish=False
   > [experimental]
-  > evolution=createmarkers,exchange
+  > stabilization=createmarkers,exchange
   > EOF
 
 initialize

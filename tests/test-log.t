@@ -1700,7 +1700,7 @@ enable obsolete to test hidden feature
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
 
   $ hg log --template='{rev}:{node}\n'
@@ -2280,7 +2280,7 @@ Even when the file revision is missing from some head:
   $ hg init issue4490
   $ cd issue4490
   $ echo '[experimental]' >> .hg/hgrc
-  $ echo 'evolution=createmarkers' >> .hg/hgrc
+  $ echo 'stabilization=createmarkers' >> .hg/hgrc
   $ echo a > a
   $ hg ci -Am0
   adding a

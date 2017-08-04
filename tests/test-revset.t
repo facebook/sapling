@@ -1830,7 +1830,7 @@ Test short 'ff...' hash collision
   $ cd wdir-hashcollision
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > evolution = createmarkers
+  > stabilization = createmarkers
   > EOF
   $ echo 0 > a
   $ hg ci -qAm 0
@@ -4465,7 +4465,7 @@ Test obsstore related revsets
   $ cd repo1
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > evolution = createmarkers
+  > stabilization = createmarkers
   > EOF
 
   $ hg debugdrawdag <<'EOS'

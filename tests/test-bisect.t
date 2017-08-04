@@ -574,7 +574,7 @@ Check that bisect does not break on obsolete changesets
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
 
 tip is obsolete

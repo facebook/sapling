@@ -2,7 +2,7 @@ Enable obsolete markers
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > [phases]
   > publish=False
   > EOF

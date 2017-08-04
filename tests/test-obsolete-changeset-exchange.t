@@ -3,7 +3,7 @@ test-obsolete.t)
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
 
 Push does not corrupt remote
@@ -87,7 +87,7 @@ check that bundle is not affected
 
 check-that bundle can contain markers:
 
-  $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5-obs.hg --config experimental.evolution.bundle-obsmarker=1
+  $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5-obs.hg --config experimental.stabilization.bundle-obsmarker=1
   1 changesets found
   $ hg debugbundle ../f89bcc95eba5.hg
   Stream params: sortdict([('Compression', 'BZ')])

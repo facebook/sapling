@@ -10,7 +10,7 @@ Global setup
   > [phases]
   > publish=False
   > [experimental]
-  > evolution=all
+  > stabilization=all
   > [alias]
   > tlog = log -G -T '{node|short}\
   >     {if(predecessors, "\n  Predecessors: {predecessors}")}\

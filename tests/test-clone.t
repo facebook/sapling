@@ -706,7 +706,7 @@ Create repositories to test auto sharing functionality
   $ cd filteredrev0
   $ cat >> .hg/hgrc << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
   $ echo initial1 > foo
   $ hg -q commit -A -m initial0

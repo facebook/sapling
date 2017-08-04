@@ -6,7 +6,7 @@ Check that obsolete properly strip heads
   > [ui]
   > logtemplate='{node|short} ({phase}) {desc|firstline}\n'
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"

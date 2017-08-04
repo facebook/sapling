@@ -9,7 +9,7 @@ Enable obsolete
   > [ui]
   > logtemplate = {rev}:{node|short} {desc}\n
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > [extensions]
   > drawdag=$TESTDIR/drawdag.py
   > [alias]

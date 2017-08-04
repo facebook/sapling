@@ -2290,7 +2290,7 @@ Test --hidden
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > stabilization=createmarkers
   > EOF
 
   $ hg debugobsolete `hg id --debug -i -r 8`

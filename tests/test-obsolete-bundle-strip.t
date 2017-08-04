@@ -15,10 +15,10 @@ Config setup
   > 
   > [experimental]
   > # enable evolution
-  > evolution = all
+  > stabilization = all
   > 
   > # include obsmarkers in bundle
-  > evolution.bundle-obsmarker = yes
+  > stabilization.bundle-obsmarker = yes
   > 
   > [extensions]
   > # needed for some tests
