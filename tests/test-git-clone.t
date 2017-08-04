@@ -36,3 +36,18 @@ we should have some bookmarks
    * master                    1:7fe02317c63d
   $ hg -R hgrepo gverify
   verifying rev 7fe02317c63d against git commit 9497a4ee62e16ee641860d7677cdb2589ea15554
+
+test for ssh vulnerability
+
+  $ hg clone 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  [1]
+  $ hg clone 'git+ssh://%2DoProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  [1]
+
+  $ hg init a
+  $ cd a
+  $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  [1]
