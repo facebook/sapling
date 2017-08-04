@@ -172,4 +172,20 @@ expect authorization error: some users denied, users must be authenticated
   % serve errors
   [255]
 
+  $ cat > .hg/hgrc <<EOF
+  > [web]
+  > push_ssl = false
+  > allow_push = *
+  > [experimental]
+  > httppostargs=true
+  > EOF
+  $ req
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  % serve errors
+
   $ cd ..
