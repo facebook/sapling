@@ -180,7 +180,7 @@ void HgManifestImporter::processEntry(
     if (iter != end) {
       ++iter;
       while (iter != end) {
-        XLOG(DBG5) << "push '" << iter.piece() << "'  # '" << dirname << "'";
+        XLOG(DBG7) << "push '" << iter.piece() << "'  # '" << dirname << "'";
         dirStack_.emplace_back(iter.piece());
         ++iter;
       }
@@ -191,7 +191,7 @@ void HgManifestImporter::processEntry(
     // None of the checks above passed, so the current entry must be a parent
     // of the current directory.  Record the current directory, then pop it off
     // the stack.
-    XLOG(DBG5) << "pop '" << dirStack_.back().getPath() << "' --> '"
+    XLOG(DBG7) << "pop '" << dirStack_.back().getPath() << "' --> '"
                << (dirStack_.end() - 2)->getPath() << "'  # '" << dirname
                << "'";
     popCurrentDir();
@@ -208,7 +208,7 @@ Hash HgManifestImporter::finish() {
   // The last entry may have been in a deep subdirectory.
   // Pop everything off dirStack_, and record the trees as we go.
   while (dirStack_.size() > 1) {
-    XLOG(DBG5) << "final pop '" << dirStack_.back().getPath() << "'";
+    XLOG(DBG7) << "final pop '" << dirStack_.back().getPath() << "'";
     popCurrentDir();
   }
 

@@ -87,6 +87,17 @@ class HgImporter {
   Hash importFlatManifest(folly::StringPiece revName);
 
   /**
+   * Import flat manifest data from the specified input File, and put the data
+   * into the specified LocalStore object.
+   *
+   * This API is primarily intended to allow benchmarking the flat manifest
+   * import process by importing data from a pre-generated file.  Outside of
+   * benchmarking the importFlatManifest() function above should generally be
+   * used instead.
+   */
+  static Hash importFlatManifest(int manifestDataFd, LocalStore* store);
+
+  /**
    * Import the tree with the specified tree manifest hash.
    *
    * Returns the Tree, or throws on error.
@@ -157,7 +168,7 @@ class HgImporter {
    * response chunk received from the helper process.  readManifestEntry() is
    * responsible for updating the cursor to point to the next manifest entry.
    */
-  void readManifestEntry(
+  static void readManifestEntry(
       HgManifestImporter& importer,
       folly::io::Cursor& cursor);
   /**
@@ -166,7 +177,10 @@ class HgImporter {
    * If the header indicates an error, this will read the full error message
    * and throw a std::runtime_error.
    */
-  ChunkHeader readChunkHeader();
+  ChunkHeader readChunkHeader() {
+    return readChunkHeader(helperOut_);
+  }
+  static ChunkHeader readChunkHeader(int fd);
   /**
    * Send a request to the helper process, asking it to send us the manifest
    * for the specified revision.

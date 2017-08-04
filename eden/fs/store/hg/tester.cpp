@@ -9,33 +9,106 @@
  */
 #include "eden/fs/model/Hash.h"
 
+#include <folly/Optional.h>
+#include <folly/experimental/TestUtil.h>
+#include <folly/experimental/logging/Init.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/init/Init.h>
+#include <folly/io/Cursor.h>
 #include <gflags/gflags.h>
+#include <rocksdb/db.h> // @manual=@/rocksdb:rocksdb
+#include <rocksdb/utilities/options_util.h> // @manual=@/rocksdb:rocksdb
 #include <sysexits.h>
 
-#include "HgImporter.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(rev, "", "The revision ID to import");
+DEFINE_string(logging, "eden=DBG2", "The logging configuration string");
+DEFINE_string(
+    import_type,
+    "flat",
+    "The hg import mechanism to use: \"flat\" or \"tree\"");
+DEFINE_string(
+    flat_import_file,
+    "",
+    "Import flat manifest data from a manifest dump in the specified file.");
+DEFINE_string(
+    rocksdb_options_file,
+    "",
+    "A path to a rocksdb options file to use when creating a "
+    "temporary rocksdb");
 
 using namespace facebook::eden;
+using folly::test::TemporaryDirectory;
+
+using folly::Endian;
+using folly::IOBuf;
+using folly::io::Cursor;
+using std::string;
+
+std::unique_ptr<rocksdb::DB> createRocksDb(AbsolutePathPiece dbPath) {
+  rocksdb::Options options;
+  if (FLAGS_rocksdb_options_file.empty()) {
+    options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+  } else {
+    std::vector<rocksdb::ColumnFamilyDescriptor> cfDescs;
+    auto env = rocksdb::Env::Default();
+    auto status = rocksdb::LoadOptionsFromFile(
+        FLAGS_rocksdb_options_file, env, &options, &cfDescs);
+    if (!status.ok()) {
+      throw std::runtime_error(
+          folly::to<string>("Failed to load DB options: ", status.ToString()));
+    }
+    fprintf(
+        stderr,
+        "loaded rocksdb options from %s\n",
+        FLAGS_rocksdb_options_file.c_str());
+  }
+
+  options.create_if_missing = true;
+
+  // Open DB.
+  rocksdb::DB* db;
+  auto status = rocksdb::DB::Open(options, dbPath.stringPiece().str(), &db);
+  if (!status.ok()) {
+    throw std::runtime_error(
+        folly::to<string>("Failed to open DB: ", status.ToString()));
+  }
+
+  return std::unique_ptr<rocksdb::DB>(db);
+}
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
+  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::INFO, false);
 
   if (argc != 2) {
-    fprintf(stderr, "usage: hg_import --edenDir=<dir> <repository>\n");
+    fprintf(stderr, "usage: hg_import <repository>\n");
     return EX_USAGE;
   }
   auto repoPath = realpath(argv[1]);
+
+  folly::Optional<TemporaryDirectory> tmpDir;
+  AbsolutePath rocksPath;
   if (FLAGS_edenDir.empty()) {
-    fprintf(stderr, "error: --edenDir must be specified\n");
-    return EX_USAGE;
+    tmpDir = TemporaryDirectory("eden_hg_tester");
+    rocksPath = AbsolutePath{tmpDir->path().string()};
+    createRocksDb(rocksPath);
+  } else {
+    if (!FLAGS_rocksdb_options_file.empty()) {
+      fprintf(
+          stderr,
+          "error: --edenDir and --rocksdb_options_file are incompatible\n");
+      return EX_USAGE;
+    }
+    rocksPath =
+        canonicalPath(FLAGS_edenDir) + RelativePathPiece{"storage/rocks-db"};
   }
-  auto rocksPath =
-      canonicalPath(FLAGS_edenDir) + RelativePathPiece{"storage/rocks-db"};
 
   std::string revName = FLAGS_rev;
   if (revName.empty()) {
@@ -43,9 +116,27 @@ int main(int argc, char* argv[]) {
   }
 
   LocalStore store(rocksPath);
-  HgImporter importer(repoPath, &store);
-  auto rootHash = importer.importManifest(revName);
-  printf("Imported root tree: %s\n", rootHash.toString().c_str());
+
+  if (!FLAGS_flat_import_file.empty()) {
+    folly::File inputFile(FLAGS_flat_import_file);
+    HgImporter::importFlatManifest(inputFile.fd(), &store);
+  } else if (FLAGS_import_type == "flat") {
+    HgImporter importer(repoPath, &store);
+    printf("Importing revision \"%s\" using flat manifest\n", revName.c_str());
+    auto rootHash = importer.importFlatManifest(revName);
+    printf("Imported root tree: %s\n", rootHash.toString().c_str());
+  } else if (FLAGS_import_type == "tree") {
+    HgImporter importer(repoPath, &store);
+    printf("Importing revision \"%s\" using tree manifest\n", revName.c_str());
+    auto rootHash = importer.importTreeManifest(revName);
+    printf("Imported root tree: %s\n", rootHash.toString().c_str());
+  } else {
+    fprintf(
+        stderr,
+        "error: unknown import type \"%s\"; must be \"flat\" or \"tree\"\n",
+        FLAGS_import_type.c_str());
+    return EX_USAGE;
+  }
 
   return EX_OK;
 }

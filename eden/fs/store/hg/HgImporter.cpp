@@ -30,6 +30,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 #include "eden/hg/datastorage/cstore/uniondatapackstore.h"
 #include "eden/hg/datastorage/ctreemanifest/treemanifest.h"
@@ -528,13 +529,18 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
   // Send the manifest request to the helper process
   sendManifestRequest(revName);
 
-  HgManifestImporter importer(store_);
+  return importFlatManifest(helperOut_, store_);
+}
+
+Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
+  HgManifestImporter importer(store);
   size_t numPaths = 0;
 
+  auto start = std::chrono::steady_clock::now();
   IOBuf chunkData;
   while (true) {
     // Read the chunk header
-    auto header = readChunkHeader();
+    auto header = readChunkHeader(fd);
 
     // Allocate a larger chunk buffer if we need to,
     // but prefer to re-use the old buffer if we can.
@@ -543,7 +549,7 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
     } else {
       chunkData.clear();
     }
-    folly::readFull(helperOut_, chunkData.writableTail(), header.dataLength);
+    folly::readFull(fd, chunkData.writableTail(), header.dataLength);
     chunkData.append(header.dataLength);
 
     // Now process the entries in the chunk
@@ -557,8 +563,13 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
       break;
     }
   }
+  auto computeEnd = std::chrono::steady_clock::now();
+  XLOG(DBG1) << "computed trees for " << numPaths << " manifest paths in "
+             << durationStr(computeEnd - start);
   auto rootHash = importer.finish();
-  XLOG(DBG1) << "processed " << numPaths << " manifest paths";
+  auto recordEnd = std::chrono::steady_clock::now();
+  XLOG(DBG1) << "recorded trees for " << numPaths << " manifest paths in "
+             << durationStr(recordEnd - computeEnd);
 
   return rootHash;
 }
@@ -648,7 +659,8 @@ void HgImporter::readManifestEntry(
   RelativePathPiece path(pathStr);
 
   // Generate a blob hash from the mercurial (path, fileRev) information
-  auto blobHash = HgProxyHash::store(store_, path, fileRevHash);
+  auto blobHash =
+      HgProxyHash::store(importer.getLocalStore(), path, fileRevHash);
 
   auto entry =
       TreeEntry(blobHash, path.basename().value(), fileType, ownerPermissions);
@@ -664,9 +676,9 @@ std::string HgImporter::getCachePath() {
   return result;
 }
 
-HgImporter::ChunkHeader HgImporter::readChunkHeader() {
+HgImporter::ChunkHeader HgImporter::readChunkHeader(int fd) {
   ChunkHeader header;
-  folly::readFull(helperOut_, &header, sizeof(header));
+  folly::readFull(fd, &header, sizeof(header));
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
   header.flags = Endian::big(header.flags);
@@ -676,7 +688,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader() {
   // and throw an exception.
   if ((header.flags & FLAG_ERROR) != 0) {
     std::vector<char> errMsg(header.dataLength);
-    folly::readFull(helperOut_, &errMsg.front(), header.dataLength);
+    folly::readFull(fd, &errMsg.front(), header.dataLength);
     string errStr(&errMsg.front(), errMsg.size());
     XLOG(WARNING) << "error received from hg helper process: " << errStr;
     throw std::runtime_error(errStr);

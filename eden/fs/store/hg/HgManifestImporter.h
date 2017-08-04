@@ -45,6 +45,10 @@ class HgManifestImporter {
    */
   Hash finish();
 
+  LocalStore* getLocalStore() const {
+    return store_;
+  }
+
  private:
   class PartialTree;
 
