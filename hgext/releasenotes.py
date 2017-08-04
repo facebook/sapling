@@ -46,6 +46,7 @@ DEFAULT_SECTIONS = [
 ]
 
 RE_DIRECTIVE = re.compile('^\.\. ([a-zA-Z0-9_]+)::\s*([^$]+)?$')
+RE_ISSUE = r'\bissue ?[0-9]{4,6}(?![0-9])\b'
 
 BULLET_SECTION = _('Other Changes')
 
@@ -92,6 +93,8 @@ class parsedreleasenotes(object):
         This is used to combine multiple sources of release notes together.
         """
         for section in other:
+            existingnotes = converttitled(self.titledforsection(section)) + \
+                convertnontitled(self.nontitledforsection(section))
             for title, paragraphs in other.titledforsection(section):
                 if self.hastitledinsection(section, title):
                     # TODO prompt for resolution if different and running in
@@ -100,16 +103,32 @@ class parsedreleasenotes(object):
                              (title, section))
                     continue
 
-                # TODO perform similarity comparison and try to match against
-                # existing.
+                incoming_str = converttitled([(title, paragraphs)])[0]
+                if section == 'fix':
+                    issue = getissuenum(incoming_str)
+                    if issue:
+                        if findissue(ui, existingnotes, issue):
+                            continue
+
+                if similar(ui, existingnotes, incoming_str):
+                    continue
+
                 self.addtitleditem(section, title, paragraphs)
 
             for paragraphs in other.nontitledforsection(section):
                 if paragraphs in self.nontitledforsection(section):
                     continue
 
-                # TODO perform similarily comparison and try to match against
-                # existing.
+                incoming_str = convertnontitled([paragraphs])[0]
+                if section == 'fix':
+                    issue = getissuenum(incoming_str)
+                    if issue:
+                        if findissue(ui, existingnotes, issue):
+                            continue
+
+                if similar(ui, existingnotes, incoming_str):
+                    continue
+
                 self.addnontitleditem(section, paragraphs)
 
 class releasenotessections(object):
@@ -135,6 +154,77 @@ class releasenotessections(object):
                 return name
 
         return None
+
+def converttitled(titledparagraphs):
+    """
+    Convert titled paragraphs to strings
+    """
+    string_list = []
+    for title, paragraphs in titledparagraphs:
+        lines = []
+        for para in paragraphs:
+            lines.extend(para)
+        string_list.append(' '.join(lines))
+    return string_list
+
+def convertnontitled(nontitledparagraphs):
+    """
+    Convert non-titled bullets to strings
+    """
+    string_list = []
+    for paragraphs in nontitledparagraphs:
+        lines = []
+        for para in paragraphs:
+            lines.extend(para)
+        string_list.append(' '.join(lines))
+    return string_list
+
+def getissuenum(incoming_str):
+    """
+    Returns issue number from the incoming string if it exists
+    """
+    issue = re.search(RE_ISSUE, incoming_str, re.IGNORECASE)
+    if issue:
+        issue = issue.group()
+    return issue
+
+def findissue(ui, existing, issue):
+    """
+    Returns true if issue number already exists in notes.
+    """
+    if any(issue in s for s in existing):
+        ui.write(_('"%s" already exists in notes; ignoring\n') % issue)
+        return True
+    else:
+        return False
+
+def similar(ui, existing, incoming_str):
+    """
+    Returns true if similar note found in existing notes.
+    """
+    if len(incoming_str.split()) > 10:
+        merge = similaritycheck(incoming_str, existing)
+        if not merge:
+            ui.write(_('"%s" already exists in notes file; ignoring\n')
+                     % incoming_str)
+            return True
+        else:
+            return False
+    else:
+        return False
+
+def similaritycheck(incoming_str, existingnotes):
+    """
+    Returns true when note fragment can be merged to existing notes.
+    """
+    import fuzzywuzzy.fuzz as fuzz
+    merge = True
+    for bullet in existingnotes:
+        score = fuzz.token_set_ratio(incoming_str, bullet)
+        if score > 75:
+            merge = False
+            break
+    return merge
 
 def getcustomadmonitions(repo):
     ctx = repo['.']

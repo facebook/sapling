@@ -1,3 +1,5 @@
+#require fuzzywuzzy
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > releasenotes=
