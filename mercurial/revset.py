@@ -1947,8 +1947,8 @@ def orphan(repo, subset, x):
     """
     # i18n: "orphan" is a keyword
     getargs(x, 0, 0, _("orphan takes no arguments"))
-    unstables = obsmod.getrevs(repo, 'unstable')
-    return subset & unstables
+    orphan = obsmod.getrevs(repo, 'orphan')
+    return subset & orphan
 
 
 @predicate('user(string)', safe=True)

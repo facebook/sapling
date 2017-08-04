@@ -211,7 +211,7 @@ class basectx(object):
 
     def orphan(self):
         """True if the changeset is not obsolete but it's ancestor are"""
-        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
+        return self.rev() in obsmod.getrevs(self._repo, 'orphan')
 
     def bumped(self):
         msg = ("'context.bumped' is deprecated, "

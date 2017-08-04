@@ -908,6 +908,14 @@ def _computeobsoleteset(repo):
 
 @cachefor('unstable')
 def _computeunstableset(repo):
+    msg = ("'unstable' volatile set is deprecated, "
+           "use 'orphan'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computeorphanset(repo)
+
+@cachefor('orphan')
+def _computeorphanset(repo):
     """the set of non obsolete revisions with obsolete parents"""
     pfunc = repo.changelog.parentrevs
     mutable = _mutablerevs(repo)
@@ -926,7 +934,7 @@ def _computeunstableset(repo):
 @cachefor('suspended')
 def _computesuspendedset(repo):
     """the set of obsolete parents with non obsolete descendants"""
-    suspended = repo.changelog.ancestors(getrevs(repo, 'unstable'))
+    suspended = repo.changelog.ancestors(getrevs(repo, 'orphan'))
     return set(r for r in getrevs(repo, 'obsolete') if r in suspended)
 
 @cachefor('extinct')
