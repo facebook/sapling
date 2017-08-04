@@ -112,13 +112,15 @@ bookmarks JSON works
     "active": true,
     "bookmark": "a-longer-bookmark",
     "longestbookmarklen": 17,
-    "node": "7b5709ab64cbc34da9b4367b64afff47f2c4ee83"
+    "node": "7b5709ab64cbc34da9b4367b64afff47f2c4ee83",
+    "nodelen": 5
    },
    {
     "active": false,
     "bookmark": "book1",
     "longestbookmarklen": 17,
-    "node": "b757f780b8ffd71267c6ccb32e0882d9d32a8cc0"
+    "node": "b757f780b8ffd71267c6ccb32e0882d9d32a8cc0",
+    "nodelen": 5
    }
   ]
 

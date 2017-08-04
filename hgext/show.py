@@ -171,7 +171,8 @@ def showbookmarks(ui, repo, fm):
         fm.write('bookmark', '%s', bm)
         fm.write('node', fm.hexfunc(node), fm.hexfunc(node))
         fm.data(active=bm == active,
-                longestbookmarklen=longestname)
+                longestbookmarklen=longestname,
+                nodelen=5)
 
 @showview('stack', csettopic='stack')
 def showstack(ui, repo, displayer):
@@ -277,7 +278,7 @@ def showstack(ui, repo, displayer):
                 ui.write('  ')
 
             ui.write(('o  '))
-            displayer.show(ctx)
+            displayer.show(ctx, nodelen=5)
             displayer.flush(ctx)
             ui.write('\n')
 
@@ -317,7 +318,7 @@ def showstack(ui, repo, displayer):
             ui.write('  ')
 
         ui.write(symbol, '  ')
-        displayer.show(ctx)
+        displayer.show(ctx, nodelen=5)
         displayer.flush(ctx)
         ui.write('\n')
 
@@ -334,7 +335,7 @@ def showstack(ui, repo, displayer):
         ui.write(_('(stack base)'), '\n', label='stack.label')
         ui.write(('o  '))
 
-        displayer.show(basectx)
+        displayer.show(basectx, nodelen=5)
         displayer.flush(basectx)
         ui.write('\n')
 
@@ -397,7 +398,8 @@ def showwork(ui, repo, displayer):
     revdag = graphmod.dagwalker(repo, revs)
 
     ui.setconfig('experimental', 'graphshorten', True)
-    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges,
+                         props={'nodelen': 5})
 
 def extsetup(ui):
     # Alias `hg <prefix><view>` to `hg show <view>`.
