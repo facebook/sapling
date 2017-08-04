@@ -12,6 +12,12 @@ Config example:
     lfsmetadata = PATH
     # path to sqlite output file for metadata
     metadata = PATH
+    # certain commits by certain users should be igored so that
+    # p4fastimporter imports the actual commits we want
+    ignore-user = None
+    # heuristic time difference between a ignored user commit
+    # and a p4fastimporter import
+    ignore-time-delta = None
 
 """
 from __future__ import absolute_import
@@ -169,10 +175,15 @@ def p4fastimport(ui, repo, client, **opts):
 
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
-    changelists = list(itertools.takewhile(
-        lambda cl: not (cl._user == 'git-fusion-user'
-                    and cl._commit_time_diff < 30),
-        sorted(p4.parse_changes(client, startcl=startcl))))
+    ignore_user = ui.config('p4fastimport', 'ignore-user')
+    ignore_time_delta = ui.config('p4fastimport', 'ignore-time-delta')
+    if ignore_user is None or ignore_time_delta is None:
+        changelists = sorted(p4.parse_changes(client, startcl=startcl))
+    else:
+        changelists = list(itertools.takewhile(
+            lambda cl: not (cl._user == ignore_user
+                        and cl._commit_time_diff < ignore_time_delta),
+            sorted(p4.parse_changes(client, startcl=startcl))))
     ui.note(_('%d changelists to import.\n') % len(changelists))
 
     limit = len(changelists)

@@ -48,6 +48,9 @@ Submit change as actual user after git-fusion-user
 
 Simple import
   $ cd $hgwd
+  $ echo [p4fastimport] >> $HGRCPATH
+  $ echo ignore-user='git-fusion-user' >> $HGRCPATH
+  $ echo ignore-time-delta=30 >> $HGRCPATH
   $ hg init --config 'format.usefncache=False'
   $ hg p4fastimport --bookmark master --debug -P $P4ROOT hg-p4-import
   loading changelist numbers.
