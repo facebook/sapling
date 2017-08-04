@@ -48,6 +48,31 @@ TODO: See if this can be made to fail the same way as on Unix
   [255]
 #endif
 
+Paths should be treated as cwd-relative, not repo-root-relative
+  $ mkdir subdir && cd subdir
+  $ hg debugsparse --include path
+  $ hg debugsparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  subdir/path (glob)
+  
+  $ cd ..
+  $ echo hello > subdir/file2.ext
+  $ cd subdir
+  $ hg debugsparse --include '**.ext'  # let us test globs
+  $ hg debugsparse --include 'path:abspath'  # and a path: pattern
+  $ cd ..
+  $ hg debugsparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  path:abspath
+  subdir/**.ext
+  subdir/path (glob)
+  
+  $ rm -rf subdir
+
 Verify commiting while sparse includes other files
 
   $ echo z > hide

@@ -17,6 +17,7 @@ from . import (
     error,
     match as matchmod,
     merge as mergemod,
+    pathutil,
     pycompat,
     scmutil,
     util,
@@ -616,7 +617,7 @@ def importfromfiles(repo, opts, paths, force=False):
 
 def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
                  delete=False, enableprofile=False, disableprofile=False,
-                 force=False):
+                 force=False, usereporootpaths=False):
     """Perform a sparse config update.
 
     Only one of the actions may be performed.
@@ -638,6 +639,20 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
 
         if any(os.path.isabs(pat) for pat in pats):
             raise error.Abort(_('paths cannot be absolute'))
+
+        if not usereporootpaths:
+            # let's treat paths as relative to cwd
+            root, cwd = repo.root, repo.getcwd()
+            abspats = []
+            for kindpat in pats:
+                kind, pat = matchmod._patsplit(kindpat, None)
+                if kind in matchmod.cwdrelativepatternkinds or kind is None:
+                    ap = (kind + ':' if kind else '') +\
+                            pathutil.canonpath(root, cwd, pat)
+                    abspats.append(ap)
+                else:
+                    abspats.append(kindpat)
+            pats = abspats
 
         if include:
             newinclude.update(pats)

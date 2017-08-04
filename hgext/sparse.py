@@ -155,7 +155,8 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
     if include or exclude or enableprofile:
         def clonesparse(orig, self, node, overwrite, *args, **kwargs):
             sparse.updateconfig(self.unfiltered(), pat, {}, include=include,
-                                exclude=exclude, enableprofile=enableprofile)
+                                exclude=exclude, enableprofile=enableprofile,
+                                usereporootpaths=True)
             return orig(self, node, overwrite, *args, **kwargs)
         extensions.wrapfunction(hg, 'updaterepo', clonesparse)
     return orig(ui, repo, *args, **opts)
