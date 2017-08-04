@@ -38,6 +38,8 @@ import re
 from mercurial.node import bin, nullid
 from mercurial.i18n import _
 from mercurial import (
+    cmdutil,
+    context,
     encoding,
     error,
     mdiff,
@@ -315,7 +317,7 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
     if not revision:
         raise error.Abort(_('cannot create revision for %s') % ctx)
 
-    return revision
+    return revision, diff
 
 def userphids(repo, names):
     """convert user names to PHIDs"""
@@ -333,6 +335,7 @@ def userphids(repo, names):
 
 @command('phabsend',
          [('r', 'rev', [], _('revisions to send'), _('REV')),
+          ('', 'amend', False, _('update commit messages')),
           ('', 'reviewer', [], _('specify reviewers')),
           ('', 'confirm', None, _('ask for confirmation before sending'))],
          _('REV [OPTIONS]'))
@@ -348,18 +351,28 @@ def phabsend(ui, repo, *revs, **opts):
     obsstore and tags information so it can figure out whether to update an
     existing Differential Revision, or create a new one.
 
+    If --amend is set, update commit messages so they have the
+    ``Differential Revision`` URL, remove related tags. This is similar to what
+    arcanist will do, and is more desired in author-push workflows. Otherwise,
+    use local tags to record the ``Differential Revision`` association.
+
     The --confirm option lets you confirm changesets before sending them. You
     can also add following to your configuration file to make it default
     behaviour.
 
     [phabsend]
     confirm = true
+
+    phabsend will check obsstore and the above association to decide whether to
+    update an existing Differential Revision, or create a new one.
     """
     revs = list(revs) + opts.get('rev', [])
     revs = scmutil.revrange(repo, revs)
 
     if not revs:
         raise error.Abort(_('phabsend requires at least one changeset'))
+    if opts.get('amend'):
+        cmdutil.checkunfinished(repo)
 
     confirm = ui.configbool('phabsend', 'confirm')
     confirm |= bool(opts.get('confirm'))
@@ -377,6 +390,9 @@ def phabsend(ui, repo, *revs, **opts):
     # {newnode: (oldnode, olddiff, olddrev}
     oldmap = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
 
+    drevids = [] # [int]
+    diffmap = {} # {newnode: diff}
+
     # Send patches one by one so we know their Differential Revision IDs and
     # can provide dependency relationship
     lastrevid = None
@@ -386,20 +402,24 @@ def phabsend(ui, repo, *revs, **opts):
 
         # Get Differential Revision ID
         oldnode, olddiff, revid = oldmap.get(ctx.node(), (None, None, None))
-        if oldnode != ctx.node():
+        if oldnode != ctx.node() or opts.get('amend'):
             # Create or update Differential Revision
-            revision = createdifferentialrevision(ctx, revid, lastrevid,
-                                                  oldnode, olddiff, actions)
+            revision, diff = createdifferentialrevision(
+                ctx, revid, lastrevid, oldnode, olddiff, actions)
+            diffmap[ctx.node()] = diff
             newrevid = int(revision[r'object'][r'id'])
             if revid:
                 action = _('updated')
             else:
                 action = _('created')
 
-            # Create a local tag to note the association
-            tagname = 'D%d' % newrevid
-            tags.tag(repo, tagname, ctx.node(), message=None, user=None,
-                     date=None, local=True)
+            # Create a local tag to note the association, if commit message
+            # does not have it already
+            m = _differentialrevisiondescre.search(ctx.description())
+            if not m or int(m.group(1)) != newrevid:
+                tagname = 'D%d' % newrevid
+                tags.tag(repo, tagname, ctx.node(), message=None, user=None,
+                         date=None, local=True)
         else:
             # Nothing changed. But still set "newrevid" so the next revision
             # could depend on this one.
@@ -408,7 +428,42 @@ def phabsend(ui, repo, *revs, **opts):
 
         ui.write(_('D%s: %s - %s: %s\n') % (newrevid, action, ctx,
                                             ctx.description().split('\n')[0]))
+        drevids.append(newrevid)
         lastrevid = newrevid
+
+    # Update commit messages and remove tags
+    if opts.get('amend'):
+        unfi = repo.unfiltered()
+        drevs = callconduit(repo, 'differential.query', {'ids': drevids})
+        with repo.wlock(), repo.lock(), repo.transaction('phabsend'):
+            wnode = unfi['.'].node()
+            mapping = {} # {oldnode: [newnode]}
+            for i, rev in enumerate(revs):
+                old = unfi[rev]
+                drevid = drevids[i]
+                drev = [d for d in drevs if int(d[r'id']) == drevid][0]
+                newdesc = getdescfromdrev(drev)
+                # Make sure commit message contain "Differential Revision"
+                if old.description() != newdesc:
+                    parents = [
+                        mapping.get(old.p1().node(), (old.p1(),))[0],
+                        mapping.get(old.p2().node(), (old.p2(),))[0],
+                    ]
+                    new = context.metadataonlyctx(
+                        repo, old, parents=parents, text=newdesc,
+                        user=old.user(), date=old.date(), extra=old.extra())
+                    newnode = new.commit()
+                    mapping[old.node()] = [newnode]
+                    # Update diff property
+                    writediffproperties(unfi[newnode], diffmap[old.node()])
+                # Remove local tags since it's no longer necessary
+                tagname = 'D%d' % drevid
+                if tagname in repo.tags():
+                    tags.tag(repo, tagname, nullid, message=None, user=None,
+                             date=None, local=True)
+            scmutil.cleanupnodes(repo, mapping, 'phabsend')
+            if wnode in mapping:
+                unfi.setparents(mapping[wnode][0])
 
 # Map from "hg:meta" keys to header understood by "hg import". The order is
 # consistent with "hg export" output.
