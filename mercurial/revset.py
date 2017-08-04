@@ -732,8 +732,8 @@ def contentdivergent(repo, subset, x):
     """
     # i18n: "contentdivergent" is a keyword
     getargs(x, 0, 0, _("contentdivergent takes no arguments"))
-    divergent = obsmod.getrevs(repo, 'divergent')
-    return subset & divergent
+    contentdivergent = obsmod.getrevs(repo, 'contentdivergent')
+    return subset & contentdivergent
 
 @predicate('extinct()', safe=True)
 def extinct(repo, subset, x):

@@ -237,7 +237,7 @@ class basectx(object):
 
         Only non-public and non-obsolete changesets may be divergent.
         """
-        return self.rev() in obsmod.getrevs(self._repo, 'divergent')
+        return self.rev() in obsmod.getrevs(self._repo, 'contentdivergent')
 
     def troubled(self):
         msg = ("'context.troubled' is deprecated, "

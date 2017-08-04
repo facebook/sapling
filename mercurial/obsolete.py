@@ -968,6 +968,14 @@ def _computebumpedset(repo):
 
 @cachefor('divergent')
 def _computedivergentset(repo):
+    msg = ("'divergent' volatile set is deprecated, "
+           "use 'contentdivergent'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computecontentdivergentset(repo)
+
+@cachefor('contentdivergent')
+def _computecontentdivergentset(repo):
     """the set of rev that compete to be the final successors of some revision.
     """
     divergent = set()
