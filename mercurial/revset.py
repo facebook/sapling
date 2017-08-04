@@ -473,8 +473,8 @@ def phasedivergent(repo, subset, x):
     """
     # i18n: "phasedivergent" is a keyword
     getargs(x, 0, 0, _("phasedivergent takes no arguments"))
-    bumped = obsmod.getrevs(repo, 'bumped')
-    return subset & bumped
+    phasedivergent = obsmod.getrevs(repo, 'phasedivergent')
+    return subset & phasedivergent
 
 @predicate('bundle()', safe=True)
 def bundle(repo, subset, x):

@@ -224,7 +224,7 @@ class basectx(object):
 
         Only non-public and non-obsolete changesets may be bumped.
         """
-        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
+        return self.rev() in obsmod.getrevs(self._repo, 'phasedivergent')
 
     def divergent(self):
         msg = ("'context.divergent' is deprecated, "

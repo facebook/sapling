@@ -942,9 +942,16 @@ def _computeextinctset(repo):
     """the set of obsolete parents without non obsolete descendants"""
     return getrevs(repo, 'obsolete') - getrevs(repo, 'suspended')
 
-
 @cachefor('bumped')
 def _computebumpedset(repo):
+    msg = ("'bumped' volatile set is deprecated, "
+           "use 'phasedivergent'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computephasedivergentset(repo)
+
+@cachefor('phasedivergent')
+def _computephasedivergentset(repo):
     """the set of revs trying to obsolete public revisions"""
     bumped = set()
     # util function (avoid attribute lookup in the loop)
