@@ -17,6 +17,7 @@ import sys
 from .i18n import _
 from . import (
     encoding,
+    error,
     policy,
     pycompat,
     win32,
@@ -203,6 +204,10 @@ def sshargs(sshcmd, host, user, port):
     '''Build argument list for ssh or Plink'''
     pflag = 'plink' in sshcmd.lower() and '-P' or '-p'
     args = user and ("%s@%s" % (user, host)) or host
+    if args.startswith('-') or args.startswith('/'):
+        raise error.Abort(
+            _('illegal ssh hostname or username starting with - or /: %s') %
+            args)
     return port and ("%s %s %s" % (args, pflag, port)) or args
 
 def setflags(f, l, x):

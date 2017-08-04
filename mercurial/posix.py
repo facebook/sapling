@@ -23,6 +23,7 @@ import unicodedata
 from .i18n import _
 from . import (
     encoding,
+    error,
     pycompat,
 )
 
@@ -91,6 +92,9 @@ def parsepatchoutput(output_line):
 def sshargs(sshcmd, host, user, port):
     '''Build argument list for ssh'''
     args = user and ("%s@%s" % (user, host)) or host
+    if '-' in args[:2]:
+        raise error.Abort(
+            _('illegal ssh hostname or username starting with -: %s') % args)
     return port and ("%s -p %s" % (args, port)) or args
 
 def isexec(f):
