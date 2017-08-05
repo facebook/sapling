@@ -151,10 +151,7 @@ class sshpeer(wireproto.wirepeer):
         sshcmd = self.ui.config("ui", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd")
 
-        args = util.sshargs(sshcmd,
-                            _serverquote(self.host),
-                            _serverquote(self.user),
-                            _serverquote(self.port))
+        args = util.sshargs(sshcmd, self.host, self.user, self.port)
 
         if create:
             cmd = '%s %s %s' % (sshcmd, args,

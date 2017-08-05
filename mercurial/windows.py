@@ -208,7 +208,10 @@ def sshargs(sshcmd, host, user, port):
         raise error.Abort(
             _('illegal ssh hostname or username starting with - or /: %s') %
             args)
-    return port and ("%s %s %s" % (args, pflag, port)) or args
+    args = shellquote(args)
+    if port:
+        args = '%s %s %s' % (pflag, shellquote(port), args)
+    return args
 
 def setflags(f, l, x):
     pass

@@ -92,10 +92,13 @@ def parsepatchoutput(output_line):
 def sshargs(sshcmd, host, user, port):
     '''Build argument list for ssh'''
     args = user and ("%s@%s" % (user, host)) or host
-    if '-' in args[:2]:
+    if '-' in args[:1]:
         raise error.Abort(
             _('illegal ssh hostname or username starting with -: %s') % args)
-    return port and ("%s -p %s" % (args, port)) or args
+    args = shellquote(args)
+    if port:
+        args = '-p %s %s' % (shellquote(port), args)
+    return args
 
 def isexec(f):
     """check whether a file is executable"""
