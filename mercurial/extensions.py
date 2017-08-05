@@ -250,6 +250,7 @@ def loadall(ui, whitelist=None):
     from . import (
         color,
         commands,
+        filemerge,
         fileset,
         revset,
         templatefilters,
@@ -268,6 +269,7 @@ def loadall(ui, whitelist=None):
         ('colortable', color, 'loadcolortable'),
         ('configtable', configitems, 'loadconfigtable'),
         ('filesetpredicate', fileset, 'loadpredicate'),
+        ('internalmerge', filemerge, 'loadinternalmerge'),
         ('revsetpredicate', revset, 'loadpredicate'),
         ('templatefilter', templatefilters, 'loadfilter'),
         ('templatefunc', templater, 'loadfunction'),

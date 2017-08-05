@@ -21,6 +21,7 @@ from . import (
     formatter,
     match,
     pycompat,
+    registrar,
     scmutil,
     simplemerge,
     tagmerge,
@@ -44,10 +45,12 @@ internals = {}
 # Merge tools to document.
 internalsdoc = {}
 
+internaltool = registrar.internalmerge()
+
 # internal tool merge types
-nomerge = None
-mergeonly = 'mergeonly'  # just the full merge, no premerge
-fullmerge = 'fullmerge'  # both premerge and merge
+nomerge = internaltool.nomerge
+mergeonly = internaltool.mergeonly # just the full merge, no premerge
+fullmerge = internaltool.fullmerge # both premerge and merge
 
 _localchangedotherdeletedmsg = _(
     "local%(l)s changed %(fd)s which other%(o)s deleted\n"
@@ -103,21 +106,6 @@ class absentfilectx(object):
 
     def isabsent(self):
         return True
-
-def internaltool(name, mergetype, onfailure=None, precheck=None):
-    '''return a decorator for populating internal merge tool table'''
-    def decorator(func):
-        fullname = ':' + name
-        func.__doc__ = (pycompat.sysstr("``%s``\n" % fullname)
-                        + func.__doc__.strip())
-        internals[fullname] = func
-        internals['internal:' + name] = func
-        internalsdoc[fullname] = func
-        func.mergetype = mergetype
-        func.onfailure = onfailure
-        func.precheck = precheck
-        return func
-    return decorator
 
 def _findtool(ui, tool):
     if tool in internals:
@@ -742,6 +730,18 @@ def premerge(repo, mynode, orig, fcd, fco, fca, labels=None):
 
 def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     return _filemerge(False, repo, mynode, orig, fcd, fco, fca, labels=labels)
+
+def loadinternalmerge(ui, extname, registrarobj):
+    """Load internal merge tool from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        fullname = ':' + name
+        internals[fullname] = func
+        internals['internal:' + name] = func
+        internalsdoc[fullname] = func
+
+# load built-in merge tools explicitly to setup internalsdoc
+loadinternalmerge(None, None, internaltool)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()

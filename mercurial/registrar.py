@@ -308,3 +308,64 @@ class templatefunc(_templateregistrarbase):
 
     def _extrasetup(self, name, func, argspec=None):
         func._argspec = argspec
+
+class internalmerge(_funcregistrarbase):
+    """Decorator to register in-process merge tool
+
+    Usage::
+
+        internalmerge = registrar.internalmerge()
+
+        @internalmerge('mymerge', internalmerge.mergeonly,
+                       onfailure=None, precheck=None):
+        def mymergefunc(repo, mynode, orig, fcd, fco, fca,
+                        toolconf, files, labels=None):
+            '''Explanation of this internal merge tool ....
+            '''
+            return 1, False # means "conflicted", "no deletion needed"
+
+    The first string argument is used to compose actual merge tool name,
+    ":name" and "internal:name" (the latter is historical one).
+
+    The second argument is one of merge types below:
+
+    ========== ======== ======== =========
+    merge type precheck premerge fullmerge
+    ========== ======== ======== =========
+    nomerge     x        x        x
+    mergeonly   o        x        o
+    fullmerge   o        o        o
+    ========== ======== ======== =========
+
+    Optional argument 'onfalure' is the format of warning message
+    to be used at failure of merging (target filename is specified
+    at formatting). Or, None or so, if warning message should be
+    suppressed.
+
+    Optional argument 'precheck' is the function to be used
+    before actual invocation of internal merge tool itself.
+    It takes as same arguments as internal merge tool does, other than
+    'files' and 'labels'. If it returns false value, merging is aborted
+    immediately (and file is marked as "unresolved").
+
+    'internalmerge' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'internalmerge' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'filemerge.loadinternalmerge()' is needed.
+    """
+    _docformat = "``:%s``\n    %s"
+
+    # merge type definitions:
+    nomerge = None
+    mergeonly = 'mergeonly'  # just the full merge, no premerge
+    fullmerge = 'fullmerge'  # both premerge and merge
+
+    def _extrasetup(self, name, func, mergetype,
+                    onfailure=None, precheck=None):
+        func.mergetype = mergetype
+        func.onfailure = onfailure
+        func.precheck = precheck
