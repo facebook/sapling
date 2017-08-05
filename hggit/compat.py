@@ -28,7 +28,7 @@ except AttributeError:
                 s = s.replace(c, '')
         return s
 
-def passwordmgr(ui, passwddb):
+def passwordmgr(ui):
     try:
         return url.passwordmgr(ui,
                                hgutil.urlreq.httppasswordmgrwithdefaultrealm())

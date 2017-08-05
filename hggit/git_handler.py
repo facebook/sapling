@@ -1695,8 +1695,7 @@ class GitHandler(object):
             uri = uri[4:]
 
         if uri.startswith('http://') or uri.startswith('https://'):
-            realm = hgutil.urlreq.httppasswordmgrwithdefaultrealm()
-            pmgr = compat.passwordmgr(self.ui, realm)
+            pmgr = compat.passwordmgr(self.ui)
             auth = urllib2.HTTPBasicAuthHandler(pmgr)
 
             opener = urllib2.build_opener(auth)
