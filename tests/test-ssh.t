@@ -477,7 +477,7 @@ debug output
 
   $ hg pull --debug ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
-  running python ".*/dummyssh" user@dummy ('|")hg -R remote serve --stdio('|") (re)
+  running python ".*/dummyssh" ['"]user@dummy['"] ('|")hg -R remote serve --stdio('|") (re)
   sending hello command
   sending between command
   remote: 355

@@ -1095,6 +1095,11 @@ pooled".
 
 SEC: check for unsafe ssh url
 
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = sh -c "read l; read l; read l"
+  > EOF
+
   $ hg clone 'ssh://-oProxyCommand=touch${IFS}owned/path'
   abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
   [255]
@@ -1111,6 +1116,42 @@ SEC: check for unsafe ssh url
   $ hg clone 'ssh://-oProxyCommand=touch owned%20foo@example.com/nonexistent/path'
   abort: potentially unsafe url: 'ssh://-oProxyCommand=touch owned foo@example.com/nonexistent/path'
   [255]
+
+#if windows
+  $ hg clone "ssh://%26touch%20owned%20/" --debug
+  running sh -c "read l; read l; read l" "&touch owned " "hg -R . serve --stdio"
+  sending hello command
+  sending between command
+  abort: no suitable response from remote hg!
+  [255]
+  $ hg clone "ssh://example.com:%26touch%20owned%20/" --debug
+  running sh -c "read l; read l; read l" -p "&touch owned " example.com "hg -R . serve --stdio"
+  sending hello command
+  sending between command
+  abort: no suitable response from remote hg!
+  [255]
+#else
+  $ hg clone "ssh://%3btouch%20owned%20/" --debug
+  running sh -c "read l; read l; read l" ';touch owned ' 'hg -R . serve --stdio'
+  sending hello command
+  sending between command
+  abort: no suitable response from remote hg!
+  [255]
+  $ hg clone "ssh://example.com:%3btouch%20owned%20/" --debug
+  running sh -c "read l; read l; read l" -p ';touch owned ' example.com 'hg -R . serve --stdio'
+  sending hello command
+  sending between command
+  abort: no suitable response from remote hg!
+  [255]
+#endif
+
+  $ hg clone "ssh://v-alid.example.com/" --debug
+  running sh -c "read l; read l; read l" v-alid\.example\.com ['"]hg -R \. serve --stdio['"] (re)
+  sending hello command
+  sending between command
+  abort: no suitable response from remote hg!
+  [255]
+
 We should not have created a file named owned - if it exists, the
 attack succeeded.
   $ if test -f owned; then echo 'you got owned'; fi
