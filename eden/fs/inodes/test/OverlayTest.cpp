@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -36,6 +37,23 @@ class OverlayTest : public ::testing::Test {
     });
     mount_.initialize(builder);
   }
+
+  // Helper method to check if two timestamps are same or not.
+  static void expectTimeSpecsEqual(
+      const struct timespec& a,
+      const struct timespec& b) {
+    EXPECT_EQ(a.tv_sec, b.tv_sec);
+    EXPECT_EQ(a.tv_nsec, b.tv_nsec);
+  }
+
+  static void expectTimeStampsEqual(
+      const struct stat& a,
+      const struct stat& b) {
+    expectTimeSpecsEqual(a.st_mtim, b.st_mtim);
+    expectTimeSpecsEqual(a.st_atim, b.st_atim);
+    expectTimeSpecsEqual(a.st_ctim, b.st_ctim);
+  }
+
   TestMount mount_;
 };
 
@@ -61,4 +79,45 @@ TEST_F(OverlayTest, testModifyRemount) {
 
   auto newInode = mount_.getFileInode("dir/a.txt");
   EXPECT_FILE_INODE(newInode, "contents changed\n", 0644);
+}
+
+// In memory timestamps should be same before and after a remount.
+// (inmemory timestamps should be written to overlay on
+// on unmount and should be read back from the overlay on remount)
+TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
+  // Materialize file and directory
+  // test timestamp behavior in overlay on remount.
+  struct stat beforeRemountFile;
+  struct stat beforeRemountDir;
+  mount_.overwriteFile("dir/a.txt", "contents changed\n");
+
+  {
+    // We do not want to keep references to inode in order to remount.
+    auto inodeFile = mount_.getFileInode("dir/a.txt");
+    EXPECT_FILE_INODE(inodeFile, "contents changed\n", 0644);
+    inodeFile->getTimestamps(beforeRemountFile);
+  }
+
+  {
+    // Check for materialized files.
+    mount_.remount();
+    auto inodeRemount = mount_.getFileInode("dir/a.txt");
+    struct stat afterRemount;
+    inodeRemount->getTimestamps(afterRemount);
+    expectTimeStampsEqual(beforeRemountFile, afterRemount);
+  }
+
+  {
+    auto inodeDir = mount_.getTreeInode("dir");
+    inodeDir->getTimestamps(beforeRemountDir);
+  }
+
+  {
+    // Check for materialized directory
+    mount_.remount();
+    auto inodeRemount = mount_.getTreeInode("dir");
+    struct stat afterRemount;
+    inodeRemount->getTimestamps(afterRemount);
+    expectTimeStampsEqual(beforeRemountDir, afterRemount);
+  }
 }

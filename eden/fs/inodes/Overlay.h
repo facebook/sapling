@@ -69,14 +69,24 @@ class Overlay {
 
   /**
    * Helper function that opens an existing overlay file,
-   * checks that it is valid, and returns the file.
+   * checks if the file has valid header
+   * populates st_atim, st_mtim, st_ctim and returns the file.
    */
-  static folly::File openFile(folly::StringPiece filePath);
+  static folly::File openFile(
+      folly::StringPiece filePath,
+      folly::StringPiece headerId,
+      struct stat& st);
 
   /**
    * Helper function that creates a new overlay file and adds header to it
    */
   folly::File createOverlayFile(fuse_ino_t childNumber);
+
+  /**
+   * Updates the timestamps of an overlay file appropriately
+   * while unloading an inode.
+   */
+  static void updateTimestampToHeader(int fd, struct stat& st);
 
   /**
    * Get the maximum inode number stored in the overlay.
@@ -101,11 +111,20 @@ class Overlay {
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
-      fuse_ino_t inodeNumber) const;
+      fuse_ino_t inodeNumber,
+      struct stat& st) const;
   /**
    * Helper function to add header to the overlay file
    */
   static void addHeaderToOverlayFile(int fd);
+
+  /**
+   * Parses, validates and reads Timestamps from the header.
+   */
+  static void parseHeader(
+      folly::StringPiece header,
+      folly::StringPiece headerId,
+      struct stat& st);
 
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;

@@ -538,6 +538,9 @@ void InodeMap::unloadInode(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
+  // Update timestamps to overlay header on unloadInode
+  inode->updateOverlayHeader();
+
   auto fuseCount = inode->getFuseRefcount();
   if (fuseCount > 0) {
     // Insert an unloaded entry

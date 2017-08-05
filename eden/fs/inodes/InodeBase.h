@@ -107,6 +107,12 @@ class InodeBase {
   virtual folly::Future<folly::Unit> access(int mask);
 
   /**
+   * If the file is materialized, we update the in-memory timestamps of
+   * materialized file's header. This is called while unloading an inode of
+   * materialized file during unmount.
+   */
+  virtual void updateOverlayHeader() const = 0;
+  /**
    * Check if this Inode has been unlinked from its parent TreeInode.
    *
    * Once an inode is unlinked it is no longer part of the file system tree.

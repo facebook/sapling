@@ -118,7 +118,13 @@ TreeInode::TreeInode(
     TreeInodePtr parent,
     PathComponentPiece name,
     std::unique_ptr<Tree>&& tree)
-    : TreeInode(ino, parent, name, buildDirFromTree(tree.get())) {}
+    : TreeInode(
+          ino,
+          parent,
+          name,
+          buildDirFromTree(
+              tree.get(),
+              parent->getMount()->getLastCheckoutTime())) {}
 
 TreeInode::TreeInode(
     fuse_ino_t ino,
@@ -127,32 +133,15 @@ TreeInode::TreeInode(
     Dir&& dir)
     : InodeBase(ino, parent, name), contents_(std::move(dir)) {
   DCHECK_NE(ino, FUSE_ROOT_ID);
-  // TODO: This is a temporary initialization of timestamps, Eventually
-  // Overlay::loadOverlayDir should be initializing timestamps of materialized
-  // directories and TreeInode::buildDirFromTree should initialize
-  // lastCheckoutTime to the non materialized directories.
-  auto lastCheckoutTime = getMount()->getLastCheckoutTime();
-  auto contents = contents_.wlock();
-  contents->atime = lastCheckoutTime;
-  contents->ctime = lastCheckoutTime;
-  contents->mtime = lastCheckoutTime;
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
-    : TreeInode(mount, buildDirFromTree(tree.get())) {}
+    : TreeInode(
+          mount,
+          buildDirFromTree(tree.get(), mount->getLastCheckoutTime())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
-    : InodeBase(mount), contents_(std::move(dir)) {
-  // TODO: This is a temporary initialization of timestamps, Eventually
-  // Overlay::loadOverlayDir should be initializing timestamps of materialized
-  // directories and TreeInode::buildDirFromTree should initialize
-  // lastCheckoutTime to the non materialized directories.
-  auto lastCheckoutTime = mount->getLastCheckoutTime();
-  auto contents = contents_.wlock();
-  contents->atime = lastCheckoutTime;
-  contents->ctime = lastCheckoutTime;
-  contents->mtime = lastCheckoutTime;
-}
+    : InodeBase(mount), contents_(std::move(dir)) {}
 
 TreeInode::~TreeInode() {}
 
@@ -636,7 +625,9 @@ void TreeInode::childDematerialized(
   }
 }
 
-TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
+TreeInode::Dir TreeInode::buildDirFromTree(
+    const Tree* tree,
+    const struct timespec& lastCheckoutTime) {
   // Now build out the Dir based on what we know.
   Dir dir;
   if (!tree) {
@@ -649,6 +640,10 @@ TreeInode::Dir TreeInode::buildDirFromTree(const Tree* tree) {
     dir.entries.emplace(
         treeEntry.getName(), std::make_unique<Entry>(std::move(entry)));
   }
+  // Set timestamps to lastCheckoutTime
+  dir.atime = lastCheckoutTime;
+  dir.ctime = lastCheckoutTime;
+  dir.mtime = lastCheckoutTime;
   return dir;
 }
 
@@ -2694,6 +2689,20 @@ void TreeInode::getTimestamps(struct stat& st) {
   st.st_atim = contents->atime;
   st.st_ctim = contents->ctime;
   st.st_mtim = contents->mtime;
+}
+
+void TreeInode::updateOverlayHeader() const {
+  auto contents = contents_.wlock();
+  if (contents->isMaterialized()) {
+    struct stat st;
+    auto filePath = getOverlay()->getFilePath(getNodeId());
+    auto file = Overlay::openFile(
+        filePath.stringPiece(), Overlay::kHeaderIdentifierDir, st);
+    st.st_atim = contents->atime;
+    st.st_mtim = contents->mtime;
+    st.st_ctim = contents->ctime;
+    Overlay::updateTimestampToHeader(file.fd(), st);
+  }
 }
 }
 }

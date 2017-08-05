@@ -72,6 +72,11 @@ class FileInode : public InodeBase {
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
+
+  /**
+   * Updates inmemory timestamps in FileInode and TreeInode to the overlay file.
+   */
+  void updateOverlayHeader() const override;
   folly::Future<Hash> getSHA1(bool failIfSymlink = true);
 
   /**

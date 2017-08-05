@@ -46,12 +46,19 @@ FileInode::State::State(
     const folly::Optional<Hash>& h,
     const timespec& lastCheckoutTime)
     : mode(m), creationTime(std::chrono::system_clock::now()), hash(h) {
-  atime = lastCheckoutTime;
-  ctime = lastCheckoutTime;
-  mtime = lastCheckoutTime;
   if (!h.hasValue()) {
+    // File is materialized
     auto filePath = inode->getLocalPath();
-    file = Overlay::openFile(filePath.c_str());
+    struct stat st;
+    file =
+        Overlay::openFile(filePath.c_str(), Overlay::kHeaderIdentifierFile, st);
+    atime = st.st_atim;
+    ctime = st.st_ctim;
+    mtime = st.st_mtim;
+  } else {
+    atime = lastCheckoutTime;
+    ctime = lastCheckoutTime;
+    mtime = lastCheckoutTime;
   }
 }
 
@@ -656,13 +663,12 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
   }
 
   // Add header to the overlay File.
-  struct timespec zeroTime = {0, 0};
   auto header = Overlay::createHeader(
       Overlay::kHeaderIdentifierFile,
       Overlay::kHeaderVersion,
-      zeroTime,
-      zeroTime,
-      zeroTime);
+      state->atime,
+      state->ctime,
+      state->mtime);
   auto iov = header.getIov();
 
   // We must not be materialized yet
@@ -673,7 +679,12 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
 
   if ((openFlags & O_TRUNC) != 0) {
     folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size());
-    state->file = Overlay::openFile(filePath.stringPiece());
+    // We don't want to set the in-memory timestamps to the timestamps returned
+    // by the below openFile function as we just wrote these timestamps in to
+    // overlay using writeFileAtomic.
+    struct stat st;
+    state->file = Overlay::openFile(
+        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, st);
     sha1 = Hash::sha1(ByteRange{});
   } else {
     if (!state->blob) {
@@ -690,7 +701,9 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
 
     folly::writeFileAtomic(
         filePath.stringPiece(), iov.data(), iov.size(), 0600);
-    state->file = Overlay::openFile(filePath.stringPiece());
+    struct stat st;
+    state->file = Overlay::openFile(
+        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, st);
 
     sha1 = getObjectStore()->getSha1ForBlob(state->hash.value());
   }
@@ -763,6 +776,18 @@ void FileInode::getTimestamps(struct stat& st) {
   st.st_atim = state->atime;
   st.st_ctim = state->ctime;
   st.st_mtim = state->mtime;
+}
+
+void FileInode::updateOverlayHeader() const {
+  auto state = state_.wlock();
+  struct stat st;
+  if (state->file) {
+    // File is a materialized file
+    st.st_atim = state->atime;
+    st.st_ctim = state->ctime;
+    st.st_mtim = state->mtime;
+    Overlay::updateTimestampToHeader(state->file.fd(), st);
+  }
 }
 }
 }

@@ -205,7 +205,8 @@ void Overlay::initNewOverlay() {
 }
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
-  auto dirData = deserializeOverlayDir(inodeNumber);
+  struct stat st;
+  auto dirData = deserializeOverlayDir(inodeNumber, st);
   if (!dirData.hasValue()) {
     return folly::none;
   }
@@ -225,6 +226,9 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
     }
     result.entries.emplace(PathComponentPiece(name), std::move(entry));
   }
+  result.atime = st.st_atim;
+  result.ctime = st.st_ctim;
+  result.mtime = st.st_mtim;
 
   return folly::Optional<TreeInode::Dir>(std::move(result));
 }
@@ -263,10 +267,8 @@ void Overlay::saveOverlayDir(
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
   // Add header to the overlay directory.
-  struct timespec zeroTime = {0, 0};
-
   auto header = createHeader(
-      kHeaderIdentifierDir, kHeaderVersion, zeroTime, zeroTime, zeroTime);
+      kHeaderIdentifierDir, kHeaderVersion, dir->atime, dir->ctime, dir->mtime);
 
   auto iov = header.getIov();
   iov.push_back(
@@ -309,7 +311,8 @@ fuse_ino_t Overlay::getMaxRecordedInode() {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
 
-    auto dir = deserializeOverlayDir(dirInodeNumber);
+    struct stat st;
+    auto dir = deserializeOverlayDir(dirInodeNumber, st);
     if (!dir.hasValue()) {
       continue;
     }
@@ -363,7 +366,8 @@ AbsolutePath Overlay::getFilePath(fuse_ino_t inodeNumber) const {
 }
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
-    fuse_ino_t inodeNumber) const {
+    fuse_ino_t inodeNumber,
+    struct stat& st) const {
   auto path = getFilePath(inodeNumber);
 
   // Read the file and de-serialize it into data
@@ -389,32 +393,11 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
   }
 
   StringPiece header{serializedData, 0, kHeaderLength};
+  // validate header and get the timestamps
+  parseHeader(header, kHeaderIdentifierDir, st);
+
   StringPiece contents{serializedData};
   contents.advance(kHeaderLength);
-
-  // check if the header contains valid identifier and version
-  StringPiece identifier{header, 0, kHeaderIdentifierDir.size()};
-  header.advance(kHeaderIdentifierDir.size());
-  StringPiece version{header, 0, sizeof(kHeaderVersion)};
-
-  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{version});
-  folly::io::Cursor cursor(&buf);
-  auto ver = cursor.readBE<uint32_t>();
-
-  // Header doesn't contain identifier
-  if (identifier.compare(kHeaderIdentifierDir) != 0) {
-    folly::throwSystemError(
-        EIO,
-        "unexpected overlay header identifier in ",
-        path,
-        ": ",
-        folly::hexlify(ByteRange{identifier}));
-  }
-  // Version number is different
-  if (ver != kHeaderVersion) {
-    folly::throwSystemError(
-        EIO, "Unexpected overlay version ", ver, " in ", path);
-  }
 
   return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
 }
@@ -447,46 +430,32 @@ folly::IOBuf Overlay::createHeader(
 
 // Helper function to open,validate,
 // get file pointer of an overlay file
-folly::File Overlay::openFile(folly::StringPiece filePath) {
+folly::File Overlay::openFile(
+    folly::StringPiece filePath,
+    folly::StringPiece headerId,
+    struct stat& st) {
   // Open the overlay file
   folly::File file(filePath, O_RDWR);
 
   // Read the contents
   std::string contents;
-  folly::readFile(file.fd(), contents);
+  folly::readFile(file.fd(), contents, kHeaderLength);
 
-  StringPiece header{contents, 0, kHeaderLength};
-  StringPiece identifier{header, 0, kHeaderIdentifierFile.size()};
-  header.advance(kHeaderIdentifierFile.size());
-  StringPiece version{header, 0, sizeof(kHeaderVersion)};
-
-  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{version});
-  folly::io::Cursor cursor(&buf);
-  auto ver = cursor.readBE<uint32_t>();
-
-  // Header doesn't contain identifier
-  if (identifier.compare(kHeaderIdentifierFile) != 0) {
-    folly::throwSystemError(
-        EIO,
-        "unexpected overlay header identifier in ",
-        filePath,
-        ": ",
-        folly::hexlify(ByteRange{identifier}));
-  }
-  // Version number is different
-  if (ver != kHeaderVersion) {
-    folly::throwSystemError(
-        EIO, "Unexpected overlay version ", ver, " in ", filePath);
-  }
-
+  StringPiece header{contents};
+  parseHeader(header, headerId, st);
   return file;
 }
 
 // Helper function to  add header to the materialized file
 void Overlay::addHeaderToOverlayFile(int fd) {
-  struct timespec zeroTime = {0, 0};
+  struct timespec currentTime;
+  clock_gettime(CLOCK_REALTIME, &currentTime);
   auto header = createHeader(
-      kHeaderIdentifierFile, kHeaderVersion, zeroTime, zeroTime, zeroTime);
+      kHeaderIdentifierFile,
+      kHeaderVersion,
+      currentTime,
+      currentTime,
+      currentTime);
 
   auto data = header.coalesce();
   auto wrote = folly::writeFull(fd, data.data(), data.size());
@@ -511,6 +480,66 @@ folly::File Overlay::createOverlayFile(fuse_ino_t childNumber) {
 
   addHeaderToOverlayFile(file.fd());
   return file;
+}
+
+void Overlay::parseHeader(
+    folly::StringPiece header,
+    folly::StringPiece headerId,
+    struct stat& st) {
+  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{header});
+  folly::io::Cursor cursor(&buf);
+
+  // Validate header identifier
+  auto id = cursor.readFixedString(kHeaderIdentifierDir.size());
+  StringPiece identifier{id};
+  if (identifier.compare(headerId) != 0) {
+    folly::throwSystemError(
+        EIO,
+        "unexpected overlay header identifier : ",
+        folly::hexlify(ByteRange{identifier}));
+  }
+
+  // Validate header version
+  auto version = cursor.readBE<uint32_t>();
+  if (version != kHeaderVersion) {
+    folly::throwSystemError(EIO, "Unexpected overlay version :", version);
+  }
+  st.st_atim.tv_sec = cursor.readBE<uint64_t>();
+  st.st_atim.tv_nsec = cursor.readBE<uint64_t>();
+  st.st_ctim.tv_sec = cursor.readBE<uint64_t>();
+  st.st_ctim.tv_nsec = cursor.readBE<uint64_t>();
+  st.st_mtim.tv_sec = cursor.readBE<uint64_t>();
+  st.st_mtim.tv_nsec = cursor.readBE<uint64_t>();
+}
+// Helper function to update timestamps into overlay file
+void Overlay::updateTimestampToHeader(int fd, struct stat& st) {
+  // Create a string piece with timestamps
+  std::array<uint64_t, 6> buf;
+  folly::IOBuf timestamps(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
+  timestamps.clear();
+
+  folly::io::Appender appender(&timestamps, 0);
+  appender.writeBE<uint64_t>(st.st_atim.tv_sec);
+  appender.writeBE<uint64_t>(st.st_atim.tv_nsec);
+  appender.writeBE<uint64_t>(st.st_ctim.tv_sec);
+  appender.writeBE<uint64_t>(st.st_ctim.tv_nsec);
+  appender.writeBE<uint64_t>(st.st_mtim.tv_sec);
+  appender.writeBE<uint64_t>(st.st_mtim.tv_nsec);
+
+  // replace the timestamps of current header with the new timestamps
+  auto newHeader = timestamps.coalesce();
+  auto wrote = folly::pwriteNoInt(
+      fd,
+      newHeader.data(),
+      newHeader.size(),
+      kHeaderIdentifierDir.size() + sizeof(kHeaderVersion));
+  if (wrote == -1) {
+    folly::throwSystemError("pwriteNoInt failed");
+  }
+  if (wrote != newHeader.size()) {
+    folly::throwSystemError(
+        "writeNoInt wrote only ", wrote, " of ", newHeader.size(), " bytes");
+  }
 }
 }
 }

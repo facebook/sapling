@@ -289,6 +289,7 @@ class TreeInode : public InodeBase {
   ~TreeInode() override;
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  void updateOverlayHeader() const override;
   fusell::Dispatcher::Attr getAttrLocked(const Dir* contents);
 
   /** Implements the InodeBase method used by the Dispatcher
@@ -577,7 +578,9 @@ class TreeInode : public InodeBase {
 
   /** Translates a Tree object from our store into a Dir object
    * used to track the directory in the inode */
-  static Dir buildDirFromTree(const Tree* tree);
+  static Dir buildDirFromTree(
+      const Tree* tree,
+      const struct timespec& lastCheckoutTime);
 
   /**
    * Get a TreeInodePtr to ourself.
