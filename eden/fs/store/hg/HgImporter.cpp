@@ -374,6 +374,12 @@ HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
   helperIn_ = helper_.stdinFd();
   helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
 
+  waitForHelperStart();
+  XLOG(DBG1) << "hg_import_helper started for repository " << repoPath
+             << ": treemanifest=" << (unionStore_ ? "yes" : "no");
+}
+
+void HgImporter::waitForHelperStart() {
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
   auto header = readChunkHeader();
@@ -386,19 +392,44 @@ HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
         "unexpected start message from hg_import_helper script");
   }
 
-  dataPackStores_.emplace_back(std::make_unique<DatapackStore>(
-      folly::to<string>(repoPath, "/.hg/store/packs/manifests")));
-
-  auto hgCachePath = getCachePath();
-  if (!hgCachePath.empty()) {
-    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(hgCachePath));
+  if (header.dataLength < sizeof(uint32_t)) {
+    throw std::runtime_error(
+        "missing CMD_STARTED response body from hg_import_helper script");
   }
 
+  IOBuf buf(IOBuf::CREATE, header.dataLength);
+  folly::readFull(helperOut_, buf.writableTail(), header.dataLength);
+  buf.append(header.dataLength);
+
+  Cursor cursor(&buf);
+  auto protocolVersion = cursor.readBE<uint32_t>();
+  if (protocolVersion != PROTOCOL_VERSION) {
+    throw std::runtime_error(folly::to<string>(
+        "hg_import_helper protocol version mismatch: edenfs expected ",
+        static_cast<uint32_t>(PROTOCOL_VERSION),
+        ", hg_import_helper is speaking ",
+        protocolVersion));
+  }
+
+  auto flags = cursor.readBE<uint32_t>();
+  auto numTreemanifestPaths = cursor.readBE<uint32_t>();
   std::vector<DatapackStore*> storePtrs;
-  for (auto& store : dataPackStores_) {
-    storePtrs.emplace_back(store.get());
+  for (uint32_t n = 0; n < numTreemanifestPaths; ++n) {
+    auto pathLength = cursor.readBE<uint32_t>();
+    auto path = cursor.readFixedString(pathLength);
+    XLOG(DBG5) << "treemanifest pack path: " << path;
+    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path));
+    storePtrs.emplace_back(dataPackStores_.back().get());
   }
-  unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
+
+  if (flags & StartFlag::TREEMANIFEST_SUPPORTED) {
+    if (dataPackStores_.empty()) {
+      throw std::runtime_error(
+          "hg_import_helper indicated that treemanifest "
+          "is supported, but provided no store paths");
+    }
+    unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
+  }
 }
 
 HgImporter::~HgImporter() {
@@ -538,7 +569,7 @@ Hash HgImporter::importManifest(StringPiece revName) {
 
 Hash HgImporter::importTreeManifest(StringPiece revName) {
   auto manifestNode = resolveManifestNode(revName);
-  XLOG(DBG0) << "revision " << revName << " has manifest node " << manifestNode;
+  XLOG(DBG2) << "revision " << revName << " has manifest node " << manifestNode;
 
   // Record that we are at the root for this node
   RelativePathPiece path{};
@@ -590,11 +621,11 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
     }
   }
   auto computeEnd = std::chrono::steady_clock::now();
-  XLOG(DBG1) << "computed trees for " << numPaths << " manifest paths in "
+  XLOG(DBG2) << "computed trees for " << numPaths << " manifest paths in "
              << durationStr(computeEnd - start);
   auto rootHash = importer.finish();
   auto recordEnd = std::chrono::steady_clock::now();
-  XLOG(DBG1) << "recorded trees for " << numPaths << " manifest paths in "
+  XLOG(DBG2) << "recorded trees for " << numPaths << " manifest paths in "
              << durationStr(recordEnd - computeEnd);
 
   return rootHash;
@@ -693,15 +724,6 @@ void HgImporter::readManifestEntry(
   importer.processEntry(path.dirname(), std::move(entry));
 }
 
-std::string HgImporter::getCachePath() {
-  sendGetCachePathRequest();
-  auto header = readChunkHeader();
-  std::string result;
-  result.resize(header.dataLength);
-  folly::readFull(helperOut_, &result[0], header.dataLength);
-  return result;
-}
-
 HgImporter::ChunkHeader HgImporter::readChunkHeader(int fd) {
   ChunkHeader header;
   folly::readFull(fd, &header, sizeof(header));
@@ -768,19 +790,6 @@ void HgImporter::sendFileRequest(RelativePathPiece path, Hash revHash) {
   iov[1].iov_len = Hash::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
-  folly::writevFull(helperIn_, iov.data(), iov.size());
-}
-
-void HgImporter::sendGetCachePathRequest() {
-  ChunkHeader header;
-  header.command = Endian::big<uint32_t>(CMD_GET_CACHE_PATH);
-  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
-  header.flags = 0;
-  header.dataLength = 0;
-
-  std::array<struct iovec, 1> iov;
-  iov[0].iov_base = &header;
-  iov[0].iov_len = sizeof(header);
   folly::writevFull(helperIn_, iov.data(), iov.size());
 }
 

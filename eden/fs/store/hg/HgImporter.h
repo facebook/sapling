@@ -139,6 +139,25 @@ class HgImporter {
     FLAG_MORE_CHUNKS = 0x02,
   };
   /**
+   * hg_import_helper protocol version number.
+   *
+   * Bump this whenever you add new commands or change the command parameters
+   * or response data.  This helps us identify if edenfs somehow ends up
+   * using an incompatible version of the hg_import_helper script.
+   *
+   * This must be kept in sync with the PROTOCOL_VERSION field in
+   * hg_import_helper.py
+   */
+  enum : uint32_t {
+    PROTOCOL_VERSION = 1,
+  };
+  /**
+   * Flags for the CMD_STARTED response
+   */
+  enum StartFlag : uint32_t {
+    TREEMANIFEST_SUPPORTED = 0x01,
+  };
+  /**
    * Command type values.
    *
    * See hg_import_helper.py for a more complete description of the
@@ -150,8 +169,7 @@ class HgImporter {
     CMD_MANIFEST = 2,
     CMD_CAT_FILE = 3,
     CMD_MANIFEST_NODE_FOR_COMMIT = 4,
-    CMD_GET_CACHE_PATH = 5,
-    CMD_FETCH_TREE = 6,
+    CMD_FETCH_TREE = 5,
   };
   struct ChunkHeader {
     uint32_t requestID;
@@ -185,6 +203,14 @@ class HgImporter {
     return readChunkHeader(helperOut_);
   }
   static ChunkHeader readChunkHeader(int fd);
+
+  /**
+   * Wait for the helper process to send a CMD_STARTED response to indicate
+   * that it has started successfully.  Process the response and finish
+   * setting up member variables based on the data included in the response.
+   */
+  void waitForHelperStart();
+
   /**
    * Send a request to the helper process, asking it to send us the manifest
    * for the specified revision.
@@ -200,16 +226,6 @@ class HgImporter {
    * manifest node (NOT the full manifest!) for the specified revision.
    */
   void sendManifestNodeRequest(folly::StringPiece revName);
-  /**
-   * Determine the shared tree manifest pack location associated with
-   * this repo.
-   */
-  std::string getCachePath();
-  /**
-   * Send a request to the helper process, asking it to send us the
-   * tree manifest pack location.
-   */
-  void sendGetCachePathRequest();
   /**
    * Send a request to the helper process asking it to prefetch data for trees
    * under the specified path, at the specified manifest node for the given

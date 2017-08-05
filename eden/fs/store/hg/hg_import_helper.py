@@ -58,6 +58,24 @@ HEADER_SIZE = 16
 # The length of a SHA-1 hash
 SHA1_NUM_BYTES = 20
 
+# The protocol version number.
+#
+# Increment this any time you add new commands or make changes to the data
+# format sent between edenfs and the hg_import_helper.
+#
+# In general we do not need to worry about backwards/forwards compatibility of
+# the protocol, since edenfs and the hg_import_helper.py script should always
+# be updated together.  This protocol version ID allows us to sanity check that
+# edenfs is actually talking to the correct hg_import_helper.py script,
+# and to fail if it somehow is using an import helper script from the wrong
+# release.
+#
+# This must be kept in sync with the PROTOCOL_VERSION field in the C++
+# HgImporter code.
+PROTOCOL_VERSION = 1
+
+START_FLAGS_TREEMANIFEST_SUPPORTED = 0x01
+
 #
 # Message types.
 #
@@ -69,8 +87,7 @@ CMD_RESPONSE = 1
 CMD_MANIFEST = 2
 CMD_CAT_FILE = 3
 CMD_MANIFEST_NODE_FOR_COMMIT = 4
-CMD_GET_CACHE_PATH = 5
-CMD_FETCH_TREE = 6
+CMD_FETCH_TREE = 5
 
 #
 # Flag values.
@@ -193,15 +210,46 @@ class HgServer(object):
             self.send_error(request=None, message=str(ex))
             return 1
 
-        # Send a success response to indicate we have started
+        # Send a CMD_STARTED response to indicate we have started,
+        # and include some information about the repository configuration.
+        options_chunk = self._gen_options()
         self._send_chunk(txn_id=0, command=CMD_STARTED,
-                         flags=0, data='')
+                         flags=0, data=options_chunk)
 
         while self.process_request():
             pass
 
         logging.debug('hg_import_helper shutting down normally')
         return 0
+
+    def _gen_options(self):
+        use_treemanifest = ((self.treemanifest is not None) and
+                            bool(getattr(self.repo, 'name', None)))
+
+        flags = 0
+        treemanifest_paths = []
+        if use_treemanifest:
+            flags |= START_FLAGS_TREEMANIFEST_SUPPORTED
+            treemanifest_paths = [
+                shallowutil.getlocalpackpath(self.repo.svfs.vfs.base,
+                                             constants.TREEPACK_CATEGORY),
+                shallowutil.getcachepackpath(self.repo,
+                                             constants.TREEPACK_CATEGORY),
+            ]
+
+        # Options format:
+        # - Protocol version number
+        # - Is treemanifest supported?
+        # - Number of treemanifest paths
+        #   - treemanifest paths, encoded as (length, string_data)
+        parts = []
+        parts.append(struct.pack(b'>III', PROTOCOL_VERSION, flags,
+                                 len(treemanifest_paths)))
+        for path in treemanifest_paths:
+            parts.append(struct.pack(b'>I', len(path)))
+            parts.append(path)
+
+        return ''.join(parts)
 
     def debug(self, msg, *args, **kwargs):
         logging.debug(msg, *args, **kwargs)
@@ -333,28 +381,6 @@ class HgServer(object):
             return
 
         self.send_chunk(request, node)
-
-    @cmd(CMD_GET_CACHE_PATH)
-    def cmd_get_cache_path(self, request):
-        '''
-        Handler for CMD_GET_CACHE_PATH requests.
-
-        Computes the tree pack cache path for the repo.
-
-        Request body format: no arguments.
-
-        Response body format:
-        - The path holding tree packs (string)
-        '''
-        if not hasattr(self.repo, 'name'):
-            # The repo doesn't have the appropriate extensions configured
-            # to support tree manifests, so return an empty path.
-            # This happens in our integration test suite.
-            cache_path = ''
-        else:
-            cache_path = shallowutil.getcachepackpath(
-                self.repo, constants.TREEPACK_CATEGORY)
-        self.send_chunk(request, cache_path)
 
     @cmd(CMD_FETCH_TREE)
     def cmd_fetch_tree(self, request):
