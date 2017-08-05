@@ -1215,6 +1215,7 @@ class ui(object):
         # call write() so output goes through subclassed implementation
         # e.g. color extension on Windows
         self.write(prompt, prompt=True)
+        self.flush()
 
         # instead of trying to emulate raw_input, swap (self.fin,
         # self.fout) with (sys.stdin, sys.stdout)
