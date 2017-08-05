@@ -10,10 +10,10 @@ help:
 all: help
 
 tests:
+	python -m doctest hggit/hg2git.py
 	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS)
 
 test-%:
-	python -m doctest hggit/hg2git.py
 	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS) $@
 
 tests-%:
