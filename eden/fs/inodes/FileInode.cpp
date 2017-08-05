@@ -112,6 +112,27 @@ FileInode::FileInode(
           getMount()->getLastCheckoutTime(),
           rdev) {}
 
+// Conditionally updates target with either the value provided by
+// the caller, or with the current time value, depending on the value
+// of the flags in to_set.  Valid flag values are defined in fuse_lowlevel.h
+// and have symbolic names matching FUSE_SET_*.
+// useAttrFlag is the bitmask that indicates whether we should use the value
+// from wantedTimeSpec.  useNowFlag is the bitmask that indicates whether we
+// should use the current time instead.
+// If neither flag is present, we will preserve the current value in target.
+static void resolveTimeForSetAttr(
+    struct timespec& target,
+    int to_set,
+    int useAttrFlag,
+    int useNowFlag,
+    const struct timespec& wantedTimeSpec) {
+  if (to_set & useAttrFlag) {
+    target = wantedTimeSpec;
+  } else if (to_set & useNowFlag) {
+    clock_gettime(CLOCK_REALTIME, &target);
+  }
+}
+
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry, we have to materialize it
@@ -143,7 +164,75 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
 
         auto result =
             fusell::Dispatcher::Attr{self->getMount()->getMountPoint()};
-        result.st = self->setAttr(attr, to_set);
+
+        auto state = self->state_.wlock();
+        CHECK(state->file) << "MUST have a materialized file at this point";
+
+        // We most likely need the current information to apply the requested
+        // changes below, so just fetch it here first.
+        struct stat currentStat;
+        checkUnixError(fstat(state->file.fd(), &currentStat));
+
+        // Set the size of the file when FUSE_SET_ATTR_SIZE is set
+        if (to_set & FUSE_SET_ATTR_SIZE) {
+          checkUnixError(ftruncate(
+              state->file.fd(), attr.st_size + Overlay::kHeaderLength));
+        }
+
+        if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
+          if ((to_set & FUSE_SET_ATTR_UID &&
+               attr.st_uid != currentStat.st_uid) ||
+              (to_set & FUSE_SET_ATTR_GID &&
+               attr.st_gid != currentStat.st_gid)) {
+            folly::throwSystemErrorExplicit(
+                EACCES, "changing the owner/group is not supported");
+          }
+
+          // Otherwise: there is no change
+        }
+
+        if (to_set & FUSE_SET_ATTR_MODE) {
+          // The mode data is stored only in inode_->state_.
+          // (We don't set mode bits on the overlay file as that may incorrectly
+          // prevent us from reading or writing the overlay data).
+          // Make sure we preserve the file type bits, and only update
+          // permissions.
+          state->mode = (state->mode & S_IFMT) | (07777 & attr.st_mode);
+        }
+
+        // TODO: Instead of using currentStat timestamps which are obtained from
+        // stating overlay file we should use inmemory timestamps. Also setattr
+        // function should be moved to InodeBase and timestamps information
+        // should be obtained by helper functions implemented in FileInode and
+        // TreeInode.
+        if (to_set &
+            (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME |
+             FUSE_SET_ATTR_ATIME_NOW | FUSE_SET_ATTR_MTIME_NOW)) {
+          // Changing various time components.
+          // Element 0 is the atime, element 1 is the mtime.
+          struct timespec times[2] = {currentStat.st_atim, currentStat.st_mtim};
+
+          resolveTimeForSetAttr(
+              times[0],
+              to_set,
+              FUSE_SET_ATTR_ATIME,
+              FUSE_SET_ATTR_ATIME_NOW,
+              attr.st_atim);
+
+          resolveTimeForSetAttr(
+              times[1],
+              to_set,
+              FUSE_SET_ATTR_MTIME,
+              FUSE_SET_ATTR_MTIME_NOW,
+              attr.st_mtim);
+
+          checkUnixError(futimens(state->file.fd(), times));
+        }
+
+        // We need to return the now-current stat information for this file.
+        checkUnixError(fstat(state->file.fd(), &result.st));
+        result.st.st_mode = state->mode;
+        result.st.st_size -= Overlay::kHeaderLength;
         result.st.st_ino = self->getNodeId();
 
         auto path = self->getPath();
@@ -151,7 +240,6 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setattr(
           self->getMount()->getJournal().wlock()->addDelta(
               std::make_unique<JournalDelta>(JournalDelta{path.value()}));
         }
-
         return result;
       });
 }
@@ -342,95 +430,6 @@ Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
         << getNodeId() << " :Blob is " << (state->blob ? "not " : "") << "Null";
     return folly::makeFuture<Hash>(bug.toException());
   }
-}
-
-// Conditionally updates target with either the value provided by
-// the caller, or with the current time value, depending on the value
-// of the flags in to_set.  Valid flag values are defined in fuse_lowlevel.h
-// and have symbolic names matching FUSE_SET_*.
-// useAttrFlag is the bitmask that indicates whether we should use the value
-// from wantedTimeSpec.  useNowFlag is the bitmask that indicates whether we
-// should use the current time instead.
-// If neither flag is present, we will preserve the current value in target.
-static void resolveTimeForSetAttr(
-    struct timespec& target,
-    int to_set,
-    int useAttrFlag,
-    int useNowFlag,
-    const struct timespec& wantedTimeSpec) {
-  if (to_set & useAttrFlag) {
-    target = wantedTimeSpec;
-  } else if (to_set & useNowFlag) {
-    clock_gettime(CLOCK_REALTIME, &target);
-  }
-}
-
-// Valid values for to_set are found in fuse_lowlevel.h and have symbolic
-// names matching FUSE_SET_*.
-struct stat FileInode::setAttr(const struct stat& attr, int to_set) {
-  auto state = state_.wlock();
-
-  CHECK(state->file) << "MUST have a materialized file at this point";
-
-  // We most likely need the current information to apply the requested
-  // changes below, so just fetch it here first.
-  struct stat currentStat;
-  checkUnixError(fstat(state->file.fd(), &currentStat));
-
-  if (to_set & FUSE_SET_ATTR_SIZE) {
-    checkUnixError(
-        ftruncate(state->file.fd(), attr.st_size + Overlay::kHeaderLength));
-  }
-
-  if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
-    if ((to_set & FUSE_SET_ATTR_UID && attr.st_uid != currentStat.st_uid) ||
-        (to_set & FUSE_SET_ATTR_GID && attr.st_gid != currentStat.st_gid)) {
-      folly::throwSystemErrorExplicit(
-          EACCES, "changing the owner/group is not supported");
-    }
-
-    // Otherwise: there is no change
-  }
-
-  if (to_set & FUSE_SET_ATTR_MODE) {
-    // The mode data is stored only in inode_->state_.
-    // (We don't set mode bits on the overlay file as that may incorrectly
-    // prevent us from reading or writing the overlay data).
-    // Make sure we preserve the file type bits, and only update permissions.
-    state->mode = (state->mode & S_IFMT) | (07777 & attr.st_mode);
-  }
-
-  if (to_set &
-      (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME | FUSE_SET_ATTR_ATIME_NOW |
-       FUSE_SET_ATTR_MTIME_NOW)) {
-    // Changing various time components.
-    // Element 0 is the atime, element 1 is the mtime.
-    struct timespec times[2] = {currentStat.st_atim, currentStat.st_mtim};
-
-    resolveTimeForSetAttr(
-        times[0],
-        to_set,
-        FUSE_SET_ATTR_ATIME,
-        FUSE_SET_ATTR_ATIME_NOW,
-        attr.st_atim);
-
-    resolveTimeForSetAttr(
-        times[1],
-        to_set,
-        FUSE_SET_ATTR_MTIME,
-        FUSE_SET_ATTR_MTIME_NOW,
-        attr.st_mtim);
-
-    checkUnixError(futimens(state->file.fd(), times));
-  }
-
-  // We need to return the now-current stat information for this file.
-  struct stat returnedStat;
-  checkUnixError(fstat(state->file.fd(), &returnedStat));
-  returnedStat.st_mode = state->mode;
-  returnedStat.st_size -= Overlay::kHeaderLength;
-
-  return returnedStat;
 }
 
 struct stat FileInode::stat() {

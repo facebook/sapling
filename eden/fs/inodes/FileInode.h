@@ -257,15 +257,6 @@ class FileInode : public InodeBase {
   folly::Optional<bool> isSameAsFast(const Hash& blobID, mode_t mode);
 
   /**
-   * Change attributes for this inode.
-   * attr is a standard struct stat.  Only the members indicated
-   * by to_set are valid.  Defined values for the to_set flags
-   * are found in the fuse_lowlevel.h header file and have symbolic
-   * names matching FUSE_SET_*.
-   */
-  struct stat setAttr(const struct stat& attr, int to_set);
-
-  /**
    * Recompute the SHA1 content hash of the open file.
    */
   Hash recomputeAndStoreSha1(
