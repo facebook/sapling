@@ -406,31 +406,57 @@ HgImporter::~HgImporter() {
   helper_.wait();
 }
 
-std::unique_ptr<Tree> HgImporter::importTree(const Hash& edenBlobHash) {
-  HgProxyHash pathInfo(store_, edenBlobHash);
+std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
+  HgProxyHash pathInfo(store_, id);
   return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
-      edenBlobHash,
+      id,
       pathInfo.path());
 }
 
 std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
-    const Hash& edenBlobHash,
+    const Hash& edenTreeID,
     RelativePathPiece path) {
-  // FIXME: We need to catch MissingKeyError here, and ask mercurial to import
-  // the tree data if it is thrown.  Currently we can often import the root
-  // tree using TreeManifest, but this results in I/O errors later on if
-  // sub-trees are not available in the data store yet.
-  auto content = unionStore_->get(
-      Key(path.stringPiece().data(),
-          path.stringPiece().size(),
-          (const char*)manifestNode.getBytes().data(),
-          manifestNode.getBytes().size()));
+  ConstantStringRef content;
+  try {
+    content = unionStore_->get(
+        Key(path.stringPiece().data(),
+            path.stringPiece().size(),
+            (const char*)manifestNode.getBytes().data(),
+            manifestNode.getBytes().size()));
+  } catch (const MissingKeyError& ex) {
+    // Data for this tree was not present locally.
+    // Fall through and fetch the data from the server below.
+  }
 
   if (!content.content()) {
+    // Ask the hg_import_helper script to fetch data for this tree
+    XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
+               << manifestNode;
+    sendFetchTreeRequest(path, manifestNode);
+    auto header = readChunkHeader();
+    if (header.dataLength != 0) {
+      throw std::runtime_error(folly::to<string>(
+          "got unexpected length ",
+          header.dataLength,
+          " for FETCH_TREE response"));
+    }
+
+    // Now try loading it again.
+    content = unionStore_->get(
+        Key(path.stringPiece().data(),
+            path.stringPiece().size(),
+            (const char*)manifestNode.getBytes().data(),
+            manifestNode.getBytes().size()));
+  }
+
+  if (!content.content()) {
+    // This generally shouldn't happen: the UnionDatapackStore throws on error
+    // instead of returning null.  We're checking simply due to an abundance of
+    // caution.
     throw std::domain_error(folly::to<string>(
-        "HgImporter::importTree asked for unknown tree ",
+        "HgImporter::importTree received null tree from mercurial store for ",
         path,
         ", ID ",
         manifestNode.toString()));
@@ -491,9 +517,9 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     iter.next();
   }
 
-  auto tree = std::make_unique<Tree>(std::move(entries), edenBlobHash);
+  auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
   auto serialized = store_->serializeTree(tree.get());
-  store_->put(edenBlobHash, serialized.second.coalesce());
+  store_->put(edenTreeID, serialized.second.coalesce());
   return tree;
 }
 
@@ -755,6 +781,26 @@ void HgImporter::sendGetCachePathRequest() {
   std::array<struct iovec, 1> iov;
   iov[0].iov_base = &header;
   iov[0].iov_len = sizeof(header);
+  folly::writevFull(helperIn_, iov.data(), iov.size());
+}
+
+void HgImporter::sendFetchTreeRequest(
+    RelativePathPiece path,
+    Hash pathManifestNode) {
+  ChunkHeader header;
+  header.command = Endian::big<uint32_t>(CMD_FETCH_TREE);
+  header.requestID = Endian::big<uint32_t>(nextRequestID_++);
+  header.flags = 0;
+  StringPiece pathStr = path.stringPiece();
+  header.dataLength = Endian::big<uint32_t>(Hash::RAW_SIZE + pathStr.size());
+
+  std::array<struct iovec, 3> iov;
+  iov[0].iov_base = &header;
+  iov[0].iov_len = sizeof(header);
+  iov[1].iov_base = const_cast<uint8_t*>(pathManifestNode.getBytes().data());
+  iov[1].iov_len = Hash::RAW_SIZE;
+  iov[2].iov_base = const_cast<char*>(pathStr.data());
+  iov[2].iov_len = pathStr.size();
   folly::writevFull(helperIn_, iov.data(), iov.size());
 }
 }

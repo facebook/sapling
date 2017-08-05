@@ -70,6 +70,7 @@ CMD_MANIFEST = 2
 CMD_CAT_FILE = 3
 CMD_MANIFEST_NODE_FOR_COMMIT = 4
 CMD_GET_CACHE_PATH = 5
+CMD_FETCH_TREE = 6
 
 #
 # Flag values.
@@ -176,6 +177,12 @@ class HgServer(object):
         mercurial.extensions.loadall(self.ui)
         repo = mercurial.hg.repository(self.ui, self.repo_path)
         self.repo = repo.unfiltered()
+
+        try:
+            self.treemanifest = mercurial.extensions.find('treemanifest')
+        except KeyError:
+            # The treemanifest extension is not present
+            self.treemanifest = None
 
     def serve(self):
         try:
@@ -349,6 +356,39 @@ class HgServer(object):
                 self.repo, constants.TREEPACK_CATEGORY)
         self.send_chunk(request, cache_path)
 
+    @cmd(CMD_FETCH_TREE)
+    def cmd_fetch_tree(self, request):
+        if len(request.body) < SHA1_NUM_BYTES:
+            raise Exception('fetch_tree request data too short: len=%d' %
+                            len(request.body))
+
+        manifest_node = request.body[:SHA1_NUM_BYTES]
+        path = request.body[SHA1_NUM_BYTES:]
+        self.debug('fetching tree for path %r manifest node %s',
+                   path, binascii.hexlify(manifest_node))
+
+        self.fetch_tree(path, manifest_node)
+        self.send_chunk(request, b'')
+
+    def fetch_tree(self, path, manifest_node):
+        if self.treemanifest is None:
+            raise Exception('treemanifest not enabled in this repository')
+
+        mfnodes = set([manifest_node])
+        base_mfnodes = set()
+
+        # The directories parameter isn't actually supported and
+        # must always be an empty list.
+        directories = []
+
+        # It would be nice to initially only fetch the one tree that we need
+        # immediately, and fetch the rest of the subtree later, in the
+        # background.  Unfortunately the wire protocol API does not support a
+        # mechanism to do this yet.  In the future it's probably worth adding a
+        # "depth" parameter requesting data only down to a specific depth.
+        self.treemanifest._prefetchtrees(self.repo, path, mfnodes,
+                                         base_mfnodes, directories)
+
     def send_chunk(self, request, data, is_last=True):
         flags = 0
         if not is_last:
@@ -513,6 +553,10 @@ def main():
                         metavar='PATH:REV',
                         help='Dump the file contents for the specified file '
                         'at the given file revision')
+    parser.add_argument('--fetch-tree',
+                        metavar='PATH:REV',
+                        help='Fetch treemanifest data for the specified path '
+                        'at the given manifest node')
 
     args = parser.parse_args()
     config_overrides = parse_config_options(parser, args.config)
@@ -535,19 +579,41 @@ def main():
     server = HgServer(args.repo, config_overrides,
                       in_fd=args.in_fd, out_fd=args.out_fd)
 
-    if args.manifest:
+    if args.manifest is not None:
         server.initialize()
         request = Request(0, CMD_MANIFEST, flags=0, body=args.manifest)
         server.dump_manifest(args.manifest, request)
         return 0
 
-    if args.cat_file:
+    if args.cat_file is not None:
         server.initialize()
         path, file_rev_str = args.cat_file.rsplit(':', -1)
         path = path.encode(sys.getfilesystemencoding())
         file_rev = binascii.unhexlify(file_rev_str)
         data = server.get_file(path, file_rev)
         sys.stdout.write(data)
+        return 0
+
+    if args.fetch_tree is not None:
+        server.initialize()
+        parts = args.fetch_tree.rsplit(':', -1)
+        if len(parts) == 1:
+            path = parts[0]
+            if path == '':
+                manifest_node = server.get_manifest_node('.')
+            else:
+                # TODO: It would be nice to automatically look up the current
+                # manifest node ID for this path and use that here, assuming
+                # we have sufficient data locally for this
+                raise Exception('a manifest node ID is required when '
+                                'using a path')
+        else:
+            path, manifest_node_str = parts
+            manifest_node = binascii.unhexlify(manifest_node_str)
+            if len(manifest_node) != 20:
+                raise Exception('manifest node should be a 40-byte hex string')
+
+        server.fetch_tree(path, manifest_node)
         return 0
 
     try:

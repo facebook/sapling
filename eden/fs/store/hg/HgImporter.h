@@ -100,10 +100,13 @@ class HgImporter {
   /**
    * Import the tree with the specified tree manifest hash.
    *
+   * @param id The Tree ID.  Note that this is eden's Tree ID, and does not
+   *   correspond to the mercurial manifest node ID for this path.
+   *
    * Returns the Tree, or throws on error.
    * Requires that tree manifest data be available.
    */
-  std::unique_ptr<Tree> importTree(const Hash& edenBlobHash);
+  std::unique_ptr<Tree> importTree(const Hash& id);
 
   /**
    * Import file information
@@ -148,6 +151,7 @@ class HgImporter {
     CMD_CAT_FILE = 3,
     CMD_MANIFEST_NODE_FOR_COMMIT = 4,
     CMD_GET_CACHE_PATH = 5,
+    CMD_FETCH_TREE = 6,
   };
   struct ChunkHeader {
     uint32_t requestID;
@@ -206,10 +210,16 @@ class HgImporter {
    * tree manifest pack location.
    */
   void sendGetCachePathRequest();
+  /**
+   * Send a request to the helper process asking it to prefetch data for trees
+   * under the specified path, at the specified manifest node for the given
+   * path.
+   */
+  void sendFetchTreeRequest(RelativePathPiece path, Hash pathManifestNode);
 
   std::unique_ptr<Tree> importTreeImpl(
       const Hash& manifestNode,
-      const Hash& edenBlobHash,
+      const Hash& edenTreeID,
       RelativePathPiece path);
 
   folly::Subprocess helper_;
