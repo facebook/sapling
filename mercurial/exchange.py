@@ -1226,8 +1226,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         opargs = {}
     pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
                            streamclonerequested=streamclonerequested, **opargs)
-    if pullop.remote.local():
-        missing = set(pullop.remote.requirements) - pullop.repo.supported
+
+    peerlocal = pullop.remote.local()
+    if peerlocal:
+        missing = set(peerlocal.requirements) - pullop.repo.supported
         if missing:
             msg = _("required features are not"
                     " supported in the destination:"
