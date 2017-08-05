@@ -30,9 +30,9 @@ except AttributeError:
 
 def passwordmgr(ui):
     try:
-        return url.passwordmgr(ui,
-                               hgutil.urlreq.httppasswordmgrwithdefaultrealm())
-    except TypeError:
+        realm = hgutil.urlreq.httppasswordmgrwithdefaultrealm()
+        return url.passwordmgr(ui, realm)
+    except (TypeError, AttributeError):
         # compat with hg < 3.9
         return url.passwordmgr(ui)
 
