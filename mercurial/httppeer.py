@@ -90,7 +90,6 @@ class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
         self.path = path
         self.caps = None
-        self.handler = None
         self.urlopener = None
         self.requestbuilder = None
         u = util.url(path)
