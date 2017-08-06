@@ -9,6 +9,11 @@ from __future__ import absolute_import
 
 import abc
 
+from .i18n import _
+from . import (
+    error,
+)
+
 class _basepeer(object):
     """Represents a "connection" to a repository.
 
@@ -227,6 +232,37 @@ class peer(_basepeer, _basewirecommands):
         Not all peers or wire protocol implementations may actually batch method
         calls. However, they must all support this API.
         """
+
+    def capable(self, name):
+        """Determine support for a named capability.
+
+        Returns ``False`` if capability not supported.
+
+        Returns ``True`` if boolean capability is supported. Returns a string
+        if capability support is non-boolean.
+        """
+        caps = self.capabilities()
+        if name in caps:
+            return True
+
+        name = '%s=' % name
+        for cap in caps:
+            if cap.startswith(name):
+                return cap[len(name):]
+
+        return False
+
+    def requirecap(self, name, purpose):
+        """Require a capability to be present.
+
+        Raises a ``CapabilityError`` if the capability isn't present.
+        """
+        if self.capable(name):
+            return
+
+        raise error.CapabilityError(
+            _('cannot %s; remote repository does not support the %r '
+              'capability') % (purpose, name))
 
 class legacypeer(peer, _baselegacywirecommands):
     """peer but with support for legacy wire protocol commands."""
