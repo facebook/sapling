@@ -10,7 +10,7 @@ help:
 all: help
 
 tests:
-	python -m doctest hggit/*.py contrib/*.py
+	$(PYTHON) -m doctest hggit/*.py contrib/*.py
 	cd tests && $(PYTHON) run-tests.py --with-hg=`which hg` $(TESTFLAGS)
 
 test-%:
