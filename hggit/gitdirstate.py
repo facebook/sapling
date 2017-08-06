@@ -6,7 +6,6 @@ import errno
 from mercurial import (
     dirstate,
     match as matchmod,
-    osutil,
     scmutil,
     util,
 )
@@ -156,9 +155,11 @@ class gitdirstate(dirstate.dirstate):
         matchalways = match.always()
         matchtdir = match.traversedir
         dmap = self._map
+        # osutil moved in hg 4.3, but util re-exports listdir
         try:
             listdir = util.listdir
         except AttributeError:
+            from mercurial import osutil
             listdir = osutil.listdir
         lstat = os.lstat
         dirkind = stat.S_IFDIR
