@@ -88,10 +88,10 @@ def _wraphttpresponse(resp):
 
 class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
-        self.path = path
-        self.caps = None
-        self.urlopener = None
-        self.requestbuilder = None
+        self._path = path
+        self._caps = None
+        self._urlopener = None
+        self._requestbuilder = None
         u = util.url(path)
         if u.query or u.fragment:
             raise error.Abort(_('unsupported URL component: "%s"') %
@@ -103,33 +103,33 @@ class httppeer(wireproto.wirepeer):
         self.ui = ui
         self.ui.debug('using %s\n' % self._url)
 
-        self.urlopener = url.opener(ui, authinfo)
-        self.requestbuilder = urlreq.request
+        self._urlopener = url.opener(ui, authinfo)
+        self._requestbuilder = urlreq.request
 
     def __del__(self):
-        urlopener = getattr(self, 'urlopener', None)
+        urlopener = getattr(self, '_urlopener', None)
         if urlopener:
             for h in urlopener.handlers:
                 h.close()
                 getattr(h, "close_all", lambda : None)()
 
     def url(self):
-        return self.path
+        return self._path
 
     # look up capabilities only when needed
 
     def _fetchcaps(self):
-        self.caps = set(self._call('capabilities').split())
+        self._caps = set(self._call('capabilities').split())
 
     def _capabilities(self):
-        if self.caps is None:
+        if self._caps is None:
             try:
                 self._fetchcaps()
             except error.RepoError:
-                self.caps = set()
+                self._caps = set()
             self.ui.debug('capabilities: %s\n' %
-                          (' '.join(self.caps or ['none'])))
-        return self.caps
+                          (' '.join(self._caps or ['none'])))
+        return self._caps
 
     def _callstream(self, cmd, _compressible=False, **args):
         if cmd == 'pushkey':
@@ -144,7 +144,7 @@ class httppeer(wireproto.wirepeer):
         # Important: don't use self.capable() here or else you end up
         # with infinite recursion when trying to look up capabilities
         # for the first time.
-        postargsok = self.caps is not None and 'httppostargs' in self.caps
+        postargsok = self._caps is not None and 'httppostargs' in self._caps
         # TODO: support for httppostargs when data is a file-like
         # object rather than a basestring
         canmungedata = not data or isinstance(data, basestring)
@@ -189,7 +189,7 @@ class httppeer(wireproto.wirepeer):
         protoparams = []
 
         mediatypes = set()
-        if self.caps is not None:
+        if self._caps is not None:
             mt = self.capable('httpmediatype')
             if mt:
                 protoparams.append('0.1')
@@ -217,13 +217,13 @@ class httppeer(wireproto.wirepeer):
         if varyheaders:
             headers['Vary'] = ','.join(varyheaders)
 
-        req = self.requestbuilder(cu, data, headers)
+        req = self._requestbuilder(cu, data, headers)
 
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
             req.add_unredirected_header('Content-Length', '%d' % size)
         try:
-            resp = self.urlopener.open(req)
+            resp = self._urlopener.open(req)
         except urlerr.httperror as inst:
             if inst.code == 401:
                 raise error.Abort(_('authorization failed'))
