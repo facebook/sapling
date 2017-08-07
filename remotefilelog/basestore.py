@@ -68,7 +68,7 @@ class basestore(object):
         count = 0
         directories = set()
         for entry in entries:
-            if entry.datarepacked and entry.historyrepacked:
+            if entry.gced or (entry.datarepacked and entry.historyrepacked):
                 ui.progress(_("cleaning up"), count, unit="files",
                             total=len(entries))
                 path = self._getfilepath(entry.filename, entry.node)

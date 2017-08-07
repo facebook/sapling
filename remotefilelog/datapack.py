@@ -231,7 +231,7 @@ class datapack(basepack.basepack):
         entries = ledger.sources.get(self, [])
         allkeys = set(self)
         repackedkeys = set((e.filename, e.node) for e in entries if
-                           e.datarepacked)
+                           e.datarepacked or e.gced)
 
         if len(allkeys - repackedkeys) == 0:
             if self.path not in ledger.created:
@@ -331,7 +331,7 @@ class fastdatapack(basepack.basepack):
         entries = ledger.sources.get(self, [])
         allkeys = set(self)
         repackedkeys = set((e.filename, e.node) for e in entries if
-                           e.datarepacked)
+                           e.datarepacked or e.gced)
 
         if len(allkeys - repackedkeys) == 0:
             if self.path not in ledger.created:

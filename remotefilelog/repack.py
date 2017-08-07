@@ -20,6 +20,7 @@ from . import (
     metadatastore,
     shallowutil,
 )
+import time
 
 osutil = policy.importmod(r'osutil')
 
@@ -259,7 +260,21 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 def _runrepack(repo, data, history, packpath, category):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
-    packer = repacker(repo, data, history, category)
+    def isold(repo, filename, node):
+        """Check if the file node is older than a limit.
+        Unless a limit is specified in the config the default limit is taken.
+        """
+        filectx = repo.filectx(filename, fileid=node)
+        filetime = repo[filectx.linkrev()].date()
+
+        # Currently default TTL limit is 30 days
+        defaultlimit = 60 * 60 * 24 * 30
+        ttl = repo.ui.configint('remotefilelog', 'nodettl', defaultlimit)
+
+        limit = time.time() - ttl
+        return filetime[0] < limit
+
+    packer = repacker(repo, data, history, category, isold)
 
     # internal config: remotefilelog.datapackversion
     dv = repo.ui.configint('remotefilelog', 'datapackversion', 0)
@@ -276,11 +291,40 @@ class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
     """
-    def __init__(self, repo, data, history, category):
+    def __init__(self, repo, data, history, category, isold=None):
         self.repo = repo
         self.data = data
         self.history = history
         self.unit = constants.getunits(category)
+        self.garbagecollect = repo.ui.configbool('remotefilelog', 'gcrepack')
+        if self.garbagecollect:
+            if not isold:
+                raise ValueError("Function 'isold' is not properly specified")
+            self.keepkeys = self._gckeepset()
+            self.isold = isold
+
+    def _gckeepset(self):
+        """Computes a keepset which is not garbage collected.
+        """
+        repo = self.repo
+        revs = ['.', 'draft()', 'parents(draft())', '(heads(all()) & date(-7))']
+
+        # If pullprefetch and bgprefetchrevs are specified include them as well
+        # since we don't want to prefetch and immediately garbage collect them
+        prefetchrevs = repo.ui.config('remotefilelog', 'pullprefetch', None)
+        if prefetchrevs:
+            revs.append('(%s)' % prefetchrevs)
+        prefetchrevs = repo.ui.config('remotefilelog', 'bgprefetchrevs', None)
+        if prefetchrevs:
+            revs.append('(%s)' % prefetchrevs)
+
+        keep = repo.revs('+'.join(revs))
+        keepkeys = set()
+        for r in keep:
+            m = repo[r].manifest()
+            keepkeys.update(m.iteritems())
+
+        return keepkeys
 
     def run(self, targetdata, targethistory):
         ledger = repackledger()
@@ -288,6 +332,7 @@ class repacker(object):
         with self.repo._lock(self.repo.svfs, "repacklock", False, None,
                              None, _('repacking %s') % self.repo.origroot):
             self.repo.hook('prerepack')
+
             # Populate ledger from source
             self.data.markledger(ledger)
             self.history.markledger(ledger)
@@ -344,6 +389,14 @@ class repacker(object):
                 # the files we have.
                 if node not in nodes:
                     continue
+
+                if self.garbagecollect:
+                    # If the node is old and is not in the keepset
+                    # we skip it and mark as garbage collected
+                    if ((filename, node) not in self.keepkeys and
+                                        self.isold(self.repo, filename, node)):
+                        entries[node].gced = True
+                        continue
 
                 ui.progress(_("processing nodes"), i, unit='nodes',
                             total=len(orderednodes))
@@ -521,7 +574,7 @@ class repackentry(object):
     """Simple class representing a single revision entry in the repackledger.
     """
     __slots__ = ['filename', 'node', 'datasource', 'historysource',
-                 'datarepacked', 'historyrepacked']
+                 'datarepacked', 'historyrepacked', 'gced']
     def __init__(self, filename, node):
         self.filename = filename
         self.node = node
@@ -533,3 +586,5 @@ class repackentry(object):
         self.datarepacked = False
         # If the revision's history entry was repacked into the repack target
         self.historyrepacked = False
+        # If garbage collected
+        self.gced = False

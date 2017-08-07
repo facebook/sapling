@@ -14,6 +14,9 @@ Configs:
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
     ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
       update, and on other commands that use them. Different from pullprefetch.
+    ``remotefilelog.gcrepack`` does garbage collection during repack when True
+    ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
+      it is garbage collected
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
