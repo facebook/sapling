@@ -13,6 +13,7 @@ from .i18n import _
 from . import (
     error,
     pycompat,
+    repository,
     util,
     wireproto,
 )
@@ -114,10 +115,10 @@ class doublepipe(object):
     def flush(self):
         return self._main.flush()
 
-class sshpeer(wireproto.wirepeer):
+class sshpeer(wireproto.wirepeer, repository.legacypeer):
     def __init__(self, ui, path, create=False):
         self._url = path
-        self.ui = ui
+        self._ui = ui
         self._pipeo = self._pipei = self._pipee = None
 
         u = util.url(path, parsequery=False, parsefragment=False)
@@ -150,8 +151,38 @@ class sshpeer(wireproto.wirepeer):
 
         self._validaterepo(sshcmd, args, remotecmd)
 
+        # TODO remove this alias once peerrepository inheritance is removed.
+        self._capabilities = self.capabilities
+
+    # Begin of _basepeer interface.
+
+    @util.propertycache
+    def ui(self):
+        return self._ui
+
     def url(self):
         return self._url
+
+    def local(self):
+        return None
+
+    def peer(self):
+        return self
+
+    def canpush(self):
+        return True
+
+    def close(self):
+        pass
+
+    # End of _basepeer interface.
+
+    # Begin of _basewirecommands interface.
+
+    def capabilities(self):
+        return self._caps
+
+    # End of _basewirecommands interface.
 
     def _validaterepo(self, sshcmd, args, remotecmd):
         # cleanup up previous run
@@ -199,9 +230,6 @@ class sshpeer(wireproto.wirepeer):
             if l.startswith("capabilities:"):
                 self._caps.update(l[:-1].split(":")[1].split())
                 break
-
-    def _capabilities(self):
-        return self._caps
 
     def _readerr(self):
         _forwardoutput(self.ui, self._pipee)
