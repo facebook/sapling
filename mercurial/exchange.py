@@ -433,16 +433,13 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
                     " %s") % (', '.join(sorted(missing)))
             raise error.Abort(msg)
 
-    # there are two ways to push to remote repo:
-    #
-    # addchangegroup assumes local user can lock remote
-    # repo (local filesystem, old ssh servers).
-    #
-    # unbundle assumes local user cannot lock remote repo (new ssh
-    # servers, http servers).
-
     if not pushop.remote.canpush():
         raise error.Abort(_("destination does not support push"))
+
+    if not pushop.remote.capable('unbundle'):
+        raise error.Abort(_('cannot push: destination does not support the '
+                            'unbundle wire protocol command'))
+
     # get local lock as we might write phase data
     localwlock = locallock = None
     try:
@@ -468,21 +465,14 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
                                                   'push-response',
                                                   pushop.remote.url())
         pushop.repo.checkpush(pushop)
-        lock = None
-        unbundle = pushop.remote.capable('unbundle')
-        if not unbundle:
-            lock = pushop.remote.lock()
-        try:
-            _pushdiscovery(pushop)
-            if not _forcebundle1(pushop):
-                _pushbundle2(pushop)
-            _pushchangeset(pushop)
-            _pushsyncphase(pushop)
-            _pushobsolete(pushop)
-            _pushbookmark(pushop)
-        finally:
-            if lock is not None:
-                lock.release()
+        _pushdiscovery(pushop)
+        if not _forcebundle1(pushop):
+            _pushbundle2(pushop)
+        _pushchangeset(pushop)
+        _pushsyncphase(pushop)
+        _pushobsolete(pushop)
+        _pushbookmark(pushop)
+
         if pushop.trmanager:
             pushop.trmanager.close()
     finally:
@@ -958,9 +948,12 @@ def _pushchangeset(pushop):
     pushop.stepsdone.add('changesets')
     if not _pushcheckoutgoing(pushop):
         return
+
+    # Should have verified this in push().
+    assert pushop.remote.capable('unbundle')
+
     pushop.repo.prepushoutgoinghooks(pushop)
     outgoing = pushop.outgoing
-    unbundle = pushop.remote.capable('unbundle')
     # TODO: get bundlecaps from remote
     bundlecaps = None
     # create a changegroup from local
@@ -979,24 +972,18 @@ def _pushchangeset(pushop):
                                         bundlecaps=bundlecaps)
 
     # apply changegroup to remote
-    if unbundle:
-        # local repo finds heads on server, finds out what
-        # revs it must push. once revs transferred, if server
-        # finds it has different heads (someone else won
-        # commit/push race), server aborts.
-        if pushop.force:
-            remoteheads = ['force']
-        else:
-            remoteheads = pushop.remoteheads
-        # ssh: return remote's addchangegroup()
-        # http: return remote's addchangegroup() or 0 for error
-        pushop.cgresult = pushop.remote.unbundle(cg, remoteheads,
-                                            pushop.repo.url())
+    # local repo finds heads on server, finds out what
+    # revs it must push. once revs transferred, if server
+    # finds it has different heads (someone else won
+    # commit/push race), server aborts.
+    if pushop.force:
+        remoteheads = ['force']
     else:
-        # we return an integer indicating remote head count
-        # change
-        pushop.cgresult = pushop.remote.addchangegroup(cg, 'push',
-                                                       pushop.repo.url())
+        remoteheads = pushop.remoteheads
+    # ssh: return remote's addchangegroup()
+    # http: return remote's addchangegroup() or 0 for error
+    pushop.cgresult = pushop.remote.unbundle(cg, remoteheads,
+                                        pushop.repo.url())
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""

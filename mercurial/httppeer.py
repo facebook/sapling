@@ -132,9 +132,6 @@ class httppeer(wireproto.wirepeer):
                           (' '.join(self.caps or ['none'])))
         return self.caps
 
-    def lock(self):
-        raise error.Abort(_('operation not supported over http'))
-
     def _callstream(self, cmd, _compressible=False, **args):
         if cmd == 'pushkey':
             args['data'] = ''

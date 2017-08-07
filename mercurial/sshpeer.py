@@ -17,21 +17,6 @@ from . import (
     wireproto,
 )
 
-class remotelock(object):
-    def __init__(self, repo):
-        self.repo = repo
-    def release(self):
-        self.repo.unlock()
-        self.repo = None
-    def __enter__(self):
-        return self
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.repo:
-            self.release()
-    def __del__(self):
-        if self.repo:
-            self.release()
-
 def _serverquote(s):
     if not s:
         return s
@@ -336,34 +321,5 @@ class sshpeer(wireproto.wirepeer):
         if flush:
             self.pipeo.flush()
         self.readerr()
-
-    def lock(self):
-        self._call("lock")
-        return remotelock(self)
-
-    def unlock(self):
-        self._call("unlock")
-
-    def addchangegroup(self, cg, source, url, lock=None):
-        '''Send a changegroup to the remote server.  Return an integer
-        similar to unbundle(). DEPRECATED, since it requires locking the
-        remote.'''
-        d = self._call("addchangegroup")
-        if d:
-            self._abort(error.RepoError(_("push refused: %s") % d))
-        for d in iter(lambda: cg.read(4096), ''):
-            self.pipeo.write(d)
-            self.readerr()
-
-        self.pipeo.flush()
-
-        self.readerr()
-        r = self._recv()
-        if not r:
-            return 1
-        try:
-            return int(r)
-        except ValueError:
-            self._abort(error.ResponseError(_("unexpected response:"), r))
 
 instance = sshpeer

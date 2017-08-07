@@ -237,9 +237,6 @@ class localpeer(peer.peerrepository):
         except error.PushRaced as exc:
             raise error.ResponseError(_('push failed:'), str(exc))
 
-    def lock(self):
-        return self._repo.lock()
-
     def pushkey(self, namespace, key, old, new):
         return self._repo.pushkey(namespace, key, old, new)
 
