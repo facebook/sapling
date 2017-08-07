@@ -17,6 +17,8 @@ from . import (
     shallowutil,
     wirepack,
 )
+from .contentstore import unioncontentstore
+from .metadatastore import unionmetadatastore
 from lz4wrapper import lz4decompress
 
 # Statistics for debugging
@@ -535,8 +537,8 @@ class fileserverclient(object):
         datastore = self.datastore
         historystore = self.historystore
         if force:
-            datastore = self.writedata
-            historystore = self.writehistory
+            datastore = unioncontentstore(*repo.shareddatastores)
+            historystore = unionmetadatastore(*repo.sharedhistorystores)
 
         missingids = set()
         if fetchdata:
