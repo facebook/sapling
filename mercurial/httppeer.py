@@ -21,6 +21,7 @@ from . import (
     error,
     httpconnection,
     pycompat,
+    repository,
     statichttprepo,
     url,
     util,
@@ -86,7 +87,7 @@ def _wraphttpresponse(resp):
 
     resp.__class__ = readerproxy
 
-class httppeer(wireproto.wirepeer):
+class httppeer(wireproto.wirepeer, repository.legacypeer):
     def __init__(self, ui, path):
         self._path = path
         self._caps = None
@@ -100,11 +101,14 @@ class httppeer(wireproto.wirepeer):
         # urllib cannot handle URLs with embedded user or passwd
         self._url, authinfo = u.authinfo()
 
-        self.ui = ui
-        self.ui.debug('using %s\n' % self._url)
+        self._ui = ui
+        ui.debug('using %s\n' % self._url)
 
         self._urlopener = url.opener(ui, authinfo)
         self._requestbuilder = urlreq.request
+
+        # TODO remove once peerrepository isn't in inheritance.
+        self._capabilities = self.capabilities
 
     def __del__(self):
         urlopener = getattr(self, '_urlopener', None)
@@ -113,15 +117,32 @@ class httppeer(wireproto.wirepeer):
                 h.close()
                 getattr(h, "close_all", lambda : None)()
 
+    # Begin of _basepeer interface.
+
+    @util.propertycache
+    def ui(self):
+        return self._ui
+
     def url(self):
         return self._path
 
-    # look up capabilities only when needed
+    def local(self):
+        return None
 
-    def _fetchcaps(self):
-        self._caps = set(self._call('capabilities').split())
+    def peer(self):
+        return self
 
-    def _capabilities(self):
+    def canpush(self):
+        return True
+
+    def close(self):
+        pass
+
+    # End of _basepeer interface.
+
+    # Begin of _basewirepeer interface.
+
+    def capabilities(self):
         if self._caps is None:
             try:
                 self._fetchcaps()
@@ -130,6 +151,13 @@ class httppeer(wireproto.wirepeer):
             self.ui.debug('capabilities: %s\n' %
                           (' '.join(self._caps or ['none'])))
         return self._caps
+
+    # End of _basewirepeer interface.
+
+    # look up capabilities only when needed
+
+    def _fetchcaps(self):
+        self._caps = set(self._call('capabilities').split())
 
     def _callstream(self, cmd, _compressible=False, **args):
         if cmd == 'pushkey':
