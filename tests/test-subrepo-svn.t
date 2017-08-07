@@ -668,30 +668,6 @@ also check that a percent encoded '-' (%2D) doesn't work
   abort: potentially unsafe url: 'svn+ssh://-oProxyCommand=touch owned nested' (in subrepository "s")
   [255]
 
-also check for a pipe
-
-  $ cd ssh-vuln
-  $ echo "s = [svn]svn+ssh://fakehost|sh%20nested" > .hgsub
-  $ hg ci -m3
-  $ cd ..
-  $ rm -r ssh-vuln-clone
-  $ hg clone ssh-vuln ssh-vuln-clone
-  updating to branch default
-  abort: potentially unsafe url: 'svn+ssh://fakehost|sh nested' (in subrepository "s")
-  [255]
-
-also check that a percent encoded '|' (%7C) doesn't work
-
-  $ cd ssh-vuln
-  $ echo "s = [svn]svn+ssh://fakehost%7Csh%20nested" > .hgsub
-  $ hg ci -m3
-  $ cd ..
-  $ rm -r ssh-vuln-clone
-  $ hg clone ssh-vuln ssh-vuln-clone
-  updating to branch default
-  abort: potentially unsafe url: 'svn+ssh://fakehost|sh nested' (in subrepository "s")
-  [255]
-
 also check that hiding the attack in the username doesn't work:
 
   $ cd ssh-vuln

@@ -1111,11 +1111,11 @@ SEC: check for unsafe ssh url
   $ hg clone 'ssh://%2DoProxyCommand=touch${IFS}owned/path'
   abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
   [255]
-  $ hg clone 'ssh://fakehost|shellcommand/path'
-  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  $ hg clone 'ssh://fakehost|touch%20owned/path'
+  abort: no suitable response from remote hg!
   [255]
-  $ hg clone 'ssh://fakehost%7Cshellcommand/path'
-  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  $ hg clone 'ssh://fakehost%7Ctouch%20owned/path'
+  abort: no suitable response from remote hg!
   [255]
 
   $ hg clone 'ssh://-oProxyCommand=touch owned%20foo@example.com/nonexistent/path'

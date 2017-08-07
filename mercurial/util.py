@@ -2905,8 +2905,7 @@ def checksafessh(path):
     Raises an error.Abort when the url is unsafe.
     """
     path = urlreq.unquote(path)
-    if (path.startswith('ssh://-') or path.startswith('svn+ssh://-')
-        or '|' in path):
+    if path.startswith('ssh://-') or path.startswith('svn+ssh://-'):
         raise error.Abort(_('potentially unsafe url: %r') %
                           (path,))
 

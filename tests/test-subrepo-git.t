@@ -1213,27 +1213,3 @@ also check that a percent encoded '-' (%2D) doesn't work
   updating to branch default
   abort: potentially unsafe url: 'ssh://-oProxyCommand=rm${IFS}non-existent/path' (in subrepository "s")
   [255]
-
-also check for a pipe
-
-  $ cd malicious-proxycommand
-  $ echo 's = [git]ssh://fakehost|shell/path' > .hgsub
-  $ hg ci -m 'change url to pipe'
-  $ cd ..
-  $ rm -r malicious-proxycommand-clone
-  $ hg clone malicious-proxycommand malicious-proxycommand-clone
-  updating to branch default
-  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepository "s")
-  [255]
-
-also check that a percent encoded '|' (%7C) doesn't work
-
-  $ cd malicious-proxycommand
-  $ echo 's = [git]ssh://fakehost%7Cshell/path' > .hgsub
-  $ hg ci -m 'change url to percent encoded'
-  $ cd ..
-  $ rm -r malicious-proxycommand-clone
-  $ hg clone malicious-proxycommand malicious-proxycommand-clone
-  updating to branch default
-  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepository "s")
-  [255]
