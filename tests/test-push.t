@@ -299,6 +299,11 @@ Test push hook locking
 
 SEC: check for unsafe ssh url
 
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = sh -c "read l; read l; read l"
+  > EOF
+
   $ hg -R test-revflag push 'ssh://-oProxyCommand=touch${IFS}owned/path'
   pushing to ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
   abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
@@ -307,11 +312,13 @@ SEC: check for unsafe ssh url
   pushing to ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
   abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
   [255]
-  $ hg -R test-revflag push 'ssh://fakehost|shellcommand/path'
-  pushing to ssh://fakehost%7Cshellcommand/path
-  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  $ hg -R test-revflag push 'ssh://fakehost|touch${IFS}owned/path'
+  pushing to ssh://fakehost%7Ctouch%24%7BIFS%7Downed/path
+  abort: no suitable response from remote hg!
   [255]
-  $ hg -R test-revflag push 'ssh://fakehost%7Cshellcommand/path'
-  pushing to ssh://fakehost%7Cshellcommand/path
-  abort: potentially unsafe url: 'ssh://fakehost|shellcommand/path'
+  $ hg -R test-revflag push 'ssh://fakehost%7Ctouch%20owned/path'
+  pushing to ssh://fakehost%7Ctouch%20owned/path
+  abort: no suitable response from remote hg!
   [255]
+
+  $ [ ! -f owned ] || echo 'you got owned'

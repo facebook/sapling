@@ -1780,6 +1780,11 @@ Test that '[paths]' is configured correctly at subrepo creation
 
 test for ssh exploit 2017-07-25
 
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = sh -c "read l; read l; read l"
+  > EOF
+
   $ hg init malicious-proxycommand
   $ cd malicious-proxycommand
   $ echo 's = [hg]ssh://-oProxyCommand=touch${IFS}owned/path' > .hgsub
@@ -1813,26 +1818,28 @@ also check that a percent encoded '-' (%2D) doesn't work
 also check for a pipe
 
   $ cd malicious-proxycommand
-  $ echo 's = [hg]ssh://fakehost|shell/path' > .hgsub
+  $ echo 's = [hg]ssh://fakehost|touch${IFS}owned/path' > .hgsub
   $ hg ci -m 'change url to pipe'
   $ cd ..
   $ rm -r malicious-proxycommand-clone
   $ hg clone malicious-proxycommand malicious-proxycommand-clone
   updating to branch default
-  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepo s)
+  abort: no suitable response from remote hg!
   [255]
+  $ [ ! -f owned ] || echo 'you got owned'
 
 also check that a percent encoded '|' (%7C) doesn't work
 
   $ cd malicious-proxycommand
-  $ echo 's = [hg]ssh://fakehost%7Cshell/path' > .hgsub
+  $ echo 's = [hg]ssh://fakehost%7Ctouch%20owned/path' > .hgsub
   $ hg ci -m 'change url to percent encoded pipe'
   $ cd ..
   $ rm -r malicious-proxycommand-clone
   $ hg clone malicious-proxycommand malicious-proxycommand-clone
   updating to branch default
-  abort: potentially unsafe url: 'ssh://fakehost|shell/path' (in subrepo s)
+  abort: no suitable response from remote hg!
   [255]
+  $ [ ! -f owned ] || echo 'you got owned'
 
 and bad usernames:
   $ cd malicious-proxycommand
