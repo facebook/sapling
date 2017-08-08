@@ -73,7 +73,7 @@ impl File {
     }
 
     pub fn copied_from(&self) -> Result<Option<(Path, NodeHash)>> {
-        if !self.node.maybe_renamed() {
+        if !self.node.maybe_copied() {
             return Ok(None);
         }
 
@@ -108,7 +108,7 @@ impl File {
     pub fn size(&self) -> Option<usize> {
         // XXX This doesn't really help because the BlobNode will have already been constructed
         // with the content so a size-only query will have already done too much work.
-        if self.node.maybe_renamed() {
+        if self.node.maybe_copied() {
             self.content().map(|s| s.len())
         } else {
             self.node.size()

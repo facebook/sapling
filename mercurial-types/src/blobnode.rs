@@ -58,7 +58,7 @@ impl Iterator for ParentIter {
 pub struct BlobNode<T = Vec<u8>> {
     blob: Blob<T>,
     parents: Parents,
-    renamed: bool,
+    maybe_copied: bool,
 }
 
 impl<T> BlobNode<T>
@@ -66,15 +66,15 @@ where
     T: AsRef<[u8]>,
 {
     /// Construct a node with the given content and parents.
-    /// NOTE: Mercurial encodes the fact that a file has been renamed from some other path
-    /// by encoding the fact by using p2 instead of p2 to refer to the parent version.
-    /// Two parent nodes are always considered to have been potentially renamed.
+    /// NOTE: Mercurial encodes the fact that a file has been copied from some other path
+    /// by encoding the fact by using p2 instead of p1 to refer to the parent version.
+    /// Two parent nodes are always considered to have been potentially copied.
     pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode<T>
     where
         B: Into<Blob<T>>,
     {
         let blob = blob.into();
-        let (p, renamed) = match (p1, p2) {
+        let (p, maybe_copied) = match (p1, p2) {
             (None, None) => (Parents::None, false),
             (Some(p1), None) => (Parents::One(*p1), false),
             (None, Some(p1)) => (Parents::One(*p1), true),
@@ -84,7 +84,7 @@ where
         BlobNode {
             blob: blob,
             parents: p,
-            renamed: renamed,
+            maybe_copied: maybe_copied,
         }
     }
 
@@ -100,8 +100,8 @@ where
         &self.parents
     }
 
-    pub fn maybe_renamed(&self) -> bool {
-        self.renamed
+    pub fn maybe_copied(&self) -> bool {
+        self.maybe_copied
     }
 
     // Annoyingly, filenode is defined as sha1(p1 || p2 || content), not
@@ -149,19 +149,19 @@ mod test {
             let pid: Option<NodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), None);
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
-            assert!(!n.renamed);
+            assert!(!n.maybe_copied);
         }
         {
             let pid: Option<NodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), None, pid.as_ref());
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
-            assert!(n.renamed);
+            assert!(n.maybe_copied);
         }
         {
             let pid: Option<NodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
-            assert!(n.renamed);
+            assert!(n.maybe_copied);
         }
     }
 
@@ -181,13 +181,13 @@ mod test {
         let node1 = {
             let n = BlobNode::new(Blob::from(&b"bar"[..]), pid1.as_ref(), pid2.as_ref());
             assert_eq!(n.parents, Parents::Two(pid1.unwrap(), pid2.unwrap()));
-            assert!(n.renamed);
+            assert!(n.maybe_copied);
             n.nodeid().expect("no nodeid 1")
         };
         let node2 = {
             let n = BlobNode::new(Blob::from(&b"bar"[..]), pid2.as_ref(), pid1.as_ref());
             assert_eq!(n.parents, Parents::Two(pid2.unwrap(), pid1.unwrap()));
-            assert!(n.renamed);
+            assert!(n.maybe_copied);
             n.nodeid().expect("no nodeid 2")
         };
         assert_eq!(node1, node2);
