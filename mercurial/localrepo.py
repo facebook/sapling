@@ -154,8 +154,6 @@ class localpeer(peer.peerrepository):
         self._repo = repo.filtered('served')
         self.ui = repo.ui
         self._caps = repo._restrictcapabilities(caps)
-        self.requirements = repo.requirements
-        self.supportedformats = repo.supportedformats
 
     def close(self):
         self._repo.close()
