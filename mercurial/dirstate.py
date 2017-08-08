@@ -359,8 +359,7 @@ class dirstate(object):
         return key in self._map
 
     def __iter__(self):
-        for x in sorted(self._map):
-            yield x
+        return iter(sorted(self._map))
 
     def items(self):
         return self._map.iteritems()
