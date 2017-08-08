@@ -47,15 +47,15 @@ pub mod blobnode;
 pub mod changeset;
 mod node;
 
-pub use delta::Delta;
-pub use nodehash::{NULL_HASH, NodeHash};
-pub use path::Path;
-pub use utils::percent_encode;
-pub use repo::{Repo, BoxRepo};
-pub use manifest::{Manifest, Entry, Type};
-pub use changeset::{Changeset, Time};
-pub use blobnode::{BlobNode, Parents};
 pub use blob::{Blob, BlobHash};
+pub use blobnode::{BlobNode, Parents};
+pub use changeset::{Changeset, Time};
+pub use delta::Delta;
+pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
+pub use nodehash::{NodeHash, NULL_HASH};
+pub use path::Path;
+pub use repo::{BoxRepo, Repo};
+pub use utils::percent_encode;
 
 pub use errors::{Error, ErrorKind};

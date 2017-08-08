@@ -131,8 +131,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use blob::Blob;
     use super::*;
+    use blob::Blob;
 
     #[test]
     fn test_node_none() {

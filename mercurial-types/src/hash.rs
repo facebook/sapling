@@ -8,7 +8,7 @@ use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
-use quickcheck::{Arbitrary, Gen, single_shrinker};
+use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rust_crypto::digest::Digest;
 use rust_crypto::sha1;
 
@@ -158,9 +158,9 @@ impl Context {
 
 #[cfg(test)]
 mod test {
-    use super::{NULL, Sha1};
-    use std::str::FromStr;
+    use super::{Sha1, NULL};
     use quickcheck::TestResult;
+    use std::str::FromStr;
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     const NILHASH: Sha1 = Sha1([0xda, 0x39, 0xa3, 0xee,

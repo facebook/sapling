@@ -7,8 +7,8 @@
 use std::cmp;
 
 use itertools::{self, PutBack};
-use rand::distributions::{IndependentSample, LogNormal};
 use quickcheck::{Arbitrary, Gen};
+use rand::distributions::{IndependentSample, LogNormal};
 
 use errors::*;
 
@@ -341,8 +341,8 @@ fn adjust(offset: usize, adjustment: isize) -> usize {
 /// module will replace that one once all instances of Vec<bdiff::Delta> are replaced
 /// with delta::Delta, and this compatibility module will be removed at that time.
 pub mod compat {
-    use bdiff;
     use super::*;
+    use bdiff;
 
     pub fn convert<T>(deltas: T) -> Delta
     where

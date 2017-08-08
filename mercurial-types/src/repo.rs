@@ -4,24 +4,24 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::sync::Arc;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use futures::future::{BoxFuture, Future};
 use futures::stream::{BoxStream, Stream};
 
 use bookmarks::{self, Bookmarks, Version};
-use manifest::{Manifest, BoxManifest};
 use changeset::Changeset;
+use manifest::{BoxManifest, Manifest};
 use nodehash::NodeHash;
 
 pub type BoxedBookmarks<E> = Box<
     Bookmarks<
-        Error=E,
-        Value=NodeHash,
-        Get=BoxFuture<Option<(NodeHash, Version)>, E>,
-        Keys=BoxStream<Vec<u8>, E>,
-    >
+        Error = E,
+        Value = NodeHash,
+        Get = BoxFuture<Option<(NodeHash, Version)>, E>,
+        Keys = BoxStream<Vec<u8>, E>,
+    >,
 >;
 
 pub trait Repo: 'static {
@@ -41,38 +41,55 @@ pub trait Repo: 'static {
     fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error>;
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error>;
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error>;
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash)
-        -> BoxFuture<Box<Manifest<Error=Self::Error> + Sync>, Self::Error>;
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error>;
 
-    fn boxed(self) -> Box<Repo<Error=Self::Error> + Sync>
-        where Self: Sync + Sized, {
+    fn boxed(self) -> Box<Repo<Error = Self::Error> + Sync>
+    where
+        Self: Sync + Sized,
+    {
         Box::new(self)
     }
 }
 
-pub struct BoxRepo<R, E> where R: Repo {
+pub struct BoxRepo<R, E>
+where
+    R: Repo,
+{
     repo: R,
     cvterr: fn(R::Error) -> E,
     _phantom: PhantomData<E>,
 }
 
 // The box can be Sync iff R is Sync, E doesn't matter as its phantom
-unsafe impl<R, E> Sync for BoxRepo<R, E> where R: Repo + Sync {}
+unsafe impl<R, E> Sync for BoxRepo<R, E>
+where
+    R: Repo + Sync,
+{
+}
 
 impl<R, E> BoxRepo<R, E>
 where
     R: Repo + Sync + Send,
-    E: Send + 'static
+    E: Send + 'static,
 {
-    pub fn new(repo: R) -> Box<Repo<Error=E> + Sync + Send> where E: From<R::Error> {
+    pub fn new(repo: R) -> Box<Repo<Error = E> + Sync + Send>
+    where
+        E: From<R::Error>,
+    {
         Self::new_with_cvterr(repo, E::from)
     }
 
-    pub fn new_with_cvterr(repo: R, cvterr: fn(R::Error) -> E) -> Box<Repo<Error=E> + Sync + Send> {
+    pub fn new_with_cvterr(
+        repo: R,
+        cvterr: fn(R::Error) -> E,
+    ) -> Box<Repo<Error = E> + Sync + Send> {
         let br = BoxRepo {
             repo,
             cvterr,
-            _phantom: PhantomData
+            _phantom: PhantomData,
         };
 
         Box::new(br)
@@ -82,7 +99,7 @@ where
 impl<R, E> Repo for BoxRepo<R, E>
 where
     R: Repo + Sync + Send + 'static,
-    E: Send + 'static
+    E: Send + 'static,
 {
     type Error = E;
 
@@ -106,20 +123,23 @@ where
         self.repo.changeset_exists(nodeid).map_err(cvterr).boxed()
     }
 
-    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash)
-        -> BoxFuture<Box<Changeset>, Self::Error> {
+    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
         let cvterr = self.cvterr;
 
-        self.repo.get_changeset_by_nodeid(nodeid)
+        self.repo
+            .get_changeset_by_nodeid(nodeid)
             .map_err(cvterr)
             .boxed()
     }
 
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash)
-        -> BoxFuture<Box<Manifest<Error=Self::Error> + Sync>, Self::Error> {
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         let cvterr = self.cvterr;
 
-        self.repo.get_manifest_by_nodeid(nodeid)
+        self.repo
+            .get_manifest_by_nodeid(nodeid)
             .map(move |m| BoxManifest::new_with_cvterr(m, cvterr))
             .map_err(cvterr)
             .boxed()
@@ -127,8 +147,9 @@ where
 }
 
 
-impl<RE> Repo for Box<Repo<Error=RE>>
-    where RE: Send + 'static,
+impl<RE> Repo for Box<Repo<Error = RE>>
+where
+    RE: Send + 'static,
 {
     type Error = RE;
 
@@ -152,8 +173,10 @@ impl<RE> Repo for Box<Repo<Error=RE>>
         (**self).get_changeset_by_nodeid(nodeid)
     }
 
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash)
-        -> BoxFuture<Box<Manifest<Error=Self::Error> + Sync>, Self::Error> {
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         (**self).get_manifest_by_nodeid(nodeid)
     }
 }

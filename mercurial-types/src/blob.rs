@@ -4,8 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use hash::Sha1;
 use super::NodeHash;
+use hash::Sha1;
 
 /// Representation of a blob of data.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -46,9 +46,7 @@ where
                 let hash = BlobHash::from(data.as_ref());
                 Blob::Clean(data, hash)
             }
-            b @ Blob::Clean(..) |
-            b @ Blob::Extern(..) |
-            b @ Blob::NodeId(..) => b,
+            b @ Blob::Clean(..) | b @ Blob::Extern(..) | b @ Blob::NodeId(..) => b,
         }
     }
 
@@ -56,8 +54,7 @@ where
         match self {
             &Blob::Dirty(ref data) => Some(data.as_ref().len()),
             &Blob::Clean(_, ref data) => Some(data.as_ref().len()),
-            &Blob::Extern(..) |
-            &Blob::NodeId(..) => None,
+            &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }
 
@@ -65,8 +62,7 @@ where
         match self {
             &Blob::Dirty(ref data) => Some(data),
             &Blob::Clean(ref data, _) => Some(data),
-            &Blob::Extern(..) |
-            &Blob::NodeId(..) => None,
+            &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }
 
@@ -82,8 +78,7 @@ where
         match self {
             &Blob::Dirty(ref data) => Some(data.as_ref()),
             &Blob::Clean(ref data, _) => Some(data.as_ref()),
-            &Blob::Extern(..) |
-            &Blob::NodeId(..) => None,
+            &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }
 }
@@ -110,8 +105,7 @@ where
         match self {
             &Blob::Clean(ref data, _) => Some(data.as_ref()),
             &Blob::Dirty(ref data) => Some(data.as_ref()),
-            &Blob::Extern(..) |
-            &Blob::NodeId(..) => None,
+            &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }
 }

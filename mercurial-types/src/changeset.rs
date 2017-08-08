@@ -10,11 +10,11 @@ use std::ops::Deref;
 use futures::future::{BoxFuture, Future};
 use futures::stream::{self, BoxStream, Stream};
 
-use repo::Repo;
+use blobnode::Parents;
 use node::Node;
 use nodehash::NodeHash;
-use blobnode::Parents;
 use path::Path;
+use repo::Repo;
 
 pub trait Changeset: Send + 'static {
     fn manifestid(&self) -> &NodeHash;

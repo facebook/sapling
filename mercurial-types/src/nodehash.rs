@@ -7,11 +7,11 @@
 //! A hash of a node (changeset, manifest or file).
 
 use std::fmt::{self, Display};
-use std::str::FromStr;
 use std::result;
+use std::str::FromStr;
 
 use ascii::{AsciiStr, AsciiString};
-use quickcheck::{Arbitrary, Gen, single_shrinker};
+use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
 use hash::{self, Sha1};

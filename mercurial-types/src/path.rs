@@ -6,9 +6,9 @@
 
 use std::cmp;
 use std::fmt::{self, Display};
-use std::str;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::str;
 
 use quickcheck::{Arbitrary, Gen};
 

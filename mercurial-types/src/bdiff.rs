@@ -48,7 +48,7 @@ pub fn apply(text: &[u8], deltas: &[Delta]) -> Vec<u8> {
 
 #[cfg(test)]
 mod test {
-    use super::{Delta, apply};
+    use super::{apply, Delta};
 
     #[test]
     fn test_1() {
