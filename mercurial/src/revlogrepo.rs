@@ -205,6 +205,10 @@ impl RevlogRepo {
     pub fn get_file_revlog(&self, path: &Path) -> Result<Revlog> {
         let mut inner = self.inner.lock().expect("poisoned lock");
 
+        self.get_file_revlog_inner(&mut inner, path)
+    }
+
+    fn get_file_revlog_inner(&self, inner: &mut RevlogInner, path: &Path) -> Result<Revlog> {
         match inner.filelogcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
