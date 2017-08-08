@@ -173,6 +173,25 @@ def clientreposetup(repo):
         except KeyError:
             raise error.Abort(_("cannot use treemanifest without fastmanifest"))
 
+    setuptreestores(repo)
+
+def setuptreestores(repo):
+    if repo.ui.configbool("treemanifest", "server"):
+        packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
+
+        # Data store
+        datastore = cstore.datapackstore(packpath)
+        revlogstore = manifestrevlogstore(repo)
+        repo.svfs.manifestdatastore = unioncontentstore(datastore, revlogstore)
+
+        # History store
+        historystore = historypackstore(repo.ui, packpath)
+        repo.svfs.manifesthistorystore = unionmetadatastore(
+            historystore,
+            revlogstore,
+        )
+        return
+
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
@@ -350,19 +369,7 @@ def serverreposetup(repo):
         return caps
     extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
 
-    packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
-
-    # Data store
-    datastore = cstore.datapackstore(packpath)
-    revlogstore = manifestrevlogstore(repo)
-    repo.svfs.manifestdatastore = unioncontentstore(datastore, revlogstore)
-
-    # History store
-    historystore = historypackstore(repo.ui, packpath)
-    repo.svfs.manifesthistorystore = unionmetadatastore(
-        historystore,
-        revlogstore,
-    )
+    setuptreestores(repo)
 
 def _addmanifestgroup(*args, **kwargs):
     raise error.Abort(_("cannot push commits to a treemanifest transition "
