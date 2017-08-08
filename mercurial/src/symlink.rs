@@ -6,8 +6,8 @@
 
 use mercurial_types::{BlobNode, Path};
 
-use file::File;
 use errors::*;
+use file::File;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symlink(File);

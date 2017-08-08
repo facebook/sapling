@@ -5,13 +5,14 @@
 // GNU General Public License version 2 or any later version.
 
 // Support for lz4revlog
+
 use std::ptr;
 
 use lz4::liblz4::{LZ4StreamDecode, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
                   LZ4_freeStreamDecode};
 
+use super::parser::{detach_result, Error};
 use nom::{self, IResult, le_u32};
-use super::parser::{Error, detach_result};
 
 // Wrapper for the lz4 library context
 struct Context(*mut LZ4StreamDecode);

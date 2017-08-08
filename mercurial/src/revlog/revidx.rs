@@ -4,8 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::str::FromStr;
 use std::ops::{Add, Mul};
+use std::str::FromStr;
 use std::u32;
 
 /// Index into a `RevLog`

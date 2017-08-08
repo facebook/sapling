@@ -13,9 +13,9 @@ use futures::{Async, Poll};
 use futures::future::{BoxFuture, Future, IntoFuture};
 use futures::stream::{BoxStream, Stream};
 
+use errors::*;
 use mercurial_types::{BlobNode, NodeHash, Parents, Path};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
-use errors::*;
 
 use RevlogRepo;
 

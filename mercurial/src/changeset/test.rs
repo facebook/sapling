@@ -11,7 +11,7 @@ use quickcheck::{QuickCheck, TestResult};
 
 use mercurial_types::{Blob, BlobNode, NodeHash, Path};
 
-use changeset::{Extra, RevlogChangeset, Time, escape, unescape};
+use changeset::{escape, unescape, Extra, RevlogChangeset, Time};
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
 const CHANGESETBLOB: Blob<&[u8]> = Blob::Dirty(CHANGESET);

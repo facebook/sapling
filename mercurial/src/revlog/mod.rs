@@ -4,16 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt::Debug;
 use std::io;
 use std::path::Path;
-use std::collections::{BTreeMap, HashMap, HashSet};
 use std::result;
 use std::sync::{Arc, Mutex};
-use std::fmt::Debug;
 
 use errors::*;
-use nom::IResult;
 use memmap::{self, Mmap};
+use nom::IResult;
 
 use mercurial_types::{Blob, BlobNode, NodeHash};
 pub use mercurial_types::bdiff::{self, Delta};
@@ -83,7 +83,7 @@ struct RevlogInner {
     header: Header,
     idx: Datafile,
     data: Option<Datafile>,
-    idxoff: BTreeMap<RevIdx, usize>, // cache of index -> offset
+    idxoff: BTreeMap<RevIdx, usize>,    // cache of index -> offset
     nodeidx: HashMap<NodeHash, RevIdx>, // cache of nodeid -> index
 }
 
@@ -121,7 +121,9 @@ impl Revlog {
             nodeidx: HashMap::new(),
         };
 
-        Ok(Revlog { inner: Arc::new(Mutex::new(inner)) })
+        Ok(Revlog {
+            inner: Arc::new(Mutex::new(inner)),
+        })
     }
 
     /// Construct a `Revlog` using in-memory data. The index is required; the data
@@ -168,10 +170,8 @@ impl Revlog {
                         Datafile::map(&path)
                             .chain_err(|| format!("Can't open data file {:?}", path))?
                     }
-                    Some(path) => {
-                        Datafile::map(&path)
-                            .chain_err(|| format!("Can't open data file {:?}", path))?
-                    }
+                    Some(path) => Datafile::map(&path)
+                        .chain_err(|| format!("Can't open data file {:?}", path))?,
                 };
                 inner.data = Some(datafile);
             }

@@ -5,14 +5,15 @@
 // GNU General Public License version 2 or any later version.
 
 // Nom parser for Mercurial revlogs
-use std::io::Read;
+
 use std::fmt::Debug;
+use std::io::Read;
 
 use flate2::read::ZlibDecoder;
 use nom::{ErrorKind, IResult, Needed, be_u16, be_u32};
 
-use mercurial_types::bdiff::Delta;
 use mercurial_types::NodeHash;
+use mercurial_types::bdiff::Delta;
 
 use revlog::revidx::RevIdx;
 
@@ -72,15 +73,15 @@ pub struct Header {
 /// Entry entry for a revision
 #[derive(Copy, Clone, Debug)]
 pub struct Entry {
-    pub offset: u64, // offset of content (delta/literal) in datafile (or inlined)
-    pub flags: IdxFlags, // unused?
+    pub offset: u64,         // offset of content (delta/literal) in datafile (or inlined)
+    pub flags: IdxFlags,     // unused?
     pub compressed_len: u32, // compressed content size
-    pub len: Option<u32>, // size of final file (after applying deltas)
+    pub len: Option<u32>,    // size of final file (after applying deltas)
     pub baserev: Option<RevIdx>, // base/previous rev for deltas (None if literal)
     pub linkrev: Option<RevIdx>, // changeset id
-    pub p1: Option<RevIdx>, // parent p1
-    pub p2: Option<RevIdx>, // parent p2
-    pub nodeid: NodeHash, // nodeid
+    pub p1: Option<RevIdx>,  // parent p1
+    pub p2: Option<RevIdx>,  // parent p2
+    pub nodeid: NodeHash,    // nodeid
 }
 
 impl Entry {
@@ -274,8 +275,8 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
 
 #[cfg(test)]
 mod test {
+    use super::{header, Features, Header, Version, GENERAL_DELTA, INLINE};
     use nom::IResult;
-    use super::{Features, GENERAL_DELTA, Header, INLINE, Version, header};
 
     #[test]
     fn test_header_0() {

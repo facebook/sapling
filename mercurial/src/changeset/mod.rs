@@ -4,15 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::str::{self, FromStr};
-use std::io::{self, Write};
 use std::collections::BTreeMap;
-use std::result;
 use std::error;
+use std::io::{self, Write};
+use std::result;
+use std::str::{self, FromStr};
 
-use mercurial_types::{BlobNode, NULL_HASH, NodeHash, Parents, Path};
-use mercurial_types::changeset::{Changeset, Time};
 use errors::*;
+use mercurial_types::{BlobNode, NodeHash, Parents, Path, NULL_HASH};
+use mercurial_types::changeset::{Changeset, Time};
 
 #[cfg(test)]
 mod test;

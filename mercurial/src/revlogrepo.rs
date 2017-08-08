@@ -4,13 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::io::{BufRead, BufReader};
-use std::str::FromStr;
-use std::fs;
-use std::fmt::{self, Display};
-use std::path::PathBuf;
 use std::collections::HashSet;
 use std::collections::hash_map::{Entry, HashMap};
+use std::fmt::{self, Display};
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use futures::{Async, Future, IntoFuture, Poll, Stream};
@@ -18,14 +18,14 @@ use futures::future::{self, BoxFuture};
 use futures::stream::{self, BoxStream};
 
 use asyncmemo::Filler;
+use bookmarks::{Bookmarks, BoxedBookmarks, Version};
 use mercurial_types::{BlobNode, Changeset, Manifest, NodeHash, Path, Repo};
 use stockbookmarks::StockBookmarks;
-use bookmarks::{Bookmarks, BoxedBookmarks, Version};
 
-use errors::*;
-use revlog::{Revlog, RevlogIter};
 pub use changeset::RevlogChangeset;
+use errors::*;
 pub use manifest::RevlogManifest;
+use revlog::{Revlog, RevlogIter};
 
 type FutureResult<T> = future::FutureResult<T, Error>;
 
@@ -103,15 +103,15 @@ impl FromStr for Required {
 ///  - per-file histories: .hg/store/data/.../<file>.[di]
 #[derive(Debug, Clone)]
 pub struct RevlogRepo {
-    basepath: PathBuf, // path to .hg directory
+    basepath: PathBuf,               // path to .hg directory
     requirements: HashSet<Required>, // requirements
-    inner: Arc<Mutex<RevlogInner>>, // Inner parts
+    inner: Arc<Mutex<RevlogInner>>,  // Inner parts
 }
 
 #[derive(Debug)]
 struct RevlogInner {
-    changelog: Revlog, // changes
-    manifest: Revlog, // manifest
+    changelog: Revlog,                   // changes
+    manifest: Revlog,                    // manifest
     filelogcache: HashMap<Path, Revlog>, // filelog cache
 }
 
@@ -334,8 +334,10 @@ impl Repo for RevlogRepo {
             .boxed()
     }
 
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash)
-        -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         RevlogRepo::get_manifest_by_nodeid(self, nodeid)
             .map(|m| m.boxed())
             .boxed()

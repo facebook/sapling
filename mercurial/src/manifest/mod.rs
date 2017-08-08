@@ -6,5 +6,5 @@
 
 pub mod revlog;
 
-pub use mercurial_types::{Manifest, Repo};
 pub use self::revlog::{Details, RevlogManifest};
+pub use mercurial_types::{Manifest, Repo};
