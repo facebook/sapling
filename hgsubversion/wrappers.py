@@ -351,17 +351,18 @@ def push(repo, dest, force, revs):
         finally:
             util.swap_out_encoding()
 
-        if hasobsolete:
-            for marker in obsmarkers:
-                obsolete.createmarkers(repo, marker)
-                beforepush = marker[0][0]
-                afterpush = marker[0][1][0]
-                ui.note('marking %s as obsoleted by %s\n' %
-                        (beforepush.hex(), afterpush.hex()))
-        else:
-            # strip the original changesets since the push was
-            # successful and changeset obsolescence is unavailable
-            util.strip(ui, repo, outgoing, "all")
+        with repo.lock():
+            if hasobsolete:
+                for marker in obsmarkers:
+                    obsolete.createmarkers(repo, marker)
+                    beforepush = marker[0][0]
+                    afterpush = marker[0][1][0]
+                    ui.note('marking %s as obsoleted by %s\n' %
+                            (beforepush.hex(), afterpush.hex()))
+            else:
+                # strip the original changesets since the push was
+                # successful and changeset obsolescence is unavailable
+                util.strip(ui, repo, outgoing, "all")
     finally:
         try:
             # It's always safe to delete the temporary commits.
@@ -373,11 +374,12 @@ def push(repo, dest, force, revs):
                 parent = repo[None].p1()
                 if parent.node() in temporary_commits:
                     hg.update(repo, parent.p1().node())
-                if hasobsolete:
-                    relations = ((repo[n], ()) for n in temporary_commits)
-                    obsolete.createmarkers(repo, relations)
-                else:
-                    util.strip(ui, repo, temporary_commits, backup=None)
+                with repo.lock():
+                    if hasobsolete:
+                        relations = ((repo[n], ()) for n in temporary_commits)
+                        obsolete.createmarkers(repo, relations)
+                    else:
+                        util.strip(ui, repo, temporary_commits, backup=None)
 
         finally:
             util.swap_out_encoding(old_encoding)
