@@ -32,6 +32,7 @@ pub struct MemHeads<T: Hash + Eq + Clone> {
 }
 
 impl<T: Hash + Eq + Clone + Send> MemHeads<T> {
+    #[allow(dead_code)]
     fn new() -> Self {
         MemHeads { heads: Mutex::new(HashSet::new()) }
     }
