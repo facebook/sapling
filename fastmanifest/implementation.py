@@ -38,7 +38,7 @@ class hybridmanifest(object):
     - fast      an existing fast manifest
     - loadflat  a function to load a flat manifest from disk
     """
-    def __init__(self, ui, opener,
+    def __init__(self, ui, opener, manifestlog,
                  flat=None, fast=None, loadflat=None, tree=None, node=None):
         self.__flatmanifest = flat
         self.loadflat = loadflat
@@ -60,6 +60,7 @@ class hybridmanifest(object):
 
         self.ui = ui
         self.opener = opener
+        self.manifestlog = manifestlog
         self.node = node
         self.basemanifest = None
 
@@ -135,13 +136,10 @@ class hybridmanifest(object):
             if self.node in self.treecache:
                 self.__treemanifest = self.treecache[self.node]
             elif self.node == revlog.nullid:
-                store = self.opener.manifestdatastore
+                store = self.manifestlog.datastore
                 self.__treemanifest = cstore.treemanifest(store)
             else:
-                if util.safehasattr(self.opener, 'manifestdatastore'):
-                    store = self.opener.manifestdatastore
-                else:
-                    store = self.opener.vfs.manifestdatastore
+                store = self.manifestlog.datastore
                 try:
                     store.get('', self.node)
                     self.__treemanifest = cstore.treemanifest(store,
@@ -224,11 +222,14 @@ class hybridmanifest(object):
         if isinstance(m, hybridmanifest):
             return m
         elif isinstance(m, fastmanifestdict):
-            return hybridmanifest(self.ui, self.opener, fast=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog,
+                                  fast=m)
         elif isinstance(m, manifest.manifestdict):
-            return hybridmanifest(self.ui, self.opener, flat=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog,
+                                  flat=m)
         elif supportsctree and isinstance(m, cstore.treemanifest):
-            return hybridmanifest(self.ui, self.opener, tree=m)
+            return hybridmanifest(self.ui, self.opener, self.manifestlog,
+                                  tree=m)
         else:
             raise ValueError("unknown manifest type {0}".format(type(m)))
 
@@ -816,7 +817,8 @@ class hybridmanifestctx(object):
                 return manifest.manifestdict(data)
 
             self._hybridmanifest = hybridmanifest(
-                self._ui, self._opener, loadflat=loadflat, node=self._node)
+                self._ui, self._opener, self._manifestlog,
+                loadflat=loadflat, node=self._node)
         return self._hybridmanifest
 
     def readdelta(self, shallow=False):
@@ -976,7 +978,7 @@ class manifestfactory(object):
         treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
         if supportsctree and treeenabled:
             mfl = mfctx._manifestlog
-            datastore = mfctx._revlog().opener.manifestdatastore
+            datastore = mfl.datastore
             opener = mfctx._revlog().opener
 
             m = mfctx._manifestdict

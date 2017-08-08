@@ -63,7 +63,8 @@ class HybridManifest(unittest.TestCase):
 
         """
         vfs = vfsmod.vfs(os.getcwd())
-        hd = fastmanifest.implementation.hybridmanifest(ui.ui(), vfs, fast=True)
+        hd = fastmanifest.implementation.hybridmanifest(ui.ui(), vfs, None,
+                                                        fast=True)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
         magicmethods = [k
                         for k, v in manifest.manifestdict.__dict__.items()
