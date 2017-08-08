@@ -11,6 +11,10 @@ use futures::{Future, Stream};
 /// A `Node` has some content, and some number of `Parents` (immediate ancestors).
 /// For Mercurial this is constrained to [0, 2] parents, but other scms (ie Git) can have
 /// arbitrary numbers of parents.
+///
+/// NOTE: Unless you're writing code that should be general across multiple source control
+/// systems, don't use Node. For example, use BlobNode or manifest::Entry for Mercurial-specific
+/// code.
 pub trait Node: Sized {
     type Content;
     type Error;

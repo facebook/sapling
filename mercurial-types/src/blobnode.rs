@@ -51,6 +51,8 @@ impl Iterator for ParentIter {
     }
 }
 
+/// A Mercurial node backed by some data. This can represent a changeset, a manifest or a file
+/// blob.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub struct BlobNode<T = Vec<u8>> {
