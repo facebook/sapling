@@ -105,9 +105,13 @@ if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
     def _bytespath(p):
+        if p is None:
+            return p
         return p.encode('utf-8')
 
     def _strpath(p):
+        if p is None:
+            return p
         return p.decode('utf-8')
 
 elif sys.version_info >= (3, 0, 0):
@@ -1383,7 +1387,8 @@ class TTest(Test):
                         else:
                             m = optline.match(el)
                             if m:
-                                conditions = [c for c in m.group(2).split(' ')]
+                                conditions = [
+                                    c for c in m.group(2).split(b' ')]
 
                                 if not self._hghave(conditions)[0]:
                                     optional.append(i)
@@ -1497,7 +1502,7 @@ class TTest(Test):
             else:
                 m = optline.match(el)
                 if m:
-                    conditions = [c for c in m.group(2).split(' ')]
+                    conditions = [c for c in m.group(2).split(b' ')]
 
                     el = m.group(1) + b"\n"
                     if not self._hghave(conditions)[0]:
