@@ -298,6 +298,7 @@ def testui(stupid=False, layout='auto', startrev=0):
     u.setconfig('hgsubversion', 'stupid', bools[stupid])
     u.setconfig('hgsubversion', 'layout', layout)
     u.setconfig('hgsubversion', 'startrev', startrev)
+    u.setconfig('devel', 'all-warnings', True)
     return u
 
 def dispatch(cmd):
