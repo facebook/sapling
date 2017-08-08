@@ -18,6 +18,16 @@ pub enum Parents {
 }
 
 impl Parents {
+    pub fn new(p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> Self {
+        match (p1, p2) {
+            (None, None) => Parents::None,
+            (Some(p1), None) => Parents::One(*p1),
+            (None, Some(p2)) => Parents::One(*p2),
+            (Some(p1), Some(p2)) if p1 == p2 => Parents::One(*p1),
+            (Some(p1), Some(p2)) => Parents::Two(*p1, *p2),
+        }
+    }
+
     pub fn get_nodes(&self) -> (Option<&NodeHash>, Option<&NodeHash>) {
         match self {
             &Parents::None => (None, None),
@@ -74,17 +84,10 @@ where
         B: Into<Blob<T>>,
     {
         let blob = blob.into();
-        let (p, maybe_copied) = match (p1, p2) {
-            (None, None) => (Parents::None, false),
-            (Some(p1), None) => (Parents::One(*p1), false),
-            (None, Some(p1)) => (Parents::One(*p1), true),
-            (Some(p1), Some(p2)) if p1 == p2 => (Parents::One(*p1), true),
-            (Some(p1), Some(p2)) => (Parents::Two(*p1, *p2), true),
-        };
         BlobNode {
             blob: blob,
-            parents: p,
-            maybe_copied: maybe_copied,
+            parents: Parents::new(p1, p2),
+            maybe_copied: p2.is_some(),
         }
     }
 
