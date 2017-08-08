@@ -158,11 +158,11 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
                 bundlehiststores.append(histstore)
 
             # Point the bundle repo at the temp stores
-            repo.svfs.manifestdatastore = contentstore.unioncontentstore(
-                repo.svfs.manifestdatastore,
+            repo.manifestlog.datastore = contentstore.unioncontentstore(
+                repo.manifestlog.datastore,
                 *bundledatastores)
-            repo.svfs.manifesthistorystore = metadatastore.unionmetadatastore(
-                repo.svfs.manifesthistorystore,
+            repo.manifestlog.historystore = metadatastore.unionmetadatastore(
+                repo.manifestlog.historystore,
                 *bundlehiststores)
         return repo
 
@@ -199,7 +199,7 @@ def validaterevset(repo, revset):
 
 def getrebaseparts(repo, peer, outgoing, onto, newhead):
     parts = []
-    if (util.safehasattr(repo.svfs, 'manifestdatastore') and
+    if (util.safehasattr(repo.manifestlog, 'datastore') and
         repo.ui.configbool("treemanifest", "sendtrees")):
         parts.append(createtreepackpart(repo, outgoing))
     parts.append(createrebasepart(repo, peer, outgoing, onto, newhead))
@@ -567,7 +567,7 @@ def _graft(repo, rev, mapping, lastdestnode):
     if not repo.ui.configbool("pushrebase", "forcetreereceive"):
         m = rev.manifest()
     else:
-        store = rev._repo.svfs.manifestdatastore
+        store = rev._repo.manifestlog.datastore
         import cstore
         m = cstore.treemanifest(store, rev.manifestnode())
         if store.getmissing([('', rev.manifestnode())]):
@@ -763,11 +763,11 @@ def _createbundlerepo(op, bundlepath):
             bundlehiststores.append(histstore)
 
         # Point the bundle repo at the temp stores
-        bundle.svfs.manifestdatastore = contentstore.unioncontentstore(
-            bundle.svfs.manifestdatastore,
+        bundle.manifestlog.datastore = contentstore.unioncontentstore(
+            bundle.manifestlog.datastore,
             *bundledatastores)
-        bundle.svfs.manifesthistorystore = metadatastore.unionmetadatastore(
-            bundle.svfs.manifesthistorystore,
+        bundle.manifestlog.historystore = metadatastore.unionmetadatastore(
+            bundle.manifestlog.historystore,
             *bundlehiststores)
 
     return bundle

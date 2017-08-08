@@ -173,23 +173,24 @@ def clientreposetup(repo):
         except KeyError:
             raise error.Abort(_("cannot use treemanifest without fastmanifest"))
 
-    setuptreestores(repo)
-
-def setuptreestores(repo):
+def setuptreestores(repo, mfl):
     if repo.ui.configbool("treemanifest", "server"):
         packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
         # Data store
         datastore = cstore.datapackstore(packpath)
         revlogstore = manifestrevlogstore(repo)
-        repo.svfs.manifestdatastore = unioncontentstore(datastore, revlogstore)
+        mfl.datastore = unioncontentstore(datastore, revlogstore)
 
         # History store
         historystore = historypackstore(repo.ui, packpath)
-        repo.svfs.manifesthistorystore = unionmetadatastore(
+        mfl.historystore = unionmetadatastore(
             historystore,
             revlogstore,
         )
+
+        repo.svfs.manifestdatastore = mfl.datastore
+        repo.svfs.manifesthistorystore = mfl.historystore
         return
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
@@ -204,8 +205,7 @@ def setuptreestores(repo):
         datastore = cstore.datapackstore(packpath)
         localdatastore = cstore.datapackstore(localpackpath)
         # TODO: can't use remotedatastore with cunionstore yet
-        repo.svfs.manifestdatastore = cstore.uniondatapackstore(
-                [localdatastore, datastore])
+        mfl.datastore = cstore.uniondatapackstore([localdatastore, datastore])
     else:
         datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
         localdatastore = datapackstore(repo.ui, localpackpath,
@@ -215,27 +215,34 @@ def setuptreestores(repo):
         if repo.ui.configbool("treemanifest", "demanddownload", True):
             stores.append(remotedatastore)
 
-        repo.svfs.manifestdatastore = unioncontentstore(*stores,
-                                                    writestore=localdatastore)
-        remotedatastore.setshared(repo.svfs.manifestdatastore)
+        mfl.datastore = unioncontentstore(*stores,
+                                          writestore=localdatastore)
+        remotedatastore.setshared(mfl.datastore)
 
-    repo.svfs.sharedmanifestdatastores = [datastore]
-    repo.svfs.localmanifestdatastores = [localdatastore]
+    mfl.shareddatastores = [datastore]
+    mfl.localdatastores = [localdatastore]
 
     # History store
     sharedhistorystore = historypackstore(repo.ui, packpath)
     localhistorystore = historypackstore(repo.ui, localpackpath)
-    repo.svfs.sharedmanifesthistorystores = [
+    mfl.sharedhistorystores = [
         sharedhistorystore
     ]
-    repo.svfs.localmanifesthistorystores = [
+    mfl.localhistorystores = [
         localhistorystore,
     ]
-    repo.svfs.manifesthistorystore = unionmetadatastore(
+    mfl.historystore = unionmetadatastore(
         sharedhistorystore,
         localhistorystore,
         writestore=localhistorystore,
     )
+
+    repo.svfs.manifestdatastore = mfl.datastore
+    repo.svfs.manifesthistorystore = mfl.historystore
+    repo.svfs.sharedmanifesthistorystores = mfl.sharedhistorystores
+    repo.svfs.localmanifesthistorystores = mfl.localhistorystores
+    repo.svfs.sharedmanifestdatastores = mfl.shareddatastores
+    repo.svfs.localmanifestdatastores = mfl.localdatastores
 
 class treemanifestlog(manifest.manifestlog):
     def __init__(self, opener, treemanifest=False):
@@ -270,7 +277,7 @@ class treeonlymanifestlog(object):
             raise RuntimeError("native tree manifestlog doesn't support "
                                "subdir reads: (%s, %s)" % (dir, hex(node)))
 
-        store = self._opener.manifestdatastore
+        store = self.datastore
         if not store.getmissing([(dir, node)]):
             return treemanifestctx(self, dir, node)
         else:
@@ -289,7 +296,7 @@ class treemanifestctx(object):
 
     def read(self):
         if self._data is None:
-            store = self._manifestlog._opener.manifestdatastore
+            store = self._manifestlog.datastore
             self._data = cstore.treemanifest(store, self._node)
         return self._data
 
@@ -301,7 +308,7 @@ class treemanifestctx(object):
             raise RuntimeError("native tree manifestlog doesn't support "
                                "subdir creation: '%s'" % dir)
 
-        store = self._manifestlog._opener.manifestdatastore
+        store = self._manifestlog.datastore
         return cstore.treemanifest(store)
 
     def copy(self):
@@ -309,7 +316,7 @@ class treemanifestctx(object):
 
     @util.propertycache
     def parents(self):
-        store = self._manifestlog._opener.manifesthistorystore
+        store = self._manifestlog.historystore
         p1, p2, linkrev, copyfrom = store.getnodeinfo((self._dir, self._node))
         if copyfrom:
             p1 = nullid
@@ -326,7 +333,7 @@ class treemanifestctx(object):
         the subdirectory will be reported among files and distinguished only by
         its 't' flag.
         '''
-        store = self._manifestlog._opener.manifestdatastore
+        store = self._manifestlog.datastore
         p1, p2 = self.parents()
         m1 = self.read()
         m2 = cstore.treemanifest(store, p1)
@@ -369,8 +376,6 @@ def serverreposetup(repo):
         return caps
     extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
 
-    setuptreestores(repo)
-
 def _addmanifestgroup(*args, **kwargs):
     raise error.Abort(_("cannot push commits to a treemanifest transition "
                         "server without pushrebase"))
@@ -378,9 +383,20 @@ def _addmanifestgroup(*args, **kwargs):
 def getmanifestlog(orig, self):
     if self.ui.configbool('treemanifest', 'treeonly'):
         mfl = treeonlymanifestlog(self.svfs)
+        setuptreestores(self, mfl)
     else:
         mfl = orig(self)
         mfl.treemanifestlog = treemanifestlog(self.svfs)
+        setuptreestores(self, mfl.treemanifestlog)
+        mfl.datastore = mfl.treemanifestlog.datastore
+        mfl.historystore = mfl.treemanifestlog.historystore
+
+        if util.safehasattr(mfl.treemanifestlog, 'shareddatastores'):
+            mfl.shareddatastores = mfl.treemanifestlog.shareddatastores
+            mfl.localdatastores = mfl.treemanifestlog.localdatastores
+            mfl.sharedhistorystores = mfl.treemanifestlog.sharedhistorystores
+            mfl.localhistorystores = mfl.treemanifestlog.localhistorystores
+
     return mfl
 
 def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
@@ -529,7 +545,7 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
 
     orig(self, repo, *args, **kwargs)
 
-    if (util.safehasattr(repo.svfs, "manifestdatastore") and
+    if (util.safehasattr(repo.manifestlog, "datastore") and
         repo.ui.configbool('treemanifest', 'autocreatetrees')):
 
         # TODO: only put in cache if pulling from main server
@@ -539,7 +555,7 @@ def _unpackmanifests(orig, self, repo, *args, **kwargs):
                 recordmanifest(dpack, hpack, repo, oldtip, len(mfrevlog))
 
         # Alert the store that there may be new packs
-        repo.svfs.manifestdatastore.markforrefresh()
+        repo.manifestlog.datastore.markforrefresh()
 
 class InterceptedMutableDataPack(object):
     """This classes intercepts data pack writes and replaces the node for the
@@ -609,7 +625,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
         linknode = cl.node(linkrev)
 
         if p1node == nullid:
-            origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
+            origtree = cstore.treemanifest(mfl.datastore)
         elif p1node in builttrees:
             origtree = builttrees[p1node]
         else:
@@ -621,7 +637,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
 
             p1mf = mfl[p1node].read()
             p1linknode = cl.node(mfrevlog.linkrev(p1))
-            origtree = cstore.treemanifest(repo.svfs.manifestdatastore)
+            origtree = cstore.treemanifest(mfl.datastore)
             for filename, node, flag in p1mf.iterentries():
                 origtree.set(filename, node, flag)
 
@@ -707,7 +723,7 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
         temphistorypack = InterceptedMutableHistoryPack(historypack,
                                                         mfrevlog.node(rev),
                                                         p1node)
-        mfdatastore = repo.svfs.manifestdatastore
+        mfdatastore = mfl.datastore
         newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
         for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
             if verify:
@@ -940,7 +956,7 @@ def pull(orig, ui, repo, *pats, **opts):
     repo = repo.unfiltered()
 
     ctxs = []
-    mfstore = repo.svfs.manifestdatastore
+    mfstore = repo.manifestlog.datastore
 
     # prefetch if it's configured
     prefetchcount = ui.configint('treemanifest', 'pullprefetchcount', None)
@@ -980,7 +996,7 @@ def pull(orig, ui, repo, *pats, **opts):
 
 def _findrecenttree(repo, startrev):
     cl = repo.changelog
-    mfstore = repo.svfs.manifestdatastore
+    mfstore = repo.manifestlog.datastore
     phasecache = repo._phasecache
     maxrev = min(len(cl) - 1, startrev + BASENODESEARCHMAX)
     minrev = max(0, startrev - BASENODESEARCHMAX)
@@ -1106,8 +1122,8 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         raise RuntimeError("directories arg is not supported yet ('%s')" %
                             ', '.join(directories))
 
-    historystore = repo.svfs.manifesthistorystore
-    datastore = repo.svfs.manifestdatastore
+    historystore = repo.manifestlog.historystore
+    datastore = repo.manifestlog.datastore
 
     # If asking for a sub-tree, start from the top level tree since the native
     # treemanifest currently doesn't support

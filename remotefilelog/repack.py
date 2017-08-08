@@ -51,7 +51,7 @@ def fullrepack(repo):
     if repo.ui.configbool('treemanifest', 'server'):
         treemfmod = extensions.find('treemanifest')
         treemfmod.serverrepack(repo)
-    elif util.safehasattr(repo.svfs, 'manifestdatastore'):
+    elif util.safehasattr(repo.manifestlog, 'datastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata
@@ -92,7 +92,7 @@ def incrementalrepack(repo):
     if repo.ui.configbool('treemanifest', 'server'):
         treemfmod = extensions.find('treemanifest')
         treemfmod.serverrepack(repo, incremental=True)
-    elif util.safehasattr(repo.svfs, 'manifestdatastore'):
+    elif util.safehasattr(repo.manifestlog, 'datastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
         spackpath, sdstores, shstores = shareddata
@@ -113,10 +113,10 @@ def incrementalrepack(repo):
                            allowincompletedata=True)
 
 def _getmanifeststores(repo):
-    shareddatastores = repo.svfs.sharedmanifestdatastores
-    localdatastores = repo.svfs.localmanifestdatastores
-    sharedhistorystores = repo.svfs.sharedmanifesthistorystores
-    localhistorystores = repo.svfs.localmanifesthistorystores
+    shareddatastores = repo.manifestlog.shareddatastores
+    localdatastores = repo.manifestlog.localdatastores
+    sharedhistorystores = repo.manifestlog.sharedhistorystores
+    localhistorystores = repo.manifestlog.localhistorystores
 
     sharedpackpath = shallowutil.getcachepackpath(repo,
                                             constants.TREEPACK_CATEGORY)
