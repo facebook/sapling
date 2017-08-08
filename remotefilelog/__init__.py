@@ -667,6 +667,7 @@ def gcclient(ui, cachepath):
             continue
         try:
             peer = hg.peer(ui, {}, path)
+            repo = peer._repo
         except error.RepoError:
             continue
 
@@ -675,26 +676,39 @@ def gcclient(ui, cachepath):
         # Protect against any repo or config changes that have happened since
         # this repo was added to the repos file. We'd rather this loop succeed
         # and too much be deleted, than the loop fail and nothing gets deleted.
-        if shallowrepo.requirement not in peer._repo.requirements:
+        if shallowrepo.requirement not in repo.requirements:
             continue
 
-        if not util.safehasattr(peer._repo, 'name'):
+        if not util.safehasattr(repo, 'name'):
             ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
             continue
 
-        reponame = peer._repo.name
+        reponame = repo.name
         if not sharedcache:
-            sharedcache = peer._repo.sharedstore
+            sharedcache = repo.sharedstore
 
+        # Compute a keepset which is not garbage collected
         # We want to keep:
-        # 1. All parents of draft commits
-        # 2. Recent heads in the repo
-        # 3. The tip commit (since it may be an old head, but we still want it)
-        keepset = ("(parents(draft()) + (heads(all()) & date(-7)) + tip) & "
-                   "public()")
-        keep = peer._repo.revs(keepset)
+        # 1. Working copy parent
+        # 2. Draft commits
+        # 3. All parents of draft commits
+        # 4. Recent heads in the repo
+        # 5. Pullprefetch and bgprefetchrevs revsets if specified
+        revs = ['.', 'draft()', 'parents(draft())', '(heads(all()) & date(-7))']
+
+        prefetchrevs = repo.ui.config('remotefilelog',
+                                      'pullprefetch', None)
+        if prefetchrevs:
+            revs.append('(%s)' % prefetchrevs)
+        prefetchrevs = repo.ui.config('remotefilelog',
+                                      'bgprefetchrevs', None)
+        if prefetchrevs:
+            revs.append('(%s)' % prefetchrevs)
+
+        keep = repo.revs('+'.join(revs))
+        # TODO: Compute keepkeys more efficiently
         for r in keep:
-            m = peer._repo[r].manifest()
+            m = repo[r].manifest()
             for filename, filenode in m.iteritems():
                 key = fileserverclient.getcachekey(reponame, filename,
                     hex(filenode))

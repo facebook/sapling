@@ -55,12 +55,35 @@
   $ find master/.hg/remotefilelogcache -type f | sort
   master/.hg/remotefilelogcache/x/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
 
+# Test that GC keepset includes pullprefetch revset if it is configured
+
+  $ cd shallow
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > pullprefetch=all()
+  > EOF
+  $ hg prefetch
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+  $ cd ..
+  $ hg gc
+  finished: removed 0 of 2 files (0.00 GB to 0.00 GB)
+
+# Ensure that there are 2 versions of the file in cache
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 (glob)
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/repos (glob)
+
+# Test that warning is displayed when there are no valid repos in repofile
+
   $ cp $CACHEDIR/repos $CACHEDIR/repos.bak
   $ echo " " > $CACHEDIR/repos
   $ hg gc
   warning: no valid repos in repofile
   $ mv $CACHEDIR/repos.bak $CACHEDIR/repos
 
+# Test that warning is displayed when the repo path is malformed
 
   $ printf "asdas\0das" >> $CACHEDIR/repos
   $ hg gc 2>&1 | head -n2
