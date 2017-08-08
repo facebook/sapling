@@ -202,6 +202,8 @@ class FastManifestExtension(object):
             manifest.manifestlog, '__getitem__', factory.newgetitem)
         extensions.wrapfunction(
             manifest.manifestlog, 'get', factory.newgetdirmanifestctx)
+        extensions.wrapfunction(
+            manifest.memmanifestctx, 'write', factory.ctxwrite)
         extensions.wrapfunction(manifest.manifestrevlog, 'add', factory.add)
 
         if ui.configbool('fastmanifest', 'usecache', True):

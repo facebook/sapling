@@ -968,18 +968,27 @@ class manifestfactory(object):
             # If neither cache could help, fallback to the normal add
             node = orig(*args, **kwargs)
 
-        # Add the new manifest to the tree
+        return node
+
+    def ctxwrite(self, orig, mfctx, transaction, link, p1, p2, added, removed):
+        node = orig(mfctx, transaction, link, p1, p2, added, removed)
+
+        treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
         if supportsctree and treeenabled:
+            mfl = mfctx._manifestlog
+            datastore = mfctx._revlog().opener.manifestdatastore
+            opener = mfctx._revlog().opener
+
+            m = mfctx._manifestdict
+
+            # hybridmanifest requires you provide either a value or loadflat.
+            # Let's give it a dummy value, since we know we'll only be calling
+            # _treemanifest()
             def loadflat():
-                # This should eventually be made lazy loaded, so consumers can
-                # access the node/p1/linkrev data without having to parse the
-                # whole manifest.
-                data = origself.revision(p1)
-                arraytext = bytearray(data)
-                origself._fulltextcache[p1] = arraytext
-                return manifest.manifestdict(data)
-            tree = hybridmanifest(self.ui, origself.opener, loadflat=loadflat,
+                raise RuntimeError("no-op loadflat should never be hit")
+            tree = hybridmanifest(self.ui, opener, mfl, loadflat=loadflat,
                                   node=p1)._treemanifest()
+
             if tree is not None:
                 newtree = tree.copy()
                 for filename in removed:
@@ -992,7 +1001,7 @@ class manifestfactory(object):
 
                 if not util.safehasattr(transaction, 'treedatapack'):
                     packpath = shallowutil.getlocalpackpath(
-                            origself.opener.vfs.base,
+                            opener.vfs.base,
                             'manifests')
                     transaction.treedatapack = datapack.mutabledatapack(
                             self.ui,
@@ -1003,9 +1012,9 @@ class manifestfactory(object):
                     def finalize(tr):
                         tr.treedatapack.close()
                         tr.treehistpack.close()
-                        treemanifestcache.getinstance(origself.opener,
+                        treemanifestcache.getinstance(opener,
                                                       self.ui).clear()
-                        origself.opener.manifestdatastore.markforrefresh()
+                        datastore.markforrefresh()
                     def abort(tr):
                         tr.treedatapack.abort()
                         tr.treehistpack.abort()
@@ -1024,7 +1033,7 @@ class manifestfactory(object):
                     dpack.add(nname, nnode, revlog.nullid, ntext)
                     hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
 
-                treemanifestcache.getinstance(origself.opener,
+                treemanifestcache.getinstance(opener,
                                               self.ui)[node] = newtree
 
         return node
