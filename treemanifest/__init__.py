@@ -189,8 +189,6 @@ def setuptreestores(repo, mfl):
             revlogstore,
         )
 
-        repo.svfs.manifestdatastore = mfl.datastore
-        repo.svfs.manifesthistorystore = mfl.historystore
         return
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
@@ -236,13 +234,6 @@ def setuptreestores(repo, mfl):
         localhistorystore,
         writestore=localhistorystore,
     )
-
-    repo.svfs.manifestdatastore = mfl.datastore
-    repo.svfs.manifesthistorystore = mfl.historystore
-    repo.svfs.sharedmanifesthistorystores = mfl.sharedhistorystores
-    repo.svfs.localmanifesthistorystores = mfl.localhistorystores
-    repo.svfs.sharedmanifestdatastores = mfl.shareddatastores
-    repo.svfs.localmanifestdatastores = mfl.localdatastores
 
 class treemanifestlog(manifest.manifestlog):
     def __init__(self, opener, treemanifest=False):
