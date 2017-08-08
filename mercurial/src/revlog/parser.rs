@@ -78,7 +78,7 @@ pub struct Entry {
     pub compressed_len: u32, // compressed content size
     pub len: Option<u32>,    // size of final file (after applying deltas)
     pub baserev: Option<RevIdx>, // base/previous rev for deltas (None if literal)
-    pub linkrev: Option<RevIdx>, // changeset id
+    pub linkrev: RevIdx,     // changeset id
     pub p1: Option<RevIdx>,  // parent p1
     pub p2: Option<RevIdx>,  // parent p2
     pub nodeid: NodeHash,    // nodeid
@@ -137,7 +137,7 @@ named!(pub indexng<Entry>,
                 compressed_len: compressed_length,
                 len: Some(uncompressed_length),
                 baserev: if baserev == !0 { None } else { Some(baserev.into()) },
-                linkrev: if linkrev == !0 { None } else { Some(linkrev.into()) },
+                linkrev: linkrev.into(),
                 p1: if p1 == !0 { None } else { Some(p1.into()) },
                 p2: if p2 == !0 { None } else { Some(p2.into()) },
                 nodeid: NodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
@@ -168,7 +168,7 @@ named!(pub index0<Entry>,
                 compressed_len: compressed_length,
                 len: None,
                 baserev: if baserev == !0 { None } else { Some(baserev.into()) },
-                linkrev: if linkrev == !0 { None } else { Some(linkrev.into()) },
+                linkrev: linkrev.into(),
                 p1: if p1 == !0 { None } else { Some(p1.into()) },
                 p2: if p2 == !0 { None } else { Some(p2.into()) },
                 nodeid: NodeHash::from_bytes(&hash[..20]).expect("bad bytes for sha"),
