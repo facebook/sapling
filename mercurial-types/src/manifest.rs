@@ -159,6 +159,7 @@ pub trait Entry: Send + 'static {
     fn get_type(&self) -> Type;
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error>;
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
+    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error>;
     fn get_hash(&self) -> &NodeHash;
     fn get_path(&self) -> &Path;
 
@@ -231,6 +232,12 @@ where
             .boxed()
     }
 
+    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+        self.entry.get_size()
+            .map_err(self.cvterr)
+            .boxed()
+    }
+
     fn get_hash(&self) -> &NodeHash {
         self.entry.get_hash()
     }
@@ -256,6 +263,10 @@ where
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
         (**self).get_content()
+    }
+
+    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+        (**self).get_size()
     }
 
     fn get_hash(&self) -> &NodeHash {

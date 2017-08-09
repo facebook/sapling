@@ -277,6 +277,18 @@ impl Entry for RevlogEntry {
             .boxed()
     }
 
+    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+        self.get_content()
+            .and_then(|content| match content {
+                Content::File(data) | Content::Executable(data) => {
+                    Ok(data.size())
+                },
+                Content::Symlink(path) => Ok(Some(path.len())),
+                Content::Tree(_) => Ok(None),
+            })
+            .boxed()
+    }
+
     fn get_hash(&self) -> &NodeHash {
         self.details.nodeid()
     }
