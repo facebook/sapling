@@ -17,6 +17,8 @@
 
 extern crate ascii;
 extern crate blobrepo;
+extern crate blobstore;
+extern crate bookmarks;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
@@ -24,6 +26,7 @@ extern crate fileheads;
 extern crate fileblob;
 extern crate filebookmarks;
 extern crate futures;
+extern crate heads;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
@@ -40,8 +43,12 @@ use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
 
+use blobrepo::BlobRepo;
+use blobstore::Blobstore;
+use bookmarks::Bookmarks;
 use clap::App;
 use futures::{Future, Stream};
+use heads::Heads;
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
@@ -53,7 +60,7 @@ use errors::*;
 
 const EXIT_CODE: i32 = 1;
 
-type NameToRepo<BlobRepo> = HashMap<String, Arc<BlobRepo>>;
+type NameToRepo<Head, Book, Blob> = HashMap<String, Arc<BlobRepo<Head, Book, Blob>>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
 
 struct Route(Regex, UrlParseFunc);
@@ -77,10 +84,16 @@ fn parse_root_treemanifest_id_url(caps: Captures) -> Result<ParsedUrl> {
     Ok(ParsedUrl::RootTreeManifestId(repo, hash))
 }
 
-fn parse_tree_content(caps: Captures) -> Result<ParsedUrl> {
+fn parse_tree_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
     let hash = parse_capture::<NodeHash>(&caps, 2)?;
-    Ok(ParsedUrl::TreeNodeBlob(repo, hash))
+    Ok(ParsedUrl::TreeContent(repo, hash))
+}
+
+fn parse_blob_content_url(caps: Captures) -> Result<ParsedUrl> {
+    let repo = parse_capture::<String>(&caps, 1)?;
+    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    Ok(ParsedUrl::BlobContent(repo, hash))
 }
 
 /// Generic url-handling function
@@ -97,7 +110,8 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
 
 enum ParsedUrl {
     RootTreeManifestId(String, NodeHash),
-    TreeNodeBlob(String, NodeHash),
+    TreeContent(String, NodeHash),
+    BlobContent(String, NodeHash),
 }
 
 lazy_static! {
@@ -105,7 +119,8 @@ lazy_static! {
         vec![
             // Workaround for https://github.com/rust-lang/rust/issues/20178
             (r"^/(\w+)/cs/(\w+)/roottreemanifestid$", parse_root_treemanifest_id_url as UrlParseFunc),
-            (r"^/(\w+)/treenode/(\w+)/$", parse_tree_content as UrlParseFunc),
+            (r"^/(\w+)/treenode/(\w+)/$", parse_tree_content_url as UrlParseFunc),
+            (r"^/(\w+)/blob/(\w+)/$", parse_blob_content_url as UrlParseFunc),
         ].into_iter().map(|(re, func)| Route(Regex::new(re).expect("bad regex"), func)).collect()
     };
 }
@@ -134,16 +149,20 @@ impl TreeMetadata {
     }
 }
 
-struct EdenServer<BlobRepo> {
-    name_to_repo: NameToRepo<BlobRepo>,
+struct EdenServer<Head, Book, Blob> {
+    name_to_repo: NameToRepo<Head, Book, Blob>,
 }
 
-impl<BlobRepo> EdenServer<BlobRepo>
+impl<Head, Book, Blob> EdenServer<Head, Book, Blob>
 where
-    EdenServer<BlobRepo>: Service,
-    BlobRepo: Repo<Error = blobrepo::Error>,
+    EdenServer<Head, Book, Blob>: Service,
+    Blob: blobstore::Blobstore<Key = String> + Clone + Sync,
+    Blob::ValueOut: AsRef<[u8]> + Send,
+    Book: Bookmarks<Value = NodeHash> + Sync,
+    Book::Error: std::error::Error,
+    Head: Heads<Key = NodeHash> + Sync,
 {
-    fn new(name_to_repo: NameToRepo<BlobRepo>) -> EdenServer<BlobRepo> {
+    fn new(name_to_repo: NameToRepo<Head, Book, Blob>) -> EdenServer<Head, Book, Blob> {
         EdenServer { name_to_repo }
     }
 
@@ -151,7 +170,7 @@ where
         &self,
         reponame: String,
         hash: &NodeHash,
-    ) -> Box<futures::Future<Item = String, Error = Error> + Send> {
+    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
@@ -159,7 +178,7 @@ where
             }
         };
         repo.get_changeset_by_nodeid(&hash)
-            .map(|cs| cs.manifestid().to_string())
+            .map(|cs| cs.manifestid().to_string().into_bytes())
             .map_err(Error::from)
             .boxed()
     }
@@ -189,11 +208,33 @@ where
             .boxed()
 
     }
+
+    fn get_blob_content(
+        &self,
+        reponame: String,
+        hash: &NodeHash,
+    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
+        let repo = match self.name_to_repo.get(&reponame) {
+            Some(repo) => repo,
+            None => {
+                return futures::future::err("unknown repo".into()).boxed();
+            }
+        };
+
+        repo.get_file_blob(hash)
+            .map_err(Error::from)
+            .and_then(|content| futures::future::ok(content))
+            .boxed()
+    }
 }
 
-impl<BlobRepo> Service for EdenServer<BlobRepo>
+impl<Head, Book, Blob> Service for EdenServer<Head, Book, Blob>
 where
-    BlobRepo: Repo<Error = blobrepo::Error>,
+    Head: Heads<Key = NodeHash> + Sync,
+    Book: Bookmarks<Value = NodeHash> + Sync,
+    Book::Error: std::error::Error,
+    Blob: Blobstore<Key = String> + Clone + Sync,
+    Blob::ValueOut: AsRef<[u8]> + Send,
 {
     type Request = Request;
     type Response = Response;
@@ -215,7 +256,7 @@ where
             ParsedUrl::RootTreeManifestId(reponame, hash) => {
                 self.get_root_tree_manifest_id(reponame, &hash)
             }
-            ParsedUrl::TreeNodeBlob(reponame, hash) => {
+            ParsedUrl::TreeContent(reponame, hash) => {
                 self.get_tree_content(reponame, &hash)
                     .map(|metadata| {
                             let err_msg = format!(
@@ -227,10 +268,11 @@ where
                     .collect()
                     .map(|entries| {
                         let x: serde_json::Value = entries.into();
-                        x.to_string()
+                        x.to_string().into_bytes()
                     })
                     .boxed()
             },
+            ParsedUrl::BlobContent(reponame, hash) => self.get_blob_content(reponame, &hash),
         };
         result_future
             .then(|res| {
