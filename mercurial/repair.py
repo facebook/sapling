@@ -67,16 +67,20 @@ def _collectfiles(repo, striprev):
 
     return sorted(files)
 
+def _collectrevlog(revlog, striprev):
+    _, brokenset = revlog.getstrippoint(striprev)
+    return [revlog.linkrev(r) for r in brokenset]
+
+def _collectmanifest(repo, striprev):
+    return _collectrevlog(repo.manifestlog._revlog, striprev)
+
 def _collectbrokencsets(repo, files, striprev):
     """return the changesets which will be broken by the truncation"""
     s = set()
-    def collectone(revlog):
-        _, brokenset = revlog.getstrippoint(striprev)
-        s.update([revlog.linkrev(r) for r in brokenset])
 
-    collectone(repo.manifestlog._revlog)
+    s.update(_collectmanifest(repo, striprev))
     for fname in files:
-        collectone(repo.file(fname))
+        s.update(_collectrevlog(repo.file(fname), striprev))
 
     return s
 
