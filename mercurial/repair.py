@@ -178,16 +178,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         tmpbundlefile = _bundle(repo, savebases, saveheads, node, 'temp',
                                 compress=False, obsolescence=False)
 
-    mfst = repo.manifestlog._revlog
-
     try:
         with repo.transaction("strip") as tr:
             offset = len(tr.entries)
 
             tr.startgroup()
             cl.strip(striprev, tr)
-            mfst.strip(striprev, tr)
-            striptrees(repo, tr, striprev, files)
+            stripmanifest(repo, striprev, tr, files)
 
             for fn in files:
                 repo.file(fn).strip(striprev, tr)
@@ -313,6 +310,11 @@ def delayedstrip(ui, repo, nodelist, topic=None):
     if topic:
         callback.topic = topic
     callback.addnodes(nodelist)
+
+def stripmanifest(repo, striprev, tr, files):
+    revlog = repo.manifestlog._revlog
+    revlog.strip(striprev, tr)
+    striptrees(repo, tr, striprev, files)
 
 def striptrees(repo, tr, striprev, files):
     if 'treemanifest' in repo.requirements: # safe but unnecessary
