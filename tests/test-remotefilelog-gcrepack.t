@@ -115,7 +115,7 @@
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > bgprefetchrevs=
-  > nodettl=$(date +%s -d '100 seconds')
+  > nodettl=$(($(date +%s) + 100))
   > EOF
 
   $ hg repack
