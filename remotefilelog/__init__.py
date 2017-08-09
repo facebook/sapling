@@ -17,6 +17,7 @@ Configs:
     ``remotefilelog.gcrepack`` does garbage collection during repack when True
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
       it is garbage collected
+    ``remotefilelog.repackonhggc`` runs repack on hg gc when True
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
@@ -654,6 +655,7 @@ def gcclient(ui, cachepath):
     _analyzing = _("analyzing repositories")
 
     sharedcache = None
+    filesrepacked = False
 
     count = 0
     for path in repos:
@@ -682,6 +684,21 @@ def gcclient(ui, cachepath):
         if not util.safehasattr(repo, 'name'):
             ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
             continue
+
+        # If garbage collection on repack and repack on hg gc are enabled
+        # then loose files are repacked and garbage collected.
+        # Otherwise regular garbage collection is performed.
+        repackonhggc = repo.ui.configbool('remotefilelog', 'repackonhggc')
+        gcrepack = repo.ui.configbool('remotefilelog', 'gcrepack')
+        if repackonhggc and gcrepack:
+            try:
+                repackmod.incrementalrepack(repo)
+                filesrepacked = True
+                continue
+            except IOError:
+                # If repack cannot be performed due to not enough disk space
+                # continue doing garbage collection of loose files w/o repack
+                pass
 
         reponame = repo.name
         if not sharedcache:
@@ -728,7 +745,7 @@ def gcclient(ui, cachepath):
     # prune cache
     if sharedcache is not None:
         sharedcache.gc(keepkeys)
-    else:
+    elif not filesrepacked:
         ui.warn(_("warning: no valid repos in repofile\n"))
 
 

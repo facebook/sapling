@@ -75,6 +75,18 @@
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
   $TESTTMP/hgcache/repos (glob)
 
+# Test that if garbage collection on repack and repack on hg gc flags are set then incremental repack with garbage collector is run
+
+  $ hg gc --config remotefilelog.gcrepack=True --config remotefilelog.repackonhggc=True
+
+# Ensure that loose files are repacked
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/8d3499c65d926e4f107cf03c6b0df833222025b4.histidx
+  $TESTTMP/hgcache/master/packs/8d3499c65d926e4f107cf03c6b0df833222025b4.histpack
+  $TESTTMP/hgcache/master/packs/9c7046f8cad0417c39aa7c03ce13e0ba991306c2.dataidx
+  $TESTTMP/hgcache/master/packs/9c7046f8cad0417c39aa7c03ce13e0ba991306c2.datapack
+  $TESTTMP/hgcache/repos
+
 # Test that warning is displayed when there are no valid repos in repofile
 
   $ cp $CACHEDIR/repos $CACHEDIR/repos.bak
