@@ -373,7 +373,7 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         msg = ['bundle2-input-bundle:']
         if unbundler.params:
             msg.append(' %i params' % len(unbundler.params))
-        if op.gettransaction is None or op.gettransaction is _notransaction:
+        if op._gettransaction is None or op._gettransaction is _notransaction:
             msg.append(' no-transaction')
         else:
             msg.append(' with-transaction')
