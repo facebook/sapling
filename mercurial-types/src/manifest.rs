@@ -121,7 +121,7 @@ impl<E: Send + 'static> Manifest for Box<Manifest<Error = E> + Sync> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 pub enum Type {
     File,
     Symlink,
