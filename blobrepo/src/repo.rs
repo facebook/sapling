@@ -20,6 +20,7 @@ use mercurial_types::{Changeset, Manifest, NodeHash, Repo, repo};
 
 use BlobChangeset;
 use BlobManifest;
+use file::fetch_file_blob_from_blobstore;
 use errors::*;
 
 pub struct BlobRepo<Head, Book, Blob> {
@@ -41,6 +42,16 @@ impl<Head, Book, Blob> BlobRepo<Head, Book, Blob> {
                 blobstore,
             }),
         }
+    }
+}
+
+impl<Head, Book, Blob> BlobRepo<Head, Book, Blob>
+where
+    Blob: Blobstore<Key = String> + Clone + Sync,
+    Blob::ValueOut: AsRef<[u8]> + Send,
+{
+    pub fn get_file_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
+        fetch_file_blob_from_blobstore(self.inner.blobstore.clone(), *key)
     }
 }
 

@@ -33,6 +33,52 @@ pub struct RawNodeBlob {
     blob: hash::Sha1,
 }
 
+fn get_node<B>(blobstore: &B,  nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error>
+where B: Blobstore<Key = String>,
+      B::ValueOut: AsRef<[u8]>,
+{
+    let key = format!("node:{}.bincode", nodeid);
+
+    blobstore
+        .get(&key)
+        .map_err(blobstore_err)
+        .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
+        .and_then(move |blob| {
+            bincode::deserialize(blob.as_ref()).into_future().from_err()
+        })
+        .boxed()
+}
+
+pub fn fetch_file_blob_from_blobstore<B>(
+    blobstore: B,
+    nodeid: NodeHash,
+) -> BoxFuture<Vec<u8>, Error>
+where
+    B: Blobstore<Key = String> + Clone,
+    B::ValueOut: AsRef<[u8]>,
+{
+    get_node(&blobstore, nodeid)
+        .and_then({
+            let blobstore = blobstore.clone();
+            move |node| {
+                let key = format!("sha1:{}", node.blob);
+
+                blobstore
+                    .get(&key)
+                    .map_err(blobstore_err)
+                    .and_then(move |blob| {
+                        blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                    })
+            }
+        })
+        .and_then({
+            |blob| {
+                Ok(Vec::from(blob.as_ref()))
+            }
+        })
+        .boxed()
+}
+
 impl<B> BlobEntry<B>
 where
     B: Blobstore<Key = String>,
@@ -48,17 +94,7 @@ where
     }
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
-        let nodeid = self.nodeid;
-        let key = format!("node:{}.bincode", self.nodeid);
-
-        self.blobstore
-            .get(&key)
-            .map_err(blobstore_err)
-            .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
-            .and_then(move |blob| {
-                bincode::deserialize(blob.as_ref()).into_future().from_err()
-            })
-            .boxed()
+        get_node(&self.blobstore, self.nodeid)
     }
 }
 
