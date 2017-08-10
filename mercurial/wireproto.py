@@ -133,23 +133,47 @@ class remoteiterbatcher(peer.iterbatcher):
         This is mostly valuable over http where request sizes can be
         limited, but can be used in other places as well.
         """
-        req, rsp = [], []
-        for name, args, opts, resref in self.calls:
-            mtd = getattr(self._remote, name)
+        # 2-tuple of (command, arguments) that represents what will be
+        # sent over the wire.
+        requests = []
+
+        # 4-tuple of (command, final future, @batchable generator, remote
+        # future).
+        results = []
+
+        for command, args, opts, finalfuture in self.calls:
+            mtd = getattr(self._remote, command)
             batchable = mtd.batchable(mtd.im_self, *args, **opts)
-            encargsorres, encresref = next(batchable)
-            assert encresref
-            req.append((name, encargsorres))
-            rsp.append((batchable, encresref))
-        if req:
-            self._resultiter = self._remote._submitbatch(req)
-        self._rsp = rsp
+
+            commandargs, fremote = next(batchable)
+            assert fremote
+            requests.append((command, commandargs))
+            results.append((command, finalfuture, batchable, fremote))
+
+        if requests:
+            self._resultiter = self._remote._submitbatch(requests)
+
+        self._results = results
 
     def results(self):
-        for (batchable, encresref), encres in itertools.izip(
-                self._rsp, self._resultiter):
-            encresref.set(encres)
-            yield next(batchable)
+        for command, finalfuture, batchable, remotefuture in self._results:
+            # Get the raw result, set it in the remote future, feed it
+            # back into the @batchable generator so it can be decoded, and
+            # set the result on the final future to this value.
+            remoteresult = next(self._resultiter)
+            remotefuture.set(remoteresult)
+            finalfuture.set(next(batchable))
+
+            # Verify our @batchable generators only emit 2 values.
+            try:
+                next(batchable)
+            except StopIteration:
+                pass
+            else:
+                raise error.ProgrammingError('%s @batchable generator emitted '
+                                             'unexpected value count' % command)
+
+            yield finalfuture.value
 
 # Forward a couple of names from peer to make wireproto interactions
 # slightly more sensible.

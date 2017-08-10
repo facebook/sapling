@@ -69,7 +69,8 @@ class localiterbatcher(iterbatcher):
 
     def results(self):
         for name, args, opts, resref in self.calls:
-            yield getattr(self.local, name)(*args, **opts)
+            resref.set(getattr(self.local, name)(*args, **opts))
+            yield resref.value
 
 def batchable(f):
     '''annotation for batchable methods
