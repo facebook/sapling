@@ -134,7 +134,9 @@ fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Resu
             let drain = KVFilter::new(
                 drain,
                 Level::Critical,
-                vec![(String::from("remote"), hashset![String::from("true")])],
+                hashmap! {
+                    "remote".into() => hashset!["true".into()],
+                }
             );
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = slog::Logger::root(drain, o![]);
