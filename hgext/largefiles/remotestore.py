@@ -12,7 +12,6 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     util,
-    wireproto,
 )
 
 from . import (
@@ -108,10 +107,6 @@ class remotestore(basestore.basestore):
                         raise RuntimeError('verify failed: unexpected response '
                                            'from statlfile (%r)' % stat)
         return failed
-
-    def batch(self):
-        '''Support for remote batching.'''
-        return wireproto.remotebatch(self)
 
     def _put(self, hash, fd):
         '''Put file with the given hash in the remote store.'''
