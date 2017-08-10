@@ -45,7 +45,6 @@ def use(it):
     batch = it.batch()
     # The calls return futures to eventually hold results.
     foo = batch.foo(one="One", two="Two")
-    foo2 = batch.foo(None)
     bar = batch.bar("Eins", "Zwei")
     # We can call non-batchable proxy methods, but the break the current batch
     # request and cause additional roundtrips.
@@ -58,7 +57,6 @@ def use(it):
     batch.submit()
     # After the call to submit, the futures actually contain values.
     print(foo.value)
-    print(foo2.value)
     print(bar.value)
     print(greet.value)
     print(hello.value)
@@ -153,8 +151,6 @@ class remotething(thing):
 
     @peer.batchable
     def foo(self, one, two=None):
-        if not one:
-            yield "Nope", None
         encargs = [('one', mangle(one),), ('two', mangle(two),)]
         encresref = peer.future()
         yield encargs, encresref

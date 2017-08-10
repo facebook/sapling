@@ -4,7 +4,6 @@ Ready.
 Un and Deux
 Eins und Zwei
 One and Two
-Nope
 Eins und Zwei
 Hello, John Smith
 Ready.
@@ -25,7 +24,6 @@ REQ: greet?name=Kpio!Tnjui
 REQ: batch?cmds=bar:b=Vop,a=Evf
   -> Vop!voe!Evf
 One and Two
-Nope
 Eins und Zwei
 Hello, John Smith
 Ready.

@@ -78,9 +78,6 @@ def batchable(f):
 
     @batchable
     def sample(self, one, two=None):
-        # Handle locally computable results first:
-        if not one:
-            yield "a local result", None
         # Build list of encoded arguments suitable for your wire protocol:
         encargs = [('one', encode(one),), ('two', encode(two),)]
         # Create future for injection of encoded result:

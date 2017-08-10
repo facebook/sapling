@@ -95,11 +95,9 @@ class remotebatch(peer.batcher):
             if batchablefn is not None:
                 batchable = batchablefn(mtd.im_self, *args, **opts)
                 encargsorres, encresref = next(batchable)
-                if encresref:
-                    req.append((name, encargsorres,))
-                    rsp.append((batchable, encresref, resref,))
-                else:
-                    resref.set(encargsorres)
+                assert encresref
+                req.append((name, encargsorres,))
+                rsp.append((batchable, encresref, resref,))
             else:
                 if req:
                     self._submitreq(req, rsp)
