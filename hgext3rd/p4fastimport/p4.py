@@ -13,6 +13,26 @@ from mercurial import (
     util,
 )
 
+def decodefilename(f):
+    """Perforce saves and returns files that have special characters encoded:
+
+        char | encoding
+        ---------------
+         @   | %40
+         #   | %23
+         *   | %2A
+         %   | %25
+    See:
+    https://www.perforce.com/perforce/doc.current/manuals/cmdref/filespecs.html
+    """
+    f = f.replace('%40', '@')
+    f = f.replace('%23', '#')
+    f = f.replace('%2A', '*')
+    # this must be last so that we don't create a sequence that is decodable,
+    # e.g.: %252A would lead to %2A and must not be decoded again.
+    f = f.replace('%25', '%')
+    return f
+
 class P4Exception(Exception):
     pass
 
@@ -316,7 +336,8 @@ class P4Changelist(object):
 #XXX: Handle oldChange vs change
             if fidx not in info:
                 break
-            files[info[fidx]] = {
+            filename = info[fidx]
+            files[filename] = {
                 'rev': int(info[ridx]),
                 'action': info[aidx],
             }

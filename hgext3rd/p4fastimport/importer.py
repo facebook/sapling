@@ -264,7 +264,8 @@ class FileImporter(object):
     def relpath(self):
         client = self._importset.client
         where = p4.parse_where(client, self.depotfile)
-        return where['clientFile'].replace('//%s/' % client, '')
+        filename = where['clientFile'].replace('//%s/' % client, '')
+        return p4.decodefilename(filename)
 
     @property
     def depotfile(self):
