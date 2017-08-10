@@ -197,3 +197,18 @@ The remote repo is empty and the local one doesn't have any bookmarks/tags
 Only one bookmark 'master' should be created
   $ hg bookmarks
    * master                    0:8aded40be5af
+
+test for ssh vulnerability
+
+  $ hg push 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'pushing to'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  [1]
+  $ hg push 'git+ssh://-oProxyCommand=rm%20nonexistent/path' | grep -v 'pushing to'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
+  [1]
+  $ hg push 'git+ssh://fakehost|shellcommand/path' | grep -v 'pushing to'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
+  [1]
+  $ hg push 'git+ssh://fakehost%7Cshellcommand/path' | grep -v 'pushing to'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
+  [1]

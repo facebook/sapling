@@ -349,3 +349,20 @@ also add an annotated tag
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add delta
   
+
+test for ssh vulnerability
+
+  $ hg init a
+  $ cd a
+  $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  [1]
+  $ hg pull 'git+ssh://-oProxyCommand=rm%20nonexistent/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
+  [1]
+  $ hg pull 'git+ssh://fakehost|shellcommand/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
+  [1]
+  $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
+  [1]

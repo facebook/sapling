@@ -45,9 +45,9 @@ test for ssh vulnerability
   $ hg clone 'git+ssh://%2DoProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
   [1]
-
-  $ hg init a
-  $ cd a
-  $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
-  abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
+  $ hg clone 'git+ssh://fakehost|shellcommand/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
+  [1]
+  $ hg clone 'git+ssh://fakehost%7Cshellcommand/path' | grep -v 'destination\|pulling from'
+  abort: potentially unsafe hostname: 'fakehost|shellcommand'
   [1]
