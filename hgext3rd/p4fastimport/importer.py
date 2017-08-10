@@ -72,7 +72,6 @@ class ChangeManifestImporter(object):
         mp2 = nullid
         mf = p1.manifest().copy()
         for i, change in enumerate(self._importset.changelists):
-            # invalidate caches so that the lookup works
             self._ui.progress(_('importing change'), pos=i, item=change,
                     unit='changes', total=len(self._importset.changelists))
 
