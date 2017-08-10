@@ -55,7 +55,7 @@ srv = serverrepo()
 clt = clientpeer(srv)
 
 print(clt.greet("Foobar"))
-b = clt.batch()
-fs = [b.greet(s) for s in ["Fo, =;:<o", "Bar"]]
+b = clt.iterbatch()
+map(b.greet, ('Fo, =;:<o', 'Bar'))
 b.submit()
-print([f.value for f in fs])
+print([r for r in b.results()])

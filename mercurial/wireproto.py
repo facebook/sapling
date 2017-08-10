@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import hashlib
-import itertools
 import os
 import tempfile
 
@@ -79,38 +78,6 @@ class abstractserverproto(object):
     #    """reinstall previous stdout and stderr and return intercepted stdout
     #    """
     #    raise NotImplementedError()
-
-class remotebatch(peer.batcher):
-    '''batches the queued calls; uses as few roundtrips as possible'''
-    def __init__(self, remote):
-        '''remote must support _submitbatch(encbatch) and
-        _submitone(op, encargs)'''
-        peer.batcher.__init__(self)
-        self.remote = remote
-    def submit(self):
-        req, rsp = [], []
-        for name, args, opts, resref in self.calls:
-            mtd = getattr(self.remote, name)
-            batchablefn = getattr(mtd, 'batchable', None)
-            if batchablefn is not None:
-                batchable = batchablefn(mtd.im_self, *args, **opts)
-                encargsorres, encresref = next(batchable)
-                assert encresref
-                req.append((name, encargsorres,))
-                rsp.append((batchable, encresref, resref,))
-            else:
-                if req:
-                    self._submitreq(req, rsp)
-                    req, rsp = [], []
-                resref.set(mtd(*args, **opts))
-        if req:
-            self._submitreq(req, rsp)
-    def _submitreq(self, req, rsp):
-        encresults = self.remote._submitbatch(req)
-        for encres, r in zip(encresults, rsp):
-            batchable, encresref, resref = r
-            encresref.set(encres)
-            resref.set(next(batchable))
 
 class remoteiterbatcher(peer.iterbatcher):
     def __init__(self, remote):
@@ -253,11 +220,6 @@ class wirepeer(peer.peerrepository):
     See also httppeer.py and sshpeer.py for protocol-specific
     implementations of this interface.
     """
-    def batch(self):
-        if self.capable('batch'):
-            return remotebatch(self)
-        else:
-            return peer.localbatch(self)
     def _submitbatch(self, req):
         """run batch request <req> on the server
 

@@ -49,15 +49,6 @@ class iterbatcher(batcher):
     def results(self):
         raise NotImplementedError()
 
-class localbatch(batcher):
-    '''performs the queued calls directly'''
-    def __init__(self, local):
-        batcher.__init__(self)
-        self.local = local
-    def submit(self):
-        for name, args, opts, resref in self.calls:
-            resref.set(getattr(self.local, name)(*args, **opts))
-
 class localiterbatcher(iterbatcher):
     def __init__(self, local):
         super(iterbatcher, self).__init__()
@@ -106,10 +97,6 @@ def batchable(f):
     return plain
 
 class peerrepository(object):
-
-    def batch(self):
-        return localbatch(self)
-
     def iterbatch(self):
         """Batch requests but allow iterating over the results.
 
