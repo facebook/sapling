@@ -722,7 +722,7 @@ def gcclient(ui, cachepath):
         if prefetchrevs:
             revs.append('(%s)' % prefetchrevs)
 
-        keep = repo.revs('+'.join(revs))
+        keep = scmutil.revrange(repo, ['+'.join(revs)])
         # TODO: Compute keepkeys more efficiently
         for r in keep:
             m = repo[r].manifest()
@@ -810,7 +810,7 @@ def pull(orig, ui, repo, *pats, **opts):
 
         if prefetchrevset:
             ui.status(_("prefetching file contents\n"))
-            revs = repo.revs(prefetchrevset)
+            revs = scmutil.revrange(repo, [prefetchrevset])
             base = repo['.'].rev()
             if bgprefetch:
                 repo.backgroundprefetch(prefetchrevset, repack=bgrepack)
