@@ -8,6 +8,7 @@ from mercurial import (
     extensions,
     mdiff,
     policy,
+    scmutil,
     util,
 )
 from mercurial.node import nullid
@@ -318,7 +319,7 @@ class repacker(object):
         if prefetchrevs:
             revs.append('(%s)' % prefetchrevs)
 
-        keep = repo.revs('+'.join(revs))
+        keep = scmutil.revrange(repo, ['+'.join(revs)])
         keepkeys = set()
         for r in keep:
             m = repo[r].manifest()
