@@ -352,17 +352,22 @@ also add an annotated tag
 
 test for ssh vulnerability
 
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = ssh -o ConnectTimeout=1
+  > EOF
+
   $ hg init a
   $ cd a
-  $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
-  [1]
-  $ hg pull 'git+ssh://-oProxyCommand=rm%20nonexistent/path' | grep -v 'destination\|pulling from'
+  [255]
+  $ hg pull 'git+ssh://-oProxyCommand=rm%20nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
-  [1]
-  $ hg pull 'git+ssh://fakehost|shellcommand/path' | grep -v 'destination\|pulling from'
-  abort: potentially unsafe hostname: 'fakehost|shellcommand'
-  [1]
-  $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' | grep -v 'destination\|pulling from'
-  abort: potentially unsafe hostname: 'fakehost|shellcommand'
-  [1]
+  [255]
+  $ hg pull 'git+ssh://fakehost|shellcommand/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  ssh: connect to host fakehost%7cshellcommand port 22: * (glob)
+  abort: git remote error: The remote server unexpectedly closed the connection.
+  $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  ssh: connect to host fakehost%7cshellcommand port 22: * (glob)
+  abort: git remote error: The remote server unexpectedly closed the connection.

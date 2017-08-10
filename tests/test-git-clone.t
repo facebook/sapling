@@ -39,15 +39,20 @@ we should have some bookmarks
 
 test for ssh vulnerability
 
-  $ hg clone 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = ssh -o ConnectTimeout=1
+  > EOF
+
+  $ hg clone 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
-  [1]
-  $ hg clone 'git+ssh://%2DoProxyCommand=rm${IFS}nonexistent/path' | grep -v 'destination\|pulling from'
+  [255]
+  $ hg clone 'git+ssh://%2DoProxyCommand=rm${IFS}nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
-  [1]
-  $ hg clone 'git+ssh://fakehost|shellcommand/path' | grep -v 'destination\|pulling from'
-  abort: potentially unsafe hostname: 'fakehost|shellcommand'
-  [1]
-  $ hg clone 'git+ssh://fakehost%7Cshellcommand/path' | grep -v 'destination\|pulling from'
-  abort: potentially unsafe hostname: 'fakehost|shellcommand'
-  [1]
+  [255]
+  $ hg clone 'git+ssh://fakehost|rm${IFS}nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  ssh: connect to host fakehost%7crm%24%7bifs%7dnonexistent port 22: * (glob)
+  abort: git remote error: The remote server unexpectedly closed the connection.
+  $ hg clone 'git+ssh://fakehost%7Crm${IFS}nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  ssh: connect to host fakehost%7crm%24%7bifs%7dnonexistent port 22: * (glob)
+  abort: git remote error: The remote server unexpectedly closed the connection.

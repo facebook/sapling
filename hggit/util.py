@@ -135,6 +135,6 @@ def checksafessh(host):
     Raises an error.Abort when the url is unsafe.
     """
     host = urllib.unquote(host)
-    if host.startswith('-') or '|' in host:
+    if host.startswith('-'):
         raise error.Abort(_('potentially unsafe hostname: %r') %
                           (host,))
