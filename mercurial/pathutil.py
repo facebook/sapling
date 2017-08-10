@@ -33,13 +33,18 @@ class pathauditor(object):
     The file system checks are only done when 'realfs' is set to True (the
     default). They should be disable then we are auditing path for operation on
     stored history.
+
+    If 'cached' is set to True, audited paths and sub-directories are cached.
+    Be careful to not keep the cache of unmanaged directories for long because
+    audited paths may be replaced with symlinks.
     '''
 
-    def __init__(self, root, callback=None, realfs=True):
+    def __init__(self, root, callback=None, realfs=True, cached=False):
         self.audited = set()
         self.auditeddir = set()
         self.root = root
         self._realfs = realfs
+        self._cached = cached
         self.callback = callback
         if os.path.lexists(root) and not util.fscasesensitive(root):
             self.normcase = util.normcase
@@ -96,10 +101,11 @@ class pathauditor(object):
                 self._checkfs(prefix, path)
             prefixes.append(normprefix)
 
-        self.audited.add(normpath)
-        # only add prefixes to the cache after checking everything: we don't
-        # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
-        self.auditeddir.update(prefixes)
+        if self._cached:
+            self.audited.add(normpath)
+            # only add prefixes to the cache after checking everything: we don't
+            # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
+            self.auditeddir.update(prefixes)
 
     def _checkfs(self, prefix, path):
         """raise exception if a file system backed check fails"""

@@ -124,6 +124,8 @@ class sshpeer(wireproto.wirepeer):
         if u.scheme != 'ssh' or not u.host or u.path is None:
             self._abort(error.RepoError(_("couldn't parse location %s") % path))
 
+        util.checksafessh(path)
+
         self.user = u.user
         if u.passwd is not None:
             self._abort(error.RepoError(_("password in URL not supported")))
@@ -134,10 +136,7 @@ class sshpeer(wireproto.wirepeer):
         sshcmd = self.ui.config("ui", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd")
 
-        args = util.sshargs(sshcmd,
-                            _serverquote(self.host),
-                            _serverquote(self.user),
-                            _serverquote(self.port))
+        args = util.sshargs(sshcmd, self.host, self.user, self.port)
 
         if create:
             cmd = '%s %s %s' % (sshcmd, args,

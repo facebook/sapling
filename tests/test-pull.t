@@ -105,4 +105,30 @@ regular shell commands.
   $ URL=`$PYTHON -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
   $ hg pull -q "$URL"
 
+SEC: check for unsafe ssh url
+
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = sh -c "read l; read l; read l"
+  > EOF
+
+  $ hg pull 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  pulling from ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg pull 'ssh://%2DoProxyCommand=touch${IFS}owned/path'
+  pulling from ssh://-oProxyCommand%3Dtouch%24%7BIFS%7Downed/path
+  abort: potentially unsafe url: 'ssh://-oProxyCommand=touch${IFS}owned/path'
+  [255]
+  $ hg pull 'ssh://fakehost|touch${IFS}owned/path'
+  pulling from ssh://fakehost%7Ctouch%24%7BIFS%7Downed/path
+  abort: no suitable response from remote hg!
+  [255]
+  $ hg pull 'ssh://fakehost%7Ctouch%20owned/path'
+  pulling from ssh://fakehost%7Ctouch%20owned/path
+  abort: no suitable response from remote hg!
+  [255]
+
+  $ [ ! -f owned ] || echo 'you got owned'
+
   $ cd ..

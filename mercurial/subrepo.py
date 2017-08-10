@@ -1281,6 +1281,10 @@ class svnsubrepo(abstractsubrepo):
         # The revision must be specified at the end of the URL to properly
         # update to a directory which has since been deleted and recreated.
         args.append('%s@%s' % (state[0], state[1]))
+
+        # SEC: check that the ssh url is safe
+        util.checksafessh(state[0])
+
         status, err = self._svncommand(args, failok=True)
         _sanitize(self.ui, self.wvfs, '.svn')
         if not re.search('Checked out revision [0-9]+.', status):
@@ -1546,6 +1550,9 @@ class gitsubrepo(abstractsubrepo):
 
     def _fetch(self, source, revision):
         if self._gitmissing():
+            # SEC: check for safe ssh url
+            util.checksafessh(source)
+
             source = self._abssource(source)
             self.ui.status(_('cloning subrepo %s from %s\n') %
                             (self._relpath, source))
