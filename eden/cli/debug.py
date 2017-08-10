@@ -189,9 +189,11 @@ def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:
     with open(overlay_file_path, 'rb') as f:
         data = f.read()
 
+    assert data[0:4] == b'OVDR'
+
     tree_data = OverlayDir()
     protocol_factory = TCompactProtocol.TCompactProtocolFactory()
-    Serializer.deserialize(protocol_factory, data, tree_data)
+    Serializer.deserialize(protocol_factory, data[64:], tree_data)
     return tree_data
 
 
