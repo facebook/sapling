@@ -120,9 +120,13 @@ class remoteiterbatcher(peer.iterbatcher):
         self._remote = remote
 
     def __getattr__(self, name):
-        if not getattr(self._remote, name, False):
-            raise AttributeError(
-                'Attempted to iterbatch non-batchable call to %r' % name)
+        # Validate this method is batchable, since submit() only supports
+        # batchable methods.
+        fn = getattr(self._remote, name)
+        if not getattr(fn, 'batchable', None):
+            raise error.ProgrammingError('Attempted to batch a non-batchable '
+                                         'call to %r' % name)
+
         return super(remoteiterbatcher, self).__getattr__(name)
 
     def submit(self):
