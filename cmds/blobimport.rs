@@ -127,7 +127,7 @@ where
                         .ok_or("missing blob data".into())
                         .map(Bytes::from)
                 }
-                Content::Symlink(path) => Ok(path.as_ref().to_vec().into()),
+                Content::Symlink(path) => Ok(path.to_vec().into()),
                 Content::Tree(_) => panic!("need tree blob"),
             };
 

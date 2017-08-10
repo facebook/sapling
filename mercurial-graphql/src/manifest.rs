@@ -43,7 +43,7 @@ graphql_scalar!(GQLPath {
 
     resolve(&self) -> Value {
         let path = &self.0;
-        Value::string(String::from_utf8_lossy(path.as_slice()).into_owned())
+        Value::string(String::from_utf8_lossy(path.to_vec().as_slice()).into_owned())
     }
 
     from_input_value(v: &InputValue) -> Option<GQLPath> {

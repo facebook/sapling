@@ -93,7 +93,7 @@ impl ChunkBuilder {
         if let &Section::Filelog(ref f) = section {
             // Note that the filename length must include the four bytes for itself.
             BigEndian::write_i32(&mut self.inner[0..], (f.len() + 4) as i32);
-            self.inner.put_slice(f.as_slice());
+            self.inner.put_slice(f.to_vec().as_slice());
             // Add four more bytes for the start of the section.
             self.len_offset = self.inner.len();
             self.inner.put_slice(&[0, 0, 0, 0]);
