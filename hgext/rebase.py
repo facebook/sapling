@@ -472,7 +472,7 @@ class rebaseruntime(object):
                 commitmsg = self.collapsemsg
             else:
                 commitmsg = 'Collapsed revision'
-                for rebased in self.state:
+                for rebased in sorted(self.state):
                     if rebased not in self.skipped and\
                        self.state[rebased] > nullmerge:
                         commitmsg += '\n* %s' % repo[rebased].description()

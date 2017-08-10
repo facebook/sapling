@@ -263,8 +263,16 @@ Prepare custom diff/edit tool:
 will change to /tmp/extdiff.TMP and populate directories a.TMP and a
 and start tool
 
+#if windows
+  $ cat > 'diff tool.bat' << EOF
+  > @$PYTHON "`pwd`/diff tool.py"
+  > EOF
+  $ hg extdiff -p "`pwd`/diff tool.bat"
+  [1]
+#else
   $ hg extdiff -p "`pwd`/diff tool.py"
   [1]
+#endif
 
 Diff in working directory, after:
 

@@ -828,6 +828,7 @@ def _dispatch(req):
             color.setup(ui_)
 
         if util.parsebool(options['pager']):
+            # ui.pager() expects 'internal-always-' prefix in this case
             ui.pager('internal-always-' + cmd)
         elif options['pager'] != 'auto':
             ui.disablepager()

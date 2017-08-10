@@ -41,6 +41,9 @@ filediff(){
     diff -u "$file1" "$file2" |
     sed "s@^--- /dev/null\(.*\)\$@--- $1\1@" |
     sed "s@^\+\+\+ /dev/null\(.*\)\$@+++ $2\1@"
+
+    # in this case, files differ from each other
+    return 1
 }
 
 if test -d "$1" -o -d "$2"; then
@@ -53,6 +56,14 @@ if test -d "$1" -o -d "$2"; then
     while read file; do
         filediff "$1/$file" "$2/$file" "diff -Nru $1/$file $2/$file"
     done
+
+    # TODO: there is no portable way for current while-read based
+    # implementation to return 1 at detecting changes.
+    #
+    # On bash and dash, assignment to variable inside while-block
+    # doesn't affect outside, because inside while-block is executed
+    # in sub-shell. BTW, it affects outside while-block on ksh (as sh
+    # on Solaris).
 else
     filediff "$1" "$2"
 fi

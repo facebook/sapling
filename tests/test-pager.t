@@ -80,6 +80,34 @@ We can control the pager from the config
   paged! 'summary:     modify a 10\n'
   paged! '\n'
 
+explicit --pager=on should take precedence over other configurations
+(issue5580)
+
+  $ cat >> $HGRCPATH <<EOF
+  > [ui]
+  > paginate = false
+  > EOF
+  $ hg log --limit 1 --pager=on
+  paged! 'changeset:   10:46106edeeb38\n'
+  paged! 'tag:         tip\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 10\n'
+  paged! '\n'
+
+  $ cat >> $HGRCPATH <<EOF
+  > [ui]
+  > # true is default value of ui.paginate
+  > paginate = true
+  > EOF
+  $ hg log --limit 1 --pager=off
+  changeset:   10:46106edeeb38
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify a 10
+  
+
 We can enable the pager on id:
 
 BROKEN: should be paged

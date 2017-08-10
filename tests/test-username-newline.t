@@ -14,10 +14,12 @@
   $ rm .hg/hgrc
 
   $ HGUSER=`(echo foo; echo bar2)` hg ci -Am m
+  adding a
   abort: username 'foo\nbar2' contains a newline
   
   [255]
   $ hg ci -Am m -u "`(echo foo; echo bar3)`"
+  adding a
   transaction abort!
   rollback completed
   abort: username 'foo\nbar3' contains a newline!

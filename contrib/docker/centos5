@@ -1,4 +1,7 @@
 FROM centos:centos5
+RUN sed -i 's/^mirrorlist/#mirrorlist/' /etc/yum.repos.d/*.repo
+RUN sed -i 's/^#\(baseurl=\)http:\/\/mirror.centos.org\/centos/\1http:\/\/vault.centos.org/' /etc/yum.repos.d/*.repo
+RUN sed -i 's/\$releasever/5.11/' /etc/yum.repos.d/*.repo
 RUN yum install -y gcc make rpm-build gettext tar
 RUN yum install -y python-devel python-docutils
 # For creating repo meta data

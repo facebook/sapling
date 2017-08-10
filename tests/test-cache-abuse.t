@@ -47,21 +47,21 @@ Make a helper function to check cache damage invariants:
   >  echo bad > $CACHE
   >  test -z "$CLEAN" || $CLEAN
   >  hg $CMD > after
-  >  diff -u before after || echo "*** overwrite corruption"
+  >  "$RUNTESTDIR/pdiff" before after || echo "*** overwrite corruption"
   >  echo corruption >> $CACHE
   >  test -z "$CLEAN" || $CLEAN
   >  hg $CMD > after
-  >  diff -u before after || echo "*** append corruption"
+  >  "$RUNTESTDIR/pdiff" before after || echo "*** append corruption"
   >  rm $CACHE
   >  mkdir $CACHE
   >  test -z "$CLEAN" || $CLEAN
   >  hg $CMD > after
-  >  diff -u before after || echo "*** read-only corruption"
+  >  "$RUNTESTDIR/pdiff" before after || echo "*** read-only corruption"
   >  test -d $CACHE || echo "*** directory clobbered"
   >  rmdir $CACHE
   >  test -z "$CLEAN" || $CLEAN
   >  hg $CMD > after
-  >  diff -u before after || echo "*** missing corruption"
+  >  "$RUNTESTDIR/pdiff" before after || echo "*** missing corruption"
   >  test -f $CACHE || echo "not rebuilt"
   > }
 

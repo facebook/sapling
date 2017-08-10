@@ -312,6 +312,7 @@ of which length of byte sequence and columns in display are different
 from each other.
 
   $ rm -f loop.pyc
+  $ rm -Rf __pycache__
   $ cat >> loop.py <<EOF
   > # use non-ascii characters as loop items of progress
   > loopitems = [
