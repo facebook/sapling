@@ -148,7 +148,6 @@ class rebaseruntime(object):
         self.activebookmark = None
         self.dest = None
         self.skipped = set()
-        self.destancestors = set()
 
         self.collapsef = opts.get('collapse', False)
         self.collapsemsg = cmdutil.logmessage(ui, opts)
@@ -336,11 +335,9 @@ class rebaseruntime(object):
 
         (self.originalwd, self.dest, self.state) = result
         if self.collapsef:
-            self.destancestors = self.repo.changelog.ancestors(
-                                        [self.dest],
-                                        inclusive=True)
-            self.external = externalparent(self.repo, self.state,
-                                              self.destancestors)
+            destancestors = self.repo.changelog.ancestors([self.dest],
+                                                          inclusive=True)
+            self.external = externalparent(self.repo, self.state, destancestors)
 
         if dest.closesbranch() and not self.keepbranchesf:
             self.ui.status(_('reopening closed branch head %s\n') % dest)
@@ -359,11 +356,6 @@ class rebaseruntime(object):
                     if len(branches) > 1:
                         raise error.Abort(_('cannot collapse multiple named '
                             'branches'))
-
-        # Rebase
-        if not self.destancestors:
-            self.destancestors = repo.changelog.ancestors([self.dest],
-                                                          inclusive=True)
 
         # Keep track of the active bookmarks in order to reset them later
         self.activebookmark = self.activebookmark or repo._activebookmark
