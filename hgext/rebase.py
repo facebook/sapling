@@ -1041,11 +1041,14 @@ def defineparents(repo, rev, dest, state):
             for j, x in enumerate(newps[:i]):
                 if x == nullrev:
                     continue
-                if isancestor(np, x):
+                if isancestor(np, x): # CASE-1
                     np = nullrev
-                elif isancestor(x, np):
+                elif isancestor(x, np): # CASE-2
                     newps[j] = np
                     np = nullrev
+                    # New parents forming an ancestor relationship does not
+                    # mean the old parents have a similar relationship. Do not
+                    # set bases[x] to nullrev.
                     bases[j], bases[i] = bases[i], bases[j]
 
             newps[i] = np
@@ -1069,8 +1072,6 @@ def defineparents(repo, rev, dest, state):
                                 'moving at least one of its parents')
                               % (rev, repo[rev]))
 
-    repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
-
     # "rebasenode" updates to new p1, use the corresponding merge base.
     if bases[0] != nullrev:
         base = bases[0]
@@ -1093,28 +1094,47 @@ def defineparents(repo, rev, dest, state):
     # better than the default (ancestor(F, Z) == null). Therefore still
     # pick one (so choose p1 above).
     if sum(1 for b in bases if b != nullrev) > 1:
-        assert base is not None
+        unwanted = [None, None] # unwanted[i]: unwanted revs if choose bases[i]
+        for i, base in enumerate(bases):
+            if base == nullrev:
+                continue
+            # Revisions in the side (not chosen as merge base) branch that
+            # might contain "surprising" contents
+            siderevs = list(repo.revs('((%ld-%d) %% (%d+%d))',
+                                      bases, base, base, dest))
 
-        # Revisions in the side (not chosen as merge base) branch that might
-        # contain "surprising" contents
-        siderevs = list(repo.revs('((%ld-%d) %% (%d+%d))',
-                                  bases, base, base, dest))
+            # If those revisions are covered by rebaseset, the result is good.
+            # A merge in rebaseset would be considered to cover its ancestors.
+            if siderevs:
+                rebaseset = [r for r, d in state.items() if d > 0]
+                merges = [r for r in rebaseset
+                          if cl.parentrevs(r)[1] != nullrev]
+                unwanted[i] = list(repo.revs('%ld - (::%ld) - %ld',
+                                             siderevs, merges, rebaseset))
 
-        # If those revisions are covered by rebaseset, the result is good.
-        # A merge in rebaseset would be considered to cover its ancestors.
-        if siderevs:
-            rebaseset = [r for r, d in state.items() if d > 0]
-            merges = [r for r in rebaseset if cl.parentrevs(r)[1] != nullrev]
-            unwantedrevs = list(repo.revs('%ld - (::%ld) - %ld',
-                                          siderevs, merges, rebaseset))
+        # Choose a merge base that has a minimal number of unwanted revs.
+        l, i = min((len(revs), i)
+                   for i, revs in enumerate(unwanted) if revs is not None)
+        base = bases[i]
 
-            # For revs not covered, it is worth a warning.
-            if unwantedrevs:
-                repo.ui.warn(
-                    _('warning: rebasing %d:%s may include unwanted changes '
-                      'from %s\n')
-                    % (rev, repo[rev], ', '.join('%d:%s' % (r, repo[r])
-                                                 for r in unwantedrevs)))
+        # newps[0] should match merge base if possible. Currently, if newps[i]
+        # is nullrev, the only case is newps[i] and newps[j] (j < i), one is
+        # the other's ancestor. In that case, it's fine to not swap newps here.
+        # (see CASE-1 and CASE-2 above)
+        if i != 0 and newps[i] != nullrev:
+            newps[0], newps[i] = newps[i], newps[0]
+
+        # The merge will include unwanted revisions. Abort now. Revisit this if
+        # we have a more advanced merge algorithm that handles multiple bases.
+        if l > 0:
+            unwanteddesc = _(' or ').join(
+                (', '.join('%d:%s' % (r, repo[r]) for r in revs)
+                 for revs in unwanted if revs is not None))
+            raise error.Abort(
+                _('rebasing %d:%s will include unwanted changes from %s')
+                % (rev, repo[rev], unwanteddesc))
+
+    repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
 
     return newps[0], newps[1], base
 

@@ -1065,10 +1065,8 @@ Rebase merge where successor of one parent is ancestor of destination
   note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
   rebasing 2:b18e25de2cf5 "D" (D)
   rebasing 5:66f1a38021c9 "F" (F tip)
-  warning: rebasing 5:66f1a38021c9 may include unwanted changes from 3:7fb047a69f22
+  note: rebase of 5:66f1a38021c9 created no changes to commit
   $ hg log -G
-  o  7:9ed45af61fa0 F
-  |
   o  6:8f47515dda15 D
   |
   | x    5:66f1a38021c9 F
@@ -1102,11 +1100,9 @@ Rebase merge where successor of other parent is ancestor of destination
   note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
   rebasing 3:7fb047a69f22 "E" (E)
   rebasing 5:66f1a38021c9 "F" (F tip)
-  warning: rebasing 5:66f1a38021c9 may include unwanted changes from 2:b18e25de2cf5
+  note: rebase of 5:66f1a38021c9 created no changes to commit
 
   $ hg log -G
-  o  7:502540f44880 F
-  |
   o  6:533690786a86 E
   |
   | x    5:66f1a38021c9 F
@@ -1121,6 +1117,88 @@ Rebase merge where successor of other parent is ancestor of destination
   |/
   o  0:426bada5c675 A
   
+  $ cd ..
+
+Rebase merge where both parents have successors in destination
+
+  $ hg init p12-succ-in-dest
+  $ cd p12-succ-in-dest
+  $ hg debugdrawdag <<'EOS'
+  >   E   F
+  >  /|  /|  # replace: A -> C
+  > A B C D  # replace: B -> D
+  > | |
+  > X Y
+  > EOS
+  $ hg rebase -r A+B+E -d F
+  note: not rebasing 4:a3d17304151f "A" (A), already in destination as 0:96cc3511f894 "C"
+  note: not rebasing 5:b23a2cc00842 "B" (B), already in destination as 1:058c1e1fb10a "D"
+  rebasing 7:dac5d11c5a7d "E" (E tip)
+  abort: rebasing 7:dac5d11c5a7d will include unwanted changes from 3:59c792af609c, 5:b23a2cc00842 or 2:ba2b7fa7166d, 4:a3d17304151f
+  [255]
+  $ cd ..
+
+Rebase a non-clean merge. One parent has successor in destination, the other
+parent moves as requested.
+
+  $ hg init p1-succ-p2-move
+  $ cd p1-succ-p2-move
+  $ hg debugdrawdag <<'EOS'
+  >   D Z
+  >  /| | # replace: A -> C
+  > A B C # D/D = D
+  > EOS
+  $ hg rebase -r A+B+D -d Z
+  note: not rebasing 0:426bada5c675 "A" (A), already in destination as 2:96cc3511f894 "C"
+  rebasing 1:fc2b737bb2e5 "B" (B)
+  rebasing 3:b8ed089c80ad "D" (D)
+
+  $ rm .hg/localtags
+  $ hg log -G
+  o  6:e4f78693cc88 D
+  |
+  o  5:76840d832e98 B
+  |
+  o  4:50e41c1f3950 Z
+  |
+  o  2:96cc3511f894 C
+  
+  $ hg files -r tip
+  B
+  C
+  D
+  Z
+
+  $ cd ..
+
+  $ hg init p1-move-p2-succ
+  $ cd p1-move-p2-succ
+  $ hg debugdrawdag <<'EOS'
+  >   D Z
+  >  /| |  # replace: B -> C
+  > A B C  # D/D = D
+  > EOS
+  $ hg rebase -r B+A+D -d Z
+  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C"
+  rebasing 0:426bada5c675 "A" (A)
+  rebasing 3:b8ed089c80ad "D" (D)
+
+  $ rm .hg/localtags
+  $ hg log -G
+  o  6:1b355ed94d82 D
+  |
+  o  5:a81a74d764a6 A
+  |
+  o  4:50e41c1f3950 Z
+  |
+  o  2:96cc3511f894 C
+  
+  $ hg files -r tip
+  A
+  C
+  D
+  Z
+
   $ cd ..
 
 Test that bookmark is moved and working dir is updated when all changesets have

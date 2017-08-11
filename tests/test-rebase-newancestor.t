@@ -354,16 +354,8 @@ may include unwanted content:
   rebasing 5:5f2c926dfecf "D" (D)
   rebasing 6:b296604d9846 "E" (E)
   rebasing 7:caa9781e507d "F" (F tip)
-  warning: rebasing 7:caa9781e507d may include unwanted changes from 4:d6003a550c2c
-  saved backup bundle to $TESTTMP/dual-merge-base1/.hg/strip-backup/b296604d9846-0516f6d2-rebase.hg (glob)
-  $ hg log -r 4 -T '{files}\n'
-  C
-  $ hg manifest -r 'desc(F)'
-  C
-  D
-  E
-  R
-  Z
+  abort: rebasing 7:caa9781e507d will include unwanted changes from 4:d6003a550c2c or 3:c1e6b162678d
+  [255]
 
 The warning does not get printed if there is no unwanted change detected:
 
