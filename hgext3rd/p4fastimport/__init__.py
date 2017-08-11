@@ -136,6 +136,18 @@ def create(tr, ui, repo, importset, filelogs):
             'localname': fi.relpath,
         })
 
+def getfilelist(ui, client, startcl, endcl):
+    filelist = set()
+    for fileinfo in p4.parse_filelist(client, startcl=startcl, endcl=endcl):
+        if fileinfo['action'] in p4.ACTION_ARCHIVE:
+            pass
+        elif fileinfo['action'] in p4.SUPPORTED_ACTIONS:
+            filelist.add(fileinfo['depotFile'])
+        else:
+            ui.warn(_('unknown action %s: %s\n') % (fileinfo['action'],
+                                                    fileinfo['depotFile']))
+    return filelist
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -201,15 +213,7 @@ def run_import(ui, repo, client, changelists, **opts):
     # 2. Get a list of files that we will have to import from the depot with
     # it's full path in the depot.
     ui.note(_('loading list of files.\n'))
-    filelist = set()
-    for fileinfo in p4.parse_filelist(client, startcl=startcl, endcl=endcl):
-        if fileinfo['action'] in p4.ACTION_ARCHIVE:
-            pass
-        elif fileinfo['action'] in p4.SUPPORTED_ACTIONS:
-            filelist.add(fileinfo['depotFile'])
-        else:
-            ui.warn(_('unknown action %s: %s\n') % (fileinfo['action'],
-                                                    fileinfo['depotFile']))
+    filelist = getfilelist(ui, client, startcl, endcl)
     ui.note(_('%d files to import.\n') % len(filelist))
 
     importset = importer.ImportSet(repo, client, changelists,
@@ -294,6 +298,83 @@ def run_import(ui, repo, client, changelists, **opts):
                 tr.release()
         finally:
             ftr.release()
+
+@command(
+        'p4syncimport',
+        [('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
+        _('[-P PATH] client'),
+        )
+def p4syncimport(ui, repo, client, **opts):
+    startcl = None
+    if len(repo) > 0 and startcl is None:
+        latestctx = list(repo.set(
+            "last(extra(p4changelist) or extra(p4fullimportbasechangelist))"))
+        if latestctx:
+            startcl = lastcl(latestctx[0])
+            ui.note(_('incremental import from changelist: %d, node: %s\n') %
+                    (startcl, short(latestctx[0].node())))
+        else:
+            raise error.Abort(_('no valid p4 changelist number.'))
+    elif len(repo) == 0:
+        raise error.Abort(_('p4 blob commit does not support empty repo yet.'))
+
+    # Fail if the specified client does not exist
+    if not p4.exists_client(client):
+        raise error.Abort(_('p4 client %s does not exist.') % client)
+
+    # Return all the changelists touching files in a given client view.
+    ui.note(_('loading changelist numbers.\n'))
+    changelists = sorted(p4.parse_changes(
+        client, startcl=startcl, endcl=startcl))
+    ui.note(_('%d changelists to import.\n') % len(changelists))
+    if len(changelists) == 0:
+        return
+    # Get a list of files that we will have to import
+    basepath = opts.get('path')
+    startcl, endcl = startcl, startcl
+    ui.note(_('loading list of files.\n'))
+    filelist = getfilelist(ui, client, startcl, endcl)
+    ui.note(_('%d files to import.\n') % len(filelist))
+
+    importset = importer.ImportSet(repo, client, changelists,
+            filelist, basepath)
+    p4filelogs = []
+    for i, f in enumerate(importset.filelogs()):
+        ui.debug('reading filelog %s\n' % f.depotfile)
+        ui.progress(_('reading filelog'), i, unit=_('filelogs'),
+                total=len(filelist))
+        p4filelogs.append(f)
+    ui.progress(_('reading filelog'), None)
+
+    # sync import.
+    with repo.wlock(), repo.lock():
+        ui.note(_('running a sync import.\n'))
+        count = 0
+        fileinfo = {}
+        p4filelogs = sorted(p4filelogs)
+        tr = repo.transaction('syncimport')
+        try:
+            for p4fl in p4filelogs:
+                bfi = importer.BlobFileImporter(ui, repo, importset, p4fl)
+                # Create filelog.
+                fileflags, oldtiprev, newtiprev = bfi.create(tr)
+                fileinfo[p4fl.depotfile] = {
+                    'flags': fileflags,
+                    'localname': bfi.relpath,
+                    'baserev': oldtiprev,
+                }
+                count += 1
+            # Generate manifest and changelog
+            clog = importer.BlobChangeManifestImporter(ui, repo, importset)
+            revisions = []
+            for cl, hgnode in clog.creategen(tr, fileinfo):
+                revisions.append((cl, hex(hgnode)))
+
+            tr.close()
+            ui.note(_('%d revision(s), %d file(s) imported.\n') % (
+                len(changelists), count))
+        finally:
+            tr.release()
 
 @command('debugscanlfs',
          [('C', 'client', '', _('Perforce client to reverse lookup')),

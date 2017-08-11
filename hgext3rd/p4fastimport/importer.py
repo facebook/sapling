@@ -122,18 +122,26 @@ class ChangeManifestImporter(object):
             username = self.usermap.get(username, username)
             self._ui.debug('changelist %d: writing changelog: %s\n' % (
                 change.cl, shortdesc))
-            cp1 = clog.add(
-                    mp1,
-                    changed,
-                    desc,
-                    tr,
-                    cp1,
-                    cp2,
-                    user=username,
-                    date=(change.parsed['time'], 0),
-                    extra={'p4changelist': change.cl})
+            cp1 = self.writechangelog(
+                    clog, mp1, changed, desc, tr, cp1, cp2,
+                    username, (change.parsed['time'], 0), change.cl)
             yield change.cl, cp1
         self._ui.progress(_('importing change'), pos=None)
+
+    def writechangelog(
+            self, clog, mp1, changed, desc, tr, cp1, cp2, username, date, cl):
+        return clog.add(
+                mp1, changed, desc, tr, cp1, cp2,
+                user=username, date=date,
+                extra={'p4changelist': cl})
+
+class BlobChangeManifestImporter(ChangeManifestImporter):
+    def writechangelog(
+            self, clog, mp1, changed, desc, tr, cp1, cp2, username, date, cl):
+        return clog.add(
+                mp1, changed, desc, tr, cp1, cp2,
+                user=username, date=date,
+                extra={'p4fullimportbasechangelist': cl})
 
 class RCSImporter(collections.Mapping):
     def __init__(self, path):
@@ -359,3 +367,52 @@ class FileImporter(object):
 
         newlen = len(hgfilelog)
         return fileflags, largefiles, origlen, newlen
+
+class BlobFileImporter(FileImporter):
+    def create(self, tr):
+        assert tr is not None
+        p4fi = P4FileImporter(self._p4filelog)
+        revs = set()
+        for c in self._importset.changelists:
+            if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
+                revs.add(c)
+
+        fileflags = collections.defaultdict(dict)
+        lastlinkrev = 0
+
+        hgfilelog = self.hgfilelog()
+        origlen = len(hgfilelog)
+
+        for c in sorted(revs):
+            linkrev = self._importset.linkrev(c.cl)
+            fparent1, fparent2 = nullid, nullid
+
+            assert linkrev >= lastlinkrev
+            lastlinkrev = linkrev
+
+            if len(hgfilelog) > 0:
+                fparent1 = hgfilelog.tip()
+
+            text = None
+            # Only read files from p4 for a blob commit
+            text, src = p4fi.content(c.cl), 'p4'
+            if text is None:
+                raise error.Abort('error generating file content %d %s' % (
+                    c.cl, self.relpath))
+
+            meta = {}
+            if self._p4filelog.isexec(c.cl):
+                fileflags[c.cl] = 'x'
+            if self._p4filelog.issymlink(c.cl):
+                fileflags[c.cl] = 'l'
+            if self._p4filelog.iskeyworded(c.cl):
+                text = re.sub(KEYWORD_REGEX, r'$\1$', text)
+
+            node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
+            self._ui.debug(
+                'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
+                'path: %s\n' % (short(node), short(fparent1), linkrev,
+                    len(text), src, self.relpath))
+
+        newlen = len(hgfilelog)
+        return fileflags, origlen, newlen
