@@ -1484,31 +1484,24 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     obsolete => None entries in the mapping indicate nodes with no successor"""
     obsoletenotrebased = {}
 
-    # Build a mapping successor => obsolete nodes for the obsolete
-    # nodes to be rebased
-    allsuccessors = {}
-    cl = repo.changelog
-    for r in rebaseobsrevs:
-        node = cl.node(r)
-        for s in obsutil.allsuccessors(repo.obsstore, [node]):
-            try:
-                allsuccessors[cl.rev(s)] = cl.rev(node)
-            except LookupError:
-                pass
-
-    if allsuccessors:
-        # Look for successors of obsolete nodes to be rebased among
-        # the ancestors of dest
-        ancs = cl.ancestors([dest],
-                            stoprev=min(allsuccessors),
-                            inclusive=True)
-        for s in allsuccessors:
-            if s in ancs:
-                obsoletenotrebased[allsuccessors[s]] = s
-            elif (s == allsuccessors[s] and
-                  allsuccessors.values().count(s) == 1):
-                # plain prune
-                obsoletenotrebased[s] = None
+    cl = repo.unfiltered().changelog
+    nodemap = cl.nodemap
+    destnode = cl.node(dest)
+    for srcrev in rebaseobsrevs:
+        srcnode = cl.node(srcrev)
+        # XXX: more advanced APIs are required to handle split correctly
+        successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
+        if len(successors) == 1:
+            # obsutil.allsuccessors includes node itself. When the list only
+            # contains one element, it means there are no successors.
+            obsoletenotrebased[srcrev] = None
+        else:
+            for succnode in successors:
+                if succnode == srcnode or succnode not in nodemap:
+                    continue
+                if cl.isancestor(succnode, destnode):
+                    obsoletenotrebased[srcrev] = nodemap[succnode]
+                    break
 
     return obsoletenotrebased
 
