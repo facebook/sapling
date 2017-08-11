@@ -131,10 +131,9 @@ test diff colorisation
   \x1b[38;5;34m+  bar*baz (glob)\x1b[39m (esc)
      bar*bad (glob)
   \x1b[38;5;124m-  bar*baz (glob)\x1b[39m (esc)
-  
-  ERROR: test-failure.t output changed
+  \x1b[38;5;88mERROR: \x1b[39m\x1b[38;5;9mtest-failure.t\x1b[39m\x1b[38;5;88m output changed\x1b[39m (esc)
   !
-  Failed test-failure.t: output changed
+  \x1b[38;5;88mFailed \x1b[39m\x1b[38;5;9mtest-failure.t\x1b[39m\x1b[38;5;88m: output changed\x1b[39m (esc)
   # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]

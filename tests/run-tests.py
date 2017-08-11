@@ -94,12 +94,47 @@ if os.name != 'nt':
     try: # is pygments installed
         import pygments
         import pygments.lexers as lexers
+        import pygments.lexer as lexer
         import pygments.formatters as formatters
+        import pygments.token as token
+        import pygments.style as style
         pygmentspresent = True
         difflexer = lexers.DiffLexer()
         terminal256formatter = formatters.Terminal256Formatter()
     except ImportError:
         pass
+
+if pygmentspresent:
+    class TestRunnerStyle(style.Style):
+        default_style = ""
+        skipped = token.string_to_tokentype("Token.Generic.Skipped")
+        failed = token.string_to_tokentype("Token.Generic.Failed")
+        error = token.string_to_tokentype("Token.Generic.Error")
+        skippedname = token.string_to_tokentype("Token.Generic.SName")
+        failedname = token.string_to_tokentype("Token.Generic.FName")
+        styles = {
+            skipped:         '#e5e5e5',
+            skippedname:     '#00ffff',
+            failed:          '#7f0000',
+            failedname:      '#ff0000',
+        }
+
+    class TestRunnerLexer(lexer.RegexLexer):
+        tokens = {
+            'root': [
+                (r'^Skipped', token.Generic.Skipped, 'skipped'),
+                (r'^Failed ', token.Generic.Failed, 'failed'),
+                (r'^ERROR: ', token.Generic.Failed, 'failed'),
+            ],
+            'skipped': [
+                (r'[\w-]+\.t', token.Generic.SName),
+                (r':.*', token.Generic.Skipped),
+            ],
+            'failed': [
+                (r'[\w-]+\.t', token.Generic.FName),
+                (r'(:| ).*', token.Generic.Failed),
+            ]
+        }
 
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
@@ -1598,7 +1633,14 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('t')
                 else:
                     if not self._options.nodiff:
-                        self.stream.write('\nERROR: %s output changed\n' % test)
+                        formatted = '\nERROR: %s output changed\n' % test
+                        if self.color:
+                            formatted = pygments.highlight(
+                                formatted,
+                                TestRunnerLexer(),
+                                formatters.Terminal256Formatter(
+                                            style=TestRunnerStyle))
+                        self.stream.write(formatted)
                     self.stream.write('!')
 
                 self.stream.flush()
@@ -2000,9 +2042,23 @@ class TextTestRunner(unittest.TextTestRunner):
 
             if not self._runner.options.noskips:
                 for test, msg in result.skipped:
-                    self.stream.writeln('Skipped %s: %s' % (test.name, msg))
+                    formatted = 'Skipped %s: %s' % (test.name, msg)
+                    if result.color:
+                        formatted = pygments.highlight(
+                            formatted,
+                            TestRunnerLexer(),
+                            formatters.Terminal256Formatter(
+                                            style=TestRunnerStyle)).strip("\n")
+                    self.stream.writeln(formatted)
             for test, msg in result.failures:
-                self.stream.writeln('Failed %s: %s' % (test.name, msg))
+                formatted = 'Failed %s: %s' % (test.name, msg)
+                if result.color:
+                    formatted = pygments.highlight(
+                        formatted,
+                        TestRunnerLexer(),
+                        formatters.Terminal256Formatter(
+                                        style=TestRunnerStyle)).strip("\n")
+                self.stream.writeln(formatted)
             for test, msg in result.errors:
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
