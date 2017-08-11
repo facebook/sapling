@@ -90,7 +90,9 @@ struct FileDelta {
   2: JournalPosition toPosition
   /** The complete list of paths from both the snapshot and the overlay that
    * changed between fromPosition and toPosition */
-  3: list<string> paths
+  3: list<string> changedPaths
+  4: list<string> createdPaths
+  5: list<string> removedPaths
 }
 
 enum StatusCode {

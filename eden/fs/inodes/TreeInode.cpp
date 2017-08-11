@@ -701,7 +701,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   }
 
   getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   // Now that we have the file handle, let's look up the attributes.
   auto getattrResult = handle->getattr();
@@ -791,7 +791,7 @@ FileInodePtr TreeInode::symlink(
   }
 
   getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return inode;
 }
@@ -856,7 +856,7 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
   }
 
   getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return inode;
 }
@@ -917,7 +917,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
   }
 
   getMount()->getJournal().wlock()->addDelta(
-      std::make_unique<JournalDelta>(JournalDelta{targetName}));
+      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return newChild;
 }
@@ -992,7 +992,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
 
     // Record the change in the journal
     getMount()->getJournal().wlock()->addDelta(
-        std::make_unique<JournalDelta>(JournalDelta{targetName}));
+        std::make_unique<JournalDelta>(targetName, JournalDelta::REMOVED));
 
     return folly::Unit{};
   }
@@ -1398,6 +1398,15 @@ Future<Unit> TreeInode::doRename(
     // holding the rename lock which prevents it from being renamed or unlinked
     // while we are operating, so getPath() must have a value here.
     overlay->saveOverlayDir(destParent->getNodeId(), locks.destContents());
+  }
+
+  auto srcPath = getPath();
+  auto destPath = destParent->getPath();
+  if (srcPath.hasValue() && destPath.hasValue()) {
+    getMount()->getJournal().wlock()->addDelta(std::make_unique<JournalDelta>(
+        srcPath.value() + srcName,
+        destPath.value() + destName,
+        JournalDelta::RENAME));
   }
 
   // Release the rename locks before we destroy the deleted destination child

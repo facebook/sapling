@@ -6,8 +6,9 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/model:model",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/folly:function",
+        "@/folly/experimental/logging:logging",
     ],
 )
 

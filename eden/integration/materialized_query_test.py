@@ -49,7 +49,9 @@ class MaterializedQueryTest:
         self.assertNotEqual(0, pos.mountGeneration)
 
         changed = self.client.getFilesChangedSince(self.mount, pos)
-        self.assertEqual(0, len(changed.paths))
+        self.assertEqual(set(), set(changed.changedPaths))
+        self.assertEqual(set(), set(changed.createdPaths))
+        self.assertEqual(set(), set(changed.removedPaths))
         self.assertEqual(pos, changed.fromPosition)
         self.assertEqual(pos, changed.toPosition)
 
@@ -97,6 +99,26 @@ class MaterializedQueryTest:
         self.assertEqual(errno.ERANGE, context.exception.errorCode,
                          msg='Must return ERANGE')
 
+    def test_removeFile(self):
+        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
+
+        os.unlink(os.path.join(self.mount, 'adir', 'file'))
+        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
+        self.assertEqual(set(), set(changed.createdPaths))
+        self.assertEqual(set(), set(changed.changedPaths))
+        self.assertEqual(set(['adir/file']), set(changed.removedPaths))
+
+    def test_renameFile(self):
+        initial_pos = self.client.getCurrentJournalPosition(self.mount)
+        self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
+
+        os.rename(os.path.join(self.mount, 'hello'), os.path.join(self.mount, 'bye'))
+        changed = self.client.getFilesChangedSince(self.mount, initial_pos)
+        self.assertEqual(set(['bye']), set(changed.createdPaths))
+        self.assertEqual(set(), set(changed.changedPaths))
+        self.assertEqual(set(['hello']), set(changed.removedPaths))
+
     def test_addFile(self):
         initial_pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
@@ -108,7 +130,9 @@ class MaterializedQueryTest:
                              msg='creating a file bumps the journal')
 
             changed = self.client.getFilesChangedSince(self.mount, initial_pos)
-            self.assertEqual(['overlaid'], changed.paths)
+            self.assertEqual(set(['overlaid']), set(changed.createdPaths))
+            self.assertEqual(set(), set(changed.changedPaths))
+            self.assertEqual(set(), set(changed.removedPaths))
             self.assertEqual(initial_pos.sequenceNumber + 1,
                              changed.fromPosition.sequenceNumber,
                              msg='changes start AFTER initial_pos')
@@ -119,7 +143,9 @@ class MaterializedQueryTest:
         self.assertEqual(INITIAL_SEQ + 2, pos_after_overlaid.sequenceNumber,
                          msg='writing bumps the journal')
         changed = self.client.getFilesChangedSince(self.mount, initial_pos)
-        self.assertEqual(['overlaid'], changed.paths)
+        self.assertEqual(set(['overlaid']), set(changed.createdPaths))
+        self.assertEqual(set(), set(changed.changedPaths))
+        self.assertEqual(set(), set(changed.removedPaths))
         self.assertEqual(initial_pos.sequenceNumber + 1,
                          changed.fromPosition.sequenceNumber,
                          msg='changes start AFTER initial_pos')
@@ -137,7 +163,9 @@ class MaterializedQueryTest:
 
         changed = self.client.getFilesChangedSince(
             self.mount, pos_after_overlaid)
-        self.assertEqual(['adir/file'], changed.paths)
+        self.assertEqual(set(['adir/file']), set(changed.changedPaths))
+        self.assertEqual(set(), set(changed.createdPaths))
+        self.assertEqual(set(), set(changed.removedPaths))
         self.assertEqual(pos_after_overlaid.sequenceNumber + 1,
                          changed.fromPosition.sequenceNumber,
                          msg='changes start AFTER pos_after_overlaid')

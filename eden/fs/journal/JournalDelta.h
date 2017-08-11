@@ -20,8 +20,14 @@ namespace eden {
 
 class JournalDelta {
  public:
+  enum Created { CREATED };
+  enum Removed { REMOVED };
+  enum Renamed { RENAME };
   JournalDelta() = default;
   JournalDelta(std::initializer_list<RelativePath> overlayFileNames);
+  JournalDelta(RelativePathPiece fileName, Created);
+  JournalDelta(RelativePathPiece fileName, Removed);
+  JournalDelta(RelativePathPiece oldName, RelativePathPiece newName, Renamed);
 
   /** the prior delta and its chain */
   std::shared_ptr<const JournalDelta> previous;
@@ -42,6 +48,10 @@ class JournalDelta {
 
   /** The set of files that changed in the overlay in this update */
   std::unordered_set<RelativePath> changedFilesInOverlay;
+  /** The set of files that were created in the overlay in this update */
+  std::unordered_set<RelativePath> createdFilesInOverlay;
+  /** The set of files that were removed in the overlay in this update */
+  std::unordered_set<RelativePath> removedFilesInOverlay;
 
   /** Merge the deltas running back from this delta for all deltas
    * whose toSequence is >= limitSequence.

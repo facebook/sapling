@@ -324,33 +324,32 @@ void EdenServiceHandler::getFilesChangedSince(
         "You need to compute a new basis for delta queries.");
   }
 
-  std::unordered_set<RelativePath> changedFiles;
-
   out.toPosition.sequenceNumber = delta->toSequence;
   out.toPosition.snapshotHash = thriftHash(delta->toHash);
   out.toPosition.mountGeneration = edenMount->getMountGeneration();
 
   out.fromPosition = out.toPosition;
 
-  while (delta) {
-    if (delta->toSequence <= fromPosition->sequenceNumber) {
-      // We've reached the end of the interesting section
-      break;
+  // The +1 is because the core merge stops at the item prior to
+  // its limitSequence parameter and we want the changes *since*
+  // the provided sequence number.
+  auto merged = delta->merge(fromPosition->sequenceNumber + 1, true);
+  if (merged) {
+    out.fromPosition.sequenceNumber = merged->fromSequence;
+    out.fromPosition.snapshotHash = thriftHash(merged->fromHash);
+    out.fromPosition.mountGeneration = out.toPosition.mountGeneration;
+
+    for (auto& path : merged->changedFilesInOverlay) {
+      out.changedPaths.emplace_back(path.stringPiece().str());
     }
 
-    changedFiles.insert(
-        delta->changedFilesInOverlay.begin(),
-        delta->changedFilesInOverlay.end());
+    for (auto& path : merged->createdFilesInOverlay) {
+      out.createdPaths.emplace_back(path.stringPiece().str());
+    }
 
-    out.fromPosition.sequenceNumber = delta->fromSequence;
-    out.fromPosition.snapshotHash = thriftHash(delta->fromHash);
-    out.fromPosition.mountGeneration = edenMount->getMountGeneration();
-
-    delta = delta->previous;
-  }
-
-  for (auto& path : changedFiles) {
-    out.paths.emplace_back(path.stringPiece().str());
+    for (auto& path : merged->removedFilesInOverlay) {
+      out.removedPaths.emplace_back(path.stringPiece().str());
+    }
   }
 }
 
