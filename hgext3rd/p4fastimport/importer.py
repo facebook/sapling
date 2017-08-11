@@ -382,6 +382,8 @@ class BlobFileImporter(FileImporter):
 
         hgfilelog = self.hgfilelog()
         origlen = len(hgfilelog)
+        largefiles = []
+        lfsext = self.findlfs()
 
         for c in sorted(revs):
             linkrev = self._importset.linkrev(c.cl)
@@ -414,5 +416,12 @@ class BlobFileImporter(FileImporter):
                 'path: %s\n' % (short(node), short(fparent1), linkrev,
                     len(text), src, self.relpath))
 
+            if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
+                lfspointer = lfsext.pointer.deserialize(
+                        hgfilelog.revision(node, raw=True))
+                oid = lfspointer.oid()
+                largefiles.append((c.cl, self.depotfile, oid))
+                self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
+
         newlen = len(hgfilelog)
-        return fileflags, origlen, newlen
+        return fileflags, largefiles, origlen, newlen

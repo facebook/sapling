@@ -354,18 +354,20 @@ def p4syncimport(ui, repo, client, **opts):
         ui.note(_('running a sync import.\n'))
         count = 0
         fileinfo = {}
+        largefileslist = []
         p4filelogs = sorted(p4filelogs)
         tr = repo.transaction('syncimport')
         try:
             for p4fl in p4filelogs:
                 bfi = importer.BlobFileImporter(ui, repo, importset, p4fl)
                 # Create filelog.
-                fileflags, oldtiprev, newtiprev = bfi.create(tr)
+                fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
                 fileinfo[p4fl.depotfile] = {
                     'flags': fileflags,
                     'localname': bfi.relpath,
                     'baserev': oldtiprev,
                 }
+                largefileslist.extend(largefiles)
                 count += 1
             # Generate manifest and changelog
             clog = importer.BlobChangeManifestImporter(ui, repo, importset)
@@ -376,6 +378,11 @@ def p4syncimport(ui, repo, client, **opts):
             if opts.get('bookmark'):
                 ui.note(_('writing bookmark\n'))
                 writebookmark(tr, repo, revisions, opts['bookmark'])
+
+            if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
+                ui.note(_('writing lfs metadata to sqlite\n'))
+                writelfsmetadata(largefiles, revisions,
+                    ui.config('p4fastimport', 'lfsmetadata', None))
 
             tr.close()
             ui.note(_('%d revision(s), %d file(s) imported.\n') % (
