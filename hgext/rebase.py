@@ -461,12 +461,10 @@ class rebaseruntime(object):
                                        editor=editor,
                                        keepbranches=self.keepbranchesf,
                                        date=self.date)
-            if newnode is None:
-                newrev = self.dest
-            else:
+            if newnode is not None:
                 newrev = repo[newnode].rev()
-            for oldrev in self.state.iterkeys():
-                self.state[oldrev] = newrev
+                for oldrev in self.state.iterkeys():
+                    self.state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
             updatemq(repo, self.state, self.skipped, **opts)
