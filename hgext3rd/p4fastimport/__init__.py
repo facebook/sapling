@@ -301,10 +301,13 @@ def run_import(ui, repo, client, changelists, **opts):
 
 @command(
         'p4syncimport',
-        [('P', 'path', '.', _('path to the local depot store'), _('PATH'))],
-        _('[-P PATH] client'),
+        [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
+         ('B', 'bookmark', '', _('bookmark to set'), _('NAME'))],
+        _('[-P PATH] client [-B NAME] bookmarkname'),
         )
 def p4syncimport(ui, repo, client, **opts):
+    if opts.get('bookmark'):
+        scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
     startcl = None
     if len(repo) > 0 and startcl is None:
         latestctx = list(repo.set(
@@ -369,6 +372,10 @@ def p4syncimport(ui, repo, client, **opts):
             revisions = []
             for cl, hgnode in clog.creategen(tr, fileinfo):
                 revisions.append((cl, hex(hgnode)))
+
+            if opts.get('bookmark'):
+                ui.note(_('writing bookmark\n'))
+                writebookmark(tr, repo, revisions, opts['bookmark'])
 
             tr.close()
             ui.note(_('%d revision(s), %d file(s) imported.\n') % (

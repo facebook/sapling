@@ -29,7 +29,7 @@ Sync import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
+  $ hg p4fastimport --bookmark master --debug -P $P4ROOT hg-p4-import
   loading changelist numbers.
   2 changelists to import.
   loading list of files.
@@ -44,6 +44,7 @@ Sync import
   changelist 1: writing changelog: initial
   changelist 2: writing manifest. node: 5c8695bebd8f p1: dbcf87f9f16c p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
+  writing bookmark
   updating the branch cache
   2 revision(s), 2 file(s) imported.
   $ cd $p4wd
@@ -68,7 +69,7 @@ Sync import
   add //depot/Main/d/f/g#1
   Change 3 submitted.
   $ cd $hgwd
-  $ hg p4syncimport --debug -P $P4ROOT hg-p4-import
+  $ hg p4syncimport --bookmark master --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 3, node: * (glob)
   loading changelist numbers.
   1 changelists to import.
@@ -85,6 +86,7 @@ Sync import
   writing filelog: 0973eb1b2ecc, p1 000000000000, linkrev 2, 2 bytes, *: p4, path: Main/d/f/g (glob)
   changelist 3: writing manifest. node: 2f8836be616d p1: 5c8695bebd8f p2: 000000000000 linkrev: 2
   changelist 3: writing changelog: third
+  writing bookmark
   updating the branch cache
   1 revision(s), 4 file(s) imported.
 
@@ -96,6 +98,17 @@ Verify
   crosschecking files in changesets and manifests
   checking files
   5 files, 3 changesets, 7 total revisions
+
+  $ hg update master
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master)
+
+  $ hg manifest -r master
+  Main/a
+  Main/b
+  Main/c
+  Main/d/e
+  Main/d/f/g
 
 End Test
   stopping the p4 server
