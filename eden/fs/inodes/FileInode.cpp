@@ -49,16 +49,10 @@ FileInode::State::State(
   if (!h.hasValue()) {
     // File is materialized
     auto filePath = inode->getLocalPath();
-    struct stat st;
-    file =
-        Overlay::openFile(filePath.c_str(), Overlay::kHeaderIdentifierFile, st);
-    atime = st.st_atim;
-    ctime = st.st_ctim;
-    mtime = st.st_mtim;
+    file = Overlay::openFile(
+        filePath.c_str(), Overlay::kHeaderIdentifierFile, timeStamps);
   } else {
-    atime = lastCheckoutTime;
-    ctime = lastCheckoutTime;
-    mtime = lastCheckoutTime;
+    timeStamps.setTimestampValues(lastCheckoutTime);
   }
 }
 
@@ -72,9 +66,7 @@ FileInode::State::State(
       rdev(rdev),
       creationTime(std::chrono::system_clock::now()),
       file(std::move(file)) {
-  atime = lastCheckoutTime;
-  ctime = lastCheckoutTime;
-  mtime = lastCheckoutTime;
+  timeStamps.setTimestampValues(lastCheckoutTime);
 }
 /*
  * Defined State Destructor explicitly to avoid including
@@ -665,9 +657,9 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
   auto header = Overlay::createHeader(
       Overlay::kHeaderIdentifierFile,
       Overlay::kHeaderVersion,
-      state->atime,
-      state->ctime,
-      state->mtime);
+      state->timeStamps.atime,
+      state->timeStamps.ctime,
+      state->timeStamps.mtime);
   auto iov = header.getIov();
 
   // We must not be materialized yet
@@ -681,9 +673,9 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     // We don't want to set the in-memory timestamps to the timestamps returned
     // by the below openFile function as we just wrote these timestamps in to
     // overlay using writeFileAtomic.
-    struct stat st;
+    InodeTimestamps timeStamps;
     state->file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, st);
+        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
     sha1 = Hash::sha1(ByteRange{});
   } else {
     if (!state->blob) {
@@ -700,9 +692,9 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
 
     folly::writeFileAtomic(
         filePath.stringPiece(), iov.data(), iov.size(), 0600);
-    struct stat st;
+    InodeTimestamps timeStamps;
     state->file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, st);
+        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
 
     sha1 = getObjectStore()->getSha1ForBlob(state->hash.value());
   }
@@ -770,22 +762,16 @@ void FileInode::storeSha1(
 }
 
 // Gets the immemory timestamps of the inode.
-void FileInode::getTimestamps(struct stat& st) {
+InodeBase::InodeTimestamps FileInode::getTimestamps() const {
   auto state = state_.rlock();
-  st.st_atim = state->atime;
-  st.st_ctim = state->ctime;
-  st.st_mtim = state->mtime;
+  return state->timeStamps;
 }
 
 void FileInode::updateOverlayHeader() const {
   auto state = state_.wlock();
-  struct stat st;
   if (state->file) {
     // File is a materialized file
-    st.st_atim = state->atime;
-    st.st_ctim = state->ctime;
-    st.st_mtim = state->mtime;
-    Overlay::updateTimestampToHeader(state->file.fd(), st);
+    Overlay::updateTimestampToHeader(state->file.fd(), state->timeStamps);
   }
 }
 }

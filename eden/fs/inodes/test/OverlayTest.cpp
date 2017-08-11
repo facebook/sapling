@@ -47,11 +47,11 @@ class OverlayTest : public ::testing::Test {
   }
 
   static void expectTimeStampsEqual(
-      const struct stat& a,
-      const struct stat& b) {
-    expectTimeSpecsEqual(a.st_mtim, b.st_mtim);
-    expectTimeSpecsEqual(a.st_atim, b.st_atim);
-    expectTimeSpecsEqual(a.st_ctim, b.st_ctim);
+      const InodeBase::InodeTimestamps& a,
+      const InodeBase::InodeTimestamps& b) {
+    expectTimeSpecsEqual(a.atime, b.atime);
+    expectTimeSpecsEqual(a.mtime, b.mtime);
+    expectTimeSpecsEqual(a.ctime, b.ctime);
   }
 
   TestMount mount_;
@@ -87,37 +87,35 @@ TEST_F(OverlayTest, testModifyRemount) {
 TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
   // Materialize file and directory
   // test timestamp behavior in overlay on remount.
-  struct stat beforeRemountFile;
-  struct stat beforeRemountDir;
+  InodeBase::InodeTimestamps beforeRemountFile;
+  InodeBase::InodeTimestamps beforeRemountDir;
   mount_.overwriteFile("dir/a.txt", "contents changed\n");
 
   {
     // We do not want to keep references to inode in order to remount.
     auto inodeFile = mount_.getFileInode("dir/a.txt");
     EXPECT_FILE_INODE(inodeFile, "contents changed\n", 0644);
-    inodeFile->getTimestamps(beforeRemountFile);
+    beforeRemountFile = inodeFile->getTimestamps();
   }
 
   {
     // Check for materialized files.
     mount_.remount();
     auto inodeRemount = mount_.getFileInode("dir/a.txt");
-    struct stat afterRemount;
-    inodeRemount->getTimestamps(afterRemount);
+    auto afterRemount = inodeRemount->getTimestamps();
     expectTimeStampsEqual(beforeRemountFile, afterRemount);
   }
 
   {
     auto inodeDir = mount_.getTreeInode("dir");
-    inodeDir->getTimestamps(beforeRemountDir);
+    beforeRemountDir = inodeDir->getTimestamps();
   }
 
   {
     // Check for materialized directory
     mount_.remount();
     auto inodeRemount = mount_.getTreeInode("dir");
-    struct stat afterRemount;
-    inodeRemount->getTimestamps(afterRemount);
+    InodeBase::InodeTimestamps afterRemount = inodeRemount->getTimestamps();
     expectTimeStampsEqual(beforeRemountDir, afterRemount);
   }
 }

@@ -53,6 +53,14 @@ InodeBase::InodeBase(
              << ") created: " << getLogPath();
 }
 
+// Helper function to set the timestamps of InodeTimestamps.
+void InodeBase::InodeTimestamps::setTimestampValues(
+    const struct timespec& timeStamp) {
+  atime = timeStamp;
+  ctime = timeStamp;
+  mtime = timeStamp;
+}
+
 // See Dispatcher::getattr
 folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();

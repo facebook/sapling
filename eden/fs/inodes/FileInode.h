@@ -168,7 +168,7 @@ class FileInode : public InodeBase {
   /**
    * Get the timestamps of the inode.
    */
-  void getTimestamps(struct stat& st);
+  InodeTimestamps getTimestamps() const;
 
  private:
   /**
@@ -218,9 +218,7 @@ class FileInode : public InodeBase {
     /**
      * Timestamps for FileInode.
      */
-    struct timespec atime;
-    struct timespec ctime;
-    struct timespec mtime;
+    InodeTimestamps timeStamps;
   };
 
   /**

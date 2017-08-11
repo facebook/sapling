@@ -205,14 +205,13 @@ void Overlay::initNewOverlay() {
 }
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
-  struct stat st;
-  auto dirData = deserializeOverlayDir(inodeNumber, st);
+  TreeInode::Dir result;
+  auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
   if (!dirData.hasValue()) {
     return folly::none;
   }
   const auto& dir = dirData.value();
 
-  TreeInode::Dir result;
   for (auto& iter : dir.entries) {
     const auto& name = iter.first;
     const auto& value = iter.second;
@@ -226,9 +225,6 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
     }
     result.entries.emplace(PathComponentPiece(name), std::move(entry));
   }
-  result.atime = st.st_atim;
-  result.ctime = st.st_ctim;
-  result.mtime = st.st_mtim;
 
   return folly::Optional<TreeInode::Dir>(std::move(result));
 }
@@ -268,7 +264,11 @@ void Overlay::saveOverlayDir(
 
   // Add header to the overlay directory.
   auto header = createHeader(
-      kHeaderIdentifierDir, kHeaderVersion, dir->atime, dir->ctime, dir->mtime);
+      kHeaderIdentifierDir,
+      kHeaderVersion,
+      dir->timeStamps.atime,
+      dir->timeStamps.ctime,
+      dir->timeStamps.mtime);
 
   auto iov = header.getIov();
   iov.push_back(
@@ -311,8 +311,8 @@ fuse_ino_t Overlay::getMaxRecordedInode() {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
 
-    struct stat st;
-    auto dir = deserializeOverlayDir(dirInodeNumber, st);
+    InodeBase::InodeTimestamps timeStamps;
+    auto dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
     if (!dir.hasValue()) {
       continue;
     }
@@ -367,7 +367,7 @@ AbsolutePath Overlay::getFilePath(fuse_ino_t inodeNumber) const {
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     fuse_ino_t inodeNumber,
-    struct stat& st) const {
+    InodeBase::InodeTimestamps& timeStamps) const {
   auto path = getFilePath(inodeNumber);
 
   // Read the file and de-serialize it into data
@@ -394,7 +394,7 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
 
   StringPiece header{serializedData, 0, kHeaderLength};
   // validate header and get the timestamps
-  parseHeader(header, kHeaderIdentifierDir, st);
+  parseHeader(header, kHeaderIdentifierDir, timeStamps);
 
   StringPiece contents{serializedData};
   contents.advance(kHeaderLength);
@@ -433,7 +433,7 @@ folly::IOBuf Overlay::createHeader(
 folly::File Overlay::openFile(
     folly::StringPiece filePath,
     folly::StringPiece headerId,
-    struct stat& st) {
+    InodeBase::InodeTimestamps& timeStamps) {
   // Open the overlay file
   folly::File file(filePath, O_RDWR);
 
@@ -442,7 +442,7 @@ folly::File Overlay::openFile(
   folly::readFile(file.fd(), contents, kHeaderLength);
 
   StringPiece header{contents};
-  parseHeader(header, headerId, st);
+  parseHeader(header, headerId, timeStamps);
   return file;
 }
 
@@ -485,7 +485,7 @@ folly::File Overlay::createOverlayFile(fuse_ino_t childNumber) {
 void Overlay::parseHeader(
     folly::StringPiece header,
     folly::StringPiece headerId,
-    struct stat& st) {
+    InodeBase::InodeTimestamps& timeStamps) {
   folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{header});
   folly::io::Cursor cursor(&buf);
 
@@ -504,27 +504,29 @@ void Overlay::parseHeader(
   if (version != kHeaderVersion) {
     folly::throwSystemError(EIO, "Unexpected overlay version :", version);
   }
-  st.st_atim.tv_sec = cursor.readBE<uint64_t>();
-  st.st_atim.tv_nsec = cursor.readBE<uint64_t>();
-  st.st_ctim.tv_sec = cursor.readBE<uint64_t>();
-  st.st_ctim.tv_nsec = cursor.readBE<uint64_t>();
-  st.st_mtim.tv_sec = cursor.readBE<uint64_t>();
-  st.st_mtim.tv_nsec = cursor.readBE<uint64_t>();
+  timeStamps.atime.tv_sec = cursor.readBE<uint64_t>();
+  timeStamps.atime.tv_nsec = cursor.readBE<uint64_t>();
+  timeStamps.ctime.tv_sec = cursor.readBE<uint64_t>();
+  timeStamps.ctime.tv_nsec = cursor.readBE<uint64_t>();
+  timeStamps.mtime.tv_sec = cursor.readBE<uint64_t>();
+  timeStamps.mtime.tv_nsec = cursor.readBE<uint64_t>();
 }
 // Helper function to update timestamps into overlay file
-void Overlay::updateTimestampToHeader(int fd, struct stat& st) {
+void Overlay::updateTimestampToHeader(
+    int fd,
+    const InodeBase::InodeTimestamps& timeStamps) {
   // Create a string piece with timestamps
   std::array<uint64_t, 6> buf;
   folly::IOBuf timestamps(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
   timestamps.clear();
 
   folly::io::Appender appender(&timestamps, 0);
-  appender.writeBE<uint64_t>(st.st_atim.tv_sec);
-  appender.writeBE<uint64_t>(st.st_atim.tv_nsec);
-  appender.writeBE<uint64_t>(st.st_ctim.tv_sec);
-  appender.writeBE<uint64_t>(st.st_ctim.tv_nsec);
-  appender.writeBE<uint64_t>(st.st_mtim.tv_sec);
-  appender.writeBE<uint64_t>(st.st_mtim.tv_nsec);
+  appender.writeBE<uint64_t>(timeStamps.atime.tv_sec);
+  appender.writeBE<uint64_t>(timeStamps.atime.tv_nsec);
+  appender.writeBE<uint64_t>(timeStamps.ctime.tv_sec);
+  appender.writeBE<uint64_t>(timeStamps.ctime.tv_nsec);
+  appender.writeBE<uint64_t>(timeStamps.mtime.tv_sec);
+  appender.writeBE<uint64_t>(timeStamps.mtime.tv_nsec);
 
   // replace the timestamps of current header with the new timestamps
   auto newHeader = timestamps.coalesce();

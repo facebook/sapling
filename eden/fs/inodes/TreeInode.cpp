@@ -641,9 +641,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(
         treeEntry.getName(), std::make_unique<Entry>(std::move(entry)));
   }
   // Set timestamps to lastCheckoutTime
-  dir.atime = lastCheckoutTime;
-  dir.ctime = lastCheckoutTime;
-  dir.mtime = lastCheckoutTime;
+  dir.timeStamps.setTimestampValues(lastCheckoutTime);
   return dir;
 }
 
@@ -2681,24 +2679,19 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
 }
 
 // Gets the immemory timestamps of the inode.
-void TreeInode::getTimestamps(struct stat& st) {
+InodeBase::InodeTimestamps TreeInode::getTimestamps() const {
   auto contents = contents_.rlock();
-  st.st_atim = contents->atime;
-  st.st_ctim = contents->ctime;
-  st.st_mtim = contents->mtime;
+  return contents->timeStamps;
 }
 
 void TreeInode::updateOverlayHeader() const {
   auto contents = contents_.wlock();
   if (contents->isMaterialized()) {
-    struct stat st;
+    InodeTimestamps timeStamps;
     auto filePath = getOverlay()->getFilePath(getNodeId());
     auto file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierDir, st);
-    st.st_atim = contents->atime;
-    st.st_mtim = contents->mtime;
-    st.st_ctim = contents->ctime;
-    Overlay::updateTimestampToHeader(file.fd(), st);
+        filePath.stringPiece(), Overlay::kHeaderIdentifierDir, timeStamps);
+    Overlay::updateTimestampToHeader(file.fd(), contents->timeStamps);
   }
 }
 }

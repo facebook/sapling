@@ -101,25 +101,23 @@ TEST(EdenMount, testLastCheckoutTime) {
 
   // Check if FileInode is updating lastCheckoutTime correctly
   auto fileInode = testMount.getFileInode("dir/foo.txt");
-  struct stat stFile;
-  fileInode->getTimestamps(stFile);
-  EXPECT_EQ(sec.count(), stFile.st_atim.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.st_atim.tv_nsec);
-  EXPECT_EQ(sec.count(), stFile.st_ctim.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.st_ctim.tv_nsec);
-  EXPECT_EQ(sec.count(), stFile.st_mtim.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.st_mtim.tv_nsec);
+  auto stFile = fileInode->getTimestamps();
+  EXPECT_EQ(sec.count(), stFile.atime.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.atime.tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.ctime.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.ctime.tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.mtime.tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.mtime.tv_nsec);
 
   // Check if TreeInode is updating lastCheckoutTime correctly
   auto treeInode = testMount.getTreeInode("dir");
-  struct stat stDir;
-  treeInode->getTimestamps(stDir);
-  EXPECT_EQ(sec.count(), stDir.st_atim.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.st_atim.tv_nsec);
-  EXPECT_EQ(sec.count(), stDir.st_ctim.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.st_ctim.tv_nsec);
-  EXPECT_EQ(sec.count(), stDir.st_mtim.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.st_mtim.tv_nsec);
+  InodeBase::InodeTimestamps stDir = treeInode->getTimestamps();
+  EXPECT_EQ(sec.count(), stDir.atime.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.atime.tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.ctime.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.ctime.tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.mtime.tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.mtime.tv_nsec);
 }
 }
 }

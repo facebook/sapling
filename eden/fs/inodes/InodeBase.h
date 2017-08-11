@@ -41,6 +41,17 @@ class InodeBase {
 
   virtual ~InodeBase();
 
+  /**
+   * Structure for wrapping atime,ctime,mtime
+   */
+  struct InodeTimestamps {
+    timespec atime;
+    timespec ctime;
+    timespec mtime;
+
+    void setTimestampValues(const timespec& timeStamp);
+  };
+
   fuse_ino_t getNodeId() const {
     return ino_;
   }
@@ -98,9 +109,8 @@ class InodeBase {
       const struct stat& attr,
       int to_set);
 
-  virtual folly::Future<folly::Unit> setxattr(folly::StringPiece name,
-                                              folly::StringPiece value,
-                                              int flags);
+  virtual folly::Future<folly::Unit>
+  setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
   virtual folly::Future<std::string> getxattr(folly::StringPiece name);
   virtual folly::Future<std::vector<std::string>> listxattr();
   virtual folly::Future<folly::Unit> removexattr(folly::StringPiece name);
