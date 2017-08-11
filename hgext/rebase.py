@@ -445,8 +445,7 @@ class rebaseruntime(object):
             else:
                 commitmsg = 'Collapsed revision'
                 for rebased in sorted(self.state):
-                    if rebased not in self.skipped and\
-                       self.state[rebased] >= revtodo:
+                    if rebased not in self.skipped:
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
@@ -467,8 +466,7 @@ class rebaseruntime(object):
             else:
                 newrev = repo[newnode].rev()
             for oldrev in self.state.iterkeys():
-                if self.state[oldrev] >= revtodo:
-                    self.state[oldrev] = newrev
+                self.state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
             updatemq(repo, self.state, self.skipped, **opts)
