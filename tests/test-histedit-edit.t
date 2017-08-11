@@ -460,7 +460,7 @@ Attempting to fold a change into a public change should not work:
   > EOF
   $ HGEDITOR="sh ../edit.sh" hg histedit 2
   warning: histedit rules saved to: .hg/histedit-last-edit.txt
-  hg: parse error: cannot fold into public change 18aa70c8ad22
+  hg: parse error: first changeset cannot use verb "fold"
   [255]
   $ cat .hg/histedit-last-edit.txt
   fold 0012be4a27ea 2 extend a

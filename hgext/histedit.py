@@ -1417,6 +1417,11 @@ def verifyactions(actions, state, ctxs):
     expected = set(c.node() for c in ctxs)
     seen = set()
     prev = None
+
+    if actions and actions[0].verb in ['roll', 'fold']:
+        raise error.ParseError(_('first changeset cannot use verb "%s"') %
+                               actions[0].verb)
+
     for action in actions:
         action.verify(prev, expected, seen)
         prev = action

@@ -541,3 +541,36 @@ Editor should have run only once
   END
 
   $ cd ..
+
+Test rolling into a commit with multiple children (issue5498)
+
+  $ hg init roll
+  $ cd roll
+  $ echo a > a
+  $ hg commit -qAm aa
+  $ echo b > b
+  $ hg commit -qAm bb
+  $ hg up -q ".^"
+  $ echo c > c
+  $ hg commit -qAm cc
+  $ hg log -G -T '{node|short} {desc}'
+  @  5db65b93a12b cc
+  |
+  | o  301d76bdc3ae bb
+  |/
+  o  8f0162e483d0 aa
+  
+
+  $ hg histedit . --commands - << EOF
+  > r 5db65b93a12b
+  > EOF
+  hg: parse error: first changeset cannot use verb "roll"
+  [255]
+  $ hg log -G -T '{node|short} {desc}'
+  @  5db65b93a12b cc
+  |
+  | o  301d76bdc3ae bb
+  |/
+  o  8f0162e483d0 aa
+  
+
