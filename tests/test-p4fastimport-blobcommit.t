@@ -89,6 +89,10 @@ Sync import
   writing bookmark
   updating the branch cache
   1 revision(s), 4 file(s) imported.
+  $ hg p4fastimport --bookmark master --debug -P $P4ROOT hg-p4-import
+  incremental import from changelist: 4, node: * (glob)
+  loading changelist numbers.
+  0 changelists to import.
 
 Verify
 

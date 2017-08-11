@@ -34,8 +34,12 @@ def decodefileflags(json):
 
 def lastcl(node):
     if node:
-        assert node.extra().get('p4changelist')
-        return int(node.extra()['p4changelist']) + 1
+        assert node.extra().get('p4changelist') or \
+            node.extra().get('p4fullimportbasechangelist')
+        if node.extra().get('p4changelist'):
+            return int(node.extra()['p4changelist']) + 1
+        else:
+            return int(node.extra()['p4fullimportbasechangelist']) + 1
     return None
 
 def runworker(ui, fn, wargs, items):

@@ -168,7 +168,8 @@ def p4fastimport(ui, repo, client, **opts):
 
     startcl = None
     if len(repo) > 0 and startcl is None:
-        latestctx = list(repo.set("last(extra(p4changelist))"))
+        latestctx = list(repo.set(
+            "last(extra(p4changelist) or extra(p4fullimportbasechangelist))"))
         if latestctx:
             startcl = lastcl(latestctx[0])
             ui.note(_('incremental import from changelist: %d, node: %s\n') %
@@ -320,7 +321,6 @@ def p4syncimport(ui, repo, client, **opts):
             raise error.Abort(_('no valid p4 changelist number.'))
     elif len(repo) == 0:
         raise error.Abort(_('p4 blob commit does not support empty repo yet.'))
-
     # Fail if the specified client does not exist
     if not p4.exists_client(client):
         raise error.Abort(_('p4 client %s does not exist.') % client)
