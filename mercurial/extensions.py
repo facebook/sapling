@@ -396,8 +396,8 @@ def wrapfilecache(cls, propname, wrapper):
             break
 
     if currcls is object:
-        raise AttributeError(
-            _("type '%s' has no property '%s'") % (cls, propname))
+        raise AttributeError(r"type '%s' has no property '%s'" % (
+            cls, propname))
 
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
