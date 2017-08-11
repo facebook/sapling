@@ -916,12 +916,13 @@ def adjustdest(repo, rev, dest, state):
         |/          |/
         A           A
     """
+    # pick already rebased revs from state
+    source = [s for s, d in state.items() if d > 0]
+
     result = []
     for prev in repo.changelog.parentrevs(rev):
         adjusted = dest
         if prev != nullrev:
-            # pick already rebased revs from state
-            source = [s for s, d in state.items() if d > 0]
             candidate = repo.revs('max(%ld and (::%d))', source, prev).first()
             if candidate is not None:
                 adjusted = state[candidate]
