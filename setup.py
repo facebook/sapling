@@ -784,11 +784,11 @@ try:
     from distutils import cygwinccompiler
 
     # the -mno-cygwin option has been deprecated for years
-    compiler = cygwinccompiler.Mingw32CCompiler
+    mingw32compilerclass = cygwinccompiler.Mingw32CCompiler
 
     class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
         def __init__(self, *args, **kwargs):
-            compiler.__init__(self, *args, **kwargs)
+            mingw32compilerclass.__init__(self, *args, **kwargs)
             for i in 'compiler compiler_so linker_exe linker_so'.split():
                 try:
                     getattr(self, i).remove('-mno-cygwin')
@@ -809,11 +809,11 @@ if os.name == 'nt':
     # effect.
     from distutils import msvccompiler
 
-    compiler = msvccompiler.MSVCCompiler
+    msvccompilerclass = msvccompiler.MSVCCompiler
 
     class HackedMSVCCompiler(msvccompiler.MSVCCompiler):
         def initialize(self):
-            compiler.initialize(self)
+            msvccompilerclass.initialize(self)
             # "warning LNK4197: export 'func' specified multiple times"
             self.ldflags_shared.append('/ignore:4197')
             self.ldflags_shared_debug.append('/ignore:4197')
