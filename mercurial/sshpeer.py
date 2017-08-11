@@ -13,7 +13,6 @@ from .i18n import _
 from . import (
     error,
     pycompat,
-    repository,
     util,
     wireproto,
 )
@@ -115,7 +114,7 @@ class doublepipe(object):
     def flush(self):
         return self._main.flush()
 
-class sshpeer(wireproto.wirepeer, repository.legacypeer):
+class sshpeer(wireproto.wirepeer):
     def __init__(self, ui, path, create=False):
         self._url = path
         self._ui = ui
@@ -150,9 +149,6 @@ class sshpeer(wireproto.wirepeer, repository.legacypeer):
                 self._abort(error.RepoError(_("could not create remote repo")))
 
         self._validaterepo(sshcmd, args, remotecmd)
-
-        # TODO remove this alias once peerrepository inheritance is removed.
-        self._capabilities = self.capabilities
 
     # Begin of _basepeer interface.
 

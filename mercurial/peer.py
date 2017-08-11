@@ -8,7 +8,6 @@
 
 from __future__ import absolute_import
 
-from .i18n import _
 from . import (
     error,
     util,
@@ -95,46 +94,3 @@ def batchable(f):
         return next(batchable)
     setattr(plain, 'batchable', f)
     return plain
-
-class peerrepository(object):
-    def iterbatch(self):
-        """Batch requests but allow iterating over the results.
-
-        This is to allow interleaving responses with things like
-        progress updates for clients.
-        """
-        return localiterbatcher(self)
-
-    def capable(self, name):
-        '''tell whether repo supports named capability.
-        return False if not supported.
-        if boolean capability, return True.
-        if string capability, return string.'''
-        caps = self._capabilities()
-        if name in caps:
-            return True
-        name_eq = name + '='
-        for cap in caps:
-            if cap.startswith(name_eq):
-                return cap[len(name_eq):]
-        return False
-
-    def requirecap(self, name, purpose):
-        '''raise an exception if the given capability is not present'''
-        if not self.capable(name):
-            raise error.CapabilityError(
-                _('cannot %s; remote repository does not '
-                  'support the %r capability') % (purpose, name))
-
-    def local(self):
-        '''return peer as a localrepo, or None'''
-        return None
-
-    def peer(self):
-        return self
-
-    def canpush(self):
-        return True
-
-    def close(self):
-        pass

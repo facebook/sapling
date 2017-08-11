@@ -21,7 +21,6 @@ from . import (
     error,
     httpconnection,
     pycompat,
-    repository,
     statichttprepo,
     url,
     util,
@@ -87,7 +86,7 @@ def _wraphttpresponse(resp):
 
     resp.__class__ = readerproxy
 
-class httppeer(wireproto.wirepeer, repository.legacypeer):
+class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
         self._path = path
         self._caps = None
@@ -106,9 +105,6 @@ class httppeer(wireproto.wirepeer, repository.legacypeer):
 
         self._urlopener = url.opener(ui, authinfo)
         self._requestbuilder = urlreq.request
-
-        # TODO remove once peerrepository isn't in inheritance.
-        self._capabilities = self.capabilities
 
     def __del__(self):
         urlopener = getattr(self, '_urlopener', None)

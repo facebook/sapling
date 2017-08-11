@@ -19,7 +19,26 @@ class clientpeer(wireproto.wirepeer):
     def __init__(self, serverrepo):
         self.serverrepo = serverrepo
 
-    def _capabilities(self):
+    @property
+    def ui(self):
+        return self.serverrepo.ui
+
+    def url(self):
+        return 'test'
+
+    def local(self):
+        return None
+
+    def peer(self):
+        return self
+
+    def canpush(self):
+        return True
+
+    def close(self):
+        pass
+
+    def capabilities(self):
         return ['batch']
 
     def _call(self, cmd, **args):
