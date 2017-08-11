@@ -31,8 +31,8 @@ Source looks like "N"
     AD: A':Z D':Z
     BD: B':Z D':B'
    ABD: A':Z B':Z D':B'
-    CD: CRASH: revlog index out of range
-   ACD: A':Z C':A'A' D':Z
+    CD: ABORT: cannot use revision 3 as base, result would have 3 parents
+   ACD: A':Z C':A'B D':Z
    BCD: B':Z C':B'A D':B'
   ABCD: A':Z B':Z C':A'B' D':B'
 
@@ -52,4 +52,4 @@ Moving backwards
     C: ABORT: cannot use revision 3 as base, result would have 3 parents
    BC: B':Z C':B'A
    AC: 
-  BAC: ABORT: nothing to merge
+  BAC: B':Z C':B'A

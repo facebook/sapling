@@ -66,7 +66,6 @@ revignored = -3
 revprecursor = -4
 # plain prune (no successor)
 revpruned = -5
-revskipped = (revignored, revprecursor, revpruned)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -390,10 +389,7 @@ class rebaseruntime(object):
                 ui.status(_('rebasing %s\n') % desc)
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
-                p1, p2, base = defineparents(repo, rev, self.dest,
-                                             self.state,
-                                             self.destancestors,
-                                             self.obsoletenotrebased)
+                p1, p2, base = defineparents(repo, rev, self.dest, self.state)
                 self.storestatus(tr=tr)
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
@@ -463,9 +459,7 @@ class rebaseruntime(object):
         repo, ui, opts = self.repo, self.ui, self.opts
         if self.collapsef and not self.keepopen:
             p1, p2, _base = defineparents(repo, min(self.state),
-                                          self.dest, self.state,
-                                          self.destancestors,
-                                          self.obsoletenotrebased)
+                                          self.dest, self.state)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if self.collapsemsg:
@@ -960,15 +954,6 @@ def adjustdest(repo, rev, dest, state):
         result.append(adjusted)
     return result
 
-def nearestrebased(repo, rev, state):
-    """return the nearest ancestors of rev in the rebase result"""
-    rebased = [r for r in state if state[r] > nullmerge]
-    candidates = repo.revs('max(%ld  and (::%d))', rebased, rev)
-    if candidates:
-        return state[candidates.first()]
-    else:
-        return None
-
 def _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs, rebaseobsskipped):
     """
     Abort if rebase will create divergence or rebase is noop because of markers
@@ -992,107 +977,173 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs, rebaseobsskipped):
               "experimental.allowdivergence=True")
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
 
-def defineparents(repo, rev, dest, state, destancestors,
-                  obsoletenotrebased):
-    'Return the new parent relationship of the revision that will be rebased'
-    parents = repo[rev].parents()
-    p1 = p2 = nullrev
-    rp1 = None
+def successorrevs(repo, rev):
+    """yield revision numbers for successors of rev"""
+    unfi = repo.unfiltered()
+    nodemap = unfi.changelog.nodemap
+    for s in obsutil.allsuccessors(unfi.obsstore, [unfi[rev].node()]):
+        if s in nodemap:
+            yield nodemap[s]
 
-    p1n = parents[0].rev()
-    if p1n in destancestors:
-        p1 = dest
-    elif p1n in state:
-        if state[p1n] == nullmerge:
-            p1 = dest
-        elif state[p1n] in revskipped:
-            p1 = nearestrebased(repo, p1n, state)
-            if p1 is None:
-                p1 = dest
-        else:
-            p1 = state[p1n]
-    else: # p1n external
-        p1 = dest
-        p2 = p1n
+def defineparents(repo, rev, dest, state):
+    """Return new parents and optionally a merge base for rev being rebased
 
-    if len(parents) == 2 and parents[1].rev() not in destancestors:
-        p2n = parents[1].rev()
-        # interesting second parent
-        if p2n in state:
-            if p1 == dest: # p1n in destancestors or external
-                p1 = state[p2n]
-                if p1 == revprecursor:
-                    rp1 = obsoletenotrebased[p2n]
-            elif state[p2n] in revskipped:
-                p2 = nearestrebased(repo, p2n, state)
-                if p2 is None:
-                    # no ancestors rebased yet, detach
-                    p2 = dest
-            else:
-                p2 = state[p2n]
-        else: # p2n external
-            if p2 != nullrev: # p1n external too => rev is a merged revision
-                raise error.Abort(_('cannot use revision %d as base, result '
-                        'would have 3 parents') % rev)
-            p2 = p2n
-    repo.ui.debug(" future parents are %d and %d\n" %
-                            (repo[rp1 or p1].rev(), repo[p2].rev()))
+    The destination specified by "dest" cannot always be used directly because
+    previously rebase result could affect destination. For example,
 
-    if not any(p.rev() in state for p in parents):
-        # Case (1) root changeset of a non-detaching rebase set.
-        # Let the merge mechanism find the base itself.
-        base = None
-    elif not repo[rev].p2():
-        # Case (2) detaching the node with a single parent, use this parent
-        base = repo[rev].p1().rev()
+          D E    rebase -r C+D+E -d B
+          |/     C will be rebased to C'
+        B C      D's new destination will be C' instead of B
+        |/       E's new destination will be C' instead of B
+        A
+
+    The new parents of a merge is slightly more complicated. See the comment
+    block below.
+    """
+    cl = repo.changelog
+    def isancestor(a, b):
+        # take revision numbers instead of nodes
+        if a == b:
+            return True
+        elif a > b:
+            return False
+        return cl.isancestor(cl.node(a), cl.node(b))
+
+    oldps = repo.changelog.parentrevs(rev) # old parents
+    newps = [nullrev, nullrev] # new parents
+    dests = adjustdest(repo, rev, dest, state) # adjusted destinations
+    bases = list(oldps) # merge base candidates, initially just old parents
+
+    if all(r == nullrev for r in oldps[1:]):
+        # For non-merge changeset, just move p to adjusted dest as requested.
+        newps[0] = dests[0]
     else:
-        # Assuming there is a p1, this is the case where there also is a p2.
-        # We are thus rebasing a merge and need to pick the right merge base.
+        # For merge changeset, if we move p to dests[i] unconditionally, both
+        # parents may change and the end result looks like "the merge loses a
+        # parent", which is a surprise. This is a limit because "--dest" only
+        # accepts one dest per src.
         #
-        # Imagine we have:
-        # - M: current rebase revision in this step
-        # - A: one parent of M
-        # - B: other parent of M
-        # - D: destination of this merge step (p1 var)
+        # Therefore, only move p with reasonable conditions (in this order):
+        #   1. use dest, if dest is a descendent of (p or one of p's successors)
+        #   2. use p's rebased result, if p is rebased (state[p] > 0)
         #
-        # Consider the case where D is a descendant of A or B and the other is
-        # 'outside'. In this case, the right merge base is the D ancestor.
+        # Comparing with adjustdest, the logic here does some additional work:
+        #   1. decide which parents will not be moved towards dest
+        #   2. if the above decision is "no", should a parent still be moved
+        #      because it was rebased?
         #
-        # An informal proof, assuming A is 'outside' and B is the D ancestor:
+        # For example:
         #
-        # If we pick B as the base, the merge involves:
-        # - changes from B to M (actual changeset payload)
-        # - changes from B to D (induced by rebase) as D is a rebased
-        #   version of B)
-        # Which exactly represent the rebase operation.
+        #     C    # "rebase -r C -d D" is an error since none of the parents
+        #    /|    # can be moved. "rebase -r B+C -d D" will move C's parent
+        #   A B D  # B (using rule "2."), since B will be rebased.
         #
-        # If we pick A as the base, the merge involves:
-        # - changes from A to M (actual changeset payload)
-        # - changes from A to D (with include changes between unrelated A and B
-        #   plus changes induced by rebase)
-        # Which does not represent anything sensible and creates a lot of
-        # conflicts. A is thus not the right choice - B is.
-        #
-        # Note: The base found in this 'proof' is only correct in the specified
-        # case. This base does not make sense if is not D a descendant of A or B
-        # or if the other is not parent 'outside' (especially not if the other
-        # parent has been rebased). The current implementation does not
-        # make it feasible to consider different cases separately. In these
-        # other cases we currently just leave it to the user to correctly
-        # resolve an impossible merge using a wrong ancestor.
-        #
-        # xx, p1 could be -4, and both parents could probably be -4...
-        for p in repo[rev].parents():
-            if state.get(p.rev()) == p1:
-                base = p.rev()
-                break
-        else: # fallback when base not found
-            base = None
+        # The loop tries to be not rely on the fact that a Mercurial node has
+        # at most 2 parents.
+        for i, p in enumerate(oldps):
+            np = p # new parent
+            if any(isancestor(x, dests[i]) for x in successorrevs(repo, p)):
+                np = dests[i]
+            elif p in state and state[p] > 0:
+                np = state[p]
 
-            # Raise because this function is called wrong (see issue 4106)
-            raise AssertionError('no base found to rebase on '
-                                 '(defineparents called wrong)')
-    return rp1 or p1, p2, base
+            # "bases" only record "special" merge bases that cannot be
+            # calculated from changelog DAG (i.e. isancestor(p, np) is False).
+            # For example:
+            #
+            #   B'   # rebase -s B -d D, when B was rebased to B'. dest for C
+            #   | C  # is B', but merge base for C is B, instead of
+            #   D |  # changelog.ancestor(C, B') == A. If changelog DAG and
+            #   | B  # "state" edges are merged (so there will be an edge from
+            #   |/   # B to B'), the merge base is still ancestor(C, B') in
+            #   A    # the merged graph.
+            #
+            # Also see https://bz.mercurial-scm.org/show_bug.cgi?id=1950#c8
+            # which uses "virtual null merge" to explain this situation.
+            if isancestor(p, np):
+                bases[i] = nullrev
+
+            # If one parent becomes an ancestor of the other, drop the ancestor
+            for j, x in enumerate(newps[:i]):
+                if x == nullrev:
+                    continue
+                if isancestor(np, x):
+                    np = nullrev
+                elif isancestor(x, np):
+                    newps[j] = np
+                    np = nullrev
+                    bases[j], bases[i] = bases[i], bases[j]
+
+            newps[i] = np
+
+        # "rebasenode" updates to new p1, and the old p1 will be used as merge
+        # base. If only p2 changes, merging using unchanged p1 as merge base is
+        # suboptimal. Therefore swap parents to make the merge sane.
+        if newps[1] != nullrev and oldps[0] == newps[0]:
+            assert len(newps) == 2 and len(oldps) == 2
+            newps.reverse()
+            bases.reverse()
+
+        # No parent change might be an error because we fail to make rev a
+        # descendent of requested dest. This can happen, for example:
+        #
+        #     C    # rebase -r C -d D
+        #    /|    # None of A and B will be changed to D and rebase fails.
+        #   A B D
+        if set(newps) == set(oldps) and dest not in newps:
+            # The error message is for compatibility. It's a bit misleading
+            # since rebase is not supposed to add new parents.
+            raise error.Abort(_('cannot use revision %d as base, '
+                                'result would have 3 parents') % rev)
+
+    repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
+
+    # "rebasenode" updates to new p1, use the corresponding merge base.
+    if bases[0] != nullrev:
+        base = bases[0]
+    else:
+        base = None
+
+    # Check if the merge will contain unwanted changes. That may happen if
+    # there are multiple special (non-changelog ancestor) merge bases, which
+    # cannot be handled well by the 3-way merge algorithm. For example:
+    #
+    #     F
+    #    /|
+    #   D E  # "rebase -r D+E+F -d Z", when rebasing F, if "D" was chosen
+    #   | |  # as merge base, the difference between D and F will include
+    #   B C  # C, so the rebased F will contain C surprisingly. If "E" was
+    #   |/   #  chosen, the rebased F will contain B.
+    #   A Z
+    #
+    # But our merge base candidates (D and E in above case) could still be
+    # better than the default (ancestor(F, Z) == null). Therefore still
+    # pick one (so choose p1 above).
+    if sum(1 for b in bases if b != nullrev) > 1:
+        assert base is not None
+
+        # Revisions in the side (not chosen as merge base) branch that might
+        # contain "surprising" contents
+        siderevs = list(repo.revs('((%ld-%d) %% (%d+%d))',
+                                  bases, base, base, dest))
+
+        # If those revisions are covered by rebaseset, the result is good.
+        # A merge in rebaseset would be considered to cover its ancestors.
+        if siderevs:
+            rebaseset = [r for r, d in state.items() if d > 0]
+            merges = [r for r in rebaseset if cl.parentrevs(r)[1] != nullrev]
+            unwantedrevs = list(repo.revs('%ld - (::%ld) - %ld',
+                                          siderevs, merges, rebaseset))
+
+            # For revs not covered, it is worth a warning.
+            if unwantedrevs:
+                repo.ui.warn(
+                    _('warning: rebasing %d:%s may include unwanted changes '
+                      'from %s\n')
+                    % (rev, repo[rev], ', '.join('%d:%s' % (r, repo[r])
+                                                 for r in unwantedrevs)))
+
+    return newps[0], newps[1], base
 
 def isagitpatch(repo, patchname):
     'Return true if the given patch is in git format'

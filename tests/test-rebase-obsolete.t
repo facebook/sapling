@@ -488,9 +488,14 @@ Detach both parents
   >   A
   > EOF
 
-BROKEN: This raises an exception
-  $ hg rebase -d G -r 'B + D + F' 2>&1 | grep '^AssertionError'
-  AssertionError: no base found to rebase on (defineparents called wrong)
+  $ hg rebase -d G -r 'B + D + F'
+  rebasing 1:112478962961 "B" (B)
+  rebasing 2:b18e25de2cf5 "D" (D)
+  not rebasing ignored 4:26805aba1e60 "C" (C)
+  not rebasing ignored 5:4b61ff5c62e2 "E" (E)
+  rebasing 6:f15c3adaf214 "F" (F tip)
+  abort: cannot use revision 6 as base, result would have 3 parents
+  [255]
 
   $ cd ..
 
@@ -962,17 +967,19 @@ Rebase merge where successor of other parent is equal to destination
   >   A
   > EOF
 
-BROKEN: Raises an exception
-  $ hg rebase -d B -s E 2>&1 | grep AssertionError:
-  AssertionError: no base found to rebase on (defineparents called wrong)
+  $ hg rebase -d B -s E
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  rebasing 4:66f1a38021c9 "F" (F tip)
   $ hg log -G
-  o    4:66f1a38021c9 F
+  o    5:aae1787dacee F
   |\
-  | x  3:7fb047a69f22 E
-  | |
-  o |  2:b18e25de2cf5 D
-  |/
-  | o  1:112478962961 B
+  | | x  4:66f1a38021c9 F
+  | |/|
+  | | x  3:7fb047a69f22 E
+  | | |
+  | o |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
   |/
   o  0:426bada5c675 A
   
@@ -994,19 +1001,19 @@ Rebase merge where successor of one parent is ancestor of destination
   $ hg rebase -d C -s D
   note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
   rebasing 5:66f1a38021c9 "F" (F tip)
-BROKEN: not rebased on top of requested destination (C)
+
   $ hg log -G
-  o    6:50e9d60b99c6 F
+  o    6:0913febf6439 F
   |\
-  | | x  5:66f1a38021c9 F
-  | |/|
-  +-----o  4:26805aba1e60 C
+  +---x  5:66f1a38021c9 F
   | | |
-  | o |  3:7fb047a69f22 E
+  | o |  4:26805aba1e60 C
   | | |
-  | | x  2:b18e25de2cf5 D
-  | |/
-  o |  1:112478962961 B
+  o | |  3:7fb047a69f22 E
+  | | |
+  +---x  2:b18e25de2cf5 D
+  | |
+  | o  1:112478962961 B
   |/
   o  0:426bada5c675 A
   
@@ -1025,19 +1032,21 @@ Rebase merge where successor of other parent is ancestor of destination
   >   A
   > EOF
 
-BROKEN: Raises an exception
-  $ hg rebase -d C -s E 2>&1 | grep AssertionError:
-  AssertionError: no base found to rebase on (defineparents called wrong)
+  $ hg rebase -d C -s E
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  rebasing 5:66f1a38021c9 "F" (F tip)
   $ hg log -G
-  o    5:66f1a38021c9 F
+  o    6:c6ab0cc6d220 F
   |\
-  | | o  4:26805aba1e60 C
+  +---x  5:66f1a38021c9 F
   | | |
-  | x |  3:7fb047a69f22 E
+  | o |  4:26805aba1e60 C
   | | |
-  o | |  2:b18e25de2cf5 D
-  |/ /
-  | o  1:112478962961 B
+  | | x  3:7fb047a69f22 E
+  | | |
+  o---+  2:b18e25de2cf5 D
+   / /
+  o /  1:112478962961 B
   |/
   o  0:426bada5c675 A
   
@@ -1060,6 +1069,7 @@ Rebase merge where successor of one parent is ancestor of destination
   rebasing 2:b18e25de2cf5 "D" (D)
   note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
   rebasing 5:66f1a38021c9 "F" (F tip)
+  warning: rebasing 5:66f1a38021c9 may include unwanted changes from 3:7fb047a69f22
   $ hg log -G
   o  7:9ed45af61fa0 F
   |
@@ -1096,13 +1106,13 @@ Rebase merge where successor of other parent is ancestor of destination
   note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
   rebasing 3:7fb047a69f22 "E" (E)
   rebasing 5:66f1a38021c9 "F" (F tip)
-BROKEN: This should have resulted in a rebased F with one parent, just like in
-the test case above
+  warning: rebasing 5:66f1a38021c9 may include unwanted changes from 2:b18e25de2cf5
+
   $ hg log -G
-  o    7:c1e6f26e339d F
-  |\
-  | o  6:533690786a86 E
-  |/
+  o  7:502540f44880 F
+  |
+  o  6:533690786a86 E
+  |
   | x    5:66f1a38021c9 F
   | |\
   o | |  4:26805aba1e60 C
