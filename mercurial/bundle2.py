@@ -1883,7 +1883,7 @@ def handlehgtagsfnodes(op, inpart):
 def bundle2getvars(op, part):
     '''unbundle a bundle2 containing shellvars on the server'''
     # An option to disable unbundling on server-side for security reasons
-    if op.ui.configbool('push', 'pushvars.server', False):
+    if op.ui.configbool('push', 'pushvars.server'):
         hookargs = {}
         for key, value in part.advisoryparams:
             key = key.upper()

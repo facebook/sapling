@@ -361,6 +361,9 @@ coreconfigitem('progress', 'refresh',
 coreconfigitem('progress', 'width',
     default=dynamicdefault,
 )
+coreconfigitem('push', 'pushvars.server',
+    default=False,
+)
 coreconfigitem('server', 'bundle1',
     default=True,
 )
