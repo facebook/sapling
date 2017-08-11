@@ -726,18 +726,19 @@ class SqliteRevMap(collections.MutableMapping):
         for path, ratio in [(self._filepath, 1.7), (self._dbpath, 1)]:
             if os.path.exists(path):
                 cachesize += os.stat(path).st_size * ratio // 1000
-        self._db.execute('PRAGMA cache_size=%d' % (-cachesize))
-
-        # PRAGMA statements provided by the user
-        for pragma in (self._sqlitepragmas or []):
-            # drop malicious ones
-            if re.match(r'\A\w+=\w+\Z', pragma):
-                self._db.execute('PRAGMA %s' % pragma)
 
         # disable auto-commit. everything is inside a transaction
         self._db.isolation_level = 'DEFERRED'
 
         with self._transaction('EXCLUSIVE'):
+            self._db.execute('PRAGMA cache_size=%d' % (-cachesize))
+
+            # PRAGMA statements provided by the user
+            for pragma in (self._sqlitepragmas or []):
+                # drop malicious ones
+                if re.match(r'\A\w+=\w+\Z', pragma):
+                    self._db.execute('PRAGMA %s' % pragma)
+
             map(self._db.execute, self.TABLESCHEMA)
             if version == RevMap.VERSION:
                 self.rowcount = 0
