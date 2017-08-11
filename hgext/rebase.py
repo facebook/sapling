@@ -21,7 +21,6 @@ import os
 
 from mercurial.i18n import _
 from mercurial.node import (
-    hex,
     nullid,
     nullrev,
     short,
@@ -60,6 +59,7 @@ templateopts = cmdutil.templateopts
 
 # Indicates that a revision needs to be rebased
 revtodo = -1
+revtodostr = '-1'
 
 # legacy revstates no longer needed in current code
 # -2: nullmerge, -3: revignored, -4: revprecursor, -5: revpruned
@@ -146,7 +146,7 @@ class rebaseruntime(object):
         # dict will be what contains most of the rebase progress state.
         self.state = {}
         self.activebookmark = None
-        self.dest = None
+        self.destmap = {}
         self.skipped = set()
 
         self.collapsef = opts.get('collapse', False)
@@ -177,34 +177,34 @@ class rebaseruntime(object):
     def _writestatus(self, f):
         repo = self.repo.unfiltered()
         f.write(repo[self.originalwd].hex() + '\n')
-        f.write(repo[self.dest].hex() + '\n')
+        # was "dest". we now write dest per src root below.
+        f.write('\n')
         f.write(repo[self.external].hex() + '\n')
         f.write('%d\n' % int(self.collapsef))
         f.write('%d\n' % int(self.keepf))
         f.write('%d\n' % int(self.keepbranchesf))
         f.write('%s\n' % (self.activebookmark or ''))
+        destmap = self.destmap
         for d, v in self.state.iteritems():
             oldrev = repo[d].hex()
             if v >= 0:
                 newrev = repo[v].hex()
-            elif v == revtodo:
-                # To maintain format compatibility, we have to use nullid.
-                # Please do remove this special case when upgrading the format.
-                newrev = hex(nullid)
             else:
                 newrev = v
-            f.write("%s:%s\n" % (oldrev, newrev))
+            destnode = repo[destmap[d]].hex()
+            f.write("%s:%s:%s\n" % (oldrev, newrev, destnode))
         repo.ui.debug('rebase status stored\n')
 
     def restorestatus(self):
         """Restore a previously stored status"""
         repo = self.repo
         keepbranches = None
-        dest = None
+        legacydest = None
         collapse = False
         external = nullrev
         activebookmark = None
         state = {}
+        destmap = {}
 
         try:
             f = repo.vfs("rebasestate")
@@ -212,7 +212,10 @@ class rebaseruntime(object):
                 if i == 0:
                     originalwd = repo[l].rev()
                 elif i == 1:
-                    dest = repo[l].rev()
+                    # this line should be empty in newer version. but legacy
+                    # clients may still use it
+                    if l:
+                        legacydest = repo[l].rev()
                 elif i == 2:
                     external = repo[l].rev()
                 elif i == 3:
@@ -227,10 +230,17 @@ class rebaseruntime(object):
                     # oldrev:newrev lines
                     activebookmark = l
                 else:
-                    oldrev, newrev = l.split(':')
+                    args = l.split(':')
+                    oldrev = args[0]
+                    newrev = args[1]
                     if newrev in legacystates:
                         continue
-                    elif newrev == nullid:
+                    if len(args) > 2:
+                        destnode = args[2]
+                    else:
+                        destnode = legacydest
+                    destmap[repo[oldrev].rev()] = repo[destnode].rev()
+                    if newrev in (nullid, revtodostr):
                         state[repo[oldrev].rev()] = revtodo
                         # Legacy compat special case
                     else:
@@ -247,7 +257,7 @@ class rebaseruntime(object):
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:
-            seen = {dest}
+            seen = set(destmap.values())
             for old, new in sorted(state.items()):
                 if new != revtodo and new in seen:
                     skipped.add(old)
@@ -258,7 +268,7 @@ class rebaseruntime(object):
         _setrebasesetvisibility(repo, set(state.keys()) | {originalwd})
 
         self.originalwd = originalwd
-        self.dest = dest
+        self.destmap = destmap
         self.state = state
         self.skipped = skipped
         self.collapsef = collapse
@@ -267,12 +277,11 @@ class rebaseruntime(object):
         self.external = external
         self.activebookmark = activebookmark
 
-    def _handleskippingobsolete(self, rebaserevs, obsoleterevs, dest):
+    def _handleskippingobsolete(self, obsoleterevs, destmap):
         """Compute structures necessary for skipping obsolete revisions
 
-        rebaserevs:     iterable of all revisions that are to be rebased
         obsoleterevs:   iterable of all obsolete revisions in rebaseset
-        dest:           a destination revision for the rebase operation
+        destmap:        {srcrev: destrev} destination revisions
         """
         self.obsoletenotrebased = {}
         if not self.ui.configbool('experimental', 'rebaseskipobsolete',
@@ -280,7 +289,7 @@ class rebaseruntime(object):
             return
         obsoleteset = set(obsoleterevs)
         self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
-                                    obsoleteset, dest)
+                                    obsoleteset, destmap)
         skippedset = set(self.obsoletenotrebased)
         _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
@@ -300,13 +309,14 @@ class rebaseruntime(object):
                 hint = _('use "hg rebase --abort" to clear broken state')
                 raise error.Abort(msg, hint=hint)
         if isabort:
-            return abort(self.repo, self.originalwd, self.dest,
+            return abort(self.repo, self.originalwd, self.destmap,
                          self.state, activebookmark=self.activebookmark)
 
-    def _preparenewrebase(self, dest, rebaseset):
-        if dest is None:
+    def _preparenewrebase(self, destmap):
+        if not destmap:
             return _nothingtorebase()
 
+        rebaseset = destmap.keys()
         allowunstable = obsolete.isenabled(self.repo, obsolete.allowunstableopt)
         if (not (self.keepf or allowunstable)
               and self.repo.revs('first(children(%ld) - %ld)',
@@ -316,10 +326,10 @@ class rebaseruntime(object):
                   " unrebased descendants"),
                 hint=_('use --keep to keep original changesets'))
 
-        obsrevs = _filterobsoleterevs(self.repo, set(rebaseset))
-        self._handleskippingobsolete(rebaseset, obsrevs, dest.rev())
+        obsrevs = _filterobsoleterevs(self.repo, rebaseset)
+        self._handleskippingobsolete(obsrevs, destmap)
 
-        result = buildstate(self.repo, dest, rebaseset, self.collapsef,
+        result = buildstate(self.repo, destmap, self.collapsef,
                             self.obsoletenotrebased)
 
         if not result:
@@ -333,14 +343,21 @@ class rebaseruntime(object):
                                   % root,
                                   hint=_("see 'hg help phases' for details"))
 
-        (self.originalwd, self.dest, self.state) = result
+        (self.originalwd, self.destmap, self.state) = result
         if self.collapsef:
-            destancestors = self.repo.changelog.ancestors([self.dest],
+            dests = set(self.destmap.values())
+            if len(dests) != 1:
+                raise error.Abort(
+                    _('--collapse does not work with multiple destinations'))
+            destrev = next(iter(dests))
+            destancestors = self.repo.changelog.ancestors([destrev],
                                                           inclusive=True)
             self.external = externalparent(self.repo, self.state, destancestors)
 
-        if dest.closesbranch() and not self.keepbranchesf:
-            self.ui.status(_('reopening closed branch head %s\n') % dest)
+        for destrev in sorted(set(destmap.values())):
+            dest = self.repo[destrev]
+            if dest.closesbranch() and not self.keepbranchesf:
+                self.ui.status(_('reopening closed branch head %s\n') % dest)
 
     def _performrebase(self, tr):
         repo, ui, opts = self.repo, self.ui, self.opts
@@ -371,6 +388,7 @@ class rebaseruntime(object):
         total = len(cands)
         pos = 0
         for rev in sortedrevs:
+            dest = self.destmap[rev]
             ctx = repo[rev]
             desc = _ctxdesc(ctx)
             if self.state[rev] == rev:
@@ -380,7 +398,8 @@ class rebaseruntime(object):
                 ui.status(_('rebasing %s\n') % desc)
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
-                p1, p2, base = defineparents(repo, rev, self.dest, self.state)
+                p1, p2, base = defineparents(repo, rev, self.destmap,
+                                             self.state)
                 self.storestatus(tr=tr)
                 storecollapsemsg(repo, self.collapsemsg)
                 if len(repo[None].parents()) == 2:
@@ -390,7 +409,7 @@ class rebaseruntime(object):
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                      'rebase')
                         stats = rebasenode(repo, rev, p1, base, self.state,
-                                           self.collapsef, self.dest)
+                                           self.collapsef, dest)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
@@ -436,8 +455,8 @@ class rebaseruntime(object):
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
         if self.collapsef and not self.keepopen:
-            p1, p2, _base = defineparents(repo, min(self.state),
-                                          self.dest, self.state)
+            p1, p2, _base = defineparents(repo, min(self.state), self.destmap,
+                                          self.state)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if self.collapsemsg:
@@ -483,7 +502,7 @@ class rebaseruntime(object):
             collapsedas = None
             if self.collapsef:
                 collapsedas = newnode
-            clearrebased(ui, repo, self.dest, self.state, self.skipped,
+            clearrebased(ui, repo, self.destmap, self.state, self.skipped,
                          collapsedas)
 
         clearstatus(repo)
@@ -675,9 +694,9 @@ def rebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
         else:
-            dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf,
-                                          destspace=destspace)
-            retcode = rbsrt._preparenewrebase(dest, rebaseset)
+            destmap = _definedestmap(ui, repo, destf, srcf, basef, revf,
+                                     destspace=destspace)
+            retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
                 return retcode
 
@@ -695,10 +714,9 @@ def rebase(ui, repo, **opts):
 
         rbsrt._finishrebase()
 
-def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
-                destspace=None):
-    """use revisions argument to define destination and rebase set
-    """
+def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
+                   destspace=None):
+    """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
 
@@ -725,12 +743,12 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
         rebaseset = scmutil.revrange(repo, revf)
         if not rebaseset:
             ui.status(_('empty "rev" revision set - nothing to rebase\n'))
-            return None, None
+            return None
     elif srcf:
         src = scmutil.revrange(repo, [srcf])
         if not src:
             ui.status(_('empty "source" revision set - nothing to rebase\n'))
-            return None, None
+            return None
         rebaseset = repo.revs('(%ld)::', src)
         assert rebaseset
     else:
@@ -738,7 +756,7 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
         if not base:
             ui.status(_('empty "base" revision set - '
                         "can't compute rebase set\n"))
-            return None, None
+            return None
         if not destf:
             dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
@@ -782,13 +800,17 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=None,
             else: # can it happen?
                 ui.status(_('nothing to rebase from %s to %s\n') %
                           ('+'.join(str(repo[r]) for r in base), dest))
-            return None, None
+            return None
 
     if not destf:
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
 
-    return dest, rebaseset
+    # assign dest to each rev in rebaseset
+    destrev = dest.rev()
+    destmap = {r: destrev for r in rebaseset} # {srcrev: destrev}
+
+    return destmap
 
 def externalparent(repo, state, destancestors):
     """Return the revision that should be used as the second parent
@@ -874,7 +896,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest):
         copies.duplicatecopies(repo, rev, p1rev, skiprev=dest)
     return stats
 
-def adjustdest(repo, rev, dest, state):
+def adjustdest(repo, rev, destmap, state):
     """adjust rebase destination given the current rebase state
 
     rev is what is being rebased. Return a list of two revs, which are the
@@ -914,8 +936,9 @@ def adjustdest(repo, rev, dest, state):
         |/          |/
         A           A
     """
-    # pick already rebased revs from state
-    source = [s for s, d in state.items() if d > 0]
+    # pick already rebased revs with same dest from state as interesting source
+    dest = destmap[rev]
+    source = [s for s, d in state.items() if d > 0 and destmap[s] == dest]
 
     result = []
     for prev in repo.changelog.parentrevs(rev):
@@ -957,7 +980,7 @@ def successorrevs(repo, rev):
         if s in nodemap:
             yield nodemap[s]
 
-def defineparents(repo, rev, dest, state):
+def defineparents(repo, rev, destmap, state):
     """Return new parents and optionally a merge base for rev being rebased
 
     The destination specified by "dest" cannot always be used directly because
@@ -981,9 +1004,10 @@ def defineparents(repo, rev, dest, state):
             return False
         return cl.isancestor(cl.node(a), cl.node(b))
 
+    dest = destmap[rev]
     oldps = repo.changelog.parentrevs(rev) # old parents
     newps = [nullrev, nullrev] # new parents
-    dests = adjustdest(repo, rev, dest, state) # adjusted destinations
+    dests = adjustdest(repo, rev, destmap, state) # adjusted destinations
     bases = list(oldps) # merge base candidates, initially just old parents
 
     if all(r == nullrev for r in oldps[1:]):
@@ -1238,7 +1262,7 @@ def needupdate(repo, state):
 
     return False
 
-def abort(repo, originalwd, dest, state, activebookmark=None):
+def abort(repo, originalwd, destmap, state, activebookmark=None):
     '''Restore the repository to its original state.  Additional args:
 
     activebookmark: the name of the bookmark that should be active after the
@@ -1248,7 +1272,7 @@ def abort(repo, originalwd, dest, state, activebookmark=None):
         # If the first commits in the rebased set get skipped during the rebase,
         # their values within the state mapping will be the dest rev id. The
         # dstates list must must not contain the dest rev (issue4896)
-        dstates = [s for s in state.values() if s >= 0 and s != dest]
+        dstates = [s for r, s in state.items() if s >= 0 and s != destmap[r]]
         immutable = [d for d in dstates if not repo[d].mutable()]
         cleanup = True
         if immutable:
@@ -1267,13 +1291,14 @@ def abort(repo, originalwd, dest, state, activebookmark=None):
 
         if cleanup:
             shouldupdate = False
-            rebased = filter(lambda x: x >= 0 and x != dest, state.values())
+            rebased = [s for r, s in state.items()
+                       if s >= 0 and s != destmap[r]]
             if rebased:
                 strippoints = [
                         c.node() for c in repo.set('roots(%ld)', rebased)]
 
             updateifonnodes = set(rebased)
-            updateifonnodes.add(dest)
+            updateifonnodes.update(destmap.values())
             updateifonnodes.add(originalwd)
             shouldupdate = repo['.'].rev() in updateifonnodes
 
@@ -1295,22 +1320,23 @@ def abort(repo, originalwd, dest, state, activebookmark=None):
         repo.ui.warn(_('rebase aborted\n'))
     return 0
 
-def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
+def buildstate(repo, destmap, collapse, obsoletenotrebased):
     '''Define which revisions are going to be rebased and where
 
     repo: repo
-    dest: context
-    rebaseset: set of rev
+    destmap: {srcrev: destrev}
     '''
+    rebaseset = destmap.keys()
     originalwd = repo['.'].rev()
     _setrebasesetvisibility(repo, set(rebaseset) | {originalwd})
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
     # a partially completed rebase is blocked by mq.
-    if 'qtip' in repo.tags() and (dest.node() in
-                            [s.node for s in repo.mq.applied]):
-        raise error.Abort(_('cannot rebase onto an applied mq patch'))
+    if 'qtip' in repo.tags():
+        mqapplied = set(repo[s.node].rev() for s in repo.mq.applied)
+        if set(destmap.values()) & mqapplied:
+            raise error.Abort(_('cannot rebase onto an applied mq patch'))
 
     roots = list(repo.set('roots(%ld)', rebaseset))
     if not roots:
@@ -1319,6 +1345,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     state = dict.fromkeys(rebaseset, revtodo)
     emptyrebase = True
     for root in roots:
+        dest = repo[destmap[root.rev()]]
         commonbase = root.ancestor(dest)
         if commonbase == root:
             raise error.Abort(_('source is ancestor of destination'))
@@ -1352,6 +1379,7 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         if succ is None:
             msg = _('note: not rebasing %s, it has no successor\n') % desc
             del state[r]
+            del destmap[r]
         else:
             destctx = unfi[succ]
             destdesc = '%d:%s "%s"' % (destctx.rev(), destctx,
@@ -1359,10 +1387,11 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
             msg = (_('note: not rebasing %s, already in destination as %s\n')
                    % (desc, destdesc))
             del state[r]
+            del destmap[r]
         repo.ui.status(msg)
-    return originalwd, dest.rev(), state
+    return originalwd, destmap, state
 
-def clearrebased(ui, repo, dest, state, skipped, collapsedas=None):
+def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
@@ -1371,7 +1400,7 @@ def clearrebased(ui, repo, dest, state, skipped, collapsedas=None):
     # Move bookmark of skipped nodes to destination. This cannot be handled
     # by scmutil.cleanupnodes since it will treat rev as removed (no successor)
     # and move bookmark backwards.
-    bmchanges = [(name, tonode(max(adjustdest(repo, rev, dest, state))))
+    bmchanges = [(name, tonode(max(adjustdest(repo, rev, destmap, state))))
                  for rev in skipped
                  for name in repo.nodebookmarks(tonode(rev))]
     if bmchanges:
@@ -1477,7 +1506,7 @@ def _filterobsoleterevs(repo, revs):
     """returns a set of the obsolete revisions in revs"""
     return set(r for r in revs if repo[r].obsolete())
 
-def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
+def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
     """return a mapping obsolete => successor for all obsolete nodes to be
     rebased that have a successors in the destination
 
@@ -1486,9 +1515,9 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
 
     cl = repo.unfiltered().changelog
     nodemap = cl.nodemap
-    destnode = cl.node(dest)
     for srcrev in rebaseobsrevs:
         srcnode = cl.node(srcrev)
+        destnode = cl.node(destmap[srcrev])
         # XXX: more advanced APIs are required to handle split correctly
         successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
         if len(successors) == 1:
