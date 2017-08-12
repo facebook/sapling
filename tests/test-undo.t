@@ -894,3 +894,196 @@ hg redo tests
   o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
        a1
   
+'Refined branch testing
+Specific edge case testing
+  $ hg up null
+  0 files updated, 0 files merged, 9 files removed, 0 files unresolved
+  $ touch b1 && hg add b1 && hg ci -m b1
+  created new head
+  $ touch b2 && hg add b2 && hg ci -m b2
+  $ touch b3 && hg add b3 && hg ci -m b3
+  $ hg up null
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ touch c1 && hg add c1 && hg ci -m c1
+  created new head
+  $ touch c2 && hg add c2 && hg ci -m c2
+  $ touch c3 && hg add c3 && hg ci -m c3
+  $ hg log -G -T compact
+  @  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  o  26   f57edd138754   1970-01-01 00:00 +0000   test
+  |    b3
+  |
+  o  25   0cb4447a10a7   1970-01-01 00:00 +0000   test
+  |    b2
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  |
+  o  22:18   3ee6a6880888   1970-01-01 00:00 +0000   test
+  |    a9
+  |
+  | o  21[newbook]:18   35324a911c0d   1970-01-01 00:00 +0000   test
+  |/     newbranch
+  |
+  o  18   75f63379f12b   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  17:9   d0fdb9510dbf   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  9[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  |
+  | o  7[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
+  |/     d
+  |
+  o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
+       a1
+  
+  $ hg undo -b f57e
+  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg undo -b f57e
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G -T compact -l5
+  o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  @  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  @  25   0cb4447a10a7   1970-01-01 00:00 +0000   test
+  |    b2
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ hg undo -b 0963
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -G -T compact -l5
+  @  28[tip]   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  o  25   0cb4447a10a7   1970-01-01 00:00 +0000   test
+  |    b2
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ hg undo
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  @  25   0cb4447a10a7   1970-01-01 00:00 +0000   test
+  |    b2
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ hg redo
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg redo
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  @  25   0cb4447a10a7   1970-01-01 00:00 +0000   test
+  |    b2
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ hg undo -b f57e
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G -T compact -l5
+  o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+       c1
+  
+  @  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~

@@ -646,6 +646,7 @@ def redo(ui, repo, *args, **opts):
     shiftedindex = _computerelative(repo, 0)
     preview = opts.get("preview")
 
+    branch = ""
     reverseindex = 0
     redocount = 0
     done = False
@@ -673,6 +674,7 @@ def redo(ui, repo, *args, **opts):
                 toshift = undoopts['step']
                 shiftedindex -= toshift
                 reverseindex += 1
+                branch = undoopts.get('branch')
                 done = True
             else:
                 if undoopts['absolute']:
@@ -695,7 +697,7 @@ def redo(ui, repo, *args, **opts):
         repo = repo.unfiltered()
         _undoto(ui, repo, reverseindex)
         # update undredo by removing what the given undo added
-        _logundoredoindex(repo, shiftedindex)
+        _logundoredoindex(repo, shiftedindex, branch)
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
@@ -811,7 +813,10 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
         oldbranch = ""
 
     if not branch:
-        reverseindex = shiftedindex + reverseindex
+        if not oldbranch:
+            reverseindex = shiftedindex + reverseindex
+        # else: previous command was branch undo
+        # perform absolute undo (no shift)
     else:
         # check if relative branch
         if (branch != oldbranch) and (oldbranch != ""):
