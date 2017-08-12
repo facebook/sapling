@@ -426,7 +426,7 @@ def serializenotes(sections, notes):
 
             lines.append('')
 
-    if lines[-1]:
+    if lines and lines[-1]:
         lines.append('')
 
     return '\n'.join(lines)
