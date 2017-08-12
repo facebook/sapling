@@ -13,9 +13,11 @@ from mercurial.i18n import _
 
 from mercurial import (
     cmdutil,
+    commands,
     dispatch,
     error,
     extensions,
+    fancyopts,
     hg,
     localrepo,
     lock as lockmod,
@@ -578,7 +580,9 @@ def undo(ui, repo, *args, **opts):
     if interactive:
         preview = True
 
-    if branch and reverseindex != 1:
+    repo = repo.unfiltered()
+
+    if branch and reverseindex != 1 and reverseindex != -1:
         raise error.Abort(_("--branch with --index not supported"))
     if relativeundo:
         reverseindex = _computerelative(repo, reverseindex,
@@ -626,7 +630,6 @@ def undo(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
-        repo = repo.unfiltered()
         if not (opts.get("force") or _gapcheck(repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
@@ -638,30 +641,55 @@ def undo(ui, repo, *args, **opts):
         _logundoredoindex(repo, reverseindex, branch)
 
 @command('redo', [
-    ('b', 'branch', "", _("single branch undo, accepts commit hash "
-                          "(ADVANCED)")),
-    ('n', 'index', 1, _("how many commands to redo")),
     ('p', 'preview', False, _("see smartlog like preview of future redo "
                               "state")),
 ])
 def redo(ui, repo, *args, **opts):
     """ perform a redo
 
-    Performs a redo.  Specifically, redo moves forward a repo state relative to
-    the previous undo or redo command.  If you run hg undo -n 10, you can redo
-    each of the 10 repo states one by one all the way back to the state from
-    which you ran undo.  You can use --index to redo across more states at once,
-    and you can use any number of undos/redos up to the current state or back to
-    when the undo extension was first active.
+    Rolls back the previous undo.
     """
-    branch = opts.get("branch")
-    reverseindex = -1 * abs(opts.get("index"))
+    shiftedindex = _computerelative(repo, 0)
     preview = opts.get("preview")
 
-    if branch and reverseindex != -1:
-        raise error.Abort(_("--branch with --index not supported"))
+    reverseindex = 0
+    redocount = 0
+    done = False
+    while not done:
+        # we step back the linear undo log
+        # redoes cancel out undoes, if we have one more undo, we should undo
+        # there, otherwise we continue looking
+        # we are careful to not redo past absolute undoes (bc we loose undoredo
+        # log info)
+        # if we run into something that isn't undo or redo, we Abort (including
+        # gaps in the log)
+        # we extract the --index arguments out of undoes to make sure we update
+        # the undoredo index correctly
+        nodedict = _readindex(repo, reverseindex)
+        commandstr = _readnode(repo, 'command.i', nodedict['command'])
+        commandlist = commandstr.split("\0")
 
-    reverseindex = _computerelative(repo, reverseindex)
+        if commandlist[0] == "undo":
+            undoopts = {}
+            fancyopts.fancyopts(commandlist[1:],
+                                cmdtable['undo'][1] + commands.globalopts,
+                                undoopts)
+            if redocount == 0:
+                # want to go to state before the undo (not after)
+                toshift = undoopts['index']
+                shiftedindex -= toshift
+                reverseindex += 1
+                done = True
+            else:
+                if undoopts['absolute']:
+                    raise error.Abort(_("can't redo past absolute undo"))
+                reverseindex += 1
+                redocount -= 1
+        elif commandlist[0] == "redo":
+            redocount += 1
+            reverseindex += 1
+        else:
+            raise error.Abort(_("nothing to redo"))
 
     if preview:
         _preview(ui, repo, reverseindex)
@@ -671,8 +699,9 @@ def redo(ui, repo, *args, **opts):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
-        _undoto(ui, repo, reverseindex, branch=branch)
-        _logundoredoindex(repo, reverseindex, branch=branch)
+        _undoto(ui, repo, reverseindex)
+        # update undredo by removing what the given undo added
+        _logundoredoindex(repo, shiftedindex)
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex

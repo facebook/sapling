@@ -274,8 +274,8 @@ hg undo command tests
      feature2                  7:296fda51a303
      master                    9:1dafc0b43612
 
-hg redo test
-  $ hg redo
+hg undo with negative index
+  $ hg undo -n -1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T compact -l1
   @  9[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
@@ -289,24 +289,24 @@ hg redo test
   ~
   $ hg undo -n 5
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg redo -n 5
+  $ hg undo -n -5
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
-  $ hg redo -n 100
+  $ hg undo -n -100
   abort: index out of bounds
   [255]
 
 hg undo --absolute tests
   $ hg undo -a
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg redo
+  $ hg undo -n -1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg undo -a
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg redo
+  $ hg undo -n -1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg undo -n 5
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -415,7 +415,7 @@ checking split/divergence.
   f86734247df6db66a810e549cc938a72cd5c6d1a d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
   $ hg undo
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg redo
+  $ hg undo -n -1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugobsolete | tail -5
   d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea f86734247df6db66a810e549cc938a72cd5c6d1a 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
@@ -639,10 +639,8 @@ and commits are not duplicated
   > rebase = !
   > EOF
 
-Check local redo works
-Simple test should be sufficient, as per usual, redo is an undo with some index
-logic
-  $ hg redo -b 3532
+Check local undo works forward
+  $ hg undo -n -1 -b 3532
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -l 2
   changeset:   21:35324a911c0d
@@ -666,9 +664,9 @@ logic
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg undo -b 3532
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg redo -b 75f6
+  $ hg undo -n -1 -b 75f6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg redo -b 75f6
+  $ hg undo -n -1 -b 75f6
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -l 2
   changeset:   22:3ee6a6880888
@@ -751,3 +749,148 @@ hg undo --preview test
   o
   |
   ~
+
+hg redo tests
+  $ hg log -G -T compact
+  @  23[tip]   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  |
+  o  22:18   3ee6a6880888   1970-01-01 00:00 +0000   test
+  |    a9
+  |
+  | o  21[newbook]:18   35324a911c0d   1970-01-01 00:00 +0000   test
+  |/     newbranch
+  |
+  o  18   75f63379f12b   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  17:9   d0fdb9510dbf   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  9[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  |
+  | o  7[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
+  |/     d
+  |
+  o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
+       a1
+  
+  $ hg log -r . -T {node}
+  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
+  $ hg undo -n 2
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg redo
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
+  $ hg undo -n 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
+  $ hg undo -n 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
+  $ hg undo -fn 3
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo --force --index -1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg debugundohistory -l
+  0: undo --force --index -1
+  1: undo -fn 3
+  2: redo
+  3: redo
+  4: redo
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg undo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -T {node}
+  a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
+  $ hg undo --traceback
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg undo -an1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg redo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg redo
+  abort: can't redo past absolute undo
+  [255]
+  $ hg undo -n -1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact
+  @  23[tip]   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  |
+  o  22:18   3ee6a6880888   1970-01-01 00:00 +0000   test
+  |    a9
+  |
+  | o  21[newbook]:18   35324a911c0d   1970-01-01 00:00 +0000   test
+  |/     newbranch
+  |
+  o  18   75f63379f12b   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  17:9   d0fdb9510dbf   1970-01-01 00:00 +0000   test
+  |    newfiles
+  |
+  o  9[master]   1dafc0b43612   1970-01-01 00:00 +0000   test
+  |    cmiss
+  |
+  o  8:4   0a3dd3e15e65   1970-01-01 00:00 +0000   test
+  |    words
+  |
+  | o  7[feature2]:4   296fda51a303   1970-01-01 00:00 +0000   test
+  |/     d
+  |
+  o  4   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  o  3:1   ec7553f7b382   1970-01-01 00:00 +0000   test
+  |    c1
+  |
+  | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
+  o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
+       a1
+  
