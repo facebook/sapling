@@ -22,11 +22,13 @@ from mercurial import (
     obsolete,
     obsutil,
     phases,
+    pycompat,
     registrar,
     revlog,
     revset,
     revsetlang,
     smartset,
+    templatekw,
     transaction,
     util,
 )
@@ -100,7 +102,7 @@ def safelog(repo, command):
             try:
                 repo.vfs.makedirs('undolog')
             except OSError:
-                repo.ui.debug("can't make undolog folder in .hg")
+                repo.ui.debug("can't make undolog folder in .hg\n")
                 return changes
             with lockmod.lock(repo.vfs, "undolog/lock", desc="undolog",
                               timeout=2):
@@ -153,10 +155,10 @@ def log(repo, command, tr):
         'workingparent': _logworkingparent(repo, tr),
     }
     try:
-        exsistingnodes = _readindex(repo, 0)
+        existingnodes = _readindex(repo, 0)
     except IndexError:
-        exsistingnodes = {}
-    if all(newnodes.get(x) == exsistingnodes.get(x) for x in newnodes.keys()):
+        existingnodes = {}
+    if all(newnodes.get(x) == existingnodes.get(x) for x in newnodes.keys()):
         # no changes to record
         return False
     else:
@@ -406,6 +408,93 @@ def _localbranch(repo, subset, x):
         querystring = revsetlang.formatspec('((::%ld) & draft())::', revs)
     return subset & smartset.baseset(repo.revs(querystring))
 
+# Templates
+keywords = {}
+
+templatekeyword = registrar.templatekeyword(keywords)
+
+def _undonehexnodes(repo):
+    repo = repo.unfiltered()
+    reverseindex = _computerelative(repo, 1)
+    revstring = revsetlang.formatspec('draft() - olddraft(%d)', reverseindex)
+    revs = repo.revs(revstring)
+    tonode = repo.changelog.node
+    hexnodes = [repo[tonode(x)] for x in revs]
+    return hexnodes
+
+@templatekeyword("undonecommits")
+def showundonecommits(repo, ctx, **args):
+    """String.  Changectxs added by last command."""
+    hexnodes = _undonehexnodes(repo)
+    if ctx in hexnodes:
+        result = ctx.hex()
+    else:
+        result = None
+    return result
+
+def _donehexnodes(repo):
+    repo = repo.unfiltered()
+    reverseindex = _computerelative(repo, 1)
+    revstring = revsetlang.formatspec('olddraft(%d)', reverseindex)
+    revs = repo.revs(revstring)
+    tonode = repo.changelog.node
+    hexnodes = [repo[tonode(x)] for x in revs]
+    return hexnodes
+
+@templatekeyword("donecommits")
+def showdonecommits(repo, ctx, **args):
+    """String. Changectxs one repo state ago."""
+    hexnodes = _donehexnodes(repo)
+    if ctx in hexnodes:
+        result = ctx.hex()
+    else:
+        result = None
+    return result
+
+def _oldmarks(repo):
+    reverseindex = _computerelative(repo, 1)
+    nodedict = _readindex(repo, reverseindex)
+    bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
+    oldmarks = bookstring.split("\n")
+    result = []
+    for mark in oldmarks:
+        kv = mark.rsplit(" ", 1)
+        if len(kv) == 2:
+            result.append(kv)
+    return result
+
+@templatekeyword("oldbookmarks")
+def showoldbookmarks(**args):
+    """List of strings.  Bookmarks one repo state ago."""
+    args = pycompat.byteskwargs(args)
+    repo = args['ctx']._repo
+    oldmarks = _oldmarks(repo)
+    bookmarks = []
+    for kv in oldmarks:
+        if repo[kv[1]] == repo[args['ctx']]:
+            bookmarks.append(kv[0])
+    active = repo._activebookmark
+    makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
+    f = templatekw._showlist('bookmark', bookmarks, args)
+    return templatekw._hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
+
+@templatekeyword("removedbookmarks")
+def showremovedbookmarks(**args):
+    """List of strings.  Bookmarks added/moved by last command."""
+    args = pycompat.byteskwargs(args)
+    repo = args['ctx']._repo
+    currentbookmarks = args['ctx'].bookmarks()
+    oldmarks = _oldmarks(repo)
+    oldbookmarks = []
+    for kv in oldmarks:
+        if repo[kv[1]] == repo[args['ctx']]:
+            oldbookmarks.append(kv[0])
+    bookmarks = list(set(currentbookmarks) - set(oldbookmarks))
+    active = repo._activebookmark
+    makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
+    f = templatekw._showlist('bookmark', bookmarks, args)
+    return templatekw._hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
+
 # Undo:
 
 @command('undo', [
@@ -416,6 +505,8 @@ def _localbranch(repo, subset, x):
     ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
     ('k', 'keep', False, _("keep working copy changes")),
     ('n', 'index', 1, _("how many steps to undo back")),
+    ('p', 'preview', False, _("see smartlog like preview of future undo "
+                              "state")),
 ])
 def undo(ui, repo, *args, **opts):
     """perform an undo
@@ -455,7 +546,7 @@ def undo(ui, repo, *args, **opts):
     before and after states are connected.
 
     Use keep to maintain working copy changes.  With keep, undo mimics hg
-    unamend and hg uncommit.  Specifically, files that exsist currently that
+    unamend and hg uncommit.  Specifically, files that exist currently that
     don't exist at the repo state we are undoing to will remain in your
     working copy but not in your changeset.  Maintaining your working copy
     has primarily two downsides: firstly your new working copy won't be clean
@@ -471,9 +562,14 @@ def undo(ui, repo, *args, **opts):
     relativeundo = not opts.get("absolute")
     keep = opts.get("keep")
     branch = opts.get("branch")
+    preview = opts.get("preview")
 
     if branch and reverseindex != 1:
         raise error.Abort(_("--branch with --index not supported"))
+
+    if preview:
+        _preview(ui, repo)
+        return
 
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
@@ -782,6 +878,24 @@ def revealcommits(repo, rev):
     else:
         ctxts = repo.set(rev)
         inhibit.revive(ctxts)
+
+def _preview(ui, repo):
+    # Print smartlog like preview of undo
+    # Input:
+    #   ui:
+    #   repo: mercurial.localrepo
+    # Output:
+    #   None
+
+    reverseindex = 1
+    opts = {}
+    opts["template"] = "{undopreview}"
+    reverseindex = _computerelative(repo, reverseindex)
+    repo = repo.unfiltered()
+    revstring = revsetlang.formatspec("olddraft(%d) + olddraft(0)",
+                                      reverseindex)
+    opts['rev'] = [revstring]
+    cmdutil.graphlog(ui, repo, None, opts)
 
 # Tools
 

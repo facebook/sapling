@@ -704,3 +704,30 @@ Check local undo with facebook style strip
   > strip =!
   > fbamend =!
   > EOF
+
+hg undo --preview test
+  $ touch prev1 && hg add prev1 && hg ci -m prev1
+  $ cat >> $HGRCPATH <<EOF
+  > [templatealias]
+  > undopreview = '{if(undonecommits, "Undone")}'
+  > EOF
+  $ hg undo -p
+  @  Undone
+  |
+  o
+  |
+  | o
+  |/
+  o
+  |
+  o
+  |
+  o
+  |
+  ~
+  o
+  |
+  ~
+  o
+  |
+  ~
