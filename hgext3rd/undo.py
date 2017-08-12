@@ -513,6 +513,7 @@ def removedbookmarks(context, mapping, args):
     ('b', 'branch', "", _("local branch undo, accepts commit hash "
                           "(ADVANCED)")),
     ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
+    ('i', 'interactive', False, _("use interactive ui for undo")),
     ('k', 'keep', False, _("keep working copy changes")),
     ('n', 'index', 1, _("how many steps to undo back")),
     ('p', 'preview', False, _("see smartlog like preview of future undo "
@@ -573,6 +574,9 @@ def undo(ui, repo, *args, **opts):
     keep = opts.get("keep")
     branch = opts.get("branch")
     preview = opts.get("preview")
+    interactive = opts.get("interactive")
+    if interactive:
+        preview = True
 
     if branch and reverseindex != 1:
         raise error.Abort(_("--branch with --index not supported"))
@@ -580,8 +584,42 @@ def undo(ui, repo, *args, **opts):
         reverseindex = _computerelative(repo, reverseindex,
                                         absolute = not relativeundo,
                                         branch = branch)
+    if branch and preview:
+        raise error.Abort(_("--branch with --preview not supported"))
 
-    if preview:
+    if interactive:
+        try:
+            interactiveui = extensions.find('interactiveui')
+        except KeyError:
+            raise error.Abort(_('undo --interactive requires interactiveui to '
+                                'work'))
+            return
+
+        class undopreview(interactiveui.viewframe):
+            def init(self, repo, ui, index):
+                self.repo = repo
+                self.ui = ui
+                self.index = index
+            def render(self):
+                ui = self.ui
+                ui.pushbuffer()
+                _preview(ui, self.repo, self.index)
+                return ui.popbuffer()
+            def rightarrow(self):
+                self.index += 1
+            def leftarrow(self):
+                self.index -= 1
+            def enter(self):
+                del opts["preview"]
+                del opts["interactive"]
+                opts["absolute"] = "absolute"
+                opts["index"] = self.index
+                undo(ui, repo, *args, **opts)
+                return
+        viewobj = undopreview(ui, repo, reverseindex)
+        interactiveui.view(viewobj)
+        return
+    elif preview:
         _preview(ui, repo, reverseindex)
         return
 
