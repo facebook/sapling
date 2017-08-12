@@ -517,7 +517,7 @@ def removedbookmarks(context, mapping, args):
     ('f', 'force', False, _("undo across missing undo history (ADVANCED)")),
     ('i', 'interactive', False, _("use interactive ui for undo")),
     ('k', 'keep', False, _("keep working copy changes")),
-    ('n', 'index', 1, _("how many steps to undo back")),
+    ('n', 'step', 1, _("how many steps to undo back")),
     ('p', 'preview', False, _("see smartlog like preview of future undo "
                               "state")),
 ])
@@ -533,45 +533,39 @@ def undo(ui, repo, *args, **opts):
 
     Undo does not preserve the working copy changes.
 
-    To undo to a specific state use the --index and --absolute flags.
-    See hg debugundohistory to get a list of indeces and commands run.
-    By undoing to a specific index you undo to the state after that command.
-    For example, hg undo --index 0 --absolute won't do anything, while
-    hg undo -n 1 -a will bring you back to the repo state before the current
-    one.
+    Use hg undo --preview for interactive preview.  Use your left and right
+    arrow keys to explore possible states, hit enter to go to a state or q to
+    quit out of preview.
 
-    Without the --absolute flag, your undos will be relative.  This means
-    they will behave how you expect them to.  If you run hg undo twice,
-    you will move back two repo states from where you ran your first hg undo.
-    You can use this in conjunction with hg redo to move up and down repo
-    states.  Note that as soon as you execute a different undoable command,
-    which isn't hg undo or hg redo, any new undos or redos will be relative to
-    the state after this command.  When using --index with relative undos,
-    this is equivalent to running index many undos, except for leaving your
-    repo state history (hg debugundohistory) less cluttered.
+    .. container:: verbose
 
-    Undo states are also distinct repo states and can thereby be inspected using
-    debugundohistory and specifically jumped to using undo --index --absolute.
+        Without the --absolute flag, your undos will be relative.  This means
+        they will behave how you expect them to.  If you run hg undo twice,
+        you will move back two repo states from where you ran your first hg
+        undo. You can use this in conjunction with `hg undo -n -1` to move up
+        and down repo states.  Note that as soon as you execute a different
+        undoable command, which isn't hg undo or hg redo, any new undos or redos
+        will be relative to the state after this command.
 
-    If the undo extension was turned off and on again, you might loose the
-    ability to undo to certain repo states.  Undoing to repo states before the
-    missing ones can be forced, but isn't advised unless its known how the
-    before and after states are connected.
+        If the undo extension was turned off and on again, you might loose the
+        ability to undo to certain repo states.  Undoing to repo states before
+        the missing ones can be forced, but isn't advised unless its known how
+        the before and after states are connected.
 
-    Use keep to maintain working copy changes.  With keep, undo mimics hg
-    unamend and hg uncommit.  Specifically, files that exist currently that
-    don't exist at the repo state we are undoing to will remain in your
-    working copy but not in your changeset.  Maintaining your working copy
-    has primarily two downsides: firstly your new working copy won't be clean
-    so you can't simply redo without cleaning your working copy.  Secondly,
-    the operation may be slow if your working copy is large.  If unsure,
-    its generally easier try undo without --keep first and redo if you want
-    to change this.
+        Use keep to maintain working copy changes.  With keep, undo mimics hg
+        unamend and hg uncommit.  Specifically, files that exist currently that
+        don't exist at the repo state we are undoing to will remain in your
+        working copy but not in your changeset.  Maintaining your working copy
+        has primarily two downsides: firstly your new working copy won't be
+        clean so you can't simply redo without cleaning your working copy.
+        Secondly, the operation may be slow if your working copy is large.  If
+        unsure, its generally easier try undo without --keep first and redo if
+        you want to change this.
 
-    Branch limits the scope of an undo to a group of local (draft) changectxs,
-    identified by any one member of this group.
+        Branch limits the scope of an undo to a group of local (draft)
+        changectxs, identified by any one member of this group.
     """
-    reverseindex = opts.get("index")
+    reverseindex = opts.get("step")
     relativeundo = not opts.get("absolute")
     keep = opts.get("keep")
     branch = opts.get("branch")
@@ -617,7 +611,7 @@ def undo(ui, repo, *args, **opts):
                 del opts["preview"]
                 del opts["interactive"]
                 opts["absolute"] = "absolute"
-                opts["index"] = self.index
+                opts["step"] = self.index
                 undo(ui, repo, *args, **opts)
                 return
         viewobj = undopreview(ui, repo, reverseindex)
@@ -676,7 +670,7 @@ def redo(ui, repo, *args, **opts):
                                 undoopts)
             if redocount == 0:
                 # want to go to state before the undo (not after)
-                toshift = undoopts['index']
+                toshift = undoopts['step']
                 shiftedindex -= toshift
                 reverseindex += 1
                 done = True

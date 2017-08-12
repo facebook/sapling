@@ -274,7 +274,7 @@ hg undo command tests
      feature2                  7:296fda51a303
      master                    9:1dafc0b43612
 
-hg undo with negative index
+hg undo with negative step
   $ hg undo -n -1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T compact -l1
@@ -823,10 +823,10 @@ hg redo tests
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo -fn 3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg undo --force --index -1
+  $ hg undo --force --step -1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugundohistory -l
-  0: undo --force --index -1
+  0: undo --force --step -1
   1: undo -fn 3
   2: redo
   3: redo
