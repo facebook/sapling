@@ -709,12 +709,32 @@ hg undo --preview test
   $ touch prev1 && hg add prev1 && hg ci -m prev1
   $ cat >> $HGRCPATH <<EOF
   > [templatealias]
-  > undopreview = '{if(undonecommits, "Undone")}'
+  > undopreview = '{if(undonecommits(UNDOINDEX), "Undone")}'
   > EOF
   $ hg undo -p
   @  Undone
   |
   o
+  |
+  | o
+  |/
+  o
+  |
+  o
+  |
+  o
+  |
+  ~
+  o
+  |
+  ~
+  o
+  |
+  ~
+  $ hg undo -p -n 2
+  @  Undone
+  |
+  o  Undone
   |
   | o
   |/

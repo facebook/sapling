@@ -22,13 +22,13 @@ from mercurial import (
     obsolete,
     obsutil,
     phases,
-    pycompat,
     registrar,
     revlog,
     revset,
     revsetlang,
     smartset,
     templatekw,
+    templater,
     transaction,
     util,
 )
@@ -206,7 +206,7 @@ def _logindex(repo, tr, nodes):
     revstring = "\n".join(sorted('%s %s' % (k, v) for k, v in nodes.items()))
     return writelog(repo, tr, "index.i", revstring)
 
-def _logundoredoindex(repo, tr, reverseindex, branch=""):
+def _logundoredoindex(repo, reverseindex, branch=""):
     rlog = _getrevlog(repo, 'index.i')
     hexnode = hex(rlog.node(_invertindex(rlog, reverseindex)))
     return repo.vfs.write("undolog/redonode", str(hexnode) + "\0" + branch)
@@ -376,7 +376,8 @@ def _olddraft(repo, subset, x):
 
     'index' is how many undoable commands you want to look back
     an undoable command is one that changed draft heads, bookmarks
-    and or working copy parent
+    and or working copy parent.  Note that olddraft uses an absolute index and
+    so olddraft(1) represents the state after an hg undo -a and not an hg undo.
     Note: this revset may include hidden commits
     """
     args = revset.getargsdict(x, 'olddraftrevset', 'reverseindex')
@@ -409,50 +410,53 @@ def _localbranch(repo, subset, x):
     return subset & smartset.baseset(repo.revs(querystring))
 
 # Templates
-keywords = {}
+templatefunc = registrar.templatefunc()
 
-templatekeyword = registrar.templatekeyword(keywords)
-
-def _undonehexnodes(repo):
+def _undonehexnodes(repo, reverseindex):
     repo = repo.unfiltered()
-    reverseindex = _computerelative(repo, 1)
     revstring = revsetlang.formatspec('draft() - olddraft(%d)', reverseindex)
     revs = repo.revs(revstring)
     tonode = repo.changelog.node
     hexnodes = [repo[tonode(x)] for x in revs]
     return hexnodes
 
-@templatekeyword("undonecommits")
-def showundonecommits(repo, ctx, **args):
-    """String.  Changectxs added by last command."""
-    hexnodes = _undonehexnodes(repo)
+@templatefunc('undonecommits(reverseindex)')
+def showundonecommits(context, mapping, args):
+    """String.  Changectxs added since reverseindex command."""
+    reverseindex = templater.evalinteger(context, mapping, args[0],
+                                _('undonecommits needs an integer argument'))
+    repo = mapping['ctx']._repo
+    ctx = mapping['ctx']
+    hexnodes = _undonehexnodes(repo, reverseindex)
     if ctx in hexnodes:
         result = ctx.hex()
     else:
         result = None
     return result
 
-def _donehexnodes(repo):
+def _donehexnodes(repo, reverseindex):
     repo = repo.unfiltered()
-    reverseindex = _computerelative(repo, 1)
     revstring = revsetlang.formatspec('olddraft(%d)', reverseindex)
     revs = repo.revs(revstring)
     tonode = repo.changelog.node
     hexnodes = [repo[tonode(x)] for x in revs]
     return hexnodes
 
-@templatekeyword("donecommits")
-def showdonecommits(repo, ctx, **args):
-    """String. Changectxs one repo state ago."""
-    hexnodes = _donehexnodes(repo)
+@templatefunc('donecommits(reverseindex)')
+def showdonecommits(context, mapping, args):
+    """String.  Changectxs reverseindex repo states ago."""
+    reverseindex = templater.evalinteger(context, mapping, args[0],
+                                    _('donecommits needs an integer argument'))
+    repo = mapping['ctx']._repo
+    ctx = mapping['ctx']
+    hexnodes = _donehexnodes(repo, reverseindex)
     if ctx in hexnodes:
         result = ctx.hex()
     else:
         result = None
     return result
 
-def _oldmarks(repo):
-    reverseindex = _computerelative(repo, 1)
+def _oldmarks(repo, reverseindex):
     nodedict = _readindex(repo, reverseindex)
     bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
     oldmarks = bookstring.split("\n")
@@ -463,36 +467,42 @@ def _oldmarks(repo):
             result.append(kv)
     return result
 
-@templatekeyword("oldbookmarks")
-def showoldbookmarks(**args):
-    """List of strings.  Bookmarks one repo state ago."""
-    args = pycompat.byteskwargs(args)
-    repo = args['ctx']._repo
-    oldmarks = _oldmarks(repo)
+@templatefunc('oldbookmarks(reverseindex)')
+def showoldbookmarks(context, mapping, args):
+    """List of Strings. Bookmarks that used to be at the changectx reverseindex
+    repo states ago."""
+    reverseindex = templater.evalinteger(context, mapping, args[0],
+                                    _('oldbookmarks needs an integer argument'))
+    repo = mapping['ctx']._repo
+    ctx = mapping['ctx']
+    oldmarks = _oldmarks(repo, reverseindex)
     bookmarks = []
     for kv in oldmarks:
-        if repo[kv[1]] == repo[args['ctx']]:
+        if repo[kv[1]] == repo[ctx]:
             bookmarks.append(kv[0])
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
-    f = templatekw._showlist('bookmark', bookmarks, args)
+    f = templatekw._showlist('bookmark', bookmarks, mapping)
     return templatekw._hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
-@templatekeyword("removedbookmarks")
-def showremovedbookmarks(**args):
-    """List of strings.  Bookmarks added/moved by last command."""
-    args = pycompat.byteskwargs(args)
-    repo = args['ctx']._repo
-    currentbookmarks = args['ctx'].bookmarks()
-    oldmarks = _oldmarks(repo)
+@templatefunc('removedbookmarks(reverseindex)')
+def removedbookmarks(context, mapping, args):
+    """List of Strings.  Bookmarks that have been moved or removed from a given
+    changectx by reverseindex repo state."""
+    reverseindex = templater.evalinteger(context, mapping, args[0],
+                                _('removedbookmarks needs an integer argument'))
+    repo = mapping['ctx']._repo
+    ctx = mapping['ctx']
+    currentbookmarks = mapping['ctx'].bookmarks()
+    oldmarks = _oldmarks(repo, reverseindex)
     oldbookmarks = []
     for kv in oldmarks:
-        if repo[kv[1]] == repo[args['ctx']]:
+        if repo[kv[1]] == repo[ctx]:
             oldbookmarks.append(kv[0])
     bookmarks = list(set(currentbookmarks) - set(oldbookmarks))
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
-    f = templatekw._showlist('bookmark', bookmarks, args)
+    f = templatekw._showlist('bookmark', bookmarks, mapping)
     return templatekw._hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
 # Undo:
@@ -566,18 +576,19 @@ def undo(ui, repo, *args, **opts):
 
     if branch and reverseindex != 1:
         raise error.Abort(_("--branch with --index not supported"))
+    if relativeundo:
+        reverseindex = _computerelative(repo, reverseindex,
+                                        absolute = not relativeundo,
+                                        branch = branch)
 
     if preview:
-        _preview(ui, repo)
+        _preview(ui, repo, reverseindex)
         return
 
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
-        reverseindex = _computerelative(repo, reverseindex,
-                                        absolute=not relativeundo,
-                                        branch=branch)
         if not (opts.get("force") or _gapcheck(repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
@@ -586,12 +597,14 @@ def undo(ui, repo, *args, **opts):
         # store undo data
         # for absolute undos, think of this as a reset
         # for relative undos, think of this as an update
-        _logundoredoindex(repo, repo.currenttransaction(), reverseindex, branch)
+        _logundoredoindex(repo, reverseindex, branch)
 
 @command('redo', [
     ('b', 'branch', "", _("single branch undo, accepts commit hash "
                           "(ADVANCED)")),
     ('n', 'index', 1, _("how many commands to redo")),
+    ('p', 'preview', False, _("see smartlog like preview of future redo "
+                              "state")),
 ])
 def redo(ui, repo, *args, **opts):
     """ perform a redo
@@ -605,17 +618,23 @@ def redo(ui, repo, *args, **opts):
     """
     branch = opts.get("branch")
     reverseindex = -1 * abs(opts.get("index"))
+    preview = opts.get("preview")
 
     if branch and reverseindex != -1:
         raise error.Abort(_("--branch with --index not supported"))
+
+    reverseindex = _computerelative(repo, reverseindex)
+
+    if preview:
+        _preview(ui, repo, reverseindex)
+        return
 
     with repo.wlock(), repo.lock(), repo.transaction("redo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         repo = repo.unfiltered()
-        reverseindex = _computerelative(repo, reverseindex, branch=branch)
         _undoto(ui, repo, reverseindex, branch=branch)
-        _logundoredoindex(repo, repo.currenttransaction(), reverseindex, branch)
+        _logundoredoindex(repo, reverseindex, branch=branch)
 
 def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     # undo to specific reverseindex
@@ -879,7 +898,7 @@ def revealcommits(repo, rev):
         ctxts = repo.set(rev)
         inhibit.revive(ctxts)
 
-def _preview(ui, repo):
+def _preview(ui, repo, reverseindex):
     # Print smartlog like preview of undo
     # Input:
     #   ui:
@@ -887,15 +906,23 @@ def _preview(ui, repo):
     # Output:
     #   None
 
-    reverseindex = 1
+    # override "UNDOINDEX" as a variable usable in template
+    overrides = {
+        ('templates', 'UNDOINDEX'): str(reverseindex),
+    }
+
     opts = {}
     opts["template"] = "{undopreview}"
-    reverseindex = _computerelative(repo, reverseindex)
     repo = repo.unfiltered()
     revstring = revsetlang.formatspec("olddraft(%d) + olddraft(0)",
                                       reverseindex)
     opts['rev'] = [revstring]
-    cmdutil.graphlog(ui, repo, None, opts)
+    try:
+        with ui.configoverride(overrides):
+            cmdutil.graphlog(ui, repo, None, opts)
+    except IndexError:
+        # don't print anything
+        pass
 
 # Tools
 
