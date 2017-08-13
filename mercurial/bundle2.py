@@ -318,9 +318,8 @@ class bundleoperation(object):
 
     def addhookargs(self, hookargs):
         if self.hookargs is None:
-            raise error.Abort(
-                _('attempted to add hooks to operation after transaction '
-                  'started'))
+            raise error.ProgrammingError('attempted to add hookargs to '
+                                         'operation after transaction started')
         self.hookargs.update(hookargs)
 
 class TransactionUnavailable(RuntimeError):
