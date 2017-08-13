@@ -304,15 +304,15 @@ class bundleoperation(object):
     def gettransaction(self):
         transaction = self._gettransaction()
 
-        if self.hookargs is not None:
+        if self.hookargs:
             # the ones added to the transaction supercede those added
             # to the operation.
             self.hookargs.update(transaction.hookargs)
             transaction.hookargs = self.hookargs
 
-            # mark the hookargs as flushed.  further attempts to add to
-            # hookargs will result in an abort.
-            self.hookargs = None
+        # mark the hookargs as flushed.  further attempts to add to
+        # hookargs will result in an abort.
+        self.hookargs = None
 
         return transaction
 
