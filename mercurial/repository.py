@@ -64,8 +64,169 @@ class _basepeer(object):
         associated with the peer should be cleaned up.
         """
 
-class peer(_basepeer):
+class _basewirecommands(object):
+    """Client-side interface for communicating over the wire protocol.
+
+    This interface is used as a gateway to the Mercurial wire protocol.
+    methods commonly call wire protocol commands of the same name.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def branchmap(self):
+        """Obtain heads in named branches.
+
+        Returns a dict mapping branch name to an iterable of nodes that are
+        heads on that branch.
+        """
+
+    @abc.abstractmethod
+    def capabilities(self):
+        """Obtain capabilities of the peer.
+
+        Returns a set of string capabilities.
+        """
+
+    @abc.abstractmethod
+    def debugwireargs(self, one, two, three=None, four=None, five=None):
+        """Used to facilitate debugging of arguments passed over the wire."""
+
+    @abc.abstractmethod
+    def getbundle(self, source, **kwargs):
+        """Obtain remote repository data as a bundle.
+
+        This command is how the bulk of repository data is transferred from
+        the peer to the local repository
+
+        Returns a generator of bundle data.
+        """
+
+    @abc.abstractmethod
+    def heads(self):
+        """Determine all known head revisions in the peer.
+
+        Returns an iterable of binary nodes.
+        """
+
+    @abc.abstractmethod
+    def known(self, nodes):
+        """Determine whether multiple nodes are known.
+
+        Accepts an iterable of nodes whose presence to check for.
+
+        Returns an iterable of booleans indicating of the corresponding node
+        at that index is known to the peer.
+        """
+
+    @abc.abstractmethod
+    def listkeys(self, namespace):
+        """Obtain all keys in a pushkey namespace.
+
+        Returns an iterable of key names.
+        """
+
+    @abc.abstractmethod
+    def lookup(self, key):
+        """Resolve a value to a known revision.
+
+        Returns a binary node of the resolved revision on success.
+        """
+
+    @abc.abstractmethod
+    def pushkey(self, namespace, key, old, new):
+        """Set a value using the ``pushkey`` protocol.
+
+        Arguments correspond to the pushkey namespace and key to operate on and
+        the old and new values for that key.
+
+        Returns a string with the peer result. The value inside varies by the
+        namespace.
+        """
+
+    @abc.abstractmethod
+    def stream_out(self):
+        """Obtain streaming clone data.
+
+        Successful result should be a generator of data chunks.
+        """
+
+    @abc.abstractmethod
+    def unbundle(self, bundle, heads, url):
+        """Transfer repository data to the peer.
+
+        This is how the bulk of data during a push is transferred.
+
+        Returns the integer number of heads added to the peer.
+        """
+
+class _baselegacywirecommands(object):
+    """Interface for implementing support for legacy wire protocol commands.
+
+    Wire protocol commands transition to legacy status when they are no longer
+    used by modern clients. To facilitate identifying which commands are
+    legacy, the interfaces are split.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def between(self, pairs):
+        """Obtain nodes between pairs of nodes.
+
+        ``pairs`` is an iterable of node pairs.
+
+        Returns an iterable of iterables of nodes corresponding to each
+        requested pair.
+        """
+
+    @abc.abstractmethod
+    def branches(self, nodes):
+        """Obtain ancestor changesets of specific nodes back to a branch point.
+
+        For each requested node, the peer finds the first ancestor node that is
+        a DAG root or is a merge.
+
+        Returns an iterable of iterables with the resolved values for each node.
+        """
+
+    @abc.abstractmethod
+    def changegroup(self, nodes, kind):
+        """Obtain a changegroup with data for descendants of specified nodes."""
+
+    @abc.abstractmethod
+    def changegroupsubset(self, bases, heads, kind):
+        pass
+
+class peer(_basepeer, _basewirecommands):
     """Unified interface and base class for peer repositories.
 
-    All peer instances must inherit from this class.
+    All peer instances must inherit from this class and conform to its
+    interface.
     """
+
+    @abc.abstractmethod
+    def iterbatch(self):
+        """Obtain an object to be used for multiple method calls.
+
+        Various operations call several methods on peer instances. If each
+        method call were performed immediately and serially, this would
+        require round trips to remote peers and/or would slow down execution.
+
+        Some peers have the ability to "batch" method calls to avoid costly
+        round trips or to facilitate concurrent execution.
+
+        This method returns an object that can be used to indicate intent to
+        perform batched method calls.
+
+        The returned object is a proxy of this peer. It intercepts calls to
+        batchable methods and queues them instead of performing them
+        immediately. This proxy object has a ``submit`` method that will
+        perform all queued batchable method calls. A ``results()`` method
+        exposes the results of queued/batched method calls. It is a generator
+        of results in the order they were called.
+
+        Not all peers or wire protocol implementations may actually batch method
+        calls. However, they must all support this API.
+        """
+
+class legacypeer(peer, _baselegacywirecommands):
+    """peer but with support for legacy wire protocol commands."""
