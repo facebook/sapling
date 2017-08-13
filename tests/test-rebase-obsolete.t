@@ -494,7 +494,7 @@ Detach both parents
   not rebasing ignored 4:26805aba1e60 "C" (C)
   not rebasing ignored 5:4b61ff5c62e2 "E" (E)
   rebasing 6:f15c3adaf214 "F" (F tip)
-  abort: cannot use revision 6 as base, result would have 3 parents
+  abort: cannot rebase 6:f15c3adaf214 without moving at least one of its parents
   [255]
 
   $ cd ..

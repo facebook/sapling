@@ -1091,10 +1091,9 @@ def defineparents(repo, rev, dest, state):
         #    /|    # None of A and B will be changed to D and rebase fails.
         #   A B D
         if set(newps) == set(oldps) and dest not in newps:
-            # The error message is for compatibility. It's a bit misleading
-            # since rebase is not supposed to add new parents.
-            raise error.Abort(_('cannot use revision %d as base, '
-                                'result would have 3 parents') % rev)
+            raise error.Abort(_('cannot rebase %d:%s without '
+                                'moving at least one of its parents')
+                              % (rev, repo[rev]))
 
     repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
 

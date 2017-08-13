@@ -23,7 +23,7 @@ Source looks like "N"
      A: A':Z
      B: B':Z
     AB: A':Z B':Z
-     C: ABORT: cannot use revision 3 as base, result would have 3 parents
+     C: ABORT: cannot rebase 3:a35c07e8a2a4 without moving at least one of its parents
     AC: A':Z C':A'B
     BC: B':Z C':B'A
    ABC: A':Z B':Z C':A'B'
@@ -31,7 +31,7 @@ Source looks like "N"
     AD: A':Z D':Z
     BD: B':Z D':B'
    ABD: A':Z B':Z D':B'
-    CD: ABORT: cannot use revision 3 as base, result would have 3 parents
+    CD: ABORT: cannot rebase 3:a35c07e8a2a4 without moving at least one of its parents
    ACD: A':Z C':A'B D':Z
    BCD: B':Z C':B'A D':B'
   ABCD: A':Z B':Z C':A'B' D':B'
@@ -49,7 +49,7 @@ Moving backwards
     B: B':Z
     A: 
    BA: B':Z
-    C: ABORT: cannot use revision 3 as base, result would have 3 parents
+    C: ABORT: cannot rebase 3:b8d7149b562b without moving at least one of its parents
    BC: B':Z C':B'A
    AC: 
   BAC: B':Z C':B'A
