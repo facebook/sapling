@@ -13,6 +13,7 @@ process simpler by automating it.
 
 from __future__ import absolute_import
 
+import difflib
 import errno
 import re
 import sys
@@ -242,6 +243,38 @@ def getcustomadmonitions(repo):
         read('.hgreleasenotes')
     return p['sections']
 
+def checkadmonitions(ui, repo, directives, revs):
+    """
+    Checks the commit messages for admonitions and their validity.
+
+    .. abcd::
+
+       First paragraph under this admonition
+
+    For this commit message, using `hg releasenotes -r . --check`
+    returns: Invalid admonition 'abcd' present in changeset 3ea92981e103
+
+    As admonition 'abcd' is neither present in default nor custom admonitions
+    """
+    for rev in revs:
+        ctx = repo[rev]
+        admonition = re.search(RE_DIRECTIVE, ctx.description())
+        if admonition:
+            if admonition.group(1) in directives:
+                continue
+            else:
+                ui.write(_("Invalid admonition '%s' present in changeset %s"
+                           "\n") % (admonition.group(1), ctx.hex()[:12]))
+                sim = lambda x: difflib.SequenceMatcher(None,
+                    admonition.group(1), x).ratio()
+
+                similar = [s for s in directives if sim(s) > 0.6]
+                if len(similar) == 1:
+                    ui.write(_("(did you mean %s?)\n") % similar[0])
+                elif similar:
+                    ss = ", ".join(sorted(similar))
+                    ui.write(_("(did you mean one of %s?)\n") % ss)
+
 def parsenotesfromrevisions(repo, directives, revs):
     notes = parsedreleasenotes()
 
@@ -432,9 +465,11 @@ def serializenotes(sections, notes):
     return '\n'.join(lines)
 
 @command('releasenotes',
-    [('r', 'rev', '', _('revisions to process for release notes'), _('REV'))],
-    _('[-r REV] FILE'))
-def releasenotes(ui, repo, file_, rev=None):
+    [('r', 'rev', '', _('revisions to process for release notes'), _('REV')),
+    ('c', 'check', False, _('checks for validity of admonitions (if any)'),
+        _('REV'))],
+    _('hg releasenotes [-r REV] [-c] FILE'))
+def releasenotes(ui, repo, file_=None, **opts):
     """parse release notes from commit messages into an output file
 
     Given an output file and set of revisions, this command will parse commit
@@ -511,8 +546,12 @@ def releasenotes(ui, repo, file_, rev=None):
     release note after it has been added to the release notes file.
     """
     sections = releasenotessections(ui, repo)
+    rev = opts.get('rev')
 
     revs = scmutil.revrange(repo, [rev or 'not public()'])
+    if opts.get('check'):
+        return checkadmonitions(ui, repo, sections.names(), revs)
+
     incoming = parsenotesfromrevisions(repo, sections.names(), revs)
 
     try:
