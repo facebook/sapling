@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function
 
 import inspect
 import os
+import re
 import sys
 
 
@@ -60,9 +61,15 @@ def poentry(path, lineno, s):
             'msgid %s\n' % normalize(s) +
             'msgstr ""\n')
 
+doctestre = re.compile(r'^ +>>> ', re.MULTILINE)
 
 def offset(src, doc, name, default):
     """Compute offset or issue a warning on stdout."""
+    # remove doctest part, in order to avoid backslash mismatching
+    m = doctestre.search(doc)
+    if m:
+        doc = doc[:m.start()]
+
     # Backslashes in doc appear doubled in src.
     end = src.find(doc.replace('\\', '\\\\'))
     if end == -1:
