@@ -1010,6 +1010,13 @@ class curseschunkselector(object):
     def _getstatuslinesegments(self):
         """-> [str]. return segments"""
         selected = self.currentselecteditem.applied
+        spaceselect = _('space: select')
+        spacedeselect = _('space: deselect')
+        # Format the selected label into a place as long as the longer of the
+        # two possible labels.  This may vary by language.
+        spacelen = max(len(spaceselect), len(spacedeselect))
+        selectedlabel = '%-*s' % (spacelen,
+                                  spacedeselect if selected else spaceselect)
         segments = [
             _headermessages[self.operation],
             '-',
@@ -1017,7 +1024,7 @@ class curseschunkselector(object):
             _('c: confirm'),
             _('q: abort'),
             _('arrow keys: move/expand/collapse'),
-            _('space: deselect') if selected else _('space: select'),
+            selectedlabel,
             _('?: help'),
         ]
         return segments
