@@ -277,7 +277,6 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
     transactions = []
     if neednewdiff:
         diff = creatediff(ctx)
-        writediffproperties(ctx, diff)
         transactions.append({'type': 'update', 'value': diff[r'phid']})
     else:
         # Even if we don't need to upload a new diff because the patch content
