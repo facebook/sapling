@@ -49,6 +49,7 @@ cpp_library(
         "@/eden/fs/store/git:git",
         "@/eden/fs/store/hg:hg",
         "@/folly/experimental:experimental",
+        "@/folly/experimental:string_keyed_map",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
         "@/folly/init:init",
