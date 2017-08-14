@@ -438,17 +438,17 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         raise error.Abort(_('cannot push: destination does not support the '
                             'unbundle wire protocol command'))
 
-    # get local lock as we might write phase data
-    localwlock = locallock = None
-    locallocked = False
+    # get lock as we might write phase data
+    wlock = lock = None
+    locked = False
     try:
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
         maypushback = pushop.ui.configbool('experimental', 'bundle2.pushback')
         if (not _forcebundle1(pushop)) and maypushback:
-            localwlock = pushop.repo.wlock()
-        locallock = pushop.repo.lock()
-        locallocked = True
+            wlock = pushop.repo.wlock()
+        lock = pushop.repo.lock()
+        locked = True
     except IOError as err:
         if err.errno != errno.EACCES:
             raise
@@ -458,7 +458,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
-        if locallocked:
+        if locked:
             pushop.trmanager = transactionmanager(pushop.repo,
                                                   'push-response',
                                                   pushop.remote.url())
@@ -476,10 +476,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
     finally:
         if pushop.trmanager:
             pushop.trmanager.release()
-        if locallock is not None:
-            locallock.release()
-        if localwlock is not None:
-            localwlock.release()
+        if lock is not None:
+            lock.release()
+        if wlock is not None:
+            wlock.release()
 
     return pushop
 
