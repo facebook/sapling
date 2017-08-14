@@ -326,6 +326,20 @@ class InodeBase {
     return *loc;
   }
 
+ protected:
+  /**
+   * Helper function to update timeStamps passed by FileInode and TreeInode in
+   * InodeBase
+   */
+  void setattrTimes(
+      const struct stat& attr,
+      int to_set,
+      InodeTimestamps& timeStamps);
+  /**
+   * Helper function to update Journal in FileInode and TreeInode.
+   */
+  void updateJournal();
+
  private:
   template <typename InodeType>
   friend class InodePtrImpl;
@@ -364,6 +378,15 @@ class InodeBase {
   }
   void onPtrRefZero() const;
   ParentInodeInfo getParentInfo() const;
+
+  /**
+   * Helper function called in setattr function to create overlay entry if not
+   * present and  fills timestamps and other FileInode related fields or
+   * TreeInode related fields.
+   */
+  virtual folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+      const struct stat& attr,
+      int to_set);
 
   fuse_ino_t const ino_;
 

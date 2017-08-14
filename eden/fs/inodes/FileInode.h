@@ -57,9 +57,6 @@ class FileInode : public InodeBase {
       dev_t rdev = 0);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
-  folly::Future<fusell::Dispatcher::Attr> setattr(
-      const struct stat& attr,
-      int to_set) override;
   folly::Future<std::string> readlink();
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi);
@@ -269,6 +266,14 @@ class FileInode : public InodeBase {
   struct stat stat();
   void flush(uint64_t lock_owner);
   void fsync(bool datasync);
+
+  /**
+   * Helper function used in setattr to perform FileInode specific operations
+   * during setattr.
+   */
+  folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+      const struct stat& attr,
+      int to_set) override;
 
   folly::Synchronized<State> state_;
 

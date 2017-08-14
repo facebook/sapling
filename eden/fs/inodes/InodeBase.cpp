@@ -12,6 +12,7 @@
 #include <folly/Likely.h>
 #include <folly/experimental/logging/xlog.h>
 
+#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
@@ -65,14 +66,13 @@ void InodeBase::InodeTimestamps::setTimestampValues(
 folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
 }
-
-// See Dispatcher::setattr
-folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
-    const struct stat& /* attr */,
-    int /* to_set */) {
-  FUSELL_NOT_IMPL();
+folly::Future<fusell::Dispatcher::Attr> InodeBase::setInodeAttr(
+    const struct stat& /*attr*/,
+    int /*to_set*/) {
+  // TODO: Make this as pure virtual function after adding setInodeAttr method
+  // to TreeInode class and remove method implementation here.
+  return fusell::Dispatcher::Attr{getMount()->getMountPoint()};
 }
-
 folly::Future<folly::Unit> InodeBase::setxattr(
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,
@@ -325,6 +325,63 @@ ParentInodeInfo InodeBase::getParentInfo() const {
     // Otherwise our parent changed, and we have to retry.
     parent.reset();
     parentContents.unlock();
+  }
+}
+
+// See Dispatcher::setattr
+folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
+    const struct stat& attr,
+    int to_set) {
+  // Check if gid and uid are same or not.
+  if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
+    if ((to_set & FUSE_SET_ATTR_UID &&
+         attr.st_uid != getMount()->getMountPoint()->getUid()) ||
+        (to_set & FUSE_SET_ATTR_GID &&
+         attr.st_gid != getMount()->getMountPoint()->getGid())) {
+      folly::throwSystemErrorExplicit(
+          EACCES, "changing the owner/group is not supported");
+    }
+    // Otherwise: there is no change
+  }
+
+  // Set FileInode or TreeInode specific data.
+  return setInodeAttr(attr, to_set);
+}
+
+// Helper function to set timeStamps of FileInode and TreeInode
+void InodeBase::setattrTimes(
+    const struct stat& attr,
+    int to_set,
+    InodeTimestamps& timeStamps) {
+  struct timespec currentTime;
+  clock_gettime(CLOCK_REALTIME, &currentTime);
+
+  // Set atime for TreeInode.
+  if (to_set & FUSE_SET_ATTR_ATIME) {
+    timeStamps.atime = attr.st_atim;
+  } else if (to_set & FUSE_SET_ATTR_ATIME_NOW) {
+    timeStamps.atime = currentTime;
+  }
+
+  // Set mtime for TreeInode.
+  if (to_set & FUSE_SET_ATTR_MTIME) {
+    timeStamps.mtime = attr.st_mtim;
+  } else if (to_set & FUSE_SET_ATTR_MTIME_NOW) {
+    timeStamps.mtime = currentTime;
+  }
+
+  // we do not allow users to set ctime using setattr. ctime should be changed
+  // when ever setattr is called, as this function is called in setattr, update
+  // ctime to currentTime.
+  timeStamps.ctime = currentTime;
+}
+
+// Helper function to update Journal used by FileInode and TreeInode.
+void InodeBase::updateJournal() {
+  auto path = getPath();
+  if (path.hasValue()) {
+    getMount()->getJournal().wlock()->addDelta(
+        std::make_unique<JournalDelta>(JournalDelta{path.value()}));
   }
 }
 }
