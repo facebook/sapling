@@ -440,7 +440,6 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
 
     # get lock as we might write phase data
     wlock = lock = None
-    locked = False
     try:
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
@@ -448,7 +447,9 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         if (not _forcebundle1(pushop)) and maypushback:
             wlock = pushop.repo.wlock()
         lock = pushop.repo.lock()
-        locked = True
+        pushop.trmanager = transactionmanager(pushop.repo,
+                                              'push-response',
+                                              pushop.remote.url())
     except IOError as err:
         if err.errno != errno.EACCES:
             raise
@@ -457,11 +458,8 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         # synchronisation.
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
+
     try:
-        if locked:
-            pushop.trmanager = transactionmanager(pushop.repo,
-                                                  'push-response',
-                                                  pushop.remote.url())
         pushop.repo.checkpush(pushop)
         _pushdiscovery(pushop)
         if not _forcebundle1(pushop):
