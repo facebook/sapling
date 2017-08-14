@@ -128,7 +128,7 @@ add some changesets to rename/remove/merge
   $ hg merge
   merging sub/maybelarge.dat and stuff/maybelarge.dat to stuff/maybelarge.dat
   merging sub/normal2 and stuff/normal2 to stuff/normal2
-  warning: $TESTTMP/bigfile-repo/stuff/maybelarge.dat looks like a binary file. (glob)
+  warning: stuff/maybelarge.dat looks like a binary file. (glob)
   warning: conflicts while merging stuff/maybelarge.dat! (edit, then use 'hg resolve --mark')
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon

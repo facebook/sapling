@@ -410,11 +410,29 @@ def _verifytext(text, path, ui, opts):
 
 def simplemerge(ui, localfile, basefile, otherfile,
                 localctx=None, basectx=None, otherctx=None, repo=None, **opts):
+    """Performs the simplemerge algorithm.
+
+    {local|base|other}ctx are optional. If passed, they (local/base/other) will
+    be read from. You should pass explicit labels in this mode since the default
+    is to use the file paths."""
     def readfile(filename):
         f = open(filename, "rb")
         text = f.read()
         f.close()
         return _verifytext(text, filename, ui, opts)
+
+    def readctx(ctx):
+        if not ctx:
+            return None
+        if not repo:
+            raise error.ProgrammingError('simplemerge: repo must be passed if '
+                                         'using contexts')
+        # `wwritedata` is used to get the post-filter data from `ctx` (i.e.,
+        # what would have been in the working copy). Since merges were run in
+        # the working copy, and thus used post-filter data, we do the same to
+        # maintain behavior.
+        return repo.wwritedata(ctx.path(),
+                               _verifytext(ctx.data(), ctx.path(), ui, opts))
 
     mode = opts.get('mode','merge')
     if mode == 'union':
@@ -436,9 +454,9 @@ def simplemerge(ui, localfile, basefile, otherfile,
             raise error.Abort(_("can only specify three labels."))
 
     try:
-        localtext = readfile(localfile)
-        basetext = readfile(basefile)
-        othertext = readfile(otherfile)
+        localtext = readctx(localctx) if localctx else readfile(localfile)
+        basetext = readctx(basectx) if basectx else readfile(basefile)
+        othertext = readctx(otherctx) if otherctx else readfile(otherfile)
     except error.Abort:
         return 1
 
