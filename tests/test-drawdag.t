@@ -232,3 +232,41 @@ Create obsmarkers via comments
   be0ef73c17ade3fc89dc41701eb9fc3a91b58282 575c4b5ec114d64b681d33f8792853568bfb2b2c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   64a8289d249234b9886244d379f15e6b650b28e3 0 {7fb047a69f220c21711122dfd94305a9efb60cba} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   58e6b987bf7045fcd9c54f496396ca1d1fc81047 0 {575c4b5ec114d64b681d33f8792853568bfb2b2c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+
+Change file contents via comments
+
+  $ reinit
+  $ hg debugdrawdag <<'EOS'
+  > C       # A/dir1/a = 1\n2
+  > |\      # B/dir2/b = 34
+  > A B     # C/dir1/c = 5
+  >         # C/dir2/c = 6
+  >         # C/A = a
+  >         # C/B = b
+  > EOS
+
+  $ hg log -G -T '{desc} {files}'
+  o    C A B dir1/c dir2/c
+  |\
+  | o  B B dir2/b
+  |
+  o  A A dir1/a
+  
+  $ for f in `hg files -r C`; do
+  >   echo FILE "$f"
+  >   hg cat -r C "$f"
+  >   echo
+  > done
+  FILE A
+  a
+  FILE B
+  b
+  FILE dir1/a
+  1
+  2
+  FILE dir1/c
+  5
+  FILE dir2/b
+  34
+  FILE dir2/c
+  6

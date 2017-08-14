@@ -84,6 +84,7 @@ from __future__ import absolute_import, print_function
 
 import collections
 import itertools
+import re
 
 from mercurial.i18n import _
 from mercurial import (
@@ -275,6 +276,12 @@ def _walkgraph(edges):
                 if leaf in v:
                     v.remove(leaf)
 
+def _getcomments(text):
+    for line in text.splitlines():
+        if ' # ' not in line:
+            continue
+        yield line.split(' # ', 1)[1].split(' # ')[0].strip()
+
 @command('debugdrawdag', [])
 def debugdrawdag(ui, repo, **opts):
     """read an ASCII graph from stdin and create changesets
@@ -301,6 +308,13 @@ def debugdrawdag(ui, repo, **opts):
             raise error.Abort(_('%s: too many parents: %s')
                               % (k, ' '.join(v)))
 
+    # parse comments to get extra file content instructions
+    files = collections.defaultdict(dict) # {(name, path): content}
+    comments = list(_getcomments(text))
+    filere = re.compile(r'^(\w+)/([\w/]+)\s*=\s*(.*)$', re.M)
+    for name, path, content in filere.findall('\n'.join(comments)):
+        files[name][path] = content.replace(r'\n', '\n')
+
     committed = {None: node.nullid}  # {name: node}
 
     # for leaf nodes, try to find existing nodes in repo
@@ -326,6 +340,9 @@ def debugdrawdag(ui, repo, **opts):
         else:
             # If it's not a merge, add a single file
             added[name] = name
+        # add extra file contents in comments
+        for path, content in files.get(name, {}).items():
+            added[path] = content
         ctx = simplecommitctx(repo, name, pctxs, added)
         n = ctx.commit()
         committed[name] = n
@@ -335,12 +352,8 @@ def debugdrawdag(ui, repo, **opts):
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction('drawdag'):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
-        for line in text.splitlines():
-            if ' # ' not in line:
-                continue
-
+        for comment in comments:
             rels = [] # obsolete relationships
-            comment = line.split(' # ', 1)[1].split(' # ')[0].strip()
             args = comment.split(':', 1)
             if len(args) <= 1:
                 continue
