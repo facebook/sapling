@@ -408,6 +408,20 @@ def _verifytext(text, path, ui, opts):
             raise error.Abort(msg)
     return text
 
+def _picklabels(defaults, overrides):
+    name_a, name_b, name_base = defaults
+
+    if len(overrides) > 0:
+        name_a = overrides[0]
+    if len(overrides) > 1:
+        name_b = overrides[1]
+    if len(overrides) > 2:
+        name_base = overrides[2]
+    if len(overrides) > 3:
+        raise error.Abort(_("can only specify three labels."))
+
+    return [name_a, name_b, name_base]
+
 def simplemerge(ui, localfile, basefile, otherfile,
                 localctx=None, basectx=None, otherctx=None, repo=None, **opts):
     """Performs the simplemerge algorithm.
@@ -446,23 +460,11 @@ def simplemerge(ui, localfile, basefile, otherfile,
             self.ctx.write(self.text, self.ctx.flags())
 
     mode = opts.get('mode','merge')
-    if mode == 'union':
-        name_a = None
-        name_b = None
-        name_base = None
-    else:
-        name_a = localfile
-        name_b = otherfile
-        name_base = None
-        labels = opts.get('label', [])
-        if len(labels) > 0:
-            name_a = labels[0]
-        if len(labels) > 1:
-            name_b = labels[1]
-        if len(labels) > 2:
-            name_base = labels[2]
-        if len(labels) > 3:
-            raise error.Abort(_("can only specify three labels."))
+    name_a, name_b, name_base = None, None, None
+    if mode != 'union':
+        name_a, name_b, name_base = _picklabels([localfile,
+                                                 otherfile, None],
+                                                opts.get('label', []))
 
     try:
         localtext = readctx(localctx) if localctx else readfile(localfile)
