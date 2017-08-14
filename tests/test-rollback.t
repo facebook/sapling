@@ -210,3 +210,276 @@ rollback disabled by config
   abort: rollback is disabled because it is unsafe
   (see `hg help -v rollback` for information)
   [255]
+
+  $ cd ..
+
+I/O errors on stdio are handled properly (issue5658)
+
+  $ cat > badui.py << EOF
+  > import errno
+  > from mercurial.i18n import _
+  > from mercurial import (
+  >     error,
+  >     ui as uimod,
+  > )
+  > 
+  > def pretxncommit(ui, repo, **kwargs):
+  >     ui.warn('warn during pretxncommit\n')
+  > 
+  > def pretxnclose(ui, repo, **kwargs):
+  >     ui.warn('warn during pretxnclose\n')
+  > 
+  > def txnclose(ui, repo, **kwargs):
+  >     ui.warn('warn during txnclose\n')
+  > 
+  > def txnabort(ui, repo, **kwargs):
+  >     ui.warn('warn during abort\n')
+  > 
+  > class fdproxy(object):
+  >     def __init__(self, ui, o):
+  >         self._ui = ui
+  >         self._o = o
+  > 
+  >     def __getattr__(self, attr):
+  >         return getattr(self._o, attr)
+  > 
+  >     def write(self, msg):
+  >         errors = set(self._ui.configlist('ui', 'ioerrors', []))
+  >         pretxncommit = msg == 'warn during pretxncommit\n'
+  >         pretxnclose = msg == 'warn during pretxnclose\n'
+  >         txnclose = msg == 'warn during txnclose\n'
+  >         txnabort = msg == 'warn during abort\n'
+  >         msgabort = msg == _('transaction abort!\n')
+  >         msgrollback = msg == _('rollback completed\n')
+  > 
+  >         if pretxncommit and 'pretxncommit' in errors:
+  >             raise IOError(errno.EPIPE, 'simulated epipe')
+  >         if pretxnclose and 'pretxnclose' in errors:
+  >             raise IOError(errno.EIO, 'simulated eio')
+  >         if txnclose and 'txnclose' in errors:
+  >             raise IOError(errno.EBADF, 'simulated badf')
+  >         if txnabort and 'txnabort' in errors:
+  >             raise IOError(errno.EPIPE, 'simulated epipe')
+  >         if msgabort and 'msgabort' in errors:
+  >             raise IOError(errno.EBADF, 'simulated ebadf')
+  >         if msgrollback and 'msgrollback' in errors:
+  >             raise IOError(errno.EIO, 'simulated eio')
+  > 
+  >         return self._o.write(msg)
+  > 
+  > def uisetup(ui):
+  >     class badui(ui.__class__):
+  >         def write_err(self, *args, **kwargs):
+  >             olderr = self.ferr
+  >             try:
+  >                 self.ferr = fdproxy(self, olderr)
+  >                 return super(badui, self).write_err(*args, **kwargs)
+  >             finally:
+  >                 self.ferr = olderr
+  > 
+  >     ui.__class__ = badui
+  > 
+  > def reposetup(ui, repo):
+  >     ui.setconfig('hooks', 'pretxnclose.badui', pretxnclose, 'badui')
+  >     ui.setconfig('hooks', 'txnclose.badui', txnclose, 'badui')
+  >     ui.setconfig('hooks', 'pretxncommit.badui', pretxncommit, 'badui')
+  >     ui.setconfig('hooks', 'txnabort.badui', txnabort, 'badui')
+  > EOF
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > badui = $TESTTMP/badui.py
+  > EOF
+
+An I/O error during pretxncommit is handled
+
+  $ hg init ioerror-pretxncommit
+  $ cd ioerror-pretxncommit
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+  $ echo 1 > foo
+  $ hg --config ui.ioerrors=pretxncommit commit -m 'error during pretxncommit'
+  error: pretxncommit.badui hook raised an exception: [Errno *] simulated epipe (glob)
+  transaction abort!
+  warn during abort
+  rollback completed
+  [255]
+
+  $ hg commit -m 'commit 1'
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ cd ..
+
+An I/O error during pretxnclose is handled
+
+  $ hg init ioerror-pretxnclose
+  $ cd ioerror-pretxnclose
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+  $ hg --config ui.ioerrors=pretxnclose commit -m 'error during pretxnclose'
+  warn during pretxncommit
+  error: pretxnclose.badui hook raised an exception: [Errno *] simulated eio (glob)
+  transaction abort!
+  warn during abort
+  rollback completed
+  abort: simulated eio
+  [255]
+
+  $ hg commit -m 'commit 1'
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ cd ..
+
+An I/O error during txnclose is handled
+
+  $ hg init ioerror-txnclose
+  $ cd ioerror-txnclose
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+  $ hg --config ui.ioerrors=txnclose commit -m 'error during txnclose'
+  warn during pretxncommit
+  warn during pretxnclose
+  error: txnclose.badui hook raised an exception: [Errno *] simulated badf (glob)
+  (run with --traceback for stack trace)
+
+  $ hg commit -m 'commit 1'
+  nothing changed
+  [1]
+
+  $ cd ..
+
+An I/O error writing "transaction abort" is handled
+
+  $ hg init ioerror-msgabort
+  $ cd ioerror-msgabort
+
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+  $ hg --config ui.ioerrors=msgabort --config hooks.pretxncommit=false commit -m 'error during abort message'
+  abort: simulated ebadf
+  *: DeprecationWarning: use lock.release instead of del lock (glob)
+    return -1
+  [255]
+
+  $ hg commit -m 'commit 1'
+  abort: abandoned transaction found!
+  (run 'hg recover' to clean up transaction)
+  [255]
+
+  $ cd ..
+
+An I/O error during txnabort should still result in rollback
+
+  $ hg init ioerror-txnabort
+  $ cd ioerror-txnabort
+
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+  $ hg --config ui.ioerrors=txnabort --config hooks.pretxncommit=false commit -m 'error during abort'
+  transaction abort!
+  error: txnabort.badui hook raised an exception: [Errno *] simulated epipe (glob)
+  (run with --traceback for stack trace)
+  rollback completed
+  abort: pretxncommit hook exited with status 1
+  [255]
+
+  $ hg commit -m 'commit 1'
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ cd ..
+
+An I/O error writing "rollback completed" is handled
+
+  $ hg init ioerror-msgrollback
+  $ cd ioerror-msgrollback
+
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+
+  $ hg --config ui.ioerrors=msgrollback --config hooks.pretxncommit=false commit -m 'error during rollback message'
+  transaction abort!
+  warn during abort
+  rollback failed - please run hg recover
+  abort: pretxncommit hook exited with status 1
+  [255]
+
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+
+  $ cd ..
+
+Multiple I/O errors after transaction open are handled.
+This is effectively what happens if a peer disconnects in the middle
+of a transaction.
+
+  $ hg init ioerror-multiple
+  $ cd ioerror-multiple
+  $ echo 0 > foo
+  $ hg -q commit -A -m initial
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
+
+  $ echo 1 > foo
+
+  $ hg --config ui.ioerrors=pretxncommit,pretxnclose,txnclose,txnabort,msgabort,msgrollback commit -m 'multiple errors'
+  error: pretxncommit.badui hook raised an exception: [Errno *] simulated epipe (glob)
+  abort: simulated ebadf
+  *: DeprecationWarning: use lock.release instead of del lock (glob)
+    return -1
+  [255]
+
+  $ hg verify
+  abandoned transaction found - run hg recover
+  checking changesets
+  checking manifests
+   manifest@?: rev 1 points to nonexistent changeset 1
+   manifest@?: 94e0ee43dbfe not in changesets
+  crosschecking files in changesets and manifests
+  checking files
+   foo@?: rev 1 points to nonexistent changeset 1
+   (expected 0)
+  1 files, 1 changesets, 2 total revisions
+  1 warnings encountered!
+  3 integrity errors encountered!
+  [1]
+
+  $ cd ..
