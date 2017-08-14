@@ -408,7 +408,8 @@ def _verifytext(text, path, ui, opts):
             raise error.Abort(msg)
     return text
 
-def simplemerge(ui, local, base, other, **opts):
+def simplemerge(ui, localfile, basefile, otherfile,
+                localctx=None, basectx=None, otherctx=None, repo=None, **opts):
     def readfile(filename):
         f = open(filename, "rb")
         text = f.read()
@@ -421,8 +422,8 @@ def simplemerge(ui, local, base, other, **opts):
         name_b = None
         name_base = None
     else:
-        name_a = local
-        name_b = other
+        name_a = localfile
+        name_b = otherfile
         name_base = None
         labels = opts.get('label', [])
         if len(labels) > 0:
@@ -435,16 +436,16 @@ def simplemerge(ui, local, base, other, **opts):
             raise error.Abort(_("can only specify three labels."))
 
     try:
-        localtext = readfile(local)
-        basetext = readfile(base)
-        othertext = readfile(other)
+        localtext = readfile(localfile)
+        basetext = readfile(basefile)
+        othertext = readfile(otherfile)
     except error.Abort:
         return 1
 
-    local = os.path.realpath(local)
+    localfile = os.path.realpath(localfile)
     if not opts.get('print'):
-        opener = vfsmod.vfs(os.path.dirname(local))
-        out = opener(os.path.basename(local), "w", atomictemp=True)
+        opener = vfsmod.vfs(os.path.dirname(localfile))
+        out = opener(os.path.basename(localfile), "w", atomictemp=True)
     else:
         out = ui.fout
 
