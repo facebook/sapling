@@ -413,8 +413,8 @@ def simplemerge(ui, localfile, basefile, otherfile,
     """Performs the simplemerge algorithm.
 
     {local|base|other}ctx are optional. If passed, they (local/base/other) will
-    be read from. You should pass explicit labels in this mode since the default
-    is to use the file paths."""
+    be read from and the merge result written to (local). You should pass
+    explicit labels in this mode since the default is to use the file paths."""
     def readfile(filename):
         f = open(filename, "rb")
         text = f.read()
@@ -433,6 +433,17 @@ def simplemerge(ui, localfile, basefile, otherfile,
         # maintain behavior.
         return repo.wwritedata(ctx.path(),
                                _verifytext(ctx.data(), ctx.path(), ui, opts))
+
+    class ctxwriter(object):
+        def __init__(self, ctx):
+            self.ctx = ctx
+            self.text = ""
+
+        def write(self, text):
+            self.text += text
+
+        def close(self):
+            self.ctx.write(self.text, self.ctx.flags())
 
     mode = opts.get('mode','merge')
     if mode == 'union':
@@ -460,12 +471,14 @@ def simplemerge(ui, localfile, basefile, otherfile,
     except error.Abort:
         return 1
 
-    localfile = os.path.realpath(localfile)
-    if not opts.get('print'):
+    if opts.get('print'):
+        out = ui.fout
+    elif localctx:
+        out = ctxwriter(localctx)
+    else:
+        localfile = os.path.realpath(localfile)
         opener = vfsmod.vfs(os.path.dirname(localfile))
         out = opener(os.path.basename(localfile), "w", atomictemp=True)
-    else:
-        out = ui.fout
 
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {
