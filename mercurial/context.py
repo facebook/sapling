@@ -243,7 +243,7 @@ class basectx(object):
         msg = ("'context.troubled' is deprecated, "
                "use 'context.isunstable'")
         self._repo.ui.deprecwarn(msg, '4.4')
-        return self.unstable()
+        return self.isunstable()
 
     def isunstable(self):
         """True if the changeset is either unstable, bumped or divergent"""
