@@ -78,11 +78,11 @@ except locale.Error:
 encodingmode = environ.get("HGENCODINGMODE", "strict")
 fallbackencoding = 'ISO-8859-1'
 
-class localstr(str):
+class localstr(bytes):
     '''This class allows strings that are unmodified to be
     round-tripped to the local encoding and back'''
     def __new__(cls, u, l):
-        s = str.__new__(cls, l)
+        s = bytes.__new__(cls, l)
         s._utf8 = u
         return s
     def __hash__(self):
