@@ -2703,5 +2703,29 @@ void TreeInode::updateOverlayHeader() const {
     Overlay::updateTimestampToHeader(file.fd(), contents->timeStamps);
   }
 }
+folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
+    const struct stat& attr,
+    int to_set) {
+  materialize();
+  fusell::Dispatcher::Attr result(getMount()->getMountPoint());
+
+  // We do not have size field for directories and currently TreeInode does not
+  // have any field like FileInode::state_::mode to set the mode. May be in the
+  // future if needed we can add a mode Field to TreeInode::contents_ but for
+  // now we are simply setting the mode to (S_IFDIR | 0755).
+
+  // Set InodeNumber, timeStamps, mode in the result.
+  result.st.st_ino = getNodeId();
+  result.st.st_mode = S_IFDIR | 0755;
+  auto contents = contents_.wlock();
+  setattrTimes(attr, to_set, contents->timeStamps);
+  result.st.st_atim = contents->timeStamps.atime;
+  result.st.st_ctim = contents->timeStamps.ctime;
+  result.st.st_mtim = contents->timeStamps.mtime;
+
+  // Update Journal
+  updateJournal();
+  return result;
+}
 }
 }

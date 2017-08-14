@@ -386,7 +386,7 @@ class InodeBase {
    */
   virtual folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
       const struct stat& attr,
-      int to_set);
+      int to_set) = 0;
 
   fuse_ino_t const ino_;
 

@@ -66,13 +66,6 @@ void InodeBase::InodeTimestamps::setTimestampValues(
 folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
 }
-folly::Future<fusell::Dispatcher::Attr> InodeBase::setInodeAttr(
-    const struct stat& /*attr*/,
-    int /*to_set*/) {
-  // TODO: Make this as pure virtual function after adding setInodeAttr method
-  // to TreeInode class and remove method implementation here.
-  return fusell::Dispatcher::Attr{getMount()->getMountPoint()};
-}
 folly::Future<folly::Unit> InodeBase::setxattr(
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,

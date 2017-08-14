@@ -120,9 +120,9 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 }
 
 folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::setattr(
-    const struct stat& /*attr*/,
-    int /*to_set*/) {
-  folly::throwSystemErrorExplicit(EROFS);
+    const struct stat& attr,
+    int to_set) {
+  return inode_->setattr(attr, to_set);
 }
 
 folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {

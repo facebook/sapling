@@ -711,6 +711,14 @@ class TreeInode : public InodeBase {
    */
   FOLLY_NODISCARD bool checkoutTryRemoveEmptyDir(CheckoutContext* ctx);
 
+  /**
+   * Helper function called inside InodeBase::setattr to perform TreeInode
+   * specific operation during setattr.
+   */
+  folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+      const struct stat& attr,
+      int to_set) override;
+
   folly::Synchronized<Dir> contents_;
 };
 }
