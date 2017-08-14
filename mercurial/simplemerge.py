@@ -397,18 +397,23 @@ class Merge3Text(object):
 
         return unc
 
+def _verifytext(text, path, ui, opts):
+    """verifies that text is non-binary (unless opts[text] is passed,
+    then we just warn)"""
+    if util.binary(text):
+        msg = _("%s looks like a binary file.") % path
+        if not opts.get('quiet'):
+            ui.warn(_('warning: %s\n') % msg)
+        if not opts.get('text'):
+            raise error.Abort(msg)
+    return text
+
 def simplemerge(ui, local, base, other, **opts):
     def readfile(filename):
         f = open(filename, "rb")
         text = f.read()
         f.close()
-        if util.binary(text):
-            msg = _("%s looks like a binary file.") % filename
-            if not opts.get('quiet'):
-                ui.warn(_('warning: %s\n') % msg)
-            if not opts.get('text'):
-                raise error.Abort(msg)
-        return text
+        return _verifytext(text, filename, ui, opts)
 
     mode = opts.get('mode','merge')
     if mode == 'union':
