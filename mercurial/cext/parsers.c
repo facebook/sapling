@@ -20,11 +20,9 @@
 /* The mapping of Python types is meant to be temporary to get Python
  * 3 to compile. We should remove this once Python 3 support is fully
  * supported and proper types are used in the extensions themselves. */
-#define PyInt_Type PyLong_Type
 #define PyInt_Check PyLong_Check
 #define PyInt_FromLong PyLong_FromLong
 #define PyInt_FromSsize_t PyLong_FromSsize_t
-#define PyInt_AS_LONG PyLong_AS_LONG
 #define PyInt_AsLong PyLong_AsLong
 #endif
 

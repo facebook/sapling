@@ -13,6 +13,14 @@
 #include "charencode.h"
 #include "util.h"
 
+#ifdef IS_PY3K
+/* The mapping of Python types is meant to be temporary to get Python
+ * 3 to compile. We should remove this once Python 3 support is fully
+ * supported and proper types are used in the extensions themselves. */
+#define PyInt_Type PyLong_Type
+#define PyInt_AS_LONG PyLong_AS_LONG
+#endif
+
 static const char lowertable[128] = {
 	'\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07',
 	'\x08', '\x09', '\x0a', '\x0b', '\x0c', '\x0d', '\x0e', '\x0f',
