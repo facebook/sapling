@@ -304,6 +304,28 @@ def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
 
 def mergecopies(repo, c1, c2, base):
     """
+    The basic algorithm for copytracing. Copytracing is used in commands like
+    rebase, merge, unshelve, etc to merge files that were moved/ copied in one
+    merge parent and modified in another. For example:
+
+    o          ---> 4 another commit
+    |
+    |   o      ---> 3 commit that modifies a.txt
+    |  /
+    o /        ---> 2 commit that moves a.txt to b.txt
+    |/
+    o          ---> 1 merge base
+
+    If we try to rebase revision 3 on revision 4, since there is no a.txt in
+    revision 4, and if user have copytrace disabled, we prints the following
+    message:
+
+    ```other changed <file> which local deleted```
+
+    If copytrace is enabled, this function finds all the new files that were
+    added from merge base up to the top commit (here 4), and for each file it
+    checks if this file was copied from another file (a.txt in the above case).
+
     Find moves and copies between context c1 and c2 that are relevant
     for merging. 'base' will be used as the merge base.
 
