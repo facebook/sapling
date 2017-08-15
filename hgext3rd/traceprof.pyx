@@ -63,5 +63,5 @@ def profile(ui, fp):
         yield
     finally:
         disable()
-    report(PyFile_AsFile(<PyObject *>fp))
-    clear()
+        report(PyFile_AsFile(<PyObject *>fp))
+        clear()
