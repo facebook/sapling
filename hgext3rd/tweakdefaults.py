@@ -342,6 +342,7 @@ def tweakbehaviors(ui):
 def commitcmd(orig, ui, repo, *pats, **opts):
     if (opts.get("amend")
             and not opts.get("date")
+            and not opts.get("to")
             and not ui.configbool('tweakdefaults', 'amendkeepdate')):
         opts["date"] = currentdate()
 
@@ -733,8 +734,9 @@ def graftcmd(orig, ui, repo, *revs, **opts):
     return orig(ui, repo, *revs, **opts)
 
 def amendcmd(orig, ui, repo, *pats, **opts):
-    if not opts.get("date") and not ui.configbool('tweakdefaults',
-                                                  'amendkeepdate'):
+    if (not opts.get("date")
+        and not opts.get("to")
+        and not ui.configbool('tweakdefaults', 'amendkeepdate')):
         opts["date"] = currentdate()
     return orig(ui, repo, *pats, **opts)
 
