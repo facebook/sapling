@@ -3752,6 +3752,8 @@ def bundlecompressiontopics():
 
         value = docobject()
         value.__doc__ = doc
+        value._origdoc = engine.bundletype.__doc__
+        value._origfunc = engine.bundletype
 
         items[bt[0]] = value
 

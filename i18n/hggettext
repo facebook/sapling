@@ -119,6 +119,8 @@ def docstrings(path):
 
     for func, rstrip in functions:
         if func.__doc__:
+            docobj = func # this might be a proxy to provide formatted doc
+            func = getattr(func, '_origfunc', func)
             funcmod = inspect.getmodule(func)
             extra = ''
             if funcmod.__package__ == funcmod.__name__:
@@ -128,8 +130,8 @@ def docstrings(path):
             src = inspect.getsource(func)
             name = "%s.%s" % (actualpath, func.__name__)
             lineno = inspect.getsourcelines(func)[1]
-            doc = func.__doc__
-            origdoc = getattr(func, '_origdoc', '')
+            doc = docobj.__doc__
+            origdoc = getattr(docobj, '_origdoc', '')
             if rstrip:
                 doc = doc.rstrip()
                 origdoc = origdoc.rstrip()
