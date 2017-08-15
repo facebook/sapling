@@ -103,7 +103,7 @@ def docstrings(path):
     only extract docstrings from functions mentioned in these tables.
     """
     mod = importpath(path)
-    if mod.__doc__:
+    if not path.startswith('mercurial/') and mod.__doc__:
         src = open(path).read()
         lineno = 1 + offset(src, mod.__doc__, path, 7)
         print(poentry(path, lineno, mod.__doc__))
