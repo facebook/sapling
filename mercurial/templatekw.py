@@ -469,6 +469,13 @@ def showgraphnode(repo, ctx, **args):
     else:
         return 'o'
 
+@templatekeyword('graphwidth')
+def showgraphwidth(repo, ctx, templ, **args):
+    """Integer. The width of the graph drawn by 'log --graph' or zero."""
+    # The value args['graphwidth'] will be this function, so we use an internal
+    # name to pass the value through props into this function.
+    return args.get('_graphwidth', 0)
+
 @templatekeyword('index')
 def showindex(**args):
     """Integer. The current iteration of the loop. (0 indexed)"""

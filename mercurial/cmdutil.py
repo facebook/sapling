@@ -2652,14 +2652,18 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         revmatchfn = None
         if filematcher is not None:
             revmatchfn = filematcher(ctx.rev())
-        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
+        edges = edgefn(type, char, state, rev, parents)
+        firstedge = next(edges)
+        width = firstedge[2]
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn,
+                       _graphwidth=width)
         lines = displayer.hunk.pop(rev).split('\n')
         if not lines[-1]:
             del lines[-1]
         displayer.flush(ctx)
-        edges = edgefn(type, char, lines, state, rev, parents)
-        for type, char, lines, coldata in edges:
+        for type, char, width, coldata in itertools.chain([firstedge], edges):
             graphmod.ascii(ui, state, type, char, lines, coldata)
+            lines = []
     displayer.close()
 
 def graphlog(ui, repo, pats, opts):

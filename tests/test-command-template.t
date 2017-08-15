@@ -4319,3 +4319,155 @@ Test that template function in extension is registered as expected
   custom
 
   $ cd ..
+
+Test 'graphwidth' in 'hg log' on various topologies. The key here is that the
+printed graphwidths 3, 5, 7, etc. should all line up in their respective
+columns. We don't care about other aspects of the graph rendering here.
+
+  $ hg init graphwidth
+  $ cd graphwidth
+
+  $ wrappabletext="a a a a a a a a a a a a"
+
+  $ printf "first\n" > file
+  $ hg add file
+  $ hg commit -m "$wrappabletext"
+
+  $ printf "first\nsecond\n" > file
+  $ hg commit -m "$wrappabletext"
+
+  $ hg checkout 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf "third\nfirst\n" > file
+  $ hg commit -m "$wrappabletext"
+  created new head
+
+  $ hg merge
+  merging file
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  | @  5
+  |/
+  o  3
+  
+  $ hg commit -m "$wrappabletext"
+
+  $ hg log --graph -T "{graphwidth}"
+  @    5
+  |\
+  | o  5
+  | |
+  o |  5
+  |/
+  o  3
+  
+
+  $ hg checkout 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf "third\nfirst\nsecond\n" > file
+  $ hg commit -m "$wrappabletext"
+  created new head
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  | o    7
+  | |\
+  +---o  7
+  | |
+  | o  5
+  |/
+  o  3
+  
+
+  $ hg log --graph -T "{graphwidth}" -r 3
+  o    5
+  |\
+  ~ ~
+
+  $ hg log --graph -T "{graphwidth}" -r 1
+  o  3
+  |
+  ~
+
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m "$wrappabletext"
+
+  $ printf "seventh\n" >> file
+  $ hg commit -m "$wrappabletext"
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  o    5
+  |\
+  | o  5
+  | |
+  o |    7
+  |\ \
+  | o |  7
+  | |/
+  o /  5
+  |/
+  o  3
+  
+
+The point of graphwidth is to allow wrapping that accounts for the space taken
+by the graph.
+
+  $ COLUMNS=10 hg log --graph -T "{fill(desc, termwidth - graphwidth)}"
+  @  a a a a
+  |  a a a a
+  |  a a a a
+  o    a a a
+  |\   a a a
+  | |  a a a
+  | |  a a a
+  | o  a a a
+  | |  a a a
+  | |  a a a
+  | |  a a a
+  o |    a a
+  |\ \   a a
+  | | |  a a
+  | | |  a a
+  | | |  a a
+  | | |  a a
+  | o |  a a
+  | |/   a a
+  | |    a a
+  | |    a a
+  | |    a a
+  | |    a a
+  o |  a a a
+  |/   a a a
+  |    a a a
+  |    a a a
+  o  a a a a
+     a a a a
+     a a a a
+
+Something tricky happens when there are elided nodes; the next drawn row of
+edges can be more than one column wider, but the graph width only increases by
+one column. The remaining columns are added in between the nodes.
+
+  $ hg log --graph -T "{graphwidth}" -r "0|2|4|5"
+  o    5
+  |\
+  | \
+  | :\
+  o : :  7
+  :/ /
+  : o  5
+  :/
+  o  3
+  
+
+  $ cd ..
+
