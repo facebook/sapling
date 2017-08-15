@@ -275,7 +275,9 @@ def _runrepack(repo, data, history, packpath, category):
         limit = time.time() - ttl
         return filetime[0] < limit
 
-    packer = repacker(repo, data, history, category, isold)
+    garbagecollect = repo.ui.configbool('remotefilelog', 'gcrepack')
+    packer = repacker(repo, data, history, category, gc=garbagecollect,
+                      isold=isold)
 
     # internal config: remotefilelog.datapackversion
     dv = repo.ui.configint('remotefilelog', 'datapackversion', 0)
@@ -292,12 +294,12 @@ class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
     """
-    def __init__(self, repo, data, history, category, isold=None):
+    def __init__(self, repo, data, history, category, gc=False, isold=None):
         self.repo = repo
         self.data = data
         self.history = history
         self.unit = constants.getunits(category)
-        self.garbagecollect = repo.ui.configbool('remotefilelog', 'gcrepack')
+        self.garbagecollect = gc
         if self.garbagecollect:
             if not isold:
                 raise ValueError("Function 'isold' is not properly specified")
