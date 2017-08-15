@@ -105,13 +105,13 @@ impl FromStr for Required {
 pub struct RevlogRepo {
     basepath: PathBuf,               // path to .hg directory
     requirements: HashSet<Required>, // requirements
+    changelog: Revlog,                   // changes
+    manifest: Revlog,                    // manifest
     inner: Arc<Mutex<RevlogInner>>,  // Inner parts
 }
 
 #[derive(Debug)]
 struct RevlogInner {
-    changelog: Revlog,                   // changes
-    manifest: Revlog,                    // manifest
     filelogcache: HashMap<Path, Revlog>, // filelog cache
 }
 
@@ -141,35 +141,29 @@ impl RevlogRepo {
         Ok(RevlogRepo {
             basepath: base.into(),
             requirements: req,
+            changelog: changelog,
+            manifest: manifest,
             inner: Arc::new(Mutex::new(RevlogInner {
-                changelog: changelog,
-                manifest: manifest,
                 filelogcache: HashMap::new(),
             })),
         })
     }
 
     pub fn get_heads(&self) -> BoxStream<NodeHash, Error> {
-        let mut inner = self.inner.lock().expect("poisoned lock");
-        match inner.changelog.get_heads() {
+        match self.changelog.get_heads() {
             Err(e) => stream::once(Err(e)).boxed(),
             Ok(set) => stream::iter(set.into_iter().map(|e| Ok(e))).boxed(),
         }
     }
 
     pub fn changeset_exists(&self, nodeid: &NodeHash) -> FutureResult<bool> {
-        let inner = self.inner.lock().expect("poisoned lock");
-
-        Ok(inner.changelog.get_idx_by_nodeid(nodeid).is_ok()).into_future()
+        Ok(self.changelog.get_idx_by_nodeid(nodeid).is_ok()).into_future()
     }
 
     pub fn get_changeset_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {
-        let inner = self.inner.lock().expect("poisoned lock");
-
-        inner
-            .changelog
+        self.changelog
             .get_idx_by_nodeid(nodeid)
-            .and_then(|idx| inner.changelog.get_rev(idx))
+            .and_then(|idx| self.changelog.get_rev(idx))
             .into_future()
     }
 
@@ -181,12 +175,9 @@ impl RevlogRepo {
     }
 
     pub fn get_manifest_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {
-        let inner = self.inner.lock().expect("poisoned lock");
-
-        inner
-            .manifest
+        self.manifest
             .get_idx_by_nodeid(nodeid)
-            .and_then(|idx| inner.manifest.get_rev(idx))
+            .and_then(|idx| self.manifest.get_rev(idx))
             .into_future()
     }
 
@@ -237,8 +228,7 @@ impl RevlogRepo {
     }
 
     pub fn changesets(&self) -> ChangesetStream {
-        let inner = self.inner.lock().expect("poisoned lock");
-        ChangesetStream::new(&inner.changelog)
+        ChangesetStream::new(&self.changelog)
     }
 }
 

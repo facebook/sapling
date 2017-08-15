@@ -247,7 +247,7 @@ impl Revlog {
     }
 
     /// Return the set of head revisions in a revlog
-    pub fn get_heads(&mut self) -> Result<HashSet<NodeHash>> {
+    pub fn get_heads(&self) -> Result<HashSet<NodeHash>> {
         let mut inner = self.inner.lock().expect("lock poisoned");
 
         inner.get_heads()
