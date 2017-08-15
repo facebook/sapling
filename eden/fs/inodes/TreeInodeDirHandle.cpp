@@ -115,6 +115,10 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 
     ++entry_iter;
   }
+  // update atime of TreeInode
+  struct timespec currentTime;
+  clock_gettime(CLOCK_REALTIME, &currentTime);
+  inode_->setAtime(currentTime);
 
   return std::move(list);
 }

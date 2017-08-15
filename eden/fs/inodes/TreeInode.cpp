@@ -154,7 +154,16 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
 
   attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId();
-  // TODO: set atime, mtime, and ctime
+#if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
+    _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
+  attr.st.st_atim = contents->timeStamps.atime;
+  attr.st.st_ctim = contents->timeStamps.ctime;
+  attr.st.st_mtim = contents->timeStamps.mtime;
+#else
+  attr.st.st_atime = contents->timeStamps.atime.tv_sec;
+  attr.st.st_mtime = contents->timeStamps.mtime.tv_sec;
+  attr.st.st_ctime = contents->timeStamps.ctime.tv_sec;
+#endif
 
   // For directories, nlink is the number of entries including the
   // "." and ".." links.
@@ -697,6 +706,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // Let's open a file handle now.
     handle = inode->finishCreate();
 
+    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
+    contents->timeStamps.ctime = contents->timeStamps.mtime;
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
@@ -787,6 +798,10 @@ FileInodePtr TreeInode::symlink(
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));
 
+    // Update mtime and ctime of the file
+    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
+    contents->timeStamps.ctime = contents->timeStamps.mtime;
+
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
@@ -852,6 +867,10 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));
 
+    // Update mtime and ctime of the file
+    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
+    contents->timeStamps.ctime = contents->timeStamps.mtime;
+
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
@@ -897,6 +916,13 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
     // Store the overlay entry for this dir
     Dir emptyDir;
+    // Update timeStamps of newly created directory and current directory.
+    clock_gettime(CLOCK_REALTIME, &emptyDir.timeStamps.atime);
+    emptyDir.timeStamps.ctime = emptyDir.timeStamps.atime;
+    emptyDir.timeStamps.mtime = emptyDir.timeStamps.atime;
+    contents->timeStamps.mtime = emptyDir.timeStamps.atime;
+    contents->timeStamps.ctime = emptyDir.timeStamps.atime;
+
     overlay->saveOverlayDir(childNumber, &emptyDir);
 
     // Add a new entry to contents_.entries
@@ -1090,6 +1116,11 @@ int TreeInode::tryRemoveChild(
 
     // Remove it from our entries list
     contents->entries.erase(entIter);
+
+    // We want to update mtime and ctime of parent directoryafter removing the
+    // child.
+    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
+    contents->timeStamps.ctime = contents->timeStamps.mtime;
 
     // Update the on-disk overlay
     auto overlay = this->getOverlay();
@@ -2726,6 +2757,10 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   // Update Journal
   updateJournal();
   return result;
+}
+void TreeInode::setAtime(struct timespec& atime) {
+  auto contents = contents_.wlock();
+  contents->timeStamps.atime = atime;
 }
 }
 }

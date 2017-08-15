@@ -13,7 +13,6 @@ import os
 import stat
 import subprocess
 import time
-import unittest
 
 
 @testcase.eden_repo_test
@@ -147,9 +146,7 @@ class SetAttrTest:
         self.assertEqual(new_st.st_mtime, st.st_mtime)
 
     # Changing permisssions of directory should change
-    # only ctime of the directory, but currently chmod
-    # is not implemented for directories in edenfs
-    @unittest.expectedFailure
+    # only ctime of the directory, but not mtime and atime.
     def test_dir_change_perm(self):
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')

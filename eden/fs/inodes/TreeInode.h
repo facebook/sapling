@@ -539,6 +539,14 @@ class TreeInode : public InodeBase {
    */
   InodeTimestamps getTimestamps() const;
 
+  /**
+   * Helper function to set the atime of a TreeInode. In order to set atime of a
+   * file in TreeInodeDirHandle::readdir which doesnot  have access to.
+   * TreeInode::contents_ we have this function. This has to be public since we
+   * are using it TreeInodeDirHandle class.
+   */
+  void setAtime(struct timespec& atime);
+
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
