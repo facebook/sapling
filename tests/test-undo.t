@@ -31,23 +31,23 @@ Test data store
   $ hg debugindex .hg/undolog/command.i
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       0      0       1 b80de5d13875 000000000000 000000000000
-       1         0      12      1       1 440cdcef588f 000000000000 000000000000
-       2        12       8      2       1 86fddc37572c 000000000000 000000000000
-       3        20       8      3       1 388d40a434df 000000000000 000000000000
-       4        28      14      4       1 1cafbfad488a 000000000000 000000000000
-       5        42       7      5       1 8879b3bd818b 000000000000 000000000000
-       6        49      13      6       1 b0f66da09921 000000000000 000000000000
-       7        62       8      7       1 004b7198dafe 000000000000 000000000000
-       8        70       8      8       1 60920018c706 000000000000 000000000000
-       9        78      14      9       1 c3e212568400 000000000000 000000000000
-      10        92       7     10       1 9d609b5b001c 000000000000 000000000000
+       1         0      22      1       1 bae41a9d0ae9 000000000000 000000000000
+       2        22      15      2       1 6086ecd42962 000000000000 000000000000
+       3        37      15      3       1 5cc3b22d9c65 000000000000 000000000000
+       4        52      24      4       1 efaf8be657bb 000000000000 000000000000
+       5        76      14      5       1 fe69d6bf5432 000000000000 000000000000
+       6        90      20      6       1 720b2d7eb02b 000000000000 000000000000
+       7       110      15      7       1 0595892db30f 000000000000 000000000000
+       8       125      15      8       1 c8265ade52fa 000000000000 000000000000
+       9       140      24      9       1 0d8f98a931b9 000000000000 000000000000
+      10       164      14     10       1 fded10d93e92 000000000000 000000000000
   $ hg debugdata .hg/undolog/command.i 0
   $ hg debugdata .hg/undolog/command.i 1
-  book\x00master (no-eol) (esc)
+  bookmarks\x00book\x00master (no-eol) (esc)
   $ hg debugdata .hg/undolog/command.i 2
-  ci\x00-ma1 (no-eol) (esc)
+  commit\x00ci\x00-ma1 (no-eol) (esc)
   $ hg debugdata .hg/undolog/command.i 3
-  ci\x00-ma2 (no-eol) (esc)
+  commit\x00ci\x00-ma2 (no-eol) (esc)
   $ hg debugdata .hg/undolog/bookmarks.i 0
   $ hg debugdata .hg/undolog/bookmarks.i 1
   master 0000000000000000000000000000000000000000 (no-eol)
@@ -63,14 +63,14 @@ Test data store
   b68836a6e2cac33ba33a20249b85a486eec78186 (no-eol)
   $ hg debugdata .hg/undolog/index.i 1
   bookmarks 8153d44860d076e9c328951c8f36cf8daebe695a
-  command 440cdcef588f9a594c5530a5b6dede39a96d930d
+  command bae41a9d0ae9614fc3aa843a0f5cbdf47bc98c43
   date * (glob)
   draftheads b80de5d138758541c5f05265ad144ab9fa86d1db
   workingparent fcb754f6a51eaf982f66d0637b39f3d2e6b520d5 (no-eol)
   $ touch a3 && hg add a3
   $ hg commit --amend
   $ hg debugdata .hg/undolog/command.i 11
-  commit\x00--amend (no-eol) (esc)
+  commit\x00commit\x00--amend (no-eol) (esc)
 
 Test debugundohistory
   $ hg debugundohistory -l

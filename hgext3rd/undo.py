@@ -58,7 +58,7 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     # This wrapper executes whenever a command is run.
     # Some commands (eg hg sl) don't actually modify anything
     # ie can't be undone, but the command doesn't know this.
-    command = fullargs
+    command = [cmd] + fullargs
 
     # Check wether undolog is consistent
     # ie check wether the undo ext was
@@ -325,6 +325,8 @@ def _debugundolist(ui, repo, offset):
         commandstr = _readnode(repo, 'command.i', nodedict['command'])
         if "" == commandstr:
             commandstr = " -- gap in log -- "
+        else:
+            commandstr = commandstr.split("\0", 1)[1]
         fm.startitem()
         fm.write('undo', '%s', str(i + offset) + ": " + commandstr)
     fm.end()
@@ -361,8 +363,11 @@ def _debugundoindex(ui, repo, reverseindex):
                         set(oldheads.split("\n"))
                         - set(rawcontent.split("\n"))
                         ))
-        elif "command.i" == filename and "" == rawcontent:
-            content = "unkown command(s) run, gap in log"
+        elif "command.i" == filename:
+            if "" == rawcontent:
+                content = "unkown command(s) run, gap in log"
+            else:
+                content = rawcontent.split("\0", 1)[1]
         else:
             content = rawcontent
         fm.startitem()
@@ -677,9 +682,9 @@ def redo(ui, repo, *args, **opts):
 
         if commandlist[0] == "undo":
             undoopts = {}
-            fancyopts.fancyopts(commandlist[1:],
+            fancyopts.fancyopts(commandlist,
                                 cmdtable['undo'][1] + commands.globalopts,
-                                undoopts)
+                                undoopts, gnu=True)
             if redocount == 0:
                 # want to go to state before the undo (not after)
                 toshift = undoopts['step']
