@@ -15,6 +15,7 @@ import subprocess
 import time
 import unittest
 
+
 @testcase.eden_repo_test
 class SetAttrTest:
     def populate_repo(self):
@@ -22,8 +23,6 @@ class SetAttrTest:
         self.repo.commit('Initial commit.')
 
     # mtime should not get changed on permission changes
-    # to the file but currently its changing in Edenfs
-    @unittest.expectedFailure
     def test_chmod(self):
         filename = os.path.join(self.mount, 'hello')
 
@@ -47,13 +46,19 @@ class SetAttrTest:
 
         with self.assertRaises(OSError) as context:
             os.chown(filename, st.st_uid + 1, st.st_gid)
-        self.assertEqual(errno.EPERM, context.exception.errno,
-                         msg="changing uid of a file should raise EPERM")
+        self.assertEqual(
+            errno.EPERM,
+            context.exception.errno,
+            msg="changing uid of a file should raise EPERM"
+        )
 
         with self.assertRaises(OSError) as context:
             os.chown(filename, st.st_uid, st.st_gid + 1)
-        self.assertEqual(errno.EPERM, context.exception.errno,
-                         msg="changing gid of a file should raise EPERM")
+        self.assertEqual(
+            errno.EPERM,
+            context.exception.errno,
+            msg="changing gid of a file should raise EPERM"
+        )
 
     def test_truncate(self):
         filename = os.path.join(self.mount, 'hello')
@@ -157,18 +162,17 @@ class SetAttrTest:
         self.assertEqual(new_st.st_atime, st.st_atime)
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
 
-    # Opening the file in read mode should update the atime
-    # But it is not being updated in Edenfs
-    @unittest.expectedFailure
+    # Read call on a file in Edenfs should modify the atime of the file.
+    # Also, open call should not change the timeStamps of a file.
     def test_timestamp_openfiles(self):
         filename = os.path.join(self.mount, 'hello')
         st = os.lstat(filename)
         with open(filename, 'r') as f:
-            f.read()
             new_st = os.lstat(filename)
             self.assertEqual(new_st.st_mtime, st.st_mtime)
             self.assertEqual(new_st.st_atime, st.st_atime)
             self.assertEqual(new_st.st_ctime, st.st_ctime)
+            f.read()
             f.close()
 
         new_st = os.lstat(filename)

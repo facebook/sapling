@@ -371,19 +371,7 @@ struct stat FileInode::stat() {
   auto state = state_.rlock();
 
   if (state->file) {
-    // stat() the overlay file.
-    //
-    // TODO: We need to get timestamps accurately here.
-    // The timestamps on the underlying file are not correct, because we keep
-    // file_ open for a long time, and do not close it when FUSE file handles
-    // close.  (Timestamps are typically only updated on close operations.)
-    // This results our reported timestamps not changing correctly after the
-    // file is changed through FUSE APIs.
-    //
-    // We probably should update the overlay file to include a header,
-    // so we can store the atime, mtime, and ctime in the header data.
-    // Otherwise we won't be able to report the ctime accurately if we just
-    // keep using the overlay file timestamps.
+    // We are calling fstat only to get the size of the file.
     checkUnixError(fstat(state->file.fd(), &st));
 
     if (st.st_size < Overlay::kHeaderLength) {
@@ -391,41 +379,27 @@ struct stat FileInode::stat() {
       EDEN_BUG() << "Overlay file " << getLocalPath()
                  << " is too short for header: size=" << st.st_size;
     }
-
     st.st_size -= Overlay::kHeaderLength;
-    st.st_mode = state->mode;
     st.st_rdev = state->rdev;
+  } else {
+    CHECK(state->blob);
+    auto buf = state->blob->getContents();
+    st.st_size = buf.computeChainDataLength();
 
-    return st;
+    // NOTE: we don't set rdev to anything special here because we
+    // don't support committing special device nodes.
   }
-
-  CHECK(state->blob);
-  st.st_mode = state->mode;
-
-  auto buf = state->blob->getContents();
-  st.st_size = buf.computeChainDataLength();
-
-  // Report atime, mtime, and ctime as the time when we first loaded this
-  // FileInode.  It hasn't been materialized yet, so this is a reasonble time
-  // to use.  Once it is materialized we use the timestamps on the underlying
-  // overlay file, which the kernel keeps up-to-date.
-  auto epochTime = state->creationTime.time_since_epoch();
-  auto epochSeconds =
-      std::chrono::duration_cast<std::chrono::seconds>(epochTime);
-  st.st_atime = epochSeconds.count();
-  st.st_mtime = epochSeconds.count();
-  st.st_ctime = epochSeconds.count();
 #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-  auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      epochTime - epochSeconds);
-  st.st_atim.tv_nsec = nsec.count();
-  st.st_mtim.tv_nsec = nsec.count();
-  st.st_ctim.tv_nsec = nsec.count();
+  st.st_atim = state->timeStamps.atime;
+  st.st_ctim = state->timeStamps.ctime;
+  st.st_mtim = state->timeStamps.mtime;
+#else
+  st.st_atime = state->timeStamps.atime.tv_sec;
+  st.st_mtime = state->timeStamps.mtime.tv_sec;
+  st.st_ctime = state->timeStamps.ctime.tv_sec;
 #endif
-
-  // NOTE: we don't set rdev to anything special here because we
-  // don't support committing special device nodes.
+  st.st_mode = state->mode;
 
   return st;
 }
@@ -462,6 +436,17 @@ void FileInode::fsync(bool datasync) {
 std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
     size_t size,
     off_t off) {
+  SCOPE_SUCCESS {
+    // We do not want to have a write lock on state_ during the entire io
+    // operation(read) for updating in memory timeStamps as it will block
+    // concurrent reads. Also, we want to update the timeStamps after the read
+    // operation, so in order to achieve the above two, we are using
+    // SCOPE_SUCCESS macro here
+
+    // Update atime on read systemcall.
+    auto state = state_.wlock();
+    clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
+  };
   auto state = state_.rlock();
 
   if (state->file) {
@@ -496,17 +481,20 @@ std::string FileInode::readAll() {
   // We need to take the wlock instead of the rlock because the lseek() call
   // modifies the file offset of the file descriptor.
   auto state = state_.wlock();
+  std::string result;
   if (state->file) {
-    std::string result;
     auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
     folly::checkUnixError(rc, "unable to seek in materialized FileData");
     folly::readFile(state->file.fd(), result);
-    return result;
+  } else {
+    const auto& contentsBuf = state->blob->getContents();
+    folly::io::Cursor cursor(&contentsBuf);
+    result = cursor.readFixedString(contentsBuf.computeChainDataLength());
   }
 
-  const auto& contentsBuf = state->blob->getContents();
-  folly::io::Cursor cursor(&contentsBuf);
-  return cursor.readFixedString(contentsBuf.computeChainDataLength());
+  // We want to update atime after the read operation.
+  clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
+  return result;
 }
 
 fusell::BufVec FileInode::read(size_t size, off_t off) {
@@ -516,6 +504,7 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
 
 size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
   auto state = state_.wlock();
+
   if (!state->file) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
@@ -526,11 +515,17 @@ size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
   auto xfer = ::pwritev(
       state->file.fd(), vec.data(), vec.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
+
+  // Update mtime and ctime on write systemcall.
+  clock_gettime(CLOCK_REALTIME, &state->timeStamps.mtime);
+  state->timeStamps.ctime = state->timeStamps.mtime;
+
   return xfer;
 }
 
 size_t FileInode::write(folly::StringPiece data, off_t off) {
   auto state = state_.wlock();
+
   if (!state->file) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
@@ -540,6 +535,11 @@ size_t FileInode::write(folly::StringPiece data, off_t off) {
   auto xfer = ::pwrite(
       state->file.fd(), data.data(), data.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
+
+  // Update mtime and ctime on write systemcall.
+  clock_gettime(CLOCK_REALTIME, &state->timeStamps.mtime);
+  state->timeStamps.ctime = state->timeStamps.mtime;
+
   return xfer;
 }
 
