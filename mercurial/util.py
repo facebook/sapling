@@ -964,10 +964,9 @@ def nogc(func):
     into. As a workaround, disable GC while building complex (huge)
     containers.
 
-    This garbage collector issue have been fixed in 2.7.
+    This garbage collector issue have been fixed in 2.7. But it still affect
+    CPython's performance.
     """
-    if sys.version_info >= (2, 7):
-        return func
     def wrapper(*args, **kwargs):
         gcenabled = gc.isenabled()
         gc.disable()
@@ -977,6 +976,10 @@ def nogc(func):
             if gcenabled:
                 gc.enable()
     return wrapper
+
+if pycompat.ispypy:
+    # PyPy runs slower with gc disabled
+    nogc = lambda x: x
 
 def pathto(root, n1, n2):
     '''return the relative path from one place to another.
