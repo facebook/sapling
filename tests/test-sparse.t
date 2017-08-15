@@ -55,7 +55,7 @@ Paths should be treated as cwd-relative, not repo-root-relative
   [include]
   $TESTTMP/myrepo/hide
   hide
-  subdir/path (glob)
+  subdir/path
   
   $ cd ..
   $ echo hello > subdir/file2.ext
@@ -69,7 +69,7 @@ Paths should be treated as cwd-relative, not repo-root-relative
   hide
   path:abspath
   subdir/**.ext
-  subdir/path (glob)
+  subdir/path
   
   $ rm -rf subdir
 
