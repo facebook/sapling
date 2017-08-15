@@ -191,10 +191,6 @@ class FileInode : public InodeBase {
 
     mode_t mode{0};
     dev_t rdev{0};
-    /**
-     * The time this FileInode object was first loaded.
-     */
-    std::chrono::system_clock::time_point creationTime;
     folly::Optional<Hash> hash;
 
     /**

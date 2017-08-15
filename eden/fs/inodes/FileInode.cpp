@@ -45,7 +45,7 @@ FileInode::State::State(
     mode_t m,
     const folly::Optional<Hash>& h,
     const timespec& lastCheckoutTime)
-    : mode(m), creationTime(std::chrono::system_clock::now()), hash(h) {
+    : mode(m), hash(h) {
   if (!h.hasValue()) {
     // File is materialized
     auto filePath = inode->getLocalPath();
@@ -64,7 +64,6 @@ FileInode::State::State(
     dev_t rdev)
     : mode(m),
       rdev(rdev),
-      creationTime(std::chrono::system_clock::now()),
       file(std::move(file)) {
   timeStamps.setTimestampValues(lastCheckoutTime);
 }
