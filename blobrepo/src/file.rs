@@ -6,11 +6,9 @@
 
 //! Plain files, symlinks
 
-use futures::future::{BoxFuture, Future, IntoFuture};
+use futures::future::{BoxFuture, Future};
 
-use bincode;
-
-use mercurial_types::{Blob, NodeHash, Parents, Path, hash};
+use mercurial_types::{Blob, NodeHash, Parents, Path};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use blobstore::Blobstore;
@@ -19,34 +17,13 @@ use errors::*;
 
 use manifest::BlobManifest;
 
+use utils::{get_node, RawNodeBlob};
+
 pub struct BlobEntry<B> {
     blobstore: B,
     path: Path, // XXX full path? Parent reference?
     nodeid: NodeHash,
     ty: Type,
-}
-
-#[derive(Debug, Copy, Clone)]
-#[derive(Serialize, Deserialize)]
-pub struct RawNodeBlob {
-    parents: Parents,
-    blob: hash::Sha1,
-}
-
-fn get_node<B>(blobstore: &B,  nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error>
-where B: Blobstore<Key = String>,
-      B::ValueOut: AsRef<[u8]>,
-{
-    let key = format!("node:{}.bincode", nodeid);
-
-    blobstore
-        .get(&key)
-        .map_err(blobstore_err)
-        .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
-        .and_then(move |blob| {
-            bincode::deserialize(blob.as_ref()).into_future().from_err()
-        })
-        .boxed()
 }
 
 pub fn fetch_file_blob_from_blobstore<B>(

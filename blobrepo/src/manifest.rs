@@ -18,6 +18,7 @@ use blobstore::Blobstore;
 
 use errors::*;
 use file::BlobEntry;
+use utils::get_node;
 
 pub struct BlobManifest<B> {
     blobstore: B,
@@ -30,11 +31,14 @@ where
     B::ValueOut: AsRef<[u8]>,
 {
     pub fn load(blobstore: &B, manifestid: &NodeHash) -> BoxFuture<Option<Self>, Error> {
-        let key = format!("manifest:{}", manifestid);
-
-        blobstore
-            .get(&key)
-            .map_err(blobstore_err)
+        get_node(blobstore, manifestid.clone())
+            .and_then({
+                let blobstore = blobstore.clone();
+                move |nodeblob| {
+                    let blobkey = format!("sha1:{}", nodeblob.blob);
+                    blobstore.get(&blobkey).map_err(blobstore_err)
+                }
+            })
             .and_then({
                 let blobstore = blobstore.clone();
                 move |got| match got {

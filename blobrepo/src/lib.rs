@@ -31,6 +31,7 @@ mod changeset;
 mod manifest;
 mod file;
 mod errors;
+mod utils;
 
 pub use errors::*;
 

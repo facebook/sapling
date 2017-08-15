@@ -192,13 +192,23 @@ fn copy_changeset(
                     .get_manifest_blob_by_nodeid(&mfid)
                     .from_err()
                     .and_then(move |blob| {
-                        let putmf = blobstore
-                            .put(
-                                format!("manifest:{}", mfid),
-                                blob.as_blob().as_slice().expect("missing blob").into(),
-                            )
-                            .map_err(Into::into);
+                        let bytes = Bytes::from(blob.as_blob().as_slice().unwrap());
+                        let nodeblob = NodeBlob {
+                            parents: blob.parents().clone(),
+                            blob: hash::Sha1::from(bytes.as_ref()),
+                        };
+                        let nodekey = format!("node:{}.bincode", mfid);
+                        let blobkey = format!("sha1:{}", nodeblob.blob);
+                        let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
+                           .expect("bincode serialize failed");
 
+                        // TODO: blobstore.putv?
+                        let node = blobstore
+                            .put(nodekey, Bytes::from(nodeblob))
+                            .map_err(Into::into);
+                        let putblob = blobstore.put(blobkey, bytes).map_err(Into::into);
+
+                        let putmf = putblob.join(node);
                         // Get the listing of entries and fetch each of those
                         let files = RevlogManifest::new(revlog.clone(), blob)
                             .map_err(|err| {
