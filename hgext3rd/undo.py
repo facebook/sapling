@@ -77,6 +77,11 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
 
     result = orig(lui, repo, cmd, fullargs, *args)
 
+    # mercurial is bad with caches
+    # eg update to hidden commit will leave false cache
+    if repo:
+        repo.invalidatevolatilesets()
+
     # record changes to repo
     if rootlog:
         safelog(repo, command)
