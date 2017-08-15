@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import errno, hashlib, mmap, os, struct, time
-from mercurial import policy, util
+from mercurial import policy, pycompat, util
 from mercurial.i18n import _
 from mercurial import vfs as vfsmod
 
@@ -40,6 +40,13 @@ SMALLFANOUTCUTOFF = 2**16 / 8
 # exception when data is moved to a new pack after the process has already
 # loaded the pack list.
 REFRESHRATE = 0.1
+
+if pycompat.osname == 'posix':
+    # With glibc 2.7+ the 'e' flag uses O_CLOEXEC when opening.
+    # The 'e' flag will be ignored on older versions of glibc.
+    PACKOPENMODE = 'rbe'
+else:
+    PACKOPENMODE = 'rb'
 
 class basepackstore(object):
     def __init__(self, ui, path):
@@ -160,8 +167,8 @@ class basepack(versionmixin):
         self.packpath = path + self.PACKSUFFIX
         self.indexpath = path + self.INDEXSUFFIX
         # TODO: use an opener/vfs to access these paths
-        self.indexfp = open(self.indexpath, 'rb')
-        self.datafp = open(self.packpath, 'rb')
+        self.indexfp = open(self.indexpath, PACKOPENMODE)
+        self.datafp = open(self.packpath, PACKOPENMODE)
 
         self.indexsize = os.stat(self.indexpath).st_size
         self.datasize = os.stat(self.packpath).st_size
