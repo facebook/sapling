@@ -3759,5 +3759,7 @@ def bundlecompressiontopics():
 
     return items
 
+i18nfunctions = bundlecompressiontopics().values()
+
 # convenient shortcut
 dst = debugstacktrace

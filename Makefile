@@ -132,6 +132,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	  mercurial/templater.py \
 	  mercurial/filemerge.py \
 	  mercurial/hgweb/webcommands.py \
+	  mercurial/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
