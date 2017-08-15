@@ -2998,9 +2998,10 @@ def commit(ui, repo, commitfunc, pats, opts):
     dsguard = None
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
+    if opts.get('addremove'):
+        dsguard = dirstateguard.dirstateguard(repo, 'commit')
     try:
-        if opts.get('addremove'):
-            dsguard = dirstateguard.dirstateguard(repo, 'commit')
+        if dsguard:
             if scmutil.addremove(repo, matcher, "", opts) != 0:
                 raise error.Abort(
                     _("failed to mark all new/missing files as added/removed"))
