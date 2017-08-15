@@ -120,9 +120,10 @@ def safelog(repo, command):
         except error.LockUnavailable: # no write permissions
             repo.ui.debug("undolog lacks write permission\n")
         except error.LockHeld: # timeout, not fatal: don't abort actual command
-            # TODO: log to Scuba.  This shouldn't happen too often as it will
+            # This shouldn't happen too often as it would
             # create gaps in the undo log
             repo.ui.debug("undolog lock timeout\n")
+            _logtoscuba(repo.ui, 'undolog lock timeout')
     return changes
 
 def lighttransaction(repo):
@@ -247,16 +248,21 @@ def _readnode(repo, filename, hexnode):
     rlog = _getrevlog(repo, filename)
     return rlog.revision(bin(hexnode))
 
-def _gapcheck(repo, reverseindex):
+def _logtoscuba(ui, message):
+    ui.log('undo', message, undo=message)
+
+def _gapcheck(ui, repo, reverseindex):
     rlog = _getrevlog(repo, 'index.i')
     absoluteindex = _invertindex(rlog, reverseindex)
     path = 'undolog' + '/' + 'gap'
+    result = False
     try:
         result = absoluteindex >= int(repo.vfs.read(path))
     except IOError:
         # recreate file
         repo.ui.debug("failed to read gap file in %s, attempting recreation\n"
                       % path)
+        _logtoscuba(ui, "gap file corruption")
         rlog = _getrevlog(repo, 'index.i')
         i = 0
         while i < (len(rlog)):
@@ -624,7 +630,7 @@ def undo(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock(), repo.transaction("undo"):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
-        if not (opts.get("force") or _gapcheck(repo, reverseindex)):
+        if not (opts.get("force") or _gapcheck(ui, repo, reverseindex)):
             raise error.Abort(_("attempted risky undo across"
                                 " missing history"))
         _undoto(ui, repo, reverseindex, keep=keep, branch=branch)
@@ -1001,8 +1007,8 @@ def _getrevlog(repo, filename):
         return revlog.revlog(repo.vfs, path)
     except error.RevlogError:
         # corruption: for now, we can simply nuke all files
-        # TODO: log to Scuba
         repo.ui.debug("caught revlog error. %s was probably corrupted\n" % path)
+        _logtoscuba(repo.ui, 'revlog error')
         repo.vfs.rmtree('undolog')
         repo.vfs.makedirs('undolog')
         # if we get the error a second time
