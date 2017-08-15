@@ -302,16 +302,12 @@ An I/O error during pretxncommit is handled
   warn during txnclose
   $ echo 1 > foo
   $ hg --config ui.ioerrors=pretxncommit commit -m 'error during pretxncommit'
-  error: pretxncommit.badui hook raised an exception: [Errno *] simulated epipe (glob)
-  transaction abort!
-  warn during abort
-  rollback completed
-  [255]
-
-  $ hg commit -m 'commit 1'
-  warn during pretxncommit
   warn during pretxnclose
   warn during txnclose
+
+  $ hg commit -m 'commit 1'
+  nothing changed
+  [1]
 
   $ cd ..
 
@@ -328,17 +324,11 @@ An I/O error during pretxnclose is handled
   $ echo 1 > foo
   $ hg --config ui.ioerrors=pretxnclose commit -m 'error during pretxnclose'
   warn during pretxncommit
-  error: pretxnclose.badui hook raised an exception: [Errno *] simulated eio (glob)
-  transaction abort!
-  warn during abort
-  rollback completed
-  abort: simulated eio
-  [255]
+  warn during txnclose
 
   $ hg commit -m 'commit 1'
-  warn during pretxncommit
-  warn during pretxnclose
-  warn during txnclose
+  nothing changed
+  [1]
 
   $ cd ..
 
@@ -356,8 +346,6 @@ An I/O error during txnclose is handled
   $ hg --config ui.ioerrors=txnclose commit -m 'error during txnclose'
   warn during pretxncommit
   warn during pretxnclose
-  error: txnclose.badui hook raised an exception: [Errno *] simulated badf (glob)
-  (run with --traceback for stack trace)
 
   $ hg commit -m 'commit 1'
   nothing changed
@@ -378,15 +366,15 @@ An I/O error writing "transaction abort" is handled
 
   $ echo 1 > foo
   $ hg --config ui.ioerrors=msgabort --config hooks.pretxncommit=false commit -m 'error during abort message'
-  abort: simulated ebadf
-  *: DeprecationWarning: use lock.release instead of del lock (glob)
-    return -1
+  warn during abort
+  rollback completed
+  abort: pretxncommit hook exited with status 1
   [255]
 
   $ hg commit -m 'commit 1'
-  abort: abandoned transaction found!
-  (run 'hg recover' to clean up transaction)
-  [255]
+  warn during pretxncommit
+  warn during pretxnclose
+  warn during txnclose
 
   $ cd ..
 
@@ -404,8 +392,6 @@ An I/O error during txnabort should still result in rollback
   $ echo 1 > foo
   $ hg --config ui.ioerrors=txnabort --config hooks.pretxncommit=false commit -m 'error during abort'
   transaction abort!
-  error: txnabort.badui hook raised an exception: [Errno *] simulated epipe (glob)
-  (run with --traceback for stack trace)
   rollback completed
   abort: pretxncommit hook exited with status 1
   [255]
@@ -433,7 +419,6 @@ An I/O error writing "rollback completed" is handled
   $ hg --config ui.ioerrors=msgrollback --config hooks.pretxncommit=false commit -m 'error during rollback message'
   transaction abort!
   warn during abort
-  rollback failed - please run hg recover
   abort: pretxncommit hook exited with status 1
   [255]
 
@@ -461,25 +446,12 @@ of a transaction.
   $ echo 1 > foo
 
   $ hg --config ui.ioerrors=pretxncommit,pretxnclose,txnclose,txnabort,msgabort,msgrollback commit -m 'multiple errors'
-  error: pretxncommit.badui hook raised an exception: [Errno *] simulated epipe (glob)
-  abort: simulated ebadf
-  *: DeprecationWarning: use lock.release instead of del lock (glob)
-    return -1
-  [255]
 
   $ hg verify
-  abandoned transaction found - run hg recover
   checking changesets
   checking manifests
-   manifest@?: rev 1 points to nonexistent changeset 1
-   manifest@?: 94e0ee43dbfe not in changesets
   crosschecking files in changesets and manifests
   checking files
-   foo@?: rev 1 points to nonexistent changeset 1
-   (expected 0)
-  1 files, 1 changesets, 2 total revisions
-  1 warnings encountered!
-  3 integrity errors encountered!
-  [1]
+  1 files, 2 changesets, 2 total revisions
 
   $ cd ..
