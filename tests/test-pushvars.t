@@ -8,10 +8,9 @@ Setup
   > env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort
   > exit 0
   > EOF
-  $ chmod +x $TESTTMP/pretxnchangegroup.sh
   $ cat >> $HGRCPATH << EOF
   > [hooks]
-  > pretxnchangegroup = $TESTTMP/pretxnchangegroup.sh
+  > pretxnchangegroup = sh $TESTTMP/pretxnchangegroup.sh
   > [experimental]
   > bundle2-exp = true
   > EOF
