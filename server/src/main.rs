@@ -21,7 +21,7 @@ extern crate error_chain;
 #[macro_use]
 extern crate slog;
 extern crate slog_term;
-extern crate kvfilter;
+extern crate slog_kvfilter;
 
 #[macro_use]
 extern crate maplit;
@@ -55,7 +55,7 @@ use futures::sync::mpsc;
 use clap::{App, Arg};
 
 use slog::{Drain, Level, LevelFilter, Logger};
-use kvfilter::KVFilter;
+use slog_kvfilter::KVFilter;
 
 use bytes::Bytes;
 use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
