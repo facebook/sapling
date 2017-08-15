@@ -3000,19 +3000,13 @@ def commit(ui, repo, commitfunc, pats, opts):
     # that doesn't support addremove
     if opts.get('addremove'):
         dsguard = dirstateguard.dirstateguard(repo, 'commit')
-    try:
+    with dsguard or util.nullcontextmanager():
         if dsguard:
             if scmutil.addremove(repo, matcher, "", opts) != 0:
                 raise error.Abort(
                     _("failed to mark all new/missing files as added/removed"))
 
-        r = commitfunc(ui, repo, message, matcher, opts)
-        if dsguard:
-            dsguard.close()
-        return r
-    finally:
-        if dsguard:
-            dsguard.release()
+        return commitfunc(ui, repo, message, matcher, opts)
 
 def samefile(f, ctx1, ctx2):
     if f in ctx1.manifest():
