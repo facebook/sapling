@@ -32,8 +32,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
-#include "eden/hg/datastorage/cstore/uniondatapackstore.h"
-#include "eden/hg/datastorage/ctreemanifest/treemanifest.h"
+#include "scm/hgext/cstore/uniondatapackstore.h"
+#include "scm/hgext/ctreemanifest/treemanifest.h"
 
 using folly::ByteRange;
 using folly::Endian;
@@ -493,7 +493,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
         manifestNode.toString()));
   }
 
-  Manifest manifest(content);
+  Manifest manifest(
+      content, reinterpret_cast<const char*>(manifestNode.getBytes().data()));
   std::vector<TreeEntry> entries;
 
   auto iter = manifest.getIterator();

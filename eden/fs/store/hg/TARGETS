@@ -19,7 +19,6 @@ cpp_library(
         "@/eden/fs/store:store",
         "@/eden/fs/utils:path",
         "@/eden/fs/utils:utils",
-        "@/eden/hg/datastorage:datapack",
         "@/folly:array",
         "@/folly:bits",
         "@/folly:conv",
@@ -31,6 +30,7 @@ cpp_library(
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
+        "@/scm/hgext:datapack",
     ],
     external_deps = [
         "gflags",
