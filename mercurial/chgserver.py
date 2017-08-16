@@ -565,8 +565,11 @@ class chgunixservicehandler(object):
                             self._hashstate, self._baseaddress)
 
 def chgunixservice(ui, repo, opts):
-    # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
-    # start another chg. drop it to avoid possible side effects.
+    # CHGINTERNALMARK is set by chg client. It is an indication of things are
+    # started by chg so other code can do things accordingly, like disabling
+    # demandimport or detecting chg client started by chg client. When executed
+    # here, CHGINTERNALMARK is no longer useful and hence dropped to make
+    # environ cleaner.
     if 'CHGINTERNALMARK' in encoding.environ:
         del encoding.environ['CHGINTERNALMARK']
 
