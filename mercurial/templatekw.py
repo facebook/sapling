@@ -760,7 +760,7 @@ def loadkeyword(ui, extname, registrarobj):
         keywords[name] = func
 
 @templatekeyword('termwidth')
-def termwidth(repo, ctx, templ, **args):
+def showtermwidth(repo, ctx, templ, **args):
     """Integer. The width of the current terminal."""
     return repo.ui.termwidth()
 
