@@ -470,6 +470,7 @@ def phasedivergent(repo, subset, x):
     """Mutable changesets marked as successors of public changesets.
 
     Only non-public and non-obsolete changesets can be `phasedivergent`.
+    (EXPERIMENTAL)
     """
     # i18n: "phasedivergent" is a keyword
     getargs(x, 0, 0, _("phasedivergent takes no arguments"))
@@ -728,7 +729,8 @@ def divergent(repo, subset, x):
 @predicate('contentdivergent()', safe=True)
 def contentdivergent(repo, subset, x):
     """
-    Final successors of changesets with an alternative set of final successors.
+    Final successors of changesets with an alternative set of final
+    successors. (EXPERIMENTAL)
     """
     # i18n: "contentdivergent" is a keyword
     getargs(x, 0, 0, _("contentdivergent takes no arguments"))
@@ -1943,7 +1945,7 @@ def unstable(repo, subset, x):
 
 @predicate('orphan()', safe=True)
 def orphan(repo, subset, x):
-    """Non-obsolete changesets with obsolete ancestors.
+    """Non-obsolete changesets with obsolete ancestors. (EXPERIMENTAL)
     """
     # i18n: "orphan" is a keyword
     getargs(x, 0, 0, _("orphan takes no arguments"))
