@@ -31,7 +31,7 @@ class marker(object):
 
     def precnode(self):
         msg = ("'marker.precnode' is deprecated, "
-               "use 'marker.precnode'")
+               "use 'marker.prednode'")
         util.nouideprecwarn(msg, '4.4')
         return self.prednode()
 
