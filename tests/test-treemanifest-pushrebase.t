@@ -27,7 +27,7 @@
   > 
   > pushclients() {
   >     for i in {0..9} ; do
-  >        hg -R client\$i push --to master -B master 2>&1 >/dev/null &
+  >        hg -R client\$i push --to master -B master >/dev/null &
   >     done
   >     wait
   > }
@@ -57,7 +57,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   > # state. Otherwise there are race with loading hg server while pushes are
   > # happening.
   > [hooks]
-  > prepushrebase.sleep=sleep 0.2
+  > prepushrebase.sleep=sleep 1
   > EOF
   $ mkdir subdir/
   $ touch subdir/a && hg ci -Aqm subdir/a
