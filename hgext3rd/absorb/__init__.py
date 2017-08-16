@@ -803,7 +803,10 @@ class fixupstate(object):
                                                     True):
             extra['absorb_source'] = ctx.hex()
         mctx = overlaycontext(memworkingcopy, ctx, parents, extra=extra)
-        return mctx.commit()
+        # preserve phase
+        with mctx.repo().ui.configoverride({
+            ('phases', 'new-commit'): ctx.phase()}):
+            return mctx.commit()
 
     @util.propertycache
     def _useobsolete(self):
