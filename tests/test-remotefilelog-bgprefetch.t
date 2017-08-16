@@ -284,8 +284,10 @@
 
   $ clearcache
   $ hg prefetch --repack
+  waiting for lock on prefetching in $TESTTMP/shallow held by process * on host * (glob) (?)
+  got lock after * seconds (glob) (?)
   (running background incremental repack)
-  5 files fetched over 1 fetches - (5 misses, 0.00% hit ratio) over *s (glob)
+  * files fetched over 1 fetches - (* misses, 0.00% hit ratio) over *s (glob) (?)
   $ sleep 0.5
   $ hg debugwaitonrepack >/dev/null 2>%1
 
