@@ -2885,7 +2885,7 @@ No tag set:
   o  0: null+1
   
 
-One common tag: longest path wins:
+One common tag: longest path wins for {latesttagdistance}:
 
   $ hg tag -r 1 -m t1 -d '6 0' t1
   $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
@@ -2904,7 +2904,7 @@ One common tag: longest path wins:
   o  0: null+1
   
 
-One ancestor tag: more recent wins:
+One ancestor tag: closest wins:
 
   $ hg tag -r 2 -m t2 -d '7 0' t2
   $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
@@ -2925,7 +2925,7 @@ One ancestor tag: more recent wins:
   o  0: null+1
   
 
-Two branch tags: more recent wins:
+Two branch tags: more recent wins if same number of changes:
 
   $ hg tag -r 3 -m t3 -d '8 0' t3
   $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
@@ -2948,12 +2948,39 @@ Two branch tags: more recent wins:
   o  0: null+1
   
 
+Two branch tags: fewest changes wins:
+
+  $ hg tag -r 4 -m t4 -d '4 0' t4 # older than t2, but should not matter
+  $ hg log -G --template "{rev}: {latesttag % '{tag}+{distance},{changes} '}\n"
+  @  9: t4+5,6
+  |
+  o  8: t4+4,5
+  |
+  o  7: t4+3,4
+  |
+  o  6: t4+2,3
+  |
+  o    5: t4+1,2
+  |\
+  | o  4: t4+0,0
+  | |
+  | o  3: t3+0,0
+  | |
+  o |  2: t2+0,0
+  |/
+  o  1: t1+0,0
+  |
+  o  0: null+1,1
+  
+
 Merged tag overrides:
 
   $ hg tag -r 5 -m t5 -d '9 0' t5
   $ hg tag -r 3 -m at3 -d '10 0' at3
   $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  @  10: t5+5
+  @  11: t5+6
+  |
+  o  10: t5+5
   |
   o  9: t5+4
   |
@@ -2965,7 +2992,7 @@ Merged tag overrides:
   |
   o    5: t5+0
   |\
-  | o  4: at3:t3+1
+  | o  4: t4+0
   | |
   | o  3: at3:t3+0
   | |
@@ -2977,7 +3004,9 @@ Merged tag overrides:
   
 
   $ hg log -G --template "{rev}: {latesttag % '{tag}+{distance},{changes} '}\n"
-  @  10: t5+5,5
+  @  11: t5+6,6
+  |
+  o  10: t5+5,5
   |
   o  9: t5+4,4
   |
@@ -2989,7 +3018,7 @@ Merged tag overrides:
   |
   o    5: t5+0,0
   |\
-  | o  4: at3+1,1 t3+1,1
+  | o  4: t4+0,0
   | |
   | o  3: at3+0,0 t3+0,0
   | |
@@ -3001,7 +3030,9 @@ Merged tag overrides:
   
 
   $ hg log -G --template "{rev}: {latesttag('re:^t[13]$') % '{tag}, C: {changes}, D: {distance}'}\n"
-  @  10: t3, C: 8, D: 7
+  @  11: t3, C: 9, D: 8
+  |
+  o  10: t3, C: 8, D: 7
   |
   o  9: t3, C: 7, D: 6
   |
@@ -3044,7 +3075,7 @@ if it is a relative path
   > EOF
 
   $ hg -R latesttag tip
-  test 10:9b4a630e5f5f
+  test 11:97e5943b523a
 
 Test recursive showlist template (issue1989):
 
@@ -3057,7 +3088,7 @@ Test recursive showlist template (issue1989):
 
   $ hg -R latesttag log -r tip --style=style1989
   M|test
-  10,test
+  11,test
   branch: test
 
 Test new-style inline templating:
@@ -3090,6 +3121,7 @@ Test the strip function with chars specified:
   $ hg log -R latesttag --template '{desc}\n'
   at3
   t5
+  t4
   t3
   t2
   t1
@@ -3103,6 +3135,7 @@ Test the strip function with chars specified:
   $ hg log -R latesttag --template '{strip(desc, "te")}\n'
   at3
   5
+  4
   3
   2
   1
@@ -3118,6 +3151,7 @@ Test date format:
   $ hg log -R latesttag --template 'date: {date(date, "%y %m %d %S %z")}\n'
   date: 70 01 01 10 +0000
   date: 70 01 01 09 +0000
+  date: 70 01 01 04 +0000
   date: 70 01 01 08 +0000
   date: 70 01 01 07 +0000
   date: 70 01 01 06 +0000
