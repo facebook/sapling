@@ -4022,7 +4022,7 @@ def push(ui, repo, dest=None, **opts):
         strings that look like conflict markers.
 
         By default, servers will ignore `--pushvars`. To enable it add the
-        following to your configuration file
+        following to your configuration file::
 
             [push]
             pushvars.server = true
