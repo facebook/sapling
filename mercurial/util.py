@@ -176,10 +176,7 @@ def bytesinput(fin, fout, *args, **kwargs):
     sin, sout = sys.stdin, sys.stdout
     try:
         sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
-        if pycompat.ispy3:
-            return encoding.strtolocal(input(*args, **kwargs))
-        else:
-            return raw_input(*args, **kwargs)
+        return encoding.strtolocal(pycompat.rawinput(*args, **kwargs))
     finally:
         sys.stdin, sys.stdout = sin, sout
 

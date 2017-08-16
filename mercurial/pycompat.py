@@ -63,6 +63,7 @@ if ispy3:
         sysexecutable = os.fsencode(sysexecutable)
     stringio = io.BytesIO
     maplist = lambda *args: list(map(*args))
+    rawinput = input
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -312,6 +313,7 @@ else:
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
     maplist = map
+    rawinput = raw_input
 
 class _pycompatstub(object):
     def __init__(self):
