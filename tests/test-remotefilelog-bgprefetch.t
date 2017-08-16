@@ -22,7 +22,7 @@
 
   $ cd ..
 
-# prefetch a revision
+# clone the repo
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
@@ -30,6 +30,17 @@
   transferred 776 bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
+
+# Set the prefetchdays config to zero so that all commits are prefetched
+# no matter what their creation date is.
+  $ cd shallow
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > prefetchdays=0
+  > EOF
+  $ cd ..
+
+# prefetch a revision
   $ cd shallow
 
   $ hg prefetch -r 0

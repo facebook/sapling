@@ -18,6 +18,8 @@ Configs:
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
       it is garbage collected
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
+    ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
+      days after which it is no longer prefetched.
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
@@ -779,6 +781,16 @@ def log(orig, ui, repo, *pats, **opts):
 
     return orig(ui, repo, *pats, **opts)
 
+def revdatelimit(ui, revset):
+    """Update revset so that only changesets no older than 'prefetchdays' days
+    are included. The default value is set to 14 days. If 'prefetchdays' is set
+    to zero or negative value then date restriction is not applied.
+    """
+    days = ui.configint('remotefilelog', 'prefetchdays', 14)
+    if days > 0:
+        revset = '(%s) & date(-%s)' % (revset, days)
+    return revset
+
 def wcpprefetch(ui, repo, **kwargs):
     """Prefetches in background revisions specified by bgprefetchrevs revset.
     Does background repack if backgroundrepack flag is set in config.
@@ -789,6 +801,9 @@ def wcpprefetch(ui, repo, **kwargs):
     if shallow and bgprefetchrevs:
         bgrepack = repo.ui.configbool('remotefilelog',
                                       'backgroundrepack', False)
+        # update a revset with a date limit
+        bgprefetchrevs = revdatelimit(ui, bgprefetchrevs)
+
         def anon():
             if util.safehasattr(repo, 'ranprefetch') and repo.ranprefetch:
                 return
@@ -929,8 +944,12 @@ def prefetch(ui, repo, *pats, **opts):
         bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
         if bgprefetchrevs:
             revset.append('(%s)' % bgprefetchrevs)
+        revset = '+'.join(revset)
 
-        opts['rev'] = ['+'.join(revset)]
+        # update a revset with a date limit
+        revset = revdatelimit(ui, revset)
+
+        opts['rev'] = [revset]
 
     revs = scmutil.revrange(repo, opts.get('rev'))
 

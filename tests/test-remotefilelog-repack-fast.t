@@ -24,6 +24,15 @@
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
+# Set the prefetchdays config to zero so that all commits are prefetched
+# no matter what their creation date is.
+  $ cd shallow
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > prefetchdays=0
+  > EOF
+  $ cd ..
+
 # Test that repack cleans up the old files and creates new packs
 
   $ cd shallow
