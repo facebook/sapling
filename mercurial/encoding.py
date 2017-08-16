@@ -575,15 +575,17 @@ def fromutf8b(s):
         r += c
     return r
 
-class strio(io.TextIOWrapper):
-    """Wrapper around TextIOWrapper that respects hg's encoding assumptions.
+if pycompat.ispy3:
+    class strio(io.TextIOWrapper):
+        """Wrapper around TextIOWrapper that respects hg's encoding assumptions.
 
-    Also works around Python closing streams.
-    """
+        Also works around Python closing streams.
+        """
 
-    def __init__(self, buffer, **kwargs):
-        kwargs[r'encoding'] = _sysstr(encoding)
-        super(strio, self).__init__(buffer, **kwargs)
+        def __init__(self, buffer):
+            super(strio, self).__init__(buffer, encoding=_sysstr(encoding))
 
-    def __del__(self):
-        """Override __del__ so it doesn't close the underlying stream."""
+        def __del__(self):
+            """Override __del__ so it doesn't close the underlying stream."""
+else:
+    strio = pycompat.identity

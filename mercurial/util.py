@@ -175,11 +175,10 @@ def safehasattr(thing, attr):
 def bytesinput(fin, fout, *args, **kwargs):
     sin, sout = sys.stdin, sys.stdout
     try:
+        sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
         if pycompat.ispy3:
-            sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
             return encoding.strtolocal(input(*args, **kwargs))
         else:
-            sys.stdin, sys.stdout = fin, fout
             return raw_input(*args, **kwargs)
     finally:
         sys.stdin, sys.stdout = sin, sout
