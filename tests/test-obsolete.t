@@ -699,42 +699,42 @@ List of all markers in JSON
     "date": [1339.0, 0],
     "flag": 0,
     "metadata": {"user": "test"},
-    "precnode": "1339133913391339133913391339133913391339",
+    "prednode": "1339133913391339133913391339133913391339",
     "succnodes": ["ca819180edb99ed25ceafb3e9584ac287e240b00"]
    },
    {
     "date": [1339.0, 0],
     "flag": 0,
     "metadata": {"user": "test"},
-    "precnode": "1337133713371337133713371337133713371337",
+    "prednode": "1337133713371337133713371337133713371337",
     "succnodes": ["5601fb93a350734d935195fee37f4054c529ff39"]
    },
    {
     "date": [121.0, 120],
     "flag": 12,
     "metadata": {"user": "test"},
-    "precnode": "245bde4270cd1072a27757984f9cda8ba26f08ca",
+    "prednode": "245bde4270cd1072a27757984f9cda8ba26f08ca",
     "succnodes": ["cdbce2fbb16313928851e97e0d85413f3f7eb77f"]
    },
    {
     "date": [1338.0, 0],
     "flag": 1,
     "metadata": {"user": "test"},
-    "precnode": "5601fb93a350734d935195fee37f4054c529ff39",
+    "prednode": "5601fb93a350734d935195fee37f4054c529ff39",
     "succnodes": ["6f96419950729f3671185b847352890f074f7557"]
    },
    {
     "date": [1338.0, 0],
     "flag": 0,
     "metadata": {"user": "test"},
-    "precnode": "ca819180edb99ed25ceafb3e9584ac287e240b00",
+    "prednode": "ca819180edb99ed25ceafb3e9584ac287e240b00",
     "succnodes": ["1337133713371337133713371337133713371337"]
    },
    {
     "date": [1337.0, 0],
     "flag": 0,
     "metadata": {"user": "test"},
-    "precnode": "cdbce2fbb16313928851e97e0d85413f3f7eb77f",
+    "prednode": "cdbce2fbb16313928851e97e0d85413f3f7eb77f",
     "succnodes": ["ca819180edb99ed25ceafb3e9584ac287e240b00"]
    },
    {
@@ -742,14 +742,14 @@ List of all markers in JSON
     "flag": 0,
     "metadata": {"user": "test"},
     "parentnodes": ["6f96419950729f3671185b847352890f074f7557"],
-    "precnode": "94b33453f93bdb8d457ef9b770851a618bf413e1",
+    "prednode": "94b33453f93bdb8d457ef9b770851a618bf413e1",
     "succnodes": []
    },
    {
     "date": *, (glob)
     "flag": 0,
     "metadata": {"user": "test <test@example.net>"},
-    "precnode": "cda648ca50f50482b7055c0b0c4c117bba6733d9",
+    "prednode": "cda648ca50f50482b7055c0b0c4c117bba6733d9",
     "succnodes": ["3de5eca88c00aa039da7399a220f4a5221faa585"]
    }
   ]
@@ -1447,7 +1447,7 @@ only a subset of those are displayed (because of --rev option)
     "flag": 0,
     "index": 1,
     "metadata": {"user": "test"},
-    "precnode": "6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1",
+    "prednode": "6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1",
     "succnodes": ["d27fb9b066076fd921277a4b9e8b9cb48c95bc6a"]
    },
    {
@@ -1455,7 +1455,7 @@ only a subset of those are displayed (because of --rev option)
     "flag": 0,
     "index": 3,
     "metadata": {"operation": "amend", "user": "test"},
-    "precnode": "4715cf767440ed891755448016c2b8cf70760c30",
+    "prednode": "4715cf767440ed891755448016c2b8cf70760c30",
     "succnodes": ["7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d"]
    }
   ]

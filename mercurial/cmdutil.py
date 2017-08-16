@@ -2019,7 +2019,7 @@ def showmarker(fm, marker, index=None):
     To be used by debug function."""
     if index is not None:
         fm.write('index', '%i ', index)
-    fm.write('precnode', '%s ', hex(marker.prednode()))
+    fm.write('prednode', '%s ', hex(marker.prednode()))
     succs = marker.succnodes()
     fm.condwrite(succs, 'succnodes', '%s ',
                  fm.formatlist(map(hex, succs), name='node'))
