@@ -66,5 +66,6 @@ Test pushing bad vars
   $ hg commit -Aqm b
   $ hg push --pushvars "DEBUG"
   pushing to $TESTTMP/repo (glob)
+  searching for changes
   abort: unable to parse variable 'DEBUG', should follow 'KEY=VALUE' or 'KEY=' format
   [255]

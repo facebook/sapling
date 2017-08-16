@@ -294,7 +294,7 @@ class pushoperation(object):
     """
 
     def __init__(self, repo, remote, force=False, revs=None, newbranch=False,
-                 bookmarks=()):
+                 bookmarks=(), pushvars=None):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
@@ -352,6 +352,8 @@ class pushoperation(object):
         # map { pushkey partid -> callback handling failure}
         # used to handle exception from mandatory pushkey part failure
         self.pkfailcb = {}
+        # an iterable of pushvars or None
+        self.pushvars = pushvars
 
     @util.propertycache
     def futureheads(self):
@@ -876,10 +878,20 @@ def _pushb2bookmarks(pushop, bundler):
 @b2partsgenerator('pushvars', idx=0)
 def _getbundlesendvars(pushop, bundler):
     '''send shellvars via bundle2'''
-    if getattr(pushop.repo, '_shellvars', ()):
+    pushvars = pushop.pushvars
+    if pushvars:
+        shellvars = {}
+        for raw in pushvars:
+            if '=' not in raw:
+                msg = ("unable to parse variable '%s', should follow "
+                        "'KEY=VALUE' or 'KEY=' format")
+                raise error.Abort(msg % raw)
+            k, v = raw.split('=', 1)
+            shellvars[k] = v
+
         part = bundler.newpart('pushvars')
 
-        for key, value in pushop.repo._shellvars.iteritems():
+        for key, value in shellvars.iteritems():
             part.addparam(key, value, mandatory=False)
 
 def _pushbundle2(pushop):

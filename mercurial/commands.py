@@ -4082,26 +4082,13 @@ def push(ui, repo, dest=None, **opts):
     finally:
         del repo._subtoppath
 
-    pushvars = opts.get('pushvars')
-    if pushvars:
-        shellvars = {}
-        for raw in pushvars:
-            if '=' not in raw:
-                msg = ("unable to parse variable '%s', should follow "
-                        "'KEY=VALUE' or 'KEY=' format")
-                raise error.Abort(msg % raw)
-            k, v = raw.split('=', 1)
-            shellvars[k] = v
-
-        repo._shellvars = shellvars
+    opargs = dict(opts.get('opargs', {})) # copy opargs since we may mutate it
+    opargs.setdefault('pushvars', []).extend(opts.get('pushvars', []))
 
     pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
                            newbranch=opts.get('new_branch'),
                            bookmarks=opts.get('bookmark', ()),
-                           opargs=opts.get('opargs'))
-
-    if pushvars:
-        del repo._shellvars
+                           opargs=opargs)
 
     result = not pushop.cgresult
 
