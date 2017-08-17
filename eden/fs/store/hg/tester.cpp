@@ -46,6 +46,11 @@ DEFINE_string(
     "",
     "A path to a rocksdb options file to use when creating a "
     "temporary rocksdb");
+DEFINE_bool(
+    tree_import_recurse,
+    true,
+    "Recursively import all trees under the specified subdirectory when "
+    "performing a treemanifest import");
 
 using namespace facebook::eden;
 using folly::test::TemporaryDirectory;
@@ -91,6 +96,31 @@ std::unique_ptr<rocksdb::DB> createRocksDb(AbsolutePathPiece dbPath) {
   return std::unique_ptr<rocksdb::DB>(db);
 }
 
+void importTreeRecursive(
+    HgImporter* importer,
+    RelativePathPiece path,
+    const Tree* tree) {
+  for (const auto& entry : tree->getTreeEntries()) {
+    if (entry.getFileType() == FileType::DIRECTORY) {
+      auto entryPath = path + entry.getName();
+      std::unique_ptr<Tree> subtree;
+      try {
+        subtree = importer->importTree(entry.getHash());
+      } catch (const std::exception& ex) {
+        printf(
+            "** error importing tree %s: %s\n",
+            entryPath.stringPiece().str().c_str(),
+            ex.what());
+        continue;
+      }
+      printf(
+          "  Recursively imported \"%s\"\n",
+          entryPath.stringPiece().str().c_str());
+      importTreeRecursive(importer, entryPath, subtree.get());
+    }
+  }
+}
+
 int importTree(
     LocalStore* store,
     AbsolutePathPiece repoPath,
@@ -119,6 +149,10 @@ int importTree(
         component.stringPiece().str().c_str(),
         entry->getHash().toString().c_str());
     tree = importer.importTree(entry->getHash());
+  }
+
+  if (FLAGS_tree_import_recurse) {
+    importTreeRecursive(&importer, subdir, tree.get());
   }
 
   return EX_OK;

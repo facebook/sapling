@@ -455,6 +455,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path) {
+  XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
+             << manifestNode << " for path \"" << path << "\"";
   ConstantStringRef content;
   try {
     content = unionStore_->get(
