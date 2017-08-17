@@ -567,3 +567,18 @@ def successorssets(repo, initialnode, closest=False, cache=None):
                 final.reverse() # put small successors set first
                 cache[current] = final
     return cache[initialnode]
+
+def successorsandmarkers(repo, ctx):
+    """compute the raw data needed for computing obsfate
+    Returns a list of dict, one dict per successors set
+    """
+    if not ctx.obsolete():
+        return None
+
+    ssets = successorssets(repo, ctx.node(), closest=True)
+
+    values = []
+    for sset in ssets:
+        values.append({'successors': sset, 'markers': sset.markers})
+
+    return values

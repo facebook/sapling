@@ -674,6 +674,48 @@ def showsuccessorssets(repo, ctx, **args):
     return _hybrid(gen(data), data, lambda x: {'successorset': x},
                    lambda d: d["successorset"])
 
+@templatekeyword("succsandmarkers")
+def showsuccsandmarkers(repo, ctx, **args):
+    """Returns a list of dict for each final successor of ctx.
+
+    The dict contains successors node id in "successors" keys and the list of
+    obs-markers from ctx to the set of successors in "markers"
+
+    (EXPERIMENTAL)
+    """
+
+    values = obsutil.successorsandmarkers(repo, ctx)
+
+    if values is None:
+        values = []
+
+    # Format successors and markers to avoid exposing binary to templates
+    data = []
+    for i in values:
+        # Format successors
+        successors = i['successors']
+
+        successors = [hex(n) for n in successors]
+        successors = _hybrid(None, successors,
+                             lambda x: {'ctx': repo[x], 'revcache': {}},
+                             lambda d: _formatrevnode(d['ctx']))
+
+        # Format markers
+        finalmarkers = []
+        for m in i['markers']:
+            hexprec = hex(m[0])
+            hexsucs = tuple(hex(n) for n in m[1])
+            hexparents = None
+            if m[5] is not None:
+                hexparents = tuple(hex(n) for n in m[5])
+            newmarker = (hexprec, hexsucs) + m[2:5] + (hexparents,) + m[6:]
+            finalmarkers.append(newmarker)
+
+        data.append({'successors': successors, 'markers': finalmarkers})
+
+    f = _showlist('succsandmarkers', data, args)
+    return _hybrid(f, data, lambda x: x, lambda d: d)
+
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
