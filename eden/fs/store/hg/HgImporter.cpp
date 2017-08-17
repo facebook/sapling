@@ -60,6 +60,12 @@ DEFINE_bool(
     use_hg_tree_manifest,
     false, // Disabled for now until we are able to handle MissingKeyError
     "Attempt to import mercurial trees using treemanifest");
+DEFINE_bool(
+    hg_fetch_missing_trees,
+    true,
+    "Set this parameter to \"no\" to disable fetching missing treemanifest "
+    "trees from the remote mercurial server.  This is generally only useful "
+    "for testing/debugging purposes");
 
 namespace {
 
@@ -459,6 +465,9 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   } catch (const MissingKeyError& ex) {
     // Data for this tree was not present locally.
     // Fall through and fetch the data from the server below.
+    if (!FLAGS_hg_fetch_missing_trees) {
+      throw;
+    }
   }
 
   if (!content.content()) {
