@@ -46,7 +46,11 @@ Add a submodule (gitlink) and move it to a different spot:
   $ sed -e 's/path = gitsubmodule/path = gitsubmodule2/' .gitmodules > .gitmodules-new
   $ mv .gitmodules-new .gitmodules
   $ mv gitsubmodule gitsubmodule2
-  $ git add .gitmodules gitsubmodule2
+
+Previous versions of git did not produce any output but 2.14 changed the output
+to warn the user about submodules
+
+  $ git add .gitmodules gitsubmodule2 2>/dev/null
   $ git rm --cached gitsubmodule
   rm 'gitsubmodule'
   $ fn_git_commit -m 'move submodule'
