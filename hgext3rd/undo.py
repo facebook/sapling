@@ -377,13 +377,24 @@ def _debugundoindex(ui, repo, reverseindex):
 # Revset logic
 
 def _getolddrafts(repo, reverseindex):
+    # convert reverseindex to node
+    # this makes cacheing guaranteed correct
+    # bc immutable history
     nodedict = _readindex(repo, reverseindex)
-    olddraftheads = _readnode(repo, "draftheads.i", nodedict["draftheads"])
-    oldheadslist = olddraftheads.split("\n")
-    oldlogrevstring = revsetlang.formatspec('draft() & ancestors(%ls)',
-            oldheadslist)
-    urepo = repo.unfiltered()
-    return urepo.revs(oldlogrevstring)
+    return _cachedgetolddrafts(repo, nodedict["draftheads"])
+
+def _cachedgetolddrafts(repo, node):
+    if not util.safehasattr(repo, '_undoolddraftcache'):
+        repo._undoolddraftcache = {}
+    cache = repo._undoolddraftcache
+    if node not in cache:
+        olddraftheads = _readnode(repo, "draftheads.i", node)
+        oldheadslist = olddraftheads.split("\n")
+        oldlogrevstring = revsetlang.formatspec('draft() & ancestors(%ls)',
+                                                oldheadslist)
+        urepo = repo.unfiltered()
+        cache[node] = smartset.baseset(urepo.revs(oldlogrevstring))
+    return cache[node]
 
 revsetpredicate = registrar.revsetpredicate()
 
