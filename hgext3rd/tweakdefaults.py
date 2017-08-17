@@ -592,6 +592,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     # Add '--' to make sure grep recognizes all remaining arguments
     # (passed in by xargs) as filenames.
     cmd.append('--')
+    ui.pager('grep')
     p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                          stdin=subprocess.PIPE)
 

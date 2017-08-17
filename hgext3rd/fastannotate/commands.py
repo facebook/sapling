@@ -146,6 +146,7 @@ def fastannotate(ui, repo, *pats, **opts):
         for name in ui.configlist('fastannotate', 'defaultformat', ['number']):
             opts[name] = True
 
+    ui.pager('fastannotate')
     template = opts.get('template')
     if template == 'json':
         formatter = faformatter.jsonformatter(ui, repo, opts)

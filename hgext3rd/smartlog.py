@@ -51,9 +51,6 @@ from mercurial import (
 )
 from mercurial import node as nodemod
 from mercurial.i18n import _
-from hgext import pager
-
-pager.attended.append('smartlog')
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -666,6 +663,7 @@ def _smartlog(ui, repo, *pats, **opts):
     with ui.configoverride(overrides, 'smartlog'):
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+        ui.pager('smartlog')
         cmdutil.displaygraph(
             ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
 

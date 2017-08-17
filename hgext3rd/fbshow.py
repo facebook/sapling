@@ -67,6 +67,7 @@ def show(ui, repo, *args, **opts):
     specifying custom templates.
 
     """
+    ui.pager('show')
     if len(args) == 0:
         opts['rev'] = ['.']
         pats = []
