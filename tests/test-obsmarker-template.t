@@ -1643,3 +1643,138 @@ Check output
   |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
+Test templates with multiple pruned commits
+===========================================
+
+Test setup
+----------
+
+  $ hg init $TESTTMP/multiple-local-prune
+  $ cd $TESTTMP/multiple-local-prune
+  $ mkcommit ROOT
+  $ mkcommit A0
+  $ hg commit --amend -m "A1"
+  $ hg debugobsolete --record-parent `getid "."`
+  obsoleted 1 changesets
+
+  $ hg up -r "desc(A0)" --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg commit --amend -m "A2"
+  $ hg debugobsolete --record-parent `getid "."`
+  obsoleted 1 changesets
+
+Check output
+------------
+
+  $ hg up "desc(A0)" --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg tlog
+  @  471f378eab4c
+  |
+  o  ea207398892e
+  
+# todo: the obsfate output is not ideal
+  $ hg fatelog
+  @  471f378eab4c
+  |    Obsfate: pruned;
+  o  ea207398892e
+  
+  $ hg fatelog -v --hidden
+  x  65b757b745b9
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
+  | x  fdf9bde5129a
+  |/     Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
+  | @  471f378eab4c
+  |/     Obsfate: rewritten as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000);
+  o  ea207398892e
+  
+
+Test templates with splitted and pruned commit
+==============================================
+
+  $ hg init $TESTTMP/templates-local-split-prune
+  $ cd $TESTTMP/templates-local-split-prune
+  $ mkcommit ROOT
+  $ echo 42 >> a
+  $ echo 43 >> b
+  $ hg commit -A -m "A0"
+  adding a
+  adding b
+  $ hg log --hidden -G
+  @  changeset:   1:471597cad322
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+# Simulate split
+  $ hg up -r "desc(ROOT)"
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo 42 >> a
+  $ hg commit -A -m "A1"
+  adding a
+  created new head
+  $ echo 43 >> b
+  $ hg commit -A -m "A2"
+  adding b
+  $ hg debugobsolete `getid "1"` `getid "2"` `getid "3"`
+  obsoleted 1 changesets
+
+# Simulate prune
+  $ hg debugobsolete --record-parent `getid "."`
+  obsoleted 1 changesets
+
+  $ hg log --hidden -G
+  @  changeset:   3:0d0ef4bdf70e
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A2
+  |
+  o  changeset:   2:617adc3a144c
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A1
+  |
+  | x  changeset:   1:471597cad322
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+Check templates
+---------------
+
+  $ hg up 'desc("A0")' --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+# todo: the obsfate output is not ideal
+  $ hg fatelog
+  o  617adc3a144c
+  |
+  | @  471597cad322
+  |/     Obsfate: pruned;
+  o  ea207398892e
+  
+  $ hg up -r 'desc("A2")' --hidden
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg fatelog --hidden
+  @  0d0ef4bdf70e
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
+  o  617adc3a144c
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000);
+  o  ea207398892e
+  
