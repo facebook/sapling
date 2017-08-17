@@ -58,8 +58,8 @@ DEFINE_string(
 
 DEFINE_bool(
     use_hg_tree_manifest,
-    false, // Disabled for now until we are able to handle MissingKeyError
-    "Attempt to import mercurial trees using treemanifest");
+    true,
+    "Import mercurial trees using treemanifest in supported repositories.");
 DEFINE_bool(
     hg_fetch_missing_trees,
     true,
