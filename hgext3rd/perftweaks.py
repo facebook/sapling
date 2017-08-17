@@ -287,6 +287,8 @@ def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
 
 def _trackrebasesize(orig, self, dest, rebaseset):
     result = orig(self, dest, rebaseset)
+    if dest is None:
+        return result
 
     # The code assumes the rebase source is roughly a linear stack within a
     # single feature branch, and there is only one destination. If that is not
