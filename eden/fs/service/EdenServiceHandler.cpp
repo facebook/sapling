@@ -25,6 +25,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -592,6 +593,36 @@ void EdenServiceHandler::debugInodeStatus(
 
   inode->getDebugStatus(inodeInfo);
 }
+
+void EdenServiceHandler::debugGetInodePath(
+    InodePathDebugInfo& info,
+    std::unique_ptr<std::string> mountPoint,
+    int64_t inodeNumber) {
+  auto inodeNum = static_cast<fuse_ino_t>(inodeNumber);
+  auto edenMount = server_->getMount(*mountPoint);
+  auto inodeMap = edenMount->getInodeMap();
+
+  // Check if the inode is loaded
+  auto loadedData = inodeMap->lookupLoadedInode(inodeNum);
+  if (loadedData == nullptr) {
+    XLOG(INFO) << "looking up unloaded inode " << inodeNum;
+    // If it's not, check if it's unloaded. If the inodeNum is invalid, this
+    // lookup will throw
+    auto unloadedData = inodeMap->lookupUnloadedInode(inodeNum);
+    info.path = unloadedData.name.stringPiece().str();
+    info.loaded = false;
+  } else {
+    // If the inode is loaded, return its path
+    auto path = loadedData->getPath();
+    if (path) {
+      info.path = path->stringPiece().str();
+      info.loaded = true;
+    } else {
+      throw newEdenError("missing path for loaded inode {}", inodeNum);
+    }
+  }
+}
+
 void EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path) {

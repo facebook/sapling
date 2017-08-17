@@ -211,6 +211,11 @@ struct TreeInodeDebugInfo {
   6: i64 refcount
 }
 
+struct InodePathDebugInfo {
+  1: string path
+  2: bool loaded
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -430,6 +435,17 @@ service EdenService extends fb303.FacebookService {
   list<TreeInodeDebugInfo> debugInodeStatus(
     1: string mountPoint,
     2: string path,
+  ) throws (1: EdenError ex)
+
+  /**
+   * Get the InodePathDebugInfo for the inode that corresponds to the given
+   * inode number. This provides the path for the inode and also indicates
+   * whether the inode is currently loaded or not. Requires that the Eden
+   * mountPoint be specified.
+   */
+  InodePathDebugInfo debugGetInodePath(
+    1: string mountPoint,
+    2: i64 inodeNumber,
   ) throws (1: EdenError ex)
 
   /**
