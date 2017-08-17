@@ -1483,7 +1483,7 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
 # recover must be a norepo command because loading the repo fails
 @command('^sqlrecover', [
     ('f', 'force', '', _('strips as far back as necessary'), ''),
-    ('', 'no-backup', '', _('does not produce backup bundles for strips'), ''),
+    ('', 'no-backup', None, _('does not produce backup bundles for strips')),
     ], _('hg sqlrecover'), norepo=True)
 def sqlrecover(ui, *args, **opts):
     """
@@ -1522,7 +1522,7 @@ def sqlrecover(ui, *args, **opts):
         nodelist = [repo[striprev].node()]
         ui.status("stripping back to %s commits" % (striprev))
 
-        backup = "none" if opts.get("no-backup") else "all"
+        backup = not opts.get("no_backup")
         repair.strip(ui, repo, nodelist, backup=backup, topic="sqlrecover")
 
         stripsize = min(stripsize * 5, 10000)
@@ -1537,6 +1537,8 @@ def sqlrecover(ui, *args, **opts):
 @command('^sqlstrip', [
     ('', 'i-know-what-i-am-doing', None, _('only run sqlstrip if you know ' +
         'exactly what you\'re doing')),
+    ('', 'no-backup-permanent-data-loss', None,
+     _('does not produce backup bundles (for use with corrupt revlogs)')),
     ], _('hg sqlstrip [OPTIONS] REV'), norepo=True)
 def sqlstrip(ui, rev, *args, **opts):
     """strips all revisions greater than or equal to the given revision from the sql database
@@ -1556,6 +1558,13 @@ def sqlstrip(ui, rev, *args, **opts):
     ui.warn("*** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***\n")
     import time
     time.sleep(5)
+
+    backup = not opts.get("no_backup_permanent_data_loss")
+    if not backup:
+        ui.warn("*** *** *** *** *** *** *** *** * *** *** *** *** *** *** *** ***\n")
+        ui.warn("*** THERE ARE NO BACKUPS!       *  (MANDATORY 10 SECOND WAIT) ***\n")
+        ui.warn("*** *** *** *** *** *** *** *** * *** *** *** *** *** *** *** ***\n")
+        time.sleep(10)
 
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
@@ -1585,7 +1594,8 @@ def sqlstrip(ui, rev, *args, **opts):
             revs = repo.revs('%s:' % rev)
             # strip locally
             ui.status("stripping locally\n")
-            repair.strip(ui, repo, [changelog.node(r) for r in revs], "all")
+            repair.strip(ui, repo, [changelog.node(r) for r in revs],
+                         backup=backup, topic="sqlstrip")
 
             ui.status("stripping from the database\n")
             ui.status("deleting old references\n")

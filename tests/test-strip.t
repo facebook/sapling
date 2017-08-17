@@ -60,7 +60,36 @@ Strip using sqlstrip
   $ hg sqlstrip --i-know-what-i-am-doing 1
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
-  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
+  stripping from the database
+  deleting old references
+  adding new head references
+  adding new tip reference
+  adding new bookmark references
+  deleting revision data
+
+Repull, and then strip without a backup
+  $ hg pull -q ../client
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  3 files, 3 changesets, 3 total revisions
+
+  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
+  o  2 z foo
+  |
+  | o  1 y
+  |/
+  o  0 x
+  
+  $ hg sqlstrip --i-know-what-i-am-doing 1 --no-backup-permanent-data-loss
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
+  *** *** *** *** *** *** *** *** * *** *** *** *** *** *** *** ***
+  *** THERE ARE NO BACKUPS!       *  (MANDATORY 10 SECOND WAIT) ***
+  *** *** *** *** *** *** *** *** * *** *** *** *** *** *** *** ***
+  stripping locally
   stripping from the database
   deleting old references
   adding new head references
@@ -90,7 +119,7 @@ Run sqlstrip on master as well
   $ hg sqlstrip --i-know-what-i-am-doing 1
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
-  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-f38e411b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-f38e411b-sqlstrip.hg (glob)
   stripping from the database
   deleting old references
   adding new head references
