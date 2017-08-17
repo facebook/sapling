@@ -178,6 +178,21 @@ class HgImporter {
     uint32_t dataLength;
   };
 
+  /**
+   * Options for this HgImporter.
+   *
+   * This is parsed from the initial CMD_STARTED response from the
+   * hg_import_helper process, and contains details about the configuration
+   * for this mercurial repository.
+   */
+  struct Options {
+    /**
+     * The paths to the treemanifest pack directories.
+     * If this vector is empty treemanifest import should not be used.
+     */
+    std::vector<std::string> treeManifestPackPaths;
+  };
+
   // Forbidden copy constructor and assignment operator
   HgImporter(const HgImporter&) = delete;
   HgImporter& operator=(const HgImporter&) = delete;
@@ -209,7 +224,15 @@ class HgImporter {
    * that it has started successfully.  Process the response and finish
    * setting up member variables based on the data included in the response.
    */
-  void waitForHelperStart();
+  Options waitForHelperStart();
+
+  /**
+   * Initialize the unionStore_ needed for treemanifest import support.
+   *
+   * This leaves unionStore_ null if treemanifest import is not supported in
+   * this repository.
+   */
+  void initializeTreeManifestImport(const Options& options);
 
   /**
    * Send a request to the helper process, asking it to send us the manifest
@@ -239,7 +262,8 @@ class HgImporter {
       RelativePathPiece path);
 
   folly::Subprocess helper_;
-  LocalStore* store_{nullptr};
+  const AbsolutePath repoPath_;
+  LocalStore* const store_{nullptr};
   uint32_t nextRequestID_{0};
   /**
    * The input and output file descriptors to the helper subprocess.

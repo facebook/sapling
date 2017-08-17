@@ -221,6 +221,8 @@ int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   folly::init(&argc, &argv);
   folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::INFO);
+  gflags::SetCommandLineOptionWithMode(
+      "use_hg_tree_manifest", "true", gflags::SET_FLAGS_DEFAULT);
 
   return RUN_ALL_TESTS();
 }

@@ -350,7 +350,7 @@ namespace facebook {
 namespace eden {
 
 HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
-    : store_(store) {
+    : repoPath_{repoPath}, store_{store} {
   auto importHelper = getImportHelperPath();
   std::vector<string> cmd = {
       importHelper.value().toStdString(),
@@ -380,12 +380,12 @@ HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
   helperIn_ = helper_.stdinFd();
   helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
 
-  waitForHelperStart();
-  XLOG(DBG1) << "hg_import_helper started for repository " << repoPath
-             << ": treemanifest=" << (unionStore_ ? "yes" : "no");
+  auto options = waitForHelperStart();
+  initializeTreeManifestImport(options);
+  XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
 }
 
-void HgImporter::waitForHelperStart() {
+HgImporter::Options HgImporter::waitForHelperStart() {
   // Wait for the import helper to send the CMD_STARTED message indicating
   // that it has started successfully.
   auto header = readChunkHeader();
@@ -417,25 +417,46 @@ void HgImporter::waitForHelperStart() {
         protocolVersion));
   }
 
+  Options options;
+
   auto flags = cursor.readBE<uint32_t>();
   auto numTreemanifestPaths = cursor.readBE<uint32_t>();
-  std::vector<DatapackStore*> storePtrs;
+  if ((flags & StartFlag::TREEMANIFEST_SUPPORTED) &&
+      numTreemanifestPaths == 0) {
+    throw std::runtime_error(
+        "hg_import_helper indicated that treemanifest "
+        "is supported, but provided no store paths");
+  }
   for (uint32_t n = 0; n < numTreemanifestPaths; ++n) {
     auto pathLength = cursor.readBE<uint32_t>();
-    auto path = cursor.readFixedString(pathLength);
+    options.treeManifestPackPaths.push_back(cursor.readFixedString(pathLength));
+  }
+
+  return options;
+}
+
+void HgImporter::initializeTreeManifestImport(const Options& options) {
+  if (!FLAGS_use_hg_tree_manifest) {
+    XLOG(DBG2) << "treemanifest import disabled via command line flags "
+                  "for repository "
+               << repoPath_;
+    return;
+  }
+  if (options.treeManifestPackPaths.empty()) {
+    XLOG(DBG2) << "treemanifest import not supported in repository "
+               << repoPath_;
+    return;
+  }
+
+  std::vector<DatapackStore*> storePtrs;
+  for (const auto& path : options.treeManifestPackPaths) {
     XLOG(DBG5) << "treemanifest pack path: " << path;
     dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path));
     storePtrs.emplace_back(dataPackStores_.back().get());
   }
 
-  if (flags & StartFlag::TREEMANIFEST_SUPPORTED) {
-    if (dataPackStores_.empty()) {
-      throw std::runtime_error(
-          "hg_import_helper indicated that treemanifest "
-          "is supported, but provided no store paths");
-    }
-    unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
-  }
+  unionStore_ = std::make_unique<UnionDatapackStore>(storePtrs);
+  XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath_;
 }
 
 HgImporter::~HgImporter() {
@@ -444,6 +465,21 @@ HgImporter::~HgImporter() {
 }
 
 std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
+  // importTree() only works with treemanifest.
+  // This can only be called if the root tree was imported with treemanifest,
+  // and we are now trying to import data for some subdirectory.
+  //
+  // If it looks like treemanifest import is no longer supported, we cannot
+  // import this data.  (This can happen if treemanifest was disabled in the
+  // repository and then eden is restarted with the new configuration.)
+  if (!unionStore_) {
+    throw std::domain_error(folly::to<string>(
+        "unable to import subtree ",
+        id.toString(),
+        " with treemanifest disabled after the parent tree was imported "
+        "with treemanifest"));
+  }
+
   HgProxyHash pathInfo(store_, id);
   return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
@@ -575,7 +611,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 }
 
 Hash HgImporter::importManifest(StringPiece revName) {
-  if (FLAGS_use_hg_tree_manifest) {
+  if (unionStore_) {
     try {
       return importTreeManifest(revName);
     } catch (const MissingKeyError&) {
