@@ -511,8 +511,16 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     FileType fileType;
     uint8_t ownerPermissions;
 
+    StringPiece entryFlag;
+    if (entry->flag) {
+      // entry->flag is a char* but is unfortunately not nul terminated.
+      // All known flag values are currently only a single character, and there
+      // are never any multi-character flags.
+      entryFlag.assign(entry->flag, entry->flag + 1);
+    }
+
     XLOG(DBG9) << "tree: " << manifestNode << " " << entryName
-               << " node: " << node << " flag: " << entry->flag;
+               << " node: " << node << " flag: " << entryFlag;
 
     if (entry->isdirectory()) {
       fileType = FileType::DIRECTORY;
@@ -534,7 +542,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
               "/",
               entryName,
               ": ",
-              entry->flag));
+              entryFlag));
       }
     } else {
       fileType = FileType::REGULAR_FILE;
