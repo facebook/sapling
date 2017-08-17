@@ -11,11 +11,3 @@ cpp_library(
         "@/folly/experimental/logging:logging",
     ],
 )
-
-cpp_unittest(
-    name = "test_journal",
-    srcs = glob(["test/*Test.cpp"]),
-    deps = [
-        ":journal",
-    ],
-)

@@ -97,8 +97,8 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
       } else {
         switch (it->second) {
           case Created:
-            // Removed, Created -> cancel out (don't report)
-            overlayState.erase(it);
+            // Removed, Created -> cancel out to Changed
+            overlayState[removed] = Changed;
             break;
           case Changed:
             // Removed, Changed -> invalid

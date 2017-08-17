@@ -1,0 +1,12 @@
+# @autodeps
+
+cpp_unittest(
+    name = "test_journal",
+    srcs = glob(["*Test.cpp"]),
+    deps = [
+        "@/eden/fs/journal:journal",
+    ],
+    external_deps = [
+        ("googletest", None, "gmock"),
+    ],
+)
