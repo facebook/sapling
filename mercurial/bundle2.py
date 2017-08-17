@@ -1815,6 +1815,7 @@ def handlephases(op, inpart):
     """apply phases from bundle part to repo"""
     headsbyphase = _readphaseheads(inpart)
     phases.updatephases(op.repo.unfiltered(), op.gettransaction(), headsbyphase)
+    op.records.add('phase-heads', {})
 
 @parthandler('reply:pushkey', ('return', 'in-reply-to'))
 def handlepushkeyreply(op, inpart):

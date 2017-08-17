@@ -1401,6 +1401,10 @@ def _pullbundle2(pullop):
     if pullop.fetch:
         pullop.cgresult = bundle2.combinechangegroupresults(op)
 
+    # If the bundle had a phase-heads part, then phase exchange is already done
+    if op.records['phase-heads']:
+        pullop.stepsdone.add('phases')
+
     # processing phases change
     for namespace, value in op.records['listkeys']:
         if namespace == 'phases':
