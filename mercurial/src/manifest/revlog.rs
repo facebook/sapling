@@ -39,7 +39,7 @@ pub struct RevlogManifest {
 // Source: mercurial/parsers.c:parse_manifest()
 //
 // NB: filenames are sequences of non-zero bytes, not strings
-pub fn parse(data: &[u8]) -> Result<BTreeMap<Path, Details>> {
+fn parse_impl(data: &[u8], prefix: Option<&Path>) -> Result<BTreeMap<Path, Details>> {
     let mut files = BTreeMap::new();
 
     for line in data.split(|b| *b == b'\n') {
@@ -59,7 +59,11 @@ pub fn parse(data: &[u8]) -> Result<BTreeMap<Path, Details>> {
             }
         };
 
-        let path = Path::new(name).chain_err(|| "invalid path in manifest")?;
+        let path = if let Some(prefix) = prefix {
+            prefix.join(&Path::new(name).chain_err(|| "invalid path in manifest")?)
+        } else {
+            Path::new(name).chain_err(|| "invalid path in manifest")?
+        };
         let details = Details::parse(rest)?;
 
         // XXX check path > last entry in files
@@ -67,6 +71,14 @@ pub fn parse(data: &[u8]) -> Result<BTreeMap<Path, Details>> {
     }
 
     Ok(files)
+}
+
+pub fn parse(data: &[u8]) -> Result<BTreeMap<Path, Details>> {
+    parse_impl(data, None)
+}
+
+pub fn parse_with_prefix(data: &[u8], prefix: &Path) -> Result<BTreeMap<Path, Details>> {
+    parse_impl(data, Some(prefix))
 }
 
 impl RevlogManifest {
@@ -86,6 +98,14 @@ impl RevlogManifest {
 
     pub fn parse(repo: Option<RevlogRepo>, data: &[u8]) -> Result<RevlogManifest> {
         parse(data).map(|files| RevlogManifest { repo, files })
+    }
+
+    pub fn parse_with_prefix(
+        repo: Option<RevlogRepo>,
+        data: &[u8],
+        prefix: &Path,
+    ) -> Result<RevlogManifest> {
+        parse_with_prefix(data, prefix).map(|files| RevlogManifest { repo, files })
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
@@ -250,8 +270,12 @@ impl Entry for RevlogEntry {
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        self.repo
-            .get_file_revlog(self.get_path())
+        let revlog = match self.get_type()  {
+            Type::Tree => self.repo.get_tree_revlog(self.get_path()),
+            _ => self.repo.get_file_revlog(self.get_path()),
+        };
+
+        revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| node.as_blob().clone())
             .and_then(|data| match self.get_type() {
@@ -261,7 +285,15 @@ impl Entry for RevlogEntry {
                     let data = data.as_slice().ok_or("missing blob data")?;
                     Ok(Content::Symlink(Path::new(data)?))
                 }
-                Type::Tree => unimplemented!(),
+                Type::Tree => {
+                    let data = data.as_slice().ok_or("missing blob data")?;
+                    let revlog_manifest = RevlogManifest::parse_with_prefix(
+                        Some(self.repo.clone()),
+                        &data,
+                        self.get_path(),
+                    )?;
+                    Ok(Content::Tree(Box::new(revlog_manifest)))
+                }
             })
             .map_err(|err| {
                 Error::with_chain(
