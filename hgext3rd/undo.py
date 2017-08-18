@@ -775,19 +775,19 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
                              clean=False, updatecheck='abort')
     elif not branchcommits or workingcopyparent in branchcommits:
         # keeps working copy files
-        precnode = bin(workingcopyparent)
-        precctx = repo[precnode]
+        prednode = bin(workingcopyparent)
+        predctx = repo[prednode]
 
         changedfiles = []
         wctx = repo[None]
         wctxmanifest = wctx.manifest()
-        precctxmanifest = precctx.manifest()
+        predctxmanifest = predctx.manifest()
         dirstate = repo.dirstate
-        diff = precctxmanifest.diff(wctxmanifest)
+        diff = predctxmanifest.diff(wctxmanifest)
         changedfiles.extend(diff.iterkeys())
 
         with dirstate.parentchange():
-            dirstate.rebuild(precnode, precctxmanifest, changedfiles)
+            dirstate.rebuild(prednode, predctxmanifest, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
             for filename, data in diff.iteritems():
@@ -979,8 +979,8 @@ def smarthide(repo, revhide, revshow, local=False):
             if not local:
                 hidecommits(repo, ctx, [])
 
-def hidecommits(repo, curctx, precctxs):
-    obsolete.createmarkers(repo, [(curctx, precctxs)], operation='undo')
+def hidecommits(repo, curctx, predctxs):
+    obsolete.createmarkers(repo, [(curctx, predctxs)], operation='undo')
 
 def revealcommits(repo, rev):
     try:
