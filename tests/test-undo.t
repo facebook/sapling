@@ -66,6 +66,7 @@ Test data store
   command bae41a9d0ae9614fc3aa843a0f5cbdf47bc98c43
   date * (glob)
   draftheads b80de5d138758541c5f05265ad144ab9fa86d1db
+  draftobsolete b80de5d138758541c5f05265ad144ab9fa86d1db
   unfinished False
   workingparent fcb754f6a51eaf982f66d0637b39f3d2e6b520d5 (no-eol)
   $ touch a3 && hg add a3
@@ -106,6 +107,8 @@ Test debugundohistory
   		0a3dd3e15e65b90836f492112d816f3ee073d897
   	REMOVED:
   	
+  draftobsolete:
+  
   unfinished:	False
 
 Test gap in data (extension dis and enabled)
@@ -145,6 +148,8 @@ Test gap in data (extension dis and enabled)
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
   	REMOVED:
   		0a3dd3e15e65b90836f492112d816f3ee073d897
+  draftobsolete:
+  
   unfinished:	False
 
 Index out of bound error
@@ -168,6 +173,8 @@ Revset tests
   		aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   	REMOVED:
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
+  draftobsolete:
+  
   unfinished:	False
 
 Test 'olddraft([NUM])' revset
@@ -1246,4 +1253,66 @@ permanently delete a commit, we do not want to undo to this state.
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase =!
+  > EOF
+
+Obsmarkers for instack amend
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > fbamend = $TESTDIR/../hgext3rd/fbamend/
+  > EOF
+  $ hg update 0963
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch c5 && hg add c5 && hg amend c5
+  warning: the changeset's children were left behind
+  (use 'hg restack' to rebase them)
+  $ hg log -G -T compact -l7
+  @  34[tip]:28   e1c5a2a441f5   1970-01-01 00:00 +0000   test
+  |    c3
+  |
+  | o  31:29   00617a57f780   1970-01-01 00:00 +0000   test
+  | |    bfile
+  | |
+  | | o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | | |    afile
+  | | |
+  | x |  29[e1c5a2a441f5.preamend]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  |/ /     c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ hg undo && hg update 00617a
+  undone to *, before amend c5 (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l7
+  @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  | o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | |    afile
+  | |
+  o |  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
+  |    prev1
+  ~
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > famend =!
   > EOF

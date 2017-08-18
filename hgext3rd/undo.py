@@ -163,6 +163,7 @@ def log(repo, command, tr):
         'bookmarks': _logbookmarks(repo, tr),
         'draftheads': _logdraftheads(repo, tr),
         'workingparent': _logworkingparent(repo, tr),
+        'draftobsolete': _logdraftobsolete(repo, tr),
     }
     try:
         existingnodes = _readindex(repo, 0)
@@ -208,6 +209,12 @@ def _logdraftheads(repo, tr):
     hexnodes = tohexnode(repo, spec)
     revstring = "\n".join(sorted(hexnodes))
     return writelog(repo, tr, "draftheads.i", revstring)
+
+def _logdraftobsolete(repo, tr):
+    spec = revsetlang.formatspec('draft() & obsolete()')
+    hexnodes = tohexnode(repo, spec)
+    revstring = "\n".join(sorted(hexnodes))
+    return writelog(repo, tr, "draftobsolete.i", revstring)
 
 def _logcommand(repo, tr, command):
     revstring = "\0".join(command)
@@ -352,7 +359,7 @@ def _debugundoindex(ui, repo, reverseindex):
     template = "{tabindent(sub('\0', ' ', content))}\n"
     fm = ui.formatter('debugundohistory', {'template': template})
     cabinet = ('command.i', 'bookmarks.i', 'date.i',
-            'draftheads.i', 'workingparent.i')
+            'draftheads.i', 'draftobsolete.i', 'workingparent.i')
     for filename in cabinet:
         header = filename[:-2] + ":\n"
         rawcontent = _readnode(repo, filename, nodedict[filename[:-2]])
@@ -821,9 +828,18 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
                                       reverseindex)
     removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
                                         reverseindex)
+    currentstate = _readindex(repo, 0)
+    curdraftobsolete = _readnode(repo, "draftobsolete.i",
+                                 currentstate["draftobsolete"])
+    newdraftobsolete = _readnode(repo, "draftobsolete.i",
+                                 nodedict["draftobsolete"])
+    obschange = (set(curdraftobsolete.split("\n"))
+                - set(newdraftobsolete.split("\n")))
+    obschangerevs = revsetlang.formatspec('%ls', obschange)
     if not branch:
         smarthide(repo, addedrevs, removedrevs)
         revealcommits(repo, removedrevs)
+        revealcommits(repo, obschangerevs)
     else:
         localadds = revsetlang.formatspec('(olddraft(0) - olddraft(%d)) and'
                                           ' _localbranch(%s)',
@@ -831,9 +847,12 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         localremoves = revsetlang.formatspec('(olddraft(%d) - olddraft(0)) and'
                                           ' _localbranch(%s)',
                                           reverseindex, branch)
+        localobschange = revsetlang.formatspec('(%ls) and _localbranch(%s)',
+                                               obschange, branch)
         smarthide(repo, localadds, removedrevs)
         smarthide(repo, addedrevs, localremoves, local=True)
         revealcommits(repo, localremoves)
+        revealcommits(repo, localobschange)
 
     # informative output
     time = _readnode(repo, "date.i", nodedict["date"])
@@ -1004,6 +1023,7 @@ def smarthide(repo, revhide, revshow, local=False):
         related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
         related.intersection_update(x.node() for x in showctxs)
         destinations = [repo[x] for x in related]
+
         # two primary objectives:
         # 1. correct divergence/nondivergence
         # 2. correct visibility of changesets for the user
@@ -1019,6 +1039,7 @@ def smarthide(repo, revhide, revshow, local=False):
         # Solution: provide helpfull ui message for
         # common and easy case (1 to 1), use simplest
         # correct solution for complex edge case
+
         if len(destinations) == 1:
             hidecommits(repo, ctx, destinations)
         elif len(destinations) > 1: # split
