@@ -495,7 +495,7 @@ impl RevlogInner {
             }
         }
 
-        delta::compat::apply_deltas(data.as_ref(), chain);
+        data = delta::compat::apply_deltas(data.as_ref(), chain);
 
         Ok(data)
     }
