@@ -66,6 +66,7 @@ Test data store
   command bae41a9d0ae9614fc3aa843a0f5cbdf47bc98c43
   date * (glob)
   draftheads b80de5d138758541c5f05265ad144ab9fa86d1db
+  unfinished False
   workingparent fcb754f6a51eaf982f66d0637b39f3d2e6b520d5 (no-eol)
   $ touch a3 && hg add a3
   $ hg commit --amend
@@ -105,8 +106,7 @@ Test debugundohistory
   		0a3dd3e15e65b90836f492112d816f3ee073d897
   	REMOVED:
   	
-  workingparent:
-  	0a3dd3e15e65b90836f492112d816f3ee073d897
+  unfinished:	False
 
 Test gap in data (extension dis and enabled)
   $ hg debugundohistory -l
@@ -145,8 +145,7 @@ Test gap in data (extension dis and enabled)
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
   	REMOVED:
   		0a3dd3e15e65b90836f492112d816f3ee073d897
-  workingparent:
-  	1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
+  unfinished:	False
 
 Index out of bound error
   $ hg debugundohistory -n 50
@@ -169,8 +168,7 @@ Revset tests
   		aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
   	REMOVED:
   		1dafc0b436123cab96f82a8e9e8d1d42c0301aaa
-  workingparent:
-  	aa430c8afedf9b2ec3f0655d39eef6b6b0a2ddb6
+  unfinished:	False
 
 Test 'olddraft([NUM])' revset
   $ hg log -G -r 'olddraft(0) - olddraft(1)' --hidden -T compact
@@ -1087,3 +1085,165 @@ Specific edge case testing
   o  23   a0b72b3048d6   1970-01-01 00:00 +0000   test
   |    prev1
   ~
+
+Interupted commands
+Commands like hg rebase, unshelve and histedit may interupt in order for the
+user to solve merge conflicts etc.  Since for example hg rebase --abort may
+permanently delete a commit, we do not want to undo to this state.
+  $ touch afile
+  $ echo "afile" > afile
+  $ hg add afile && hg ci -m afile
+  $ hg up 0963b9e31e70
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ touch afile
+  $ echo "bfile" > afile
+  $ hg add afile && hg ci -m bfile
+  $ hg log -G -T compact -l6
+  @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  | o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | |    afile
+  | |
+  o |  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > rebase =
+  > EOF
+  $ hg rebase -r 00617 -d 28dfc
+  rebasing 31:00617a57f780 "bfile" (tip)
+  merging afile
+  warning: conflicts while merging afile! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg log -G -T compact -l6
+  @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  | @  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | |    afile
+  | |
+  o |  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ hg resolve -m afile
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 31:00617a57f780 "bfile" (tip)
+  $ hg log -G -T compact -l6
+  @  32[tip]:30   e642892c5cb0   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  |    afile
+  |
+  | o  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  | o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+  |      c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ hg undo
+  4 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  | o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | |    afile
+  | |
+  o |  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ hg redo
+  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  @  32[tip]:30   e642892c5cb0   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  |    afile
+  |
+  | o  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  | o  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  | o  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+  |      c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ hg undo
+  4 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg rebase -r 00617 -d 28dfc
+  rebasing 31:00617a57f780 "bfile" (tip)
+  merging afile
+  warning: conflicts while merging afile! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+  $ hg undo
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -T compact -l6
+  @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
+  |    bfile
+  |
+  | o  30:24   28dfc398cab7   1970-01-01 00:00 +0000   test
+  | |    afile
+  | |
+  o |  29   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | |    c3
+  | |
+  o |  28   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
+  | |    c2
+  | |
+  o |  27:-1   c54b1b73bb58   1970-01-01 00:00 +0000   test
+   /     c1
+  |
+  o  24:-1   90af9088326b   1970-01-01 00:00 +0000   test
+       b1
+  
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > rebase =!
+  > EOF

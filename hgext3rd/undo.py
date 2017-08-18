@@ -75,17 +75,19 @@ def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     else:
         rootlog = False
 
-    result = orig(lui, repo, cmd, fullargs, *args)
+    try:
+        result = orig(lui, repo, cmd, fullargs, *args)
+    finally:
+        if repo is not None:
+            # mercurial is bad with caches
+            # eg update to hidden commit will leave false cache
+                repo.invalidatevolatilesets()
 
-    # mercurial is bad with caches
-    # eg update to hidden commit will leave false cache
-    if repo:
-        repo.invalidatevolatilesets()
+        # record changes to repo
+        if rootlog:
+            safelog(repo, command)
+            del os.environ['_undologactive']
 
-    # record changes to repo
-    if rootlog:
-        safelog(repo, command)
-        del os.environ['_undologactive']
     return result
 
 # Write: Log control
@@ -173,10 +175,20 @@ def log(repo, command, tr):
         newnodes.update({
             'date': _logdate(repo, tr),
             'command': _logcommand(repo, tr, command),
+            'unfinished': unfinished(repo),
         })
         _logindex(repo, tr, newnodes)
         # changes have been recorded
         return True
+
+def unfinished(repo, commit=False):
+    '''like cmdutil.checkunfinished without raising an Abort'''
+    for f, clearable, allowcommit, msg, hint in cmdutil.unfinishedstates:
+        if commit and allowcommit:
+            continue
+        if repo.vfs.exists(f):
+            return True
+    return False
 
 # Write: Logs
 
@@ -372,6 +384,7 @@ def _debugundoindex(ui, repo, reverseindex):
             content = rawcontent
         fm.startitem()
         fm.write('content', '%s', header + content)
+    fm.write('content', '%s', "unfinished:\t" + nodedict['unfinished'])
     fm.end()
 
 # Revset logic
@@ -606,9 +619,13 @@ def undo(ui, repo, *args, **opts):
     if branch and reverseindex != 1 and reverseindex != -1:
         raise error.Abort(_("--branch with --index not supported"))
     if relativeundo:
-        reverseindex = _computerelative(repo, reverseindex,
-                                        absolute = not relativeundo,
-                                        branch = branch)
+        try:
+            reverseindex = _computerelative(repo, reverseindex,
+                                            absolute = not relativeundo,
+                                            branch = branch)
+        except IndexError:
+            raise error.Abort(_("index out of bounds"))
+
     if branch and preview:
         raise error.Abort(_("--branch with --preview not supported"))
 
@@ -691,7 +708,10 @@ def redo(ui, repo, *args, **opts):
         commandstr = _readnode(repo, 'command.i', nodedict['command'])
         commandlist = commandstr.split("\0")
 
-        if commandlist[0] == "undo":
+        if 'True' == nodedict['unfinished']:
+            # don't want to redo to an interupted state
+            reverseindex += 1
+        elif commandlist[0] == "undo":
             undoopts = {}
             fancyopts.fancyopts(commandlist,
                                 cmdtable['undo'][1] + commands.globalopts,
@@ -820,6 +840,10 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
     # redonode storage
     # allows for branch undos using
     # findnextdelta logic
+    if reverseindex != 0:
+        sign = reverseindex / abs(reverseindex)
+    else:
+        sign = None
     if not absolute:
         try: # attempt to get relative shift
             nodebranch = repo.vfs.read("undolog/redonode").split("\0")
@@ -862,6 +886,16 @@ def _computerelative(repo, reverseindex, absolute=False, branch=""):
             shiftedindex = _findnextdelta(repo, shiftedindex, branch,
                                           direction=sign)
         reverseindex = shiftedindex
+    # skip interupted commands
+    if sign:
+        done = False
+        rlog = _getrevlog(repo, 'index.i')
+        while not done:
+            indexdict = _readindex(repo, reverseindex, rlog)
+            if 'True' == indexdict['unfinished']:
+                reverseindex += sign
+            else:
+                done = True
     return reverseindex
 
 def _findnextdelta(repo, reverseindex, branch, direction):
@@ -901,6 +935,9 @@ def _findnextdelta(repo, reverseindex, branch, direction):
             nodedict = _readindex(repo, incrementalindex)
         except IndexError:
             raise error.Abort(_("index out of bounds"))
+        # skip interupted commands
+        if 'True' == nodedict['unfinished']:
+            break
         # check wkp, commits, bookmarks
         workingcopyparent = _readnode(repo, "workingparent.i",
                                       nodedict["workingparent"])
