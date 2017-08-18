@@ -50,8 +50,8 @@ def unamend(ui, repo, **opts):
         e = _("changeset must have one precursor, found %i precursors")
         raise error.Abort(e % len(markers))
 
-    precnode = markers[0].precnode()
-    precctx = unfi[precnode]
+    prednode = markers[0].prednode()
+    predctx = unfi[prednode]
 
     if curctx.children():
         raise error.Abort(_("cannot unamend in the middle of a stack"))
@@ -61,14 +61,14 @@ def unamend(ui, repo, **opts):
         changedfiles = []
         wctx = repo[None]
         wm = wctx.manifest()
-        cm = precctx.manifest()
+        cm = predctx.manifest()
         dirstate = repo.dirstate
         diff = cm.diff(wm)
         changedfiles.extend(diff.iterkeys())
 
         tr = repo.transaction('unamend')
         with dirstate.parentchange():
-            dirstate.rebuild(precnode, cm, changedfiles)
+            dirstate.rebuild(prednode, cm, changedfiles)
             # we want added and removed files to be shown
             # properly, not with ? and ! prefixes
             for filename, data in diff.iteritems():
@@ -78,7 +78,7 @@ def unamend(ui, repo, **opts):
                     dirstate.remove(filename)
         changes = []
         for book in ctxbookmarks:
-            changes.append((book, precnode))
+            changes.append((book, prednode))
         repo._bookmarks.applychanges(repo, tr, changes)
-        obsolete.createmarkers(repo, [(curctx, (precctx,))])
+        obsolete.createmarkers(repo, [(curctx, (predctx,))])
         tr.close()
