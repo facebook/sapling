@@ -130,7 +130,7 @@ where
         self.get_content()
             .and_then(|content| match content {
                 Content::File(data) | Content::Executable(data) => Ok(data.size()),
-                Content::Symlink(path) => Ok(Some(path.len())),
+                Content::Symlink(path) => Ok(Some(path.to_vec().len())),
                 Content::Tree(_) => Ok(None),
             })
             .boxed()

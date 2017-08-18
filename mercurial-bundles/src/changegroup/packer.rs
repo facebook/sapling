@@ -92,7 +92,7 @@ impl ChunkBuilder {
         // TODO: will need to encode tree manifests here as well
         if let &Section::Filelog(ref f) = section {
             // Note that the filename length must include the four bytes for itself.
-            BigEndian::write_i32(&mut self.inner[0..], (f.len() + 4) as i32);
+            BigEndian::write_i32(&mut self.inner[0..], (f.to_vec().len() + 4) as i32);
             self.inner.put_slice(f.to_vec().as_slice());
             // Add four more bytes for the start of the section.
             self.len_offset = self.inner.len();

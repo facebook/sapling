@@ -5,9 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::cmp;
+use std::convert::From;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
+use std::iter::{once, Once};
 use std::path::PathBuf;
+use std::slice::Iter;
 use std::str;
 
 use quickcheck::{Arbitrary, Gen};
@@ -25,31 +28,17 @@ pub struct PathElement(Vec<u8>);
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 pub struct Path {
     elements: Vec<PathElement>,
-    total_len: usize,
 }
 
 impl Path {
     pub fn new<P: AsRef<[u8]>>(p: P) -> Result<Path> {
         let p = p.as_ref();
-        if p.is_empty() {
-            Ok(Path {
-                elements: vec![],
-                total_len: 0,
-            })
-        } else {
-            Self::verify(p)?;
-            let mut elements: Vec<PathElement> = vec![];
-            let mut len: usize = 0;
-            for elem in p.split(|c| *c == b'/') {
-                elements.push(PathElement(elem.into()));
-                len += elem.len();
-            }
-            let slashes_count = elements.len() - 1;
-            Ok(Path {
-                elements: elements.into(),
-                total_len: len + slashes_count,
-            })
-        }
+        Self::verify(p)?;
+        let elements: Vec<_> = p.split(|c| *c == b'/')
+            .filter(|e| !e.is_empty())
+            .map(|e| PathElement(e.into()))
+            .collect();
+        Ok(Path { elements })
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -57,6 +46,22 @@ impl Path {
             bail!(ErrorKind::InvalidPath("paths cannot contain '\\0'".into()))
         }
         Ok(())
+    }
+
+    pub fn join<'a, Elements: IntoIterator<Item = &'a PathElement>>(
+        &self,
+        another: Elements,
+    ) -> Path {
+        let mut newelements = self.elements.clone();
+        newelements.extend(
+            another
+                .into_iter()
+                .filter(|elem| !elem.0.is_empty())
+                .cloned(),
+        );
+        Path {
+            elements: newelements,
+        }
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
@@ -89,21 +94,37 @@ impl Path {
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
-        let components: Vec<Vec<u8>> = self.elements
-            .iter()
-            .map(|component| component.0.clone())
-            .collect();
-        components.join(&b'/')
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.total_len
+        let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
+        ret.join(&b'/')
     }
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.elements.is_empty()
+    }
+}
+
+impl<'a> IntoIterator for &'a Path {
+    type Item = &'a PathElement;
+    type IntoIter = Iter<'a, PathElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a PathElement {
+    type Item = &'a PathElement;
+    type IntoIter = Once<&'a PathElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        once(self)
+    }
+}
+
+impl<'a> From<&'a Path> for Vec<u8> {
+    fn from(path: &Path) -> Self {
+        path.to_vec()
     }
 }
 
@@ -291,7 +312,7 @@ mod test {
                 .join(&b'/');
             let expected_len = joined.len();
             let path = Path::new(joined).unwrap();
-            elements == path.elements && path.len() == expected_len
+            elements == path.elements && path.to_vec().len() == expected_len
         }
     }
 
@@ -299,7 +320,7 @@ mod test {
     fn path_make() {
         let path = Path::new(b"1234abc");
         assert!(Path::new(b"1234abc").is_ok());
-        assert_eq!(path.unwrap().len(), 7);
+        assert_eq!(path.unwrap().to_vec().len(), 7);
     }
 
     #[test]
@@ -391,5 +412,58 @@ mod test {
         let p = a.fsencode(false);
 
         assert_eq!(p, PathBuf::from("_h_e_l_l_o.d.hg/_w_o_r_l_d.d"));
+    }
+
+    #[test]
+    fn join() {
+        let prefix = Path::new(b"prefix").unwrap();
+        assert_eq!(
+            prefix.join(&Path::new("suffix").unwrap()).fsencode(false),
+            PathBuf::from("prefix/suffix")
+        );
+        assert_eq!(
+            prefix.join(&Path::new("").unwrap()).fsencode(false),
+            PathBuf::from("prefix")
+        );
+        let empty = Path::new(b"").unwrap();
+        assert_eq!(
+            empty.join(&Path::new("suffix").unwrap()).fsencode(false),
+            PathBuf::from("suffix")
+        );
+
+        assert_eq!(
+            Path::new(b"asdf")
+                .unwrap()
+                .join(&Path::new(b"").unwrap())
+                .to_vec().len(),
+            4
+        );
+
+        assert_eq!(
+            Path::new(b"").unwrap().join(&Path::new(b"").unwrap()).to_vec().len(),
+            0
+        );
+
+        assert_eq!(
+            Path::new(b"asdf")
+                .unwrap()
+                .join(&PathElement(b"bdc".iter().cloned().collect()))
+                .to_vec().len(),
+            8
+        );
+    }
+
+    #[test]
+    fn empty_paths() {
+        assert_eq!(Path::new(b"/").unwrap().to_vec().len(), 0);
+        assert_eq!(Path::new(b"////").unwrap().to_vec().len(), 0);
+        assert_eq!(Path::new(b"////").unwrap().join(&Path::new(b"///").unwrap()).to_vec().len(), 0);
+        let p = b"///";
+        let elements: Vec<_> = p.split(|c| *c == b'/')
+            .filter(|e| !e.is_empty())
+            .map(|e| PathElement(e.into()))
+            .collect();
+        assert_eq!(Path::new(b"////").unwrap().join(elements.iter()).to_vec().len(), 0);
+        assert!(Path::new(b"////").unwrap().join(elements.iter()).is_empty());
     }
 }
