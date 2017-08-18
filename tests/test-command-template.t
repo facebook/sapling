@@ -2871,95 +2871,158 @@ latesttag:
 
 No tag set:
 
-  $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  5: null+5
-  4: null+4
-  3: null+3
-  2: null+3
-  1: null+2
-  0: null+1
+  $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
+  @    5: null+5
+  |\
+  | o  4: null+4
+  | |
+  | o  3: null+3
+  | |
+  o |  2: null+3
+  |/
+  o  1: null+2
+  |
+  o  0: null+1
+  
 
 One common tag: longest path wins:
 
   $ hg tag -r 1 -m t1 -d '6 0' t1
-  $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  6: t1+4
-  5: t1+3
-  4: t1+2
-  3: t1+1
-  2: t1+1
-  1: t1+0
-  0: null+1
+  $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
+  @  6: t1+4
+  |
+  o    5: t1+3
+  |\
+  | o  4: t1+2
+  | |
+  | o  3: t1+1
+  | |
+  o |  2: t1+1
+  |/
+  o  1: t1+0
+  |
+  o  0: null+1
+  
 
 One ancestor tag: more recent wins:
 
   $ hg tag -r 2 -m t2 -d '7 0' t2
-  $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  7: t2+3
-  6: t2+2
-  5: t2+1
-  4: t1+2
-  3: t1+1
-  2: t2+0
-  1: t1+0
-  0: null+1
+  $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
+  @  7: t2+3
+  |
+  o  6: t2+2
+  |
+  o    5: t2+1
+  |\
+  | o  4: t1+2
+  | |
+  | o  3: t1+1
+  | |
+  o |  2: t2+0
+  |/
+  o  1: t1+0
+  |
+  o  0: null+1
+  
 
 Two branch tags: more recent wins:
 
   $ hg tag -r 3 -m t3 -d '8 0' t3
-  $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  8: t3+5
-  7: t3+4
-  6: t3+3
-  5: t3+2
-  4: t3+1
-  3: t3+0
-  2: t2+0
-  1: t1+0
-  0: null+1
+  $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
+  @  8: t3+5
+  |
+  o  7: t3+4
+  |
+  o  6: t3+3
+  |
+  o    5: t3+2
+  |\
+  | o  4: t3+1
+  | |
+  | o  3: t3+0
+  | |
+  o |  2: t2+0
+  |/
+  o  1: t1+0
+  |
+  o  0: null+1
+  
 
 Merged tag overrides:
 
   $ hg tag -r 5 -m t5 -d '9 0' t5
   $ hg tag -r 3 -m at3 -d '10 0' at3
-  $ hg log --template '{rev}: {latesttag}+{latesttagdistance}\n'
-  10: t5+5
-  9: t5+4
-  8: t5+3
-  7: t5+2
-  6: t5+1
-  5: t5+0
-  4: at3:t3+1
-  3: at3:t3+0
-  2: t2+0
-  1: t1+0
-  0: null+1
+  $ hg log -G --template '{rev}: {latesttag}+{latesttagdistance}\n'
+  @  10: t5+5
+  |
+  o  9: t5+4
+  |
+  o  8: t5+3
+  |
+  o  7: t5+2
+  |
+  o  6: t5+1
+  |
+  o    5: t5+0
+  |\
+  | o  4: at3:t3+1
+  | |
+  | o  3: at3:t3+0
+  | |
+  o |  2: t2+0
+  |/
+  o  1: t1+0
+  |
+  o  0: null+1
+  
 
-  $ hg log --template "{rev}: {latesttag % '{tag}+{distance},{changes} '}\n"
-  10: t5+5,5 
-  9: t5+4,4 
-  8: t5+3,3 
-  7: t5+2,2 
-  6: t5+1,1 
-  5: t5+0,0 
-  4: at3+1,1 t3+1,1 
-  3: at3+0,0 t3+0,0 
-  2: t2+0,0 
-  1: t1+0,0 
-  0: null+1,1 
+  $ hg log -G --template "{rev}: {latesttag % '{tag}+{distance},{changes} '}\n"
+  @  10: t5+5,5
+  |
+  o  9: t5+4,4
+  |
+  o  8: t5+3,3
+  |
+  o  7: t5+2,2
+  |
+  o  6: t5+1,1
+  |
+  o    5: t5+0,0
+  |\
+  | o  4: at3+1,1 t3+1,1
+  | |
+  | o  3: at3+0,0 t3+0,0
+  | |
+  o |  2: t2+0,0
+  |/
+  o  1: t1+0,0
+  |
+  o  0: null+1,1
+  
 
-  $ hg log --template "{rev}: {latesttag('re:^t[13]$') % '{tag}, C: {changes}, D: {distance}'}\n"
-  10: t3, C: 8, D: 7
-  9: t3, C: 7, D: 6
-  8: t3, C: 6, D: 5
-  7: t3, C: 5, D: 4
-  6: t3, C: 4, D: 3
-  5: t3, C: 3, D: 2
-  4: t3, C: 1, D: 1
-  3: t3, C: 0, D: 0
-  2: t1, C: 1, D: 1
-  1: t1, C: 0, D: 0
-  0: null, C: 1, D: 1
+  $ hg log -G --template "{rev}: {latesttag('re:^t[13]$') % '{tag}, C: {changes}, D: {distance}'}\n"
+  @  10: t3, C: 8, D: 7
+  |
+  o  9: t3, C: 7, D: 6
+  |
+  o  8: t3, C: 6, D: 5
+  |
+  o  7: t3, C: 5, D: 4
+  |
+  o  6: t3, C: 4, D: 3
+  |
+  o    5: t3, C: 3, D: 2
+  |\
+  | o  4: t3, C: 1, D: 1
+  | |
+  | o  3: t3, C: 0, D: 0
+  | |
+  o |  2: t1, C: 1, D: 1
+  |/
+  o  1: t1, C: 0, D: 0
+  |
+  o  0: null, C: 1, D: 1
+  
 
   $ cd ..
 
