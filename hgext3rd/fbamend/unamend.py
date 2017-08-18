@@ -19,9 +19,9 @@ from mercurial.i18n import _
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-def precursormarkers(ctx):
-    """obsolete marker marking this changeset as a successors"""
-    for data in ctx.repo().obsstore.precursors.get(ctx.node(), ()):
+def predecessormarkers(ctx):
+    """yields the obsolete markers marking the given changeset as a successor"""
+    for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
         yield obsutil.marker(ctx.repo(), data)
 
 @command('^unamend', [])
@@ -45,9 +45,9 @@ def unamend(ui, repo, **opts):
     curctx = repo['.']
 
     # identify the commit to which to unamend
-    markers = list(precursormarkers(curctx))
+    markers = list(predecessormarkers(curctx))
     if len(markers) != 1:
-        e = _("changeset must have one precursor, found %i precursors")
+        e = _("changeset must have one predecessor, found %i predecessors")
         raise error.Abort(e % len(markers))
 
     prednode = markers[0].prednode()

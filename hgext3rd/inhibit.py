@@ -16,19 +16,19 @@ from mercurial import (
 
 def _obsoletedrevs(repo):
     """Redefine "obsolete()" revset. Previously, X is obsoleted if X appears as
-    a precursor in a marker. Now, X is obsoleted if X is a precursor in marker
-    M1, *and* is not a successor in marker M2 where M2.date >= M1.date.
+    a predecessor in a marker. Now, X is obsoleted if X is a predecessor in
+    marker M1, *and* is not a successor in marker M2 where M2.date >= M1.date.
 
     This allows undo to return to old hashes, and is correct as long as
     obsmarker is not exchanged.
     """
     getnode = repo.changelog.node
-    markersbysuccessor = repo.obsstore.precursors.get
-    markersbyprecursor = repo.obsstore.successors.get
+    markersbysuccessor = repo.obsstore.predecessors.get
+    markersbypredecessor = repo.obsstore.successors.get
     result = set()
     for r in obsolete._mutablerevs(repo):
         n = getnode(r)
-        m1s = markersbyprecursor(n)
+        m1s = markersbypredecessor(n)
         m2s = markersbysuccessor(n)
         if m1s:
             if m2s:
@@ -52,9 +52,9 @@ def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
         if date is None:
             date = util.makedate()
     # if prec is a successor of an existing marker, make default date bigger so
-    # the old marker won't revive the precursor accidentally. This helps tests
+    # the old marker won't revive the predecessor accidentally. This helps tests
     # where date are always (0, 0)
-    markers = self.precursors.get(prec)
+    markers = self.predecessors.get(prec)
     if markers:
         maxdate = max(m[4] for m in markers)
         maxdate = (maxdate[0] + 1, maxdate[1])
@@ -68,7 +68,7 @@ class _nocontainslist(list):
         return False
 
 def _createmarkers(orig, repo, rels, *args, **kwargs):
-    # make precursor context unfiltered so parents() won't raise
+    # make predecessor context unfiltered so parents() won't raise
     unfi = repo.unfiltered()
     rels = [list(r) for r in rels]  # make mutable
     for r in rels:
@@ -109,7 +109,7 @@ def uisetup(ui):
     # to write X -> X to revive X.
     extensions.wrapfunction(obsolete.obsstore, 'create', _obsstorecreate)
 
-    # make createmarkers use unfiltered precursor ctx, workarounds an issue
+    # make createmarkers use unfiltered predecessor ctx, workarounds an issue
     # that prec.parents() may raise FilteredIndexError.
     # NOTE: should be fixed upstream once hash-preserving obsstore is a thing.
     extensions.wrapfunction(obsolete, 'createmarkers', _createmarkers)

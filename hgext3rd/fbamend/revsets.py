@@ -35,28 +35,15 @@ def _calculateset(repo, subset, x, f):
     s.sort()
     return subset & s
 
-@revsetpredicate('successors(set)')
-def successors(repo, subset, x):
-    """Immediate successors for given set"""
-    # getsuccessors: lookup node by precursor
-    getsuccessors = repo.obsstore.successors.get
-    def f(nodes):
-        for n in nodes:
-            for m in getsuccessors(n, ()):
-                # m[0]: precursor, m[1]: successors
-                for n in m[1]:
-                    yield n
-    return _calculateset(repo, subset, x, f)
-
 @revsetpredicate('precursors(set)')
-def precursors(repo, subset, x):
-    """Immediate precursors for given set"""
-    # getsuccessors: lookup node by precursor
-    getprecursors = repo.obsstore.precursors.get
+@revsetpredicate('predecessors(set)')
+def predecessors(repo, subset, x):
+    """Immediate predecessors for given set"""
+    getpredecessors = repo.obsstore.predecessors.get
     def f(nodes):
         for n in nodes:
-            for m in getprecursors(n, ()):
-                # m[0]: precursor, m[1]: successors
+            for m in getpredecessors(n, ()):
+                # m[0]: predecessor, m[1]: successors
                 yield m[0]
     return _calculateset(repo, subset, x, f)
 
@@ -67,7 +54,8 @@ def allsuccessors(repo, subset, x):
     return _calculateset(repo, subset, x, f)
 
 @revsetpredicate('allprecursors(set)')
-def allprecursors(repo, subset, x):
-    """All changesets which are precursors for given set, recursively"""
-    f = lambda nodes: obsutil.allprecursors(repo.obsstore, nodes)
+@revsetpredicate('allpredecessors(set)')
+def allpredecessors(repo, subset, x):
+    """All changesets which are predecessors for given set, recursively"""
+    f = lambda nodes: obsutil.allpredecessors(repo.obsstore, nodes)
     return _calculateset(repo, subset, x, f)
