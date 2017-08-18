@@ -62,7 +62,7 @@ RequestData& RequestData::create(fuse_req_t req) {
 }
 
 Future<folly::Unit> RequestData::startRequest(
-    folly::ThreadLocal<EdenStats>* stats,
+    ThreadLocalEdenStats* stats,
     EdenStats::HistogramPtr histogram) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);

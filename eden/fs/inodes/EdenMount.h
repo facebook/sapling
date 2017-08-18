@@ -73,7 +73,7 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      folly::ThreadLocal<fusell::EdenStats>* globalStats,
+      fusell::ThreadLocalEdenStats* globalStats,
       std::chrono::system_clock::time_point lastCheckoutTime =
           std::chrono::system_clock::now());
 
@@ -300,8 +300,9 @@ class EdenMount {
   /**
    * Returns a pointer to a stats instance associated with this mountpoint.
    * Today this is the global stats instance, but in the future it will be
-   * a mount point specific instance. */
-  folly::ThreadLocal<fusell::EdenStats>* getStats() const;
+   * a mount point specific instance.
+   */
+  fusell::ThreadLocalEdenStats* getStats() const;
 
   folly::Logger& getStraceLogger() {
     return straceLogger_;
@@ -363,7 +364,7 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      folly::ThreadLocal<fusell::EdenStats>* globalStats,
+      fusell::ThreadLocalEdenStats* globalStats,
       std::chrono::system_clock::time_point lastCheckoutTime =
           std::chrono::system_clock::now());
 
@@ -396,7 +397,7 @@ class EdenMount {
    * like to make this its own child instance that aggregates up into
    * the global instance in the future.
    */
-  folly::ThreadLocal<fusell::EdenStats>* globalEdenStats_{nullptr};
+  fusell::ThreadLocalEdenStats* globalEdenStats_{nullptr};
 
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;

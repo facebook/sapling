@@ -25,10 +25,30 @@
 #include <folly/stats/TimeseriesHistogram.h>
 #endif
 
+namespace folly {
+template <class T, class Tag, class AccessMode>
+class ThreadLocal;
+};
+
 namespace facebook {
 namespace eden {
 namespace fusell {
 
+/**
+ * A tag class for using with folly::ThreadLocal when storing EdenStats.
+ */
+class EdenStatsTag {};
+class EdenStats;
+
+using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
+
+/**
+ * EdenStats contains various thread-local stats structures.
+ *
+ * Each EdenStats object should only be used from a single thread.
+ * The ThreadLocalEdenStats object should be used to maintain one EdenStats
+ * object for each thread that needs to access/update the stats.
+ */
 class EdenStats
 #if EDEN_HAS_COMMON_STATS
     : public facebook::stats::ThreadLocalStatsT<

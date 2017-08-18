@@ -28,7 +28,7 @@ class RequestData : public folly::RequestData {
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStats::HistogramPtr latencyHistogram_{nullptr};
-  folly::ThreadLocal<EdenStats>* stats_{nullptr};
+  ThreadLocalEdenStats* stats_{nullptr};
 
   static void interrupter(fuse_req_t req, void* data);
   fuse_req_t stealReq();
@@ -53,7 +53,7 @@ class RequestData : public folly::RequestData {
   static bool isFuseRequest();
 
   folly::Future<folly::Unit> startRequest(
-      folly::ThreadLocal<EdenStats>* stats,
+      ThreadLocalEdenStats* stats,
       EdenStats::HistogramPtr histogram);
   void finishRequest();
 

@@ -152,7 +152,7 @@ class EdenServer {
     return edenDir_;
   }
 
-  folly::ThreadLocal<fusell::EdenStats>* getStats() const {
+  fusell::ThreadLocalEdenStats* getStats() const {
     return &edenStats_;
   }
 
@@ -225,7 +225,7 @@ class EdenServer {
   folly::Synchronized<BackingStoreMap> backingStores_;
 
   folly::Synchronized<MountMap> mountPoints_;
-  mutable folly::ThreadLocal<fusell::EdenStats> edenStats_;
+  mutable fusell::ThreadLocalEdenStats edenStats_;
 
   /**
    * Function scheduler to unload free inodes periodically

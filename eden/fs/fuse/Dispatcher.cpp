@@ -35,7 +35,7 @@ Dispatcher::Attr::Attr(const MountPoint* mount)
 
 Dispatcher::~Dispatcher() {}
 
-Dispatcher::Dispatcher(folly::ThreadLocal<EdenStats>* stats) : stats_(stats) {}
+Dispatcher::Dispatcher(ThreadLocalEdenStats* stats) : stats_(stats) {}
 
 void Dispatcher::setMountPoint(MountPoint* mountPoint) {
   CHECK(mountPoint_ == nullptr);
@@ -965,7 +965,7 @@ Channel* Dispatcher::getChannelPtr() const {
   return chan_;
 }
 
-folly::ThreadLocal<EdenStats>* Dispatcher::getStats() const {
+ThreadLocalEdenStats* Dispatcher::getStats() const {
   return stats_;
 }
 

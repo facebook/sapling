@@ -274,7 +274,7 @@ class TestMount {
    */
   std::atomic<uint64_t> commitNumber_{1};
 
-  folly::ThreadLocal<fusell::EdenStats> stats_;
+  fusell::ThreadLocalEdenStats stats_;
 };
 }
 }

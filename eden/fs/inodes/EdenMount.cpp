@@ -65,7 +65,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    folly::ThreadLocal<fusell::EdenStats>* globalStats,
+    fusell::ThreadLocalEdenStats* globalStats,
     std::chrono::system_clock::time_point lastCheckoutTime) {
   auto mount = std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
                                                         std::move(objectStore),
@@ -80,7 +80,7 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    folly::ThreadLocal<fusell::EdenStats>* globalStats,
+    fusell::ThreadLocalEdenStats* globalStats,
     std::chrono::system_clock::time_point lastCheckOutTime)
     : globalEdenStats_(globalStats),
       config_(std::move(config)),
@@ -220,7 +220,7 @@ const AbsolutePath& EdenMount::getSocketPath() const {
   return socketPath_;
 }
 
-folly::ThreadLocal<fusell::EdenStats>* EdenMount::getStats() const {
+fusell::ThreadLocalEdenStats* EdenMount::getStats() const {
   return globalEdenStats_;
 }
 
