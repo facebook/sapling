@@ -100,6 +100,7 @@ impl FromStr for Required {
 /// At the filesystem level, the repo consists of:
 ///  - the changelog: .hg/store/00changelog.[di]
 ///  - the manifest: .hg/store/00manifest.[di]
+///  - the tree manifests: .hg/store/00manifesttree.[di] and .hg/store/meta/.../00manifest.i
 ///  - per-file histories: .hg/store/data/.../<file>.[di]
 #[derive(Debug, Clone)]
 pub struct RevlogRepo {
@@ -130,7 +131,13 @@ impl RevlogRepo {
         let store = base.as_path().join("store");
 
         let changelog = Revlog::from_idx_data(store.join("00changelog.i"), None as Option<String>)?;
-        let manifest = Revlog::from_idx_data(store.join("00manifest.i"), None as Option<String>)?;
+        let tree_manifest_path = store.join("00manifesttree.i");
+        let manifest = if tree_manifest_path.exists() {
+             Revlog::from_idx_data(tree_manifest_path, None as Option<String>)?
+        } else {
+            // Fallback to flat manifest
+            Revlog::from_idx_data(store.join("00manifest.i"), None as Option<String>)?
+        };
 
         let mut req = HashSet::new();
         let file = fs::File::open(base.join("requires"))
