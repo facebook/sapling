@@ -638,6 +638,10 @@ void EdenServiceHandler::unloadInodeForPath(
   inode->unloadChildrenNow();
 }
 
+void EdenServiceHandler::flushStatsNow() {
+  server_->flushStatsNow();
+}
+
 void EdenServiceHandler::shutdown() {
   server_->stop();
 }

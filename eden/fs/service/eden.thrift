@@ -456,4 +456,16 @@ service EdenService extends fb303.FacebookService {
     2: string path,
   ) throws (1: EdenError ex)
 
+  /**
+   * Flush all thread-local stats to the main ServiceData object.
+   *
+   * Thread-local counters are normally flushed to the main ServiceData once
+   * a second.  flushStatsNow() can be used to flush thread-local counters on
+   * demand, in addition to the normal once-a-second flush.
+   *
+   * This is mainly useful for unit and integration tests that want to ensure
+   * they see up-to-date counter information without waiting for the normal
+   * flush interval.
+   */
+  void flushStatsNow() throws (1: EdenError ex)
 }

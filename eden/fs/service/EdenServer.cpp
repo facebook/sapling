@@ -163,7 +163,7 @@ void EdenServer::prepare() {
 
   // Start stats aggregation
   functionScheduler_->addFunction(
-      [this] { edenStats_.get()->aggregate(); }, std::chrono::seconds(1));
+      [this] { flushStatsNow(); }, std::chrono::seconds(1));
 
   auto pool =
       make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
@@ -451,6 +451,12 @@ void EdenServer::stop() const {
 void EdenServer::shutdown() {
   unmountAll().get();
   functionScheduler_->shutdown();
+}
+
+void EdenServer::flushStatsNow() const {
+  for (auto& stats : edenStats_.accessAllThreads()) {
+    stats.aggregate();
+  }
 }
 }
 } // facebook::eden
