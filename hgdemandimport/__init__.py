@@ -13,6 +13,7 @@
 
 from __future__ import absolute_import
 
+import os
 import sys
 
 if sys.version_info[0] >= 3:
@@ -68,6 +69,9 @@ demandimport.init(ignore)
 
 # Re-export.
 isenabled = demandimport.isenabled
-enable = demandimport.enable
 disable = demandimport.disable
 deactivated = demandimport.deactivated
+
+def enable():
+    if os.environ.get('HGDEMANDIMPORT') != 'disable':
+        demandimport.enable()
