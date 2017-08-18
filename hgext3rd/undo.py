@@ -952,7 +952,7 @@ def smarthide(repo, revhide, revshow, local=False):
     for ctx in hidectxs:
         unfi = repo.unfiltered()
         related = []
-        related = set(obsutil.allprecursors(unfi.obsstore, [ctx.node()]))
+        related = set(obsutil.allpredecessors(unfi.obsstore, [ctx.node()]))
         related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
         related.intersection_update(x.node() for x in showctxs)
         destinations = [repo[x] for x in related]
