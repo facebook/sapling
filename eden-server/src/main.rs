@@ -142,7 +142,7 @@ impl TreeMetadata {
     {
         TreeMetadata {
             hash: entry.get_hash().clone(),
-            path: entry.get_path().fsencode(false),
+            path: entry.get_path().fsencode_file(false),
             ty: entry.get_type(),
             size,
         }

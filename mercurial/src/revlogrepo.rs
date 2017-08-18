@@ -208,7 +208,7 @@ impl RevlogRepo {
                 let mut path = self.basepath
                     .join("store")
                     .join("data")
-                    .join(path.fsencode(dotencode));
+                    .join(path.fsencode_file(dotencode));
                 if let Some(ext) = path.extension()
                     .map(|ext| ext.to_string_lossy().into_owned())
                 {
