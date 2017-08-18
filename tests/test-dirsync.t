@@ -104,6 +104,8 @@ Test conflicting edits
 Test non-conflicting edits
   $ echo a > dir2/subdir/a
   $ hg commit -Am "add non-conflicting changes"
+  adding dir1/a
+  adding dir2/subdir/a
   not mirroring 'dir1/a' to 'dir2/subdir/a'; it already matches
   not mirroring 'dir2/subdir/a' to 'dir1/a'; it already matches
   committing files:
