@@ -58,7 +58,7 @@ where
 
 impl<B> BlobEntry<B>
 where
-    B: Blobstore<Key = String>,
+    B: Blobstore<Key = String> + Sync + Clone,
     B::ValueOut: AsRef<[u8]>,
 {
     pub fn new(blobstore: B, path: Path, nodeid: NodeHash, ty: Type) -> Self {
@@ -72,6 +72,28 @@ where
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
         get_node(&self.blobstore, self.nodeid)
+    }
+
+    fn get_raw_content_inner(&self) -> BoxFuture<Vec<u8>, Error> {
+        let nodeid = self.nodeid;
+        let blobstore = self.blobstore.clone();
+
+        self.get_node()
+            .and_then({
+                let blobstore = blobstore.clone();
+                move |node| {
+                    let key = format!("sha1:{}", node.blob);
+
+                    blobstore
+                        .get(&key)
+                        .map_err(blobstore_err)
+                        .and_then(move |blob| {
+                            blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                        })
+                        .map(|blob| Vec::from(blob.as_ref()))
+                }
+            })
+            .boxed()
     }
 }
 
@@ -90,24 +112,15 @@ where
         self.get_node().map(|node| node.parents).boxed()
     }
 
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+        self.get_raw_content_inner()
+            .map(|blob| Blob::from(blob.as_ref()))
+            .boxed()
+    }
+
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        let nodeid = self.nodeid;
         let blobstore = self.blobstore.clone();
-
-        self.get_node()
-            .and_then({
-                let blobstore = blobstore.clone();
-                move |node| {
-                    let key = format!("sha1:{}", node.blob);
-
-                    blobstore
-                        .get(&key)
-                        .map_err(blobstore_err)
-                        .and_then(move |blob| {
-                            blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                        })
-                }
-            })
+        self.get_raw_content_inner()
             .and_then({
                 let ty = self.ty;
                 move |blob| {

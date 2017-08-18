@@ -158,6 +158,7 @@ pub trait Entry: Send + 'static {
 
     fn get_type(&self) -> Type;
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error>;
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error>;
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error>;
     fn get_hash(&self) -> &NodeHash;
@@ -223,6 +224,13 @@ where
         self.entry.get_parents().map_err(self.cvterr).boxed()
     }
 
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+        self.entry
+            .get_raw_content()
+            .map_err(self.cvterr)
+            .boxed()
+    }
+
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
         let cvterr = self.cvterr;
         self.entry
@@ -259,6 +267,10 @@ where
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
         (**self).get_parents()
+    }
+
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+        (**self).get_raw_content()
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {

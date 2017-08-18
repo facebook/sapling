@@ -14,7 +14,7 @@ use futures::future::{BoxFuture, Future, IntoFuture};
 use futures::stream::{BoxStream, Stream};
 
 use errors::*;
-use mercurial_types::{BlobNode, NodeHash, Parents, Path};
+use mercurial_types::{Blob, BlobNode, NodeHash, Parents, Path};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use RevlogRepo;
@@ -271,6 +271,32 @@ impl Entry for RevlogEntry {
         };
          revlog.and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| *node.parents())
+            .into_future()
+            .boxed()
+    }
+
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+        let revlog = {
+            if self.get_type() == Type::Tree {
+                self.repo.get_tree_revlog(self.get_path())
+            } else {
+                self.repo.get_file_revlog(self.get_path())
+            }
+        };
+
+        revlog
+            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+            .map(|node| node.as_blob().clone())
+            .map_err(|err| {
+                Error::with_chain(
+                    err,
+                    format!(
+                        "Can't get content for {} node {}",
+                        self.get_path(),
+                        self.get_hash()
+                    ),
+                )
+            })
             .into_future()
             .boxed()
     }

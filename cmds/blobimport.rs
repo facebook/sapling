@@ -58,8 +58,8 @@ use fileheads::FileHeads;
 use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
-use mercurial_types::{Changeset, NodeHash, Parents, hash};
-use mercurial_types::manifest::{Content, Entry, Manifest};
+use mercurial_types::{Changeset, NodeHash, Parents, hash, Type};
+use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
 #[derive(Serialize, Deserialize)]
@@ -108,29 +108,26 @@ error_chain! {
 // TODO: recast as `impl Future<...>` - remove most of these type constraints (which are mostly
 // for BoxFuture)
 // TODO: #[async]
-fn copy_file<E>(entry: &Entry<Error = E>, blobstore: BBlobstore) -> BoxFuture<(), Error>
+fn copy_manifest_entry<E>(
+    entry: &Entry<Error = E>,
+    blobstore: BBlobstore,
+) -> BoxFuture<(), Error>
 where
     Error: From<E>,
     E: Send + 'static,
 {
     let hash = *entry.get_hash();
 
-    let copy = entry
-        .get_content()
-        .join(entry.get_parents())
-        .map_err(Into::into)
-        .and_then(move |(content, parents)| {
-            let bytes = match content {
-                Content::File(blob) |
-                Content::Executable(blob) => {
-                    blob.into_inner()
+    let blobfuture = entry.get_raw_content()
+        .map_err(Error::from)
+        .and_then(|blob| blob.into_inner()
                         .ok_or("missing blob data".into())
-                        .map(Bytes::from)
-                }
-                Content::Symlink(path) => Ok(path.to_vec().into()),
-                Content::Tree(_) => panic!("need tree blob"),
-            };
+                        .map(Bytes::from));
 
+    let copy = blobfuture
+        .join(entry.get_parents().map_err(Error::from))
+        .and_then(move |(bytes, parents)| {
+            let bytes = futures::future::ok(bytes);
             bytes.into_future().and_then(move |bytes| {
                 let nodeblob = NodeBlob {
                     parents: parents,
@@ -154,6 +151,36 @@ where
     copy.boxed()
 }
 
+fn get_stream_of_manifest_entries(
+    entry: Box<Entry<Error = mercurial::Error>>,
+) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send>
+{
+    match entry.get_type() {
+        Type::File | Type::Executable | Type::Symlink => {
+            futures::stream::once(Ok(entry)).boxed()
+        },
+        Type::Tree => {
+            entry.get_content()
+                .and_then(|content|
+                    match content {
+                        mercurial_types::manifest::Content::Tree(manifest) => {
+                            Ok(manifest.list())
+                        }
+                        _ => {
+                            panic!("shound not happend")
+                        }
+                    }
+                )
+                .flatten_stream()
+                .map(|entry| get_stream_of_manifest_entries(entry))
+                .map_err(Error::from)
+                .flatten()
+                .chain(futures::stream::once(Ok(entry)))
+                .boxed()
+        },
+    }
+}
+
 /// Copy a changeset and its manifest into the blobstore
 ///
 /// The changeset and the manifest are straightforward - we just make literal copies of the
@@ -163,7 +190,7 @@ where
 /// the entry streams from all changesets into a single stream. Then each entry is filtered
 /// against a set of entries that have already been copied, and any remaining are actually copied.
 fn copy_changeset(
-    revlog: RevlogRepo,
+    revlog_repo: RevlogRepo,
     blobstore: BBlobstore,
     csid: NodeHash,
 ) -> BoxFuture<BoxStream<Box<Entry<Error = mercurial::Error>>, Error>, Error> {
@@ -171,7 +198,7 @@ fn copy_changeset(
         let blobstore = blobstore.clone();
         let csid = csid;
 
-        revlog.get_changeset_by_nodeid(&csid).from_err().and_then(
+        revlog_repo.get_changeset_by_nodeid(&csid).from_err().and_then(
             move |cs| {
                 let bcs = BlobChangeset::new(&csid, cs);
 
@@ -181,14 +208,14 @@ fn copy_changeset(
     };
 
     let manifest = {
-        revlog
+        revlog_repo
             .get_changeset_by_nodeid(&csid)
             .from_err()
             .and_then(move |cs| {
                 let mfid = *cs.manifestid();
 
                 // fetch the blob for the (root) manifest
-                revlog
+                revlog_repo
                     .get_manifest_blob_by_nodeid(&mfid)
                     .from_err()
                     .and_then(move |blob| {
@@ -201,7 +228,6 @@ fn copy_changeset(
                         let blobkey = format!("sha1:{}", nodeblob.blob);
                         let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
                            .expect("bincode serialize failed");
-
                         // TODO: blobstore.putv?
                         let node = blobstore
                             .put(nodekey, Bytes::from(nodeblob))
@@ -210,11 +236,14 @@ fn copy_changeset(
 
                         let putmf = putblob.join(node);
                         // Get the listing of entries and fetch each of those
-                        let files = RevlogManifest::new(revlog.clone(), blob)
+                        let files = RevlogManifest::new(revlog_repo.clone(), blob)
                             .map_err(|err| {
                                 Error::with_chain(Error::from(err), "Parsing manifest to get list")
                             })
                             .map(|mf| mf.list().map_err(Error::from))
+                            .map(|entry_stream|
+                                    entry_stream.map(|entry| get_stream_of_manifest_entries(entry))
+                                    .flatten())
                             .into_future();
 
                         putmf.join(files)
@@ -266,7 +295,7 @@ where
         })
         .map({
             let blobstore = blobstore.clone();
-            move |entry| copy_file(&entry, blobstore.clone())
+            move |entry| copy_manifest_entry(&entry, blobstore.clone())
         })
         .map(|copy| cpupool.spawn(copy))
         .buffer_unordered(100);
