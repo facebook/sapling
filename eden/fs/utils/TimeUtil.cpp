@@ -66,5 +66,25 @@ std::string durationStr(std::chrono::nanoseconds duration) {
         remainder.count() / 1000000000.0);
   }
 }
+
+// Set of all the Comparision operators for comparing two timespec structs.
+bool operator<(const timespec& a, const timespec& b) {
+  CHECK_LT(a.tv_nsec, 1000000000);
+  CHECK_LT(b.tv_nsec, 1000000000);
+  if (a.tv_sec == b.tv_sec) {
+    return a.tv_nsec < b.tv_nsec;
+  } else {
+    return a.tv_sec < b.tv_sec;
+  }
+}
+bool operator<=(const timespec& a, const timespec& b) {
+  CHECK_LT(a.tv_nsec, 1000000000);
+  CHECK_LT(b.tv_nsec, 1000000000);
+  if (a.tv_sec == b.tv_sec) {
+    return a.tv_nsec <= b.tv_nsec;
+  } else {
+    return a.tv_sec < b.tv_sec;
+  }
+}
 }
 }

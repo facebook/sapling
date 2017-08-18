@@ -24,5 +24,23 @@ namespace eden {
  *   1d23h3500.123s
  */
 std::string durationStr(std::chrono::nanoseconds duration);
+
+/**
+ * Comparision operators for comparing two timespec structs.
+ */
+bool operator<(const timespec& a, const timespec& b);
+bool operator<=(const timespec& a, const timespec& b);
+inline bool operator>=(const timespec& a, const timespec& b) {
+  return !(b < a);
+}
+inline bool operator>(const timespec& a, const timespec& b) {
+  return !(b <= a);
+}
+inline bool operator==(const timespec& a, const timespec& b) {
+  return (a.tv_sec == b.tv_sec) && (a.tv_nsec == b.tv_nsec);
+}
+inline bool operator!=(const timespec& a, const timespec& b) {
+  return !(b == a);
+}
 }
 }

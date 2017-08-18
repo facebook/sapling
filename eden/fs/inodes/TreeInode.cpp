@@ -40,6 +40,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -2622,11 +2623,118 @@ void TreeInode::unloadChildrenNow() {
   }
   for (auto& child : treeChildren) {
     child->unloadChildrenNow();
+    // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
+    // we have to make sure that even treeChildren also gets unloaded.
   }
 
   // Note: during mount point shutdown, returning from this function and
   // destroying the treeChildren map will decrement the reference count on
   // all of our children trees, which may result in them being destroyed.
+}
+
+void TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
+  // Get the timepoint and convert to timespec.
+  auto timePointRel = std::chrono::system_clock::now() - age;
+  auto epochTime = timePointRel.time_since_epoch();
+  auto sec = std::chrono::duration_cast<std::chrono::seconds>(epochTime);
+  auto nsec =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(epochTime - sec);
+  timespec timePoint;
+  timePoint.tv_sec = sec.count();
+  timePoint.tv_nsec = nsec.count();
+  unloadChildrenNow(timePoint);
+}
+
+void TreeInode::unloadChildrenNow(const timespec& timePointAge) {
+  // Unloading inodes from the InodeMap requires to lock contents_ of TreeInode.
+  // Getting atime of an inode requires a lock on the inode.
+
+  // we don't want to hold lock on the children while holding a lock on the
+  // parent i.e We don't want to grab a lock on the children inodes for atime
+  // while holding a lock on the contents_. In order to overcome this make a
+  // list of inodes while holding a lock on contents_ and walk through the list
+  // by releasing the contents lock to filter inodes based on the atime(requires
+  // lock on the inodes) from the list. Finally grab a lock on contents_ and
+  // unload any inodes which are present in the list that we made. In this way
+  // we can avoid holding lock on inodes for atime while holding contents lock
+
+  // Get the list of inodes in the directory by holding contents lock.
+  std::vector<FileInodePtr> potentialUnload;
+  {
+    auto contents = contents_.rlock();
+    for (auto& entry : contents->entries) {
+      if (!entry.second->getInode()) {
+        continue;
+      }
+
+      auto* asFile = dynamic_cast<FileInode*>(entry.second->getInode());
+      if (asFile) {
+        potentialUnload.push_back(FileInodePtr::newPtrLocked(asFile));
+      }
+    }
+  }
+  // filter inodes based on the age (i.e atime) after releasing contents lock.
+  // We are intentionally making toUnload as a list of FileInode* rather than
+  // FileInodePtr to make raw pointer comparision to check if the pointer in
+  // toUnload exists in contents_->entries.
+  std::unordered_set<FileInode*> toUnload;
+  {
+    for (const auto& inode : potentialUnload) {
+      auto timeStamps = inode->getTimestamps();
+      auto atime = timeStamps.atime;
+      if (atime >= timePointAge) {
+        toUnload.insert(inode.get());
+      }
+    }
+    // we want to release the reference counts of the inodes.
+    // Beware that this may invalidate objects referred to in the toUnload
+    // list.  Elements in toUnload are saved for pointer comparisons,
+    // but should not be dereferenced.
+    potentialUnload.clear();
+  }
+
+  // Unload Inodes whose reference count is greater than zero and age is greater
+  // than the required age.
+  std::vector<TreeInodePtr> treeChildren;
+  std::vector<InodeBase*> toDelete;
+  {
+    auto* inodeMap = getInodeMap();
+    auto contents = contents_.wlock();
+    auto inodeMapLock = inodeMap->lockForUnload();
+
+    for (auto& entry : contents->entries) {
+      if (!entry.second->getInode()) {
+        continue;
+      }
+      auto asTree = dynamic_cast<TreeInode*>(entry.second->getInode());
+      if (asTree) {
+        treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
+      } else {
+        // Check if the entry is present in the toUnload list(atime greater than
+        // age)
+        auto asFile = dynamic_cast<FileInode*>(entry.second->getInode());
+        if (toUnload.find(asFile) != toUnload.end() &&
+            entry.second->getInode()->isPtrAcquireCountZero()) {
+          // Unload the inode
+          inodeMap->unloadInode(
+              entry.second->getInode(), this, entry.first, false, inodeMapLock);
+          // Record that we should now delete this inode after releasing
+          // the locks.
+          toDelete.push_back(entry.second->getInode());
+          entry.second->clearInode();
+        }
+      }
+    }
+  }
+
+  for (auto* child : toDelete) {
+    delete child;
+  }
+  for (auto& child : treeChildren) {
+    // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
+    // we have to make sure that even treeChildren also gets unloaded.
+    child->unloadChildrenNow(timePointAge);
+  }
 }
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {

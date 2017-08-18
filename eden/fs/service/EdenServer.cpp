@@ -54,6 +54,10 @@ DEFINE_int64(
     start_delay_minutes,
     10,
     "start delay for scheduling unloading inodes job");
+DEFINE_int64(
+    unload_age_minutes,
+    60,
+    "Minimum age of the inodes to be unloaded");
 
 using apache::thrift::ThriftServer;
 using folly::Future;
@@ -234,7 +238,8 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
         [edenMount] {
           auto rootInode = (edenMount.get())->getRootInode();
           XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
-          rootInode->unloadChildrenNow();
+          rootInode->unloadChildrenNow(
+              std::chrono::minutes(FLAGS_unload_age_minutes));
         },
         std::chrono::hours(FLAGS_unload_interval_hours),
         getPeriodicUnloadFunctionName(edenMount.get()),
