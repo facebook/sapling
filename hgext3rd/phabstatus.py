@@ -183,7 +183,7 @@ def showsyncstatus(repo, ctx, templ, **args):
     if local == remote:
         return "sync"
     elif count == 1:
-        precursors = list(obsutil.allprecursors(repo.obsstore,
+        precursors = list(obsutil.allpredecessors(repo.obsstore,
             [ctx.node()]))
         hashes = [repo.unfiltered()[h].hex() for h in precursors]
         # hashes[0] is the current
