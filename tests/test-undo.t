@@ -210,8 +210,7 @@ Test undolog lock
 
 hg undo command tests
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (leaving bookmark master)
+  undone to *, before ci -ma5 (glob)
   $ hg log -G -T compact -l2
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -221,8 +220,9 @@ hg undo command tests
   ~
   $ hg update 0a3dd3e15e65
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark master)
   $ hg undo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before update 0a3dd3e15e65 (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -234,7 +234,7 @@ hg undo command tests
   |    cmiss
   ~
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before commit --amend (glob)
   $ hg log -G -T compact -l4
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -258,15 +258,14 @@ hg undo command tests
   |    cmiss
   ~
   $ hg undo
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before graft 296fda51a303 (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg book test
   $ hg undo
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (leaving bookmark test)
+  undone to *, before book test (glob)
   $ hg bookmarks
      feature1                  2:49cdb4091aca
      feature2                  7:296fda51a303
@@ -274,21 +273,21 @@ hg undo command tests
 
 hg undo with negative step
   $ hg undo -n -1
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before book test (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo -n 5
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg undo -n -5
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before book test (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -299,21 +298,21 @@ hg undo with negative step
 
 hg undo --absolute tests
   $ hg undo -a
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -n -5 (glob)
   $ hg undo -n -1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -a (glob)
   $ hg undo -a
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -n -1 (glob)
   $ hg undo -n -1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -a (glob)
   $ hg undo -n 5
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master,test]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
   ~
   $ hg undo -a
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -n 5 (glob)
   $ hg log -G -T compact -l1
   @  9[tip][master]   1dafc0b43612   1970-01-01 00:00 +0000   test
   |    cmiss
@@ -330,9 +329,9 @@ hg undo --force tests
   abort: attempted risky undo across missing history
   [255]
   $ hg undo -a -n 25 -f
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -md (glob)
   $ hg undo -a
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -a -n 25 -f (glob)
 
 hg undo --keep tests
   $ touch kfl1 && hg add kfl1
@@ -341,6 +340,7 @@ hg undo --keep tests
   $ hg commit --amend
   $ hg st
   $ hg undo --keep
+  undone to *, before commit --amend (glob)
   $ hg st
   A kfl1
   $ hg commit --amend
@@ -358,7 +358,7 @@ checking split/divergence.
   > fbamend = $TESTDIR/../hgext3rd/fbamend/
   > EOF
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before commit --amend (glob)
   $ hg sl --all --hidden -T "{node|short} {if(undosuccessors, label('sl.undo', '(Undone as {join(undosuccessors% \'{shortest(undosuccessor, 6)}\', ', ')})'))}"
   x  db3723da827c
   |
@@ -412,9 +412,9 @@ checking split/divergence.
   c9476255bc2a68672c844021397838ff4eeefcda 1dafc0b436123cab96f82a8e9e8d1d42c0301aaa 0 (Thu Jan 01 00:00:06 1970 +0000) {'operation': 'undo', 'user': 'test'}
   f86734247df6db66a810e549cc938a72cd5c6d1a d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea 75f63379f12bf02d40fe7444587ad67be9ae81b8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
   $ hg undo
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before split --quiet (glob)
   $ hg undo -n -1
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg debugobsolete | tail -5
   d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea f86734247df6db66a810e549cc938a72cd5c6d1a 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 0 {d0fdb9510dbf78c1a7e62c3e6628ff1f978f87ea} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'undo', 'user': 'test'}
@@ -574,11 +574,11 @@ Includes commit and book changes
   (leaving bookmark newbook)
 3 changes within local scope: commit, book, update
   $ hg undo -b 75f63379f12b
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before update null (glob)
   $ hg undo -b 75f63379f12b
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -moldbranch (glob)
   $ hg undo -b 75f63379f12b
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before book oldbook (glob)
   $ hg log -l 2
   changeset:   20:805791ba4bcd
   bookmark:    newbook
@@ -617,7 +617,7 @@ and commits are not duplicated
   summary:     newfiles
   
   $ hg undo -b 3532
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before rebase -s 8057 -d 75f6 (glob)
   $ hg log -l 2
   changeset:   20:805791ba4bcd
   bookmark:    newbook
@@ -639,7 +639,7 @@ and commits are not duplicated
 
 Check local undo works forward
   $ hg undo -n -1 -b 3532
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -b 3532 (glob)
   $ hg log -l 2
   changeset:   21:35324a911c0d
   bookmark:    newbook
@@ -659,13 +659,13 @@ Check local undo works forward
   $ hg log -r . -T {node}
   3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
   $ hg undo -b 3532
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -m a9 (glob)
   $ hg undo -b 3532
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -n -1 -b 3532 (glob)
   $ hg undo -n -1 -b 75f6
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before ci -m a9 (glob)
   $ hg undo -n -1 -b 75f6
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -b 3532 (glob)
   $ hg log -l 2
   changeset:   22:3ee6a6880888
   tag:         tip
@@ -692,7 +692,7 @@ Check local undo with facebook style strip
   working directory now at 75f63379f12b
   1 changesets pruned
   $ hg undo -b 3532
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before strip 3ee6 (glob)
   $ hg log -r . -T {node}
   3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
   $ cat >> $HGRCPATH <<EOF
@@ -792,37 +792,37 @@ hg redo tests
   $ hg log -r . -T {node}
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo -n 2
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before undo -b 3532 (glob)
   $ hg redo
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -n 2 (glob)
   $ hg log -r . -T {node}
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -m prev1 (glob)
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -b 3532 (glob)
   $ hg log -r . -T {node}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
   $ hg undo -n 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before strip 3ee6 (glob)
   $ hg redo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -n 1 (glob)
   $ hg log -r . -T {node}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
   $ hg undo -n 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before strip 3ee6 (glob)
   $ hg redo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -n 1 (glob)
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg log -r . -T {node}
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo -fn 3
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before strip 3ee6 (glob)
   $ hg undo --force --step -1
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -b 3532 (glob)
   $ hg debugundohistory -l
   0: undo --force --step -1
   1: undo -fn 3
@@ -830,28 +830,28 @@ hg redo tests
   3: redo
   4: redo
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo --force --step -1 (glob)
   $ hg undo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -n -1 -b 75f6 (glob)
   $ hg log -r . -T {node}
   75f63379f12bf02d40fe7444587ad67be9ae81b8 (no-eol)
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -fn 3 (glob)
   $ hg log -r . -T {node}
   a0b72b3048d6d07b35b1d79c8e5c46b159d21cc9 (no-eol)
   $ hg undo --traceback
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -m prev1 (glob)
   $ hg undo -an1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo --traceback (glob)
   $ hg redo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before undo -an1 (glob)
   $ hg redo
   abort: can't redo past absolute undo
   [255]
   $ hg undo -n -1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before redo (glob)
   $ hg log -G -T compact
   @  23[tip]   a0b72b3048d6   1970-01-01 00:00 +0000   test
   |    prev1
@@ -965,9 +965,9 @@ Specific edge case testing
        a1
   
   $ hg undo -b f57e
-  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  undone to *, before ci -m b3 (glob)
   $ hg undo -b f57e
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before ci -m b2 (glob)
   $ hg log -G -T compact -l5
   o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
   |    c3
@@ -985,7 +985,7 @@ Specific edge case testing
   |    prev1
   ~
   $ hg redo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before undo -b f57e (glob)
   $ hg log -G -T compact -l6
   o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
   |    c3
@@ -1006,7 +1006,7 @@ Specific edge case testing
   |    prev1
   ~
   $ hg undo -b 0963
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before ci -m c3 (glob)
   $ hg log -G -T compact -l5
   @  28[tip]   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test
   |    c2
@@ -1024,7 +1024,7 @@ Specific edge case testing
   |    prev1
   ~
   $ hg undo
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before undo -b 0963 (glob)
   $ hg log -G -T compact -l6
   o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
   |    c3
@@ -1045,9 +1045,9 @@ Specific edge case testing
   |    prev1
   ~
   $ hg redo
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg redo
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  undone to *, before undo -b 0963 (glob)
   $ hg log -G -T compact -l6
   o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
   |    c3
@@ -1068,7 +1068,7 @@ Specific edge case testing
   |    prev1
   ~
   $ hg undo -b f57e
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before redo (glob)
   $ hg log -G -T compact -l5
   o  29[tip]   0963b9e31e70   1970-01-01 00:00 +0000   test
   |    c3
@@ -1171,7 +1171,7 @@ permanently delete a commit, we do not want to undo to this state.
        b1
   
   $ hg undo
-  4 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before rebase -r 00617 -d 28dfc (glob)
   $ hg log -G -T compact -l6
   @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
   |    bfile
@@ -1192,7 +1192,7 @@ permanently delete a commit, we do not want to undo to this state.
        b1
   
   $ hg redo
-  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  undone to *, before undo (glob)
   $ hg log -G -T compact -l6
   @  32[tip]:30   e642892c5cb0   1970-01-01 00:00 +0000   test
   |    bfile
@@ -1213,7 +1213,7 @@ permanently delete a commit, we do not want to undo to this state.
        b1
   
   $ hg undo
-  4 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  undone to *, before rebase -r 00617 -d 28dfc (glob)
   $ hg rebase -r 00617 -d 28dfc
   rebasing 31:00617a57f780 "bfile" (tip)
   merging afile
@@ -1223,7 +1223,7 @@ permanently delete a commit, we do not want to undo to this state.
   $ hg rebase --abort
   rebase aborted
   $ hg undo
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before rebase -r 00617 -d 28dfc (glob)
   $ hg log -G -T compact -l6
   @  31[tip]:29   00617a57f780   1970-01-01 00:00 +0000   test
   |    bfile

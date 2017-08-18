@@ -791,8 +791,8 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
                                   nodedict["workingparent"])
     if not keep:
         if not branchcommits or workingcopyparent in branchcommits:
-            hg.updatetotally(ui, repo, workingcopyparent, workingcopyparent,
-                             clean=False, updatecheck='abort')
+            # bailifchanged is run, so this should be safe
+            hg.clean(repo, workingcopyparent, show_stats=False)
     elif not branchcommits or workingcopyparent in branchcommits:
         # keeps working copy files
         prednode = bin(workingcopyparent)
@@ -834,6 +834,17 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         smarthide(repo, localadds, removedrevs)
         smarthide(repo, addedrevs, localremoves, local=True)
         revealcommits(repo, localremoves)
+
+    # informative output
+    time = _readnode(repo, "date.i", nodedict["date"])
+    time = util.datestr([float(x) for x in time.split(" ")])
+
+    nodedict = _readindex(repo, reverseindex - 1)
+    commandstr = _readnode(repo, "command.i", nodedict["command"])
+    commandlist = commandstr.split("\0")[1:]
+    commandstr = " ".join(commandlist)
+    uimessage = 'undone to %s, before %s\n' % (time, commandstr)
+    repo.ui.status(_(uimessage))
 
 def _computerelative(repo, reverseindex, absolute=False, branch=""):
     # allows for relative undos using

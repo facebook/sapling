@@ -62,7 +62,7 @@ Do a fold
 
 Do an undo
   $ hg undo
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  undone to *, before fold --exact 7 6 (glob)
   $ showgraph
   @  7 r7
   |
