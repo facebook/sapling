@@ -67,7 +67,7 @@ def _findrestacktargets(repo, base):
        to be correctly rebased.
     """
     childrenof = common.getchildrelationships(repo,
-        repo.revs('%d + allprecursors(%d)', base, base))
+        repo.revs('%d + allpredecessors(%d)', base, base))
 
     # Perform BFS starting from base.
     queue = deque([base])
@@ -93,7 +93,7 @@ def _findrestacktargets(repo, base):
         # Look for visible precursors (which are probably visible because
         # they have unstable descendants) and successors (for which the latest
         # non-obsolete version should be visible).
-        precursors = repo.revs('allprecursors(%d)', rev)
+        precursors = repo.revs('allpredecessors(%d)', rev)
         successors = repo.revs('allsuccessors(%d)', rev)
 
         # If this changeset has precursors but no successor, then

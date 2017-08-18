@@ -43,10 +43,10 @@ def restackonce(ui, repo, rev, rebaseopts=None, childrenonly=False):
     """
     # Get visible descendants of precusors of rev.
     # Excluding obsoleted changesets avoids divergence issues.
-    allprecursors = repo.revs('allprecursors(%d)', rev)
+    allpredecessors = repo.revs('allpredecessors(%d)', rev)
     fmt = ('%s(%%ld) - %%ld - obsolete()'
            % ('children' if childrenonly else 'descendants'))
-    descendants = repo.revs(fmt, allprecursors, allprecursors)
+    descendants = repo.revs(fmt, allpredecessors, allpredecessors)
 
     # Nothing to do if there are no descendants.
     if not descendants:
