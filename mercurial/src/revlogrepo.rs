@@ -113,6 +113,7 @@ pub struct RevlogRepo {
 #[derive(Debug)]
 struct RevlogInner {
     filelogcache: HashMap<Path, Revlog>, // filelog cache
+    treelogcache: HashMap<Path, Revlog>,
 }
 
 impl PartialEq<Self> for RevlogRepo {
@@ -145,6 +146,7 @@ impl RevlogRepo {
             manifest: manifest,
             inner: Arc::new(Mutex::new(RevlogInner {
                 filelogcache: HashMap::new(),
+                treelogcache: HashMap::new(),
             })),
         })
     }
@@ -193,6 +195,25 @@ impl RevlogRepo {
         &self.requirements
     }
 
+    pub fn get_tree_revlog(&self, path: &Path) -> Result<Revlog> {
+        let mut inner = self.inner.lock().expect("poisoned lock");
+
+        match inner.treelogcache.entry(path.clone()) {
+            Entry::Occupied(log) => Ok(log.get().clone()),
+
+            Entry::Vacant(missing) => {
+                let dotencode = self.requirements.contains(&Required::Dotencode);
+                let path = self.basepath
+                    .join("store/meta")
+                    .join(path.fsencode_dir(dotencode))
+                    .join("00manifest.i");
+
+                let revlog = Revlog::from_idx_data(path, None as Option<String>)?;
+                Ok(missing.insert(revlog).clone())
+            }
+        }
+    }
+
     pub fn get_file_revlog(&self, path: &Path) -> Result<Revlog> {
         let mut inner = self.inner.lock().expect("poisoned lock");
 
@@ -206,8 +227,7 @@ impl RevlogRepo {
             Entry::Vacant(missing) => {
                 let dotencode = self.requirements.contains(&Required::Dotencode);
                 let mut path = self.basepath
-                    .join("store")
-                    .join("data")
+                    .join("store/data")
                     .join(path.fsencode_file(dotencode));
                 if let Some(ext) = path.extension()
                     .map(|ext| ext.to_string_lossy().into_owned())
