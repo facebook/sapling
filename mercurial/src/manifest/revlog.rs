@@ -261,9 +261,15 @@ impl Entry for RevlogEntry {
     }
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
-        self.repo
-            .get_file_revlog(self.get_path())
-            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+        let revlog = match self.get_type() {
+            Type::Tree => {
+                self.repo.get_tree_revlog(self.get_path())
+            },
+            _ => {
+                self.repo.get_file_revlog(self.get_path())
+            }
+        };
+         revlog.and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| *node.parents())
             .into_future()
             .boxed()
