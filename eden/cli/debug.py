@@ -15,6 +15,7 @@ import sys
 from typing import List, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
+import facebook.hgdirstate.ttypes as hgdirstate
 
 from . import cmd_util
 
@@ -167,6 +168,26 @@ def _print_inode_info(inode_info):
             entry.inodeNumber, file_type_str, perms, loaded_flag,
             hash_str(entry.hash), escape_path(entry.name))
         print(line)
+
+
+def do_hg_get_dirstate_tuple(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    mount, rel_path = get_mount_path(args.path)
+    with config.get_thrift_client() as client:
+        dirstate_tuple = client.hgGetDirstateTuple(mount, rel_path)
+
+    status = hgdirstate.DirstateNonnormalFileStatus._VALUES_TO_NAMES[
+        dirstate_tuple.status
+    ]
+    merge_state = hgdirstate.DirstateMergeState._VALUES_TO_NAMES[
+        dirstate_tuple.mergeState
+    ]
+    print(f'''\
+{rel_path}
+    status = {status}
+    mode = {oct(dirstate_tuple.mode)}
+    mergeState = {merge_state}\
+''')
 
 
 def do_inode(args: argparse.Namespace):
@@ -371,6 +392,13 @@ def setup_argparse(parser: argparse.ArgumentParser):
     parser.add_argument('mount', help='The eden mount point path.')
     parser.add_argument('id', help='The blob ID')
     parser.set_defaults(func=do_blobmeta)
+
+    parser = subparsers.add_parser(
+        'hg_get_dirstate_tuple', help='Dirstate status for file')
+    parser.add_argument(
+        'path',
+        help='The path to the file whose status should be queried.')
+    parser.set_defaults(func=do_hg_get_dirstate_tuple)
 
     parser = subparsers.add_parser(
         'inode', help='Show data about loaded inodes')
