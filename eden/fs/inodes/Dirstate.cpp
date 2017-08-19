@@ -164,8 +164,8 @@ class ThriftStatusCallback : public InodeDiffCallback {
    * removedFile(), and modifiedFile().
    *
    * The logic is:
-   * - If the file is present in userDirectives as userDirectiveType,
-   *   then remove it from userDirectives and report the status as
+   * - If the file is present in hgDirstateTuples as userDirectiveStatus,
+   *   then remove it from hgDirstateTuples and report the status as
    *   userDirectiveStatus.
    * - Otherwise, report the status as defaultStatus
    */
@@ -176,14 +176,15 @@ class ThriftStatusCallback : public InodeDiffCallback {
       StatusCode defaultStatus) {
     auto data = data_.wlock();
     auto iter = data->hgDirstateTuples.find(path.stringPiece());
-    if (iter != data->hgDirstateTuples.end()) {
-      if (iter->second.get_status() == userDirectiveType) {
-        data->status.emplace(path.stringPiece().str(), userDirectiveStatus);
-        data->hgDirstateTuples.erase(iter);
-        return;
-      }
+    StatusCode newStatus = defaultStatus;
+    if (iter != data->hgDirstateTuples.end() &&
+        iter->second.get_status() == userDirectiveType) {
+      newStatus = userDirectiveStatus;
+      data->hgDirstateTuples.erase(iter);
     }
-    data->status.emplace(path.stringPiece().str(), defaultStatus);
+    data->status.emplace(path.stringPiece().str(), newStatus);
+    XLOG(INFO) << "ThriftStatusCallback::processChangedFile(" << path << ") -> "
+               << _StatusCode_VALUES_TO_NAMES.at(newStatus);
   }
 
   struct Data {
@@ -227,7 +228,6 @@ static bool isMagicPath(RelativePathPiece path) {
 
 Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
   XLOG(INFO) << "Dirstate::onSnapshotChanged(" << rootTree->getHash() << ")";
-
   {
     auto data = data_.wlock();
     bool madeChanges = false;
@@ -264,13 +264,16 @@ Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
 }
 
 DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {
-  auto data = data_.rlock();
-  auto& hgDirstateTuples = data->hgDirstateTuples;
-  auto* ptr = folly::get_ptr(hgDirstateTuples, filename.stringPiece());
-  if (ptr != nullptr) {
-    return *ptr;
-  } else if (
-      filename == RelativePathPiece{".hgsub"} ||
+  {
+    auto data = data_.rlock();
+    auto& hgDirstateTuples = data->hgDirstateTuples;
+    auto* ptr = folly::get_ptr(hgDirstateTuples, filename.stringPiece());
+    if (ptr != nullptr) {
+      return *ptr;
+    }
+  }
+
+  if (filename == RelativePathPiece{".hgsub"} ||
       filename == RelativePathPiece{".hgsubstate"}) {
     // Currently, these are the only files that Hg appears to ask about that are
     // not expected to be in the dirstate when the request is made. This is
@@ -278,17 +281,51 @@ DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {
     // support subrepos in Eden, this seems to have the desired effect as it is
     // ultimately reflected as a KeyError in the Hg extension (though it could
     // be swallowing a real logical error in that case, as well).
-    throw std::domain_error(filename.stringPiece().str());
-  } else {
-    // TODO(mbolin): Make sure the file exists in the working copy and set the
-    // appropriate values in the HgDirstateTuple. Most likely the biggest
-    // question is whether NotTracked or Normal should be returned.
+    throw std::domain_error(folly::to<std::string>(
+        "No hgDirstateTuple for ",
+        filename.stringPiece(),
+        " because Eden acts as if this file does not exist."));
+  }
+
+  // If the filename is in the manifest, return it.
+  auto mode = isInManifestAsFile(filename);
+  if (mode.hasValue()) {
     DirstateTuple tuple;
-    tuple.set_status(DirstateNonnormalFileStatus::NotTracked);
-    tuple.set_mode(0644); // TODO(mbolin): Check executable bit!
+    tuple.set_status(DirstateNonnormalFileStatus::Normal);
+    // Lower bits? Should be 644 not 100644.
+    tuple.set_mode(mode.value());
     tuple.set_mergeState(DirstateMergeState::NotApplicable);
     return tuple;
+  } else {
+    throw std::domain_error(folly::to<std::string>(
+        "No hgDirstateTuple for ",
+        filename.stringPiece(),
+        " because there is no entry for it in the root Tree as a file."));
   }
+}
+
+folly::Optional<mode_t> Dirstate::isInManifestAsFile(
+    const RelativePathPiece filename) const {
+  auto tree = mount_->getRootTree();
+  auto parentDirectory = filename.dirname();
+  auto objectStore = mount_->getObjectStore();
+  for (auto piece : parentDirectory.components()) {
+    auto entry = tree->getEntryPtr(piece);
+    if (entry != nullptr && entry->getFileType() == FileType::DIRECTORY) {
+      tree = objectStore->getTree(entry->getHash()).get();
+    } else {
+      return folly::none;
+    }
+  }
+
+  if (tree != nullptr) {
+    auto entry = tree->getEntryPtr(filename.basename());
+    if (entry != nullptr && entry->getFileType() != FileType::DIRECTORY) {
+      return entry->getMode();
+    }
+  }
+
+  return folly::none;
 }
 
 void Dirstate::hgSetDirstateTuple(

@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/Optional.h>
 #include <folly/Synchronized.h>
 #include <folly/experimental/StringKeyedUnorderedMap.h>
 #include "eden/fs/inodes/DirstatePersistence.h"
@@ -119,6 +120,13 @@ class Dirstate {
   folly::StringKeyedUnorderedMap<RelativePath> hgCopyMapGetAll() const;
 
  private:
+  /**
+   * If `filename` exists in the manifest as a file (not a directory), returns
+   * the mode of the file as recorded in the manifest.
+   */
+  folly::Optional<mode_t> isInManifestAsFile(
+      const RelativePathPiece filename) const;
+
   /** The EdenMount object that owns this Dirstate */
   EdenMount* const mount_{nullptr};
   DirstatePersistence persistence_;
