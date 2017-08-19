@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import heapq
 
 from . import (
+    match as matchmod,
     node,
     pathutil,
     scmutil,
@@ -182,8 +183,9 @@ def _forwardcopies(a, b, match=None):
     # optimization, since the ctx.files() for a merge commit is not correct for
     # this comparison.
     forwardmissingmatch = match
-    if not match and b.p1() == a and b.p2().node() == node.nullid:
-        forwardmissingmatch = scmutil.matchfiles(a._repo, b.files())
+    if b.p1() == a and b.p2().node() == node.nullid:
+        filesmatcher = scmutil.matchfiles(a._repo, b.files())
+        forwardmissingmatch = matchmod.intersectmatchers(match, filesmatcher)
     missing = _computeforwardmissing(a, b, match=forwardmissingmatch)
 
     ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
