@@ -3,10 +3,13 @@
 from __future__ import absolute_import, print_function
 
 from mercurial import (
+    bundlerepo,
     httppeer,
     localrepo,
     sshpeer,
+    statichttprepo,
     ui as uimod,
+    unionrepo,
 )
 
 def checkobject(o):
@@ -67,5 +70,8 @@ def main():
     checkobject(httppeer.httppeer(ui, 'http://localhost'))
     checkobject(localrepo.localpeer(dummyrepo()))
     checkobject(testingsshpeer(ui, 'ssh://localhost/foo'))
+    checkobject(bundlerepo.bundlepeer(dummyrepo()))
+    checkobject(statichttprepo.statichttppeer(dummyrepo()))
+    checkobject(unionrepo.unionpeer(dummyrepo()))
 
 main()
