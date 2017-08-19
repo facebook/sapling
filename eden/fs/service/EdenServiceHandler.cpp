@@ -425,8 +425,21 @@ void EdenServiceHandler::hgGetDirstateTuple(
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
   DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
                               << mountPoint.get();
+
   auto filename = RelativePathPiece{*relativePath};
-  out = dirstate->hgGetDirstateTuple(filename);
+  try {
+    out = dirstate->hgGetDirstateTuple(filename);
+    // Print this before invoking hgGetDirstateTuple(), as it may throw.
+    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") returning "
+               << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
+                      out.get_status())
+               << " "
+               << _DirstateMergeState_VALUES_TO_NAMES.at(out.get_mergeState());
+  } catch (const std::exception& e) {
+    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") failed with "
+               << e.what();
+    throw;
+  }
 }
 
 void EdenServiceHandler::hgSetDirstateTuple(
