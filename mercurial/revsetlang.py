@@ -270,25 +270,6 @@ def _match(patspec, tree):
     return parser.matchtree(pattern, tree, ('symbol', '_'),
                             {'keyvalue', 'list'})
 
-def _isnamedfunc(x, funcname):
-    """Check if given tree matches named function"""
-    return x and x[0] == 'func' and getsymbol(x[1]) == funcname
-
-def _isposargs(x, n):
-    """Check if given tree is n-length list of positional arguments"""
-    l = getlist(x)
-    return len(l) == n and all(y and y[0] != 'keyvalue' for y in l)
-
-def _matchnamedfunc(x, funcname):
-    """Return args tree if given tree matches named function; otherwise None
-
-    This can't be used for testing a nullary function since its args tree
-    is also None. Use _isnamedfunc() instead.
-    """
-    if not _isnamedfunc(x, funcname):
-        return
-    return x[2]
-
 def _matchonly(revs, bases):
     return _match('ancestors(_) and not ancestors(_)', ('and', revs, bases))
 
