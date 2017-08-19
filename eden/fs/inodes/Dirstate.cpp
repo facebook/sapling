@@ -332,14 +332,12 @@ void Dirstate::hgSetDirstateTuple(
     const RelativePathPiece filename,
     const DirstateTuple* tuple) {
   auto data = data_.wlock();
-  if (tuple->get_status() == hgdirstate::DirstateNonnormalFileStatus::Normal &&
-      tuple->get_mergeState() ==
-          hgdirstate::DirstateMergeState::NotApplicable) {
-    data->hgDirstateTuples.erase(filename.stringPiece());
-  } else {
-    data->hgDirstateTuples[filename.stringPiece()] = *tuple;
-  }
+  data->hgDirstateTuples[filename.stringPiece()] = *tuple;
   persistence_.save(*data);
+}
+
+bool Dirstate::hgDeleteDirstateTuple(const RelativePathPiece filename) {
+  return data_.wlock()->hgDirstateTuples.erase(filename.stringPiece());
 }
 
 std::unordered_map<RelativePath, DirstateTuple> Dirstate::hgGetNonnormalFiles()

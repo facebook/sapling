@@ -342,6 +342,12 @@ service EdenService extends fb303.FacebookService {
     2: string relativePath,
   ) throws (1: EdenError ex)
 
+  /** Return a boolean indicating whether something was actually deleted. */
+  bool hgDeleteDirstateTuple(
+    1: string mountPoint,
+    2: string relativePath,
+  ) throws (1: EdenError ex)
+
   list<HgNonnormalFile> hgGetNonnormalFiles(
     1: string mountPoint,
   ) throws (1: EdenError ex)

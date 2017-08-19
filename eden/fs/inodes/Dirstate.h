@@ -110,6 +110,8 @@ class Dirstate {
   void hgSetDirstateTuple(
       const RelativePathPiece filename,
       const hgdirstate::DirstateTuple* tuple);
+  bool hgDeleteDirstateTuple(const RelativePathPiece filename);
+
   std::unordered_map<RelativePath, hgdirstate::DirstateTuple>
   hgGetNonnormalFiles() const;
 

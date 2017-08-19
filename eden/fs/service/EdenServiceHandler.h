@@ -104,6 +104,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> relativePath,
       std::unique_ptr<hgdirstate::DirstateTuple> tuple) override;
 
+  bool hgDeleteDirstateTuple(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> relativePath) override;
+
   void hgGetNonnormalFiles(
       std::vector<HgNonnormalFile>& out,
       std::unique_ptr<std::string> mountPoint) override;
