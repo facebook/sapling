@@ -4437,14 +4437,17 @@ loading it
 Test repo.anyrevs with customized revset overrides
 
   $ cat > $TESTTMP/printprevset.py <<EOF
-  > from mercurial import encoding
-  > def reposetup(ui, repo):
+  > from mercurial import encoding, registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('printprevset')
+  > def printprevset(ui, repo):
   >     alias = {}
   >     p = encoding.environ.get('P')
   >     if p:
   >         alias['P'] = p
   >     revs = repo.anyrevs(['P'], user=True, localalias=alias)
-  >     ui.write('P=%r' % list(revs))
+  >     ui.write('P=%r\n' % list(revs))
   > EOF
 
   $ cat >> .hg/hgrc <<EOF
@@ -4452,9 +4455,9 @@ Test repo.anyrevs with customized revset overrides
   > printprevset = $TESTTMP/printprevset.py
   > EOF
 
-  $ hg --config revsetalias.P=1 log -r . -T '\n'
+  $ hg --config revsetalias.P=1 printprevset
   P=[1]
-  $ P=3 hg --config revsetalias.P=2 log -r . -T '\n'
+  $ P=3 hg --config revsetalias.P=2 printprevset
   P=[3]
 
   $ cd ..
