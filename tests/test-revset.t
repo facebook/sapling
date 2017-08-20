@@ -166,8 +166,7 @@ trivial
     None)
   * optimized:
   (rangeall
-    None
-    define)
+    None)
   * set:
   <spanset+ 0:10>
   0
@@ -495,8 +494,7 @@ keyword arguments
     ('symbol', 'foo')
     (func
       ('symbol', '_notpublic')
-      None
-      any))
+      None))
   hg: parse error: can't use a key-value pair in this context
   [255]
 
@@ -538,21 +536,16 @@ left-hand side of relation-subscript operator should be optimized recursively:
     (not
       (func
         ('symbol', 'public')
-        None
-        any)
-      define)
+        None))
     ('symbol', 'generations')
-    ('symbol', '0')
-    define)
+    ('symbol', '0'))
   * optimized:
   (relsubscript
     (func
       ('symbol', '_notpublic')
-      None
-      any)
+      None)
     ('symbol', 'generations')
-    ('symbol', '0')
-    define)
+    ('symbol', '0'))
 
 resolution of subscript and relation-subscript ternary operators:
 
@@ -560,8 +553,7 @@ resolution of subscript and relation-subscript ternary operators:
   * analyzed:
   (subscript
     ('symbol', 'tip')
-    ('symbol', '0')
-    define)
+    ('symbol', '0'))
   hg: parse error: can't use a subscript in this context
   [255]
 
@@ -570,8 +562,7 @@ resolution of subscript and relation-subscript ternary operators:
   (relsubscript
     ('symbol', 'tip')
     ('symbol', 'rel')
-    ('symbol', '0')
-    define)
+    ('symbol', '0'))
   hg: parse error: unknown identifier: rel
   [255]
 
@@ -580,10 +571,8 @@ resolution of subscript and relation-subscript ternary operators:
   (subscript
     (relation
       ('symbol', 'tip')
-      ('symbol', 'rel')
-      define)
-    ('symbol', '0')
-    define)
+      ('symbol', 'rel'))
+    ('symbol', '0'))
   hg: parse error: can't use a subscript in this context
   [255]
 
@@ -593,10 +582,8 @@ resolution of subscript and relation-subscript ternary operators:
     (relsubscript
       ('symbol', 'tip')
       ('symbol', 'rel')
-      ('symbol', '0')
-      define)
-    ('symbol', '1')
-    define)
+      ('symbol', '0'))
+    ('symbol', '1'))
   hg: parse error: can't use a subscript in this context
   [255]
 
@@ -605,11 +592,9 @@ resolution of subscript and relation-subscript ternary operators:
   (relsubscript
     (relation
       ('symbol', 'tip')
-      ('symbol', 'rel0')
-      define)
+      ('symbol', 'rel0'))
     ('symbol', 'rel1')
-    ('symbol', '1')
-    define)
+    ('symbol', '1'))
   hg: parse error: unknown identifier: rel1
   [255]
 
@@ -619,11 +604,9 @@ resolution of subscript and relation-subscript ternary operators:
     (relsubscript
       ('symbol', 'tip')
       ('symbol', 'rel0')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     ('symbol', 'rel1')
-    ('symbol', '1')
-    define)
+    ('symbol', '1'))
   hg: parse error: unknown identifier: rel1
   [255]
 
@@ -700,20 +683,15 @@ parsed tree at stages:
     (or
       (list
         ('symbol', '0')
-        ('symbol', '1'))
-      define)
+        ('symbol', '1')))
     (not
-      ('symbol', '1')
-      follow)
-    define)
+      ('symbol', '1')))
   * optimized:
   (difference
     (func
       ('symbol', '_list')
-      ('string', '0\x001')
-      define)
-    ('symbol', '1')
-    define)
+      ('string', '0\x001'))
+    ('symbol', '1'))
   0
 
   $ hg debugrevspec -p unknown '0'
@@ -733,18 +711,14 @@ verify optimized tree:
   (and
     (func
       ('symbol', 'r3232')
-      None
-      define)
-    ('symbol', '2')
-    define)
+      None)
+    ('symbol', '2'))
   * optimized:
-  (and
+  (flipand
     ('symbol', '2')
     (func
       ('symbol', 'r3232')
-      None
-      define)
-    define)
+      None))
   * analyzed set:
   <baseset [2]>
   * optimized set:
@@ -776,8 +750,7 @@ may be hidden (issue5385)
     None)
   * analyzed:
   (rangeall
-    None
-    define)
+    None)
   * set:
   <spanset+ 0:10>
   0
@@ -793,8 +766,7 @@ may be hidden (issue5385)
   $ try -p analyzed ':1'
   * analyzed:
   (rangepre
-    ('symbol', '1')
-    define)
+    ('symbol', '1'))
   * set:
   <spanset+ 0:2>
   0
@@ -805,9 +777,7 @@ may be hidden (issue5385)
     (or
       (list
         ('symbol', '1')
-        ('symbol', '2'))
-      define)
-    define)
+        ('symbol', '2'))))
   * set:
   <spanset+ 0:3>
   0
@@ -818,9 +788,7 @@ may be hidden (issue5385)
   (rangepre
     (and
       ('symbol', '1')
-      ('symbol', '2')
-      define)
-    define)
+      ('symbol', '2')))
   * set:
   <baseset []>
 
@@ -1643,11 +1611,8 @@ Test operand of '%' is optimized recursively (issue4670)
     (difference
       (range
         ('symbol', '8')
-        ('symbol', '9')
-        define)
-      ('symbol', '8')
-      define)
-    define)
+        ('symbol', '9'))
+      ('symbol', '8')))
   * set:
   <baseset+ [8, 9]>
   8
@@ -1663,8 +1628,7 @@ Test operand of '%' is optimized recursively (issue4670)
     ('symbol', 'only')
     (list
       ('symbol', '9')
-      ('symbol', '5'))
-    define)
+      ('symbol', '5')))
   * set:
   <baseset+ [2, 4, 8, 9]>
   2
@@ -1999,18 +1963,13 @@ ordering defined by it.
     (and
       (range
         ('symbol', '3')
-        ('symbol', '0')
-        define)
+        ('symbol', '0'))
       (range
         ('symbol', '0')
-        ('symbol', '3')
-        follow)
-      define)
+        ('symbol', '3')))
     (range
       ('symbol', '2')
-      ('symbol', '1')
-      any)
-    define)
+      ('symbol', '1')))
   * set:
   <filteredset
     <filteredset
@@ -2039,13 +1998,10 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', '_list')
-      ('string', '0\x001\x002')
-      follow)
-    define)
+      ('string', '0\x001\x002')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2072,17 +2028,13 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (or
       (list
         (range
           ('symbol', '0')
-          ('symbol', '1')
-          follow)
-        ('symbol', '2'))
-      follow)
-    define)
+          ('symbol', '1'))
+        ('symbol', '2'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2104,16 +2056,13 @@ ordering defined by it.
       ('symbol', '_intlist')
       ('string', '0\x001\x002')))
   * optimized:
-  (and
+  (flipand
     (func
       ('symbol', '_intlist')
-      ('string', '0\x001\x002')
-      follow)
+      ('string', '0\x001\x002'))
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
-    define)
+      ('symbol', '0')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2134,13 +2083,10 @@ ordering defined by it.
   (and
     (func
       ('symbol', '_intlist')
-      ('string', '0\x002\x001')
-      define)
+      ('string', '0\x002\x001'))
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      follow)
-    define)
+      ('symbol', '0')))
   * set:
   <filteredset
     <baseset [0, 2, 1]>,
@@ -2163,13 +2109,10 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', '_hexlist')
-      ('string', '*') (glob)
-      follow)
-    define)
+      ('string', '*'))) (glob)
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2187,16 +2130,13 @@ ordering defined by it.
       ('symbol', '2')
       ('symbol', '0')))
   * optimized:
-  (and
+  (flipand
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      follow)
+      ('symbol', '0'))
     (func
       ('symbol', '_hexlist')
-      ('string', '*') (glob)
-      define)
-    define)
+      ('string', '*'))) (glob)
   * set:
   <baseset [0, 2, 1]>
   0
@@ -2211,13 +2151,10 @@ ordering defined by it.
   (difference
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', '_list')
-      ('string', '0\x001')
-      any)
-    define)
+      ('string', '0\x001')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2230,19 +2167,14 @@ ordering defined by it.
   (difference
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (and
       (range
         ('symbol', '0')
-        ('symbol', '2')
-        any)
+        ('symbol', '2'))
       (func
         ('symbol', '_list')
-        ('string', '0\x001')
-        any)
-      any)
-    define)
+        ('string', '0\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2259,9 +2191,7 @@ ordering defined by it.
     ('symbol', 'present')
     (func
       ('symbol', '_list')
-      ('string', '2\x000\x001')
-      define)
-    define)
+      ('string', '2\x000\x001')))
   * set:
   <baseset [2, 0, 1]>
   2
@@ -2284,16 +2214,12 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', 'present')
       (func
         ('symbol', '_list')
-        ('string', '0\x001\x002')
-        follow)
-      follow)
-    define)
+        ('string', '0\x001\x002'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2318,16 +2244,12 @@ ordering defined by it.
   (and
     (range
       ('symbol', '0')
-      ('symbol', '2')
-      define)
+      ('symbol', '2'))
     (func
       ('symbol', 'reverse')
       (func
         ('symbol', 'all')
-        None
-        define)
-      follow)
-    define)
+        None)))
   * set:
   <filteredset
     <spanset+ 0:3>,
@@ -2355,18 +2277,14 @@ ordering defined by it.
   (and
     (range
       ('symbol', '0')
-      ('symbol', '2')
-      define)
+      ('symbol', '2'))
     (func
       ('symbol', 'sort')
       (list
         (func
           ('symbol', 'all')
-          None
-          define)
-        ('string', '-rev'))
-      follow)
-    define)
+          None)
+        ('string', '-rev'))))
   * set:
   <filteredset
     <spanset+ 0:3>,
@@ -2402,16 +2320,12 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', 'first')
       (func
         ('symbol', '_list')
-        ('string', '1\x000\x002')
-        define)
-      follow)
-    define)
+        ('string', '1\x000\x002'))))
   * set:
   <filteredset
     <baseset [1]>,
@@ -2435,16 +2349,12 @@ ordering defined by it.
   (difference
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (func
       ('symbol', 'last')
       (func
         ('symbol', '_list')
-        ('string', '0\x002\x001')
-        define)
-      any)
-    define)
+        ('string', '0\x002\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2477,29 +2387,21 @@ ordering defined by it.
   (and
     (range
       ('symbol', '2')
-      ('symbol', '0')
-      define)
+      ('symbol', '0'))
     (range
       (func
         ('symbol', '_list')
-        ('string', '1\x000\x002')
-        define)
+        ('string', '1\x000\x002'))
       (func
         ('symbol', '_list')
-        ('string', '0\x002\x001')
-        define)
-      follow)
-    define)
+        ('string', '0\x002\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
     <baseset [1]>>
   1
 
- 'A & B' can be rewritten as 'B & A' by weight, but that's fine as long as
- the ordering rule is determined before the rewrite; in this example,
- 'B' follows the order of the initial set, which is the same order as 'A'
- since 'A' also follows the order:
+ 'A & B' can be rewritten as 'flipand(B, A)' by weight.
 
   $ try --optimize 'contains("glob:*") & (2 + 0 + 1)'
   (and
@@ -2513,16 +2415,13 @@ ordering defined by it.
           ('symbol', '0')
           ('symbol', '1')))))
   * optimized:
-  (and
+  (flipand
     (func
       ('symbol', '_list')
-      ('string', '2\x000\x001')
-      follow)
+      ('string', '2\x000\x001'))
     (func
       ('symbol', 'contains')
-      ('string', 'glob:*')
-      define)
-    define)
+      ('string', 'glob:*')))
   * set:
   <filteredset
     <baseset+ [0, 1, 2]>,
@@ -2548,19 +2447,15 @@ ordering defined by it.
           ('symbol', '2')
           ('symbol', '1')))))
   * optimized:
-  (and
+  (flipand
     (func
       ('symbol', '_list')
-      ('string', '0\x002\x001')
-      follow)
+      ('string', '0\x002\x001'))
     (func
       ('symbol', 'reverse')
       (func
         ('symbol', 'contains')
-        ('string', 'glob:*')
-        define)
-      define)
-    define)
+        ('string', 'glob:*'))))
   * set:
   <filteredset
     <baseset- [0, 1, 2]>,
@@ -2953,8 +2848,7 @@ test optimization of trivial `or` operation
   * optimized:
   (func
     ('symbol', '_list')
-    ('string', '0\x001\x002\x00-2\x00tip\x00null')
-    define)
+    ('string', '0\x001\x002\x00-2\x00tip\x00null'))
   * set:
   <baseset [0, 1, 2, 8, 9, -1]>
   0
@@ -2977,13 +2871,10 @@ test optimization of trivial `or` operation
     (list
       (func
         ('symbol', '_list')
-        ('string', '0\x001')
-        define)
+        ('string', '0\x001'))
       (range
         ('symbol', '2')
-        ('symbol', '3')
-        define))
-    define)
+        ('symbol', '3'))))
   * set:
   <addset
     <baseset [0, 1]>,
@@ -3010,18 +2901,14 @@ test optimization of trivial `or` operation
     (list
       (range
         ('symbol', '0')
-        ('symbol', '1')
-        define)
+        ('symbol', '1'))
       ('symbol', '2')
       (range
         ('symbol', '3')
-        ('symbol', '4')
-        define)
+        ('symbol', '4'))
       (func
         ('symbol', '_list')
-        ('string', '5\x006')
-        define))
-    define)
+        ('string', '5\x006'))))
   * set:
   <addset
     <addset
@@ -3048,8 +2935,7 @@ unoptimized `or` looks like this
       ('symbol', '1')
       ('symbol', '2')
       ('symbol', '3')
-      ('symbol', '4'))
-    define)
+      ('symbol', '4')))
   * set:
   <addset
     <addset
@@ -3169,8 +3055,7 @@ no crash by empty group "()" while optimizing `or` operations
   (or
     (list
       ('symbol', '0')
-      None)
-    define)
+      None))
   hg: parse error: missing argument
   [255]
 
@@ -3200,8 +3085,7 @@ check that conversion to only works
     ('symbol', 'only')
     (list
       ('symbol', '3')
-      ('symbol', '1'))
-    define)
+      ('symbol', '1')))
   * set:
   <baseset+ [3]>
   3
@@ -3218,8 +3102,7 @@ check that conversion to only works
     ('symbol', 'only')
     (list
       ('symbol', '1')
-      ('symbol', '3'))
-    define)
+      ('symbol', '3')))
   * set:
   <baseset+ []>
   $ try --optimize 'not ::2 and ::6'
@@ -3234,8 +3117,7 @@ check that conversion to only works
     ('symbol', 'only')
     (list
       ('symbol', '6')
-      ('symbol', '2'))
-    define)
+      ('symbol', '2')))
   * set:
   <baseset+ [3, 4, 5, 6]>
   3
@@ -3256,8 +3138,7 @@ check that conversion to only works
     ('symbol', 'only')
     (list
       ('symbol', '6')
-      ('symbol', '4'))
-    define)
+      ('symbol', '4')))
   * set:
   <baseset+ [3, 5, 6]>
   3
@@ -3273,13 +3154,11 @@ no crash by empty group "()" while optimizing to "only()"
     (group
       None))
   * optimized:
-  (and
+  (flipand
     None
     (func
       ('symbol', 'ancestors')
-      ('symbol', '1')
-      define)
-    define)
+      ('symbol', '1')))
   hg: parse error: missing argument
   [255]
 
@@ -3290,15 +3169,12 @@ optimization to only() works only if ancestors() takes only one argument
   (difference
     (func
       ('symbol', 'ancestors')
-      ('symbol', '6')
-      define)
+      ('symbol', '6'))
     (func
       ('symbol', 'ancestors')
       (list
         ('symbol', '4')
-        ('symbol', '1'))
-      any)
-    define)
+        ('symbol', '1'))))
   0
   1
   3
@@ -3311,13 +3187,10 @@ optimization to only() works only if ancestors() takes only one argument
       ('symbol', 'ancestors')
       (list
         ('symbol', '6')
-        ('symbol', '1'))
-      define)
+        ('symbol', '1')))
     (func
       ('symbol', 'ancestors')
-      ('symbol', '4')
-      any)
-    define)
+      ('symbol', '4')))
   5
   6
 
@@ -3331,15 +3204,12 @@ to support it)
       ('symbol', 'ancestors')
       (keyvalue
         ('symbol', 'set')
-        ('symbol', '6'))
-      define)
+        ('symbol', '6')))
     (func
       ('symbol', 'ancestors')
       (keyvalue
         ('symbol', 'set')
-        ('symbol', '4'))
-      any)
-    define)
+        ('symbol', '4'))))
   3
   5
   6

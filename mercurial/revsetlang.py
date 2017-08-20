@@ -258,7 +258,7 @@ def _matchnamedfunc(x, funcname):
         return
     return x[2]
 
-# Constants for ordering requirement, used in _analyze():
+# Constants for ordering requirement, used in getset():
 #
 # If 'define', any nested functions and operations can change the ordering of
 # the entries in the set. If 'follow', any nested functions and operations
@@ -282,25 +282,9 @@ def _matchnamedfunc(x, funcname):
 #
 # 'y()' can either enforce its ordering requirement or take the ordering
 # specified by 'x()' because 'not()' doesn't care the order.
-#
-# Transition of ordering requirement:
-#
-# 1. starts with 'define'
-# 2. shifts to 'follow' by 'x & y'
-# 3. changes back to 'define' on function call 'f(x)' or function-like
-#    operation 'x (f) y' because 'f' may have its own ordering requirement
-#    for 'x' and 'y' (e.g. 'first(x)')
-#
 anyorder = 'any'        # don't care the order
 defineorder = 'define'  # should define the order
 followorder = 'follow'  # must follow the current order
-
-# transition table for 'x & y', from the current expression 'x' to 'y'
-_tofolloworder = {
-    anyorder: anyorder,
-    defineorder: followorder,
-    followorder: followorder,
-}
 
 def _matchonly(revs, bases):
     """
@@ -340,76 +324,59 @@ def _fixops(x):
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
-def _analyze(x, order):
+def _analyze(x):
     if x is None:
         return x
 
     op = x[0]
     if op == 'minus':
-        return _analyze(('and', x[1], ('not', x[2])), order)
+        return _analyze(('and', x[1], ('not', x[2])))
     elif op == 'only':
         t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _analyze(t, order)
+        return _analyze(t)
     elif op == 'onlypost':
-        return _analyze(('func', ('symbol', 'only'), x[1]), order)
+        return _analyze(('func', ('symbol', 'only'), x[1]))
     elif op == 'dagrangepre':
-        return _analyze(('func', ('symbol', 'ancestors'), x[1]), order)
+        return _analyze(('func', ('symbol', 'ancestors'), x[1]))
     elif op == 'dagrangepost':
-        return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
+        return _analyze(('func', ('symbol', 'descendants'), x[1]))
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
-        return _analyze(('string', '-' + s), order)
+        return _analyze(('string', '-' + s))
     elif op in ('string', 'symbol'):
         return x
-    elif op == 'and':
-        ta = _analyze(x[1], order)
-        tb = _analyze(x[2], _tofolloworder[order])
-        return (op, ta, tb, order)
-    elif op == 'or':
-        return (op, _analyze(x[1], order), order)
-    elif op == 'not':
-        return (op, _analyze(x[1], anyorder), order)
     elif op == 'rangeall':
-        return (op, None, order)
-    elif op in ('rangepre', 'rangepost', 'parentpost'):
-        return (op, _analyze(x[1], defineorder), order)
+        return (op, None)
+    elif op in {'or', 'not', 'rangepre', 'rangepost', 'parentpost'}:
+        return (op, _analyze(x[1]))
     elif op == 'group':
-        return _analyze(x[1], order)
-    elif op in ('dagrange', 'range', 'parent', 'ancestor', 'relation',
-                'subscript'):
-        ta = _analyze(x[1], defineorder)
-        tb = _analyze(x[2], defineorder)
-        return (op, ta, tb, order)
+        return _analyze(x[1])
+    elif op in {'and', 'dagrange', 'range', 'parent', 'ancestor', 'relation',
+                'subscript'}:
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        return (op, ta, tb)
     elif op == 'relsubscript':
-        ta = _analyze(x[1], defineorder)
-        tb = _analyze(x[2], defineorder)
-        tc = _analyze(x[3], defineorder)
-        return (op, ta, tb, tc, order)
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        tc = _analyze(x[3])
+        return (op, ta, tb, tc)
     elif op == 'list':
-        return (op,) + tuple(_analyze(y, order) for y in x[1:])
+        return (op,) + tuple(_analyze(y) for y in x[1:])
     elif op == 'keyvalue':
-        return (op, x[1], _analyze(x[2], order))
+        return (op, x[1], _analyze(x[2]))
     elif op == 'func':
-        f = getsymbol(x[1])
-        d = defineorder
-        if f == 'present':
-            # 'present(set)' is known to return the argument set with no
-            # modification, so forward the current order to its argument
-            d = order
-        return (op, x[1], _analyze(x[2], d), order)
+        return (op, x[1], _analyze(x[2]))
     raise ValueError('invalid operator %r' % op)
 
-def analyze(x, order=defineorder):
+def analyze(x):
     """Transform raw parsed tree to evaluatable tree which can be fed to
     optimize() or getset()
 
     All pseudo operations should be mapped to real operations or functions
     defined in methods or symbols table respectively.
-
-    'order' specifies how the current expression 'x' is ordered (see the
-    constants defined above.)
     """
-    return _analyze(x, order)
+    return _analyze(x)
 
 def _optimize(x, small):
     if x is None:
@@ -425,24 +392,21 @@ def _optimize(x, small):
     elif op == 'and':
         wa, ta = _optimize(x[1], True)
         wb, tb = _optimize(x[2], True)
-        order = x[3]
         w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         tm = _matchonly(ta, tb) or _matchonly(tb, ta)
         if tm:
-            return w, ('func', ('symbol', 'only'), tm, order)
+            return w, ('func', ('symbol', 'only'), tm)
 
         if tb is not None and tb[0] == 'not':
-            return wa, ('difference', ta, tb[1], order)
-
+            return wa, ('difference', ta, tb[1])
         if wa > wb:
-            return w, (op, tb, ta, order)
-        return w, (op, ta, tb, order)
+            return w, ('flipand', tb, ta)
+        return w, (op, ta, tb)
     elif op == 'or':
         # fast path for machine-generated expression, that is likely to have
         # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
-        order = x[2]
         ws, ts, ss = [], [], []
         def flushss():
             if not ss:
@@ -451,7 +415,7 @@ def _optimize(x, small):
                 w, t = ss[0]
             else:
                 s = '\0'.join(t[1] for w, t in ss)
-                y = ('func', ('symbol', '_list'), ('string', s), order)
+                y = ('func', ('symbol', '_list'), ('string', s))
                 w, t = _optimize(y, False)
             ws.append(w)
             ts.append(t)
@@ -467,37 +431,31 @@ def _optimize(x, small):
         flushss()
         if len(ts) == 1:
             return ws[0], ts[0] # 'or' operation is fully optimized out
-        return max(ws), (op, ('list',) + tuple(ts), order)
+        return max(ws), (op, ('list',) + tuple(ts))
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1][:3] == ('func', ('symbol', 'public'), None):
-            order = x[1][3]
-            newsym = ('func', ('symbol', '_notpublic'), None, order)
+            newsym = ('func', ('symbol', '_notpublic'), None)
             o = _optimize(newsym, not small)
             return o[0], o[1]
         else:
             o = _optimize(x[1], not small)
-            order = x[2]
-            return o[0], (op, o[1], order)
+            return o[0], (op, o[1])
     elif op == 'rangeall':
         return smallbonus, x
     elif op in ('rangepre', 'rangepost', 'parentpost'):
         o = _optimize(x[1], small)
-        order = x[2]
-        return o[0], (op, o[1], order)
+        return o[0], (op, o[1])
     elif op in ('dagrange', 'range'):
         wa, ta = _optimize(x[1], small)
         wb, tb = _optimize(x[2], small)
-        order = x[3]
-        return wa + wb, (op, ta, tb, order)
+        return wa + wb, (op, ta, tb)
     elif op in ('parent', 'ancestor', 'relation', 'subscript'):
         w, t = _optimize(x[1], small)
-        order = x[3]
-        return w, (op, t, x[2], order)
+        return w, (op, t, x[2])
     elif op == 'relsubscript':
         w, t = _optimize(x[1], small)
-        order = x[4]
-        return w, (op, t, x[2], x[3], order)
+        return w, (op, t, x[2], x[3])
     elif op == 'list':
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
@@ -522,8 +480,7 @@ def _optimize(x, small):
             w = 10 # assume most sorts look at changelog
         else:
             w = 1
-        order = x[3]
-        return w + wa, (op, x[1], ta, order)
+        return w + wa, (op, x[1], ta)
     raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
