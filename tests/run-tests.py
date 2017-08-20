@@ -1440,7 +1440,7 @@ class TTest(Test):
                                 conditions = [
                                     c for c in m.group(2).split(b' ')]
 
-                                if not self._hghave(conditions)[0]:
+                                if not self._iftest(conditions):
                                     optional.append(i)
 
                     i += 1
@@ -1474,7 +1474,7 @@ class TTest(Test):
                             if m:
                                 conditions = [c for c in m.group(2).split(b' ')]
 
-                                if self._hghave(conditions)[0]:
+                                if self._iftest(conditions):
                                     # Don't append as optional line
                                     continue
                             else:
@@ -1555,7 +1555,7 @@ class TTest(Test):
                     conditions = [c for c in m.group(2).split(b' ')]
 
                     el = m.group(1) + b"\n"
-                    if not self._hghave(conditions)[0]:
+                    if not self._iftest(conditions):
                         retry = "retry"    # Not required by listed features
 
             if el.endswith(b" (esc)\n"):

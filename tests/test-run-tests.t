@@ -823,6 +823,20 @@ When "#testcases" is used in .t files
     2
   #endif
 
+  $ cat >> test-cases.t <<'EOF'
+  > #if a
+  >   $ NAME=A
+  > #else
+  >   $ NAME=B
+  > #endif
+  >   $ echo $NAME
+  >   A (a !)
+  >   B (b !)
+  > EOF
+  $ rt test-cases.t
+  ..
+  # Ran 2 tests, 0 skipped, 0 failed.
+
   $ rm test-cases.t
 
 (reinstall)
