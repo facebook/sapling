@@ -707,31 +707,9 @@ def gcclient(ui, cachepath):
             sharedcache = repo.sharedstore
 
         # Compute a keepset which is not garbage collected
-        # We want to keep:
-        # 1. Working copy parent
-        # 2. Draft commits
-        # 3. All parents of draft commits
-        # 4. Recent heads in the repo
-        # 5. Pullprefetch and bgprefetchrevs revsets if specified
-        revs = ['.', 'draft()', 'parents(draft())', '(heads(all()) & date(-7))']
-
-        prefetchrevs = repo.ui.config('remotefilelog',
-                                      'pullprefetch', None)
-        if prefetchrevs:
-            revs.append('(%s)' % prefetchrevs)
-        prefetchrevs = repo.ui.config('remotefilelog',
-                                      'bgprefetchrevs', None)
-        if prefetchrevs:
-            revs.append('(%s)' % prefetchrevs)
-
-        keep = scmutil.revrange(repo, ['+'.join(revs)])
-        # TODO: Compute keepkeys more efficiently
-        for r in keep:
-            m = repo[r].manifest()
-            for filename, filenode in m.iteritems():
-                key = fileserverclient.getcachekey(reponame, filename,
-                    hex(filenode))
-                keepkeys.add(key)
+        def keyfn(fname, fnode):
+            return fileserverclient.getcachekey(reponame, fname, hex(fnode))
+        keepkeys = repackmod.keepset(repo, keyfn=keyfn, lastkeepkeys=keepkeys)
 
     ui.progress(_analyzing, None)
 
@@ -907,6 +885,13 @@ def debugdatapack(ui, path, **opts):
     ], _('hg debughistorypack <path>'), norepo=True)
 def debughistorypack(ui, path, **opts):
     return debugcommands.debughistorypack(ui, path)
+
+@command('debugkeepset', [
+    ], _('hg debugkeepset'))
+def debugkeepset(ui, repo, **opts):
+    # The command is used to measure keepset computation time
+    repackmod.keepset(repo)
+    return
 
 @command('debugwaitonrepack', [
     ], _('hg debugwaitonrepack'))

@@ -290,6 +290,59 @@ def _runrepack(repo, data, history, packpath, category):
                 raise error.Abort(_("skipping repack - another repack is "
                                     "already running"))
 
+def keepset(repo, keyfn, lastkeepkeys=None):
+    """Computes a keepset which is not garbage collected.
+    'keyfn' is a function that maps filename, node to a unique key.
+    'lastkeepkeys' is an optional argument and if provided the keepset
+    function updates lastkeepkeys with more keys and returns the result.
+    """
+    if not lastkeepkeys:
+        keepkeys = set()
+    else:
+        keepkeys = lastkeepkeys
+
+    # We want to keep:
+    # 1. Working copy parent
+    # 2. Draft commits
+    # 3. Parents of draft commits
+    # 4. Pullprefetch and bgprefetchrevs revsets if specified
+    revs = ['.', 'draft()', 'parents(draft())']
+    prefetchrevs = repo.ui.config('remotefilelog', 'pullprefetch', None)
+    if prefetchrevs:
+        revs.append('(%s)' % prefetchrevs)
+    prefetchrevs = repo.ui.config('remotefilelog', 'bgprefetchrevs', None)
+    if prefetchrevs:
+        revs.append('(%s)' % prefetchrevs)
+    revs = '+'.join(revs)
+
+    revs = ['sort((%s), "topo")' % revs]
+    keep = scmutil.revrange(repo, revs)
+
+    processed = set()
+    lastmanifest = None
+
+    # process the commits in toposorted order starting from the oldest
+    for r in reversed(keep._list):
+        if repo[r].p1().rev() in processed:
+            # if the direct parent has already been processed
+            # then we only need to process the delta
+            m = repo[r].manifestctx().readdelta()
+        else:
+            # otherwise take the manifest and diff it
+            # with the previous manifest if one exists
+            if lastmanifest:
+                m = repo[r].manifest().diff(lastmanifest)
+            else:
+                m = repo[r].manifest()
+        lastmanifest = repo[r].manifest()
+        processed.add(r)
+
+        # populate keepkeys with keys from the current manifest
+        for filename, filenode in m.iteritems():
+            keepkeys.add(keyfn(filename, filenode))
+
+    return keepkeys
+
 class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
@@ -303,31 +356,9 @@ class repacker(object):
         if self.garbagecollect:
             if not isold:
                 raise ValueError("Function 'isold' is not properly specified")
-            self.keepkeys = self._gckeepset()
+            # use (filename, node) tuple as a keepset key
+            self.keepkeys = keepset(repo, lambda f, n : (f, n))
             self.isold = isold
-
-    def _gckeepset(self):
-        """Computes a keepset which is not garbage collected.
-        """
-        repo = self.repo
-        revs = ['.', 'draft()', 'parents(draft())', '(heads(all()) & date(-7))']
-
-        # If pullprefetch and bgprefetchrevs are specified include them as well
-        # since we don't want to prefetch and immediately garbage collect them
-        prefetchrevs = repo.ui.config('remotefilelog', 'pullprefetch', None)
-        if prefetchrevs:
-            revs.append('(%s)' % prefetchrevs)
-        prefetchrevs = repo.ui.config('remotefilelog', 'bgprefetchrevs', None)
-        if prefetchrevs:
-            revs.append('(%s)' % prefetchrevs)
-
-        keep = scmutil.revrange(repo, ['+'.join(revs)])
-        keepkeys = set()
-        for r in keep:
-            m = repo[r].manifest()
-            keepkeys.update(m.iteritems())
-
-        return keepkeys
 
     def run(self, targetdata, targethistory):
         ledger = repackledger()
