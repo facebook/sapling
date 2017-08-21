@@ -462,12 +462,11 @@ def _localbranch(repo, subset, x):
 templatefunc = registrar.templatefunc()
 
 def _undonehexnodes(repo, reverseindex):
-    repo = repo.unfiltered()
-    revstring = revsetlang.formatspec('draft() - olddraft(%d)', reverseindex)
+    revstring = revsetlang.formatspec('olddraft(0) - olddraft(%d)',
+                                      reverseindex)
     revs = repo.revs(revstring)
     tonode = repo.changelog.node
-    hexnodes = [repo[tonode(x)] for x in revs]
-    return hexnodes
+    return [tonode(x) for x in revs]
 
 @templatefunc('undonecommits(reverseindex)')
 def showundonecommits(context, mapping, args):
@@ -477,7 +476,7 @@ def showundonecommits(context, mapping, args):
     repo = mapping['ctx']._repo
     ctx = mapping['ctx']
     hexnodes = _undonehexnodes(repo, reverseindex)
-    if ctx in hexnodes:
+    if ctx.node() in hexnodes:
         result = ctx.hex()
     else:
         result = None
@@ -488,8 +487,7 @@ def _donehexnodes(repo, reverseindex):
     revstring = revsetlang.formatspec('olddraft(%d)', reverseindex)
     revs = repo.revs(revstring)
     tonode = repo.changelog.node
-    hexnodes = [repo[tonode(x)] for x in revs]
-    return hexnodes
+    return [tonode(x) for x in revs]
 
 @templatefunc('donecommits(reverseindex)')
 def showdonecommits(context, mapping, args):
@@ -499,7 +497,7 @@ def showdonecommits(context, mapping, args):
     repo = mapping['ctx']._repo
     ctx = mapping['ctx']
     hexnodes = _donehexnodes(repo, reverseindex)
-    if ctx in hexnodes:
+    if ctx.node() in hexnodes:
         result = ctx.hex()
     else:
         result = None
@@ -526,8 +524,9 @@ def showoldbookmarks(context, mapping, args):
     ctx = mapping['ctx']
     oldmarks = _oldmarks(repo, reverseindex)
     bookmarks = []
+    ctxhex = ctx.hex()
     for kv in oldmarks:
-        if repo[kv[1]] == repo[ctx]:
+        if kv[1] == ctxhex:
             bookmarks.append(kv[0])
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
@@ -545,8 +544,9 @@ def removedbookmarks(context, mapping, args):
     currentbookmarks = mapping['ctx'].bookmarks()
     oldmarks = _oldmarks(repo, reverseindex)
     oldbookmarks = []
+    ctxhex = ctx.hex()
     for kv in oldmarks:
-        if repo[kv[1]] == repo[ctx]:
+        if kv[1] == ctxhex:
             oldbookmarks.append(kv[0])
     bookmarks = list(set(currentbookmarks) - set(oldbookmarks))
     active = repo._activebookmark
