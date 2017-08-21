@@ -5,11 +5,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.i18n import _
-from mercurial.node import hex, bin, nullid
-from mercurial import util, sshpeer, error, util, wireproto, httppeer
+from __future__ import absolute_import
+
 import hashlib, os, time, io, struct
 import itertools
+
+from mercurial.i18n import _
+from mercurial.node import hex, bin, nullid
+from mercurial import (
+    error,
+    httppeer,
+    peer as peermod,
+    sshpeer,
+    util,
+    util,
+    wireproto,
+)
 
 from . import (
     connectionpool,
@@ -19,7 +30,7 @@ from . import (
 )
 from .contentstore import unioncontentstore
 from .metadatastore import unionmetadatastore
-from lz4wrapper import lz4decompress
+from .lz4wrapper import lz4decompress
 
 # Statistics for debugging
 fetchcost = 0
@@ -64,7 +75,7 @@ def peersetup(ui, peer):
         def _updatecallstreamopts(self, command, opts):
             if command != 'getbundle':
                 return
-            if 'remotefilelog' not in self._capabilities():
+            if 'remotefilelog' not in shallowutil.peercapabilities(self):
                 return
             if not util.safehasattr(self, '_localrepo'):
                 return
@@ -194,15 +205,13 @@ def _getfilesbatch(
         return
     while missed:
         chunk, missed = missed[:batchsize], missed[batchsize:]
-        b = remote.batch()
-        futures = {}
+        b = remote.iterbatch()
         for m in chunk:
             file_ = idmap[m]
             node = m[-40:]
-            futures[m] = b.getfile(file_, node)
+            b.getfile(file_, node)
         b.submit()
-        for m in chunk:
-            v = futures[m].value
+        for m, v in zip(chunk, b.results()):
             file_ = idmap[m]
             node = m[-40:]
             receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), file_, node)
@@ -212,6 +221,8 @@ def _getfiles(
     remote, receivemissing, progresstick, missed, idmap, step):
     remote._callstream("getfiles")
     i = 0
+    pipeo = shallowutil.trygetattr(remote, ('_pipeo', 'pipeo'))
+    pipei = shallowutil.trygetattr(remote, ('_pipei', 'pipei'))
     while i < len(missed):
         # issue a batch of requests
         start = i
@@ -222,19 +233,19 @@ def _getfiles(
             versionid = missingid[-40:]
             file = idmap[missingid]
             sshrequest = "%s%s\n" % (versionid, file)
-            remote.pipeo.write(sshrequest)
-        remote.pipeo.flush()
+            pipeo.write(sshrequest)
+        pipeo.flush()
 
         # receive batch results
         for missingid in missed[start:end]:
             versionid = missingid[-40:]
             file = idmap[missingid]
-            receivemissing(remote.pipei, file, versionid)
+            receivemissing(pipei, file, versionid)
             progresstick()
 
     # End the command
-    remote.pipeo.write('\n')
-    remote.pipeo.flush()
+    pipeo.write('\n')
+    pipeo.flush()
 
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
@@ -428,8 +439,9 @@ class fileserverclient(object):
 
                 packpath = shallowutil.getcachepackpath(
                     self.repo, constants.FILEPACK_CATEGORY)
+                pipei = shallowutil.trygetattr(remote, ('_pipei', 'pipei'))
                 receiveddata, receivedhistory = wirepack.receivepack(
-                    self.repo.ui, remote.pipei, packpath)
+                    self.repo.ui, pipei, packpath)
                 rcvd = len(receiveddata)
 
             self.ui.log("remotefilefetchlog",
@@ -453,16 +465,17 @@ class fileserverclient(object):
             grouped.setdefault(filename, set()).add(node)
 
         # Issue request
+        pipeo = shallowutil.trygetattr(remote, ('_pipeo', 'pipeo'))
         for filename, nodes in grouped.iteritems():
             filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
             countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
             rawnodes = ''.join(bin(n) for n in nodes)
 
-            remote.pipeo.write('%s%s%s%s' % (filenamelen, filename, countlen,
-                                             rawnodes))
-            remote.pipeo.flush()
-        remote.pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
-        remote.pipeo.flush()
+            pipeo.write('%s%s%s%s' % (filenamelen, filename, countlen,
+                                      rawnodes))
+            pipeo.flush()
+        pipeo.write(struct.pack(constants.FILENAMESTRUCT, 0))
+        pipeo.flush()
 
     def connect(self):
         if self.cacheprocess:

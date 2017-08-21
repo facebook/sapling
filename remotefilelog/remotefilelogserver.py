@@ -193,7 +193,10 @@ def onetimesetup(ui):
             caps.append('getflogheads')
             caps.append('getfile')
         return caps
-    wrapfunction(wireproto, '_capabilities', _capabilities)
+    if util.safehasattr(wireproto, '_capabilities'):
+        wrapfunction(wireproto, '_capabilities', _capabilities)
+    else:
+        wrapfunction(wireproto, 'capabilities', _capabilities)
 
     def _adjustlinkrev(orig, self, *args, **kwargs):
         # When generating file blobs, taking the real path is too slow on large

@@ -25,8 +25,6 @@ Build a query string for later use:
 
   $ grep batch access.log | grep getfile
   * "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=getfile+*node%3D1406e74118627694268417491f018a4a883152f0* (glob)
-  $ grep batch access.log | grep getfile
-  * "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=getfile+*file%3Dx* (glob)
 
 Clear filenode cache so we can test fetching with a modified batch size
   $ rm -r $TESTTMP/hgcache

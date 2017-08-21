@@ -10,6 +10,7 @@ from mercurial import (
     extensions,
     hg,
     localrepo,
+    peer as peermod,
     scmutil,
     wireproto,
 )
@@ -173,18 +174,18 @@ def clientfetch(repo, paths, lastnodemap=None, peer=None):
         lastnodemap = {}
 
     ui = repo.ui
-    batcher = peer.batch()
+    batcher = peer.iterbatch()
     ui.debug('fastannotate: requesting %d files\n' % len(paths))
-    results = [batcher.getannotate(p, lastnodemap.get(p)) for p in paths]
+    for p in paths:
+        batcher.getannotate(p, lastnodemap.get(p))
     # Note: This is the only place that fastannotate sends a request via SSH.
     # The SSH stream should not be in the remotefilelog "getfiles" loop.
     batcher.submit()
+    results = list(batcher.results())
 
     ui.debug('fastannotate: server returned\n')
     for result in results:
-        if result.value is None:
-            continue
-        for path, content in result.value.iteritems():
+        for path, content in result.iteritems():
             # ignore malicious paths
             if not path.startswith('fastannotate/') or '/../' in (path + '/'):
                 ui.debug('fastannotate: ignored malicious path %s\n' % path)

@@ -152,7 +152,8 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             # Replace remote.stream_out with a version that sends file
             # patterns.
             def stream_out_shallow(orig):
-                if shallowrepo.requirement in remote._capabilities():
+                caps = shallowutil.peercapabilities(remote)
+                if shallowrepo.requirement in caps:
                     opts = {}
                     if repo.includepattern:
                         opts['includepattern'] = '\0'.join(repo.includepattern)

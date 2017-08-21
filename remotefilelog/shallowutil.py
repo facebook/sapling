@@ -463,3 +463,17 @@ def mkstickygroupdir(ui, path):
             setstickygroupdir(path, gid, ui.warn)
     finally:
         os.umask(oldumask)
+
+def trygetattr(obj, names):
+    """try different attribute names, return the first matched attribute,
+    or raise if no names are matched.
+    """
+    for name in names:
+        result = getattr(obj, name, None)
+        if result is not None:
+            return result
+    raise AttributeError
+
+def peercapabilities(peer):
+    """return capabilities of a peer"""
+    return trygetattr(peer, ('_capabilities', 'capabilities'))()
