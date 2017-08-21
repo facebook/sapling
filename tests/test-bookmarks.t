@@ -191,6 +191,28 @@ force rename to existent bookmark
 
   $ hg bookmark -f -m X Y
 
+rename bookmark using .
+
+  $ hg book rename-me
+  $ hg book -m . renamed
+  $ hg bookmark
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+   * renamed                   2:db815d6d32e6
+  $ hg up -q Y
+  $ hg book -d renamed
+
+rename bookmark using . with no active bookmark
+
+  $ hg book rename-me
+  $ hg book -i rename-me
+  $ hg book -m . renamed
+  abort: no active bookmark
+  [255]
+  $ hg up -q Y
+  $ hg book -d rename-me
+
 list bookmarks
 
   $ hg bookmark

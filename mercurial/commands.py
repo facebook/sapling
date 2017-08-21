@@ -968,6 +968,7 @@ def bookmark(ui, repo, *names, **opts):
                     raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
                     raise error.Abort(_("only one new bookmark name allowed"))
+                rename = repo._bookmarks.expandname(rename)
                 bookmarks.rename(repo, tr, rename, names[0], force, inactive)
             elif names:
                 bookmarks.addbookmarks(repo, tr, names, rev, force, inactive)
