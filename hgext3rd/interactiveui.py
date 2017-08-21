@@ -18,6 +18,12 @@ from mercurial import (
     error,
 )
 
+def upline(n=1):
+    w = sys.stdout
+    # ANSI
+    # ESC[#A : up # lines
+    w.write('\033[%dA' % n)
+
 def clearline(n=1):
     w = sys.stdout
     # ANSI
@@ -25,7 +31,6 @@ def clearline(n=1):
     # ESC[K : clear to end of line
     for i in range(n):
         w.write('\033[1A\033[K')
-    w.flush()
 
 # From:
 # https://github.com/pallets/click/blob/master/click/_termui_impl.py#L534
@@ -132,6 +137,14 @@ def view(viewobj):
             viewobj.rightarrow()
         if repr(output) == '\'\\x1b[D\'':
             viewobj.leftarrow()
-        clearline(s.count("\n"))
+        linecount = s.count('\n')
         s = viewobj.render()
-        sys.stdout.write(s)
+        newlinecount = s.count('\n')
+        if newlinecount < linecount:
+            clearline(linecount - newlinecount)
+            upline(newlinecount)
+        else:
+            upline(linecount)
+        slist = s.splitlines(True)
+        sys.stdout.write(''.join('\033[K' + line for line in slist))
+        sys.stdout.flush()
