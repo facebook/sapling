@@ -653,6 +653,10 @@ def undo(ui, repo, *args, **opts):
                 ui = self.ui
                 ui.pushbuffer()
                 _preview(ui, self.repo, self.index)
+                repo.ui.status(_("<-: next  "
+                                 "->: previous  "
+                                 "q: abort  "
+                                 "enter: confirm\n"))
                 return ui.popbuffer()
             def rightarrow(self):
                 self.index += 1
@@ -862,8 +866,8 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     commandstr = _readnode(repo, "command.i", nodedict["command"])
     commandlist = commandstr.split("\0")[1:]
     commandstr = " ".join(commandlist)
-    uimessage = 'undone to %s, before %s\n' % (time, commandstr)
-    repo.ui.status(_(uimessage))
+    uimessage = _('undone to %s, before %s\n') % (time, commandstr)
+    repo.ui.status((uimessage))
 
 def _computerelative(repo, reverseindex, absolute=False, branch=""):
     # allows for relative undos using
@@ -1069,6 +1073,9 @@ def _preview(ui, repo, reverseindex):
     #   None
 
     # override "UNDOINDEX" as a variable usable in template
+    if not _gapcheck(ui, repo, reverseindex):
+        repo.ui.status(_("WARN: missing history between present and this"
+                         " state\n"))
     overrides = {
         ('templates', 'UNDOINDEX'): str(reverseindex),
     }
@@ -1082,6 +1089,17 @@ def _preview(ui, repo, reverseindex):
     try:
         with ui.configoverride(overrides):
             cmdutil.graphlog(ui, repo, None, opts)
+        # informative output
+        nodedict = _readindex(repo, reverseindex)
+        time = _readnode(repo, "date.i", nodedict["date"])
+        time = util.datestr([float(x) for x in time.split(" ")])
+
+        nodedict = _readindex(repo, reverseindex - 1)
+        commandstr = _readnode(repo, "command.i", nodedict["command"])
+        commandlist = commandstr.split("\0")[1:]
+        commandstr = " ".join(commandlist)
+        uimessage = _('undo to %s, before %s\n') % (time, commandstr)
+        repo.ui.status((uimessage))
     except IndexError:
         # don't print anything
         pass

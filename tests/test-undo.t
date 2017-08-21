@@ -734,6 +734,7 @@ hg undo --preview test
   o
   |
   ~
+  undo to *, before ci -m prev1 (glob)
   $ hg undo -p -n 2
   @  Undone
   |
@@ -754,6 +755,7 @@ hg undo --preview test
   o
   |
   ~
+  undo to *, before undo -b 3532 (glob)
 
 hg redo tests
   $ hg log -G -T compact

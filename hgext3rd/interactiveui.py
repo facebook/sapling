@@ -12,12 +12,19 @@ import sys
 import termios
 import tty
 
-def clearline():
+from mercurial.i18n import _
+
+from mercurial import (
+    error,
+)
+
+def clearline(n=1):
     w = sys.stdout
     # ANSI
     # ESC[#A : up # lines
     # ESC[K : clear to end of line
-    w.write('\033[1A\033[K')
+    for i in range(n):
+        w.write('\033[1A\033[K')
     w.flush()
 
 # From:
@@ -107,8 +114,10 @@ class viewframe(object):
 
 def view(viewobj):
     done = False
+    if viewobj.ui.pageractive:
+        raise error.Abort(_("interactiveui doesn't work with pager"))
     s = viewobj.render()
-    print(s)
+    sys.stdout.write(s)
     while not done:
         output = getchar(sys.stdin.fileno())
         if repr(output) == '\'q\'':
@@ -123,7 +132,6 @@ def view(viewobj):
             viewobj.rightarrow()
         if repr(output) == '\'\\x1b[D\'':
             viewobj.leftarrow()
-        for i in range(len(s.split("\n"))):
-            clearline()
+        clearline(s.count("\n"))
         s = viewobj.render()
-        print(s)
+        sys.stdout.write(s)
