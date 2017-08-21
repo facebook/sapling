@@ -399,6 +399,21 @@ def wrapfilecache(cls, propname, wrapper):
         raise AttributeError(r"type '%s' has no property '%s'" % (
             cls, propname))
 
+class wrappedfunction(object):
+    '''context manager for temporarily wrapping a function'''
+
+    def __init__(self, container, funcname, wrapper):
+        assert callable(wrapper)
+        self._container = container
+        self._funcname = funcname
+        self._wrapper = wrapper
+
+    def __enter__(self):
+        wrapfunction(self._container, self._funcname, self._wrapper)
+
+    def __exit__(self, exctype, excvalue, traceback):
+        unwrapfunction(self._container, self._funcname, self._wrapper)
+
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
 
