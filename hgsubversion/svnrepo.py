@@ -20,8 +20,13 @@ from mercurial import error
 from mercurial import localrepo
 from mercurial import util as hgutil
 
+peerapi = 0
 try:
-    from mercurial.peer import peerrepository
+    try:
+        from mercurial.repository import peer as peerrepository
+        peerapi = 1
+    except ImportError:
+        from mercurial.peer import peerrepository
     from mercurial import httppeer
 except ImportError:
     from mercurial.repo import repository as peerrepository
@@ -122,7 +127,7 @@ class svnremoterepo(peerrepository):
     """ the dumb wrapper for actual Subversion repositories """
 
     def __init__(self, ui, path=None):
-        self.ui = ui
+        self._ui = ui
         if path is None:
             path = self.ui.config('paths', 'default-push')
         if path is None:
@@ -130,7 +135,10 @@ class svnremoterepo(peerrepository):
         if not path:
             raise hgutil.Abort('no Subversion URL specified. Expect[path] default= or [path] default-push= SVN URL entries in hgrc.')
         self.path = path
-        self.capabilities = set(['lookup', 'subversion'])
+        if peerapi == 1:
+            self._capabilities = set(['lookup', 'subversion'])
+        elif peerapi == 0:
+            self.capabilities = set(['lookup', 'subversion'])
         pws = self.ui.config('hgsubversion', 'password_stores', None)
         if pws is not None:
             # Split pws at comas and strip neighbouring whitespace (whitespace
@@ -140,8 +148,12 @@ class svnremoterepo(peerrepository):
         else:
             self.password_stores = None
 
-    def _capabilities(self):
-        return self.capabilities
+    if peerapi == 1:
+        def capabilities(self):
+            return self._capabilities
+    elif peerapi == 0:
+        def _capabilities(self):
+            return self.capabilities
 
     @propertycache
     def svnauth(self):
@@ -168,6 +180,10 @@ class svnremoterepo(peerrepository):
             self.ui.traceback()
             raise hgutil.Abort(e)
 
+    @property
+    def ui(self):
+        return self._ui
+
     def url(self):
         return self.path
 
@@ -189,6 +205,40 @@ class svnremoterepo(peerrepository):
 
     def listkeys(self, namespace):
         return {}
+
+    if peerapi == 1:
+        def canpush(self):
+            return True
+
+        def close(self):
+            pass
+
+        def iterbatch(self):
+            raise NotImplementedError
+
+        def known(self):
+            raise NotImplementedError
+
+        def getbundle(self):
+            raise NotImplementedError
+
+        def local(self):
+            return None
+
+        def peer(self):
+            return self
+
+        def stream_out(self):
+            raise NotImplementedError
+
+        def unbundle(self):
+            raise NotImplementedError
+
+        def branchmap(self):
+            raise NotImplementedError
+
+        def debugwireargs(self):
+            raise NotImplementedError
 
 def instance(ui, url, create):
     if url.startswith('http://') or url.startswith('https://'):

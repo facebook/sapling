@@ -89,9 +89,12 @@ def getlocalpeer(ui, opts, source):
     return repo
 
 def getcaps(other):
-    return (getattr(other, 'caps', None) or
+    caps = (getattr(other, 'caps', None) or
             getattr(other, 'capabilities', None) or set())
-
+    # 'capabilities' might be an instance method
+    if hgutil.safehasattr(caps, '__call__'):
+        caps = caps()
+    return caps
 
 def incoming(orig, ui, repo, origsource='default', **opts):
     """show incoming revisions from Subversion
