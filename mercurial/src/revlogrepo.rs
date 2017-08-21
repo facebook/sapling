@@ -190,6 +190,19 @@ impl RevlogRepo {
             .into_future()
     }
 
+    pub fn get_tree_manifest_blob_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+        path: &Path,
+    ) -> FutureResult<BlobNode> {
+        self.get_tree_revlog(path)
+            .and_then(|tree_revlog| {
+                let idx = tree_revlog.get_idx_by_nodeid(nodeid)?;
+                tree_revlog.get_rev(idx)
+            })
+            .into_future()
+    }
+
     pub fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<RevlogManifest, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let repo = self.clone();
