@@ -474,4 +474,14 @@ service EdenService extends fb303.FacebookService {
    * flush interval.
    */
   void flushStatsNow() throws (1: EdenError ex)
+
+  /**
+  * Invalidate kernel cache for inode.
+  */
+  void invalidateKernelInodeCache(
+    1: string mountPoint,
+    2: string path
+    )
+  throws (1: EdenError ex)
+
 }

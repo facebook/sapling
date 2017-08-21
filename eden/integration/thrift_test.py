@@ -11,6 +11,7 @@ import hashlib
 
 from facebook.eden.ttypes import SHA1Result, EdenError
 from .lib import testcase
+import os
 
 
 @testcase.eden_repo_test
@@ -18,6 +19,7 @@ class ThriftTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.write_file('bdir/file', 'bar!\n')
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
@@ -92,12 +94,13 @@ class ThriftTest:
     def test_glob(self):
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['a*/file']))
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['**/file']))
+        self.assertCountEqual(
+            ['adir/file', 'bdir/file'], self.client.glob(self.mount, ['**/file']))
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['adir/*']))
-        self.assertEqual(
-            ['adir/file'], self.client.glob(self.mount, ['adir/*', '**/file']),
+        self.assertCountEqual(
+            ['adir/file', 'bdir/file'],
+            self.client.glob(self.mount, ['adir/*', '**/file']),
             msg='De-duplicate results from multiple globs')
         self.assertEqual(
             ['hello'], self.client.glob(self.mount, ['hello']))
@@ -146,3 +149,45 @@ class ThriftTest:
             inode_count_before_unload,
             inode_count_after_unload,
             'Number of loaded inodes should reduce after unload')
+
+    def read_file(self, filename):
+        with open(filename, 'r') as f:
+            f.read()
+
+    def get_counter(self, name):
+        self.client.flushStatsNow()
+        return self.client.getCounters()[name]
+
+    def test_invalidate_inode_cache(self):
+        filename = os.path.join(self.mount, 'bdir/file')
+        dirname = os.path.join(self.mount, 'bdir/')
+
+#       Exercise eden a bit to make sure counters are ready
+        for _ in range(20):
+            fn = os.path.join(self.mount, '_tmp_')
+            with open(fn, 'w') as f:
+                f.write('foo!\n')
+            os.unlink(fn)
+
+        reads = self.get_counter("fuse.read_us.count")
+        self.read_file(filename)
+        reads_1read = self.get_counter("fuse.read_us.count")
+        self.assertEqual(reads_1read, reads + 1)
+        self.read_file(filename)
+        reads_2read = self.get_counter("fuse.read_us.count")
+        self.assertEqual(reads_1read, reads_2read)
+        self.client.invalidateKernelInodeCache(self.mount, 'bdir/file')
+        self.read_file(filename)
+        reads_3read = self.get_counter("fuse.read_us.count")
+        self.assertEqual(reads_2read + 1, reads_3read)
+
+        lookups = self.get_counter("fuse.lookup_us.count")
+#        -hl makes ls to do a lookup of the file to determine type
+        os.system("ls -hl " + dirname + " > /dev/null")
+        lookups_1ls = self.get_counter("fuse.lookup_us.count")
+#        equal, the file was lookup'ed above.
+        self.assertEqual(lookups, lookups_1ls)
+        self.client.invalidateKernelInodeCache(self.mount, 'bdir')
+        os.system("ls -hl " + dirname + " > /dev/null")
+        lookups_2ls = self.get_counter("fuse.lookup_us.count")
+        self.assertEqual(lookups_1ls + 1, lookups_2ls)

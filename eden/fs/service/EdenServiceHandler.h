@@ -160,6 +160,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void flushStatsNow() override;
 
+  void invalidateKernelInodeCache(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> path) override;
+
   /**
    * When this Thrift handler is notified to shutdown, it notifies the
    * EdenServer to shut down, as well.

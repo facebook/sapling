@@ -18,6 +18,7 @@
 #include <unordered_set>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/Channel.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
@@ -665,6 +666,31 @@ void EdenServiceHandler::unloadInodeForPath(
 
 void EdenServiceHandler::flushStatsNow() {
   server_->flushStatsNow();
+}
+void EdenServiceHandler::invalidateKernelInodeCache(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> path) {
+  auto edenMount = server_->getMount(*mountPoint);
+  InodePtr inode;
+  if (path->empty()) {
+    inode = edenMount->getRootInode();
+  } else {
+    inode = edenMount->getInode(RelativePathPiece{*path}).get();
+  }
+  auto* fuseChannel = edenMount->getFuseChannel();
+
+  // Invalidate cached pages and attributes
+  fuseChannel->invalidateInode(inode->getNodeId(), 0, 0);
+
+  const auto treePtr = inode.asTreePtrOrNull();
+
+  // invalidate all parent/child relationships potentially cached.
+  if (treePtr != nullptr) {
+    const auto& dir = treePtr->getContents().rlock();
+    for (const auto& entry : dir->entries) {
+      fuseChannel->invalidateEntry(inode->getNodeId(), entry.first);
+    }
+  }
 }
 
 void EdenServiceHandler::shutdown() {
