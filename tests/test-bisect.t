@@ -187,7 +187,6 @@ bisect test
   $ hg status -v
   # The repository is in an unfinished *bisect* state.
   
-  None
   # To mark the changeset good:    hg bisect --good
   # To mark the changeset bad:     hg bisect --bad
   # To abort:                      hg bisect --reset
