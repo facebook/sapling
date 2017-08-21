@@ -401,20 +401,24 @@ def _getolddrafts(repo, reverseindex):
     # this makes cacheing guaranteed correct
     # bc immutable history
     nodedict = _readindex(repo, reverseindex)
-    return _cachedgetolddrafts(repo, nodedict["draftheads"])
+    return _cachedgetolddrafts(repo, nodedict["draftheads"],
+                               nodedict["draftobsolete"])
 
-def _cachedgetolddrafts(repo, node):
+def _cachedgetolddrafts(repo, draftnode, obsnode):
     if not util.safehasattr(repo, '_undoolddraftcache'):
         repo._undoolddraftcache = {}
     cache = repo._undoolddraftcache
-    if node not in cache:
-        olddraftheads = _readnode(repo, "draftheads.i", node)
+    key = draftnode + obsnode
+    if key not in cache:
+        olddraftheads = _readnode(repo, "draftheads.i", draftnode)
         oldheadslist = olddraftheads.split("\n")
-        oldlogrevstring = revsetlang.formatspec('draft() & ancestors(%ls)',
-                                                oldheadslist)
+        oldobs = _readnode(repo, "draftobsolete.i", obsnode)
+        oldobslist = filter(None, oldobs.split("\n"))
+        oldlogrevstring = revsetlang.formatspec(
+            '(draft() & ancestors(%ls)) - %ls', oldheadslist, oldobslist)
         urepo = repo.unfiltered()
-        cache[node] = smartset.baseset(urepo.revs(oldlogrevstring))
-    return cache[node]
+        cache[key] = smartset.baseset(urepo.revs(oldlogrevstring))
+    return cache[key]
 
 revsetpredicate = registrar.revsetpredicate()
 
@@ -832,18 +836,9 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
                                       reverseindex)
     removedrevs = revsetlang.formatspec('olddraft(%d) - olddraft(0)',
                                         reverseindex)
-    currentstate = _readindex(repo, 0)
-    curdraftobsolete = _readnode(repo, "draftobsolete.i",
-                                 currentstate["draftobsolete"])
-    newdraftobsolete = _readnode(repo, "draftobsolete.i",
-                                 nodedict["draftobsolete"])
-    obschange = (set(curdraftobsolete.split("\n"))
-                - set(newdraftobsolete.split("\n")))
-    obschangerevs = revsetlang.formatspec('%ls', obschange)
     if not branch:
         smarthide(repo, addedrevs, removedrevs)
         revealcommits(repo, removedrevs)
-        revealcommits(repo, obschangerevs)
     else:
         localadds = revsetlang.formatspec('(olddraft(0) - olddraft(%d)) and'
                                           ' _localbranch(%s)',
@@ -851,12 +846,9 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         localremoves = revsetlang.formatspec('(olddraft(%d) - olddraft(0)) and'
                                           ' _localbranch(%s)',
                                           reverseindex, branch)
-        localobschange = revsetlang.formatspec('(%ls) and _localbranch(%s)',
-                                               obschange, branch)
         smarthide(repo, localadds, removedrevs)
         smarthide(repo, addedrevs, localremoves, local=True)
         revealcommits(repo, localremoves)
-        revealcommits(repo, localobschange)
 
     # informative output
     time = _readnode(repo, "date.i", nodedict["date"])
