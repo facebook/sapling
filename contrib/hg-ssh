@@ -28,13 +28,19 @@ command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
 You can also add a --read-only flag to allow read-only access to a key, e.g.:
 command="hg-ssh --read-only repos/*"
 """
+from __future__ import absolute_import
+
+import os
+import shlex
+import sys
 
 # enable importing on demand to reduce startup time
-from mercurial import demandimport; demandimport.enable()
+import hgdemandimport ; hgdemandimport.enable()
 
-from mercurial import dispatch, ui as uimod
-
-import sys, os, shlex
+from mercurial import (
+    dispatch,
+    ui as uimod,
+)
 
 def main():
     cwd = os.getcwd()
