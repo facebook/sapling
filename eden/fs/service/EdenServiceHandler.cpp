@@ -412,8 +412,8 @@ void EdenServiceHandler::scmGetStatus(
     std::unique_ptr<std::string> mountPoint,
     bool listIgnored) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   out = dirstate->getStatus(listIgnored);
   XLOG(INFO) << "scmGetStatus() returning " << out;
@@ -424,8 +424,8 @@ void EdenServiceHandler::hgGetDirstateTuple(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   auto filename = RelativePathPiece{*relativePath};
   try {
@@ -448,8 +448,8 @@ void EdenServiceHandler::hgSetDirstateTuple(
     std::unique_ptr<std::string> relativePath,
     std::unique_ptr<DirstateTuple> tuple) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   XLOG(INFO) << "hgSetDirstateTuple(" << *relativePath << ") to "
              << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
@@ -465,8 +465,8 @@ bool EdenServiceHandler::hgDeleteDirstateTuple(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   XLOG(DBG2) << "hgDeleteDirstateTuple(" << *relativePath << ")";
   auto filename = RelativePathPiece{*relativePath};
@@ -477,8 +477,8 @@ void EdenServiceHandler::hgGetNonnormalFiles(
     std::vector<HgNonnormalFile>& out,
     std::unique_ptr<std::string> mountPoint) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   for (auto& pair : dirstate->hgGetNonnormalFiles()) {
     HgNonnormalFile nonnormal;
@@ -494,8 +494,8 @@ void EdenServiceHandler::hgCopyMapPut(
     std::unique_ptr<std::string> relativePathDest,
     std::unique_ptr<std::string> relativePathSource) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
   dirstate->hgCopyMapPut(
       RelativePathPiece{*relativePathDest},
       RelativePathPiece{*relativePathSource});
@@ -506,8 +506,8 @@ void EdenServiceHandler::hgCopyMapGet(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePathDest) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
   relativePathSource =
       dirstate->hgCopyMapGet(RelativePathPiece{*relativePathDest})
           .stringPiece()
@@ -518,8 +518,8 @@ void EdenServiceHandler::hgCopyMapGetAll(
     std::map<std::string, std::string>& copyMap,
     std::unique_ptr<std::string> mountPoint) {
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr) << "Failed to get dirstate for "
-                              << mountPoint.get();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
 
   for (const auto& pair : dirstate->hgCopyMapGetAll()) {
     copyMap.emplace(pair.first.str(), pair.second.stringPiece().str());
