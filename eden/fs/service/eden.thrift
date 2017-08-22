@@ -330,6 +330,10 @@ service EdenService extends fb303.FacebookService {
     2: bool listIgnored,
   ) throws (1: EdenError ex)
 
+  void hgClearDirstate(
+    1: string mountPoint,
+  ) throws (1: EdenError ex)
+
   void hgSetDirstateTuple(
     1: string mountPoint,
     2: string relativePath,

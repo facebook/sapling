@@ -263,6 +263,24 @@ Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
   return makeFuture();
 }
 
+void Dirstate::clear() {
+  bool madeChanges = false;
+  auto data = data_.wlock();
+
+  if (!data->hgDirstateTuples.empty()) {
+    data->hgDirstateTuples.clear();
+    madeChanges = true;
+  }
+  if (!data->hgDestToSourceCopyMap.empty()) {
+    data->hgDestToSourceCopyMap.clear();
+    madeChanges = true;
+  }
+
+  if (madeChanges) {
+    persistence_.save(*data);
+  }
+}
+
 DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {
   {
     auto data = data_.rlock();

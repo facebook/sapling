@@ -105,6 +105,9 @@ class Dirstate {
    */
   folly::Future<folly::Unit> onSnapshotChanged(const Tree* rootTree);
 
+  /** Clears out the data structures associated with this Dirstate. */
+  void clear();
+
   hgdirstate::DirstateTuple hgGetDirstateTuple(
       const RelativePathPiece filename);
   void hgSetDirstateTuple(

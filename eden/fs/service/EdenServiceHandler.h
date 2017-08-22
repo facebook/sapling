@@ -94,6 +94,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored) override;
 
+  void hgClearDirstate(std::unique_ptr<std::string> mountPoint) override;
+
   void hgGetDirstateTuple(
       hgdirstate::DirstateTuple& out,
       std::unique_ptr<std::string> mountPoint,

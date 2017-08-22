@@ -419,6 +419,16 @@ void EdenServiceHandler::scmGetStatus(
   XLOG(INFO) << "scmGetStatus() returning " << out;
 }
 
+void EdenServiceHandler::hgClearDirstate(
+    std::unique_ptr<std::string> mountPoint) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
+
+  XLOG(DBG2) << "hgClearDirstate(" << *mountPoint << ")";
+  dirstate->clear();
+}
+
 void EdenServiceHandler::hgGetDirstateTuple(
     DirstateTuple& out,
     std::unique_ptr<std::string> mountPoint,
