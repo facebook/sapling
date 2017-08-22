@@ -1207,8 +1207,9 @@ Test issue 4506
 Test heads computation on pending index changes with obsolescence markers
   $ cd ..
   $ cat >$TESTTMP/test_extension.py  << EOF
-  > from mercurial import cmdutil, registrar
+  > from __future__ import absolute_import
   > from mercurial.i18n import _
+  > from mercurial import cmdutil, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
