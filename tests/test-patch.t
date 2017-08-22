@@ -1,8 +1,9 @@
   $ cat > patchtool.py <<EOF
+  > from __future__ import absolute_import, print_function
   > import sys
-  > print 'Using custom patch'
+  > print('Using custom patch')
   > if '--binary' in sys.argv:
-  >     print '--binary found !'
+  >     print('--binary found !')
   > EOF
 
   $ echo "[ui]" >> $HGRCPATH
