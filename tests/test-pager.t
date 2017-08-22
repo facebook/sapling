@@ -342,7 +342,9 @@ Put annotate in the ignore list for pager:
 
 Environment variables like LESS and LV are set automatically:
   $ cat > $TESTTMP/printlesslv.py <<EOF
-  > import os, sys
+  > from __future__ import absolute_import
+  > import os
+  > import sys
   > sys.stdin.read()
   > for name in ['LESS', 'LV']:
   >     sys.stdout.write(('%s=%s\n') % (name, os.environ.get(name, '-')))
