@@ -27,11 +27,10 @@ This also has some limitations compared to the Python 2 implementation:
 from __future__ import absolute_import
 
 import contextlib
-import sys
-
 import importlib.abc
 import importlib.machinery
 import importlib.util
+import sys
 
 _deactivated = False
 
