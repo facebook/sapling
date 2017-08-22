@@ -8,13 +8,15 @@
   > }
 
   $ cat > arelinked.py <<EOF
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > from mercurial import util
   > path1, path2 = sys.argv[1:3]
   > if util.samefile(path1, path2):
-  >     print '%s == %s' % (path1, path2)
+  >     print('%s == %s' % (path1, path2))
   > else:
-  >     print '%s != %s' % (path1, path2)
+  >     print('%s != %s' % (path1, path2))
   > EOF
 
 
