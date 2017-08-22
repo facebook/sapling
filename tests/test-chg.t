@@ -115,7 +115,9 @@ chg waits for pager if runcommand raises
   > EOF
 
   $ cat > $TESTTMP/fakepager.py <<EOF
-  > import sys, time
+  > from __future__ import absolute_import
+  > import sys
+  > import time
   > for line in iter(sys.stdin.readline, ''):
   >     if 'crash' in line: # only interested in lines containing 'crash'
   >         # if chg exits when pager is sleeping (incorrectly), the output
