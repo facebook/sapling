@@ -381,7 +381,7 @@ def mergecopies(repo, c1, c2, base):
     # if we have a dirty endpoint, we need to trigger graft logic, and also
     # keep track of which endpoint is dirty
     dirtyc1 = not (base == _c1 or base.descendant(_c1))
-    dirtyc2 = not (base== _c2 or base.descendant(_c2))
+    dirtyc2 = not (base == _c2 or base.descendant(_c2))
     graft = dirtyc1 or dirtyc2
     tca = base
     if graft:
