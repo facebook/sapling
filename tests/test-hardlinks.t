@@ -17,8 +17,9 @@
 Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
 
   $ cat > linkcp.py <<EOF
-  > from mercurial import util
+  > from __future__ import absolute_import
   > import sys
+  > from mercurial import util
   > util.copyfiles(sys.argv[1], sys.argv[2], hardlink=True)
   > EOF
 
