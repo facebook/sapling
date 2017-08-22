@@ -211,15 +211,12 @@ The '-t' should override autodetection
   > done
 
   $ cat > md5comp.py <<EOF
-  > from __future__ import print_function
-  > try:
-  >     from hashlib import md5
-  > except ImportError:
-  >     from md5 import md5
+  > from __future__ import absolute_import, print_function
+  > import hashlib
   > import sys
   > f1, f2 = sys.argv[1:3]
-  > h1 = md5(open(f1, 'rb').read()).hexdigest()
-  > h2 = md5(open(f2, 'rb').read()).hexdigest()
+  > h1 = hashlib.md5(open(f1, 'rb').read()).hexdigest()
+  > h2 = hashlib.md5(open(f2, 'rb').read()).hexdigest()
   > print(h1 == h2 or "md5 differ: " + repr((h1, h2)))
   > EOF
 
