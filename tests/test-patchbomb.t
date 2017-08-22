@@ -9,18 +9,19 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
 --===+[0-9]+=+$ -> --===*= (glob)
 
   $ cat > prune-blank-after-boundary.py <<EOF
+  > from __future__ import absolute_import, print_function
   > import sys
   > skipblank = False
   > trim = lambda x: x.strip(' \r\n')
   > for l in sys.stdin:
   >     if trim(l).endswith('=--') or trim(l).endswith('=='):
   >         skipblank = True
-  >         print l,
+  >         print(l, end='')
   >         continue
   >     if not trim(l) and skipblank:
   >         continue
   >     skipblank = False
-  >     print l,
+  >     print(l, end='')
   > EOF
   $ FILTERBOUNDARY="$PYTHON `pwd`/prune-blank-after-boundary.py"
   $ echo "[format]" >> $HGRCPATH
