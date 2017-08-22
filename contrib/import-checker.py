@@ -222,6 +222,9 @@ def list_stdlib_modules():
         yield m
     yield '__builtin__'
     yield 'builtins' # python3 only
+    yield 'importlib.abc' # python3 only
+    yield 'importlib.machinery' # python3 only
+    yield 'importlib.util' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
     for m in 'cPickle', 'datetime': # in Python (not C) on PyPy
