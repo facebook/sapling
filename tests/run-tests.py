@@ -136,6 +136,9 @@ if pygmentspresent:
             ]
         }
 
+    runnerformatter = formatters.Terminal256Formatter(style=TestRunnerStyle)
+    runnerlexer = TestRunnerLexer()
+
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
@@ -1637,9 +1640,8 @@ class TestResult(unittest._TextTestResult):
                         if self.color:
                             formatted = pygments.highlight(
                                 formatted,
-                                TestRunnerLexer(),
-                                formatters.Terminal256Formatter(
-                                            style=TestRunnerStyle))
+                                runnerlexer,
+                                runnerformatter)
                         self.stream.write(formatted)
                     self.stream.write('!')
 
@@ -2046,18 +2048,16 @@ class TextTestRunner(unittest.TextTestRunner):
                     if result.color:
                         formatted = pygments.highlight(
                             formatted,
-                            TestRunnerLexer(),
-                            formatters.Terminal256Formatter(
-                                            style=TestRunnerStyle)).strip("\n")
+                            runnerlexer,
+                            runnerformatter).strip("\n")
                     self.stream.writeln(formatted)
             for test, msg in result.failures:
                 formatted = 'Failed %s: %s' % (test.name, msg)
                 if result.color:
                     formatted = pygments.highlight(
                         formatted,
-                        TestRunnerLexer(),
-                        formatters.Terminal256Formatter(
-                                        style=TestRunnerStyle)).strip("\n")
+                        runnerlexer,
+                        runnerformatter).strip("\n")
                 self.stream.writeln(formatted)
             for test, msg in result.errors:
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
