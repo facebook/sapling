@@ -354,8 +354,9 @@ configured as GMT.
   $ hg -R repo add repo/a
   $ hg -R repo commit -m '#0' -d '456789012 21600'
   $ cat > show_mtime.py <<EOF
-  > from __future__ import print_function
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > print(int(os.stat(sys.argv[1]).st_mtime))
   > EOF
 
