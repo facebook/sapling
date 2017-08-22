@@ -693,7 +693,10 @@ def embedded(f, modname, src):
             else:
                 script.append(l[4:])
             continue
-        if inlinepython and l == b'  \n':
+        # If we have an empty line or a command for sh, we end the
+        # inline script.
+        if inlinepython and (l == b'  \n'
+                             or l.startswith(b'  $ ')):
             yield b''.join(script), (b"%s[%d]" %
                    (modname, inlinepython)), t, inlinepython
             script = []
