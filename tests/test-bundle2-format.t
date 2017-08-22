@@ -12,8 +12,9 @@ Create an extension to test bundle2 API
   > This extension allows detailed testing of the various bundle2 API and
   > behaviors.
   > """
-  > 
-  > import sys, os, gc
+  > import gc
+  > import os
+  > import sys
   > from mercurial import util
   > from mercurial import bundle2
   > from mercurial import scmutil
