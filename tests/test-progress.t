@@ -1,7 +1,8 @@
 
   $ cat > loop.py <<EOF
-  > from mercurial import commands, registrar
+  > from __future__ import absolute_import
   > import time
+  > from mercurial import commands, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
