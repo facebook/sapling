@@ -3,7 +3,7 @@
 # $ hg init
 # $ undumprevlog < repo.dump
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import sys
 from mercurial import (
@@ -27,7 +27,7 @@ while True:
     if l.startswith("file:"):
         f = l[6:-1]
         r = revlog.revlog(opener, f)
-        print f
+        print(f)
     elif l.startswith("node:"):
         n = node.bin(l[6:-1])
     elif l.startswith("linkrev:"):
