@@ -16,7 +16,10 @@ outputs, which should be fixed later.
 
   $ testrepohg locate 'set:**.py or grep(r"^#!.*?python")' \
   > 'tests/**.t' \
+  > -X hgweb.cgi \
+  > -X setup.py \
   > -X contrib/debugshell.py \
+  > -X contrib/hgweb.fcgi \
   > -X contrib/python-zstandard/ \
   > -X contrib/win32/hgwebdir_wsgi.py \
   > -X doc/gendoc.py \
