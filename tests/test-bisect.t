@@ -462,9 +462,10 @@ test bisecting command
 
   $ cat > script.py <<EOF
   > #!$PYTHON
+  > from __future__ import absolute_import
   > import sys
-  > from mercurial import ui, hg
-  > repo = hg.repository(ui.ui.load(), '.')
+  > from mercurial import hg, ui as uimod
+  > repo = hg.repository(uimod.ui.load(), '.')
   > if repo['.'].rev() < 6:
   >     sys.exit(1)
   > EOF
