@@ -1,7 +1,8 @@
   $ cat > echo.py <<EOF
   > #!$PYTHON
-  > from __future__ import print_function
-  > import os, sys
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > try:
   >     import msvcrt
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
