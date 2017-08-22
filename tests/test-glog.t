@@ -82,7 +82,13 @@ o  (0) root
   > }
 
   $ cat > printrevset.py <<EOF
-  > from mercurial import extensions, revsetlang, commands, cmdutil
+  > from __future__ import absolute_import
+  > from mercurial import (
+  >   cmdutil,
+  >   commands,
+  >   extensions,
+  >   revsetlang,
+  > )
   > 
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
