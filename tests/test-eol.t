@@ -8,9 +8,11 @@ Test EOL extension
 Set up helpers
 
   $ cat > switch-eol.py <<EOF
+  > from __future__ import absolute_import
+  > import os
   > import sys
   > try:
-  >     import os, msvcrt
+  >     import msvcrt
   >     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
   > except ImportError:
