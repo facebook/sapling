@@ -883,7 +883,7 @@ file specified by acl.config does not exist
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
-  error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
+  error: pretxnchangegroup.acl hook raised an exception: [Errno *] * (glob)
   bundle2-input-part: total payload size 1553
   bundle2-input-bundle: 3 parts total
   transaction abort!

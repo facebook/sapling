@@ -24,11 +24,10 @@ os.utime('foo', (1000, 1000))
 repo[None].add(['foo'])
 repo.commit(text='commit1', date="0 0")
 
+d = repo[None]['foo'].date()
 if os.name == 'nt':
-    d = repo[None]['foo'].date()
-    print("workingfilectx.date = (%d, %d)" % (d[0], d[1]))
-else:
-    print("workingfilectx.date =", repo[None]['foo'].date())
+    d = d[:2]
+print("workingfilectx.date = (%d, %d)" % d)
 
 # test memctx with non-ASCII commit message
 

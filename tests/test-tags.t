@@ -381,7 +381,7 @@ Errors writing to .hgtags fnodes cache are silently ignored
 
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> tags
-  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> couldn't write cache/hgtagsfnodes1: [Errno 13] Permission denied: '$TESTTMP/t2/.hg/cache/hgtagsfnodes1'
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> couldn't write cache/hgtagsfnodes1: [Errno *] * (glob)
   1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> 2/3 cache hits/lookups in * seconds (glob)
   1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> writing .hg/cache/tags2-visible with 1 tags
   1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> tags exited 0 after * seconds (glob)

@@ -208,10 +208,22 @@ def getlatesttags(repo, ctx, cache, pattern=None):
             latesttags[rev] = ctx.date()[0], 0, [t for t in sorted(tags)]
             continue
         try:
-            # The tuples are laid out so the right one can be found by
-            # comparison.
-            pdate, pdist, ptag = max(
-                latesttags[p.rev()] for p in ctx.parents())
+            ptags = [latesttags[p.rev()] for p in ctx.parents()]
+            if len(ptags) > 1:
+                if ptags[0][2] == ptags[1][2]:
+                    # The tuples are laid out so the right one can be found by
+                    # comparison in this case.
+                    pdate, pdist, ptag = max(ptags)
+                else:
+                    def key(x):
+                        changessincetag = len(repo.revs('only(%d, %s)',
+                                                        ctx.rev(), x[2][0]))
+                        # Smallest number of changes since tag wins. Date is
+                        # used as tiebreaker.
+                        return [-changessincetag, x[0]]
+                    pdate, pdist, ptag = max(ptags, key=key)
+            else:
+                pdate, pdist, ptag = ptags[0]
         except KeyError:
             # Cache miss - recurse
             todo.append(rev)

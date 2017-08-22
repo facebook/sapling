@@ -904,7 +904,8 @@ class ui(object):
                 if not getattr(self.ferr, 'closed', False):
                     self.ferr.flush()
         except IOError as inst:
-            raise error.StdioError(inst)
+            if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
+                raise error.StdioError(inst)
 
     def flush(self):
         # opencode timeblockedsection because this is a critical path
@@ -913,12 +914,14 @@ class ui(object):
             try:
                 self.fout.flush()
             except IOError as err:
-                raise error.StdioError(err)
+                if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
+                    raise error.StdioError(err)
             finally:
                 try:
                     self.ferr.flush()
                 except IOError as err:
-                    raise error.StdioError(err)
+                    if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
+                        raise error.StdioError(err)
         finally:
             self._blockedtimes['stdio_blocked'] += \
                 (util.timer() - starttime) * 1000

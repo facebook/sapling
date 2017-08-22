@@ -3335,7 +3335,9 @@ def log(ui, repo, *pats, **opts):
     revisions.
 
     See :hg:`help templates` for more about pre-packaged styles and
-    specifying custom templates.
+    specifying custom templates. The default template used by the log
+    command can be customized via the ``ui.logtemplate`` configuration
+    setting.
 
     Returns 0 on success.
 
