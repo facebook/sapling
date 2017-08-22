@@ -20,6 +20,7 @@ test-empty-dir.t
 test-empty.t
 test-excessive-merge.t
 test-hghave.t
+test-imports-checker.t
 test-issue1089.t
 test-issue1993.t
 test-issue842.t
