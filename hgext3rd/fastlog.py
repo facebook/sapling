@@ -243,7 +243,7 @@ def getfastlogrevs(orig, repo, pats, opts):
                         if producer == LOCAL:
                             raise error.Abort(msg)
                         elif msg:
-                            repo.ui.warn(msg + '\n')
+                            repo.ui.log("hgfastlog", msg)
                             continue
 
                     if msg is None:
