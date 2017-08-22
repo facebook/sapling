@@ -94,9 +94,11 @@ Portable way to print file permissions:
 
   $ cat > ls-l.py <<EOF
   > #!$PYTHON
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > path = sys.argv[1]
-  > print('%03o' % (os.lstat(path).st_mode & 0777))
+  > print('%03o' % (os.lstat(path).st_mode & 0o777))
   > EOF
   $ chmod +x ls-l.py
 
