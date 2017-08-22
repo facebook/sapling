@@ -361,7 +361,7 @@ class rebaseruntime(object):
                 self.ui.status(_('reopening closed branch head %s\n') % dest)
 
     def _performrebase(self, tr):
-        repo, ui, opts = self.repo, self.ui, self.opts
+        repo, ui = self.repo, self.ui
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
             # there's a user-provided extrafn it can clobber branch if
@@ -384,10 +384,17 @@ class rebaseruntime(object):
         # if we fail before the transaction closes.
         self.storestatus()
 
-        sortedrevs = repo.revs('sort(%ld, -topo)', self.state)
         cands = [k for k, v in self.state.iteritems() if v == revtodo]
         total = len(cands)
         pos = 0
+        for subset in sortsource(self.destmap):
+            pos = self._performrebasesubset(tr, subset, pos, total)
+        ui.progress(_('rebasing'), None)
+        ui.note(_('rebase merging completed\n'))
+
+    def _performrebasesubset(self, tr, subset, pos, total):
+        repo, ui, opts = self.repo, self.ui, self.opts
+        sortedrevs = repo.revs('sort(%ld, -topo)', subset)
         for rev in sortedrevs:
             dest = self.destmap[rev]
             ctx = repo[rev]
@@ -449,9 +456,7 @@ class rebaseruntime(object):
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[self.state[rev]]))
-
-        ui.progress(_('rebasing'), None)
-        ui.note(_('rebase merging completed\n'))
+        return pos
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
@@ -969,6 +974,18 @@ def adjustdest(repo, rev, destmap, state):
         | B         | ...
         |/          |/
         A           A
+
+    Besides, adjust dest according to existing rebase information. For example,
+
+      B C D    B needs to be rebased on top of C, C needs to be rebased on top
+       \|/     of D. We will rebase C first.
+        A
+
+          C'   After rebasing C, when considering B's destination, use C'
+          |    instead of the original C.
+      B   D
+       \ /
+        A
     """
     # pick already rebased revs with same dest from state as interesting source
     dest = destmap[rev]
@@ -981,6 +998,12 @@ def adjustdest(repo, rev, destmap, state):
             candidate = repo.revs('max(%ld and (::%d))', source, prev).first()
             if candidate is not None:
                 adjusted = state[candidate]
+        if adjusted == dest and dest in state:
+            adjusted = state[dest]
+            if adjusted == revtodo:
+                # sortsource should produce an order that makes this impossible
+                raise error.ProgrammingError(
+                    'rev %d should be rebased already at this time' % dest)
         result.append(adjusted)
     return result
 
@@ -1127,6 +1150,12 @@ def defineparents(repo, rev, destmap, state):
             raise error.Abort(_('cannot rebase %d:%s without '
                                 'moving at least one of its parents')
                               % (rev, repo[rev]))
+
+    # Source should not be ancestor of dest. The check here guarantees it's
+    # impossible. With multi-dest, the initial check does not cover complex
+    # cases since we don't have abstractions to dry-run rebase cheaply.
+    if any(p != nullrev and isancestor(rev, p) for p in newps):
+        raise error.Abort(_('source is ancestor of destination'))
 
     # "rebasenode" updates to new p1, use the corresponding merge base.
     if bases[0] != nullrev:
@@ -1354,6 +1383,31 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
         repo.ui.warn(_('rebase aborted\n'))
     return 0
 
+def sortsource(destmap):
+    """yield source revisions in an order that we only rebase things once
+
+    If source and destination overlaps, we should filter out revisions
+    depending on other revisions which hasn't been rebased yet.
+
+    Yield a sorted list of revisions each time.
+
+    For example, when rebasing A to B, B to C. This function yields [B], then
+    [A], indicating B needs to be rebased first.
+
+    Raise if there is a cycle so the rebase is impossible.
+    """
+    srcset = set(destmap)
+    while srcset:
+        srclist = sorted(srcset)
+        result = []
+        for r in srclist:
+            if destmap[r] not in srcset:
+                result.append(r)
+        if not result:
+            raise error.Abort(_('source and destination form a cycle'))
+        srcset -= set(result)
+        yield result
+
 def buildstate(repo, destmap, collapse, obsoletenotrebased):
     '''Define which revisions are going to be rebased and where
 
@@ -1372,12 +1426,21 @@ def buildstate(repo, destmap, collapse, obsoletenotrebased):
         if set(destmap.values()) & mqapplied:
             raise error.Abort(_('cannot rebase onto an applied mq patch'))
 
-    roots = list(repo.set('roots(%ld)', rebaseset))
+    # Get "cycle" error early by exhausting the generator.
+    sortedsrc = list(sortsource(destmap)) # a list of sorted revs
+    if not sortedsrc:
+        raise error.Abort(_('no matching revisions'))
+
+    # Only check the first batch of revisions to rebase not depending on other
+    # rebaseset. This means "source is ancestor of destination" for the second
+    # (and following) batches of revisions are not checked here. We rely on
+    # "defineparents" to do that check.
+    roots = list(repo.set('roots(%ld)', sortedsrc[0]))
     if not roots:
         raise error.Abort(_('no matching revisions'))
     roots.sort()
     state = dict.fromkeys(rebaseset, revtodo)
-    emptyrebase = True
+    emptyrebase = (len(sortedsrc) == 1)
     for root in roots:
         dest = repo[destmap[root.rev()]]
         commonbase = root.ancestor(dest)

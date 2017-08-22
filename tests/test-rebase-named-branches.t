@@ -245,7 +245,7 @@ Rebasing descendant onto ancestor across different named branches
   @  0: 'A'
   
   $ hg rebase -s 5 -d 6
-  abort: source is ancestor of destination
+  abort: source and destination form a cycle
   [255]
 
   $ hg rebase -s 6 -d 5

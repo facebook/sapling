@@ -204,7 +204,7 @@ Destination is an ancestor of source:
   > |
   > Z
   > EOS
-  abort: source is ancestor of destination
+  abort: source and destination form a cycle
   [255]
 
 Switch roots:
@@ -291,22 +291,163 @@ Move to a previous parent:
   |/
   o  0: A
   
-Source overlaps with destination (not handled well currently):
+Source overlaps with destination:
 
   $ rebasewithdag -s 'B+C+D' -d 'map(SRC, "B:C,C:D")' <<'EOS'
   > B C D
   >  \|/
   >   A
   > EOS
-  rebasing 1:112478962961 "B" (B)
   rebasing 2:dc0947a82db8 "C" (C)
-  o  5: C
+  rebasing 1:112478962961 "B" (B)
+  o  5: B
+  |
+  o  4: C
   |
   o  3: D
   |
-  | o  4: B orphan
+  o  0: A
+  
+Detect cycles early:
+
+  $ rebasewithdag -r 'all()-Z' -d 'map(SRC, "A:B,B:C,C:D,D:B")' <<'EOS'
+  > A B C
+  >  \|/
+  >   | D
+  >   |/
+  >   Z
+  > EOS
+  abort: source and destination form a cycle
+  [255]
+
+Detect source is ancestor of dest in runtime:
+
+  $ rebasewithdag -r 'C+B' -d 'map(SRC, "C:B,B:D")' -q <<'EOS'
+  >   D
+  >   |
+  > B C
+  >  \|
+  >   A
+  > EOS
+  abort: source is ancestor of destination
+  [255]
+
+"Already rebased" fast path still works:
+
+  $ rebasewithdag -r 'all()' -d 'SRC^' <<'EOS'
+  >   E F
+  >  /| |
+  > B C D
+  >  \|/
+  >   A
+  > EOS
+  already rebased 1:112478962961 "B" (B)
+  already rebased 2:dc0947a82db8 "C" (C)
+  already rebased 3:b18e25de2cf5 "D" (D)
+  already rebased 4:312782b8f06e "E" (E)
+  already rebased 5:ad6717a6a58e "F" (F tip)
+  o  5: F
+  |
+  o  3: D
+  |
+  | o    4: E
+  | |\
+  +---o  2: C
   | |
-  | x  2: C
+  | o  1: B
   |/
+  o  0: A
+  
+Massively rewrite the DAG:
+
+  $ rebasewithdag -r 'all()' -d 'map(SRC, "A:I,I:null,H:A,B:J,J:C,C:H,D:E,F:G,G:K,K:D,E:B")' <<'EOS'
+  > D G K
+  > | | |
+  > C F J
+  > | | |
+  > B E I
+  >  \| |
+  >   A H
+  > EOS
+  rebasing 4:701514e1408d "I" (I)
+  rebasing 0:426bada5c675 "A" (A)
+  rebasing 1:e7050b6e5048 "H" (H)
+  rebasing 5:26805aba1e60 "C" (C)
+  rebasing 7:cf89f86b485b "J" (J)
+  rebasing 2:112478962961 "B" (B)
+  rebasing 3:7fb047a69f22 "E" (E)
+  rebasing 8:f585351a92f8 "D" (D)
+  rebasing 10:ae41898d7875 "K" (K tip)
+  rebasing 9:711f53bbef0b "G" (G)
+  rebasing 6:64a8289d2492 "F" (F)
+  o  21: F
+  |
+  o  20: G
+  |
+  o  19: K
+  |
+  o  18: D
+  |
+  o  17: E
+  |
+  o  16: B
+  |
+  o  15: J
+  |
+  o  14: C
+  |
+  o  13: H
+  |
+  o  12: A
+  |
+  o  11: I
+  
+Resolve instability:
+
+  $ rebasewithdag <<'EOF' -r 'orphan()-obsolete()' -d 'max((successors(max(roots(ALLSRC) & ::SRC)^)-obsolete())::)'
+  >      F2
+  >      |
+  >    J E E2
+  >    | |/
+  > I2 I | E3
+  >   \| |/
+  >    H | G
+  >    | | |
+  >   B2 D F
+  >    | |/         # rebase: B -> B2
+  >    N C          # amend: E -> E2
+  >    | |          # amend: E2 -> E3
+  >    M B          # rebase: F -> F2
+  >     \|          # amend: I -> I2
+  >      A
+  > EOF
+  rebasing 16:5c432343bf59 "J" (J tip)
+  rebasing 3:26805aba1e60 "C" (C)
+  rebasing 6:f585351a92f8 "D" (D)
+  rebasing 10:ffebc37c5d0b "E3" (E3)
+  rebasing 13:fb184bcfeee8 "F2" (F2)
+  rebasing 11:dc838ab4c0da "G" (G)
+  o  22: G
+  |
+  o  21: F2
+  |
+  o  20: E3
+  |
+  o  19: D
+  |
+  o  18: C
+  |
+  o  17: J
+  |
+  o  15: I2
+  |
+  o  12: H
+  |
+  o  5: B2
+  |
+  o  4: N
+  |
+  o  2: M
+  |
   o  0: A
   

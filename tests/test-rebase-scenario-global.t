@@ -264,7 +264,7 @@ G onto F - rebase onto an ancestor:
 F onto G - rebase onto a descendant:
 
   $ hg rebase -s 5 -d 6
-  abort: source is ancestor of destination
+  abort: source and destination form a cycle
   [255]
 
 G onto B - merge revision with both parents not in ancestors of target:
