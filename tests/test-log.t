@@ -2027,7 +2027,8 @@ Check that adding an arbitrary name shows up in log automatically
 
   $ cat > ../names.py <<EOF
   > """A small extension to test adding arbitrary names to a repo"""
-  > from mercurial.namespaces import namespace
+  > from __future__ import absolute_import
+  > from mercurial import namespaces
   > 
   > def reposetup(ui, repo):
   >     foo = {'foo': repo[0].node()}
@@ -2035,9 +2036,10 @@ Check that adding an arbitrary name shows up in log automatically
   >     namemap = lambda r, name: foo.get(name)
   >     nodemap = lambda r, node: [name for name, n in foo.iteritems()
   >                                if n == node]
-  >     ns = namespace("bars", templatename="bar", logname="barlog",
-  >                    colorname="barcolor", listnames=names, namemap=namemap,
-  >                    nodemap=nodemap)
+  >     ns = namespaces.namespace(
+  >         "bars", templatename="bar", logname="barlog",
+  >         colorname="barcolor", listnames=names, namemap=namemap,
+  >         nodemap=nodemap)
   > 
   >     repo.names.addnamespace(ns)
   > EOF
