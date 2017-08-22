@@ -21,6 +21,7 @@ if True: # disable lexical sorting checks
 # Whitelist of modules that symbols can be directly imported from.
 allowsymbolimports = (
     '__future__',
+    'hgclient',
     'mercurial',
     'mercurial.hgweb.common',
     'mercurial.hgweb.request',
