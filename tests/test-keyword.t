@@ -1412,7 +1412,7 @@ suppress expanding keywords at subsequent commands
   $ mv $HGRCPATH.new $HGRCPATH
 
   >>> from __future__ import print_function
-  >>> from hgclient import readchannel, runcommand, check
+  >>> from hgclient import check, readchannel, runcommand
   >>> @check
   ... def check(server):
   ...     # hello block
