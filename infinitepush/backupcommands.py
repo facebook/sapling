@@ -318,13 +318,24 @@ def backedup(repo, subset, x):
     visiblebkpheads = [head for head in bkpstate.heads if head in repo]
     return subset & repo.revs('draft() and ::%ls', visiblebkpheads)
 
+@revsetpredicate('notbackedup')
+def notbackedup(repo, subset, x):
+    """Changesets that have not yet been backed up by infinitepush"""
+    bkpstate = _readlocalbackupstate(repo.ui, repo)
+    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
+    expectedbkpheads = _backupheads(repo.ui, repo)
+    return subset & repo.revs('draft() and only(%ls, %ls)',
+                              expectedbkpheads, visiblebkpheads)
+
 def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
         return
 
     bkpstate = _readlocalbackupstate(ui, repo)
     visiblebkpheads = [head for head in bkpstate.heads if head in repo]
-    unbackeduprevs = repo.revs('draft() and not ::%ls', visiblebkpheads)
+    expectedbkpheads = _backupheads(ui, repo)
+    unbackeduprevs = repo.revs('draft() and only(%ls, %ls)',
+                               expectedbkpheads, visiblebkpheads)
 
     # Count the number of changesets that haven't been backed up for 10 minutes.
     # If there is only one, also print out its hash.
@@ -344,6 +355,20 @@ def smartlogsummary(ui, repo):
         ui.warn(_('Run `hg pushbackup` to perform a backup.  If this fails,\n'
                   'please report to the Source Control @ FB group.\n'))
 
+def _backupheads(ui, repo):
+    """Returns the set of heads that should be backed up in this repo."""
+    maxheadstobackup = ui.configint('infinitepushbackup',
+                                    'maxheadstobackup', -1)
+
+    revset = 'head() & draft() & not obsolete()'
+
+    backupheads = [ctx.hex() for ctx in repo.set(revset)]
+    if maxheadstobackup > 0:
+        backupheads = backupheads[-maxheadstobackup:]
+    elif maxheadstobackup == 0:
+        backupheads = []
+    return set(backupheads)
+
 def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
@@ -358,23 +383,13 @@ def _dobackup(ui, repo, dest, **opts):
         _writebackupgenerationfile(repo.vfs, newbkpgenerationvalue)
     bkpstate = _readlocalbackupstate(ui, repo)
 
-    maxheadstobackup = ui.configint('infinitepushbackup',
-                                    'maxheadstobackup', -1)
-
-    revset = 'head() & draft() & not obsolete()'
-
     # this variable stores the local store info (tip numeric revision and date)
     # which we use to quickly tell if our backup is stale
     afterbackupinfo = _getlocalinfo(repo)
 
     # This variable will store what heads will be saved in backup state file
     # if backup finishes successfully
-    afterbackupheads = [ctx.hex() for ctx in repo.set(revset)]
-    if maxheadstobackup > 0:
-        afterbackupheads = afterbackupheads[-maxheadstobackup:]
-    elif maxheadstobackup == 0:
-        afterbackupheads = []
-    afterbackupheads = set(afterbackupheads)
+    afterbackupheads = _backupheads(ui, repo)
     other = _getremote(repo, ui, dest, **opts)
     outgoing, badhexnodes = _getrevstobackup(repo, ui, other,
                                              afterbackupheads - bkpstate.heads)
