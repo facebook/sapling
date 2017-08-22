@@ -1241,8 +1241,14 @@ Test cache consistency for the visible filter
 bookmarks change
   $ cd ..
   $ cat >$TESTTMP/test_extension.py  << EOF
+  > from __future__ import absolute_import, print_function
   > import weakref
-  > from mercurial import cmdutil, extensions, bookmarks, repoview
+  > from mercurial import (
+  >   bookmarks,
+  >   cmdutil,
+  >   extensions,
+  >   repoview,
+  > )
   > def _bookmarkchanged(orig, bkmstoreinst, *args, **kwargs):
   >  reporef = weakref.ref(bkmstoreinst._repo)
   >  def trhook(tr):
@@ -1250,7 +1256,7 @@ bookmarks change
   >   hidden1 = repoview.computehidden(repo)
   >   hidden = repoview.filterrevs(repo, 'visible')
   >   if sorted(hidden1) != sorted(hidden):
-  >     print "cache inconsistency"
+  >     print("cache inconsistency")
   >  bkmstoreinst._repo.currenttransaction().addpostclose('test_extension', trhook)
   >  orig(bkmstoreinst, *args, **kwargs)
   > def extsetup(ui):
