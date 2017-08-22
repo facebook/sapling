@@ -127,11 +127,11 @@ if pygmentspresent:
                 (r'^ERROR: ', token.Generic.Failed, 'failed'),
             ],
             'skipped': [
-                (r'[\w-]+\.t', token.Generic.SName),
+                (r'[\w-]+\.(t|py)', token.Generic.SName),
                 (r':.*', token.Generic.Skipped),
             ],
             'failed': [
-                (r'[\w-]+\.t', token.Generic.FName),
+                (r'[\w-]+\.(t|py)', token.Generic.FName),
                 (r'(:| ).*', token.Generic.Failed),
             ]
         }
