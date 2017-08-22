@@ -109,7 +109,6 @@ if pygmentspresent:
         default_style = ""
         skipped = token.string_to_tokentype("Token.Generic.Skipped")
         failed = token.string_to_tokentype("Token.Generic.Failed")
-        error = token.string_to_tokentype("Token.Generic.Error")
         skippedname = token.string_to_tokentype("Token.Generic.SName")
         failedname = token.string_to_tokentype("Token.Generic.FName")
         styles = {
