@@ -132,25 +132,27 @@ Test cache warming command
 Test internal debugstacktrace command
 
   $ cat > debugstacktrace.py << EOF
-  > from mercurial.util import debugstacktrace, dst, sys
+  > from __future__ import absolute_import
+  > import sys
+  > from mercurial import util
   > def f():
-  >     debugstacktrace(f=sys.stdout)
+  >     util.debugstacktrace(f=sys.stdout)
   >     g()
   > def g():
-  >     dst('hello from g\\n', skip=1)
+  >     util.dst('hello from g\\n', skip=1)
   >     h()
   > def h():
-  >     dst('hi ...\\nfrom h hidden in g', 1, depth=2)
+  >     util.dst('hi ...\\nfrom h hidden in g', 1, depth=2)
   > f()
   > EOF
   $ $PYTHON debugstacktrace.py
   stacktrace at:
-   debugstacktrace.py:10 in * (glob)
-   debugstacktrace.py:3  in f
+   debugstacktrace.py:12 in * (glob)
+   debugstacktrace.py:5  in f
   hello from g at:
-   debugstacktrace.py:10 in * (glob)
-   debugstacktrace.py:4  in f
+   debugstacktrace.py:12 in * (glob)
+   debugstacktrace.py:6  in f
   hi ...
   from h hidden in g at:
-   debugstacktrace.py:4 in f
-   debugstacktrace.py:7 in g
+   debugstacktrace.py:6 in f
+   debugstacktrace.py:9 in g
