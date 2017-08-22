@@ -961,7 +961,8 @@ Use delayedstrip to strip inside a transaction
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
-  > from mercurial import repair, commands
+  > from __future__ import absolute_import
+  > from mercurial import commands, repair
   > def reposetup(ui, repo):
   >     def getnodes(expr):
   >         return [repo.changelog.node(r) for r in repo.revs(expr)]
