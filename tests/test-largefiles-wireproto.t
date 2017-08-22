@@ -226,7 +226,8 @@ Clone over http, no largefiles pulled on clone.
   added 1 changesets with 1 changes to 1 files
 
 Archive contains largefiles
-  >>> import urllib2, os
+  >>> import os
+  >>> import urllib2
   >>> u = 'http://localhost:%s/archive/default.zip' % os.environ['HGPORT2']
   >>> with open('archive.zip', 'w') as f:
   ...     f.write(urllib2.urlopen(u).read())
