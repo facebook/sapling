@@ -1,6 +1,7 @@
   $ cat > $TESTTMP/filter.py <<EOF
-  > from __future__ import print_function
-  > import sys, re
+  > from __future__ import absolute_import, print_function
+  > import re
+  > import sys
   > print(re.sub("\n[ \t]", " ", sys.stdin.read()), end="")
   > EOF
 
