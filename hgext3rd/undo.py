@@ -462,6 +462,39 @@ def _localbranch(repo, subset, x):
         querystring = revsetlang.formatspec('((::%ld) & draft())::', revs)
     return subset & smartset.baseset(repo.revs(querystring))
 
+def _getoldworkingcopyparent(repo, reverseindex):
+    # convert reverseindex to node
+    # this makes cacheing guaranteed correct
+    # bc immutable history
+    nodedict = _readindex(repo, reverseindex)
+    return _cachedgetoldworkingcopyparent(repo, nodedict["workingparent"])
+
+def _cachedgetoldworkingcopyparent(repo, wkpnode):
+    if not util.safehasattr(repo, '_undooldworkingparentcache'):
+        repo._undooldworkingparentcache = {}
+    cache = repo._undooldworkingparentcache
+    key = wkpnode
+    if key not in cache:
+        oldworkingparent = _readnode(repo, "workingparent.i", wkpnode)
+        oldworkingparent = filter(None, oldworkingparent.split("\n"))
+        oldwkprevstring = revsetlang.formatspec('%ls', oldworkingparent)
+        urepo = repo.unfiltered()
+        cache[key] = smartset.baseset(urepo.revs(oldwkprevstring))
+    return cache[key]
+
+@revsetpredicate('oldworkingcopyparent')
+def _oldworkingcopyparent(repo, subset, x):
+    """``oldworkingcopyparent([index])``
+    previous working copy parent
+
+    'index' is how many undoable commands you want to look back.  See 'hg undo'.
+    """
+    args = revset.getargsdict(x, 'oldoworkingcopyrevset', 'reverseindex')
+    reverseindex = revsetlang.getinteger(args.get('reverseindex'),
+                    _('index must be a positive interger'), 1)
+    revs = _getoldworkingcopyparent(repo, reverseindex)
+    return subset & smartset.baseset(revs)
+
 # Templates
 templatefunc = registrar.templatefunc()
 
@@ -557,6 +590,24 @@ def removedbookmarks(context, mapping, args):
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
     f = templatekw._showlist('bookmark', bookmarks, mapping)
     return templatekw._hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
+
+@templatefunc('oldworkingcopyparent(reverseindex)')
+def oldworkingparenttemplate(context, mapping, args):
+    """String. Workingcopyparent reverseindex repo states ago."""
+    reverseindex = templater.evalinteger(context, mapping, args[0],
+                                _('undonecommits needs an integer argument'))
+    repo = mapping['ctx']._repo
+    ctx = mapping['ctx']
+    repo = repo.unfiltered()
+    revstring = revsetlang.formatspec('oldworkingcopyparent(%d)', reverseindex)
+    revs = repo.revs(revstring)
+    tonode = repo.changelog.node
+    nodes = [tonode(x) for x in revs]
+    if ctx.node() in nodes:
+        result = ctx.hex()
+    else:
+        result = None
+    return result
 
 # Undo:
 
@@ -657,6 +708,9 @@ def undo(ui, repo, *args, **opts):
                 ui = self.ui
                 ui.pushbuffer()
                 _preview(ui, self.repo, self.index)
+                text = ui.config('undo', 'interactivehelptext',
+                                 "legend: red - to hide; green - to revive\n")
+                repo.ui.status(text)
                 repo.ui.status(_("<-: next  "
                                  "->: previous  "
                                  "q: abort  "
@@ -1075,8 +1129,41 @@ def _preview(ui, repo, reverseindex):
     opts = {}
     opts["template"] = "{undopreview}"
     repo = repo.unfiltered()
-    revstring = revsetlang.formatspec("olddraft(%d) + olddraft(0)",
-                                      reverseindex)
+
+    try:
+        nodedict = _readindex(repo, reverseindex)
+        curdict = _readindex(repo, reverseindex)
+    except IndexError:
+        return
+
+    bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
+    oldmarks = bookstring.split("\n")
+    oldpairs = set()
+    for mark in oldmarks:
+        kv = mark.rsplit(" ", 1)
+        if len(kv) == 2:
+            oldpairs.update(kv)
+    bookstring = _readnode(repo, "bookmarks.i", curdict["bookmarks"])
+    curmarks = bookstring.split("\n")
+    curpairs = set()
+    for mark in curmarks:
+        kv = mark.rsplit(" ", 1)
+        if len(kv) == 2:
+            curpairs.update(kv)
+
+    diffpairs = oldpairs.symmetric_difference(curpairs)
+    # extract hashes from diffpairs
+
+    bookdiffs = []
+    for kv in diffpairs:
+        bookdiffs += kv[0]
+
+    revstring = revsetlang.formatspec(
+        "draft() & ::((olddraft(0) - olddraft(%s)) + "
+        "(olddraft(%s) - olddraft(0)) + %ls + '.' + "
+        "oldworkingcopyparent(%s))",
+        reverseindex, reverseindex, bookdiffs, reverseindex)
+
     opts['rev'] = [revstring]
     try:
         with ui.configoverride(overrides):

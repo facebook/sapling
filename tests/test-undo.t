@@ -719,18 +719,10 @@ hg undo --preview test
   |
   o
   |
-  | o
-  |/
   o
   |
   o
   |
-  o
-  |
-  ~
-  o
-  |
-  ~
   o
   |
   ~
@@ -740,18 +732,10 @@ hg undo --preview test
   |
   o  Undone
   |
-  | o
-  |/
   o
   |
   o
   |
-  o
-  |
-  ~
-  o
-  |
-  ~
   o
   |
   ~
