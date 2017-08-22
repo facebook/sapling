@@ -205,9 +205,9 @@ Encoding of reserved / long paths in the store
 Aborting lock does not prevent fncache writes
 
   $ cat > exceptionext.py <<EOF
+  > from __future__ import absolute_import
   > import os
-  > from mercurial import commands, error
-  > from mercurial.extensions import wrapcommand, wrapfunction
+  > from mercurial import commands, error, extensions
   > 
   > def lockexception(orig, vfs, lockname, wait, releasefn, *args, **kwargs):
   >     def releasewrap():
@@ -217,7 +217,7 @@ Aborting lock does not prevent fncache writes
   >     return l
   > 
   > def reposetup(ui, repo):
-  >     wrapfunction(repo, '_lock', lockexception)
+  >     extensions.wrapfunction(repo, '_lock', lockexception)
   > 
   > cmdtable = {}
   > 
@@ -236,7 +236,7 @@ Aborting lock does not prevent fncache writes
   >             wlock.release()
   > 
   > def extsetup(ui):
-  >     wrapcommand(commands.table, "commit", commitwrap)
+  >     extensions.wrapcommand(commands.table, "commit", commitwrap)
   > EOF
   $ extpath=`pwd`/exceptionext.py
   $ hg init fncachetxn
@@ -252,9 +252,9 @@ Aborting lock does not prevent fncache writes
 Aborting transaction prevents fncache change
 
   $ cat > ../exceptionext.py <<EOF
+  > from __future__ import absolute_import
   > import os
-  > from mercurial import commands, error, localrepo
-  > from mercurial.extensions import wrapfunction
+  > from mercurial import commands, error, extensions, localrepo
   > 
   > def wrapper(orig, self, *args, **kwargs):
   >     tr = orig(self, *args, **kwargs)
@@ -265,7 +265,8 @@ Aborting transaction prevents fncache change
   >     return tr
   > 
   > def uisetup(ui):
-  >     wrapfunction(localrepo.localrepository, 'transaction', wrapper)
+  >     extensions.wrapfunction(
+  >         localrepo.localrepository, 'transaction', wrapper)
   > 
   > cmdtable = {}
   > 
@@ -287,9 +288,15 @@ Clean cached version
 Aborted transactions can be recovered later
 
   $ cat > ../exceptionext.py <<EOF
+  > from __future__ import absolute_import
   > import os
-  > from mercurial import commands, error, transaction, localrepo
-  > from mercurial.extensions import wrapfunction
+  > from mercurial import (
+  >   commands,
+  >   error,
+  >   extensions,
+  >   localrepo,
+  >   transaction,
+  > )
   > 
   > def trwrapper(orig, self, *args, **kwargs):
   >     tr = orig(self, *args, **kwargs)
@@ -303,8 +310,10 @@ Aborted transactions can be recovered later
   >     raise error.Abort("forced transaction failure")
   > 
   > def uisetup(ui):
-  >     wrapfunction(localrepo.localrepository, 'transaction', trwrapper)
-  >     wrapfunction(transaction.transaction, '_abort', abortwrapper)
+  >     extensions.wrapfunction(localrepo.localrepository, 'transaction',
+  >                             trwrapper)
+  >     extensions.wrapfunction(transaction.transaction, '_abort',
+  >                             abortwrapper)
   > 
   > cmdtable = {}
   > 
