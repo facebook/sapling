@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 #
 # check-translation.py - check Mercurial specific translation problems
+from __future__ import absolute_import
+
+import re
 
 import polib
-import re
 
 scanners = []
 checkers = []
