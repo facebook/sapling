@@ -23,6 +23,7 @@ extern crate futures;
 extern crate linked_hash_map;
 extern crate heapsize;
 
+use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 use std::usize;
@@ -51,6 +52,20 @@ where
     inner: Arc<AsyncmemoInner<F>>,
 }
 
+impl<F> Debug for Asyncmemo<F>
+where
+    F: Filler,
+    F::Key: Eq + Hash + Debug,
+    <<F as Filler>::Value as IntoFuture>::Future: Debug,
+    <<F as Filler>::Value as IntoFuture>::Item: Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("Asyncmemo")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
 /// Generate a result for the cache.
 ///
 /// The function implemented by `fill()` should be referentially transparent - the output
@@ -77,6 +92,21 @@ where
 {
     hash: Mutex<CacheHash<F>>,
     filler: F,
+}
+
+impl<F> Debug for AsyncmemoInner<F>
+where
+    F: Filler,
+    F::Key: Eq + Hash + Debug,
+    <<F as Filler>::Value as IntoFuture>::Future: Debug,
+    <<F as Filler>::Value as IntoFuture>::Item: Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let hash = self.hash.lock().expect("poisoned lock");
+        fmt.debug_struct("AsyncmemoInner")
+            .field("hash", &*hash)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -109,6 +139,21 @@ where
 {
     cache: Arc<AsyncmemoInner<F>>,
     key: F::Key,
+}
+
+impl<F> Debug for MemoFuture<F>
+where
+    F: Filler,
+    F::Key: Eq + Hash + Debug,
+    <<F as Filler>::Value as IntoFuture>::Future: Debug,
+    <<F as Filler>::Value as IntoFuture>::Item: Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("MemoFuture")
+            .field("cache", &self.cache)
+            .field("key", &self.key)
+            .finish()
+    }
 }
 
 impl<F> MemoFuture<F>
