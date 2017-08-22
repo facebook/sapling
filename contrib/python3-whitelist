@@ -4,6 +4,7 @@ test-branch-tag-confict.t
 test-casecollision.t
 test-check-commit.t
 test-check-execute.t
+test-check-module-imports.t
 test-check-pyflakes.t
 test-check-pylint.t
 test-check-shbang.t
