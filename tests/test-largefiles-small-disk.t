@@ -1,7 +1,10 @@
 Test how largefiles abort in case the disk runs full
 
   $ cat > criple.py <<EOF
-  > import os, errno, shutil
+  > from __future__ import absolute_import
+  > import errno
+  > import os
+  > import shutil
   > from mercurial import util
   > #
   > # this makes the original largefiles code abort:
