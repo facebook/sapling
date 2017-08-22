@@ -351,11 +351,9 @@ def exbookmarks(orig, ui, repo, *names, **opts):
         destpath = path.pushloc or path.loc
         other = hg.peer(repo, opts, destpath)
         if not names:
-            defaultscratchpatterns = ui.configlist(
-                'infinitepush', 'defaultremotepatterns', ['*'])
-            fetchedbookmarks = other.listkeyspatterns(
-                'bookmarks', patterns=defaultscratchpatterns)
-            fetchedbookmarks.update(other.listkeys('bookmarks'))
+            raise error.Abort(
+                '--list-remote requires a bookmark pattern',
+                hint='use "hg book" to get a list of your local bookmarks')
         else:
             fetchedbookmarks = other.listkeyspatterns('bookmarks',
                                                       patterns=names)

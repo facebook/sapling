@@ -371,12 +371,13 @@ Use --force because this push creates new head
      scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
      scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
   $ hg book --list-remote
-     newbook                   0000000000000000000000000000000000000000
-     scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
-     scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
+  abort: --list-remote requires a bookmark pattern
+  (use "hg book" to get a list of your local bookmarks)
+  [255]
   $ hg book --config infinitepush.defaultremotepatterns=scratch/another* --list-remote
-     newbook                   0000000000000000000000000000000000000000
-     scratch/anotherbranch     1de1d7d92f8965260391d0513fe8a8d5973d3042
+  abort: --list-remote requires a bookmark pattern
+  (use "hg book" to get a list of your local bookmarks)
+  [255]
   $ hg book --list-remote scratch/my
   $ hg book --list-remote scratch/my*
      scratch/mybranch          8872775dd97a750e1533dc1fbbca665644b32547
