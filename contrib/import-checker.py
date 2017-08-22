@@ -616,22 +616,26 @@ def _cycle_sortkey(c):
 def embedded(f, modname, src):
     """Extract embedded python code
 
+    >>> def _forcestr(thing):
+    ...     if not isinstance(thing, str):
+    ...         return thing.decode('ascii')
+    ...     return thing
     >>> def test(fn, lines):
-    ...     for s, m, f, l in embedded(fn, "example", lines):
-    ...         print("%s %s %s" % (m, f, l))
-    ...         print(repr(s))
+    ...     for s, m, f, l in embedded(fn, b"example", lines):
+    ...         print("%s %s %d" % (_forcestr(m), _forcestr(f), l))
+    ...         print(repr(_forcestr(s)))
     >>> lines = [
-    ...   'comment',
-    ...   '  >>> from __future__ import print_function',
-    ...   "  >>> ' multiline",
-    ...   "  ... string'",
-    ...   '  ',
-    ...   'comment',
-    ...   '  $ cat > foo.py <<EOF',
-    ...   '  > from __future__ import print_function',
-    ...   '  > EOF',
+    ...   b'comment',
+    ...   b'  >>> from __future__ import print_function',
+    ...   b"  >>> ' multiline",
+    ...   b"  ... string'",
+    ...   b'  ',
+    ...   b'comment',
+    ...   b'  $ cat > foo.py <<EOF',
+    ...   b'  > from __future__ import print_function',
+    ...   b'  > EOF',
     ... ]
-    >>> test("example.t", lines)
+    >>> test(b"example.t", lines)
     example[2] doctest.py 2
     "from __future__ import print_function\\n' multiline\\nstring'\\n"
     example[7] foo.py 7
@@ -653,16 +657,16 @@ def embedded(f, modname, src):
             if not inlinepython:
                 # We've just entered a Python block.
                 inlinepython = n
-                t = 'doctest.py'
+                t = b'doctest.py'
             script.append(l[prefix:])
             continue
         if l.startswith(b'  ... '): # python inlines
             script.append(l[prefix:])
             continue
-        cat = re.search(r"\$ \s*cat\s*>\s*(\S+\.py)\s*<<\s*EOF", l)
+        cat = re.search(br"\$ \s*cat\s*>\s*(\S+\.py)\s*<<\s*EOF", l)
         if cat:
             if inlinepython:
-                yield ''.join(script), ("%s[%d]" %
+                yield b''.join(script), (b"%s[%d]" %
                        (modname, inlinepython)), t, inlinepython
                 script = []
                 inlinepython = 0
@@ -671,7 +675,7 @@ def embedded(f, modname, src):
             continue
         if shpython and l.startswith(b'  > '): # sh continuation
             if l == b'  > EOF\n':
-                yield ''.join(script), ("%s[%d]" %
+                yield b''.join(script), (b"%s[%d]" %
                        (modname, shpython)), t, shpython
                 script = []
                 shpython = 0
@@ -679,7 +683,7 @@ def embedded(f, modname, src):
                 script.append(l[4:])
             continue
         if inlinepython and l == b'  \n':
-            yield ''.join(script), ("%s[%d]" %
+            yield b''.join(script), (b"%s[%d]" %
                    (modname, inlinepython)), t, inlinepython
             script = []
             inlinepython = 0
@@ -697,11 +701,11 @@ def sources(f, modname):
     """
     py = False
     if not f.endswith('.t'):
-        with open(f) as src:
+        with open(f, 'rb') as src:
             yield src.read(), modname, f, 0
             py = True
     if py or f.endswith('.t'):
-        with open(f) as src:
+        with open(f, 'rb') as src:
             for script, modname, t, line in embedded(f, modname, src):
                 yield script, modname, t, line
 
