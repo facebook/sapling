@@ -220,6 +220,7 @@ def list_stdlib_modules():
     # consider them stdlib.
     for m in ['msvcrt', '_winreg']:
         yield m
+    yield '__builtin__'
     yield 'builtins' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
