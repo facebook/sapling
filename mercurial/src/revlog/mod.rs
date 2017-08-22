@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use std::io;
 use std::path::Path;
 use std::result;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use errors::*;
 use memmap::{self, Mmap};
@@ -75,7 +75,7 @@ where
 /// entries at random, and extracting the data for each entry.
 #[derive(Debug, Clone)]
 pub struct Revlog {
-    inner: Arc<Mutex<RevlogInner>>,
+    inner: Arc<RevlogInner>,
 }
 
 #[derive(Debug)]
@@ -111,18 +111,33 @@ impl Revlog {
         }
 
         let mut idxoff = BTreeMap::new();
-        idxoff.insert(RevIdx::zero(), 0); // prime cache - idx 0 = offset 0
+        let mut nodeidx = HashMap::new();
 
-        let inner = RevlogInner {
+        let mut inner = RevlogInner {
             header: hdr,
             idx: idx,
             data: data,
-            idxoff: idxoff,
+            idxoff: BTreeMap::new(),
             nodeidx: HashMap::new(),
         };
 
+        let mut off = 0;
+        let mut i = RevIdx::zero();
+        loop {
+            let ent = inner.parse_entry(off);
+            if let Ok(entry) = ent {
+                idxoff.insert(i, off);
+                nodeidx.insert(entry.nodeid, i);
+                i = i.succ();
+                off += inner.entry_size(Some(&entry));
+            } else {
+                break;
+            }
+        }
+        inner.idxoff = idxoff;
+        inner.nodeidx = nodeidx;
         Ok(Revlog {
-            inner: Arc::new(Mutex::new(inner)),
+            inner: Arc::new(inner),
         })
     }
 
@@ -155,26 +170,22 @@ impl Revlog {
         IP: AsRef<Path> + Debug,
         DP: AsRef<Path> + Debug,
     {
-        let revlog = Self::from_idx(&idxpath)
+        let mut revlog = Self::from_idx(&idxpath)
             .chain_err(|| format!("Can't open index {:?}", idxpath))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
-        {
-            let mut inner = revlog.inner.lock().expect("lock poisoned");
-
-            if !inner.have_data() {
-                let datafile = match datapath {
-                    None => {
-                        let path = idxpath.with_extension("d");
-                        Datafile::map(&path)
-                            .chain_err(|| format!("Can't open data file {:?}", path))?
-                    }
-                    Some(path) => Datafile::map(&path)
-                        .chain_err(|| format!("Can't open data file {:?}", path))?,
-                };
-                inner.data = Some(datafile);
-            }
+        if !revlog.inner.have_data() {
+            let datafile = match datapath {
+                None => {
+                    let path = idxpath.with_extension("d");
+                    Datafile::map(&path)
+                        .chain_err(|| format!("Can't open data file {:?}", path))?
+                }
+                Some(path) => Datafile::map(&path)
+                    .chain_err(|| format!("Can't open data file {:?}", path))?,
+            };
+            Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);
         }
 
         Ok(revlog)
@@ -183,37 +194,27 @@ impl Revlog {
     /// Return `true` if the `Revlog` has the data it requires - ie, the data is either inlined,
     /// or a data file has been provided.
     pub fn have_data(&self) -> bool {
-        let inner = self.inner.lock().expect("lock poisoned");
-
-        inner.have_data()
+        self.inner.have_data()
     }
 
     /// Get the `Revlog`s header.
     pub fn get_header(&self) -> Header {
-        let inner = self.inner.lock().expect("lock poisoned");
-
-        inner.header
+        self.inner.header
     }
 
     /// Return an `Entry` entry from the `RevIdx`.
     pub fn get_entry(&self, idx: RevIdx) -> Result<Entry> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_entry(idx)
+        self.inner.get_entry(idx)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
     pub fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_idx_by_nodeid(nodeid)
+        self.inner.get_idx_by_nodeid(nodeid)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
     pub fn get_entry_by_nodeid(&self, nodeid: &NodeHash) -> Result<Entry> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_entry_by_nodeid(nodeid)
+        self.inner.get_entry_by_nodeid(nodeid)
     }
 
     /// Return a `Chunk` for a revision at `RevIdx`.
@@ -223,34 +224,24 @@ impl Revlog {
     /// mechanism of applying the deltas depends on whether the `RevLog` has the `GENERAL_DELTA`
     /// flag set or not.
     pub fn get_chunk(&self, idx: RevIdx) -> Result<Chunk> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_chunk(idx)
+        self.inner.get_chunk(idx)
     }
 
     pub fn get_rev(&self, tgtidx: RevIdx) -> Result<BlobNode> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_rev(tgtidx)
+        self.inner.get_rev(tgtidx)
     }
 
     pub fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_rev_by_nodeid(id)
+        self.inner.get_rev_by_nodeid(id)
     }
 
     pub fn get_node_by_nodeid(&self, id: &NodeHash, with_data: bool) -> Result<BlobNode> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_node_by_nodeid(id, with_data)
+        self.inner.get_node_by_nodeid(id, with_data)
     }
 
     /// Return the set of head revisions in a revlog
     pub fn get_heads(&self) -> Result<HashSet<NodeHash>> {
-        let mut inner = self.inner.lock().expect("lock poisoned");
-
-        inner.get_heads()
+        self.inner.get_heads()
     }
 }
 
@@ -311,73 +302,32 @@ impl RevlogInner {
     }
 
     /// Return an `Entry` entry from the `RevIdx`.
-    fn get_entry(&mut self, idx: RevIdx) -> Result<Entry> {
+    fn get_entry(&self, idx: RevIdx) -> Result<Entry> {
         let mut entry = if let Some(off) = self.offset_for_idx(idx) {
             // cache hit or computed
             self.parse_entry(off)?
         } else {
-            // cache miss - find last cached offset and go from there
-            let (last, mut off) = {
-                let (last, off) = self.idxoff.iter().rev().next().expect("cache not primed?");
-                (*last, *off)
-            };
-            assert!(
-                last < idx,
-                "last cached entry is after idx, but idx not in cache"
-            );
-
-            for curidx in last.range_to(idx.succ()) {
-                let ent = self.parse_entry(off)?;
-
-                self.idxoff.insert(curidx, off);
-                off += self.entry_size(Some(&ent));
-            }
-
-            self.parse_entry(self.offset_for_idx(idx).expect("missing from cache?"))?
+            return Err(ErrorKind::Revlog(format!("rev {:?} not found", idx)).into());
         };
 
         // Some index entries refer to themselves as their base when they're literal data
         if entry.baserev.map(Into::into) == Some(idx) {
             entry.baserev = None;
         }
-
-        // Update NodeHash cache
-        self.nodeidx.insert(entry.nodeid, idx);
-
         Ok(entry)
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    fn get_idx_by_nodeid(&mut self, nodeid: &NodeHash) -> Result<RevIdx> {
-        let idx = self.nodeidx.get(nodeid).cloned();
-
-        match idx {
+    fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
+        match self.nodeidx.get(nodeid).cloned() {
             Some(idx) => Ok(idx),   // cache hit
-
-            None => {
-                // search the hard way
-                let mut posidx = None;
-                let res = self.into_iter().position(|(i, entry)| {
-                    posidx = Some(i);
-                    &entry.nodeid == nodeid
-                });
-
-                match res {
-                    None => Err(
-                        ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into(),
-                    ),
-                    Some(idx) => {
-                        let idx = RevIdx::from(idx);
-                        assert_eq!(posidx, Some(idx));
-                        self.nodeidx.insert(*nodeid, idx);
-                        Ok(idx)
-                    }
-                }
-            }
+            None => Err(
+                ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into(),
+            ),
         }
     }
 
-    fn get_entry_by_nodeid(&mut self, nodeid: &NodeHash) -> Result<Entry> {
+    fn get_entry_by_nodeid(&self, nodeid: &NodeHash) -> Result<Entry> {
         self.get_idx_by_nodeid(nodeid)
             .and_then(|idx| self.get_entry(idx))
     }
@@ -388,7 +338,7 @@ impl RevlogInner {
     /// text of the change, or a series of deltas against a previous version; the exact
     /// mechanism of applying the deltas depends on whether the `RevLog` has the `GENERAL_DELTA`
     /// flag set or not.
-    fn get_chunk(&mut self, idx: RevIdx) -> Result<Chunk> {
+    fn get_chunk(&self, idx: RevIdx) -> Result<Chunk> {
         if !self.have_data() {
             return Err("Can't get chunks without data".into());
         }
@@ -465,7 +415,7 @@ impl RevlogInner {
         self.header.features.contains(parser::GENERAL_DELTA)
     }
 
-    fn construct_simple(&mut self, tgtidx: RevIdx) -> Result<Vec<u8>> {
+    fn construct_simple(&self, tgtidx: RevIdx) -> Result<Vec<u8>> {
         assert!(!self.is_general_delta());
 
         let entry = self.get_entry(tgtidx)?;
@@ -500,7 +450,7 @@ impl RevlogInner {
         Ok(data)
     }
 
-    fn construct_general(&mut self, tgtidx: RevIdx) -> Result<Vec<u8>> {
+    fn construct_general(&self, tgtidx: RevIdx) -> Result<Vec<u8>> {
         assert!(self.is_general_delta());
 
         let mut chunks = Vec::new();
@@ -548,7 +498,7 @@ impl RevlogInner {
         Ok(data)
     }
 
-    fn make_node<T>(&mut self, entry: &Entry, blob: Blob<T>) -> Result<BlobNode<T>>
+    fn make_node<T>(&self, entry: &Entry, blob: Blob<T>) -> Result<BlobNode<T>>
     where
         T: AsRef<[u8]>,
     {
@@ -562,7 +512,7 @@ impl RevlogInner {
         Ok(BlobNode::new(blob, p1.as_ref(), p2.as_ref()))
     }
 
-    fn get_rev(&mut self, tgtidx: RevIdx) -> Result<BlobNode> {
+    fn get_rev(&self, tgtidx: RevIdx) -> Result<BlobNode> {
         if !self.have_data() {
             return Err("Need data to assemble revision".into());
         }
@@ -578,14 +528,14 @@ impl RevlogInner {
         self.make_node(&entry, Blob::from(data))
     }
 
-    fn get_rev_by_nodeid(&mut self, id: &NodeHash) -> Result<BlobNode> {
+    fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
         self.get_idx_by_nodeid(id).and_then(|idx| {
             self.get_rev(idx)
                 .chain_err::<_, Error>(|| format!("can't get rev for id {}", id).into())
         })
     }
 
-    fn get_node_by_nodeid(&mut self, id: &NodeHash, with_data: bool) -> Result<BlobNode> {
+    fn get_node_by_nodeid(&self, id: &NodeHash, with_data: bool) -> Result<BlobNode> {
         if with_data {
             self.get_idx_by_nodeid(id).and_then(|idx| self.get_rev(idx))
         } else {
@@ -597,7 +547,7 @@ impl RevlogInner {
     }
 
     /// Return the set of head revisions in a revlog
-    fn get_heads(&mut self) -> Result<HashSet<NodeHash>> {
+    fn get_heads(&self) -> Result<HashSet<NodeHash>> {
         // Current set of candidate heads
         let mut heads = HashMap::new();
 
@@ -631,9 +581,9 @@ pub enum Chunk {
     Deltas(RevIdx, Vec<Delta>),
 }
 
-struct RevlogInnerIter<'a>(&'a mut RevlogInner, RevIdx);
+struct RevlogInnerIter<'a>(&'a RevlogInner, RevIdx);
 
-impl<'a> IntoIterator for &'a mut RevlogInner {
+impl<'a> IntoIterator for &'a RevlogInner {
     type Item = <Self::IntoIter as Iterator>::Item;
     type IntoIter = RevlogInnerIter<'a>;
 
@@ -654,7 +604,7 @@ impl<'a> Iterator for RevlogInnerIter<'a> {
 }
 
 #[derive(Debug)]
-pub struct RevlogIter(Arc<Mutex<RevlogInner>>, RevIdx);
+pub struct RevlogIter(Arc<RevlogInner>, RevIdx);
 
 impl IntoIterator for Revlog {
     type Item = <Self::IntoIter as Iterator>::Item;
@@ -684,7 +634,7 @@ impl Iterator for RevlogIter {
     type Item = (RevIdx, Entry);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut revlog = self.0.lock().expect("locked poisoned");
+        let revlog = &self.0;
 
         let idx = self.1;
         let ret = revlog.get_entry(idx).ok();
