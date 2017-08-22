@@ -340,9 +340,14 @@ aren't changed), even if none of mode, size and timestamp of them
 isn't changed on the filesystem (see also issue4583).
 
   $ cat > $TESTTMP/abort.py <<EOF
+  > from __future__ import absolute_import
   > # emulate aborting before "recordupdates()". in this case, files
   > # are changed without updating dirstate
-  > from mercurial import extensions, merge, error
+  > from mercurial import (
+  >   error,
+  >   extensions,
+  >   merge,
+  > )
   > def applyupdates(orig, *args, **kwargs):
   >     orig(*args, **kwargs)
   >     raise error.Abort('intentional aborting')
