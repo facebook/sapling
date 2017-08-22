@@ -12,7 +12,10 @@ import sys
 # to work when run from a virtualenv.  The modules were chosen empirically
 # so that the return value matches the return value without virtualenv.
 if True: # disable lexical sorting checks
-    import BaseHTTPServer
+    try:
+        import BaseHTTPServer as basehttpserver
+    except ImportError:
+        basehttpserver = None
     import zlib
 
 # Whitelist of modules that symbols can be directly imported from.
@@ -183,8 +186,9 @@ def populateextmods(localmods):
 def list_stdlib_modules():
     """List the modules present in the stdlib.
 
+    >>> py3 = sys.version_info[0] >= 3
     >>> mods = set(list_stdlib_modules())
-    >>> 'BaseHTTPServer' in mods
+    >>> 'BaseHTTPServer' in mods or py3
     True
 
     os.path isn't really a module, so it's missing:
@@ -201,7 +205,7 @@ def list_stdlib_modules():
     >>> 'collections' in mods
     True
 
-    >>> 'cStringIO' in mods
+    >>> 'cStringIO' in mods or py3
     True
 
     >>> 'cffi' in mods
@@ -223,7 +227,9 @@ def list_stdlib_modules():
     stdlib_prefixes = {sys.prefix, sys.exec_prefix}
     # We need to supplement the list of prefixes for the search to work
     # when run from within a virtualenv.
-    for mod in (BaseHTTPServer, zlib):
+    for mod in (basehttpserver, zlib):
+        if mod is None:
+            continue
         try:
             # Not all module objects have a __file__ attribute.
             filename = mod.__file__
