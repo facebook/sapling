@@ -49,6 +49,7 @@ def readfromstore(self, text):
     oid = p.oid()
     store = self.opener.lfslocalblobstore
     if not store.has(oid):
+        p.filename = getattr(self, 'indexfile', None)
         self.opener.lfsremoteblobstore.readbatch([p], store)
     text = store.read(oid)
 

@@ -127,7 +127,23 @@ class _gitlfsremote(object):
                                  % rawjson)
         return response
 
-    def _extractobjects(self, response, action):
+    def _checkforservererror(self, pointers, responses):
+        """Scans errors from objects
+
+        Returns LfsRemoteError if any objects has an error"""
+        for response in responses:
+            error = response.get('error')
+            if error:
+                ptrmap = {p.oid(): p for p in pointers}
+                p = ptrmap.get(response['oid'], None)
+                if error['code'] == 404 and p:
+                    filename = getattr(p, 'filename', 'unknown')
+                    raise LfsRemoteError(
+                        _(('LFS server error. Remote object '
+                          'for file %s not found: %r')) % (filename, response))
+                raise LfsRemoteError(_('LFS server error: %r') % response)
+
+    def _extractobjects(self, response, pointers, action):
         """extract objects from response of the batch API
 
         response: parsed JSON object returned by batch API
@@ -136,10 +152,8 @@ class _gitlfsremote(object):
         """
         # Scan errors from objects - fail early
         objects = response.get('objects', [])
-        for obj in objects:
-            error = obj.get('error')
-            if error:
-                raise LfsRemoteError(_('LFS server error: %r') % obj)
+        self._checkforservererror(pointers, objects)
+
         # Filter objects with given action. Practically, this skips uploading
         # objects which exist in the server.
         filteredobjects = [o for o in objects if action in o.get('actions', [])]
@@ -204,7 +218,7 @@ class _gitlfsremote(object):
 
         response = self._batchrequest(pointers, action)
         prunningsize = [0]
-        objects = self._extractobjects(response, action)
+        objects = self._extractobjects(response, pointers, action)
         total = sum(x.get('size', 0) for x in objects)
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]

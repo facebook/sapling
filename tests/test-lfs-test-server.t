@@ -83,3 +83,26 @@ Check error message when the remote missed a blob:
   abort: LFS server claims required objects do not exist:
   8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13!
   [255]
+
+Check error message when object does not exist:
+
+  $ hg init test && cd test
+  $ echo "[extensions]" >> .hg/hgrc
+  $ echo "lfs=" >> .hg/hgrc
+  $ echo "[lfs]" >> .hg/hgrc
+  $ echo "threshold=1" >> .hg/hgrc
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m 'test'
+  $ echo aaaaa > a
+  $ hg commit -m 'largefile'
+  $ hg debugdata .hg/store/data/a.i 1 # verify this is no the file content but includes "oid", the LFS "pointer".
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:bdc26931acfb734b142a8d675f205becf27560dc461f501822de13274fe6fc8a
+  size 6
+  x-is-binary 0
+  $ cd ..
+  $ hg --config 'lfs.url=https://dewey-lfs.vip.facebook.com/lfs' clone test test2
+  updating to branch default
+  abort: LFS server error. Remote object for file data/a.i not found:(.*)! (re)
+  [255]
