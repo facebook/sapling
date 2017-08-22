@@ -281,6 +281,7 @@ Clean hook cached version
   ...     f.close()
   ...     runcommand(server, ['commit', '-Amm'])
   ...     runcommand(server, ['bookmarks'])
+  ...     print('')
   *** runcommand bookmarks
   no bookmarks set
   *** runcommand bookmarks
@@ -295,6 +296,7 @@ Clean hook cached version
      bm1                       1:d3a0a68be6de
      bm2                       1:d3a0a68be6de
    * bm3                       2:aef17e88f5f0
+  
 
   >>> import os
   >>> from hgclient import readchannel, runcommand, check
@@ -331,6 +333,7 @@ Clean hook cached version
   ...     runcommand(server, ['commit', '-Am.'])
   ...     runcommand(server, ['rollback'])
   ...     runcommand(server, ['phase', '-r', '.'])
+  ...     print('')
   *** runcommand phase -r . -p
   no phases changed
   *** runcommand commit -Am.
@@ -339,6 +342,7 @@ Clean hook cached version
   working directory now based on revision 3
   *** runcommand phase -r .
   3: public
+  
 
   >>> import os
   >>> from hgclient import readchannel, runcommand, check
@@ -372,10 +376,12 @@ Clean hook cached version
   ...     f.write('ignored-file')
   ...     f.close()
   ...     runcommand(server, ['status', '-i', '-u'])
+  ...     print('')
   *** runcommand commit -Am.
   adding .hgignore
   *** runcommand status -i -u
   I ignored-file
+  
 
 cache of non-public revisions should be invalidated on repository change
 (issue4855):
@@ -396,12 +402,14 @@ cache of non-public revisions should be invalidated on repository change
   ...         os.system('hg commit -Aqm%d' % i)
   ...     # new commits should be listed as draft revisions
   ...     runcommand(server, ['log', '-qr', 'draft()'])
+  ...     print('')
   *** runcommand log -qr draft()
   4:7966c8e3734d
   *** runcommand log -qr draft()
   4:7966c8e3734d
   5:41f6602d1c4f
   6:10501e202c35
+  
 
   >>> import os
   >>> from hgclient import readchannel, runcommand, check
@@ -414,12 +422,14 @@ cache of non-public revisions should be invalidated on repository change
   ...     os.system('hg --config extensions.strip= strip -q 5')
   ...     # shouldn't abort by "unknown revision '6'"
   ...     runcommand(server, ['log', '-qr', 'draft()'])
+  ...     print('')
   *** runcommand log -qr draft()
   4:7966c8e3734d
   5:41f6602d1c4f
   6:10501e202c35
   *** runcommand log -qr draft()
   4:7966c8e3734d
+  
 
 cache of phase roots should be invalidated on strip (issue3827):
 
