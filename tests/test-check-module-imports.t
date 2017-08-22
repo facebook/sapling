@@ -28,6 +28,7 @@ outputs, which should be fixed later.
   > -X tests/hypothesishelpers.py \
   > -X tests/test-commit-interactive.t \
   > -X tests/test-contrib-check-code.t \
+  > -X tests/test-demandimport.py \
   > -X tests/test-extension.t \
   > -X tests/test-hghave.t \
   > -X tests/test-hgweb-auth.py \
