@@ -1525,7 +1525,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
     Returns the name of the temporary file.
     """
     d, fn = os.path.split(name)
-    fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, dir=d)
+    fd, temp = tempfile.mkstemp(prefix='.%s-' % fn, suffix='~', dir=d)
     os.close(fd)
     # Temporary files are created with mode 0600, which is usually not
     # what we want.  If the original file already exists, just copy
