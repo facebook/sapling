@@ -147,6 +147,8 @@ def fromlocalfunc(modulename, localmods):
     >>> fromlocal2('bar', 2)
     ('foo.bar', 'foo.bar.__init__', True)
     """
+    if not isinstance(modulename, str):
+        modulename = modulename.decode('ascii')
     prefix = '.'.join(modulename.split('.')[:-1])
     if prefix:
         prefix += '.'
@@ -406,6 +408,8 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
     * Certain modules must be aliased to alternate names to avoid aliasing
       and readability problems. See `requirealias`.
     """
+    if not isinstance(module, str):
+        module = module.decode('ascii')
     topmodule = module.split('.')[0]
     fromlocal = fromlocalfunc(module, localmods)
 
@@ -724,6 +728,9 @@ def main(argv):
         localmodpaths[modname] = source_path
     localmods = populateextmods(localmodpaths)
     for localmodname, source_path in sorted(localmodpaths.items()):
+        if not isinstance(localmodname, bytes):
+            # This is only safe because all hg's files are ascii
+            localmodname = localmodname.encode('ascii')
         for src, modname, name, line in sources(source_path, localmodname):
             try:
                 used_imports[modname] = sorted(
