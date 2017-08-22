@@ -637,8 +637,8 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
     limit = the rev number to not search beyond
     data = dictionary of dictionary to store copy data. (see mergecopies)
 
-    note: limit is only an optimization, and there is no guarantee that
-    irrelevant revisions will not be limited
+    note: limit is only an optimization, and provides no guarantee that
+    irrelevant revisions will not be visited
     there is no easy way to make this algorithm stop in a guaranteed way
     once it "goes behind a certain revision".
     """
