@@ -301,7 +301,6 @@ class bundlerepository(localrepo.localrepository):
 
             if cgstream is None:
                 raise error.Abort(_('No changegroups found'))
-            cgstream.seek(0)
 
             self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
 

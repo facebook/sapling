@@ -828,7 +828,11 @@ class unbundle20(unpackermixin):
         while headerblock is not None:
             part = unbundlepart(self.ui, headerblock, self._fp)
             yield part
+            # Seek to the end of the part to force it's consumption so the next
+            # part can be read. But then seek back to the beginning so the
+            # code consuming this generator has a part that starts at 0.
             part.seek(0, 2)
+            part.seek(0)
             headerblock = self._readpartheader()
         indebug(self.ui, 'end of bundle2 stream')
 
