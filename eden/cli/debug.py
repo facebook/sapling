@@ -335,14 +335,13 @@ def do_overlay(args: argparse.Namespace):
 
 def do_getpath(args: argparse.Namespace):
     config = cmd_util.create_config(args)
-
-    mount, _ = get_mount_path(args.mount)
+    mount, _ = get_mount_path(args.path)
 
     with config.get_thrift_client() as client:
         inodePathInfo = client.debugGetInodePath(mount, args.number)
-        print('%s %s' %
-              ('loaded' if inodePathInfo.loaded else 'unloaded',
-               os.path.normpath(os.path.join(mount, inodePathInfo.path))))
+    print('%s %s' %
+          ('loaded' if inodePathInfo.loaded else 'unloaded',
+           os.path.normpath(os.path.join(mount, inodePathInfo.path))))
 
 
 def get_loaded_inode_count(inode_info):
@@ -460,8 +459,8 @@ def setup_argparse(parser: argparse.ArgumentParser):
     parser = subparsers.add_parser(
         'getpath', help='Get the eden path that corresponds to an inode number')
     parser.add_argument(
-        'mount',
-        help='The path to the eden mount point.')
+        'path', nargs='?', default=os.getcwd(),
+        help='The path to an Eden mount point. Uses `pwd` by default.')
     parser.add_argument(
         'number',
         type=int,

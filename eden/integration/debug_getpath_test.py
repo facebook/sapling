@@ -10,9 +10,6 @@
 from .lib import testcase, edenclient
 import os
 
-# This is the name of the default repository created by EdenRepoTestBase.
-repo_name = 'main'
-
 
 @testcase.eden_repo_test
 class DebugGetPathTest:
@@ -29,8 +26,8 @@ class DebugGetPathTest:
         output = self.eden.run_cmd(
             'debug',
             'getpath',
-            self.mount,
-            '1')
+            '1',
+            cwd=self.mount)
 
         self.assertEqual('loaded ' + self.mount + '\n', output)
 
@@ -42,8 +39,8 @@ class DebugGetPathTest:
         output = self.eden.run_cmd(
             'debug',
             'getpath',
-            self.mount,
-            '2')
+            '2',
+            cwd=self.mount)
 
         self.assertEqual(
             'loaded ' + os.path.join(self.mount, ".eden") + '\n',
@@ -58,6 +55,6 @@ class DebugGetPathTest:
             self.eden.run_cmd(
                 'debug',
                 'getpath',
-                self.mount,
-                '1234')
+                '1234',
+                cwd=self.mount)
             self.assertIn('unknown inode number 1234', str(context.exception))
