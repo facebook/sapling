@@ -160,16 +160,19 @@ else:
         'datapack': {
             "sources" : ["cdatapack/cdatapack.c"],
             "include_dirs" : ["clib"] + include_dirs,
-            "libraries" : ["lz4", "sha1"],
+            "libraries" : ["lz4", "sha1detectcoll"],
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         },
         'mpatch': {
             'sources': ['cstore/mpatch.c']
         },
-        "sha1": {
-            "sources" : ["clib/sha1/sha1.c", "clib/sha1/ubc_check.c"],
-            "include_dirs" : ["clib/sha1"] + include_dirs,
+        "sha1detectcoll": {
+            "sources" : [
+                "third-party/sha1dc/sha1.c",
+                "third-party/sha1dc/ubc_check.c",
+            ],
+            "include_dirs" : ["third-party"] + include_dirs,
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         },
@@ -246,6 +249,7 @@ else:
                     'cdatapack',
                     'clib',
                     'cstore',
+                    'third-party',
                 ] + include_dirs,
                 library_dirs=[
                     'build/' + distutils_dir_name('lib'),
@@ -254,7 +258,7 @@ else:
                     'datapack',
                     'lz4',
                     'mpatch',
-                    'sha1',
+                    'sha1detectcoll',
                 ],
                 extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
             ),
@@ -278,9 +282,10 @@ else:
                 include_dirs=[
                     'cfastmanifest',
                     'clib',
+                    'third-party',
                 ] + include_dirs,
                 library_dirs=library_dirs,
-                libraries=['sha1'],
+                libraries=['sha1detectcoll'],
                 extra_compile_args=filter(None, [
                     STDC99,
                     WALL,

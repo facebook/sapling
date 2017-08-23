@@ -5,7 +5,7 @@
 //
 // no-check-code
 
-#include "sha1/sha1.h"
+#include <sha1dc/sha1.h>
 
 #include "node.h"
 #include "tree.h"

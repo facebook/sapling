@@ -6,11 +6,12 @@
 
 #include <inttypes.h>
 #include <memory.h>
+#include <sha1dc/sha1.h>
 #include <stdio.h>
-#include "convert.h"
-#include "sha1/sha1.h"
-#include "cdatapack.h"
 #include <stdlib.h>
+
+#include "convert.h"
+#include "cdatapack.h"
 
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"
