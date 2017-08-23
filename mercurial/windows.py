@@ -137,7 +137,8 @@ def posixfile(name, mode='r', buffering=-1):
         return fp
     except WindowsError as err:
         # convert to a friendlier exception
-        raise IOError(err.errno, '%s: %s' % (name, err.strerror))
+        raise IOError(err.errno, '%s: %s' % (
+            name, encoding.strtolocal(err.strerror)))
 
 # may be wrapped by win32mbcs extension
 listdir = osutil.listdir

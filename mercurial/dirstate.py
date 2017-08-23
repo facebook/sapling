@@ -982,7 +982,7 @@ class dirstate(object):
                             matchedir(nf)
                         notfoundadd(nf)
                     else:
-                        badfn(ff, inst.strerror)
+                        badfn(ff, encoding.strtolocal(inst.strerror))
 
         # Case insensitive filesystems cannot rely on lstat() failing to detect
         # a case-only rename.  Prune the stat object for any file that does not
@@ -1088,7 +1088,8 @@ class dirstate(object):
                     entries = listdir(join(nd), stat=True, skip=skip)
                 except OSError as inst:
                     if inst.errno in (errno.EACCES, errno.ENOENT):
-                        match.bad(self.pathto(nd), inst.strerror)
+                        match.bad(self.pathto(nd),
+                                  encoding.strtolocal(inst.strerror))
                         continue
                     raise
                 for f, kind, st in entries:

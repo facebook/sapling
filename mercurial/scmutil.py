@@ -163,7 +163,8 @@ def callcatch(ui, func):
             ui.warn(_("(lock might be very busy)\n"))
     except error.LockUnavailable as inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
+               (inst.desc or inst.filename,
+                encoding.strtolocal(inst.strerror)))
     except error.OutOfBandError as inst:
         if inst.args:
             msg = _("abort: remote error:\n")
@@ -226,16 +227,18 @@ def callcatch(ui, func):
             pass
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
-                ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+                ui.warn(_("abort: %s: %s\n") % (
+                    encoding.strtolocal(inst.strerror), inst.filename))
             else:
-                ui.warn(_("abort: %s\n") % inst.strerror)
+                ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
         else:
             raise
     except OSError as inst:
         if getattr(inst, "filename", None) is not None:
-            ui.warn(_("abort: %s: '%s'\n") % (inst.strerror, inst.filename))
+            ui.warn(_("abort: %s: '%s'\n") % (
+                encoding.strtolocal(inst.strerror), inst.filename))
         else:
-            ui.warn(_("abort: %s\n") % inst.strerror)
+            ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
     except SystemExit as inst:

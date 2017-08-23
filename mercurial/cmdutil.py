@@ -777,7 +777,7 @@ def logmessage(ui, opts):
                 message = '\n'.join(util.readfile(logfile).splitlines())
         except IOError as inst:
             raise error.Abort(_("can't read commit message '%s': %s") %
-                             (logfile, inst.strerror))
+                             (logfile, encoding.strtolocal(inst.strerror)))
     return message
 
 def mergeeditform(ctxorbool, baseformname):
@@ -1099,7 +1099,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     srcexists = False
                 else:
                     ui.warn(_('%s: cannot copy - %s\n') %
-                            (relsrc, inst.strerror))
+                            (relsrc, encoding.strtolocal(inst.strerror)))
                     return True # report a failure
 
         if ui.verbose or not exact:

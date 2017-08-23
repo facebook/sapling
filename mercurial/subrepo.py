@@ -1346,7 +1346,8 @@ class gitsubrepo(abstractsubrepo):
             genericerror = _("error executing git for subrepo '%s': %s")
             notfoundhint = _("check git is installed and in your PATH")
             if e.errno != errno.ENOENT:
-                raise error.Abort(genericerror % (self._path, e.strerror))
+                raise error.Abort(genericerror % (
+                    self._path, encoding.strtolocal(e.strerror)))
             elif pycompat.osname == 'nt':
                 try:
                     self._gitexecutable = 'git.cmd'
@@ -1358,7 +1359,7 @@ class gitsubrepo(abstractsubrepo):
                             hint=notfoundhint)
                     else:
                         raise error.Abort(genericerror % (self._path,
-                            e2.strerror))
+                            encoding.strtolocal(e2.strerror)))
             else:
                 raise error.Abort(_("couldn't find git for subrepo '%s'")
                     % self._path, hint=notfoundhint)

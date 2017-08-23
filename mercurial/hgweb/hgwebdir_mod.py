@@ -289,7 +289,7 @@ class hgwebdir(object):
                         repo = hg.repository(self.ui.copy(), real)
                         return hgweb_mod.hgweb(repo).run_wsgi(req)
                     except IOError as inst:
-                        msg = inst.strerror
+                        msg = encoding.strtolocal(inst.strerror)
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                     except error.RepoError as inst:
                         raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))

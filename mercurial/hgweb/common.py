@@ -178,7 +178,8 @@ def staticfile(directory, fname, req):
         if err.errno == errno.ENOENT:
             raise ErrorResponse(HTTP_NOT_FOUND)
         else:
-            raise ErrorResponse(HTTP_SERVER_ERROR, err.strerror)
+            raise ErrorResponse(HTTP_SERVER_ERROR,
+                                encoding.strtolocal(err.strerror))
 
 def paritygen(stripecount, offset=0):
     """count parity of horizontal stripes for easier reading"""

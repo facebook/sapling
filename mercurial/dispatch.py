@@ -88,7 +88,8 @@ def run():
             status = -1
     if util.safehasattr(req.ui, 'ferr'):
         if err is not None and err.errno != errno.EPIPE:
-            req.ui.ferr.write('abort: %s\n' % err.strerror)
+            req.ui.ferr.write('abort: %s\n' %
+                              encoding.strtolocal(err.strerror))
         req.ui.ferr.flush()
     sys.exit(status & 255)
 
@@ -676,7 +677,7 @@ def _getlocal(ui, rpath, wd=None):
             wd = pycompat.getcwd()
         except OSError as e:
             raise error.Abort(_("error getting current working directory: %s") %
-                              e.strerror)
+                              encoding.strtolocal(e.strerror))
     path = cmdutil.findrepo(wd) or ""
     if not path:
         lui = ui

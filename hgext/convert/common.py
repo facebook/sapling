@@ -15,6 +15,7 @@ import subprocess
 
 from mercurial.i18n import _
 from mercurial import (
+    encoding,
     error,
     phases,
     util,
@@ -475,8 +476,9 @@ class mapfile(dict):
             try:
                 self.fp = open(self.path, 'a')
             except IOError as err:
-                raise error.Abort(_('could not open map file %r: %s') %
-                                 (self.path, err.strerror))
+                raise error.Abort(
+                    _('could not open map file %r: %s') %
+                    (self.path, encoding.strtolocal(err.strerror)))
         self.fp.write('%s %s\n' % (key, value))
         self.fp.flush()
         super(mapfile, self).__setitem__(key, value)

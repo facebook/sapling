@@ -80,6 +80,7 @@ from mercurial import (
     cmdutil,
     commands,
     dirstateguard,
+    encoding,
     error,
     extensions,
     hg,
@@ -1206,7 +1207,7 @@ class queue(object):
                 p = self.opener(patchfn, "w")
             except IOError as e:
                 raise error.Abort(_('cannot write patch "%s": %s')
-                                 % (patchfn, e.strerror))
+                                 % (patchfn, encoding.strtolocal(e.strerror)))
             try:
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
