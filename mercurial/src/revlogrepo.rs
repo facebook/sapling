@@ -25,7 +25,7 @@ use stockbookmarks::StockBookmarks;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
-use revlog::{Revlog, RevlogIter};
+use revlog::{self, Revlog, RevlogIter};
 
 type FutureResult<T> = future::FutureResult<T, Error>;
 
@@ -181,6 +181,13 @@ impl RevlogRepo {
         self.get_changeset_blob_by_nodeid(nodeid)
             .and_then(|rev| RevlogChangeset::new(rev))
             .boxed()
+    }
+
+    pub fn get_changelog_revlog_entry_by_nodeid(
+        &self,
+        nodeid: &NodeHash
+    ) -> FutureResult<revlog::Entry> {
+        self.changelog.get_entry_by_nodeid(nodeid).into_future()
     }
 
     pub fn get_manifest_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {

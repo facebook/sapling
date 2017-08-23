@@ -31,7 +31,6 @@ extern crate serde;
 
 extern crate bincode;
 
-use std::collections::HashSet;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -40,7 +39,6 @@ use bytes::Bytes;
 
 use futures::{Future, IntoFuture, Stream};
 use futures::future::BoxFuture;
-use futures::stream::BoxStream;
 use futures_ext::StreamExt;
 
 use futures_cpupool::CpuPool;
@@ -58,7 +56,8 @@ use heads::Heads;
 use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
-use mercurial_types::{hash, Changeset, NodeHash, Parents, Type};
+use mercurial::revlog::RevIdx;
+use mercurial_types::{Blob, hash, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
@@ -104,12 +103,43 @@ error_chain! {
     }
 }
 
+fn put_manifest_entry(
+    blobstore: BBlobstore,
+    entry_hash: NodeHash,
+    blob: Blob<Vec<u8>>,
+    parents: Parents,
+) -> BoxFuture<(), Error> {
+    let bytes = blob.into_inner()
+        .ok_or("missing blob data".into())
+        .map(Bytes::from)
+        .into_future();
+    bytes.and_then(move |bytes| {
+            let nodeblob = NodeBlob {
+                parents: parents,
+                blob: hash::Sha1::from(bytes.as_ref()),
+            };
+            let nodekey = format!("node:{}.bincode", entry_hash);
+            let blobkey = format!("sha1:{}", nodeblob.blob);
+            let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
+                .expect("bincode serialize failed");
+
+            // TODO: blobstore.putv?
+            let node = blobstore
+                .put(nodekey, Bytes::from(nodeblob))
+                .map_err(Into::into);
+            let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
+
+            node.join(blob).map(|_| ())
+        }
+    ).boxed()
+}
+
 // Copy a single manifest entry into the blobstore
 // TODO: recast as `impl Future<...>` - remove most of these type constraints (which are mostly
 // for BoxFuture)
 // TODO: #[async]
 fn copy_manifest_entry<E>(
-    entry: &Entry<Error = E>,
+    entry: Box<Entry<Error = E>>,
     blobstore: BBlobstore,
 ) -> BoxFuture<(), Error>
 where
@@ -118,44 +148,45 @@ where
 {
     let hash = *entry.get_hash();
 
-    let blobfuture = entry.get_raw_content().map_err(Error::from).and_then(
-        |blob| {
-            blob.into_inner()
-                .ok_or("missing blob data".into())
-                .map(Bytes::from)
-        },
-    );
+    let blobfuture = entry.get_raw_content().map_err(Error::from);
 
     let copy = blobfuture
         .join(entry.get_parents().map_err(Error::from))
-        .and_then(move |(bytes, parents)| {
-            let bytes = futures::future::ok(bytes);
-            bytes.into_future().and_then(move |bytes| {
-                let nodeblob = NodeBlob {
-                    parents: parents,
-                    blob: hash::Sha1::from(bytes.as_ref()),
-                };
-                let nodekey = format!("node:{}.bincode", hash);
-                let blobkey = format!("sha1:{}", nodeblob.blob);
-                let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
-                    .expect("bincode serialize failed");
-
-                // TODO: blobstore.putv?
-                let node = blobstore
-                    .put(nodekey, Bytes::from(nodeblob))
-                    .map_err(Into::into);
-                let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
-
-                node.join(blob).map(|_| ())
-            })
-        });
+        .and_then(move |(blob, parents)| put_manifest_entry(blobstore, hash, blob, parents));
 
     copy.boxed()
 }
 
 fn get_stream_of_manifest_entries(
     entry: Box<Entry<Error = mercurial::Error>>,
+    revlog_repo: RevlogRepo,
+    cs_rev: RevIdx,
 ) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send> {
+    let revlog = match entry.get_type() {
+        Type::File | Type::Executable | Type::Symlink => {
+            revlog_repo.get_file_revlog(entry.get_path())
+        }
+        Type::Tree => revlog_repo.get_tree_revlog(entry.get_path()),
+    };
+
+    let linkrev = revlog
+        .and_then(|file_revlog| {
+            file_revlog.get_entry_by_nodeid(entry.get_hash())
+        })
+        .map(|e| e.linkrev)
+        .map_err(|e| {
+            Error::with_chain(e, format!("cannot get linkrev of {}", entry.get_hash()))
+        });
+
+    match linkrev {
+        Ok(linkrev) => if linkrev != cs_rev {
+            return futures::stream::empty().boxed();
+        },
+        Err(e) => {
+            return futures::stream::once(Err(e)).boxed();
+        }
+    }
+
     match entry.get_type() {
         Type::File | Type::Executable | Type::Symlink => futures::stream::once(Ok(entry)).boxed(),
         Type::Tree => entry
@@ -165,7 +196,9 @@ fn get_stream_of_manifest_entries(
                 _ => panic!("should not happened"),
             })
             .flatten_stream()
-            .map(|entry| get_stream_of_manifest_entries(entry))
+            .map(move |entry| {
+                get_stream_of_manifest_entries(entry, revlog_repo.clone(), cs_rev.clone())
+            })
             .map_err(Error::from)
             .flatten()
             .chain(futures::stream::once(Ok(entry)))
@@ -185,7 +218,7 @@ fn copy_changeset(
     revlog_repo: RevlogRepo,
     blobstore: BBlobstore,
     csid: NodeHash,
-) -> BoxFuture<BoxStream<Box<Entry<Error = mercurial::Error>>, Error>, Error> {
+) -> BoxFuture<(), Error> {
     let put = {
         let blobstore = blobstore.clone();
         let csid = csid;
@@ -203,31 +236,24 @@ fn copy_changeset(
     let manifest = {
         revlog_repo
             .get_changeset_by_nodeid(&csid)
+            .join(revlog_repo.get_changelog_revlog_entry_by_nodeid(&csid))
             .from_err()
-            .and_then(move |cs| {
+            .and_then(move |(cs, entry)| {
                 let mfid = *cs.manifestid();
+                let linkrev = entry.linkrev;
 
                 // fetch the blob for the (root) manifest
                 revlog_repo
                     .get_manifest_blob_by_nodeid(&mfid)
                     .from_err()
                     .and_then(move |blob| {
-                        let bytes = Bytes::from(blob.as_blob().as_slice().unwrap());
-                        let nodeblob = NodeBlob {
-                            parents: blob.parents().clone(),
-                            blob: hash::Sha1::from(bytes.as_ref()),
-                        };
-                        let nodekey = format!("node:{}.bincode", mfid);
-                        let blobkey = format!("sha1:{}", nodeblob.blob);
-                        let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
-                            .expect("bincode serialize failed");
-                        // TODO: blobstore.putv?
-                        let node = blobstore
-                            .put(nodekey, Bytes::from(nodeblob))
-                            .map_err(Into::into);
-                        let putblob = blobstore.put(blobkey, bytes).map_err(Into::into);
+                        let putmf = put_manifest_entry(
+                            blobstore.clone(),
+                            mfid,
+                            blob.as_blob().clone(),
+                            blob.parents().clone(),
+                        );
 
-                        let putmf = putblob.join(node);
                         // Get the listing of entries and fetch each of those
                         let files = RevlogManifest::new(revlog_repo.clone(), blob)
                             .map_err(|err| {
@@ -236,21 +262,37 @@ fn copy_changeset(
                             .map(|mf| mf.list().map_err(Error::from))
                             .map(|entry_stream| {
                                 entry_stream
-                                    .map(|entry| get_stream_of_manifest_entries(entry))
+                                    .map({
+                                        let revlog_repo = revlog_repo.clone();
+                                        move |entry| {
+                                            get_stream_of_manifest_entries(
+                                                entry,
+                                                revlog_repo.clone(),
+                                                linkrev.clone(),
+                                            )
+                                        }
+                                    })
                                     .flatten()
+                                    .for_each(move |entry| {
+                                        copy_manifest_entry(
+                                            entry,
+                                            blobstore.clone(),
+                                        )
+                                    })
                             })
-                            .into_future();
+                            .into_future()
+                            .flatten()
+                            .boxed();
 
                         putmf.join(files)
                     })
             })
-            .map(|(_, fs)| fs)
             .map_err(move |err| {
                 Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
             })
     };
 
-    put.join(manifest).map(|(_, fs)| fs.boxed()).boxed()
+    put.join(manifest).map(|(_, _)| ()).boxed()
 }
 
 fn convert<H>(
@@ -268,9 +310,7 @@ where
     let mut core = tokio_core::reactor::Core::new()?;
 
     // Generate stream of changesets. For each changeset, save the cs blob, and the manifest blob,
-    // and the files. We get the set of all files as a separate flat stream, and check each one
-    // against a set of seen files
-    let mut seen = HashSet::new();
+    // and the files. 
     let changesets = revlog.changesets()
         .map_err(Error::from)
         .enumerate()
@@ -281,17 +321,7 @@ where
                 info!(logger, "{}: changeset {}", seq, csid);
                 copy_changeset(revlog.clone(), blobstore.clone(), csid)
             }
-        }) // Stream<Future<Stream<Entry>>>
-        .map(Future::flatten_stream) // Stream<Stream<Entry>>
-        .flatten() // Stream<Entry>
-        .filter(move |entry| { // This is FnMut, with HashSet moved into its closure
-            let key = (entry.get_type(), entry.get_path().clone(), *entry.get_hash());
-            seen.insert(key)
-        })
-        .map({
-            let blobstore = blobstore.clone();
-            move |entry| copy_manifest_entry(&entry, blobstore.clone())
-        })
+        }) // Stream<Future<()>>
         .map(|copy| cpupool.spawn(copy))
         .buffer_unordered(100);
 

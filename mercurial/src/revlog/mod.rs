@@ -27,8 +27,9 @@ mod lz4;
 #[cfg(test)]
 mod test;
 
-use self::parser::{Entry, Header, Version};
+use self::parser::{Header, Version};
 pub use self::revidx::RevIdx;
+pub use self::parser::Entry;
 
 #[derive(Debug)]
 enum Datafile {
