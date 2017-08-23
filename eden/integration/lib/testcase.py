@@ -234,8 +234,8 @@ class EdenTestCase(TestParent):
         '''
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
-        repo = repo_class(repo_path, **kwargs)
-        repo.init()
+        repo = repo_class(repo_path)
+        repo.init(**kwargs)
 
         return repo
 

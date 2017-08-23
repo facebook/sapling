@@ -66,16 +66,15 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         super().setup_eden_test()
 
         # Create an hgrc to use as the $HGRCPATH.
-        hgrc = os.path.join(self.tmp_dir, 'hgrc_for_self_dot_repo')
-        config = configparser.ConfigParser()
-        config['ui'] = {
+        hgrc = configparser.ConfigParser()
+        hgrc['ui'] = {
             'username': 'Kevin Flynn <lightcyclist@example.com>',
         }
-        config['experimental'] = {
+        hgrc['experimental'] = {
             'evolution': 'createmarkers',
             'evolutioncommands': 'prev next split fold obsolete metaedit',
         }
-        config['extensions'] = {
+        hgrc['extensions'] = {
             'directaccess': '',
             'evolve': '',
             'fbamend': '',
@@ -89,11 +88,9 @@ class HgExtensionTestBase(testcase.EdenTestCase):
             'strip': '',
             'tweakdefaults': '',
         }
-        config['directaccess'] = {
+        hgrc['directaccess'] = {
             'loadsafter': 'tweakdefaults',
         }
-        with open(hgrc, 'w') as f:
-            config.write(f)
 
         # Create the backing repository
         self.backing_repo_name = 'backing_repo'
@@ -109,7 +106,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         self.eden.clone(self.backing_repo_name, self.mount)
 
         # Now create the repository object that refers to the eden client
-        self.repo = hgrepo.HgRepository(self.mount, hgrc=hgrc)
+        self.repo = hgrepo.HgRepository(self.mount)
 
     def populate_backing_repo(self, repo):
         raise NotImplementedError('individual test classes must implement '

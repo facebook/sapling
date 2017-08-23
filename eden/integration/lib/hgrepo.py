@@ -50,7 +50,7 @@ class HgError(subprocess.CalledProcessError):
 
 
 class HgRepository(repobase.Repository):
-    def __init__(self, path, hgrc=None):
+    def __init__(self, path):
         '''
         If hgrc is specified, it will be used as the value of the HGRCPATH
         environment variable when `hg` is run.
@@ -58,8 +58,9 @@ class HgRepository(repobase.Repository):
         super().__init__(path)
         self.hg_environment = os.environ.copy()
         self.hg_environment['HGPLAIN'] = '1'
-        if hgrc is not None:
-            self.hg_environment['HGRCPATH'] = hgrc
+        # Set HGRCPATH to make sure we aren't affected by the local system's
+        # mercurial settings from /etc/mercurial/
+        self.hg_environment['HGRCPATH'] = ''
         self.hg_bin = distutils.spawn.find_executable(
             'hg.real') or distutils.spawn.find_executable('hg')
 
@@ -76,8 +77,19 @@ class HgRepository(repobase.Repository):
         if completed_process.stdout is not None:
             return completed_process.stdout.decode(stdout_charset)
 
-    def init(self):
+    def init(self, hgrc=None):
+        '''
+        Initialize a new hg repository by running 'hg init'
+
+        The hgrc parameter may be a configparser.ConfigParser() object
+        describing configuration settings that should be added to the
+        repository's .hg/hgrc file.
+        '''
         self.hg('init')
+        if hgrc is not None:
+            hgrc_path = os.path.join(self.path, '.hg', 'hgrc')
+            with open(hgrc_path, 'a') as f:
+                hgrc.write(f)
 
     def get_type(self):
         return 'hg'
