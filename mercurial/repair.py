@@ -12,7 +12,10 @@ import errno
 import hashlib
 
 from .i18n import _
-from .node import short
+from .node import (
+    hex,
+    short,
+)
 from . import (
     bundle2,
     changegroup,
@@ -35,8 +38,9 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     # Include a hash of all the nodes in the filename for uniqueness
     allcommits = repo.set('%ln::%ln', bases, heads)
     allhashes = sorted(c.hex() for c in allcommits)
-    totalhash = hashlib.sha1(''.join(allhashes)).hexdigest()
-    name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
+    totalhash = hashlib.sha1(''.join(allhashes)).digest()
+    name = "%s/%s-%s-%s.hg" % (backupdir, short(node),
+                               hex(totalhash[:4]), suffix)
 
     cgversion = changegroup.safeversion(repo)
     comp = None
