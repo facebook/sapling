@@ -2632,7 +2632,7 @@ void TreeInode::unloadChildrenNow() {
   // all of our children trees, which may result in them being destroyed.
 }
 
-void TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
+uint64_t TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
   // Get the timepoint and convert to timespec.
   auto timePointRel = std::chrono::system_clock::now() - age;
   auto epochTime = timePointRel.time_since_epoch();
@@ -2642,10 +2642,10 @@ void TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
   timespec timePoint;
   timePoint.tv_sec = sec.count();
   timePoint.tv_nsec = nsec.count();
-  unloadChildrenNow(timePoint);
+  return unloadChildrenNow(timePoint);
 }
 
-void TreeInode::unloadChildrenNow(const timespec& timePointAge) {
+uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   // Unloading inodes from the InodeMap requires to lock contents_ of TreeInode.
   // Getting atime of an inode requires a lock on the inode.
 
@@ -2697,6 +2697,7 @@ void TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   // than the required age.
   std::vector<TreeInodePtr> treeChildren;
   std::vector<InodeBase*> toDelete;
+  uint64_t unloadCount = 0;
   {
     auto* inodeMap = getInodeMap();
     auto contents = contents_.wlock();
@@ -2722,6 +2723,7 @@ void TreeInode::unloadChildrenNow(const timespec& timePointAge) {
           // the locks.
           toDelete.push_back(entry.second->getInode());
           entry.second->clearInode();
+          unloadCount++;
         }
       }
     }
@@ -2733,8 +2735,13 @@ void TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   for (auto& child : treeChildren) {
     // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
     // we have to make sure that even treeChildren also gets unloaded.
-    child->unloadChildrenNow(timePointAge);
+    unloadCount += child->unloadChildrenNow(timePointAge);
   }
+
+  return unloadCount;
+  // Note: during mount point shutdown, returning from this function and
+  // destroying the treeChildren map will decrement the reference count on
+  // all of our children trees, which may result in them being destroyed.
 }
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {

@@ -659,7 +659,7 @@ void EdenServiceHandler::debugGetInodePath(
   }
 }
 
-void EdenServiceHandler::unloadInodeForPath(
+int64_t EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path,
     std::unique_ptr<TimeSpec> age) {
@@ -674,7 +674,7 @@ void EdenServiceHandler::unloadInodeForPath(
   // Convert age to std::chrono::nanoseconds.
   std::chrono::seconds sec(age->seconds);
   std::chrono::nanoseconds nsec(age->nanoSeconds);
-  inode->unloadChildrenNow(sec + nsec);
+  return inode->unloadChildrenNow(sec + nsec);
 }
 
 void EdenServiceHandler::flushStatsNow() {

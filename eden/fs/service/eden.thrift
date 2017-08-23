@@ -465,7 +465,7 @@ service EdenService extends fb303.FacebookService {
   * The age parameter is a relative time to be subtracted from the current
   * (wall clock) time.
   */
-  void unloadInodeForPath(
+  i64 unloadInodeForPath(
     1: string mountPoint,
     2: string path,
     3: TimeSpec age,

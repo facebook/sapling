@@ -486,7 +486,7 @@ class TreeInode : public InodeBase {
    * time since last access time is greater than the 'age' parameter, we will
    * unload the inode.
    */
-  void unloadChildrenNow(std::chrono::nanoseconds age);
+  uint64_t unloadChildrenNow(std::chrono::nanoseconds age);
 
   /**
    * Load all materialized children underneath this TreeInode.
@@ -741,7 +741,7 @@ class TreeInode : public InodeBase {
    * which takes struct timespec as parameter. We will unload inodes under a
    * directory whose atime lies before 'timePointAge'.
    */
-  void unloadChildrenNow(const timespec& timePointAge);
+  uint64_t unloadChildrenNow(const timespec& timePointAge);
 
   folly::Synchronized<Dir> contents_;
 };

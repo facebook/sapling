@@ -145,11 +145,10 @@ class ThriftTest:
         age = TimeSpec()
         age.seconds = 0
         age.nanoSeconds = 0
-        self.client.unloadInodeForPath(self.mount, '', age)
+        unload_count = self.client.unloadInodeForPath(self.mount, '', age)
 
-        inode_count_after_unload = self.get_loaded_inodes_count('')
-        self.assertGreater(
-            inode_count_before_unload, inode_count_after_unload,
+        self.assertGreaterEqual(
+            unload_count, 100,
             'Number of loaded inodes should reduce after unload'
         )
 
@@ -175,10 +174,8 @@ class ThriftTest:
         age = TimeSpec()
         age.seconds = age_to_unload
         age.nanoSeconds = 0
-        self.client.unloadInodeForPath(self.mount, '', age)
+        unloaded_inode_count = self.client.unloadInodeForPath(self.mount, '', age)
         result = self.client.debugInodeStatus(self.mount, '')
-
-        inode_count_after_unload = 0
 
         # Check if the inodes we are epecting to be unloaded are actually unloading.
         for item in result:
@@ -190,7 +187,6 @@ class ThriftTest:
                         str(inode.name).find('testfile_old') != -1,
                         'old inodes should not be loaded'
                     )
-                    inode_count_after_unload += 1
                 else:
                     # check that the inodes that are unloaded are not the new ones
                     # (not all the files that are unloaded are new ones).
@@ -198,7 +194,7 @@ class ThriftTest:
                         str(inode.name).find('testfile_new') != -1,
                         'new inodes should not be unloaded'
                     )
-        unloaded_inode_count = inode_count_before_unload - inode_count_after_unload
+
         self.assertEqual(
             unloaded_inode_count, 100, 'Only the old batch of inodes should unload'
         )
