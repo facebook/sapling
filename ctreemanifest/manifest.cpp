@@ -7,9 +7,8 @@
 //
 // no-check-code
 
-#include <sha1dc/sha1.h>
-
 #include "manifest.h"
+#include "clib/sha1.h"
 
 Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
     _rawobj(rawobj),
@@ -232,19 +231,19 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   std::string content;
   this->serialize(content);
 
-  SHA1_CTX ctx;
-  SHA1DCInit(&ctx);
+  fbhg_sha1_ctx_t ctx;
+  fbhg_sha1_init(&ctx);
 
   if (memcmp(p1, p2, BIN_NODE_SIZE) == -1) {
-    SHA1DCUpdate(&ctx, (const unsigned char *) p1, BIN_NODE_SIZE);
-    SHA1DCUpdate(&ctx, (const unsigned char *) p2, BIN_NODE_SIZE);
+    fbhg_sha1_update(&ctx, p1, BIN_NODE_SIZE);
+    fbhg_sha1_update(&ctx, p2, BIN_NODE_SIZE);
   } else {
-    SHA1DCUpdate(&ctx, (const unsigned char *)p2, BIN_NODE_SIZE);
-    SHA1DCUpdate(&ctx, (const unsigned char *)p1, BIN_NODE_SIZE);
+    fbhg_sha1_update(&ctx, p2, BIN_NODE_SIZE);
+    fbhg_sha1_update(&ctx, p1, BIN_NODE_SIZE);
   }
-  SHA1DCUpdate(&ctx, (const unsigned char *)content.c_str(), content.size());
+  fbhg_sha1_update(&ctx, content.c_str(), content.size());
 
-  SHA1DCFinal((unsigned char*)result, &ctx);
+  fbhg_sha1_final((unsigned char*)result, &ctx);
 }
 
 ManifestPtr::ManifestPtr() :

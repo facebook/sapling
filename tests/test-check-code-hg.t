@@ -57,6 +57,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping clib/buffer.c it has no-che?k-code (glob)
   Skipping clib/buffer.h it has no-che?k-code (glob)
   Skipping clib/null_test.c it has no-che?k-code (glob)
+  Skipping clib/sha1.h it has no-che?k-code (glob)
   Skipping cstore/datapackstore.cpp it has no-che?k-code (glob)
   Skipping cstore/datapackstore.h it has no-che?k-code (glob)
   Skipping cstore/key.h it has no-che?k-code (glob)

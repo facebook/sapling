@@ -245,6 +245,7 @@ else:
                     'ctreemanifest/treemanifest.cpp',
                 ],
                 include_dirs=[
+                    '.',
                     'ctreemanifest',
                     'cdatapack',
                     'clib',
@@ -280,6 +281,7 @@ else:
                          'cfastmanifest/tree_path.c',
                 ],
                 include_dirs=[
+                    '.',
                     'cfastmanifest',
                     'clib',
                     'third-party',

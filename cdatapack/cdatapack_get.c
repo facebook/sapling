@@ -6,12 +6,12 @@
 
 #include <inttypes.h>
 #include <memory.h>
-#include <sha1dc/sha1.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "convert.h"
 #include "cdatapack.h"
+#include "clib/sha1.h"
+#include "convert.h"
 
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"
@@ -81,10 +81,10 @@ int main(int argc, char *argv[]) {
   for (int ix = 0; ix < chain.links_count; ix ++) {
     delta_chain_link_t *link = &chain.delta_chain_links[ix];
 
-    SHA1_CTX ctx;
-    SHA1DCInit(&ctx);
-    SHA1DCUpdate(&ctx, link->delta, link->delta_sz);
-    SHA1DCFinal(sha, &ctx);
+    fbhg_sha1_ctx_t ctx;
+    fbhg_sha1_init(&ctx);
+    fbhg_sha1_update(&ctx, link->delta, link->delta_sz);
+    fbhg_sha1_final(sha, &ctx);
 
     if (last_filename_sz != link->filename_sz ||
         memcmp(last_filename, link->filename, last_filename_sz) != 0) {
