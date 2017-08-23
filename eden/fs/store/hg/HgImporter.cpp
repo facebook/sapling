@@ -58,7 +58,11 @@ DEFINE_string(
 
 DEFINE_bool(
     use_hg_tree_manifest,
-    true,
+    // treemanifest imports are disabled by default for now.
+    // We currently cannot access treemanifest data for pending transactions
+    // when mercurial invokes dirstate.setparents(), and this breaks
+    // many workflows.
+    false,
     "Import mercurial trees using treemanifest in supported repositories.");
 DEFINE_bool(
     hg_fetch_missing_trees,
