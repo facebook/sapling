@@ -30,9 +30,9 @@ DEFINE_string(
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
 DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
 
-// The logging configuration parameter.  We default to INFO for everything in
+// The logging configuration parameter.  We default to DBG2 for everything in
 // eden, and WARNING for all other categories.
-DEFINE_string(logging, ".=WARNING,eden=INFO", "Logging configuration");
+DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
 
 DEFINE_int32(
     fuseThreadStack,
