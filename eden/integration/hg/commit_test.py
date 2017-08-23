@@ -30,6 +30,7 @@ class CommitTest(HgExtensionTestBase):
         self.assertNotEqual(self.commit1, commit2)
         self.assert_status_empty()
         self.assertEqual('test version 2\n', self.read_file('foo/bar.txt'))
+        self.assertEqual([self.commit1, commit2], self.repo.log())
 
     def test_commit_new_file(self):
         '''Test committing a new file'''
@@ -57,3 +58,22 @@ class CommitTest(HgExtensionTestBase):
         self.assertNotEqual(self.commit1, commit2)
         self.assert_status_empty()
         self.assertFalse(os.path.exists(self.get_path('foo/subdir/test.txt')))
+
+    def test_amend(self):
+        '''Test amending a commit'''
+        self.assert_status_empty()
+
+        self.write_file('foo/bar.txt', 'test version 2\n')
+        self.write_file('foo/new.txt', 'new and improved\n')
+        self.hg('add', 'foo/new.txt')
+        self.assert_status({
+            'foo/bar.txt': 'M',
+            'foo/new.txt': 'A',
+        })
+
+        commit2 = self.repo.commit('Updated initial commit\n', amend=True)
+        self.assertNotEqual(self.commit1, commit2)
+        self.assert_status_empty()
+        self.assertEqual('test version 2\n', self.read_file('foo/bar.txt'))
+        self.assertEqual('new and improved\n', self.read_file('foo/new.txt'))
+        self.assertEqual([commit2], self.repo.log())

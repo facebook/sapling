@@ -78,7 +78,8 @@ class GitRepository(repobase.Repository):
                date=None,
                committer_name=None,
                committer_email=None,
-               committer_date=None):
+               committer_date=None,
+               amend=False):
         if author_name is None:
             author_name = self.author_name
         if author_email is None:
@@ -112,4 +113,8 @@ class GitRepository(repobase.Repository):
                                          encoding='utf-8') as msgf:
             msgf.write(message)
             msgf.flush()
-            self.git('commit', '-F', msgf.name, env=git_commit_env)
+
+            args = ['commit', '-F', msgf.name]
+            if amend:
+                args.append('--amend')
+            self.git(*args, env=git_commit_env)
