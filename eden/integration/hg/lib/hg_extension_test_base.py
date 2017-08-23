@@ -76,10 +76,8 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         }
         hgrc['extensions'] = {
             'directaccess': '',
-            'evolve': '',
             'fbamend': '',
             'fbhistedit': '',
-            'fsmonitor': '',
             'histedit': '',
             'inhibit': '',
             'purge': '',
