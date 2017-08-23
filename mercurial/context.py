@@ -103,12 +103,10 @@ class basectx(object):
         return self.manifest()
 
     def _matchstatus(self, other, match):
-        """return match.always if match is none
-
-        This internal method provides a way for child objects to override the
+        """This internal method provides a way for child objects to override the
         match operator.
         """
-        return match or matchmod.always(self._repo.root, self._repo.getcwd())
+        return match
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
@@ -392,6 +390,7 @@ class basectx(object):
             reversed = True
             ctx1, ctx2 = ctx2, ctx1
 
+        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         match = ctx2._matchstatus(ctx1, match)
         r = scmutil.status([], [], [], [], [], [], [])
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
@@ -1848,8 +1847,6 @@ class workingctx(committablectx):
         If we aren't comparing against the working directory's parent, then we
         just use the default match object sent to us.
         """
-        superself = super(workingctx, self)
-        match = superself._matchstatus(other, match)
         if other != self._repo['.']:
             def bad(f, msg):
                 # 'f' may be a directory pattern from 'match.files()',
