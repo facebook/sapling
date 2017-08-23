@@ -137,13 +137,20 @@ class HgRepository(repobase.Repository):
         # Get the commit ID and return it
         return self.hg('log', '-T{node}', '-r.')
 
-    def log(self, template='{node}\\0', delimiter='\0'):
-        '''Runs `hg log` with the specified template and uses the specified
-        delimiter to break split the stdout into an array. The caller is
-        responsible for ensuring the template ends with the delimiter.
+    def log(self, template='{node}', revset='::.'):
+        '''Runs `hg log` with the specified template and revset.
 
-        By default, returns the commit hashes (most recent first).'''
-        return self.hg('log', '-T', template).split(delimiter)[:-1]
+        Returns the log output, as a list with one entry per commit.'''
+        # Append a separator to the template so we can split up the entries
+        # afterwards.  Use a slightly more complex string rather than just a
+        # single nul byte, just in case the caller uses internal nuls in their
+        # template to split fields.
+        escaped_delimiter = r'\0-+-\0'
+        delimiter = '\0-+-\0'
+        assert escaped_delimiter not in template
+        template += escaped_delimiter
+        output = self.hg('log', '-T', template, '-r', revset)
+        return output.split(delimiter)[:-1]
 
     def status(self):
         '''Returns the output of `hg status` as a string.'''
