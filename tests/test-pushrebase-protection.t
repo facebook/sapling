@@ -17,7 +17,6 @@ Setup pushrebase required repo
   $ cd server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [pushrebase]
   > blocknonpushrebase = True
@@ -55,7 +54,7 @@ Non-pushrebase pushes should be rejected
 
 Pushrebase pushes should be allowed
 
-  $ hg push --config "extensions.bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py" --config "extensions.pushrebase=$TESTDIR/../hgext3rd/pushrebase.py" --to master -B master
+  $ hg push --config "extensions.pushrebase=$TESTDIR/../hgext3rd/pushrebase.py" --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
   pushing 1 changeset:

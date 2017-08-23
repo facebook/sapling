@@ -14,7 +14,6 @@ Set up server repository
   $ cd server
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo foo > a
@@ -31,7 +30,6 @@ Set up client repository 1 with pushrebase enabled
   $ cd client1
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ cd ..
@@ -42,7 +40,6 @@ Set up client repository 2 with pushrebase enabled / fastmanifest enabled
   $ cd client2
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > fastmanifest=$TESTDIR/../fastmanifest
   > EOF

@@ -36,7 +36,6 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [experimental]
   > bundle2lazylocking=True

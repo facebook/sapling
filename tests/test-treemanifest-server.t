@@ -7,7 +7,6 @@
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > treemanifest=$TESTDIR/../treemanifest
   > [treemanifest]

@@ -35,7 +35,6 @@ Set up client repository
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "bundle2hooks =" >> .hg/hgrc
   $ echo "pushrebase =" >> .hg/hgrc
 
 Without server extension
@@ -84,7 +83,6 @@ Stack of non-conflicting commits should be accepted
 
   $ cd ../server
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "bundle2hooks =" >> .hg/hgrc
   $ echo "pushrebase =" >> .hg/hgrc
   $ log
   @  a => bar [draft:add0c792bfce]
@@ -531,7 +529,6 @@ Test that the prepushrebase hook can run against the bundle repo
   > [hooks]
   > prepushrebase = $TESTTMP/prerebase.sh
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [experimental]
   > bundle2lazylocking = True
@@ -551,7 +548,6 @@ Test that the prepushrebase hook can run against the bundle repo
   $ cd prepushrebaseclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ touch b && hg add b && hg commit -qm b
@@ -589,7 +585,6 @@ Test that hooks are fired with the correct variables
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ touch file && hg ci -Aqm initial
@@ -608,7 +603,6 @@ Test that hooks are fired with the correct variables
   $ cd hookclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg update master
@@ -646,7 +640,6 @@ Test date rewriting
   $ cd rewritedate
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > [pushrebase]
   > rewritedates = True
@@ -662,7 +655,6 @@ Test date rewriting
   $ cd rewritedateclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg up 0
@@ -735,7 +727,6 @@ Test pushrebase on merge commit where master is on the p2 side
   $ cd p2mergeserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo a >> a && hg commit -Aqm 'add a'
@@ -792,7 +783,6 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ echo a > a && hg commit -Aqm a
@@ -807,7 +797,6 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
   $ hg up 0
@@ -845,8 +834,6 @@ Server with obsstore disabled can still send obsmarkers useful to client, and
 phase is updated correctly with the marker information.
 
   $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > [experimental]
   > evolution =
   > EOF

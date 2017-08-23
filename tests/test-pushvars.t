@@ -12,7 +12,6 @@ Setup
   $ chmod +x $TESTTMP/pretxnchangegroup.sh
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
   > pushvars=$TESTDIR/../hgext3rd/pushvars.py
   > [hooks]
   > pretxnchangegroup = $TESTTMP/pretxnchangegroup.sh

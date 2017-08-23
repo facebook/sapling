@@ -35,7 +35,6 @@ inside the lock are marked with a ":(".
   >   echo "[experimental]" >> .hg/hgrc
   >   echo "bundle2lazylocking=True" >> .hg/hgrc
   >   echo "[extensions]" >> .hg/hgrc
-  >   echo "bundle2hooks =" >> .hg/hgrc
   >   echo "pushrebase =" >> .hg/hgrc
   > }
 
