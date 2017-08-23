@@ -14,7 +14,7 @@
 #include "ubc_check.h"
 
 
-/*
+/* 
    Because Little-Endian architectures are most common,
    we only set SHA1DC_BIGENDIAN if one of these conditions is met.
    Note that all MSFT platforms are little endian,
@@ -876,11 +876,6 @@ static void sha1recompress_fast_ ## t (uint32_t ihvin[5], uint32_t ihvout[5], co
 	ihvout[0] = ihvin[0] + a; ihvout[1] = ihvin[1] + b; ihvout[2] = ihvin[2] + c; ihvout[3] = ihvin[3] + d; ihvout[4] = ihvin[4] + e; \
 }
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4127)  /* Complier complains about the checks in the above macro being constant. */
-#endif
-
 #ifdef DOSTORESTATE0
 SHA1_RECOMPRESS(0)
 #endif
@@ -1199,10 +1194,6 @@ SHA1_RECOMPRESS(78)
 
 #ifdef DOSTORESTATE79
 SHA1_RECOMPRESS(79)
-#endif
-
-#ifdef _MSC_VER
-#pragma warning(pop)
 #endif
 
 static void sha1_recompression_step(uint32_t step, uint32_t ihvin[5], uint32_t ihvout[5], const uint32_t me2[80], const uint32_t state[5])
@@ -1622,7 +1613,7 @@ static void sha1_process(SHA1_CTX* ctx, const uint32_t block[16])
 	unsigned i, j;
 	uint32_t ubc_dv_mask[DVMASKSIZE] = { 0xFFFFFFFF };
 	uint32_t ihvtmp[5];
-
+	
 	ctx->ihv1[0] = ctx->ihv[0];
 	ctx->ihv1[1] = ctx->ihv[1];
 	ctx->ihv1[2] = ctx->ihv[2];
@@ -1723,7 +1714,7 @@ void SHA1DCSetCallback(SHA1_CTX* ctx, collision_block_callback callback)
 	ctx->callback = callback;
 }
 
-void SHA1DCUpdate(SHA1_CTX* ctx, const unsigned char* buf, size_t len)
+void SHA1DCUpdate(SHA1_CTX* ctx, const char* buf, size_t len)
 {
 	unsigned left, fill;
 	if (len == 0)
@@ -1768,7 +1759,7 @@ int SHA1DCFinal(unsigned char output[20], SHA1_CTX *ctx)
 	uint32_t last = ctx->total & 63;
 	uint32_t padn = (last < 56) ? (56 - last) : (120 - last);
 	uint64_t total;
-	SHA1DCUpdate(ctx, sha1_padding, padn);
+	SHA1DCUpdate(ctx, (const char*)(sha1_padding), padn);
 
 	total = ctx->total - padn;
 	total <<= 3;

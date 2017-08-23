@@ -25,7 +25,7 @@ static inline int fbhg_sha1_init(fbhg_sha1_ctx_t* ctx) {
 
 static inline int
 fbhg_sha1_update(fbhg_sha1_ctx_t* ctx, const void* data, unsigned long length) {
-  SHA1DCUpdate(ctx, (const unsigned char*)data, length);
+  SHA1DCUpdate(ctx, (const char*)data, length);
   return 0;
 }
 
