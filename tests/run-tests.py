@@ -1459,7 +1459,7 @@ class TTest(Test):
                         if not el.endswith(b" (?)\n"):
                             m = optline.match(el)
                             if m:
-                                conditions = [c for c in m.group(2).split(' ')]
+                                conditions = [c for c in m.group(2).split(b' ')]
 
                                 if self._hghave(conditions)[0]:
                                     # Don't append as optional line
