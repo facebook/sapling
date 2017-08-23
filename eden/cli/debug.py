@@ -9,6 +9,7 @@
 
 import argparse
 import binascii
+import json
 import os
 import stat
 import sys
@@ -169,6 +170,14 @@ def _print_inode_info(inode_info):
             entry.inodeNumber, file_type_str, perms, loaded_flag,
             hash_str(entry.hash), escape_path(entry.name))
         print(line)
+
+
+def do_hg_copy_map_get_all(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    mount, _ = get_mount_path(args.path)
+    with config.get_thrift_client() as client:
+        copy_map = client.hgCopyMapGetAll(mount)
+    print(json.dumps(copy_map, indent=2))
 
 
 def do_hg_get_dirstate_tuple(args: argparse.Namespace):
@@ -405,6 +414,13 @@ def setup_argparse(parser: argparse.ArgumentParser):
     parser.add_argument('mount', help='The eden mount point path.')
     parser.add_argument('id', help='The blob ID')
     parser.set_defaults(func=do_blobmeta)
+
+    parser = subparsers.add_parser(
+        'hg_copy_map_get_all', help='Copymap for dirstate')
+    parser.add_argument(
+        'path', nargs='?', default=os.getcwd(),
+        help='The path to an Eden mount point. Uses `pwd` by default.')
+    parser.set_defaults(func=do_hg_copy_map_get_all)
 
     parser = subparsers.add_parser(
         'hg_get_dirstate_tuple', help='Dirstate status for file')

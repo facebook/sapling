@@ -506,6 +506,9 @@ void EdenServiceHandler::hgCopyMapPut(
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
   DCHECK(dirstate != nullptr)
       << "Failed to get dirstate for " << mountPoint.get();
+  XLOG(DBG2) << "hgCopyMapPut(" << *relativePathDest << ","
+             << *relativePathSource << ")";
+
   dirstate->hgCopyMapPut(
       RelativePathPiece{*relativePathDest},
       RelativePathPiece{*relativePathSource});
@@ -518,10 +521,17 @@ void EdenServiceHandler::hgCopyMapGet(
   auto dirstate = server_->getMount(*mountPoint)->getDirstate();
   DCHECK(dirstate != nullptr)
       << "Failed to get dirstate for " << mountPoint.get();
-  relativePathSource =
-      dirstate->hgCopyMapGet(RelativePathPiece{*relativePathDest})
-          .stringPiece()
-          .str();
+
+  try {
+    auto source = dirstate->hgCopyMapGet(RelativePathPiece{*relativePathDest});
+    relativePathSource = source.stringPiece().str();
+    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") returning "
+               << relativePathSource;
+  } catch (const std::exception& e) {
+    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") failed with "
+               << e.what();
+    throw;
+  }
 }
 
 void EdenServiceHandler::hgCopyMapGetAll(
