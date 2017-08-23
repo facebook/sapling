@@ -15,7 +15,6 @@ from mercurial.node import hex, bin, nullid
 from mercurial import (
     error,
     httppeer,
-    peer as peermod,
     sshpeer,
     util,
     util,

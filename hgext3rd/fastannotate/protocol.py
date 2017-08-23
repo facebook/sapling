@@ -10,7 +10,6 @@ from mercurial import (
     extensions,
     hg,
     localrepo,
-    peer as peermod,
     scmutil,
     wireproto,
 )
