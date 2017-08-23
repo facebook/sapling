@@ -661,7 +661,8 @@ void EdenServiceHandler::debugGetInodePath(
 
 void EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
-    std::unique_ptr<std::string> path) {
+    std::unique_ptr<std::string> path,
+    std::unique_ptr<TimeSpec> age) {
   auto edenMount = server_->getMount(*mountPoint);
 
   TreeInodePtr inode;
@@ -670,8 +671,10 @@ void EdenServiceHandler::unloadInodeForPath(
   } else {
     inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
   }
-
-  inode->unloadChildrenNow();
+  // Convert age to std::chrono::nanoseconds.
+  std::chrono::seconds sec(age->seconds);
+  std::chrono::nanoseconds nsec(age->nanoSeconds);
+  inode->unloadChildrenNow(sec + nsec);
 }
 
 void EdenServiceHandler::flushStatsNow() {

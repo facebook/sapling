@@ -16,6 +16,7 @@ from typing import List, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
 import facebook.hgdirstate.ttypes as hgdirstate
+from facebook.eden.ttypes import TimeSpec
 
 from . import cmd_util
 
@@ -353,7 +354,11 @@ def do_unload_inodes(args: argparse.Namespace):
         inodeCount_before_unload = get_loaded_inode_count(
             inodeInfo_before_unload)
 
-        client.unloadInodeForPath(mount, rel_path)
+        # set the age in nanoSeconds
+        age = TimeSpec()
+        age.seconds = int(args.age)
+        age.nanoSeconds = int((args.age - age.seconds) * 10**9)
+        client.unloadInodeForPath(mount, rel_path, age)
 
         inodeInfo_after_unload = client.debugInodeStatus(mount, rel_path)
         inodeCount_after_unload = get_loaded_inode_count(inodeInfo_after_unload)
@@ -454,6 +459,11 @@ def setup_argparse(parser: argparse.ArgumentParser):
         help='The path to the eden mount point.  If a subdirectory inside '
         'a mount point is specified, only inodes under the '
         'specified subdirectory will be unloaded.')
+    parser.add_argument(
+        'age',
+        type=float,
+        help='Minimum age of the inodes to be unloaded in seconds'
+    )
     parser.set_defaults(func=do_unload_inodes)
 
     parser = subparsers.add_parser(

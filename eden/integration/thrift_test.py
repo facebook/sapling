@@ -8,10 +8,12 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import hashlib
+import os
+import time
 
 from facebook.eden.ttypes import SHA1Result, EdenError
+from facebook.eden.ttypes import TimeSpec
 from .lib import testcase
-import os
 
 
 @testcase.eden_repo_test
@@ -31,6 +33,15 @@ class ThriftTest:
     def tearDown(self):
         self.client.close()
         super().tearDown()
+
+    def get_loaded_inodes_count(self, path):
+        result = self.client.debugInodeStatus(self.mount, path)
+        inode_count = 0
+        for item in result:
+            for inode in item.entries:
+                if inode.loaded:
+                    inode_count += 1
+        return inode_count
 
     def test_list_mounts(self):
         mounts = self.client.listMounts()
@@ -125,30 +136,72 @@ class ThriftTest:
         for i in range(100):
             self.write_file('testfile%d.txt' % i, 'unload test case')
 
+        inode_count_before_unload = self.get_loaded_inodes_count('')
+        self.assertGreater(
+            inode_count_before_unload, 100,
+            'Number of loaded inodes should increase'
+        )
+
+        age = TimeSpec()
+        age.seconds = 0
+        age.nanoSeconds = 0
+        self.client.unloadInodeForPath(self.mount, '', age)
+
+        inode_count_after_unload = self.get_loaded_inodes_count('')
+        self.assertGreater(
+            inode_count_before_unload, inode_count_after_unload,
+            'Number of loaded inodes should reduce after unload'
+        )
+
+    # Checks if unloadInodeForPath unloads inodes based on the age
+    def test_unload_free_inodes_age(self):
+        age_to_unload = 10
+        old_timestamp = time.time() - (age_to_unload * 2)
+
+        # Load 100 inodes and set their atime to a very old value.
+        for i in range(100):
+            filename = os.path.join(self.mount, 'testfile_old%d.txt' % i)
+            self.write_file(filename, 'unload test case')
+            os.utime(filename, (old_timestamp, old_timestamp))
+
+        # Load another 100 inodes whose atime is close to current time.
+        for i in range(100):
+            self.write_file('testfile_new%d.txt' % i, 'unload test case')
+
+        inode_count_before_unload = self.get_loaded_inodes_count('')
+        self.assertGreater(
+            inode_count_before_unload, 200, 'Number of loaded inodes should increase'
+        )
+        age = TimeSpec()
+        age.seconds = age_to_unload
+        age.nanoSeconds = 0
+        self.client.unloadInodeForPath(self.mount, '', age)
         result = self.client.debugInodeStatus(self.mount, '')
-        inode_count_before_unload = 0
+
         inode_count_after_unload = 0
 
+        # Check if the inodes we are epecting to be unloaded are actually unloading.
         for item in result:
             for inode in item.entries:
                 if inode.loaded:
-                    inode_count_before_unload += 1
-        self.assertGreater(
-            inode_count_before_unload,
-            100,
-            'Number of loaded inodes should increase')
-
-        self.client.unloadInodeForPath(self.mount, '')
-
-        result = self.client.debugInodeStatus(self.mount, '')
-        for item in result:
-            for inode in item.entries:
-                if inode.loaded:
+                    # If a file is loaded check that it is not old file (not all the
+                    # ones that are loaded are new files, there can be other files too).
+                    self.assertFalse(
+                        str(inode.name).find('testfile_old') != -1,
+                        'old inodes should not be loaded'
+                    )
                     inode_count_after_unload += 1
-        self.assertGreater(
-            inode_count_before_unload,
-            inode_count_after_unload,
-            'Number of loaded inodes should reduce after unload')
+                else:
+                    # check that the inodes that are unloaded are not the new ones
+                    # (not all the files that are unloaded are new ones).
+                    self.assertFalse(
+                        str(inode.name).find('testfile_new') != -1,
+                        'new inodes should not be unloaded'
+                    )
+        unloaded_inode_count = inode_count_before_unload - inode_count_after_unload
+        self.assertEqual(
+            unloaded_inode_count, 100, 'Only the old batch of inodes should unload'
+        )
 
     def read_file(self, filename):
         with open(filename, 'r') as f:

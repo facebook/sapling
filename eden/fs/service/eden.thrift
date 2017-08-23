@@ -459,11 +459,16 @@ service EdenService extends fb303.FacebookService {
   ) throws (1: EdenError ex)
 
   /**
-  * Unloads unused Inodes of a tree Node
+  * Unloads unused Inodes from a directory inside a mountPoint whose last
+  * access time is older than the specified age.
+  *
+  * The age parameter is a relative time to be subtracted from the current
+  * (wall clock) time.
   */
   void unloadInodeForPath(
     1: string mountPoint,
     2: string path,
+    3: TimeSpec age,
   ) throws (1: EdenError ex)
 
   /**

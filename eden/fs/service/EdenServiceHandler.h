@@ -158,7 +158,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void unloadInodeForPath(
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> path) override;
+      std::unique_ptr<std::string> path,
+      std::unique_ptr<TimeSpec> age) override;
 
   void flushStatsNow() override;
 
