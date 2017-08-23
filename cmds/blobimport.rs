@@ -52,13 +52,13 @@ use blobstore::Blobstore;
 use fileblob::Fileblob;
 use rocksblob::Rocksblob;
 
-use heads::Heads;
 use fileheads::FileHeads;
+use heads::Heads;
 
 use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
-use mercurial_types::{Changeset, NodeHash, Parents, hash, Type};
+use mercurial_types::{hash, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
@@ -118,11 +118,13 @@ where
 {
     let hash = *entry.get_hash();
 
-    let blobfuture = entry.get_raw_content()
-        .map_err(Error::from)
-        .and_then(|blob| blob.into_inner()
-                        .ok_or("missing blob data".into())
-                        .map(Bytes::from));
+    let blobfuture = entry.get_raw_content().map_err(Error::from).and_then(
+        |blob| {
+            blob.into_inner()
+                .ok_or("missing blob data".into())
+                .map(Bytes::from)
+        },
+    );
 
     let copy = blobfuture
         .join(entry.get_parents().map_err(Error::from))
@@ -153,31 +155,21 @@ where
 
 fn get_stream_of_manifest_entries(
     entry: Box<Entry<Error = mercurial::Error>>,
-) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send>
-{
+) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send> {
     match entry.get_type() {
-        Type::File | Type::Executable | Type::Symlink => {
-            futures::stream::once(Ok(entry)).boxed()
-        },
-        Type::Tree => {
-            entry.get_content()
-                .and_then(|content|
-                    match content {
-                        mercurial_types::manifest::Content::Tree(manifest) => {
-                            Ok(manifest.list())
-                        }
-                        _ => {
-                            panic!("shound not happend")
-                        }
-                    }
-                )
-                .flatten_stream()
-                .map(|entry| get_stream_of_manifest_entries(entry))
-                .map_err(Error::from)
-                .flatten()
-                .chain(futures::stream::once(Ok(entry)))
-                .boxed()
-        },
+        Type::File | Type::Executable | Type::Symlink => futures::stream::once(Ok(entry)).boxed(),
+        Type::Tree => entry
+            .get_content()
+            .and_then(|content| match content {
+                mercurial_types::manifest::Content::Tree(manifest) => Ok(manifest.list()),
+                _ => panic!("should not happened"),
+            })
+            .flatten_stream()
+            .map(|entry| get_stream_of_manifest_entries(entry))
+            .map_err(Error::from)
+            .flatten()
+            .chain(futures::stream::once(Ok(entry)))
+            .boxed(),
     }
 }
 
@@ -198,13 +190,14 @@ fn copy_changeset(
         let blobstore = blobstore.clone();
         let csid = csid;
 
-        revlog_repo.get_changeset_by_nodeid(&csid).from_err().and_then(
-            move |cs| {
+        revlog_repo
+            .get_changeset_by_nodeid(&csid)
+            .from_err()
+            .and_then(move |cs| {
                 let bcs = BlobChangeset::new(&csid, cs);
 
                 bcs.save(blobstore).map_err(Into::into)
-            },
-        )
+            })
     };
 
     let manifest = {
@@ -227,7 +220,7 @@ fn copy_changeset(
                         let nodekey = format!("node:{}.bincode", mfid);
                         let blobkey = format!("sha1:{}", nodeblob.blob);
                         let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
-                           .expect("bincode serialize failed");
+                            .expect("bincode serialize failed");
                         // TODO: blobstore.putv?
                         let node = blobstore
                             .put(nodekey, Bytes::from(nodeblob))
@@ -241,9 +234,11 @@ fn copy_changeset(
                                 Error::with_chain(Error::from(err), "Parsing manifest to get list")
                             })
                             .map(|mf| mf.list().map_err(Error::from))
-                            .map(|entry_stream|
-                                    entry_stream.map(|entry| get_stream_of_manifest_entries(entry))
-                                    .flatten())
+                            .map(|entry_stream| {
+                                entry_stream
+                                    .map(|entry| get_stream_of_manifest_entries(entry))
+                                    .flatten()
+                            })
                             .into_future();
 
                         putmf.join(files)
@@ -362,18 +357,14 @@ fn open_blobstore<P: AsRef<Path>>(output: P, ty: BlobstoreType) -> Result<BBlobs
     output.push("blobs");
 
     let blobstore = match ty {
-        BlobstoreType::Files => {
-            Fileblob::<_, Bytes>::create(output)
-                .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
-                .arced()
-        }
-        BlobstoreType::Rocksdb => {
-            Rocksblob::create(output)
-                .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
-                .arced()
-        }
+        BlobstoreType::Files => Fileblob::<_, Bytes>::create(output)
+            .map_err(Error::from)
+            .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
+            .arced(),
+        BlobstoreType::Rocksdb => Rocksblob::create(output)
+            .map_err(Error::from)
+            .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
+            .arced(),
     };
 
     _assert_clone(&blobstore);
