@@ -5,7 +5,6 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > bundle2hooks=
   > pushrebase=
   > EOF
 
