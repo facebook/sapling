@@ -346,7 +346,7 @@ def debugdrawdag(ui, repo, **opts):
         ctx = simplecommitctx(repo, name, pctxs, added)
         n = ctx.commit()
         committed[name] = n
-        tagsmod.tag(repo, name, n, message=None, user=None, date=None,
+        tagsmod.tag(repo, [name], n, message=None, user=None, date=None,
                     local=True)
 
     # handle special comments
