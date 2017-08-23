@@ -89,7 +89,9 @@ impl Path {
     /// need to be encoded differently, we have two separate methods `fsencode_dir` and
     /// `fsencode_file`. It's up to the user to decide what method to use.
     pub fn fsencode_dir(&self, dotencode: bool) -> PathBuf {
-        Path::fsencode_dir_impl(dotencode, self.elements.iter())
+        let prefix = PathElement(Vec::from("meta".as_bytes()));
+        let path = ::std::iter::once(&prefix).chain(self.elements.iter());
+        Path::fsencode_dir_impl(dotencode, path)
     }
 
     /// Perform the mapping to a filesystem path used in a .hg directory
@@ -99,7 +101,9 @@ impl Path {
         let mut path = self.elements.iter().rev();
         let file = path.next();
 
-        let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path.rev());
+        let prefix = PathElement(Vec::from("data".as_bytes()));
+        let path = ::std::iter::once(&prefix).chain(path.rev());
+        let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path);
 
         if let Some(file) = file {
             ret.push(Path::fsencode_filter(&file.0, dotencode));
@@ -368,7 +372,7 @@ mod test {
         let a = Path::new(b"foo/bar").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("foo/bar"));
+        assert_eq!(p, PathBuf::from("data/foo/bar"));
     }
 
     #[test]
@@ -376,7 +380,7 @@ mod test {
         let a = Path::new(b"bar").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("bar"));
+        assert_eq!(p, PathBuf::from("data/bar"));
     }
 
     #[test]
@@ -384,38 +388,38 @@ mod test {
         let a = Path::new(b"oh?/wow~:<>").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("oh~3f/wow~7e~3a~3c~3e"));
+        assert_eq!(p, PathBuf::from("data/oh~3f/wow~7e~3a~3c~3e"));
     }
 
     #[test]
     fn fsencode_direncode() {
         assert_eq!(
             Path::new(b"foo.d/bar.d").unwrap().fsencode_file(false),
-            PathBuf::from("foo.d.hg/bar.d")
+            PathBuf::from("data/foo.d.hg/bar.d")
         );
         assert_eq!(
             Path::new(b"foo.d/bar.d").unwrap().fsencode_dir(false),
-            PathBuf::from("foo.d.hg/bar.d.hg")
+            PathBuf::from("meta/foo.d.hg/bar.d.hg")
         );
         assert_eq!(
             Path::new(b"foo.hg/bar.d").unwrap().fsencode_file(false),
-            PathBuf::from("foo.hg.hg/bar.d")
+            PathBuf::from("data/foo.hg.hg/bar.d")
         );
         assert_eq!(
             Path::new(b"foo.hg/bar.d").unwrap().fsencode_dir(false),
-            PathBuf::from("foo.hg.hg/bar.d.hg")
+            PathBuf::from("meta/foo.hg.hg/bar.d.hg")
         );
         assert_eq!(
             Path::new(b"tests/legacy-encoding.hg")
                 .unwrap()
                 .fsencode_file(false),
-            PathBuf::from("tests/legacy-encoding.hg")
+            PathBuf::from("data/tests/legacy-encoding.hg")
         );
         assert_eq!(
             Path::new(b"tests/legacy-encoding.hg")
                 .unwrap()
                 .fsencode_dir(false),
-            PathBuf::from("tests/legacy-encoding.hg.hg")
+            PathBuf::from("meta/tests/legacy-encoding.hg.hg")
         );
     }
 
@@ -424,7 +428,7 @@ mod test {
         let a = Path::new(b"bar.d").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("bar.d"));
+        assert_eq!(p, PathBuf::from("data/bar.d"));
     }
 
     #[test]
@@ -432,7 +436,7 @@ mod test {
         let a = Path::new(b"HELLO/WORLD").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("_h_e_l_l_o/_w_o_r_l_d"));
+        assert_eq!(p, PathBuf::from("data/_h_e_l_l_o/_w_o_r_l_d"));
     }
 
     #[test]
@@ -440,7 +444,7 @@ mod test {
         let a = Path::new(b"HELLO.d/WORLD.d").unwrap();
         let p = a.fsencode_file(false);
 
-        assert_eq!(p, PathBuf::from("_h_e_l_l_o.d.hg/_w_o_r_l_d.d"));
+        assert_eq!(p, PathBuf::from("data/_h_e_l_l_o.d.hg/_w_o_r_l_d.d"));
     }
 
     #[test]
@@ -448,16 +452,16 @@ mod test {
         let prefix = Path::new(b"prefix").unwrap();
         assert_eq!(
             prefix.join(&Path::new("suffix").unwrap()).fsencode_file(false),
-            PathBuf::from("prefix/suffix")
+            PathBuf::from("data/prefix/suffix")
         );
         assert_eq!(
             prefix.join(&Path::new("").unwrap()).fsencode_file(false),
-            PathBuf::from("prefix")
+            PathBuf::from("data/prefix")
         );
         let empty = Path::new(b"").unwrap();
         assert_eq!(
             empty.join(&Path::new("suffix").unwrap()).fsencode_file(false),
-            PathBuf::from("suffix")
+            PathBuf::from("data/suffix")
         );
 
         assert_eq!(

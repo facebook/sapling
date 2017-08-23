@@ -231,7 +231,7 @@ impl RevlogRepo {
             Entry::Vacant(missing) => {
                 let dotencode = self.requirements.contains(&Required::Dotencode);
                 let path = self.basepath
-                    .join("store/meta")
+                    .join("store")
                     .join(path.fsencode_dir(dotencode))
                     .join("00manifest.i");
 
@@ -254,7 +254,7 @@ impl RevlogRepo {
             Entry::Vacant(missing) => {
                 let dotencode = self.requirements.contains(&Required::Dotencode);
                 let mut path = self.basepath
-                    .join("store/data")
+                    .join("store")
                     .join(path.fsencode_file(dotencode));
                 if let Some(ext) = path.extension()
                     .map(|ext| ext.to_string_lossy().into_owned())
