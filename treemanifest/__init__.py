@@ -365,7 +365,11 @@ def serverreposetup(repo):
         caps = orig(repo, proto)
         caps.append('gettreepack')
         return caps
-    extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
+
+    if util.safehasattr(wireproto, '_capabilities'):
+        extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
+    else:
+        extensions.wrapfunction(wireproto, 'capabilities', _capabilities)
 
 def _addmanifestgroup(*args, **kwargs):
     raise error.Abort(_("cannot push commits to a treemanifest transition "
@@ -837,7 +841,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
 
     start = time.time()
     remote = hg.peer(repo.ui, {}, fallbackpath)
-    if 'gettreepack' not in remote._capabilities():
+    if 'gettreepack' not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
     bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories)
 
