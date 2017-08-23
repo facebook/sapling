@@ -1,3 +1,4 @@
+test-addremove.t
 test-ancestor.py
 test-backwards-remove.t
 test-branch-tag-confict.t
@@ -10,6 +11,9 @@ test-check-pylint.t
 test-check-shbang.t
 test-contrib-check-code.t
 test-contrib-check-commit.t
+test-debugrename.t
+test-diff-copy-depth.t
+test-diff-hashes.t
 test-diff-issue2761.t
 test-diff-newlines.t
 test-diff-reverse.t
@@ -33,6 +37,7 @@ test-match.py
 test-merge-default.t
 test-merge2.t
 test-merge5.t
+test-permissions.t
 test-push-checkheads-pruned-B1.t
 test-push-checkheads-pruned-B6.t
 test-push-checkheads-pruned-B7.t
