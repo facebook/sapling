@@ -31,7 +31,7 @@ def parsemeta(text):
     return meta, (s + 2)
 
 def packmeta(meta, text):
-    keys = sorted(meta.iterkeys())
+    keys = sorted(meta)
     metatext = "".join("%s: %s\n" % (k, meta[k]) for k in keys)
     return "\1\n%s\1\n%s" % (metatext, text)
 

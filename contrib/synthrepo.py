@@ -479,7 +479,7 @@ def synthesize(ui, repo, descpath, **opts):
         date = min(0x7fffffff, max(0, date))
         user = random.choice(words) + '@' + random.choice(words)
         mc = context.memctx(repo, pl, makeline(minimum=2),
-                            sorted(changes.iterkeys()),
+                            sorted(changes),
                             filectxfn, user, '%d %d' % (date, pick(tzoffset)))
         newnode = mc.commit()
         heads.add(repo.changelog.rev(newnode))
