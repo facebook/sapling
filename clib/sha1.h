@@ -20,6 +20,8 @@ typedef SHA1_CTX fbhg_sha1_ctx_t;
 
 static inline int fbhg_sha1_init(fbhg_sha1_ctx_t* ctx) {
   SHA1DCInit(ctx);
+  SHA1DCSetSafeHash(ctx, 0);
+  SHA1DCSetUseDetectColl(ctx, 0);
   return 0;
 }
 
