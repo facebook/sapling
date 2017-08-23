@@ -60,7 +60,8 @@ def split(ui, repo, *revs, **opts):
         wlock = repo.wlock()
         lock = repo.lock()
         cmdutil.bailifchanged(repo)
-        cmdutil.checkunfinished(repo)
+        if torebase:
+            cmdutil.checkunfinished(repo)
         tr = repo.transaction('split')
         ctx = repo[rev]
         r = ctx.rev()
