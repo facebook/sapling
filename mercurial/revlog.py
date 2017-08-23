@@ -1473,7 +1473,7 @@ class revlog(object):
             if revornode is None:
                 revornode = templatefilters.short(hex(node))
             raise RevlogError(_("integrity check failed on %s:%s")
-                % (self.indexfile, revornode))
+                % (self.indexfile, pycompat.bytestr(revornode)))
 
     def checkinlinesize(self, tr, fp=None):
         """Check if the revlog is too big for inline and convert if so.
