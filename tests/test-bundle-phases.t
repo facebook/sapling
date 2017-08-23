@@ -37,12 +37,12 @@ Phases are restored when unbundling
   $ hg bundle --base B -r E bundle
   3 changesets found
   $ hg debugbundle bundle
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3'), ('targetphase', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 3, targetphase: 2, version: 02}
       26805aba1e600a82e93661149f2313866a221a7b
       f585351a92f85104bff7c284233c338b10eb1df7
       9bc730a19041f9ec7cb33c626e811aa233efb18c
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       26805aba1e600a82e93661149f2313866a221a7b draft
   $ hg strip --no-backup C
   $ hg unbundle -q bundle
@@ -226,14 +226,14 @@ Restore bundle of entire repo
   $ hg bundle -a bundle
   5 changesets found
   $ hg debugbundle bundle
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '5'), ('targetphase', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 5, targetphase: 2, version: 02}
       426bada5c67598ca65036d57d9e4b64b0c1ce7a0
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
       4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
       03ca77807e919db8807c3749086dc36fb478cac0
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       dc0947a82db884575bb76ea10ac97b08536bfa03 public
       03ca77807e919db8807c3749086dc36fb478cac0 draft
   $ hg strip --no-backup A
@@ -254,32 +254,32 @@ Restore bundle of entire repo
   $ hg bundle --base 'A + C' -r D bundle
   2 changesets found
   $ hg debugbundle bundle
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 2, targetphase: 2, version: 02}
       112478962961147124edd43549aedd1a335e44bf
       4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
   $ rm bundle
 
   $ hg bundle --base A -r D bundle
   3 changesets found
   $ hg debugbundle bundle
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '3'), ('targetphase', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 3, targetphase: 2, version: 02}
       112478962961147124edd43549aedd1a335e44bf
       dc0947a82db884575bb76ea10ac97b08536bfa03
       4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       dc0947a82db884575bb76ea10ac97b08536bfa03 public
   $ rm bundle
 
   $ hg bundle --base 'B + C' -r 'D + E' bundle
   2 changesets found
   $ hg debugbundle bundle
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2'), ('targetphase', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 2, targetphase: 2, version: 02}
       4e4f9194f9f181c57f62e823e8bdfa46ab9e4ff4
       03ca77807e919db8807c3749086dc36fb478cac0
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       03ca77807e919db8807c3749086dc36fb478cac0 draft
   $ rm bundle

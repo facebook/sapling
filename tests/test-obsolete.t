@@ -1344,14 +1344,14 @@ Test ability to pull changeset with locally applying obsolescence markers
   o  0:a78f55e5508c (draft) [ ] 0
   
   $ hg debugbundle .hg/strip-backup/e008cf283490-*-backup.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 2, version: 02}
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8
       f27abbcc1f77fb409cf9160482fe619541e2d605
-  obsmarkers -- 'sortdict()'
+  obsmarkers -- {}
       version: 1 (70 bytes)
       f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       f27abbcc1f77fb409cf9160482fe619541e2d605 draft
 
   $ hg pull .hg/strip-backup/e008cf283490-*-backup.hg
@@ -1389,15 +1389,15 @@ Testing that strip remove markers:
   @  0:a78f55e5508c (draft) [tip ] 0
   
   $ hg debugbundle .hg/strip-backup/e016b03fd86f-*-backup.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 2, version: 02}
       e016b03fd86fcccc54817d120b90b751aaf367d6
       b0551702f918510f01ae838ab03a463054c67b46
-  obsmarkers -- 'sortdict()'
+  obsmarkers -- {}
       version: 1 (139 bytes)
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
       f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       b0551702f918510f01ae838ab03a463054c67b46 draft
 
   $ hg unbundle .hg/strip-backup/e016b03fd86f-*-backup.hg

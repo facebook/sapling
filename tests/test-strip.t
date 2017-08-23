@@ -211,10 +211,10 @@
   summary:     b
   
   $ hg debugbundle .hg/strip-backup/*
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       264128213d290d868c54642d13aeaa3675551a78
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       264128213d290d868c54642d13aeaa3675551a78 draft
   $ hg pull .hg/strip-backup/*
   pulling from .hg/strip-backup/264128213d29-0b39d6bf-backup.hg

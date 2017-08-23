@@ -31,7 +31,7 @@ Terse output:
 
   $ hg debugbundle bundle2.hg
   Stream params: {}
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  changegroup -- {nbchanges: 2, version: 02}
       0e067c57feba1a5694ca4844f05588bb1bf82342
       991a3460af53952d10ec8a295d3d2cc2e5fa9690
 
@@ -56,7 +56,7 @@ Verbose output:
 
   $ hg debugbundle --all bundle2.hg
   Stream params: {}
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '2')])"
+  changegroup -- {nbchanges: 2, version: 02}
       format: id, p1, p2, cset, delta base, len(delta)
   
       changelog

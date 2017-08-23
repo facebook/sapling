@@ -170,7 +170,7 @@ Get branch and merge:
   $ hg debuggetbundle repo bundle -t bundle2
   $ hg debugbundle bundle
   Stream params: {}
-  changegroup -- "sortdict([('version', '01')])"
+  changegroup -- {version: 01}
       7704483d56b2a7b5db54dcee7c62378ac629b348
       29a4d1f17bd3f0779ca0525bebb1cfb51067c738
       713346a995c363120712aed1aee7e04afd867638

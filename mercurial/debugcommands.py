@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import difflib
 import errno
 import operator
@@ -323,16 +324,22 @@ def _debugphaseheads(ui, data, indent=0):
             ui.write(indent_string)
             ui.write('%s %s\n' % (hex(head), phases.phasenames[phase]))
 
+def _quasirepr(thing):
+    if isinstance(thing, (dict, util.sortdict, collections.OrderedDict)):
+        return '{%s}' % (
+            b', '.join(b'%s: %s' % (k, thing[k]) for k in sorted(thing)))
+    return pycompat.bytestr(repr(thing))
+
 def _debugbundle2(ui, gen, all=None, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_('not a bundle2 file'))
-    ui.write(('Stream params: %s\n' % repr(gen.params)))
+    ui.write(('Stream params: %s\n' % _quasirepr(gen.params)))
     parttypes = opts.get(r'part_type', [])
     for part in gen.iterparts():
         if parttypes and part.type not in parttypes:
             continue
-        ui.write('%s -- %r\n' % (part.type, repr(part.params)))
+        ui.write('%s -- %s\n' % (part.type, _quasirepr(part.params)))
         if part.type == 'changegroup':
             version = part.params.get('version', '01')
             cg = changegroup.getunbundler(version, part, 'UN')

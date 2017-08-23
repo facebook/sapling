@@ -90,14 +90,14 @@ check-that bundle can contain markers:
   $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5-obs.hg --config experimental.stabilization.bundle-obsmarker=1
   1 changesets found
   $ hg debugbundle ../f89bcc95eba5.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
   $ hg debugbundle ../f89bcc95eba5-obs.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
-  obsmarkers -- 'sortdict()'
+  obsmarkers -- {}
       version: 1 (70 bytes)
       9d73aac1b2ed7d53835eaeec212ed41ea47da53a f89bcc95eba5174b1ccc3e33a82e84c96e8338ee 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
