@@ -456,7 +456,8 @@ def _dobackup(ui, repo, dest, **opts):
     return 0
 
 def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
-    remotehexnodes = list(bkpstate.heads) + bkpstate.localbookmarks.values()
+    remotehexnodes = sorted(
+        set(bkpstate.heads).union(bkpstate.localbookmarks.values()))
     if not remotehexnodes:
         return True
     other = _getremote(repo, ui, dest, **opts)
@@ -465,14 +466,15 @@ def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
         batch.lookup(hexnode)
     batch.submit()
     lookupresults = batch.results()
+    i = 0
     try:
-        for r in lookupresults:
+        for i, r in enumerate(lookupresults):
             # iterate over results to make it throw if revision
             # was not found
             pass
         return True
-    except error.RepoError as e:
-        ui.warn(_('%s\n') % e)
+    except error.RepoError:
+        ui.warn(_('unknown revision %r\n') % remotehexnodes[i])
         return False
 
 _backuplatestinfofile = 'infinitepushlatestbackupinfo'
