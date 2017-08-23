@@ -406,13 +406,15 @@ class dirstate(object):
 
                 # Discard 'm' markers when moving away from a merge state
                 if s[0] == 'm':
-                    if f in self._copymap:
-                        copies[f] = self._copymap[f]
+                    source = self._copymap.get(f)
+                    if source:
+                        copies[f] = source
                     self.normallookup(f)
                 # Also fix up otherparent markers
                 elif s[0] == 'n' and s[2] == -2:
-                    if f in self._copymap:
-                        copies[f] = self._copymap[f]
+                    source = self._copymap.get(f)
+                    if source:
+                        copies[f] = source
                     self.add(f)
         return copies
 
@@ -518,8 +520,7 @@ class dirstate(object):
             self._copymap[dest] = source
             self._updatedfiles.add(source)
             self._updatedfiles.add(dest)
-        elif dest in self._copymap:
-            del self._copymap[dest]
+        elif self._copymap.pop(dest, None):
             self._updatedfiles.add(dest)
 
     def copied(self, file):
@@ -568,8 +569,7 @@ class dirstate(object):
         mtime = s.st_mtime
         self._addpath(f, 'n', s.st_mode,
                       s.st_size & _rangemask, mtime & _rangemask)
-        if f in self._copymap:
-            del self._copymap[f]
+        self._copymap.pop(f, None)
         if f in self._nonnormalset:
             self._nonnormalset.remove(f)
         if mtime > self._lastnormaltime:
@@ -597,8 +597,7 @@ class dirstate(object):
             if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
                 return
         self._addpath(f, 'n', 0, -1, -1)
-        if f in self._copymap:
-            del self._copymap[f]
+        self._copymap.pop(f, None)
         if f in self._nonnormalset:
             self._nonnormalset.remove(f)
 
@@ -613,15 +612,12 @@ class dirstate(object):
         else:
             # add-like
             self._addpath(f, 'n', 0, -2, -1)
-
-        if f in self._copymap:
-            del self._copymap[f]
+        self._copymap.pop(f, None)
 
     def add(self, f):
         '''Mark a file added.'''
         self._addpath(f, 'a', 0, -1, -1)
-        if f in self._copymap:
-            del self._copymap[f]
+        self._copymap.pop(f, None)
 
     def remove(self, f):
         '''Mark a file removed.'''
@@ -638,8 +634,8 @@ class dirstate(object):
                 self._otherparentset.add(f)
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self._nonnormalset.add(f)
-        if size == 0 and f in self._copymap:
-            del self._copymap[f]
+        if size == 0:
+            self._copymap.pop(f, None)
 
     def merge(self, f):
         '''Mark a file merged.'''
@@ -655,8 +651,7 @@ class dirstate(object):
             del self._map[f]
             if f in self._nonnormalset:
                 self._nonnormalset.remove(f)
-            if f in self._copymap:
-                del self._copymap[f]
+            self._copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
         if exists is None:
