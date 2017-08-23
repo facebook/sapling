@@ -273,13 +273,14 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
             // if base portion of name is a windows reserved name,
             // then hex encode 3rd char
             let pos = name.iter().position(|c| *c == b'.').unwrap_or(name.len());
-            match &name[..pos] {
-                b"aux" | b"con" | b"prn" | b"nul" => {
+            let prefix_len = ::std::cmp::min(3, pos);
+            match &name[..prefix_len] {
+                b"aux" | b"con" | b"prn" | b"nul" if pos == 3 => {
                     ret.extend_from_slice(&name[..2]);
                     hexenc(name[2], &mut ret);
                     ret.extend_from_slice(&name[3..]);
                 }
-                b"com" | b"lpt" if pos >= 4 && name[3] >= b'1' && name[3] <= b'9' => {
+                b"com" | b"lpt" if pos == 4 && name[3] >= b'1' && name[3] <= b'9' => {
                     ret.extend_from_slice(&name[..2]);
                     hexenc(name[2], &mut ret);
                     ret.extend_from_slice(&name[3..]);
@@ -445,6 +446,57 @@ mod test {
         let p = a.fsencode_file(false);
 
         assert_eq!(p, PathBuf::from("data/_h_e_l_l_o.d.hg/_w_o_r_l_d.d"));
+    }
+
+    #[test]
+    fn fsencode_single_underscore_fileencode() {
+        let a = Path::new(b"_").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/__"));
+    }
+
+    #[test]
+    fn fsencode_auxencode() {
+        let a = Path::new(b"com3").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/co~6d3"));
+
+        let a = Path::new(b"lpt9").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/lp~749"));
+
+        let a = Path::new(b"com").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/com"));
+
+        let a = Path::new(b"lpt.3").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/lpt.3"));
+
+        let a = Path::new(b"com3x").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/com3x"));
+
+        let a = Path::new(b"xcom3").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/xcom3"));
+
+        let a = Path::new(b"aux").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/au~78"));
+
+        let a = Path::new(b"auxx").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/auxx"));
     }
 
     #[test]
