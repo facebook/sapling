@@ -57,5 +57,5 @@ Test pushing bad vars
   $ hg push --pushvars "DEBUG"
   pushing to $TESTTMP/repo (glob)
   searching for changes
-  abort: passed in variable needs to be of form var= or var=val. Instead, this was given "DEBUG"
+  abort: unable to parse variable 'DEBUG', should follow 'KEY=VALUE' or 'KEY=' format
   [255]
