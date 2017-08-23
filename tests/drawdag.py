@@ -110,7 +110,52 @@ def _isname(ch):
     return ch in _nonpipechars
 
 def _parseasciigraph(text):
-    """str -> {str : [str]}. convert the ASCII graph to edges"""
+    r"""str -> {str : [str]}. convert the ASCII graph to edges
+
+    >>> import pprint
+    >>> pprint.pprint({k: [vv for vv in v]
+    ...  for k, v in _parseasciigraph(br'''
+    ...        G
+    ...        |
+    ...  I D C F   # split: B -> E, F, G
+    ...   \ \| |   # replace: C -> D -> H
+    ...    H B E   # prune: F, I
+    ...     \|/
+    ...      A
+    ... ''').items()})
+    {'A': [],
+     'B': ['A'],
+     'C': ['B'],
+     'D': ['B'],
+     'E': ['A'],
+     'F': ['E'],
+     'G': ['F'],
+     'H': ['A'],
+     'I': ['H']}
+    >>> pprint.pprint({k: [vv for vv in v]
+    ...  for k, v in _parseasciigraph(br'''
+    ...  o    foo
+    ...  |\
+    ...  +---o  bar
+    ...  | | |
+    ...  | o |  baz
+    ...  |  /
+    ...  +---o  d
+    ...  | |
+    ...  +---o  c
+    ...  | |
+    ...  o |  b
+    ...  |/
+    ...  o  a
+    ... ''').items()})
+    {'a': [],
+     'b': ['a'],
+     'bar': ['b', 'a'],
+     'baz': [],
+     'c': ['b'],
+     'd': ['b'],
+     'foo': ['baz', 'b']}
+    """
     lines = text.splitlines()
     edges = collections.defaultdict(list)  # {node: []}
 
@@ -277,6 +322,18 @@ def _walkgraph(edges):
                     v.remove(leaf)
 
 def _getcomments(text):
+    """
+    >>> [s for s in _getcomments(br'''
+    ...        G
+    ...        |
+    ...  I D C F   # split: B -> E, F, G
+    ...   \ \| |   # replace: C -> D -> H
+    ...    H B E   # prune: F, I
+    ...     \|/
+    ...      A
+    ... ''')]
+    ['split: B -> E, F, G', 'replace: C -> D -> H', 'prune: F, I']
+    """
     for line in text.splitlines():
         if ' # ' not in line:
             continue

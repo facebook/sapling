@@ -78,3 +78,5 @@ testmod('hgext.convert.filemap')
 testmod('hgext.convert.p4')
 testmod('hgext.convert.subversion')
 testmod('hgext.mq')
+# Helper scripts in tests/ that have doctests:
+testmod('drawdag')
