@@ -92,6 +92,7 @@ from mercurial import (
     error,
     node,
     obsolete,
+    pycompat,
     registrar,
     scmutil,
     tags as tagsmod,
@@ -100,9 +101,9 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-_pipechars = '\\/+-|'
-_nonpipechars = ''.join(chr(i) for i in xrange(33, 127)
-                        if chr(i) not in _pipechars)
+_pipechars = b'\\/+-|'
+_nonpipechars = b''.join(pycompat.bytechr(i) for i in range(33, 127)
+                         if pycompat.bytechr(i) not in _pipechars)
 
 def _isname(ch):
     """char -> bool. return True if ch looks like part of a name, False
@@ -113,7 +114,7 @@ def _parseasciigraph(text):
     r"""str -> {str : [str]}. convert the ASCII graph to edges
 
     >>> import pprint
-    >>> pprint.pprint({k: [vv for vv in v]
+    >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
     ...  for k, v in _parseasciigraph(br'''
     ...        G
     ...        |
@@ -132,7 +133,7 @@ def _parseasciigraph(text):
      'G': ['F'],
      'H': ['A'],
      'I': ['H']}
-    >>> pprint.pprint({k: [vv for vv in v]
+    >>> pprint.pprint({pycompat.sysstr(k): [pycompat.sysstr(vv) for vv in v]
     ...  for k, v in _parseasciigraph(br'''
     ...  o    foo
     ...  |\
@@ -163,16 +164,16 @@ def _parseasciigraph(text):
         """(int, int) -> char. give a coordinate, return the char. return a
         space for anything out of range"""
         if x < 0 or y < 0:
-            return ' '
+            return b' '
         try:
-            return lines[y][x]
+            return lines[y][x:x + 1] or b' '
         except IndexError:
-            return ' '
+            return b' '
 
     def getname(y, x):
         """(int, int) -> str. like get(y, x) but concatenate left and right
         parts. if name is an 'o', try to replace it to the right"""
-        result = ''
+        result = b''
         for i in itertools.count(0):
             ch = get(y, x - i)
             if not _isname(ch):
@@ -183,17 +184,17 @@ def _parseasciigraph(text):
             if not _isname(ch):
                 break
             result += ch
-        if result == 'o':
+        if result == b'o':
             # special handling, find the name to the right
-            result = ''
+            result = b''
             for i in itertools.count(2):
                 ch = get(y, x + i)
-                if ch == ' ' or ch in _pipechars:
+                if ch == b' ' or ch in _pipechars:
                     if result or x + i >= len(lines[y]):
                         break
                 else:
                     result += ch
-            return result or 'o'
+            return result or b'o'
         return result
 
     def parents(y, x):
@@ -209,19 +210,19 @@ def _parseasciigraph(text):
             if '-' (or '+') is not in excepted, and get(y, x) is '-' (or '+'),
             the next line (y + 1, x) will be checked instead."""
             ch = get(y, x)
-            if any(ch == c and c not in expected for c in '-+'):
+            if any(ch == c and c not in expected for c in (b'-', b'+')):
                 y += 1
                 return follow(y + 1, x, expected)
-            if ch in expected or ('o' in expected and _isname(ch)):
+            if ch in expected or (b'o' in expected and _isname(ch)):
                 visit.append((y, x))
 
         #  -o-  # starting point:
         #  /|\ # follow '-' (horizontally), and '/|\' (to the bottom)
-        follow(y + 1, x, '|')
-        follow(y + 1, x - 1, '/')
-        follow(y + 1, x + 1, '\\')
-        follow(y, x - 1, '-')
-        follow(y, x + 1, '-')
+        follow(y + 1, x, b'|')
+        follow(y + 1, x - 1, b'/')
+        follow(y + 1, x + 1, b'\\')
+        follow(y, x - 1, b'-')
+        follow(y, x + 1, b'-')
 
         while visit:
             y, x = visit.pop()
@@ -232,28 +233,28 @@ def _parseasciigraph(text):
             if _isname(ch):
                 result.append(getname(y, x))
                 continue
-            elif ch == '|':
-                follow(y + 1, x, '/|o')
-                follow(y + 1, x - 1, '/')
-                follow(y + 1, x + 1, '\\')
-            elif ch == '+':
-                follow(y, x - 1, '-')
-                follow(y, x + 1, '-')
-                follow(y + 1, x - 1, '/')
-                follow(y + 1, x + 1, '\\')
-                follow(y + 1, x, '|')
-            elif ch == '\\':
-                follow(y + 1, x + 1, '\\|o')
-            elif ch == '/':
-                follow(y + 1, x - 1, '/|o')
-            elif ch == '-':
-                follow(y, x - 1, '-+o')
-                follow(y, x + 1, '-+o')
+            elif ch == b'|':
+                follow(y + 1, x, b'/|o')
+                follow(y + 1, x - 1, b'/')
+                follow(y + 1, x + 1, b'\\')
+            elif ch == b'+':
+                follow(y, x - 1, b'-')
+                follow(y, x + 1, b'-')
+                follow(y + 1, x - 1, b'/')
+                follow(y + 1, x + 1, b'\\')
+                follow(y + 1, x, b'|')
+            elif ch == b'\\':
+                follow(y + 1, x + 1, b'\\|o')
+            elif ch == b'/':
+                follow(y + 1, x - 1, b'/|o')
+            elif ch == b'-':
+                follow(y, x - 1, b'-+o')
+                follow(y, x + 1, b'-+o')
         return result
 
     for y, line in enumerate(lines):
-        for x, ch in enumerate(line):
-            if ch == '#':  # comment
+        for x, ch in enumerate(pycompat.bytestr(line)):
+            if ch == b'#':  # comment
                 break
             if _isname(ch):
                 edges[getname(y, x)] += parents(y, x)
@@ -278,14 +279,14 @@ class simplefilectx(object):
         return None
 
     def flags(self):
-        return ''
+        return b''
 
 class simplecommitctx(context.committablectx):
     def __init__(self, repo, name, parentctxs, added):
         opts = {
             'changes': scmutil.status([], list(added), [], [], [], [], []),
-            'date': '0 0',
-            'extra': {'branch': 'default'},
+            'date': b'0 0',
+            'extra': {b'branch': b'default'},
         }
         super(simplecommitctx, self).__init__(self, name, **opts)
         self._repo = repo
@@ -304,7 +305,7 @@ def _walkgraph(edges):
     """yield node, parents in topologically order"""
     visible = set(edges.keys())
     remaining = {}  # {str: [str]}
-    for k, vs in edges.iteritems():
+    for k, vs in edges.items():
         for v in vs:
             if v not in remaining:
                 remaining[v] = []
@@ -317,13 +318,13 @@ def _walkgraph(edges):
             if leaf in visible:
                 yield leaf, edges[leaf]
             del remaining[leaf]
-            for k, v in remaining.iteritems():
+            for k, v in remaining.items():
                 if leaf in v:
                     v.remove(leaf)
 
 def _getcomments(text):
     """
-    >>> [s for s in _getcomments(br'''
+    >>> [pycompat.sysstr(s) for s in _getcomments(br'''
     ...        G
     ...        |
     ...  I D C F   # split: B -> E, F, G
@@ -335,11 +336,11 @@ def _getcomments(text):
     ['split: B -> E, F, G', 'replace: C -> D -> H', 'prune: F, I']
     """
     for line in text.splitlines():
-        if ' # ' not in line:
+        if b' # ' not in line:
             continue
-        yield line.split(' # ', 1)[1].split(' # ')[0].strip()
+        yield line.split(b' # ', 1)[1].split(b' # ')[0].strip()
 
-@command('debugdrawdag', [])
+@command(b'debugdrawdag', [])
 def debugdrawdag(ui, repo, **opts):
     """read an ASCII graph from stdin and create changesets
 
@@ -360,22 +361,22 @@ def debugdrawdag(ui, repo, **opts):
 
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
-    for k, v in edges.iteritems():
+    for k, v in edges.items():
         if len(v) > 2:
             raise error.Abort(_('%s: too many parents: %s')
-                              % (k, ' '.join(v)))
+                              % (k, b' '.join(v)))
 
     # parse comments to get extra file content instructions
     files = collections.defaultdict(dict) # {(name, path): content}
     comments = list(_getcomments(text))
-    filere = re.compile(r'^(\w+)/([\w/]+)\s*=\s*(.*)$', re.M)
-    for name, path, content in filere.findall('\n'.join(comments)):
-        files[name][path] = content.replace(r'\n', '\n')
+    filere = re.compile(br'^(\w+)/([\w/]+)\s*=\s*(.*)$', re.M)
+    for name, path, content in filere.findall(b'\n'.join(comments)):
+        files[name][path] = content.replace(br'\n', b'\n')
 
     committed = {None: node.nullid}  # {name: node}
 
     # for leaf nodes, try to find existing nodes in repo
-    for name, parents in edges.iteritems():
+    for name, parents in edges.items():
         if len(parents) == 0:
             try:
                 committed[name] = scmutil.revsingle(repo, name)
@@ -407,27 +408,27 @@ def debugdrawdag(ui, repo, **opts):
                     local=True)
 
     # handle special comments
-    with repo.wlock(), repo.lock(), repo.transaction('drawdag'):
+    with repo.wlock(), repo.lock(), repo.transaction(b'drawdag'):
         getctx = lambda x: repo.unfiltered()[committed[x.strip()]]
         for comment in comments:
             rels = [] # obsolete relationships
-            args = comment.split(':', 1)
+            args = comment.split(b':', 1)
             if len(args) <= 1:
                 continue
 
             cmd = args[0].strip()
             arg = args[1].strip()
 
-            if cmd in ('replace', 'rebase', 'amend'):
-                nodes = [getctx(m) for m in arg.split('->')]
+            if cmd in (b'replace', b'rebase', b'amend'):
+                nodes = [getctx(m) for m in arg.split(b'->')]
                 for i in range(len(nodes) - 1):
                     rels.append((nodes[i], (nodes[i + 1],)))
-            elif cmd in ('split',):
-                pre, succs = arg.split('->')
-                succs = succs.split(',')
+            elif cmd in (b'split',):
+                pre, succs = arg.split(b'->')
+                succs = succs.split(b',')
                 rels.append((getctx(pre), (getctx(s) for s in succs)))
-            elif cmd in ('prune',):
-                for n in arg.split(','):
+            elif cmd in (b'prune',):
+                for n in arg.split(b','):
                     rels.append((getctx(n), ()))
             if rels:
                 obsolete.createmarkers(repo, rels, date=(0, 0), operation=cmd)
