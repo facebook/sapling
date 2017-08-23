@@ -16,6 +16,8 @@ STDCPP0X = "" if iswindows else "-std=c++0x"
 WEXTRA = "" if iswindows else "-Wextra"
 WCONVERSION = "" if iswindows else "-Wconversion"
 PEDANTIC = "" if iswindows else "-pedantic"
+SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
+SHA1_LIBRARY = "sha1detectcoll"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
 OPTIMIZATION = "" if iswindows else "-O2"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
@@ -52,7 +54,7 @@ for i, arg in enumerate(sys.argv):
 
 sys.argv = args
 
-cflags = []
+cflags = [SHA1LIB_DEFINE]
 
 # if this is set, compile all C extensions with -O0 -g for easy debugging.  note
 # that this is not manifested in any way in the Makefile dependencies.
@@ -160,7 +162,7 @@ else:
         'datapack': {
             "sources" : ["cdatapack/cdatapack.c"],
             "include_dirs" : ["clib"] + include_dirs,
-            "libraries" : ["lz4", "sha1detectcoll"],
+            "libraries" : ["lz4", SHA1_LIBRARY],
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         },
@@ -259,7 +261,7 @@ else:
                     'datapack',
                     'lz4',
                     'mpatch',
-                    'sha1detectcoll',
+                    SHA1_LIBRARY,
                 ],
                 extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
             ),
@@ -287,7 +289,7 @@ else:
                     'third-party',
                 ] + include_dirs,
                 library_dirs=library_dirs,
-                libraries=['sha1detectcoll'],
+                libraries=[SHA1_LIBRARY],
                 extra_compile_args=filter(None, [
                     STDC99,
                     WALL,

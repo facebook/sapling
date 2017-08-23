@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#ifdef SHA1_USE_SHA1DC
 #include <stdlib.h>
 #include <sha1dc/sha1.h>
 
@@ -34,6 +35,24 @@ fbhg_sha1_update(fbhg_sha1_ctx_t* ctx, const void* data, unsigned long length) {
 static inline int fbhg_sha1_final(unsigned char* md, fbhg_sha1_ctx_t* ctx) {
   return SHA1DCFinal(md, ctx);
 }
+#else
+#include <openssl/sha.h>
+
+typedef SHA_CTX fbhg_sha1_ctx_t;
+
+static inline int fbhg_sha1_init(fbhg_sha1_ctx_t* ctx) {
+  return SHA1_Init(ctx);
+}
+
+static inline int
+fbhg_sha1_update(fbhg_sha1_ctx_t* ctx, const void* data, unsigned long length) {
+  return SHA1_Update(ctx, data, length);
+}
+
+static inline int fbhg_sha1_final(unsigned char* md, fbhg_sha1_ctx_t* ctx) {
+  return SHA1_Final(md, ctx);
+}
+#endif
 
 #ifdef __cplusplus
 } /* extern C */
