@@ -791,8 +791,8 @@ def _pushb2phases(pushop, bundler):
         part = bundler.newpart('pushkey')
         part.addparam('namespace', enc('phases'))
         part.addparam('key', enc(newremotehead.hex()))
-        part.addparam('old', enc(str(phases.draft)))
-        part.addparam('new', enc(str(phases.public)))
+        part.addparam('old', enc('%d' % phases.draft))
+        part.addparam('new', enc('%d' % phases.public))
         part2node.append((part.id, newremotehead))
         pushop.pkfailcb[part.id] = handlefailure
 
