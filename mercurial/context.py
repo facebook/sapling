@@ -1750,11 +1750,9 @@ class workingctx(committablectx):
                 # Even if the wlock couldn't be grabbed, clear out the list.
                 self._repo.clearpostdsstatus()
 
-    def _dirstatestatus(self, match=None, ignored=False, clean=False,
-                        unknown=False):
+    def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
         listignored, listclean, listunknown = ignored, clean, unknown
-        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         subrepos = []
         if '.hgsub' in self:
             subrepos = sorted(self.substate)
@@ -1980,14 +1978,12 @@ class workingcommitctx(workingctx):
         super(workingctx, self).__init__(repo, text, user, date, extra,
                                          changes)
 
-    def _dirstatestatus(self, match=None, ignored=False, clean=False,
-                        unknown=False):
+    def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Return matched files only in ``self._status``
 
         Uncommitted files appear "clean" via this context, even if
         they aren't actually so in the working directory.
         """
-        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         if clean:
             clean = [f for f in self._manifest if f not in self._changedset]
         else:
