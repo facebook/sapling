@@ -446,8 +446,9 @@ def _dobackup(ui, repo, dest, **opts):
             ui.status(_('nothing to backup\n'))
     finally:
         # cleanup ensures that all pipes are flushed
+        cleanup = getattr(other, '_cleanup', None) or getattr(other, 'cleanup')
         try:
-            other.cleanup()
+            cleanup()
         except Exception:
             ui.warn(_('remote connection cleanup failed\n'))
         ui.status(_('finished in %f seconds\n') % (time.time() - start))
