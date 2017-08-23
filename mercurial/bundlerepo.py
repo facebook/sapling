@@ -283,26 +283,18 @@ class bundlerepository(localrepo.localrepository):
         self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
 
         if isinstance(self.bundle, bundle2.unbundle20):
-            cgstream = None
+            hadchangegroup = False
             for part in self.bundle.iterparts():
                 if part.type == 'changegroup':
-                    if cgstream is not None:
+                    if hadchangegroup:
                         raise NotImplementedError("can't process "
                                                   "multiple changegroups")
-                    cgstream = part
-                    version = part.params.get('version', '01')
-                    legalcgvers = changegroup.supportedincomingversions(self)
-                    if version not in legalcgvers:
-                        msg = _('Unsupported changegroup version: %s')
-                        raise error.Abort(msg % version)
-                    if self.bundle.compressed():
-                        cgstream = self._writetempbundle(part.read,
-                                                         ".cg%sun" % version)
+                    hadchangegroup = True
 
-            if cgstream is None:
-                raise error.Abort(_('No changegroups found'))
+                self._handlebundle2part(part)
 
-            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
+            if not hadchangegroup:
+                raise error.Abort(_("No changegroups found"))
 
         elif self.bundle.compressed():
             f = self._writetempbundle(self.bundle.read, '.hg10un',
@@ -317,6 +309,20 @@ class bundlerepository(localrepo.localrepository):
         self.firstnewrev = self.changelog.repotiprev + 1
         phases.retractboundary(self, None, phases.draft,
                                [ctx.node() for ctx in self[self.firstnewrev:]])
+
+    def _handlebundle2part(self, part):
+        if part.type == 'changegroup':
+            cgstream = part
+            version = part.params.get('version', '01')
+            legalcgvers = changegroup.supportedincomingversions(self)
+            if version not in legalcgvers:
+                msg = _('Unsupported changegroup version: %s')
+                raise error.Abort(msg % version)
+            if self.bundle.compressed():
+                cgstream = self._writetempbundle(part.read,
+                                                 ".cg%sun" % version)
+
+            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
 
     def _writetempbundle(self, readfn, suffix, header=''):
         """Write a temporary file to disk
