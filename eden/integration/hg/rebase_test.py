@@ -93,7 +93,7 @@ class RebaseTest:
 
     def assert_update_logic(self, stdout: str, num_fast_path: int=0,
                             num_slow_path: int=0):
-        '''Helper function to examine the stdout of an `hg --debug upate` call
+        '''Helper function to examine the stdout of an `hg --debug update` call
         and verify the number of times our Hg extension exercised the "fast
         path" for Eden when doing an update versus the number of times it
         exercised the "slow path."
