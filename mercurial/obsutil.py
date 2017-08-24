@@ -307,7 +307,21 @@ def foreground(repo, nodes):
             foreground = set(repo.set('%ln::', known))
     return set(c.node() for c in foreground)
 
-# logic around storing and using effect flags
+# effectflag field
+#
+# Effect-flag is a 1-byte bit field used to store what changed between a
+# changeset and its successor(s).
+#
+# The effect flag is stored in obs-markers metadata while we iterate on the
+# information design. That's why we have the EFFECTFLAGFIELD. If we come up
+# with an incompatible design for effect flag, we can store a new design under
+# another field name so we don't break readers. We plan to extend the existing
+# obsmarkers bit-field when the effect flag design will be stabilized.
+#
+# The effect-flag is placed behind an experimental flag
+# `effect-flags` set to off by default.
+#
+
 EFFECTFLAGFIELD = "ef1"
 
 DESCCHANGED = 1 << 0 # action changed the description
