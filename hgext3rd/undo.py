@@ -41,6 +41,10 @@ from mercurial.node import (
     nullid,
 )
 
+from hgext3rd import (
+    interactiveui,
+)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -692,13 +696,6 @@ def undo(ui, repo, *args, **opts):
         raise error.Abort(_("--branch with --preview not supported"))
 
     if interactive:
-        try:
-            interactiveui = extensions.find('interactiveui')
-        except KeyError:
-            raise error.Abort(_('undo --interactive requires interactiveui to '
-                                'work'))
-            return
-
         class undopreview(interactiveui.viewframe):
             def init(self, repo, ui, index):
                 self.repo = repo
