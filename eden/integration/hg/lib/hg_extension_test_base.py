@@ -9,6 +9,7 @@
 
 from ...lib import find_executables, hgrepo, testcase
 import configparser
+import json
 import os
 
 
@@ -167,6 +168,12 @@ class HgExtensionTestBase(testcase.EdenTestCase):
     def assert_status_empty(self, msg=None, check_ignored=True):
         '''Ensures that `hg status` reports no modifications.'''
         self.assert_status({}, msg=msg, check_ignored=check_ignored)
+
+    def assert_copy_map(self, expected):
+        stdout = self.eden.run_cmd('debug', 'hg_copy_map_get_all',
+                                   cwd=self.mount)
+        copy_map = json.loads(stdout)
+        self.assertEqual(expected, copy_map)
 
 
 def _apply_flatmanifest_config(test, config):

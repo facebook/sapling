@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import json
 from textwrap import dedent
 
 from .lib.hg_extension_test_base import hg_test
@@ -47,9 +46,3 @@ class CopyTest:
         self.assertEqual(dedent('''\
         A goodbye.txt
         '''), extended_status)
-
-    def assert_copy_map(self, expected):
-        stdout = self.eden.run_cmd('debug', 'hg_copy_map_get_all',
-                                   cwd=self.mount)
-        copy_map = json.loads(stdout)
-        self.assertEqual(expected, copy_map)
