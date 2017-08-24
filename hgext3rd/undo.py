@@ -1159,10 +1159,11 @@ def _preview(ui, repo, reverseindex):
         bookdiffs += kv[0]
 
     revstring = revsetlang.formatspec(
-        "draft() & ::((olddraft(0) - olddraft(%s)) + "
+        "ancestor(olddraft(0), olddraft(%s)) +"
+        "(draft() & ::((olddraft(0) - olddraft(%s)) + "
         "(olddraft(%s) - olddraft(0)) + %ls + '.' + "
-        "oldworkingcopyparent(%s))",
-        reverseindex, reverseindex, bookdiffs, reverseindex)
+        "oldworkingcopyparent(%s)))",
+        reverseindex, reverseindex, reverseindex, bookdiffs, reverseindex)
 
     opts['rev'] = [revstring]
     try:
