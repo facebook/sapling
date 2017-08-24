@@ -7,9 +7,9 @@
 """simple Phabricator integration
 
 This extension provides a ``phabsend`` command which sends a stack of
-changesets to Phabricator without amending commit messages, and a ``phabread``
-command which prints a stack of revisions in a format suitable
-for :hg:`import`, and a ``phabupdate`` command to update statuses in batch.
+changesets to Phabricator, and a ``phabread`` command which prints a stack of
+revisions in a format suitable for :hg:`import`, and a ``phabupdate`` command
+to update statuses in batch.
 
 By default, Phabricator requires ``Test Plan`` which might prevent some
 changeset from being sent. The requirement could be disabled by changing
@@ -339,7 +339,7 @@ def userphids(repo, names):
 
 @command('phabsend',
          [('r', 'rev', [], _('revisions to send'), _('REV')),
-          ('', 'amend', False, _('update commit messages')),
+          ('', 'amend', True, _('update commit messages')),
           ('', 'reviewer', [], _('specify reviewers')),
           ('', 'confirm', None, _('ask for confirmation before sending'))],
          _('REV [OPTIONS]'))
