@@ -696,6 +696,9 @@ def undo(ui, repo, *args, **opts):
         raise error.Abort(_("--branch with --preview not supported"))
 
     if interactive:
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
+
         class undopreview(interactiveui.viewframe):
             def init(self, repo, ui, index):
                 self.repo = repo
