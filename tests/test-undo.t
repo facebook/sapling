@@ -724,6 +724,8 @@ hg undo --preview test
   o
   |
   o
+  :
+  o
   |
   ~
   undo to *, before ci -m prev1 (glob)
@@ -736,6 +738,8 @@ hg undo --preview test
   |
   o
   |
+  o
+  :
   o
   |
   ~
