@@ -180,9 +180,11 @@ def _computeincrementaldatapack(ui, files):
     gencountlimit = ui.configint('remotefilelog', 'data.gencountlimit', 2)
     repacksizelimit = ui.configbytes('remotefilelog', 'data.repacksizelimit',
                                      '100MB')
+    maxrepackpacks = ui.configint('remotefilelog', 'data.maxrepackpacks', 50)
 
     return _computeincrementalpack(ui, files, generations, datapack.PACKSUFFIX,
-            datapack.INDEXSUFFIX, gencountlimit, repacksizelimit)
+                                   datapack.INDEXSUFFIX, gencountlimit,
+                                   repacksizelimit, maxrepackpacks)
 
 def _computeincrementalhistorypack(ui, files):
     generations = ui.configlist("remotefilelog", "history.generations",
@@ -194,13 +196,14 @@ def _computeincrementalhistorypack(ui, files):
     gencountlimit = ui.configint('remotefilelog', 'history.gencountlimit', 2)
     repacksizelimit = ui.configbytes('remotefilelog', 'history.repacksizelimit',
                                      '100MB')
+    maxrepackpacks = ui.configint('remotefilelog', 'history.maxrepackpacks', 50)
 
     return _computeincrementalpack(ui, files, generations,
             historypack.PACKSUFFIX, historypack.INDEXSUFFIX, gencountlimit,
-            repacksizelimit)
+            repacksizelimit, maxrepackpacks)
 
 def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
-                            gencountlimit, repacksizelimit):
+                            gencountlimit, repacksizelimit, maxrepackpacks):
     # Group the packs by generation (i.e. by size)
     generations = []
     for i in xrange(len(limits)):
@@ -224,39 +227,35 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
                 generations[i].append(prefix)
                 break
 
-    # Find the largest generation with more than 2 packs and repack it.
+    # Steps for picking what packs to repack:
+    # 1. Pick the largest generation with >2 pack files.
+    # 2. Take the smallest three packs.
+    # 3. While total-size-of-packs < repacksizelimit: add another pack
+
+    # Find the largest generation with more than gencountlimit packs
+    genpacks = []
     for i, limit in enumerate(limits):
         if len(generations[i]) > gencountlimit:
-            # Try to repack 3 things at once. This means if we run an
-            # incremental repack right after we add a new pack file, we'll still
-            # decrease the total number of pack files.
-            count = 3
-            if sum(sizes[n] for n in generations[i]) < repacksizelimit:
-                count = len(generations[i])
-            return sorted(generations[i], key=lambda x: sizes[x])[:count]
+            # Sort to be smallest last, for easy popping later
+            genpacks.extend(sorted(generations[i], reverse=True,
+                                   key=lambda x: sizes[x]))
+            break
 
-    # If no generation has more than 2 packs, repack as many as fit into the
-    # limit
-    small = set().union(*generations[1:])
-    if len(small) > 1:
-        total = 0
-        packs = []
-        for pack in sorted(small, key=lambda x: sizes[x]):
-            size = sizes[pack]
-            if total + size < repacksizelimit:
-                packs.append(pack)
-                total += size
-            else:
-                break
+    # Take as many packs from the generation as we can
+    chosenpacks = genpacks[-3:]
+    genpacks = genpacks[:-3]
+    repacksize = sum(sizes[n] for n in chosenpacks)
+    while (repacksize < repacksizelimit and genpacks and
+           len(chosenpacks) < maxrepackpacks):
+        chosenpacks.append(genpacks.pop())
+        repacksize += sizes[chosenpacks[-1]]
 
-        if len(packs) > 1:
-            return packs
+    # If there aren't any good candidates for a repack,
+    # repack the two largest ones.
+    if not chosenpacks and len(generations[0]) > 1:
+        chosenpacks = generations[0]
 
-    # If there aren't small ones to repack, repack the two largest ones.
-    if len(generations[0]) > 1:
-        return generations[0]
-
-    return []
+    return chosenpacks
 
 def _runrepack(repo, data, history, packpath, category):
     shallowutil.mkstickygroupdir(repo.ui, packpath)

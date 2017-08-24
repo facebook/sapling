@@ -142,12 +142,24 @@
   -r--r--r--     248 544a3b46a61732209116ae50847ec333b75e3765.datapack
   -r--r--r--     248 863908ef8149261ab0d891c2344d8e8766c39441.datapack
   -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
+  $ cd .hg/store/packs/manifests
+  $ cp d7e689a91ac63385be120a118af9ce8663748f28.datapack x7e689a91ac63385be120a118af9ce8663748f28.datapack
+  $ cp d7e689a91ac63385be120a118af9ce8663748f28.dataidx x7e689a91ac63385be120a118af9ce8663748f28.dataidx
+  $ cp 21501384df03b8489b366c5218be639fa08830e4.datapack x1501384df03b8489b366c5218be639fa08830e4.datapack
+  $ cp 21501384df03b8489b366c5218be639fa08830e4.dataidx x1501384df03b8489b366c5218be639fa08830e4.dataidx
+  $ cp 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack x47263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
+  $ cp 347263bf1efbdb5bf7e1d1565b6b504073fb9093.dataidx x47263bf1efbdb5bf7e1d1565b6b504073fb9093.dataidx
+  $ cd ../../../../
 
 - repack incremental kicks in once there are a number of packs
-  $ hg repack --incremental --config remotefilelog.data.generations=300,200
+- (set the repacksizelimit so that we test that we only repack up to 1500 bytes,
+- and it leaves one x** datapack behind)
+  $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=1500B
   $ ls_l .hg/store/packs/manifests | grep datapack
   -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
   -r--r--r--    1188 785af77b59c45dd43e3e0e63929d77665c505387.datapack
+  -r--r--r--     248 x47263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
+  $ rm -f .hg/store/packs/manifests/x*
 
 Test repacking from revlogs to pack files on the server
   $ cd ../master

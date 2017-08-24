@@ -20,6 +20,10 @@ Configs:
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
       days after which it is no longer prefetched.
+    ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
+      include in an incremental data repack.
+    ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
+      include in an incremental history repack.
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
