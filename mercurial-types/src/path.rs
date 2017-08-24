@@ -25,6 +25,12 @@ use errors::*;
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 pub struct PathElement(Vec<u8>);
 
+impl PathElement {
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_slice()
+    }
+}
+
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 pub struct Path {
     elements: Vec<PathElement>,
