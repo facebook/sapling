@@ -180,14 +180,17 @@ def log(repo, command, tr):
         newnodes.update({
             'date': _logdate(repo, tr),
             'command': _logcommand(repo, tr, command),
-            'unfinished': unfinished(repo),
+            'unfinished': unfinished(repo, command=command),
         })
         _logindex(repo, tr, newnodes)
         # changes have been recorded
         return True
 
-def unfinished(repo, commit=False):
+def unfinished(repo, commit=False, command=None):
     '''like cmdutil.checkunfinished without raising an Abort'''
+    # "hg serve" usually does not make sense to undo to. hide it from undolog
+    if command and command[0] == 'serve':
+        return True
     for f, clearable, allowcommit, msg, hint in cmdutil.unfinishedstates:
         if commit and allowcommit:
             continue
@@ -690,7 +693,8 @@ def undo(ui, repo, *args, **opts):
                                             absolute = not relativeundo,
                                             branch = branch)
         except IndexError:
-            raise error.Abort(_("index out of bounds"))
+            raise error.Abort(_("cannot undo this far - undo extension was not"
+                                " enabled"))
 
     if branch and preview:
         raise error.Abort(_("--branch with --preview not supported"))
@@ -703,12 +707,20 @@ def undo(ui, repo, *args, **opts):
             def render(self):
                 ui = self.ui
                 ui.pushbuffer()
-                _preview(ui, self.repo, self.index)
+                return_code = _preview(ui, self.repo, self.index)
+                if return_code == 1:
+                    if self.index < 0:
+                        self.index += 1
+                        repo.ui.status(_("Already at newest repo state\a\n"))
+                    elif self.index > 0:
+                        self.index -= 1
+                        repo.ui.status(_("Already at oldest repo state\a\n"))
+                    _preview(ui, self.repo, self.index)
                 text = ui.config('undo', 'interactivehelptext',
                                  "legend: red - to hide; green - to revive\n")
                 repo.ui.status(text)
-                repo.ui.status(_("<-: next  "
-                                 "->: previous  "
+                repo.ui.status(_("<-: newer  "
+                                 "->: older  "
                                  "q: abort  "
                                  "enter: confirm\n"))
                 return ui.popbuffer()
@@ -1112,7 +1124,7 @@ def _preview(ui, repo, reverseindex):
     #   ui:
     #   repo: mercurial.localrepo
     # Output:
-    #   None
+    #   returns 1 on index error, 0 otherwise
 
     # override "UNDOINDEX" as a variable usable in template
     if not _gapcheck(ui, repo, reverseindex):
@@ -1130,7 +1142,7 @@ def _preview(ui, repo, reverseindex):
         nodedict = _readindex(repo, reverseindex)
         curdict = _readindex(repo, reverseindex)
     except IndexError:
-        return
+        return 1
 
     bookstring = _readnode(repo, "bookmarks.i", nodedict["bookmarks"])
     oldmarks = bookstring.split("\n")
@@ -1169,7 +1181,11 @@ def _preview(ui, repo, reverseindex):
         nodedict = _readindex(repo, reverseindex)
         time = _readnode(repo, "date.i", nodedict["date"])
         time = util.datestr([float(x) for x in time.split(" ")])
+    except IndexError:
+        # don't print anything
+        return 1
 
+    try:
         nodedict = _readindex(repo, reverseindex - 1)
         commandstr = _readnode(repo, "command.i", nodedict["command"])
         commandlist = commandstr.split("\0")[1:]
@@ -1177,8 +1193,9 @@ def _preview(ui, repo, reverseindex):
         uimessage = _('undo to %s, before %s\n') % (time, commandstr)
         repo.ui.status((uimessage))
     except IndexError:
-        # don't print anything
-        pass
+        repo.ui.status(_("most recent state: undoing here won't change"
+                        " anything\n"))
+    return 0
 
 # Tools
 

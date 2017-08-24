@@ -300,7 +300,7 @@ hg undo with negative step
   |    cmiss
   ~
   $ hg undo -n -100
-  abort: index out of bounds
+  abort: cannot undo this far - undo extension was not enabled
   [255]
 
 hg undo --absolute tests
