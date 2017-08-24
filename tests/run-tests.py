@@ -611,6 +611,18 @@ def log(*msg):
         print()
         sys.stdout.flush()
 
+def highlightdiff(line, color):
+    if not color:
+        return line
+    assert pygmentspresent
+    return pygments.highlight(line, difflexer, terminal256formatter)
+
+def highlightmsg(msg, color):
+    if not color:
+        return msg
+    assert pygmentspresent
+    return pygments.highlight(msg, runnerlexer, runnerformatter)
+
 def terminate(proc):
     """Terminate subprocess"""
     vlog('# Terminating process %d' % proc.pid)
@@ -1636,12 +1648,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     if not self._options.nodiff:
                         formatted = '\nERROR: %s output changed\n' % test
-                        if self.color:
-                            formatted = pygments.highlight(
-                                formatted,
-                                runnerlexer,
-                                runnerformatter)
-                        self.stream.write(formatted)
+                        self.stream.write(highlightmsg(formatted, self.color))
                     self.stream.write('!')
 
                 self.stream.flush()
@@ -1707,10 +1714,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if self.color:
-                            line = pygments.highlight(line,
-                                                      difflexer,
-                                                      terminal256formatter)
+                        line = highlightdiff(line, self.color)
                         if PYTHON3:
                             self.stream.flush()
                             self.stream.buffer.write(line)
@@ -2044,20 +2048,10 @@ class TextTestRunner(unittest.TextTestRunner):
             if not self._runner.options.noskips:
                 for test, msg in result.skipped:
                     formatted = 'Skipped %s: %s\n' % (test.name, msg)
-                    if result.color:
-                        formatted = pygments.highlight(
-                            formatted,
-                            runnerlexer,
-                            runnerformatter)
-                    self.stream.write(formatted)
+                    self.stream.write(highlightmsg(formatted, result.color))
             for test, msg in result.failures:
                 formatted = 'Failed %s: %s\n' % (test.name, msg)
-                if result.color:
-                    formatted = pygments.highlight(
-                        formatted,
-                        runnerlexer,
-                        runnerformatter)
-                self.stream.write(formatted)
+                self.stream.write(highlightmsg(formatted, result.color))
             for test, msg in result.errors:
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
