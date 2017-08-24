@@ -59,6 +59,10 @@ def extsetup(ui):
 # Wrappers
 
 def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
+    # For chg, do not wrap the "serve" runcommand call
+    if 'CHGINTERNALMARK' in os.environ:
+        return orig(lui, repo, cmd, fullargs, *args)
+
     # This wrapper executes whenever a command is run.
     # Some commands (eg hg sl) don't actually modify anything
     # ie can't be undone, but the command doesn't know this.
@@ -180,20 +184,15 @@ def log(repo, command, tr):
         newnodes.update({
             'date': _logdate(repo, tr),
             'command': _logcommand(repo, tr, command),
-            'unfinished': unfinished(repo, command=command),
+            'unfinished': unfinished(repo),
         })
         _logindex(repo, tr, newnodes)
         # changes have been recorded
         return True
 
-def unfinished(repo, commit=False, command=None):
+def unfinished(repo):
     '''like cmdutil.checkunfinished without raising an Abort'''
-    # "hg serve" usually does not make sense to undo to. hide it from undolog
-    if command and command[0] == 'serve':
-        return True
     for f, clearable, allowcommit, msg, hint in cmdutil.unfinishedstates:
-        if commit and allowcommit:
-            continue
         if repo.vfs.exists(f):
             return True
     return False
