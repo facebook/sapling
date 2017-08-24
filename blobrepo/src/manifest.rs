@@ -65,7 +65,7 @@ impl<B> Manifest for BlobManifest<B>
     fn lookup(
         &self,
         path: &Path,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error>>>, Self::Error> {
+    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let res = self.files
             .get(path)
             .map({
@@ -77,7 +77,7 @@ impl<B> Manifest for BlobManifest<B>
         Ok(res).into_future().boxed()
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error>>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
         let entries = self.files
             .clone()
             .into_iter()

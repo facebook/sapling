@@ -227,7 +227,7 @@ impl Manifest for RevlogManifest {
     fn lookup(
         &self,
         path: &Path,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error>>>, Self::Error> {
+    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let repo = self.repo.as_ref().expect("missing repo").clone();
         let res = RevlogManifest::lookup(self, path).map(|details| {
             RevlogEntry {
@@ -240,7 +240,7 @@ impl Manifest for RevlogManifest {
         Ok(res.map(|e| e.boxed())).into_future().boxed()
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error>>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
         let v: Vec<_> = self.manifest()
             .into_iter()
             .map(|(p, d)| (p.clone(), *d))
@@ -262,14 +262,11 @@ impl Entry for RevlogEntry {
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
         let revlog = match self.get_type() {
-            Type::Tree => {
-                self.repo.get_tree_revlog(self.get_path())
-            },
-            _ => {
-                self.repo.get_file_revlog(self.get_path())
-            }
+            Type::Tree => self.repo.get_tree_revlog(self.get_path()),
+            _ => self.repo.get_file_revlog(self.get_path()),
         };
-         revlog.and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+        revlog
+            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| *node.parents())
             .into_future()
             .boxed()
@@ -302,7 +299,7 @@ impl Entry for RevlogEntry {
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        let revlog = match self.get_type()  {
+        let revlog = match self.get_type() {
             Type::Tree => self.repo.get_tree_revlog(self.get_path()),
             _ => self.repo.get_file_revlog(self.get_path()),
         };
@@ -344,9 +341,7 @@ impl Entry for RevlogEntry {
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
         self.get_content()
             .and_then(|content| match content {
-                Content::File(data) | Content::Executable(data) => {
-                    Ok(data.size())
-                },
+                Content::File(data) | Content::Executable(data) => Ok(data.size()),
                 Content::Symlink(path) => Ok(Some(path.to_vec().len())),
                 Content::Tree(_) => Ok(None),
             })

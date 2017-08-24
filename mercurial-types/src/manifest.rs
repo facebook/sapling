@@ -22,8 +22,8 @@ pub trait Manifest: Send + 'static {
     fn lookup(
         &self,
         path: &Path,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error>>>, Self::Error>;
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error>>, Self::Error>;
+    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error>;
+    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error>;
 
     fn boxed(self) -> Box<Manifest<Error = Self::Error> + Sync>
     where
@@ -85,7 +85,7 @@ where
     fn lookup(
         &self,
         path: &Path,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error>>>, Self::Error> {
+    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let cvterr = self.cvterr;
 
         self.manifest
@@ -95,7 +95,7 @@ where
             .boxed()
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error>>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
         let cvterr = self.cvterr;
 
         self.manifest
@@ -112,11 +112,11 @@ impl<E: Send + 'static> Manifest for Box<Manifest<Error = E> + Sync> {
     fn lookup(
         &self,
         path: &Path,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error>>>, Self::Error> {
+    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error>>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
         (**self).list()
     }
 }
@@ -164,9 +164,9 @@ pub trait Entry: Send + 'static {
     fn get_hash(&self) -> &NodeHash;
     fn get_path(&self) -> &Path;
 
-    fn boxed(self) -> Box<Entry<Error = Self::Error>>
+    fn boxed(self) -> Box<Entry<Error = Self::Error> + Sync>
     where
-        Self: Sized,
+        Self: Sync + Sized,
     {
         Box::new(self)
     }
@@ -190,17 +190,20 @@ where
 
 impl<Ent, E> BoxEntry<Ent, E>
 where
-    Ent: Entry,
+    Ent: Entry + Sync + Send + 'static,
     E: Send + 'static,
 {
-    pub fn new(entry: Ent) -> Box<Entry<Error = E>>
+    pub fn new(entry: Ent) -> Box<Entry<Error = E> + Sync>
     where
         E: From<Ent::Error>,
     {
         Self::new_with_cvterr(entry, E::from)
     }
 
-    pub fn new_with_cvterr(entry: Ent, cvterr: fn(Ent::Error) -> E) -> Box<Entry<Error = E>> {
+    pub fn new_with_cvterr(
+        entry: Ent,
+        cvterr: fn(Ent::Error) -> E,
+    ) -> Box<Entry<Error = E> + Sync> {
         Box::new(BoxEntry {
             entry,
             cvterr,
@@ -211,7 +214,7 @@ where
 
 impl<Ent, E> Entry for BoxEntry<Ent, E>
 where
-    Ent: Entry + Send + 'static,
+    Ent: Entry + Sync + Send + 'static,
     E: Send + 'static,
 {
     type Error = E;
@@ -241,9 +244,7 @@ where
     }
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
-        self.entry.get_size()
-            .map_err(self.cvterr)
-            .boxed()
+        self.entry.get_size().map_err(self.cvterr).boxed()
     }
 
     fn get_hash(&self) -> &NodeHash {
@@ -255,10 +256,7 @@ where
     }
 }
 
-impl<E> Entry for Box<Entry<Error = E>>
-where
-    E: Send + 'static,
-{
+impl<E: Send + 'static> Entry for Box<Entry<Error = E> + Sync> {
     type Error = E;
 
     fn get_type(&self) -> Type {
