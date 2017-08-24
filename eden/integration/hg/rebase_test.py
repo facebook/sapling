@@ -56,9 +56,8 @@ class RebaseTest(HgExtensionTestBase):
         self.assert_update_logic(stdout, num_fast_path=2, num_slow_path=5)
 
         # Get the hash of the new head created as a result of the rebase.
-        new_head = self.hg(
-            'log', '-r', f'successors({self._c15})', '-T', '{node}'
-        )
+        new_head = self.repo.log(
+            revset=f'successors({self._c15})-{self._c15}')[0]
 
         # Record the pre-update inode count.
         inspector = eden_server_inspector.EdenServerInspector(self.repo.path)
