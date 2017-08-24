@@ -42,6 +42,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
+use std::ffi::OsString;
+use std::os::unix::ffi::OsStringExt;
 
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -142,7 +144,7 @@ impl TreeMetadata {
     {
         TreeMetadata {
             hash: entry.get_hash().clone(),
-            path: entry.get_path().fsencode_file(false),
+            path: PathBuf::from(OsString::from_vec(entry.get_path().to_vec())),
             ty: entry.get_type(),
             size,
         }
