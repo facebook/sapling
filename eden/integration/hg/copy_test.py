@@ -10,10 +10,11 @@
 import json
 from textwrap import dedent
 
-from .lib.hg_extension_test_base import HgExtensionTestBase
+from .lib.hg_extension_test_base import hg_test
 
 
-class CopyTest(HgExtensionTestBase):
+@hg_test
+class CopyTest:
     def populate_backing_repo(self, repo):
         repo.write_file('hello.txt', 'hola')
         repo.commit('Initial commit.\n')

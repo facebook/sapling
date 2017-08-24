@@ -7,10 +7,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib.hg_extension_test_base import HgExtensionTestBase
+from .lib.hg_extension_test_base import hg_test
 
 
-class UpdateTest(HgExtensionTestBase):
+@hg_test
+class UpdateTest:
     def edenfs_logging_settings(self):
         return {
             'eden.fs.inodes.TreeInode': 'DBG5',

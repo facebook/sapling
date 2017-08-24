@@ -9,10 +9,11 @@
 
 import os
 
-from .lib.hg_extension_test_base import HgExtensionTestBase
+from .lib.hg_extension_test_base import hg_test
 
 
-class CommitTest(HgExtensionTestBase):
+@hg_test
+class CommitTest:
     def populate_backing_repo(self, repo):
         repo.write_file('hello.txt', 'hola')
         repo.write_file('foo/bar.txt', 'test\n')

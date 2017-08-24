@@ -7,12 +7,13 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib.hg_extension_test_base import HgExtensionTestBase
+from .lib.hg_extension_test_base import hg_test
 import subprocess
 import unittest
 
 
-class AddTest(HgExtensionTestBase):
+@hg_test
+class AddTest:
     def populate_backing_repo(self, repo):
         repo.write_file('rootfile.txt', '')
         repo.write_file('dir1/a.txt', 'original contents')

@@ -7,11 +7,12 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .hg_extension_test_base import HgExtensionTestBase, EDEN_EXT_DIR
+from .hg_extension_test_base import hg_test, EDEN_EXT_DIR
 import os
 
 
-class HgExtensionTestBaseTest(HgExtensionTestBase):
+@hg_test
+class HgExtensionTestBaseTest:
     '''Test to make sure that HgExtensionTestBase creates Eden mounts that are
     properly configured with the Hg extension.
     '''

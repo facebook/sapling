@@ -9,12 +9,13 @@
 
 import os
 
-from .lib.hg_extension_test_base import HgExtensionTestBase
+from .lib.hg_extension_test_base import hg_test
 from .lib.histedit_command import HisteditCommand
 from ..lib import hgrepo
 
 
-class HisteditTest(HgExtensionTestBase):
+@hg_test
+class HisteditTest:
     def populate_backing_repo(self, repo):
         repo.write_file('first', '')
         self._commit1 = repo.commit('first commit')

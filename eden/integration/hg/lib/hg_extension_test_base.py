@@ -89,6 +89,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         hgrc['directaccess'] = {
             'loadsafter': 'tweakdefaults',
         }
+        self.apply_hg_config_variant(hgrc)
 
         # Create the backing repository
         self.backing_repo_name = 'backing_repo'
@@ -167,3 +168,65 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         '''Ensures that `hg status` reports no modifications.'''
         self.assert_status({}, msg=msg, check_ignored=check_ignored)
 
+
+def _apply_flatmanifest_config(test, config):
+    # flatmanifest is the default mercurial behavior
+    # no additional config settings are required
+    pass
+
+
+def _apply_treemanifest_config(test, config):
+    config['extensions']['fastmanifest'] = ''
+    config['extensions']['treemanifest'] = ''
+    config['fastmanifest'] = {
+        'usetree': 'True',
+        'usecache': 'False',
+    }
+    config['remotefilelog'] = {
+        'reponame': 'eden_integration_tests',
+        'cachepath': os.path.join(test.tmp_dir, 'hgcache'),
+    }
+
+
+def _apply_treeonly_config(test, config):
+    config['extensions']['treemanifest'] = ''
+    config['treemanifest'] = {
+        'treeonly': 'True',
+    }
+    config['remotefilelog'] = {
+        'reponame': 'eden_integration_tests',
+        'cachepath': os.path.join(test.tmp_dir, 'hgcache'),
+    }
+
+
+def _replicate_hg_test(test_class):
+    configs = {
+        'Flatmanifest': _apply_flatmanifest_config,
+        'Treemanifest': _apply_treemanifest_config,
+        # TODO: The treemanifest-only tests are currently disabled.
+        # The treeonly code in mercurial currently has bugs causing
+        # "hg commit" to fail when trying to create the initial root commit in
+        # a repository.  We should enable this once the treeonly code is fixed.
+        # 'TreeOnly': _apply_treeonly_config,
+    }
+
+    for name, config_fn in configs.items():
+        class HgTestVariant(test_class, HgExtensionTestBase):
+            apply_hg_config_variant = config_fn
+
+        yield name, HgTestVariant
+
+
+# A decorator function used to define test cases that test eden+mercurial.
+#
+# This decorator creates multiple TestCase subclasses from a single input
+# class.  This allows us to re-run the same test code with several different
+# mercurial extension configurations.
+#
+# The test case subclasses will have different suffixes to identify their
+# configuration.  Currently for a given input test class named "MyTest",
+# this will create subclasses named:
+# - "MyTestFlat": configures hg using the vanilla flat manifest
+# - "MyTestTree": configures hg using treemanifest
+# - "MyTestTreeOnly": configures hg using treemanifest.treeonly
+hg_test = testcase.test_replicator(_replicate_hg_test)
