@@ -615,7 +615,8 @@ def highlightdiff(line, color):
     if not color:
         return line
     assert pygmentspresent
-    return pygments.highlight(line, difflexer, terminal256formatter)
+    return pygments.highlight(line.decode('latin1'), difflexer,
+                              terminal256formatter).encode('latin1')
 
 def highlightmsg(msg, color):
     if not color:
