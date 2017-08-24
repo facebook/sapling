@@ -2043,21 +2043,21 @@ class TextTestRunner(unittest.TextTestRunner):
 
             if not self._runner.options.noskips:
                 for test, msg in result.skipped:
-                    formatted = 'Skipped %s: %s' % (test.name, msg)
+                    formatted = 'Skipped %s: %s\n' % (test.name, msg)
                     if result.color:
                         formatted = pygments.highlight(
                             formatted,
                             runnerlexer,
-                            runnerformatter).strip("\n")
-                    self.stream.writeln(formatted)
+                            runnerformatter)
+                    self.stream.write(formatted)
             for test, msg in result.failures:
-                formatted = 'Failed %s: %s' % (test.name, msg)
+                formatted = 'Failed %s: %s\n' % (test.name, msg)
                 if result.color:
                     formatted = pygments.highlight(
                         formatted,
                         runnerlexer,
-                        runnerformatter).strip("\n")
-                self.stream.writeln(formatted)
+                        runnerformatter)
+                self.stream.write(formatted)
             for test, msg in result.errors:
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
