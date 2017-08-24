@@ -123,6 +123,9 @@ def view(viewobj):
     done = False
     if viewobj.ui.pageractive:
         raise error.Abort(_("interactiveui doesn't work with pager"))
+    # disable line wrapping
+    # this is from curses.tigetstr('rmam')
+    sys.stdout.write('\x1b[?7l')
     s = viewobj.render()
     sys.stdout.write(s)
     while not done:
@@ -150,3 +153,7 @@ def view(viewobj):
         slist = s.splitlines(True)
         sys.stdout.write(''.join('\033[K' + line for line in slist))
         sys.stdout.flush()
+    # re-enable line wrapping
+    # this is from curses.tigetstr('smam')
+    sys.stdout.write('\x1b[?7h')
+    sys.stdout.flush()
