@@ -917,6 +917,9 @@ def bookmark(ui, repo, *names, **opts):
     diverged, a new 'divergent bookmark' of the form 'name@path' will
     be created. Using :hg:`merge` will resolve the divergence.
 
+    Specifying bookmark as '.' to -m or -d options is equivalent to specifying
+    the active bookmark's name.
+
     A bookmark named '@' has the special property that :hg:`clone` will
     check it out by default if it exists.
 
@@ -962,6 +965,7 @@ def bookmark(ui, repo, *names, **opts):
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
             if delete:
+                names = pycompat.maplist(repo._bookmarks.expandname, names)
                 bookmarks.delete(repo, tr, names)
             elif rename:
                 if not names:

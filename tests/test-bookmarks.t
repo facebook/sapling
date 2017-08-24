@@ -213,6 +213,26 @@ rename bookmark using . with no active bookmark
   $ hg up -q Y
   $ hg book -d rename-me
 
+delete bookmark using .
+
+  $ hg book delete-me
+  $ hg book -d .
+  $ hg bookmark
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+  $ hg up -q Y
+
+delete bookmark using . with no active bookmark
+
+  $ hg book delete-me
+  $ hg book -i delete-me
+  $ hg book -d .
+  abort: no active bookmark
+  [255]
+  $ hg up -q Y
+  $ hg book -d delete-me
+
 list bookmarks
 
   $ hg bookmark
