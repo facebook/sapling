@@ -317,7 +317,7 @@ def _display_overlay(
 
 def do_overlay(args: argparse.Namespace):
     config = cmd_util.create_config(args)
-    mount, rel_path = get_mount_path(args.path)
+    mount, rel_path = get_mount_path(args.path or os.getcwd())
 
     # Get the path to the overlay directory for this mount point
     client_dir = config._get_client_dir_for_mount_point(mount)
@@ -335,7 +335,7 @@ def do_overlay(args: argparse.Namespace):
 
 def do_getpath(args: argparse.Namespace):
     config = cmd_util.create_config(args)
-    mount, _ = get_mount_path(args.path)
+    mount, _ = get_mount_path(args.path or os.getcwd())
 
     with config.get_thrift_client() as client:
         inodePathInfo = client.debugGetInodePath(mount, args.number)
@@ -452,14 +452,14 @@ def setup_argparse(parser: argparse.ArgumentParser):
         action='store_const', const=-1, dest='depth', default=0,
         help='Recursively print child entries.')
     parser.add_argument(
-        'path',
+        'path', nargs='?',
         help='The path to the eden mount point.')
     parser.set_defaults(func=do_overlay)
 
     parser = subparsers.add_parser(
         'getpath', help='Get the eden path that corresponds to an inode number')
     parser.add_argument(
-        'path', nargs='?', default=os.getcwd(),
+        'path', nargs='?',
         help='The path to an Eden mount point. Uses `pwd` by default.')
     parser.add_argument(
         'number',
