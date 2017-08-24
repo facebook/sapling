@@ -71,7 +71,7 @@ stop & continue cannot preserve hashes without obsolescence
   > stop e860deea161a e
   > pick 652413bf663e f
   > EOF
-  Changes commited as 04d2fab98077. You may amend the changeset now.
+  Changes committed as 04d2fab98077. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
 
   $ hg histedit --continue
@@ -118,7 +118,7 @@ stop on a commit
   > stop 04d2fab98077 e
   > pick 794fe033d0a0 f
   > EOF
-  Changes commited as d28623a90f2b. You may amend the changeset now.
+  Changes committed as d28623a90f2b. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
 
   $ hg id -r . -i
@@ -171,7 +171,7 @@ fold a commit to check if other non-pick actions are handled correctly
   > stop d51720eb7a13 e
   > pick 099559071076 f
   > EOF
-  Changes commited as 08cf87522012. You may amend the changeset now.
+  Changes committed as 08cf87522012. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
 
   $ hg histedit --continue

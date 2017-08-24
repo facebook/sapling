@@ -231,7 +231,7 @@ Test interaction with histedit
   warning: orphaned descendants detected, not stripping 83455f1f6049
   warning: the changeset's children were left behind
   (this is okay since a histedit is in progress)
-  Changes commited as a2329fab3fab. You may amend the changeset now.
+  Changes committed as a2329fab3fab. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
   [1]
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'

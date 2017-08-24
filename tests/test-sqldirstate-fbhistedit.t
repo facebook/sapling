@@ -364,7 +364,7 @@ Test abort a stopped histedit with obsmarkers
   > exec false
   > pick 0d9a4961b100 f
   > EOF
-  Changes commited as 1d7ed205640e. You may amend the changeset now.
+  Changes committed as 1d7ed205640e. You may amend the changeset now.
   When you are done, run hg histedit --continue to resume
   [1]
   $ hg histedit --edit-plan

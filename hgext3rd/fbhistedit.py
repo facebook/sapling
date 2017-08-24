@@ -41,7 +41,7 @@ def defineactions():
             self.state.replacements.extend(replacements)
             self.state.write()
             raise error.InterventionRequired(
-                _('Changes commited as %s. You may amend the changeset now.\n'
+                _('Changes committed as %s. You may amend the changeset now.\n'
                   'When you are done, run hg histedit --continue to resume') %
                 parentctx)
 
