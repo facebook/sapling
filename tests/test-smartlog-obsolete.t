@@ -6,6 +6,8 @@
   > rebase=
   > smartlog=$TESTDIR/../hgext3rd/smartlog.py
   > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > [tweakdefaults]
+  > histeditkeepdate = true
   > [experimental]
   > evolution = createmarkers, allowunstable
   > allowdivergence = on

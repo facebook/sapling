@@ -1,8 +1,11 @@
+  $ . "$TESTDIR/histedit-helpers.sh"
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > rebase=
+  > histedit=
   > [experimental]
   > updatecheck=noconflict
   > EOF
@@ -414,6 +417,36 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   0.00 15
   0.00 14
 
+Test histedit date when tweakdefaults.histeditkeepdate is set
+  $ hg bookmark histedit_test
+  $ echo test_1 > histedit_1
+  $ hg commit -Aqm "commit 1 for histedit"
+  $ echo test_2 > histedit_2
+  $ hg commit -Aqm "commit 2 for histedit"
+  $ echo test_3 > histedit_3
+  $ hg commit -Aqm "commit 3 for histedit"
+  $ hg histedit 16 --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
+  > pick 16
+  > pick 18
+  > pick 17
+  > EOF
+  [1]
+  $ hg log -l 3 -T "{date} {rev} {desc}\n"
+  0.00 18 commit 2 for histedit
+  0.00 17 commit 3 for histedit
+  0.00 16 commit 1 for histedit
+
+Test histedit date when tweakdefaults.histeditkeepdate is not set
+  $ hg histedit 16 --commands - 2>&1 <<EOF| fixbundle
+  > pick 16
+  > pick 18
+  > pick 17
+  > EOF
+  [1]
+  $ hg log -l 2 -T "{rev} {desc}\n" -d "yesterday to today"
+  18 commit 3 for histedit
+  17 commit 2 for histedit
+
 Test reuse message flag by taking message from previous commit
   $ cd ../..
   $ hg up -q hyphen-book
@@ -449,7 +482,7 @@ Test non-remotenames use of pull --rebase and --update requires --dest
   $ cd $TESTTMP
   $ hg clone repo clone
   updating to branch default
-  9 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  12 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone
   $ hg pull --rebase
   abort: you must use a bookmark with tracking or manually specify a destination for the rebase

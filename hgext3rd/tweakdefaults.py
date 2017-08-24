@@ -23,10 +23,12 @@ Config::
     # default destination used by pull --rebase / --update
     defaultdest = ''
 
-    # whether to keep the commit date when doing amend / graft / rebase
+    # whether to keep the commit date when doing amend / graft / rebase /
+    # histedit
     amendkeepdate = False
     graftkeepdate = False
     rebasekeepdate = False
+    histeditkeepdate = False
 
     # whether to allow or disable some commands
     allowbranch = True
@@ -179,6 +181,11 @@ def extsetup(ui):
         fbamendmodule = extensions.find('fbamend')
         opawareamend = markermetadatawritingcommand(ui, amendcmd, 'amend')
         wrapcommand(fbamendmodule.cmdtable, 'amend', opawareamend)
+    except KeyError:
+        pass
+    try:
+        histeditmodule = extensions.find('histedit')
+        wrapfunction(histeditmodule, 'commitfuncfor', histeditcommitfuncfor)
     except KeyError:
         pass
 
@@ -740,6 +747,14 @@ def amendcmd(orig, ui, repo, *pats, **opts):
         and not ui.configbool('tweakdefaults', 'amendkeepdate')):
         opts["date"] = currentdate()
     return orig(ui, repo, *pats, **opts)
+
+def histeditcommitfuncfor(orig, repo, src):
+    origcommitfunc = orig(repo, src)
+    def commitfunc(**kwargs):
+        if not repo.ui.configbool('tweakdefaults', 'histeditkeepdate'):
+            kwargs['date'] = util.makedate(time.time())
+        origcommitfunc(**kwargs)
+    return commitfunc
 
 def log(orig, ui, repo, *pats, **opts):
     # 'hg log' defaults to -f
