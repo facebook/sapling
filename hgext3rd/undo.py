@@ -700,10 +700,6 @@ def undo(ui, repo, *args, **opts):
         cmdutil.bailifchanged(repo)
 
         class undopreview(interactiveui.viewframe):
-            def init(self, repo, ui, index):
-                self.repo = repo
-                self.ui = ui
-                self.index = index
             def render(self):
                 ui = self.ui
                 ui.pushbuffer()

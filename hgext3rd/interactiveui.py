@@ -104,6 +104,8 @@ class viewframe(object):
         self.ui = ui
         self.repo = repo
         self.index = index
+        ui.disablepager()
+        repo.ui.disablepager()
     def render():
         # returns string to print
         pass
