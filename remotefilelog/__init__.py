@@ -895,7 +895,9 @@ def debughistorypack(ui, path, **opts):
     ], _('hg debugkeepset'))
 def debugkeepset(ui, repo, **opts):
     # The command is used to measure keepset computation time
-    repackmod.keepset(repo)
+    def keyfn(fname, fnode):
+        return fileserverclient.getcachekey(repo.name, fname, hex(fnode))
+    repackmod.keepset(repo, keyfn)
     return
 
 @command('debugwaitonrepack', [

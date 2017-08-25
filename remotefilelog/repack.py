@@ -337,8 +337,16 @@ def keepset(repo, keyfn, lastkeepkeys=None):
         processed.add(r)
 
         # populate keepkeys with keys from the current manifest
-        for filename, filenode in m.iteritems():
-            keepkeys.add(keyfn(filename, filenode))
+        if type(m) is dict:
+            # m is a result of diff of two manifests and is a dictionary that
+            # maps filename to ((newnode, newflag), (oldnode, oldflag)) tuple
+            for filename, diff in m.iteritems():
+                if diff[0][0] is not None:
+                    keepkeys.add(keyfn(filename, diff[0][0]))
+        else:
+            # m is a manifest object
+            for filename, filenode in m.iteritems():
+                keepkeys.add(keyfn(filename, filenode))
 
     return keepkeys
 
