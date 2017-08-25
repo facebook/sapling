@@ -59,6 +59,15 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+colortable = {
+    'phabricator.action.created': 'green',
+    'phabricator.action.skipped': 'magenta',
+    'phabricator.action.updated': 'magenta',
+    'phabricator.desc': '',
+    'phabricator.drev': 'bold',
+    'phabricator.node': '',
+}
+
 def urlencodenested(params):
     """like urlencode, but works with nested parameters.
 
@@ -413,9 +422,9 @@ def phabsend(ui, repo, *revs, **opts):
             diffmap[ctx.node()] = diff
             newrevid = int(revision[r'object'][r'id'])
             if revid:
-                action = _('updated')
+                action = 'updated'
             else:
-                action = _('created')
+                action = 'created'
 
             # Create a local tag to note the association, if commit message
             # does not have it already
@@ -428,10 +437,18 @@ def phabsend(ui, repo, *revs, **opts):
             # Nothing changed. But still set "newrevid" so the next revision
             # could depend on this one.
             newrevid = revid
-            action = _('skipped')
+            action = 'skipped'
 
-        ui.write(_('D%s: %s - %s: %s\n') % (newrevid, action, ctx,
-                                            ctx.description().split('\n')[0]))
+        actiondesc = ui.label(
+            {'created': _('created'),
+             'skipped': _('skipped'),
+             'updated': _('updated')}[action],
+            'phabricator.action.%s' % action)
+        drevdesc = ui.label('D%s' % newrevid, 'phabricator.drev')
+        nodedesc = ui.label(bytes(ctx), 'phabricator.node')
+        desc = ui.label(ctx.description().split('\n')[0], 'phabricator.desc')
+        ui.write(_('%s - %s - %s: %s\n') % (drevdesc, actiondesc, nodedesc,
+                                            desc))
         drevids.append(newrevid)
         lastrevid = newrevid
 
