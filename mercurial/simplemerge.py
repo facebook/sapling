@@ -461,8 +461,8 @@ def simplemerge(ui, localfile, basefile, otherfile,
     mode = opts.get('mode','merge')
     name_a, name_b, name_base = None, None, None
     if mode != 'union':
-        name_a, name_b, name_base = _picklabels([localfile,
-                                                 otherfile, None],
+        name_a, name_b, name_base = _picklabels([localctx.path(),
+                                                 otherctx.path(), None],
                                                 opts.get('label', []))
 
     try:
