@@ -1694,6 +1694,9 @@ class revlog(object):
         - rawtext is optional (can be None); if not set, cachedelta must be set.
           if both are set, they must correspond to each other.
         """
+        if node == nullid:
+            raise RevlogError(_("%s: attempt to add null revision") %
+                              (self.indexfile))
         btext = [rawtext]
         def buildtext():
             if btext[0] is not None:
