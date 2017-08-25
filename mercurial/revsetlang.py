@@ -260,9 +260,10 @@ def _matchnamedfunc(x, funcname):
 
 # Constants for ordering requirement, used in getset():
 #
-# If 'define', any nested functions and operations can change the ordering of
-# the entries in the set. If 'follow', any nested functions and operations
-# should take the ordering specified by the first operand to the '&' operator.
+# If 'define', any nested functions and operations MAY change the ordering of
+# the entries in the set (but if changes the ordering, it MUST ALWAYS change
+# it). If 'follow', any nested functions and operations MUST take the ordering
+# specified by the first operand to the '&' operator.
 #
 # For instance,
 #
@@ -276,15 +277,28 @@ def _matchnamedfunc(x, funcname):
 #
 # 'any' means the order doesn't matter. For instance,
 #
-#   X & !Y
-#        ^
-#        any
+#   (X & Y) | ancestors(Z)
+#        ^              ^
+#        any            any
 #
-# 'y()' can either enforce its ordering requirement or take the ordering
-# specified by 'x()' because 'not()' doesn't care the order.
-anyorder = 'any'        # don't care the order
-defineorder = 'define'  # should define the order
-followorder = 'follow'  # must follow the current order
+# For 'X & Y', 'X' decides order so the order of 'Y' does not matter. For
+# 'ancestors(Z)', Z's order does not matter since 'ancestors' does not care
+# about the order of its argument.
+#
+# Currently, most revsets do not care about the order, so 'define' is
+# equivalent to 'follow' for them, and the resulting order is based on the
+# 'subset' parameter passed down to them:
+#
+#   m = revset.match(..., order=defineorder)
+#   m(repo, subset)
+#           ^^^^^^
+#      For most revsets, 'define' means using the order this subset provides
+#
+# There are a few revsets that always redefine the order if 'define' is
+# specified: 'sort(X)', 'reverse(X)', 'x:y'.
+anyorder = 'any'        # don't care the order, could be even random-shuffled
+defineorder = 'define'  # ALWAYS redefine, or ALWAYS follow the current order
+followorder = 'follow'  # MUST follow the current order
 
 def _matchonly(revs, bases):
     """
