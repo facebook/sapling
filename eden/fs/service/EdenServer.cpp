@@ -25,6 +25,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
@@ -169,6 +170,10 @@ void EdenServer::prepare() {
   functionScheduler_->addFunction(
       [this] { flushStatsNow(); }, std::chrono::seconds(1));
 
+  // Set the ServiceData counter for tracking number of inodes unloaded by
+  // periodic job for unloading inodes to zero on EdenServer start.
+  stats::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
+
   auto pool =
       make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
   wangle::setCPUExecutor(pool);
@@ -238,13 +243,31 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
         [edenMount] {
           auto rootInode = (edenMount.get())->getRootInode();
           XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
-          rootInode->unloadChildrenNow(
+          auto unloadCount = rootInode->unloadChildrenNow(
               std::chrono::minutes(FLAGS_unload_age_minutes));
+          unloadCount +=
+              stats::ServiceData::get()->getCounter(kPeriodicUnloadCounterKey);
+          stats::ServiceData::get()->setCounter(
+              kPeriodicUnloadCounterKey, unloadCount);
         },
         std::chrono::hours(FLAGS_unload_interval_hours),
         getPeriodicUnloadFunctionName(edenMount.get()),
         std::chrono::minutes(FLAGS_start_delay_minutes));
   }
+
+  // TODO(T21262294): We will have to implement a mechanism to get the counter
+  // names for a mount point.
+  // Register callback for getting Loaded inodes in the memory for a mountPoint.
+  stats::ServiceData::get()->getDynamicCounters()->registerCallback(
+      edenMount->getCounterName(CounterName::LOADED), [edenMount] {
+        return edenMount.get()->getInodeMap()->getLoadedInodeCount();
+      });
+  // Register callback for getting Unloaded inodes in the memory for a
+  // mountpoint
+  stats::ServiceData::get()->getDynamicCounters()->registerCallback(
+      edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
+        return edenMount.get()->getInodeMap()->getUnloadedInodeCount();
+      });
 
   // Perform all of the bind mounts associated with the client.
   for (auto& bindMount : edenMount->getBindMounts()) {
@@ -295,6 +318,10 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   functionScheduler_->cancelFunctionAndWait(
       getPeriodicUnloadFunctionName(edenMount));
+  stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
+      edenMount->getCounterName(CounterName::LOADED));
+  stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
+      edenMount->getCounterName(CounterName::UNLOADED));
 
   // Erase the EdenMount from our mountPoints_ map
   folly::SharedPromise<Unit> unmountPromise;

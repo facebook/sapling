@@ -52,6 +52,20 @@ class RenameLock;
 class SharedRenameLock;
 
 /**
+ * Represents types of keys for some fb303 counters.
+ */
+enum class CounterName {
+  /**
+   * Represents count of loaded inodes in the current mount.
+   */
+  LOADED,
+  /**
+   * Represents count of unloaded inodes in the current mount.
+   */
+  UNLOADED
+};
+
+/**
  * EdenMount contains all of the data about a specific eden mount point.
  *
  * This contains:
@@ -311,6 +325,11 @@ class EdenMount {
    * Returns the last checkout time in the Eden mount.
    */
   struct timespec getLastCheckoutTime();
+
+  /**
+   * Returns the key value to an fb303 counter.
+   */
+  std::string getCounterName(CounterName name);
 
   struct ParentInfo {
     ParentCommits parents;

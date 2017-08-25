@@ -217,6 +217,34 @@ struct InodePathDebugInfo {
   3: bool linked
 }
 
+/**
+ * Struct to store Information about inodes in a mount point.
+ */
+struct MountInodeInfo {
+  1: i64 loadedInodeCount
+  2: i64 unloadedInodeCount
+  3: i64 materializedInodeCount
+}
+
+/**
+ * Struct to store fb303 counters from ServiceData.getCounters() and inode
+ * information of all the mount points.
+ */
+struct InternalStats {
+  1: i64 periodicUnloadCount
+/**
+ * counters is the list of fb303 counters, key is the counter name, value is the
+ * counter value.
+ */
+  2: map<string, i64> counters
+/**
+ * mountPointInfo is a map whose key is the path of the mount point and value
+ * is the details like number of loaded inodes,unloaded inodes in that mount
+ * and number of materialized inodes in that mountpoint.
+ */
+  3: map<string, MountInodeInfo> mountPointInfo
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -494,4 +522,8 @@ service EdenService extends fb303.FacebookService {
     )
   throws (1: EdenError ex)
 
+ /**
+   * Gets the number of inodes unloaded by periodic job on an EdenMount.
+   */
+  InternalStats getStatInfo() throws (1: EdenError ex)
 }

@@ -18,6 +18,8 @@ python_library(
         "config.py",
         "configinterpolator.py",
         "rage.py",
+        "stats.py",
+        "stats_print.py",
         "util.py",
     ],
 )

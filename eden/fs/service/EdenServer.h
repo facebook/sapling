@@ -27,6 +27,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
 
+constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
+
 namespace apache {
 namespace thrift {
 class ThriftServer;

@@ -404,6 +404,13 @@ class InodeMap {
   fuse_ino_t allocateInodeNumber();
   void inodeCreated(const InodePtr& inode);
 
+  uint64_t getLoadedInodeCount() {
+    return data_.rlock()->loadedInodes_.size();
+  }
+  uint64_t getUnloadedInodeCount() {
+    return data_.rlock()->unloadedInodes_.size();
+  }
+
  private:
   friend class InodeMapLock;
 

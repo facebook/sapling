@@ -403,5 +403,14 @@ RenameLock EdenMount::acquireRenameLock() {
 SharedRenameLock EdenMount::acquireSharedRenameLock() {
   return SharedRenameLock{this};
 }
+
+std::string EdenMount::getCounterName(CounterName name) {
+  if (name == CounterName::LOADED) {
+    return getPath().stringPiece().str() + ".loaded";
+  } else if (name == CounterName::UNLOADED) {
+    return getPath().stringPiece().str() + ".unloaded";
+  }
+  folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
+}
 }
 } // facebook::eden

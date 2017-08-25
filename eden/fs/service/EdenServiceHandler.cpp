@@ -675,6 +675,39 @@ int64_t EdenServiceHandler::unloadInodeForPath(
   return inode->unloadChildrenNow(sec + nsec);
 }
 
+void EdenServiceHandler::getStatInfo(InternalStats& result) {
+  auto mountList = server_->getMountPoints();
+  for (auto& mount : mountList) {
+    // Set LoadedInde Count and unloaded Inode count for the mountPoint.
+    MountInodeInfo mountInodeInfo;
+    mountInodeInfo.loadedInodeCount = stats::ServiceData::get()->getCounter(
+        mount->getCounterName(CounterName::LOADED));
+    mountInodeInfo.unloadedInodeCount = stats::ServiceData::get()->getCounter(
+        mount->getCounterName(CounterName::UNLOADED));
+
+    // TODO: Currently getting Materialization status of an inode using
+    // getDebugStatus which walks through entire Tree of inodes, in future we
+    // can add some mechanism to get materialized inode count without walking
+    // through the entire tree.
+    vector<TreeInodeDebugInfo> debugInfoStatus;
+    auto root = mount->getRootInode();
+    root->getDebugStatus(debugInfoStatus);
+    uint64_t materializedCount = 0;
+    for (auto& entry : debugInfoStatus) {
+      if (entry.materialized) {
+        materializedCount++;
+      }
+    }
+    mountInodeInfo.materializedInodeCount = materializedCount;
+    result.mountPointInfo[mount->getPath().stringPiece().str()] =
+        mountInodeInfo;
+  }
+  // Get the counters and set number of inodes unloaded by periodic unload job.
+  result.counters = stats::ServiceData::get()->getCounters();
+  result.periodicUnloadCount =
+      result.counters[kPeriodicUnloadCounterKey.toString()];
+}
+
 void EdenServiceHandler::flushStatsNow() {
   server_->flushStatsNow();
 }
