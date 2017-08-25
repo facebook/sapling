@@ -362,10 +362,10 @@ def phabsend(ui, repo, *revs, **opts):
 
     The --confirm option lets you confirm changesets before sending them. You
     can also add following to your configuration file to make it default
-    behaviour.
+    behaviour::
 
-    [phabsend]
-    confirm = true
+        [phabsend]
+        confirm = true
 
     phabsend will check obsstore and the above association to decide whether to
     update an existing Differential Revision, or create a new one.
