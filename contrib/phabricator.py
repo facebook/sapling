@@ -274,7 +274,7 @@ def createdifferentialrevision(ctx, revid=None, parentrevid=None, oldnode=None,
     """
     repo = ctx.repo()
     if oldnode:
-        diffopts = mdiff.diffopts(git=True, context=1)
+        diffopts = mdiff.diffopts(git=True, context=32767)
         oldctx = repo.unfiltered()[oldnode]
         neednewdiff = (getdiff(ctx, diffopts) != getdiff(oldctx, diffopts))
     else:
