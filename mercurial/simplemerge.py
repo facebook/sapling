@@ -419,8 +419,8 @@ def _picklabels(defaults, overrides):
 
     return [name_a, name_b, name_base]
 
-def simplemerge(ui, localfile, basefile, otherfile,
-                localctx=None, basectx=None, otherctx=None, repo=None, **opts):
+def simplemerge(ui, localctx=None, basectx=None, otherctx=None, repo=None,
+                **opts):
     """Performs the simplemerge algorithm.
 
     {local|base|other}ctx are optional. If passed, they (local/base/other) will

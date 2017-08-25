@@ -341,7 +341,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
                 labels = _defaultconflictlabels
             if len(labels) < 3:
                 labels.append('base')
-        r = simplemerge.simplemerge(ui, a, b, c, fcd, fca, fco,
+        r = simplemerge.simplemerge(ui, fcd, fca, fco,
                                     quiet=True, label=labels, repo=repo)
         if not r:
             ui.debug(" premerge successful\n")
@@ -372,7 +372,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
 
     ui = repo.ui
 
-    r = simplemerge.simplemerge(ui, a, b, c, fcd, fca, fco,
+    r = simplemerge.simplemerge(ui, fcd, fca, fco,
                                 label=labels, mode=mode, repo=repo)
     return True, r, False
 
@@ -425,7 +425,7 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
     assert localorother is not None
     tool, toolpath, binary, symlink = toolconf
     a, b, c, back = files
-    r = simplemerge.simplemerge(repo.ui, a, b, c, fcd, fca, fco,
+    r = simplemerge.simplemerge(repo.ui, fcd, fca, fco,
                                 label=labels, localorother=localorother,
                                 repo=repo)
     return True, r

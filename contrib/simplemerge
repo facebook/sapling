@@ -85,9 +85,6 @@ try:
             raise ParseError(_('wrong number of arguments'))
     local, base, other = args
     sys.exit(simplemerge.simplemerge(uimod.ui.load(),
-                                     local,
-                                     base,
-                                     other,
                                      filebackedctx(local),
                                      filebackedctx(base),
                                      filebackedctx(other),
