@@ -378,10 +378,13 @@ def phabsend(ui, repo, *revs, **opts):
     if opts.get('amend'):
         cmdutil.checkunfinished(repo)
 
+    # {newnode: (oldnode, olddiff, olddrev}
+    oldmap = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
+
     confirm = ui.configbool('phabsend', 'confirm')
     confirm |= bool(opts.get('confirm'))
     if confirm:
-        confirmed = _confirmbeforesend(repo, revs)
+        confirmed = _confirmbeforesend(repo, revs, oldmap)
         if not confirmed:
             raise error.Abort(_('phabsend cancelled'))
 
@@ -390,9 +393,6 @@ def phabsend(ui, repo, *revs, **opts):
     if reviewers:
         phids = userphids(repo, reviewers)
         actions.append({'type': 'reviewers.add', 'value': phids})
-
-    # {newnode: (oldnode, olddiff, olddrev}
-    oldmap = getoldnodedrevmap(repo, [repo[r].node() for r in revs])
 
     drevids = [] # [int]
     diffmap = {} # {newnode: diff}
@@ -474,14 +474,21 @@ def phabsend(ui, repo, *revs, **opts):
 _metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
                               (r'node', 'Node ID'), (r'parent', 'Parent ')])
 
-def _confirmbeforesend(repo, revs):
+def _confirmbeforesend(repo, revs, oldmap):
     url, token = readurltoken(repo)
     ui = repo.ui
     for rev in revs:
         ctx = repo[rev]
         desc = ctx.description().splitlines()[0]
-        ui.write(('%d: ' % rev), label='phabsend.revnumber')
-        ui.write(('%s\n' % desc), label='phabsend.desc')
+        oldnode, olddiff, drevid = oldmap.get(ctx.node(), (None, None, None))
+        if drevid:
+            drevdesc = ui.label('D%s' % drevid, 'phabricator.drev')
+        else:
+            drevdesc = ui.label(_('NEW'), 'phabricator.drev')
+
+        ui.write(_('%s - %s: %s\n') % (drevdesc,
+                                       ui.label(bytes(ctx), 'phabricator.node'),
+                                       ui.label(desc, 'phabricator.desc')))
 
     if ui.promptchoice(_('Send the above changes to %s (yn)?'
                          '$$ &Yes $$ &No') % url):
