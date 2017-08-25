@@ -419,13 +419,10 @@ def _picklabels(defaults, overrides):
 
     return [name_a, name_b, name_base]
 
-def simplemerge(ui, localctx=None, basectx=None, otherctx=None, repo=None,
-                **opts):
+def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
     """Performs the simplemerge algorithm.
 
-    {local|base|other}ctx are optional. If passed, they (local/base/other) will
-    be read from and the merge result written to (local). You should pass
-    explicit labels in this mode since the default is to use the file paths.
+    The merged result is written into `localctx`.
     """
     def readctx(ctx):
         if not ctx:
