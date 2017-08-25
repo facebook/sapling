@@ -3849,7 +3849,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
                         "merge)\n"))
         else:
             ui.status(_("(run 'hg heads' to see heads)\n"))
-    else:
+    elif not ui.configbool('commands', 'update.requiredest'):
         ui.status(_("(run 'hg update' to get a working copy)\n"))
 
 @command('^pull',
