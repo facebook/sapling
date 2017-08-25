@@ -1097,6 +1097,13 @@ class basefilectx(object):
             c = visit.pop(max(visit))
             yield c
 
+    def decodeddata(self):
+        """Returns `data()` after running repository decoding filters.
+
+        This is often equivalent to how the data would be expressed on disk.
+        """
+        return self._repo.wwritedata(self.path(), self.data())
+
 def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     r'''
     Given parent and child fctxes and annotate data for parents, for all lines
