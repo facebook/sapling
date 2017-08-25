@@ -438,15 +438,14 @@ def simplemerge(ui, localfile, basefile, otherfile,
     def readctx(ctx):
         if not ctx:
             return None
-        if not repo:
-            raise error.ProgrammingError('simplemerge: repo must be passed if '
-                                         'using contexts')
-        # `wwritedata` is used to get the post-filter data from `ctx` (i.e.,
-        # what would have been in the working copy). Since merges were run in
-        # the working copy, and thus used post-filter data, we do the same to
-        # maintain behavior.
-        return repo.wwritedata(ctx.path(),
-                               _verifytext(ctx.data(), ctx.path(), ui, opts))
+        # Merges were always run in the working copy before, which means
+        # they used decoded data, if the user defined any repository
+        # filters.
+        #
+        # Maintain that behavior today for BC, though perhaps in the future
+        # it'd be worth considering whether merging encoded data (what the
+        # repository usually sees) might be more useful.
+        return _verifytext(ctx.decodeddata(), ctx.path(), ui, opts)
 
     class ctxwriter(object):
         def __init__(self, ctx):
