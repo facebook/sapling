@@ -15,42 +15,18 @@
 #include <stdexcept>
 
 #include "clib/convert.h"
+#include "cstore/store.h"
+#include "ctreemanifest/manifest_entry.h"
+#include "ctreemanifest/manifest_ptr.h"
 
-class Manifest;
 class ManifestIterator;
 class SortedManifestIterator;
-
-class ManifestPtr {
-  private:
-    Manifest *manifest;
-  public:
-    ManifestPtr();
-
-    ManifestPtr(Manifest *manifest);
-
-    ManifestPtr(const ManifestPtr &other);
-
-    ~ManifestPtr();
-
-    ManifestPtr& operator= (const ManifestPtr& other);
-
-    operator Manifest* () const;
-
-    Manifest *operator-> ();
-
-    bool isnull() const;
-};
 
 enum FindResultType {
   RESULT_FILE,
   RESULT_DIRECTORY,
   RESULT_FILE_OR_DIRECTORY,
 };
-
-class ManifestEntry;
-
-#include "cstore/store.h"
-#include "ctreemanifest/manifest_entry.h"
 
 /**
  * This class represents a view on a particular Manifest instance. It provides

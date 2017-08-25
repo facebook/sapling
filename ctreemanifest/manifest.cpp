@@ -247,54 +247,6 @@ void Manifest::computeNode(const char *p1, const char *p2, char *result) {
   fbhg_sha1_final((unsigned char*)result, &ctx);
 }
 
-ManifestPtr::ManifestPtr() :
-  manifest(NULL) {
-}
-
-ManifestPtr::ManifestPtr(Manifest *manifest) :
-  manifest(manifest) {
-  if (!manifest) {
-    throw std::logic_error("passed NULL manifest pointer");
-  }
-  this->manifest->incref();
-}
-
-ManifestPtr::ManifestPtr(const ManifestPtr &other) :
-  manifest(other.manifest) {
-  if (this->manifest) {
-    this->manifest->incref();
-  }
-}
-
-ManifestPtr::~ManifestPtr() {
-  if (this->manifest && this->manifest->decref() == 0) {
-    delete(this->manifest);
-  }
-}
-
-ManifestPtr& ManifestPtr::operator= (const ManifestPtr& other) {
-  if (this->manifest) {
-    this->manifest->decref();
-  }
-  this->manifest = other.manifest;
-  if (this->manifest) {
-    this->manifest->incref();
-  }
-  return *this;
-}
-
-ManifestPtr::operator Manifest* () const {
-  return this->manifest;
-}
-
-Manifest *ManifestPtr::operator-> () {
-  return this->manifest;
-}
-
-bool ManifestPtr::isnull() const {
-  return this->manifest == NULL;
-}
-
 void Manifest::incref() {
   this->_refcount++;
 }

@@ -9,6 +9,8 @@
 
 #include "ctreemanifest/manifest_fetcher.h"
 
+#include "ctreemanifest/manifest.h"
+
 ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) :
   _store(store) {
 }

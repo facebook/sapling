@@ -13,10 +13,8 @@
 #include <memory>
 #include <string>
 
-class ManifestFetcher;
-
 #include "cstore/store.h"
-#include "ctreemanifest/manifest.h"
+#include "ctreemanifest/manifest_ptr.h"
 
 /**
  * Class used to obtain Manifests, given a path and node.

@@ -11,6 +11,8 @@
 
 #include <cassert>
 
+#include "ctreemanifest/manifest.h"
+
 ManifestEntry::ManifestEntry()
     : filename(NULL), filenamelen(0), node(NULL), flag(NULL),
       ownedmemory(NULL) {}

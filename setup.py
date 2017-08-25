@@ -245,6 +245,7 @@ else:
                     'ctreemanifest/manifest.cpp',
                     'ctreemanifest/manifest_entry.cpp',
                     'ctreemanifest/manifest_fetcher.cpp',
+                    'ctreemanifest/manifest_ptr.cpp',
                     'ctreemanifest/treemanifest.cpp',
                 ],
                 include_dirs=[
