@@ -31,7 +31,7 @@ class DeltaChainIterator {
     std::vector<delta_chain_t> _chains;
     DeltaChainIterator() :
       _index(0) {}
-    virtual delta_chain_t getNextChain(const Key &key) {
+    virtual delta_chain_t getNextChain(const Key& /*key*/) {
       return COMPOUND_LITERAL(delta_chain_t) { GET_DELTA_CHAIN_NOT_FOUND };
     }
   public:
@@ -99,7 +99,7 @@ class DatapackStoreKeyIterator : public KeyIterator {
       _store(store),
       _missing(missing) {}
 
-    Key *next();
+    Key *next() override;
 };
 
 /* Manages access to a directory of datapack files. */

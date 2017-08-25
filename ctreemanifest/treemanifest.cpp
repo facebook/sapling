@@ -301,10 +301,11 @@ struct GetResult {
 };
 
 static FindResult get_callback(
-    Manifest *manifest,
-    const char *filename, size_t filenamelen,
-    FindContext *context,
-    ManifestPtr *resultManifest) {
+    Manifest* manifest,
+    const char* filename,
+    size_t filenamelen,
+    FindContext* context,
+    ManifestPtr* /*resultManifest*/) {
   GetResult *result = (GetResult *) context->extras;
 
   // position the iterator at the right location

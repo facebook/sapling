@@ -33,14 +33,15 @@ class UnionDatapackStoreKeyIterator : public KeyIterator {
       _store(store),
       _missing(missing) {}
 
-    Key *next();
+    Key *next() override;
 };
 
 class UnionDeltaChainIterator: public DeltaChainIterator {
   private:
     UnionDatapackStore &_store;
   protected:
-    delta_chain_t getNextChain(const Key &key);
+    delta_chain_t getNextChain(const Key &key) override;
+
   public:
     UnionDeltaChainIterator(UnionDatapackStore &store, const Key &key) :
       DeltaChainIterator(),
@@ -55,9 +56,9 @@ class UnionDatapackStore : public Store {
 
     UnionDatapackStore(std::vector<DatapackStore*> stores);
 
-    ~UnionDatapackStore();
+    ~UnionDatapackStore() override;
 
-    ConstantStringRef get(const Key &key);
+    ConstantStringRef get(const Key &key) override;
 
     UnionDeltaChainIterator getDeltaChain(const Key &key);
 
