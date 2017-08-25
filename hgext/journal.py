@@ -342,7 +342,7 @@ class journalstorage(object):
         with self.jlock(vfs):
             version = None
             # open file in amend mode to ensure it is created if missing
-            with vfs('namejournal', mode='a+b', atomictemp=True) as f:
+            with vfs('namejournal', mode='a+b') as f:
                 f.seek(0, os.SEEK_SET)
                 # Read just enough bytes to get a version number (up to 2
                 # digits plus separator)
