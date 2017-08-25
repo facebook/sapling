@@ -425,8 +425,6 @@ def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
     The merged result is written into `localctx`.
     """
     def readctx(ctx):
-        if not ctx:
-            return None
         # Merges were always run in the working copy before, which means
         # they used decoded data, if the user defined any repository
         # filters.
