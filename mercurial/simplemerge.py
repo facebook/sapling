@@ -436,17 +436,6 @@ def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
         # repository usually sees) might be more useful.
         return _verifytext(ctx.decodeddata(), ctx.path(), ui, opts)
 
-    class ctxwriter(object):
-        def __init__(self, ctx):
-            self.ctx = ctx
-            self.text = ""
-
-        def write(self, text):
-            self.text += text
-
-        def close(self):
-            self.ctx.write(self.text, self.ctx.flags())
-
     mode = opts.get('mode','merge')
     name_a, name_b, name_base = None, None, None
     if mode != 'union':
@@ -461,11 +450,6 @@ def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
     except error.Abort:
         return 1
 
-    if opts.get('print'):
-        out = ui.fout
-    else:
-        out = ctxwriter(localctx)
-
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {
             "localorother": opts.get("localorother", None),
@@ -479,12 +463,17 @@ def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
         extrakwargs['base_marker'] = '|||||||'
         extrakwargs['name_base'] = name_base
         extrakwargs['minimize'] = False
+
+    mergedtext = ""
     for line in m3.merge_lines(name_a=name_a, name_b=name_b,
                                **pycompat.strkwargs(extrakwargs)):
-        out.write(line)
+        if opts.get('print'):
+            ui.fout.write(line)
+        else:
+            mergedtext += line
 
     if not opts.get('print'):
-        out.close()
+        localctx.write(mergedtext, localctx.flags())
 
     if m3.conflicts and not mode == 'union':
         return 1
