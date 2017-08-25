@@ -204,6 +204,7 @@ def extsetup(ui):
             # remotenames is loaded, wrap its wrapper directly
             remotenames = extensions.find('remotenames')
             wrapfunction(remotenames, 'exbookmarks', unfilteredcmd)
+            wrapfunction(remotenames, 'expullcmd', pullrebaseffwd)
         else:
             # otherwise wrap the bookmarks command
             wrapcommand(commands.table, 'bookmarks', unfilteredcmd)
@@ -318,10 +319,43 @@ def pull(orig, ui, repo, *args, **opts):
     # NB: we use rebase and not isrebase on the next line because
     # remotenames may have already handled the rebase.
     if dest and rebase:
-        ret = ret or rebasemodule.rebase(ui, repo, dest=dest, tool=tool)
+        ret = ret or rebaseorfastforward(rebasemodule.rebase, ui, repo,
+                                         dest=dest, tool=tool)
     if dest and update:
         ret = ret or commands.update(ui, repo, node=dest, check=True)
 
+    return ret
+
+def rebaseorfastforward(orig, ui, repo, dest, **args):
+    """Wrapper for rebasemodule.rebase that fast-forwards the working directory
+    and any active bookmark to the rebase destination if there is actually
+    nothing to rebase.
+    """
+    prev = repo['.']
+    destrev = scmutil.revsingle(repo, dest)
+    common = destrev.ancestor(prev)
+    if prev == common and destrev != prev:
+        result = hg.update(repo, destrev.node())
+        if bmactive(repo):
+            with repo.wlock():
+                bookmarks.update(repo, [prev.node()], destrev.node())
+        ui.status(_("nothing to rebase - fast-forwarded to %s\n") % dest)
+        return result
+    return orig(ui, repo, dest=dest, **args)
+
+def pullrebaseffwd(orig, rebasefunc, ui, repo, source="default", **opts):
+    # The remotenames module also wraps "pull --rebase", and if it is active, it
+    # is the module that actually performs the rebase.  If it is rebasing, we
+    # need to wrap the rebasemodule.rebase function that it calls to replace it
+    # with our rebaseorfastforward method.
+    rebasing = 'rebase' in opts
+    if rebasing:
+        rebasemodule = extensions.find('rebase')
+        if rebasemodule:
+            wrapfunction(rebasemodule, 'rebase', rebaseorfastforward)
+    ret = orig(rebasefunc, ui, repo, source, **opts)
+    if rebasing and rebasemodule:
+        extensions.unwrapfunction(rebasemodule, 'rebase', rebaseorfastforward)
     return ret
 
 def tweakbehaviors(ui):
