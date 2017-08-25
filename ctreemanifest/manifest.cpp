@@ -1,10 +1,10 @@
-// manifest.cpp - c++ implementation of a single manifest
-//
-// Copyright 2016 Facebook, Inc.
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-//
+
+// manifest.cpp - c++ implementation of a single manifest
 // no-check-code
 
 #include "ctreemanifest/manifest.h"

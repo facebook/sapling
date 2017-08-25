@@ -1,10 +1,10 @@
-// py-treemanifest.cpp - c++ implementation of a tree manifest
-//
-// Copyright 2016 Facebook, Inc.
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-//
+
+// py-treemanifest.cpp - c++ implementation of a tree manifest
 // no-check-code
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,

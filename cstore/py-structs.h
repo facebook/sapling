@@ -1,10 +1,10 @@
-// py-structs.h - c++ headers for store python objects
-//
-// Copyright 2017 Facebook, Inc.
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-//
+
+// py-structs.h - c++ headers for store python objects
 // no-check-code
 
 #ifndef CSTORE_PY_STRUCTS

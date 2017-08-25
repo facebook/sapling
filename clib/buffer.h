@@ -1,8 +1,11 @@
-// Copyright 2016-present Facebook. All Rights Reserved.
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
 //
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
 // buffer.c: declarations for a generic mechanism to expand a heap-allocated
 //           buffer.  this is for internal use only.
-//
 // no-check-code
 
 #ifndef __FASTMANIFEST_BUFFER_H__

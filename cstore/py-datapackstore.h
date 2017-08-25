@@ -1,10 +1,10 @@
-// py-cstore.cpp - c++ implementation of a store
-//
-// Copyright 2017 Facebook, Inc.
+// Copyright (c) 2004-present, Facebook, Inc.
+// All Rights Reserved.
 //
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
-//
+
+// py-cstore.cpp - c++ implementation of a store
 // no-check-code
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
