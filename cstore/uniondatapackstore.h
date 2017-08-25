@@ -10,17 +10,17 @@
 #ifndef UNIONDATAPACKSTORE_H
 #define UNIONDATAPACKSTORE_H
 
+#include <cstring>
+#include <stdexcept>
+#include <vector>
+
 extern "C" {
-#include "cdatapack.h"
+#include "cdatapack/cdatapack.h"
 }
 
-#include "key.h"
-#include "datapackstore.h"
-#include "store.h"
-
-#include <cstring>
-#include <vector>
-#include <stdexcept>
+#include "cstore/key.h"
+#include "cstore/datapackstore.h"
+#include "cstore/store.h"
 
 class UnionDatapackStore;
 class UnionDatapackStoreKeyIterator : public KeyIterator {

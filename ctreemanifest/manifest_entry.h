@@ -14,11 +14,9 @@
 #include <cstring>
 #include <string>
 
-class ManifestEntry;
-
-#include "convert.h"
-#include "manifest.h"
-#include "manifest_fetcher.h"
+#include "clib/convert.h"
+#include "ctreemanifest/manifest.h"
+#include "ctreemanifest/manifest_fetcher.h"
 
 #define MANIFEST_DIRECTORY_FLAG 't'
 #define MANIFEST_DIRECTORY_FLAGPTR (&"t"[0])

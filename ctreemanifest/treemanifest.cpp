@@ -7,7 +7,8 @@
 //
 // no-check-code
 
-#include "treemanifest.h"
+#include "ctreemanifest/treemanifest.h"
+
 #include <cassert>
 
 /**

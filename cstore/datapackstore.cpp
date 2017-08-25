@@ -7,13 +7,14 @@
 //
 // no-check-code
 
-#include "datapackstore.h"
-#include "key.h"
+#include "cstore/datapackstore.h"
 
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdexcept>
 #include <stdlib.h>
+
+#include "cstore/key.h"
 
 std::vector<std::string> getAvailablePackFiles(const std::string &path) {
   std::vector<std::string> results;

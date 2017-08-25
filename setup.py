@@ -161,13 +161,14 @@ else:
     availablelibraries = {
         'datapack': {
             "sources" : ["cdatapack/cdatapack.c"],
-            "include_dirs" : ["clib"] + include_dirs,
+            "include_dirs" : ["."] + include_dirs,
             "libraries" : ["lz4", SHA1_LIBRARY],
             "extra_args" : filter(None,
                 [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
         },
         'mpatch': {
-            'sources': ['cstore/mpatch.c']
+            "sources": ["cstore/mpatch.c"],
+            "include_dirs" : ["."] + include_dirs,
         },
         "sha1detectcoll": {
             "sources" : [
@@ -248,10 +249,6 @@ else:
                 ],
                 include_dirs=[
                     '.',
-                    'ctreemanifest',
-                    'cdatapack',
-                    'clib',
-                    'cstore',
                     'third-party',
                 ] + include_dirs,
                 library_dirs=[
@@ -316,7 +313,7 @@ else:
         'traceprof': [
             Extension('hgext3rd.traceprof',
                 sources=['hgext3rd/traceprof.pyx'],
-                include_dirs=['hgext3rd/'],
+                include_dirs=['hgext3rd'],
                 extra_compile_args=filter(None, [
                     OPTIMIZATION, STDCPP0X, WALL, WEXTRA, WCONVERSION, PEDANTIC,
                     PRODUCEDEBUGSYMBOLS

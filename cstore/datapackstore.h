@@ -11,16 +11,16 @@
 #define DATAPACKSTORE_H
 
 extern "C" {
-#include "cdatapack.h"
+#include "cdatapack/cdatapack.h"
 }
 
-#include <string>
 #include <ctime>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
-#include "key.h"
-#include "portability/portability.h"
+#include "clib/portability/portability.h"
+#include "cstore/key.h"
 
 const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 

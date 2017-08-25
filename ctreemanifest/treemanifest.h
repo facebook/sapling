@@ -14,9 +14,10 @@
 #include <string>
 #include <vector>
 
-#include "manifest.h"
-#include "manifest_fetcher.h"
-#include "match.h"
+#include "cstore/match.h"
+#include "ctreemanifest/manifest.h"
+#include "ctreemanifest/manifest_entry.h"
+#include "ctreemanifest/manifest_fetcher.h"
 
 enum FindResult {
   FIND_PATH_OK,

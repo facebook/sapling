@@ -5,6 +5,8 @@
 #define MPATCH_ERR_CANNOT_BE_DECODED -2
 #define MPATCH_ERR_INVALID_PATCH -1
 
+#include "clib/portability/unistd.h"
+
 struct mpatch_frag {
 	int start, end, len;
 	const char *data;

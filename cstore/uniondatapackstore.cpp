@@ -7,13 +7,13 @@
 //
 // no-check-code
 
+#include "cstore/uniondatapackstore.h"
+
 #include <algorithm>
 #include <memory>
 
-#include "uniondatapackstore.h"
-
 extern "C" {
-#include "mpatch.h"
+#include "cstore/mpatch.h"
 }
 
 UnionDatapackStore::UnionDatapackStore(std::vector<DatapackStore*> stores) :

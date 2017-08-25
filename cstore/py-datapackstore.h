@@ -15,14 +15,14 @@
 #include <string>
 
 extern "C" {
-#include "cdatapack.h"
+#include "cdatapack/cdatapack.h"
 }
 
-#include "pythonutil.h"
-#include "datapackstore.h"
-#include "key.h"
-#include "py-structs.h"
-#include "uniondatapackstore.h"
+#include "cstore/datapackstore.h"
+#include "cstore/key.h"
+#include "cstore/py-structs.h"
+#include "cstore/pythonutil.h"
+#include "cstore/uniondatapackstore.h"
 
 // --------- DatapackStore Implementation ---------
 

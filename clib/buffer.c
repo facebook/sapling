@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "buffer.h"
+#include "clib/buffer.h"
 
 bool buffer_append(
     char **buffer, size_t *buffer_idx, size_t *buffer_sz,

@@ -7,7 +7,7 @@
 //
 // no-check-code
 
-#include "manifest_fetcher.h"
+#include "ctreemanifest/manifest_fetcher.h"
 
 ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) :
   _store(store) {

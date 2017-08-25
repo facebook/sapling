@@ -5,12 +5,13 @@
 //
 // no-check-code
 
+#include <inttypes.h>
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
-#include "convert.h"
-#include "cdatapack.h"
+
+#include "cdatapack/cdatapack.h"
+#include "clib/convert.h"
 
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"

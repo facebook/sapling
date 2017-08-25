@@ -7,12 +7,12 @@
 #ifndef CDATAPACK_CDATAPACK_H
 #define CDATAPACK_CDATAPACK_H
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
-#include "portability/portability.h"
+#include "clib/portability/portability.h"
 
 #define NODE_SZ 20
 

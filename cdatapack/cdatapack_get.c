@@ -9,9 +9,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cdatapack.h"
+#include "cdatapack/cdatapack.h"
+#include "clib/convert.h"
 #include "clib/sha1.h"
-#include "convert.h"
 
 #define DATAIDX_EXT  ".dataidx"
 #define DATAPACK_EXT ".datapack"

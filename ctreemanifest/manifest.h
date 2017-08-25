@@ -14,7 +14,7 @@
 #include <list>
 #include <stdexcept>
 
-#include "convert.h"
+#include "clib/convert.h"
 
 class Manifest;
 class ManifestIterator;
@@ -41,14 +41,16 @@ class ManifestPtr {
     bool isnull() const;
 };
 
-#include "manifest_entry.h"
-#include "store.h"
-
 enum FindResultType {
   RESULT_FILE,
   RESULT_DIRECTORY,
   RESULT_FILE_OR_DIRECTORY,
 };
+
+class ManifestEntry;
+
+#include "cstore/store.h"
+#include "ctreemanifest/manifest_entry.h"
 
 /**
  * This class represents a view on a particular Manifest instance. It provides

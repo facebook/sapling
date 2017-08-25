@@ -12,8 +12,9 @@
 
 #include <memory>
 
-#include "datapackstore.h"
-#include "uniondatapackstore.h"
+#include "cstore/datapackstore.h"
+#include "cstore/pythonutil.h"
+#include "cstore/uniondatapackstore.h"
 
 struct py_datapackstore {
   PyObject_HEAD;

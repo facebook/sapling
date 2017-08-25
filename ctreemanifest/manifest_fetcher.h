@@ -15,8 +15,8 @@
 
 class ManifestFetcher;
 
-#include "manifest.h"
-#include "store.h"
+#include "cstore/store.h"
+#include "ctreemanifest/manifest.h"
 
 /**
  * Class used to obtain Manifests, given a path and node.

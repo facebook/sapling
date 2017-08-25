@@ -19,13 +19,13 @@
  This software may be used and distributed according to the terms
  of the GNU General Public License, incorporated herein by reference.
 */
+#include "cstore/mpatch.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "bitmanipulation.h"
-#include "compat.h"
-#include "mpatch.h"
+#include "cstore/bitmanipulation.h"
+#include "cstore/compat.h"
 
 static struct mpatch_flist *lalloc(ssize_t size)
 {

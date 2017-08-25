@@ -10,9 +10,10 @@
 #ifndef STORE_H
 #define STORE_H
 
-#include "key.h"
-#include <memory>
 #include <cstddef>
+#include <memory>
+
+#include "cstore/key.h"
 
 class ConstantStringRef {
   private:

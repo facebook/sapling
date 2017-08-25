@@ -4,6 +4,8 @@
 //
 // no-check-code
 
+#include "cdatapack/cdatapack.h"
+
 // be64toh is only available if _DEFAULT_SOURCE is defined for glibc >= 2.19,
 // or _BSD_SOURCE is defined for glibc < 2.19. These have to be defined before
 // #include <features.h>. Macros testing glibc version are defined by
@@ -36,11 +38,10 @@
 #endif /* #if defined(__APPLE__) */
 
 #include <lz4.h>
-#include "portability/inet.h"
-#include "portability/unistd.h"
 
-#include "cdatapack.h"
-#include "buffer.h"
+#include "clib/buffer.h"
+#include "clib/portability/inet.h"
+#include "clib/portability/unistd.h"
 
 #define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)
 

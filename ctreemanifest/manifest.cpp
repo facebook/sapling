@@ -7,7 +7,8 @@
 //
 // no-check-code
 
-#include "manifest.h"
+#include "ctreemanifest/manifest.h"
+
 #include "clib/sha1.h"
 
 Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
