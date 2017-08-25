@@ -18,15 +18,12 @@
 
 from __future__ import absolute_import
 
-import os
-
 from .i18n import _
 from . import (
     error,
     mdiff,
     pycompat,
     util,
-    vfs as vfsmod,
 )
 
 class CantReprocessAndShowBase(Exception):
@@ -428,13 +425,8 @@ def simplemerge(ui, localfile, basefile, otherfile,
 
     {local|base|other}ctx are optional. If passed, they (local/base/other) will
     be read from and the merge result written to (local). You should pass
-    explicit labels in this mode since the default is to use the file paths."""
-    def readfile(filename):
-        f = open(filename, "rb")
-        text = f.read()
-        f.close()
-        return _verifytext(text, filename, ui, opts)
-
+    explicit labels in this mode since the default is to use the file paths.
+    """
     def readctx(ctx):
         if not ctx:
             return None
@@ -466,20 +458,16 @@ def simplemerge(ui, localfile, basefile, otherfile,
                                                 opts.get('label', []))
 
     try:
-        localtext = readctx(localctx) if localctx else readfile(localfile)
-        basetext = readctx(basectx) if basectx else readfile(basefile)
-        othertext = readctx(otherctx) if otherctx else readfile(otherfile)
+        localtext = readctx(localctx)
+        basetext = readctx(basectx)
+        othertext = readctx(otherctx)
     except error.Abort:
         return 1
 
     if opts.get('print'):
         out = ui.fout
-    elif localctx:
-        out = ctxwriter(localctx)
     else:
-        localfile = os.path.realpath(localfile)
-        opener = vfsmod.vfs(os.path.dirname(localfile))
-        out = opener(os.path.basename(localfile), "w", atomictemp=True)
+        out = ctxwriter(localctx)
 
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {
