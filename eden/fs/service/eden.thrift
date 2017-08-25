@@ -214,6 +214,7 @@ struct TreeInodeDebugInfo {
 struct InodePathDebugInfo {
   1: string path
   2: bool loaded
+  3: bool linked
 }
 
 service EdenService extends fb303.FacebookService {

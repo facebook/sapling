@@ -645,28 +645,16 @@ void EdenServiceHandler::debugGetInodePath(
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
   auto inodeNum = static_cast<fuse_ino_t>(inodeNumber);
-  auto edenMount = server_->getMount(*mountPoint);
-  auto inodeMap = edenMount->getInodeMap();
+  auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
+  folly::Optional<RelativePath> relativePath =
+      inodeMap->getPathForInode(inodeNum);
   // Check if the inode is loaded
-  auto loadedData = inodeMap->lookupLoadedInode(inodeNum);
-  if (loadedData == nullptr) {
-    XLOG(INFO) << "looking up unloaded inode " << inodeNum;
-    // If it's not, check if it's unloaded. If the inodeNum is invalid, this
-    // lookup will throw
-    auto unloadedData = inodeMap->lookupUnloadedInode(inodeNum);
-    info.path = unloadedData.name.stringPiece().str();
-    info.loaded = false;
-  } else {
-    // If the inode is loaded, return its path
-    auto path = loadedData->getPath();
-    if (path) {
-      info.path = path->stringPiece().str();
-      info.loaded = true;
-    } else {
-      throw newEdenError("missing path for loaded inode {}", inodeNum);
-    }
-  }
+  info.loaded = inodeMap->lookupLoadedInode(inodeNum) != nullptr;
+  // If getPathForInode returned folly::none then the inode is unlinked
+  info.linked = relativePath != folly::none;
+
+  info.path = relativePath ? relativePath->stringPiece().str() : "";
 }
 
 int64_t EdenServiceHandler::unloadInodeForPath(

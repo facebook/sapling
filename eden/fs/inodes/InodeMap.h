@@ -209,6 +209,18 @@ class InodeMap {
   UnloadedInodeData lookupUnloadedInode(fuse_ino_t number);
 
   /**
+   * Recursively determines the path for a loaded or unloaded inode. If the
+   * inode is unloaded, it appends the name of the unloaded inode to the path
+   * of the parent inode (which is determined recursively). If the inode is
+   * loaded, it returns InodeBase::getPath() (which also recursively
+   * queries the parent nodes).
+   *
+   * If there is an unlinked inode in the path, this function returns
+   * folly::none. If the inode is invalid, it throws EINVAL.
+   */
+  folly::Optional<RelativePath> getPathForInode(fuse_ino_t inodeNumber);
+
+  /**
    * Decrement the number of outstanding FUSE references to an inode number.
    *
    * Note that there is no corresponding incFuseRefcount() function:
@@ -500,6 +512,10 @@ class InodeMap {
   PromiseVector extractPendingPromises(fuse_ino_t number);
 
   fuse_ino_t allocateInodeNumber(Members& data);
+
+  folly::Optional<RelativePath> getPathForInodeHelper(
+      fuse_ino_t inodeNumber,
+      const folly::Synchronized<Members>::ConstLockedPtr& data);
 
   /**
    * Unload an inode

@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import atexit
+import errno
 import inspect
 import logging
 import os
@@ -252,6 +253,7 @@ class EdenTestCase(TestParent):
     def write_file(self, path, contents, mode=0o644):
         '''Create or overwrite a file with the given contents.'''
         fullpath = self.get_path(path)
+        self.make_parent_dir(fullpath)
         with open(fullpath, 'w') as f:
             f.write(contents)
         os.chmod(fullpath, mode)
@@ -266,8 +268,17 @@ class EdenTestCase(TestParent):
 
     def mkdir(self, path):
         '''Call mkdir for the specified path relative to the clone.'''
-        fullpath = self.get_path(path)
-        os.mkdir(fullpath)
+        full_path = self.get_path(path)
+        try:
+            os.makedirs(full_path)
+        except OSError as ex:
+            if ex.errno != errno.EEXIST:
+                raise
+
+    def make_parent_dir(self, path):
+        dirname = os.path.dirname(path)
+        if dirname:
+            self.mkdir(dirname)
 
     def rm(self, path):
         '''Unlink the file at the specified path relative to the clone.'''

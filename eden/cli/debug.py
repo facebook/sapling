@@ -341,7 +341,8 @@ def do_getpath(args: argparse.Namespace):
         inodePathInfo = client.debugGetInodePath(mount, args.number)
     print('%s %s' %
           ('loaded' if inodePathInfo.loaded else 'unloaded',
-           os.path.normpath(os.path.join(mount, inodePathInfo.path))))
+           os.path.normpath(os.path.join(mount, inodePathInfo.path)) if
+               inodePathInfo.linked else 'unlinked'))
 
 
 def get_loaded_inode_count(inode_info):

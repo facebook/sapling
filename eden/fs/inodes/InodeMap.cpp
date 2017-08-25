@@ -326,6 +326,44 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fuse_ino_t number) {
   return UnloadedInodeData(it->second.parent, it->second.name);
 }
 
+folly::Optional<RelativePath> InodeMap::getPathForInode(
+    fuse_ino_t inodeNumber) {
+  auto data = data_.rlock();
+  return getPathForInodeHelper(inodeNumber, data);
+}
+
+folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
+    fuse_ino_t inodeNumber,
+    const folly::Synchronized<Members>::ConstLockedPtr& data) {
+  auto loadedIt = data->loadedInodes_.find(inodeNumber);
+  if (loadedIt != data->loadedInodes_.cend()) {
+    // If the inode is loaded, return its RelativePath
+    return loadedIt->second->getPath();
+  } else {
+    auto unloadedIt = data->unloadedInodes_.find(inodeNumber);
+    if (unloadedIt != data->unloadedInodes_.cend()) {
+      if (unloadedIt->second.isUnlinked) {
+        return folly::none;
+      }
+      // If the inode is not loaded, return its parent's path as long as it's
+      // parent isn't the root
+      auto parent = unloadedIt->second.parent;
+      if (parent == FUSE_ROOT_ID) {
+        // The parent is the Eden mount root, just return its name (base case)
+        return RelativePath(unloadedIt->second.name);
+      }
+      auto dir = getPathForInodeHelper(parent, data);
+      if (!dir) {
+        EDEN_BUG() << "unlinked parent inode " << parent
+                   << "appears to contain non-unlinked child " << inodeNumber;
+      }
+      return *dir + unloadedIt->second.name;
+    } else {
+      throwSystemErrorExplicit(EINVAL, "unknown inode number ", inodeNumber);
+    }
+  }
+}
+
 void InodeMap::decFuseRefcount(fuse_ino_t number, uint32_t count) {
   auto data = data_.wlock();
 
