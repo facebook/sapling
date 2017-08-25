@@ -475,6 +475,7 @@ _metanamemap = util.sortdict([(r'user', 'User'), (r'date', 'Date'),
                               (r'node', 'Node ID'), (r'parent', 'Parent ')])
 
 def _confirmbeforesend(repo, revs):
+    url, token = readurltoken(repo)
     ui = repo.ui
     for rev in revs:
         ctx = repo[rev]
@@ -482,8 +483,8 @@ def _confirmbeforesend(repo, revs):
         ui.write(('%d: ' % rev), label='phabsend.revnumber')
         ui.write(('%s\n' % desc), label='phabsend.desc')
 
-    if ui.promptchoice(_('Phabsend the above changes (yn)?'
-                            '$$ &Yes $$ &No')):
+    if ui.promptchoice(_('Send the above changes to %s (yn)?'
+                         '$$ &Yes $$ &No') % url):
         return False
 
     return True
