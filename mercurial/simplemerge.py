@@ -406,18 +406,12 @@ def _verifytext(text, path, ui, opts):
     return text
 
 def _picklabels(defaults, overrides):
-    name_a, name_b, name_base = defaults
-
-    if len(overrides) > 0:
-        name_a = overrides[0]
-    if len(overrides) > 1:
-        name_b = overrides[1]
-    if len(overrides) > 2:
-        name_base = overrides[2]
     if len(overrides) > 3:
         raise error.Abort(_("can only specify three labels."))
-
-    return [name_a, name_b, name_base]
+    result = defaults[:]
+    for i, override in enumerate(overrides):
+        result[i] = override
+    return result
 
 def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
     """Performs the simplemerge algorithm.
