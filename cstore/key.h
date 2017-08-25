@@ -7,8 +7,8 @@
 // key.h - c++ declarations for a key to pack data
 // no-check-code
 
-#ifndef KEY_H
-#define KEY_H
+#ifndef FBHGEXT_CSTORE_KEY_H
+#define FBHGEXT_CSTORE_KEY_H
 
 #include <cstring>
 #include <stdexcept>
@@ -53,4 +53,4 @@ class KeyIterator {
     virtual Key *next() = 0;
 };
 
-#endif //KEY_H
+#endif // FBHGEXT_CSTORE_KEY_H

@@ -7,8 +7,8 @@
 // manifest_entry.h - c++ declaration for a single manifest entry
 // no-check-code
 
-#ifndef REMOTEFILELOG_MANIFEST_ENTRY_H
-#define REMOTEFILELOG_MANIFEST_ENTRY_H
+#ifndef FBHGEXT_CTREEMANIFEST_MANIFEST_ENTRY_H
+#define FBHGEXT_CTREEMANIFEST_MANIFEST_ENTRY_H
 
 #include <cstddef>
 #include <cstring>
@@ -79,4 +79,4 @@ class ManifestEntry {
     static int compareName(ManifestEntry *left, ManifestEntry *right);
 };
 
-#endif //REMOTEFILELOG_MANIFEST_ENTRY_H
+#endif // FBHGEXT_CTREEMANIFEST_MANIFEST_ENTRY_H

@@ -7,8 +7,8 @@
 // datapackstore.h - c++ declarations for a data pack store
 // no-check-code
 
-#ifndef DATAPACKSTORE_H
-#define DATAPACKSTORE_H
+#ifndef FBHGEXT_DATAPACKSTORE_H
+#define FBHGEXT_DATAPACKSTORE_H
 
 extern "C" {
 #include "cdatapack/cdatapack.h"
@@ -131,4 +131,4 @@ class DatapackStore {
     void markForRefresh();
 };
 
-#endif //DATAPACKSTORE_H
+#endif // FBHGEXT_DATAPACKSTORE_H

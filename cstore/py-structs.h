@@ -7,8 +7,8 @@
 // py-structs.h - c++ headers for store python objects
 // no-check-code
 
-#ifndef CSTORE_PY_STRUCTS
-#define CSTORE_PY_STRUCTS
+#ifndef FBHGEXT_CSTORE_PY_STRUCTS_H
+#define FBHGEXT_CSTORE_PY_STRUCTS_H
 
 #include <memory>
 
@@ -31,4 +31,4 @@ struct py_uniondatapackstore {
   std::vector<PythonObj> substores;
 };
 
-#endif //CSTORE_PY_STRUCTS
+#endif // FBHGEXT_CSTORE_PY_STRUCTS_H

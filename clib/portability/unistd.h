@@ -6,8 +6,8 @@
 
 // no-check-code
 
-#ifndef PORTABILITY_UNISTD_H
-#define PORTABILITY_UNISTD_H
+#ifndef FBHGEXT_CLIB_PORTABILITY_UNISTD_H
+#define FBHGEXT_CLIB_PORTABILITY_UNISTD_H
 
 #if defined(_MSC_VER)
 	#include <io.h>
@@ -20,5 +20,4 @@
 	#include <unistd.h>
 #endif
 
-#endif /* PORTABILITY_UNISTD_H */
-
+#endif /* FBHGEXT_CLIB_PORTABILITY_UNISTD_H */

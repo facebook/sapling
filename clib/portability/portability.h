@@ -6,8 +6,8 @@
 
 // no-check-code
 
-#ifndef PORTABILITY_PORTABILITY_H
-#define PORTABILITY_PORTABILITY_H
+#ifndef FBHGEXT_CLIB_PORTABILITY_PORTABILITY_H
+#define FBHGEXT_CLIB_PORTABILITY_PORTABILITY_H
 
 #if defined(_MSC_VER)
 	/* MSVC2015 supports compound literals in C mode (/TC)
@@ -28,4 +28,4 @@
 	#define PACKEDSTRUCT(__Declaration__) __Declaration__ __attribute__((packed))
 #endif
 
-#endif /* #ifndef PORTABILITY_PORTABILITY_H */
+#endif /* #ifndef FBHGEXT_CLIB_PORTABILITY_PORTABILITY_H */

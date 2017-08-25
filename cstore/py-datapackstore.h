@@ -7,6 +7,9 @@
 // py-cstore.cpp - c++ implementation of a store
 // no-check-code
 
+#ifndef FBHGEXT_CSTORE_PY_DATAPACKSTORE_H
+#define FBHGEXT_CSTORE_PY_DATAPACKSTORE_H
+
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
 // as per the documentation.
 #define PY_SSIZE_T_CLEAN
@@ -426,3 +429,5 @@ static PyTypeObject uniondatapackstoreType = {
   (initproc)uniondatapackstore_init,                /* tp_init */
   0,                                                /* tp_alloc */
 };
+
+#endif /* FBHGEXT_CSTORE_PY_DATAPACKSTORE_H */

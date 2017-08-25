@@ -7,8 +7,8 @@
 // pythonutil.h - utilities to glue C++ code to python
 // no-check-code
 
-#ifndef REMOTEFILELOG_PYTHONOBJ_H
-#define REMOTEFILELOG_PYTHONOBJ_H
+#ifndef FBHGEXT_CSTORE_PYTHONUTIL_H
+#define FBHGEXT_CSTORE_PYTHONUTIL_H
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
 // as per the documentation.
@@ -126,4 +126,4 @@ class PythonDiffResult : public DiffResult {
       return this->_diff;
     }
 };
-#endif //REMOTEFILELOG_PYTHONOBJ_H
+#endif // FBHGEXT_CSTORE_PYTHONUTIL_H

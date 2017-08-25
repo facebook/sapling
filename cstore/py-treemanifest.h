@@ -6,6 +6,9 @@
 
 // py-treemanifest.cpp - c++ implementation of a tree manifest
 // no-check-code
+//
+#ifndef FBHGEXT_CSTORE_PY_TREEMANIFEST_H
+#define FBHGEXT_CSTORE_PY_TREEMANIFEST_H
 
 // The PY_SSIZE_T_CLEAN define must be defined before the Python.h include,
 // as per the documentation.
@@ -1553,3 +1556,5 @@ static PyTypeObject treemanifestType = {
   (initproc)treemanifest_init,                      /* tp_init */
   0,                                                /* tp_alloc */
 };
+
+#endif /* FBHGEXT_CSTORE_PY_TREEMANIFEST_H */

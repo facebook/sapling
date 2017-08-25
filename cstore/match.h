@@ -7,8 +7,8 @@
 // match.h - c++ declarations for a data store
 // no-check-code
 
-#ifndef MATCH_H
-#define MATCH_H
+#ifndef FBHGEXT_CSTORE_MATCH_H
+#define FBHGEXT_CSTORE_MATCH_H
 
 class Matcher {
   public:
@@ -27,4 +27,4 @@ class AlwaysMatcher : public Matcher {
     virtual bool visitdir(const std::string &path) { return true; }
 };
 
-#endif // MATCH_H
+#endif // FBHGEXT_CSTORE_MATCH_H

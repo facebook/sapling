@@ -7,7 +7,8 @@
 // sha1.h - wrapper functions around the underlying SHA-1 implementation.
 //
 // no-check-code
-#pragma once
+#ifndef FBHGEXT_CLIB_SHA1_H
+#define FBHGEXT_CLIB_SHA1_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,3 +58,5 @@ static inline int fbhg_sha1_final(unsigned char* md, fbhg_sha1_ctx_t* ctx) {
 #ifdef __cplusplus
 } /* extern C */
 #endif
+
+#endif /* FBHGEXT_CLIB_SHA1_H */

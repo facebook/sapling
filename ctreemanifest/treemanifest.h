@@ -7,8 +7,8 @@
 // treemanifest.h - c++ declarations of a tree manifest
 // no-check-code
 
-#ifndef REMOTEFILELOG_TREEMANIFEST_H
-#define REMOTEFILELOG_TREEMANIFEST_H
+#ifndef FBHGEXT_CTREEMANIFEST_TREEMANIFEST_H
+#define FBHGEXT_CTREEMANIFEST_TREEMANIFEST_H
 
 #include <memory>
 #include <string>
@@ -350,4 +350,4 @@ extern void treemanifest_diffrecurse(
     bool clean,
     Matcher &matcher);
 
-#endif //REMOTEFILELOG_TREEMANIFEST_H
+#endif // FBHGEXT_CTREEMANIFEST_TREEMANIFEST_H

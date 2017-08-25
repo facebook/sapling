@@ -7,16 +7,16 @@
 // convert.h - conversion utility methods
 // no-check-code
 
-#ifdef __cplusplus
-#include <string>
-#endif
-
-#ifndef __CONVERT_H_C__
-#define __CONVERT_H_C__
+#ifndef FBHGEXT_CLIB_CONVERT_H
+#define FBHGEXT_CLIB_CONVERT_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+#include <string>
+#endif
 
 static const size_t BIN_NODE_SIZE = 20;
 static const size_t HEX_NODE_SIZE = 40;
@@ -83,11 +83,7 @@ static inline void hexlify(const uint8_t *input, int len, char *dst) {
 	}
 }
 
-#endif /* #ifndef __CONVERT_H_C__ */
-
 #ifdef __cplusplus
-#ifndef __CONVERT_H_CPP__
-#define __CONVERT_H_CPP__
 
 /**
  * Converts a given 40-byte hex string into a 20-byte node.
@@ -125,5 +121,6 @@ static inline void hexfrombin(const char *binnode, std::string &output) {
 	}
 }
 
-#endif /* #ifndef __CONVERT_H_CPP__ */
-#endif
+#endif /* __cplusplus */
+
+#endif /* FBHGEXT_CLIB_CONVERT_H */

@@ -7,8 +7,8 @@
 // store.h - c++ declarations for a data store
 // no-check-code
 
-#ifndef STORE_H
-#define STORE_H
+#ifndef FBHGEXT_CSTORE_STORE_H
+#define FBHGEXT_CSTORE_STORE_H
 
 #include <cstddef>
 #include <memory>
@@ -53,4 +53,4 @@ class Store {
     virtual ConstantStringRef get(const Key &key) = 0;
 };
 
-#endif //STORE_H
+#endif // FBHGEXT_CSTORE_STORE_H

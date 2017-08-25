@@ -7,8 +7,8 @@
 // manifest.h - c++ declarations for a single manifest
 // no-check-code
 
-#ifndef REMOTEFILELOG_MANIFEST_H
-#define REMOTEFILELOG_MANIFEST_H
+#ifndef FBHGEXT_CTREEMANIFEST_MANIFEST_H
+#define FBHGEXT_CTREEMANIFEST_MANIFEST_H
 
 #include <cstring>
 #include <list>
@@ -191,4 +191,4 @@ class SortedManifestIterator {
     bool isfinished() const;
 };
 
-#endif //REMOTEFILELOG_MANIFEST_H
+#endif // FBHGEXT_CTREEMANIFEST_MANIFEST_H

@@ -8,8 +8,8 @@
 //           buffer.  this is for internal use only.
 // no-check-code
 
-#ifndef __FASTMANIFEST_BUFFER_H__
-#define __FASTMANIFEST_BUFFER_H__
+#ifndef FBHGEXT_CLIB_BUFFER_H
+#define FBHGEXT_CLIB_BUFFER_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -54,4 +54,4 @@ extern bool buffer_append(
     const size_t min_increment,
     const size_t max_increment);
 
-#endif /* __FASTMANIFEST_BUFFER_H__ */
+#endif /* FBHGEXT_CLIB_BUFFER_H */

@@ -7,8 +7,8 @@
 // cdatapack:
 // no-check-code
 
-#ifndef CDATAPACK_CDATAPACK_H
-#define CDATAPACK_CDATAPACK_H
+#ifndef FBHGEXT_CDATAPACK_CDATAPACK_H
+#define FBHGEXT_CDATAPACK_CDATAPACK_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -175,4 +175,4 @@ extern const get_delta_chain_link_result_t getdeltachainlink(
 // caller is responsible for freeing link->delta.
 extern bool uncompressdeltachainlink(delta_chain_link_t *link);
 
-#endif //CDATAPACK_CDATAPACK_H
+#endif // FBHGEXT_CDATAPACK_CDATAPACK_H

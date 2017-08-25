@@ -7,8 +7,8 @@
 // manifest_fetcher.h - c++ declarations for a fetcher for manifests
 // no-check-code
 
-#ifndef REMOTEFILELOG_MANIFEST_FETCHER_H
-#define REMOTEFILELOG_MANIFEST_FETCHER_H
+#ifndef FBHGEXT_CTREEMANIFEST_MANIFEST_FETCHER_H
+#define FBHGEXT_CTREEMANIFEST_MANIFEST_FETCHER_H
 
 #include <memory>
 #include <string>
@@ -34,4 +34,4 @@ class ManifestFetcher {
         std::string &node) const;
 };
 
-#endif //REMOTEFILELOG_MANIFEST_FETCHER_H
+#endif // FBHGEXT_CTREEMANIFEST_MANIFEST_FETCHER_H

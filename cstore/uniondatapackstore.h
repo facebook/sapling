@@ -7,8 +7,8 @@
 // uniondatapackstore.h - c++ declarations for a union datapack store
 // no-check-code
 
-#ifndef UNIONDATAPACKSTORE_H
-#define UNIONDATAPACKSTORE_H
+#ifndef FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H
+#define FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H
 
 #include <cstring>
 #include <stdexcept>
@@ -68,4 +68,4 @@ class UnionDatapackStore : public Store {
     void markForRefresh();
 };
 
-#endif //UNIONDATAPACKSTORE_H
+#endif // FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H

@@ -6,8 +6,8 @@
 
 // no-check-code
 
-#ifndef PORTABILITY_INET_H
-#define PORTABILITY_INET_H
+#ifndef FBHGEXT_CLIB_PORTABILITY_INET_H
+#define FBHGEXT_CLIB_PORTABILITY_INET_H
 
 #if defined(_MSC_VER)
 	#include <winsock2.h>
@@ -17,5 +17,4 @@
 	#include <arpa/inet.h>
 #endif
 
-#endif /* PORTABILITY_INET_H */
-
+#endif /* FBHGEXT_CLIB_PORTABILITY_INET_H */
