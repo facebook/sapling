@@ -510,6 +510,53 @@ See also issue5208 for detail about example case on Python 3.x.
 
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.checkrelativity=$TESTTMP/checkrelativity.py checkrelativity)
 
+Make sure a broken uisetup doesn't globally break hg:
+  $ cat > $TESTTMP/baduisetup.py <<EOF
+  > from mercurial import (
+  >     bdiff,
+  >     extensions,
+  > )
+  > 
+  > def blockswrapper(orig, *args, **kwargs):
+  >     return orig(*args, **kwargs)
+  > 
+  > def uisetup(ui):
+  >     extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+  > EOF
+
+Even though the extension fails during uisetup, hg is still basically usable:
+  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version
+  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
+  Mercurial Distributed SCM (version *) (glob)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-2017 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version --traceback
+  Traceback (most recent call last):
+    File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
+      uisetup(ui)
+    File "$TESTTMP/baduisetup.py", line 10, in uisetup
+      extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+    File "*/mercurial/extensions.py", line *, in wrapfunction (glob)
+      origfn = getattr(container, funcname)
+    File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
+      self._load()
+    File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
+      mod = _hgextimport(_origimport, head, globals, locals, None, level)
+    File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
+      return importfunc(name, globals, *args, **kwargs)
+  ImportError: No module named (mercurial\.)?bdiff (re)
+  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
+  Mercurial Distributed SCM (version *) (glob)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-2017 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
 #endif
 
   $ cd ..
@@ -1662,54 +1709,3 @@ Show deprecation warning for the use of cmdutil.command
   $ hg --config extensions.nonregistrar=`pwd`/nonregistrar.py version > /dev/null
   devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
   (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
-
-Make sure a broken uisetup doesn't globally break hg:
-  $ cat > $TESTTMP/baduisetup.py <<EOF
-  > from mercurial import (
-  >     bdiff,
-  >     extensions,
-  > )
-  > 
-  > def blockswrapper(orig, *args, **kwargs):
-  >     return orig(*args, **kwargs)
-  > 
-  > def uisetup(ui):
-  >     extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
-  > EOF
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > baduisetup = $TESTTMP/baduisetup.py
-  > EOF
-
-Even though the extension fails during uisetup, hg is still basically usable:
-  $ hg version
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-  $ hg version --traceback
-  Traceback (most recent call last):
-    File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
-      uisetup(ui)
-    File "$TESTTMP/baduisetup.py", line 10, in uisetup
-      extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
-    File "*/mercurial/extensions.py", line *, in wrapfunction (glob)
-      origfn = getattr(container, funcname)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
-      self._load()
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
-      mod = _hgextimport(_origimport, head, globals, locals, None, level)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
-      return importfunc(name, globals, *args, **kwargs)
-  ImportError: No module named (mercurial\.)?bdiff (re)
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
