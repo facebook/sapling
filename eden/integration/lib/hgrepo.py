@@ -57,6 +57,10 @@ class HgRepository(repobase.Repository):
         '''
         super().__init__(path)
         self.hg_environment = os.environ.copy()
+        # Drop any environment variables starting with 'HG'
+        # to ensure the user's environment does not affect the tests
+        self.hg_environment = dict((k, v) for k, v in os.environ.items()
+                                   if not k.startswith('HG'))
         self.hg_environment['HGPLAIN'] = '1'
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
