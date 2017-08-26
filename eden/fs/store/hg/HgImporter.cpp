@@ -505,10 +505,23 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
             (const char*)manifestNode.getBytes().data(),
             manifestNode.getBytes().size()));
   } catch (const MissingKeyError& ex) {
-    // Data for this tree was not present locally.
-    // Fall through and fetch the data from the server below.
-    if (!FLAGS_hg_fetch_missing_trees) {
-      throw;
+    XLOG(DBG2) << "didn't find path \"" << path << "\" + manifest "
+               << manifestNode << ", mark store for refresh and look again";
+    unionStore_->markForRefresh();
+
+    // Now try loading it again.
+    try {
+      content = unionStore_->get(
+          Key(path.stringPiece().data(),
+              path.stringPiece().size(),
+              (const char*)manifestNode.getBytes().data(),
+              manifestNode.getBytes().size()));
+    } catch (const MissingKeyError&) {
+      // Data for this tree was not present locally.
+      // Fall through and fetch the data from the server below.
+      if (!FLAGS_hg_fetch_missing_trees) {
+        throw;
+      }
     }
   }
 
@@ -525,7 +538,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
           " for FETCH_TREE response"));
     }
 
-    // Now try loading it again.
+    // Now try loading it again (third time's the charm?).
     content = unionStore_->get(
         Key(path.stringPiece().data(),
             path.stringPiece().size(),
