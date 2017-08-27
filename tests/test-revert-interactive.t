@@ -460,3 +460,40 @@ Check the experimental config to invert the selection:
   forget added file newfile (Yn)? y
   $ hg status
   ? newfile
+
+When a line without EOL is selected during "revert -i" (issue5651)
+
+  $ cat <<EOF >> $HGRCPATH
+  > [experimental]
+  > %unset revertalternateinteractivemode
+  > EOF
+
+  $ hg init $TESTTMP/revert-i-eol
+  $ cd $TESTTMP/revert-i-eol
+  $ echo 0 > a
+  $ hg ci -qAm 0
+  $ printf 1 >> a
+  $ hg ci -qAm 1
+  $ cat a
+  0
+  1 (no-eol)
+
+  $ hg revert -ir'.^' <<EOF
+  > y
+  > y
+  > EOF
+  reverting a
+  diff --git a/a b/a
+  1 hunks, 1 lines changed
+  examine changes to 'a'? [Ynesfdaq?] y
+  
+  @@ -1,1 +1,2 @@
+   0
+  +1
+  \ No newline at end of file
+  revert this change to 'a'? [Ynesfdaq?] y
+  
+  $ cat a
+  0
+
+  $ cd ..
