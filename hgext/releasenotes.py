@@ -275,6 +275,10 @@ def checkadmonitions(ui, repo, directives, revs):
                     ss = ", ".join(sorted(similar))
                     ui.write(_("(did you mean one of %s?)\n") % ss)
 
+def _getadmonitionlist(ui, sections):
+    for section in sections:
+        ui.write("%s: %s\n" % (section[0], section[1]))
+
 def parsenotesfromrevisions(repo, directives, revs):
     notes = parsedreleasenotes()
 
@@ -467,7 +471,9 @@ def serializenotes(sections, notes):
 @command('releasenotes',
     [('r', 'rev', '', _('revisions to process for release notes'), _('REV')),
     ('c', 'check', False, _('checks for validity of admonitions (if any)'),
-        _('REV'))],
+        _('REV')),
+    ('l', 'list', False, _('list the available admonitions with their title'),
+        None)],
     _('hg releasenotes [-r REV] [-c] FILE'))
 def releasenotes(ui, repo, file_=None, **opts):
     """parse release notes from commit messages into an output file
@@ -546,8 +552,10 @@ def releasenotes(ui, repo, file_=None, **opts):
     release note after it has been added to the release notes file.
     """
     sections = releasenotessections(ui, repo)
-    rev = opts.get('rev')
+    if opts.get('list'):
+        return _getadmonitionlist(ui, sections)
 
+    rev = opts.get('rev')
     revs = scmutil.revrange(repo, [rev or 'not public()'])
     if opts.get('check'):
         return checkadmonitions(ui, repo, sections.names(), revs)

@@ -407,3 +407,16 @@ Suggest similar admonition in place of the invalid one.
   $ hg releasenotes -r . -c
   Invalid admonition 'fixes' present in changeset 0e7130d2705c
   (did you mean fix?)
+
+  $ cd ..
+
+Usage of --list flag
+
+  $ hg init relnotes-list
+  $ cd relnotes-list
+  $ hg releasenotes -l
+  feature: New Features
+  bc: Backwards Compatibility Changes
+  fix: Bug Fixes
+  perf: Performance Improvements
+  api: API Changes
