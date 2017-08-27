@@ -205,8 +205,8 @@ More complex case where part of the rebase set were already rebased
   o  0:cd010b8cd998 A
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
-  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D"
   rebasing 8:8877864f1edb "B"
+  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D"
   rebasing 10:5ae4c968c6ac "C"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
@@ -736,8 +736,8 @@ Even when the chain include missing node
   $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.stabilization=all
   obsoleted 1 changesets
   $ hg rebase -d 6 -r "4::"
-  note: not rebasing 7:360bbaa7d3ce "O", it has no successor
   rebasing 4:ff2c4d47b71d "C"
+  note: not rebasing 7:360bbaa7d3ce "O", it has no successor
   rebasing 8:8d47583e023f "P" (tip)
 
 If all the changeset to be rebased are obsolete and present in the destination, we
@@ -769,10 +769,8 @@ should display a friendly error message
 If a rebase is going to create divergence, it should abort
 
   $ hg log -G
-  @  11:f44da1f4954c nonrelevant
+  @  10:121d9e3bc4c6 P
   |
-  | o  10:121d9e3bc4c6 P
-  |/
   o  9:4be60e099a77 C
   |
   o  6:9c48361117de D
@@ -904,7 +902,6 @@ Create the changes that we will rebase
   |
   ~
   $ hg rebase -r ".^^ + .^ + ." -d 19
-  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
   rebasing 20:b82fb57ea638 "willconflict second version"
   merging willconflict
   warning: conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
@@ -916,6 +913,7 @@ Create the changes that we will rebase
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing 20:b82fb57ea638 "willconflict second version"
+  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
   rebasing 22:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
@@ -1062,8 +1060,8 @@ Rebase merge where successor of one parent is ancestor of destination
   > EOF
 
   $ hg rebase -d C -b F
-  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
   rebasing 2:b18e25de2cf5 "D" (D)
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
   rebasing 5:66f1a38021c9 "F" (F tip)
   note: rebase of 5:66f1a38021c9 created no changes to commit
   $ hg log -G
@@ -1179,8 +1177,8 @@ parent moves as requested.
   > A B C  # D/D = D
   > EOS
   $ hg rebase -r B+A+D -d Z
-  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C"
   rebasing 0:426bada5c675 "A" (A)
+  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C"
   rebasing 3:b8ed089c80ad "D" (D)
 
   $ rm .hg/localtags
@@ -1226,17 +1224,46 @@ equivalents in destination
   2:1e9a3c00cbe9 b (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.stabilization.track-operation=1
   note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b"
-Check that working directory was not updated to rev 3 because rev 2 was skipped
-during the rebase operation
+Check that working directory and bookmark was updated to rev 3 although rev 2
+was skipped
   $ hg log -r .
-  2:1e9a3c00cbe9 b (no-eol)
-
-Check that bookmark was not moved to rev 3 if rev 2 was skipped during the
-rebase operation. This makes sense because if rev 2 has a successor, the
-operation generating that successor (ex. rebase) should be responsible for
-moving bookmarks. If the bookmark is on a precursor, like rev 2, that means the
-user manually moved it back. In that case we should not move it again.
+  3:be1832deae9a b (no-eol)
   $ hg bookmarks
-     mybook                    2:1e9a3c00cbe9
+     mybook                    3:be1832deae9a
   $ hg debugobsolete --rev tip
   1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc be1832deae9ac531caa7438b8dcf6055a122cd8e 0 (*) {'user': 'test'} (glob)
+
+Obsoleted working parent and bookmark could be moved if an ancestor of working
+parent gets moved:
+
+  $ hg init $TESTTMP/ancestor-wd-move
+  $ cd $TESTTMP/ancestor-wd-move
+  $ hg debugdrawdag <<'EOS'
+  >  E D1  # rebase: D1 -> D2
+  >  | |
+  >  | C
+  > D2 |
+  >  | B
+  >  |/
+  >  A
+  > EOS
+  $ hg update D1 -q
+  $ hg bookmark book -i
+  $ hg rebase -r B+D1 -d E
+  rebasing 1:112478962961 "B" (B)
+  note: not rebasing 5:15ecf15e0114 "D1" (D1 tip book), already in destination as 2:0807738e0be9 "D2"
+  $ hg log -G -T '{desc} {bookmarks}'
+  @  B book
+  |
+  | x  D1
+  | |
+  o |  E
+  | |
+  | o  C
+  | |
+  o |  D2
+  | |
+  | x  B
+  |/
+  o  A
+  
