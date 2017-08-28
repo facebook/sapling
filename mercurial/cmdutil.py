@@ -587,7 +587,7 @@ def _conflictsmsg(repo):
         return
 
     m = scmutil.match(repo[None])
-    unresolvedlist = [f for f in mergestate if m(f) and mergestate[f] == 'u']
+    unresolvedlist = [f for f in mergestate.unresolved() if m(f)]
     if unresolvedlist:
         mergeliststr = '\n'.join(
             ['    %s' % os.path.relpath(
