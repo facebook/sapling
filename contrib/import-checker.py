@@ -411,7 +411,8 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
       assign the symbol to a module-level variable. In addition, these imports
       must be performed before other local imports. This rule only
       applies to import statements outside of any blocks.
-    * Relative imports from the standard library are not allowed.
+    * Relative imports from the standard library are not allowed, unless that
+      library is also a local module.
     * Certain modules must be aliased to alternate names to avoid aliasing
       and readability problems. See `requirealias`.
     """
@@ -493,7 +494,10 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
             # __future__ is special since it needs to come first and use
             # symbol import.
             if fullname != '__future__':
-                if not fullname or fullname in stdlib_modules:
+                if not fullname or (
+                    fullname in stdlib_modules
+                    and fullname not in localmods
+                    and fullname + '.__init__' not in localmods):
                     yield msg('relative import of stdlib module')
                 else:
                     seenlocal = fullname
