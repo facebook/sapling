@@ -1440,6 +1440,17 @@ the following are valid keystrokes:
         except curses.error:
             pass
 
+    def commitMessageWindow(self):
+        "Create a temporary commit message editing window on the screen."
+
+        curses.raw()
+        curses.def_prog_mode()
+        curses.endwin()
+        self.commenttext = self.ui.edit(self.commenttext, self.ui.username())
+        curses.cbreak()
+        self.stdscr.refresh()
+        self.stdscr.keypad(1) # allow arrow-keys to continue to function
+
     def confirmationwindow(self, windowtext):
         "display an informational window, then wait for and return a keypress."
 
@@ -1661,6 +1672,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.togglefolded()
         elif keypressed in ["F"]:
             self.togglefolded(foldparent=True)
+        elif keypressed in ["m"]:
+            self.commitMessageWindow()
         elif keypressed in ["?"]:
             self.helpwindow()
             self.stdscr.clear()
@@ -1736,3 +1749,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 keypressed = "foobar"
             if self.handlekeypressed(keypressed):
                 break
+
+        if self.commenttext != "":
+            whitespaceremoved = re.sub("(?m)^\s.*(\n|$)", "", self.commenttext)
+            if whitespaceremoved != "":
+                self.opts['message'] = self.commenttext
