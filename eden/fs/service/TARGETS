@@ -48,6 +48,7 @@ cpp_library(
         "@/eden/fs/inodes:inodes",
         "@/eden/fs/store/git:git",
         "@/eden/fs/store/hg:hg",
+        "@/folly:network_address",
         "@/folly:thread_local",
         "@/folly/experimental:experimental",
         "@/folly/experimental:string_keyed_map",
