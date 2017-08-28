@@ -550,6 +550,12 @@ def releasenotes(ui, repo, file_=None, **opts):
     this command and changes should not be lost when running this command on
     that file. A particular use case for this is to tweak the wording of a
     release note after it has been added to the release notes file.
+
+    The -c/--check option checks the commit message for invalid admonitions.
+
+    The -l/--list option, presents the user with a list of existing available
+    admonitions along with their title. This also includes the custom
+    admonitions (if any).
     """
     sections = releasenotessections(ui, repo)
 
