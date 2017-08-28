@@ -2371,7 +2371,7 @@ class metadataonlyctx(committablectx):
         for f in self._files:
             if not managing(f):
                 added.append(f)
-            elif self[f]:
+            elif f in self:
                 modified.append(f)
             else:
                 removed.append(f)
