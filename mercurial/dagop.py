@@ -75,27 +75,49 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
                 if prev != node.nullrev:
                     heapq.heappush(pendingheap, (heapsign * prev, pdepth))
 
-def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth):
+def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
     if followfirst:
         cut = 1
     else:
         cut = None
     cl = repo.changelog
-    def pfunc(rev):
+    def plainpfunc(rev):
         try:
             return cl.parentrevs(rev)[:cut]
         except error.WdirUnsupported:
             return (pctx.rev() for pctx in repo[rev].parents()[:cut])
+    if cutfunc is None:
+        pfunc = plainpfunc
+    else:
+        pfunc = lambda rev: [r for r in plainpfunc(rev) if not cutfunc(r)]
+        revs = revs.filter(lambda rev: not cutfunc(rev))
     return _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse=True)
 
-def revancestors(repo, revs, followfirst, startdepth=None, stopdepth=None):
+def revancestors(repo, revs, followfirst=False, startdepth=None,
+                 stopdepth=None, cutfunc=None):
     """Like revlog.ancestors(), but supports additional options, includes
     the given revs themselves, and returns a smartset
 
     Scan ends at the stopdepth (exlusive) if specified. Revisions found
     earlier than the startdepth are omitted.
+
+    If cutfunc is provided, it will be used to cut the traversal of the DAG.
+    When cutfunc(X) returns True, the DAG traversal stops - revision X and
+    X's ancestors in the traversal path will be skipped. This could be an
+    optimization sometimes.
+
+    Note: if Y is an ancestor of X, cutfunc(X) returning True does not
+    necessarily mean Y will also be cut. Usually cutfunc(Y) also wants to
+    return True in this case. For example,
+
+        D     # revancestors(repo, D, cutfunc=lambda rev: rev == B)
+        |\    # will include "A", because the path D -> C -> A was not cut.
+        B C   # If "B" gets cut, "A" might want to be cut too.
+        |/
+        A
     """
-    gen = _genrevancestors(repo, revs, followfirst, startdepth, stopdepth)
+    gen = _genrevancestors(repo, revs, followfirst, startdepth, stopdepth,
+                           cutfunc)
     return generatorset(gen, iterasc=False)
 
 def _genrevdescendants(repo, revs, followfirst):

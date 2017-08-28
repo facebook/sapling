@@ -4321,3 +4321,147 @@ Test obsstore related revsets
 
   $ hg log -r 'successors(B+A)-contentdivergent()-obsolete()' -T '{desc}\n'
   Z
+
+Test `draft() & ::x` optimization
+
+  $ hg init $TESTTMP/repo2
+  $ cd $TESTTMP/repo2
+  $ hg debugdrawdag <<'EOS'
+  >   P5 S1
+  >    |  |
+  > S2 | D3
+  >   \|/
+  >   P4
+  >    |
+  >   P3 D2
+  >    |  |
+  >   P2 D1
+  >    |/
+  >   P1
+  >    |
+  >   P0
+  > EOS
+  $ hg phase --public -r P5
+  $ hg phase --force --secret -r S1+S2
+  $ hg log -G -T '{rev} {desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
+  o  8 P5 public
+  |
+  | o  10 S1 secret
+  | |
+  | o  7 D3 draft
+  |/
+  | o  9 S2 secret
+  |/
+  o  6 P4 public
+  |
+  o  5 P3 public
+  |
+  o  3 P2 public
+  |
+  | o  4 D2 draft
+  | |
+  | o  2 D1 draft
+  |/
+  o  1 P1 public
+  |
+  o  0 P0 public
+  
+  $ hg debugrevspec --verify -p analyzed -p optimized 'draft() & ::(((S1+D1+P5)-D3)+S2)'
+  * analyzed:
+  (and
+    (func
+      ('symbol', 'draft')
+      None)
+    (func
+      ('symbol', 'ancestors')
+      (or
+        (list
+          (and
+            (or
+              (list
+                ('symbol', 'S1')
+                ('symbol', 'D1')
+                ('symbol', 'P5')))
+            (not
+              ('symbol', 'D3')))
+          ('symbol', 'S2')))))
+  * optimized:
+  (func
+    ('symbol', '_phaseandancestors')
+    (list
+      ('symbol', 'draft')
+      (or
+        (list
+          (difference
+            (func
+              ('symbol', '_list')
+              ('string', 'S1\x00D1\x00P5'))
+            ('symbol', 'D3'))
+          ('symbol', 'S2')))))
+  $ hg debugrevspec --verify -p analyzed -p optimized 'secret() & ::9'
+  * analyzed:
+  (and
+    (func
+      ('symbol', 'secret')
+      None)
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '9')))
+  * optimized:
+  (func
+    ('symbol', '_phaseandancestors')
+    (list
+      ('symbol', 'secret')
+      ('symbol', '9')))
+  $ hg debugrevspec --verify -p analyzed -p optimized '7 & ( (not public()) & ::(tag()) )'
+  * analyzed:
+  (and
+    ('symbol', '7')
+    (and
+      (not
+        (func
+          ('symbol', 'public')
+          None))
+      (func
+        ('symbol', 'ancestors')
+        (func
+          ('symbol', 'tag')
+          None))))
+  * optimized:
+  (and
+    ('symbol', '7')
+    (func
+      ('symbol', '_phaseandancestors')
+      (list
+        ('symbol', '_notpublic')
+        (func
+          ('symbol', 'tag')
+          None))))
+  $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, 1)'
+  * optimized:
+  (and
+    (func
+      ('symbol', '_notpublic')
+      None)
+    (func
+      ('symbol', 'ancestors')
+      (list
+        (func
+          ('symbol', '_list')
+          ('string', 'S1\x00D2\x00P5'))
+        ('symbol', '1'))))
+  $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, depth=1)'
+  * optimized:
+  (and
+    (func
+      ('symbol', '_notpublic')
+      None)
+    (func
+      ('symbol', 'ancestors')
+      (list
+        (func
+          ('symbol', '_list')
+          ('string', 'S1\x00D2\x00P5'))
+        (keyvalue
+          ('symbol', 'depth')
+          ('symbol', '1')))))

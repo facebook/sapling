@@ -369,6 +369,11 @@ def _optimize(x, small):
         wb, tb = _optimize(x[2], True)
         w = min(wa, wb)
 
+        # (draft/secret/_notpublic() & ::x) have a fast path
+        m = _match('_() & ancestors(_)', ('and', ta, tb))
+        if m and getsymbol(m[1]) in {'draft', 'secret', '_notpublic'}:
+            return w, _build('_phaseandancestors(_, _)', m[1], m[2])
+
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         m = _matchonly(ta, tb) or _matchonly(tb, ta)
         if m:

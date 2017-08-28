@@ -1577,6 +1577,37 @@ def _notpublic(repo, subset, x):
     getargs(x, 0, 0, "_notpublic takes no arguments")
     return _phase(repo, subset, phases.draft, phases.secret)
 
+# for internal use
+@predicate('_phaseandancestors(phasename, set)', safe=True)
+def _phaseandancestors(repo, subset, x):
+    # equivalent to (phasename() & ancestors(set)) but more efficient
+    # phasename could be one of 'draft', 'secret', or '_notpublic'
+    args = getargs(x, 2, 2, "_phaseandancestors requires two arguments")
+    phasename = getsymbol(args[0])
+    s = getset(repo, fullreposet(repo), args[1])
+
+    draft = phases.draft
+    secret = phases.secret
+    phasenamemap = {
+        '_notpublic': draft,
+        'draft': draft, # follow secret's ancestors
+        'secret': secret,
+    }
+    if phasename not in phasenamemap:
+        raise error.ParseError('%r is not a valid phasename' % phasename)
+
+    minimalphase = phasenamemap[phasename]
+    getphase = repo._phasecache.phase
+
+    def cutfunc(rev):
+        return getphase(repo, rev) < minimalphase
+
+    revs = dagop.revancestors(repo, s, cutfunc=cutfunc)
+
+    if phasename == 'draft': # need to remove secret changesets
+        revs = revs.filter(lambda r: getphase(repo, r) == draft)
+    return subset & revs
+
 @predicate('public()', safe=True)
 def public(repo, subset, x):
     """Changeset in public phase."""
