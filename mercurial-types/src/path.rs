@@ -265,38 +265,36 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
     let elem = elem.as_ref();
     let mut ret = Vec::new();
 
-    if elem.len() > 0 {
-        // Remove trailing '.' or ' ' for later handling
-        let (name, tail) = match elem[elem.len() - 1] {
-            b'.' | b' ' => (&elem[..elem.len() - 1], Some(elem[elem.len() - 1])),
-            _ => (elem, None),
-        };
-        if dotencode && (name[0] == b'.' || name[0] == b' ') {
-            // if dotencode and first char is '.' or ' ', then hex encode it
-            hexenc(name[0], &mut ret);
-            ret.extend_from_slice(&name[1..]);
+    if let Some((first, elements)) = elem.split_first() {
+        if dotencode && (first == &b'.' || first == &b' ') {
+            hexenc(*first, &mut ret);
+            ret.extend_from_slice(elements);
         } else {
             // if base portion of name is a windows reserved name,
             // then hex encode 3rd char
-            let pos = name.iter().position(|c| *c == b'.').unwrap_or(name.len());
+            let pos = elem.iter().position(|c| *c == b'.').unwrap_or(elem.len());
             let prefix_len = ::std::cmp::min(3, pos);
-            match &name[..prefix_len] {
+            match &elem[..prefix_len] {
                 b"aux" | b"con" | b"prn" | b"nul" if pos == 3 => {
-                    ret.extend_from_slice(&name[..2]);
-                    hexenc(name[2], &mut ret);
-                    ret.extend_from_slice(&name[3..]);
+                    ret.extend_from_slice(&elem[..2]);
+                    hexenc(elem[2], &mut ret);
+                    ret.extend_from_slice(&elem[3..]);
                 }
-                b"com" | b"lpt" if pos == 4 && name[3] >= b'1' && name[3] <= b'9' => {
-                    ret.extend_from_slice(&name[..2]);
-                    hexenc(name[2], &mut ret);
-                    ret.extend_from_slice(&name[3..]);
+                b"com" | b"lpt" if pos == 4 && elem[3] >= b'1' && elem[3] <= b'9' => {
+                    ret.extend_from_slice(&elem[..2]);
+                    hexenc(elem[2], &mut ret);
+                    ret.extend_from_slice(&elem[3..]);
                 }
-                _ => ret.extend_from_slice(name),
+                _ => ret.extend_from_slice(elem),
             }
         }
-        // hex encode trailing '.' or ' '
-        if let Some(tail) = tail {
-            hexenc(tail, &mut ret)
+    }
+    // hex encode trailing '.' or ' '
+    if let Some(last) = ret.pop() {
+        if last == b'.' || last == b' ' {
+            hexenc(last, &mut ret);
+        } else {
+            ret.push(last);
         }
     }
 
@@ -503,6 +501,21 @@ mod test {
         let p = a.fsencode_file(false);
 
         assert_eq!(p, PathBuf::from("data/auxx"));
+
+        let a = Path::new(b" ").unwrap();
+        let p = a.fsencode_file(true);
+
+        assert_eq!(p, PathBuf::from("data/~20"));
+
+        let a = Path::new(b"aux ").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/aux~20"));
+
+        let a = Path::new(b"").unwrap();
+        let p = a.fsencode_file(false);
+
+        assert_eq!(p, PathBuf::from("data/"));
     }
 
     #[test]
