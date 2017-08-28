@@ -387,10 +387,10 @@ revsets = {
     'svnrev': revset_svnrev,
 }
 
-def revset_stringset(orig, repo, subset, x):
+def revset_stringset(orig, repo, subset, x, *args, **kwargs):
     if x.startswith('r') and x[1:].isdigit():
         return revset_svnrev(repo, subset, ('string', x[1:]))
-    return orig(repo, subset, x)
+    return orig(repo, subset, x, *args, **kwargs)
 
 def getfilestoresize(ui):
     """Return the replay or stupid file memory store size in megabytes or -1"""
