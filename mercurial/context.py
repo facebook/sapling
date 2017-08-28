@@ -2298,15 +2298,23 @@ class metadataonlyctx(committablectx):
     def __new__(cls, repo, originalctx, *args, **kwargs):
         return super(metadataonlyctx, cls).__new__(cls, repo)
 
-    def __init__(self, repo, originalctx, parents, text, user=None, date=None,
-                 extra=None, editor=False):
+    def __init__(self, repo, originalctx, parents=None, text=None, user=None,
+                 date=None, extra=None, editor=False):
+        if text is None:
+            text = originalctx.description()
         super(metadataonlyctx, self).__init__(repo, text, user, date, extra)
         self._rev = None
         self._node = None
         self._originalctx = originalctx
         self._manifestnode = originalctx.manifestnode()
-        parents = [(p or nullid) for p in parents]
-        p1, p2 = self._parents = [changectx(self._repo, p) for p in parents]
+        if parents is None:
+            parents = originalctx.parents()
+        else:
+            parents = [repo[p] for p in parents if p is not None]
+        parents = parents[:]
+        while len(parents) < 2:
+            parents.append(repo[nullid])
+        p1, p2 = self._parents = parents
 
         # sanity check to ensure that the reused manifest parents are
         # manifests of our commit parents
