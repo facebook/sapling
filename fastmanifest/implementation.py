@@ -1017,11 +1017,27 @@ class manifestfactory(object):
                         treemanifestcache.getinstance(opener,
                                                       self.ui).clear()
                         datastore.markforrefresh()
+
+                    def writepending(tr):
+                        finalize(tr)
+                        transaction.treedatapack = datapack.mutabledatapack(
+                                self.ui,
+                                packpath)
+                        transaction.treehistpack = \
+                            historypack.mutablehistorypack(
+                                self.ui,
+                                packpath)
+                        # re-register to write pending changes so that a series
+                        # of writes are correctly flushed to the store.  This
+                        # happens during amend.
+                        tr.addpending('treepack', writepending)
+
                     def abort(tr):
                         tr.treedatapack.abort()
                         tr.treehistpack.abort()
                     transaction.addfinalize('treepack', finalize)
                     transaction.addabort('treepack', abort)
+                    transaction.addpending('treepack', writepending)
 
                 dpack = treemanifest.InterceptedMutableDataPack(
                         transaction.treedatapack,
