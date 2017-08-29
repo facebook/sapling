@@ -260,6 +260,7 @@ class treemanifestlog(manifest.manifestlog):
 class treeonlymanifestlog(object):
     def __init__(self, opener):
         self._opener = opener
+        self._memtrees = {}
 
     def __getitem__(self, node):
         return self.get('', node)
@@ -271,15 +272,25 @@ class treeonlymanifestlog(object):
         if node == nullid:
             return treemanifestctx(self, dir, node)
 
+        memtree = self._memtrees.get((dir, node))
+        if memtree is not None:
+            return memtree
+
         store = self.datastore
+
         if not store.getmissing([(dir, node)]):
             return treemanifestctx(self, dir, node)
         else:
             raise KeyError("tree node not found (%s, %s)" %
                            (dir, hex(node)))
 
+    def addmemtree(self, node, tree):
+        ctx = treemanifestctx(self, '', node)
+        ctx._data = tree
+        self._memtrees[('', node)] = ctx
+
     def clearcaches(self):
-        pass
+        self._memtrees.clear()
 
 class treemanifestctx(object):
     def __init__(self, manifestlog, dir, node):
@@ -433,6 +444,8 @@ class memtreemanifestctx(object):
             if nname == "":
                 node = nnode
 
+        if node is not None:
+            self._manifestlog.addmemtree(node, newtree)
         return node
 
 def serverreposetup(repo):
