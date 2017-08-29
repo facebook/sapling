@@ -215,7 +215,22 @@ Test pulling new commits from a hybrid server
   
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
-# Rebase
+Test rebasing treeonly commits
+  $ hg rebase -d 6 -b 2
+  rebasing 2:4b702090309e "hybrid flat+tree commit"
+  merging subdir/x
+  warning: conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ printf "x\nx\nh\n" > subdir/x
+  $ hg resolve --mark subdir/x
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 2:4b702090309e "hybrid flat+tree commit"
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/4b702090309e-7a0f0c5f-rebase.hg (glob)
+
+TODO
 # Histedit
 # Push to peer
 # Pull from peer

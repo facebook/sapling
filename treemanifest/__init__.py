@@ -363,9 +363,12 @@ class treemanifestctx(object):
         its 't' flag.
         '''
         store = self._manifestlog.datastore
-        p1, p2 = self.parents()
-        m1 = self.read()
-        m2 = cstore.treemanifest(store, p1)
+        p1, p2 = self.parents
+        mf = self.read()
+        if p1 == nullid:
+            parentmf = cstore.treemanifest(store)
+        else:
+            parentmf = cstore.treemanifest(store, p1)
 
         if shallow:
             # This appears to only be used for changegroup creation in
@@ -375,7 +378,7 @@ class treemanifestctx(object):
                                  "readdelta yet")
         else:
             md = cstore.treemanifest(store)
-            for f, ((n1, fl1), (n2, fl2)) in m1.diff(m2).iteritems():
+            for f, ((n1, fl1), (n2, fl2)) in parentmf.diff(mf).iteritems():
                 if n2:
                     md[f] = n2
                     if fl2:
