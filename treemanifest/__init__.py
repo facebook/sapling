@@ -219,6 +219,7 @@ def setuptreestores(repo, mfl):
 
     mfl.shareddatastores = [datastore]
     mfl.localdatastores = [localdatastore]
+    mfl.ui = repo.ui
 
     # History store
     sharedhistorystore = historypackstore(repo.ui, packpath)
@@ -267,6 +268,8 @@ class treeonlymanifestlog(object):
         if dir != '':
             raise RuntimeError("native tree manifestlog doesn't support "
                                "subdir reads: (%s, %s)" % (dir, hex(node)))
+        if node == nullid:
+            return treemanifestctx(self, dir, node)
 
         store = self.datastore
         if not store.getmissing([(dir, node)]):
@@ -303,7 +306,9 @@ class treemanifestctx(object):
         return cstore.treemanifest(store)
 
     def copy(self):
-        return self.read().copy()
+        memmf = memtreemanifestctx(self._manifestlog, dir=self._dir)
+        memmf._treemanifest = self.read().copy()
+        return memmf
 
     @util.propertycache
     def parents(self):
@@ -356,6 +361,79 @@ class treemanifestctx(object):
 
     def find(self, key):
         return self.read().find(key)
+
+class memtreemanifestctx(object):
+    def __init__(self, manifestlog, dir=''):
+        self._manifestlog = manifestlog
+        self._dir = dir
+        store = self._manifestlog.datastore
+        self._treemanifest = cstore.treemanifest(store)
+
+    def new(self, dir=''):
+        return memtreemanifestctx(self._manifestlog, dir=dir)
+
+    def copy(self):
+        memmf = memtreemanifestctx(self._manifestlog, dir=self._dir)
+        memmf._treemanifest = self._treemanifest.copy()
+        return memmf
+
+    def read(self):
+        return self._treemanifest
+
+    def write(self, transaction, link, p1, p2, added, removed):
+        if not util.safehasattr(transaction, 'treedatapack'):
+            mfl = self._manifestlog
+            opener = mfl._opener
+            ui = self._manifestlog.ui
+            packpath = shallowutil.getlocalpackpath(
+                    opener.vfs.base,
+                    'manifests')
+            transaction.treedatapack = mutabledatapack(
+                    ui,
+                    packpath)
+            transaction.treehistpack = mutablehistorypack(
+                    ui,
+                    packpath)
+            def finalize(tr):
+                tr.treedatapack.close()
+                tr.treehistpack.close()
+                mfl.datastore.markforrefresh()
+            def abort(tr):
+                tr.treedatapack.abort()
+                tr.treehistpack.abort()
+            def writepending(tr):
+                finalize(tr)
+                transaction.treedatapack = datapack.mutabledatapack(
+                        self.ui,
+                        packpath)
+                transaction.treehistpack = historypack.mutablehistorypack(
+                        self.ui,
+                        packpath)
+                # re-register to write pending changes so that a series
+                # of writes are correctly flushed to the store.  This
+                # happens during amend.
+                tr.addpending('treepack', writepending)
+            transaction.addfinalize('treepack', finalize)
+            transaction.addabort('treepack', abort)
+            transaction.addpending('treepack', writepending)
+
+        dpack = transaction.treedatapack
+        hpack = transaction.treehistpack
+
+        newtree = self._treemanifest
+        p1tree = self._manifestlog[p1].read()
+        newtreeiter = newtree.finalize(p1tree)
+
+        node = None
+        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+            # Not using deltas, since there aren't any other trees in
+            # this pack it could delta against.
+            dpack.add(nname, nnode, revlog.nullid, ntext)
+            hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
+            if nname == "":
+                node = nnode
+
+        return node
 
 def serverreposetup(repo):
     extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
@@ -1223,13 +1301,15 @@ class remotetreedatastore(object):
         # Only look at the server if not root or is public
         basemfnodes = []
         if name == '':
-            # TODO: once flat manifests are gone, we won't be able to peak at
-            # the revlog here to figure out our linkrev
-            mfrevlog = self._repo.manifestlog._revlog
-            rev = mfrevlog.rev(node)
-            linkrev = mfrevlog.linkrev(rev)
-            if self._repo[linkrev].phase() != phases.public:
-                raise KeyError((name, node))
+            if util.safehasattr(self._repo.manifestlog, '_revlog'):
+                mfrevlog = self._repo.manifestlog._revlog
+                rev = mfrevlog.rev(node)
+                linkrev = mfrevlog.linkrev(rev)
+                if self._repo[linkrev].phase() != phases.public:
+                    raise KeyError((name, node))
+            else:
+                # TODO: improve linkrev guessing when the revlog isn't available
+                linkrev = self._repo['tip'].rev()
 
             # Find a recent tree that we already have
             basemfnodes = _findrecenttree(self._repo, linkrev)
