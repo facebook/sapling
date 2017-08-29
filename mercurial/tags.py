@@ -541,7 +541,7 @@ def tag(repo, names, node, message, local, user, date, editor=False):
 
     with repo.wlock():
         repo.tags() # instantiate the cache
-        _tag(repo.unfiltered(), names, node, message, local, user, date,
+        _tag(repo, names, node, message, local, user, date,
              editor=editor)
 
 def _tag(repo, names, node, message, local, user, date, extra=None,
