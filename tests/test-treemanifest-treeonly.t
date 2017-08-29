@@ -246,8 +246,52 @@ Test histedit treeonly commits
   |
   ~
 
+Test peer-to-peer push/pull of tree only commits
+  $ cd ..
+  $ clearcache
+# TODO: Test tree only clone
+  $ hgcloneshallow ssh://user@dummy/master client2 -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd client2
+  $ cp ../client/.hg/hgrc .hg/hgrc
+
+# Test pulling from a treeonly peer
+  $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup)"
+  bundle2-input-part: total payload size 980
+  bundle2-input-part: total payload size 171
+  bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
+  bundle2-input-part: total payload size 948
+  $ hg up tip
+  2 trees fetched over * (glob)
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -l 3 -T '{desc}' --stat
+  @  hybrid flat+tree commit subdir/x |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  add y subdir/x.orig |  2 ++
+  |   y             |  1 +
+  |   2 files changed, 3 insertions(+), 0 deletions(-)
+  |
+  2 trees fetched over * (glob)
+  o  modify subdir/x subdir/x |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  ~
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+
+# Test pushing to a treeonly peer
+  $ echo y >> y
+  $ hg commit -qm "modify y"
+  1 trees fetched over * (glob)
+  $ hg push -f -r . ssh://user@dummy/client --debug 2>&1 | grep treegroup
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  $ cd ../client
+  $ hg log -r tip -T '{desc}\n' --stat
+  modify y
+   y |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+
 TODO
-# Push to peer
-# Pull from peer
+# hg bundle
 # Access the pre-tree commit
 # log -T "{manifest}" #TODO: edit templatekw.showmanifest

@@ -153,7 +153,14 @@ def uisetup(ui):
     extensions.wrapfunction(bundle2, '_addpartsfromopts', _addpartsfromopts)
     extensions.wrapfunction(bundlerepo.bundlerepository, '_handlebundle2part',
                             _handlebundle2part)
+    extensions.wrapfunction(bundle2, 'getrepocaps', getrepocaps)
     _registerbundle2parts()
+
+def getrepocaps(orig, repo, *args, **kwargs):
+    caps = orig(repo, *args, **kwargs)
+    if repo.ui.configbool('treemanifest', 'sendtrees'):
+        caps['treemanifest'] = ('True',)
+    return caps
 
 def _collectmanifest(orig, repo, striprev):
     if repo.ui.configbool("treemanifest", "treeonly"):
@@ -1052,6 +1059,20 @@ def _registerbundle2parts():
 
         part = createtreepackpart(pushop.repo, pushop.outgoing,
                                   TREEGROUP_PARTTYPE2)
+        bundler.addpart(part)
+
+    @exchange.getbundle2partsgenerator(TREEGROUP_PARTTYPE2)
+    def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
+                                  b2caps=None, heads=None, common=None,
+                                  **kwargs):
+        """add parts containing trees being pulled"""
+        if ('True' not in b2caps.get('treemanifest', []) or
+            repo.svfs.treemanifestserver or
+            not kwargs.get('cg', True)):
+            return
+
+        outgoing = exchange._computeoutgoing(repo, heads, common)
+        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
         bundler.addpart(part)
 
 def createtreepackpart(repo, outgoing, partname):

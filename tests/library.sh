@@ -33,6 +33,8 @@ hgcloneshallow() {
 [remotefilelog]
 reponame=master
 datapackversion=1
+[phases]
+publish=False
 EOF
 }
 
