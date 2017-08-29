@@ -133,7 +133,9 @@ BASENODESEARCHMAX = 25000
 
 def uisetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
-                            _unpackmanifests)
+                            _unpackmanifestscg1)
+    extensions.wrapfunction(changegroup.cg3unpacker, '_unpackmanifests',
+                            _unpackmanifestscg3)
     extensions.wrapfunction(revlog.revlog, 'checkhash', _checkhash)
 
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
@@ -296,11 +298,13 @@ class treeonlymanifestlog(object):
 
         store = self.datastore
 
-        if not store.getmissing([(dir, node)]):
-            return treemanifestctx(self, dir, node)
-        else:
+        try:
+            store.get(dir, node)
+        except KeyError:
             raise KeyError("tree node not found (%s, %s)" %
                            (dir, hex(node)))
+
+        return treemanifestctx(self, dir, node)
 
     def addmemtree(self, node, tree):
         ctx = treemanifestctx(self, '', node)
@@ -643,8 +647,21 @@ def _backfill(tr, repo, limit):
 
     ui.progress(converting, None)
 
-def _unpackmanifests(orig, self, repo, *args, **kwargs):
+def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if repo.ui.configbool('treemanifest', 'treeonly'):
+        self.manifestheader()
+        chain = None
+        for chunkdata in iter(lambda: self.deltachunk(chain), {}):
+            chain = chunkdata['node']
+        return
+    return orig(self, repo, *args, **kwargs)
+
+def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
+    if repo.ui.configbool('treemanifest', 'treeonly'):
+        self.manifestheader()
+        chain = None
+        for chunkdata in iter(lambda: self.deltachunk(chain), {}):
+            chain = chunkdata['node']
         return
 
     mfrevlog = repo.manifestlog._revlog

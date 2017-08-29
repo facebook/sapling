@@ -179,9 +179,42 @@ Test unbundling the original commit
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+Test pulling new commits from a hybrid server
+  $ cd ../master
+  $ echo x >> subdir/x
+  $ hg commit -qAm 'modify subdir/x'
+  $ hg log -r tip -T '{manifest}'
+  1:d9920715ba88 (no-eol)
 
-TODO
-# Pull
+  $ cd ../client
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+  $ hg debugindex -m --config treemanifest.treeonly=False
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      51     -1       0 85b359fdb09e 000000000000 000000000000
+       1        51      51     -1       1 c0196aba344d 85b359fdb09e 000000000000
+       2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
+  $ hg log -r tip --stat --pager=off
+  2 trees fetched over * (glob)
+  changeset:   6:2937cde31c19
+  tag:         tip
+  parent:      0:2278cc8c6ce6
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify subdir/x
+  
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+
 # Rebase
 # Histedit
 # Push to peer
