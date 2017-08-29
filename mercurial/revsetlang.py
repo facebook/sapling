@@ -467,9 +467,6 @@ def _optimize(x, small):
         flushss()
         if len(ts) == 1:
             return ws[0], ts[0] # 'or' operation is fully optimized out
-        if order != defineorder:
-            # reorder by weight only when f(a + b) == f(b + a)
-            ts = [wt[1] for wt in sorted(zip(ws, ts), key=lambda wt: wt[0])]
         return max(ws), (op, ('list',) + tuple(ts), order)
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version

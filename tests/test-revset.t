@@ -2076,19 +2076,19 @@ ordering defined by it.
       define)
     (or
       (list
-        ('symbol', '2')
         (range
           ('symbol', '0')
           ('symbol', '1')
-          follow))
+          follow)
+        ('symbol', '2'))
       follow)
     define)
   * set:
   <filteredset
     <spanset- 0:3>,
     <addset
-      <baseset [2]>,
-      <spanset+ 0:2>>>
+      <spanset+ 0:2>,
+      <baseset [2]>>>
   2
   1
   0
@@ -2568,69 +2568,6 @@ ordering defined by it.
   2
   1
   0
-
- 'A + B' can be rewritten to 'B + A' by weight only when the order doesn't
- matter (e.g. 'X & (A + B)' can be 'X & (B + A)', but '(A + B) & X' can't):
-
-  $ try -p optimized '0:2 & (reverse(contains("a")) + 2)'
-  * optimized:
-  (and
-    (range
-      ('symbol', '0')
-      ('symbol', '2')
-      define)
-    (or
-      (list
-        ('symbol', '2')
-        (func
-          ('symbol', 'reverse')
-          (func
-            ('symbol', 'contains')
-            ('string', 'a')
-            define)
-          follow))
-      follow)
-    define)
-  * set:
-  <filteredset
-    <spanset+ 0:3>,
-    <addset
-      <baseset [2]>,
-      <filteredset
-        <fullreposet+ 0:10>,
-        <contains 'a'>>>>
-  0
-  1
-  2
-
-  $ try -p optimized '(reverse(contains("a")) + 2) & 0:2'
-  * optimized:
-  (and
-    (range
-      ('symbol', '0')
-      ('symbol', '2')
-      follow)
-    (or
-      (list
-        (func
-          ('symbol', 'reverse')
-          (func
-            ('symbol', 'contains')
-            ('string', 'a')
-            define)
-          define)
-        ('symbol', '2'))
-      define)
-    define)
-  * set:
-  <addset
-    <filteredset
-      <spanset- 0:3>,
-      <contains 'a'>>,
-    <baseset [2]>>
-  1
-  0
-  2
 
 test sort revset
 --------------------------------------------
