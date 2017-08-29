@@ -133,6 +133,14 @@ def _validatecmdtable(ui, cmdtable):
                           "registrar.command to register '%s'" % c, '4.6')
         missing = [a for a in _cmdfuncattrs if not util.safehasattr(f, a)]
         if not missing:
+            for option in e[1]:
+                default = option[2]
+                if isinstance(default, type(u'')):
+                    raise error.ProgrammingError(
+                        "option '%s.%s' has a unicode default value"
+                        % (c, option[1]),
+                        hint=("change the %s.%s default value to a "
+                              "non-unicode string" % (c, option[1])))
             continue
         raise error.ProgrammingError(
             'missing attributes: %s' % ', '.join(missing),

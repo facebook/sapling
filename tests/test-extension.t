@@ -1709,3 +1709,26 @@ Show deprecation warning for the use of cmdutil.command
   $ hg --config extensions.nonregistrar=`pwd`/nonregistrar.py version > /dev/null
   devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
   (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
+
+Prohibit the use of unicode strings as the default value of options
+
+  $ hg init $TESTTMP/opt-unicode-default
+
+  $ cat > $TESTTMP/test_unicode_default_value.py << EOF
+  > from mercurial import registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('dummy', [('', 'opt', u'value', u'help')], 'ext [OPTIONS]')
+  > def ext(*args, **opts):
+  >     print(opts['opt'])
+  > EOF
+  $ cat > $TESTTMP/opt-unicode-default/.hg/hgrc << EOF
+  > [extensions]
+  > test_unicode_default_value = $TESTTMP/test_unicode_default_value.py
+  > EOF
+  $ hg -R $TESTTMP/opt-unicode-default dummy
+  *** failed to import extension test_unicode_default_value from $TESTTMP/test_unicode_default_value.py: option 'dummy.opt' has a unicode default value
+  *** (change the dummy.opt default value to a non-unicode string)
+  hg: unknown command 'dummy'
+  (did you mean summary?)
+  [255]
