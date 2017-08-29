@@ -5,9 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 use std::hash::Hash;
-use std::marker::PhantomData;
 
-use linked_hash_map::{self, LinkedHashMap};
+use linked_hash_map::LinkedHashMap;
 use weight::Weight;
 
 #[derive(Debug, Clone)]
@@ -17,21 +16,11 @@ where
 {
     hash: LinkedHashMap<K, V>,
 
-    entrylimit: usize, // max number of entries
+    entrylimit: usize,  // max number of entries
     weightlimit: usize, // max weight of entries
 
-    keysizes: usize, // sum of key weights
+    keysizes: usize,   // sum of key weights
     entrysizes: usize, // sum of (completed) entry weights
-}
-
-pub struct Entry<'a, K, V>
-where
-    K: 'a + Eq + Hash,
-    V: 'a,
-{
-    hash: *mut BoundedHash<K, V>, // promise to just touch sizes
-    entry: linked_hash_map::OccupiedEntry<'a, K, V>,
-    _phantom: PhantomData<&'a mut BoundedHash<K, V>>, // lifetime for pointer
 }
 
 impl<K, V> BoundedHash<K, V>
@@ -47,10 +36,6 @@ where
             entrylimit,
             weightlimit,
         }
-    }
-
-    pub fn weightlimit(&self) -> usize {
-        self.weightlimit
     }
 
     pub fn total_weight(&self) -> usize {
@@ -140,7 +125,7 @@ where
     /// Insert new entry, updating weights
     ///
     /// Insert fails if there isn't capacity for the new entry, returning the key and value.
-    pub fn insert(&mut self, k: K, v: V) -> Result<(), (K, V)> {
+    pub fn insert(&mut self, k: K, v: V) -> Result<Option<V>, (K, V)> {
         if !self.trim_entries(1) {
             // seems unlikely, but anyway
             return Err((k, v));
@@ -156,11 +141,12 @@ where
         self.keysizes += kw;
         self.entrysizes += vw;
 
-        if let Some(oldv) = self.hash.insert(k, v) {
+        let oldv = self.hash.insert(k, v);
+        if let Some(oldv) = oldv.as_ref() {
             self.entrysizes -= oldv.get_weight();
         }
 
-        Ok(())
+        Ok(oldv)
     }
 
     #[cfg(test)]
@@ -169,67 +155,9 @@ where
         self.hash.get(key)
     }
 
-    /// Similar to other `Entry` variants, but only for occuped entries
-    pub fn entry(&mut self, key: K) -> Option<Entry<K, V>> {
-        let ptr = self as *mut _;
-        if let linked_hash_map::Entry::Occupied(occ) = self.hash.entry(key) {
-            Some(Entry {
-                hash: ptr,
-                entry: occ,
-                _phantom: PhantomData,
-            })
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, K, V> Entry<'a, K, V>
-where
-    K: 'a + Eq + Hash + Weight,
-    V: 'a + Weight,
-{
-    /// Get a reference to the entry
-    pub fn get(&self) -> &V {
-        self.entry.get()
-    }
-
-    /// Get a mutable reference. The caller must be careful not to change the weight
-    /// of the entry - it will not be accounted for (use `update()` to change an entry along
-    /// with its weight).
-    pub fn get_mut(&mut self) -> &mut V {
-        self.entry.get_mut()
-    }
-
-    /// Returns true if a new value will fit into the overall hash's weight limit
-    pub fn may_fit(&self, new: &V) -> bool {
-        let oldw = self.get().get_weight();
-        let neww = new.get_weight();
-
-        unsafe {
-            let weight = (&*self.hash).total_weight();
-            weight + neww - oldw < (*self.hash).weightlimit
-        }
-    }
-
-    /// Update an entry, including adjusting for a weight change.
-    pub fn update(&mut self, new: V) {
-        // XXX can't trim here, so may allow out of bounds. Use may_fit() to check first.
-        let neww = new.get_weight();
-        let old = self.entry.insert(new);
-
-        unsafe {
-            (*self.hash).entrysizes += neww - old.get_weight();
-        }
-    }
-
-    /// Remove the entry.
-    pub fn remove(self) {
-        unsafe {
-            (*self.hash).keysizes -= self.entry.key().get_weight();
-            (*self.hash).entrysizes -= self.get().get_weight();
-        }
-        let _ = self.entry.remove();
+    #[inline]
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        self.hash.get_mut(key)
     }
 }
 
@@ -286,41 +214,6 @@ mod test {
             assert_eq!(c.total_weight(), 0);
             assert_eq!(c.len(), 0);
         }
-    }
-
-    #[test]
-    fn entry() {
-        let mut c = BoundedHash::new(10, 1000);
-
-        let ok = c.insert(Weighted("hello", 10), Weighted("world", 100))
-            .is_ok();
-
-        assert!(ok, "insert failed");
-        assert_eq!(c.total_weight(), 10 + 100);
-        assert_eq!(c.len(), 1);
-
-        {
-            let mut ent = c.entry(Weighted("hello", 10)).expect("entry failed");
-            assert_eq!(ent.get(), &Weighted("world", 100));
-            ent.update(Weighted("jupiter", 500));
-        }
-
-        assert_eq!(c.total_weight(), 10 + 500);
-        assert_eq!(c.len(), 1);
-
-        {
-            let v = c.get(&Weighted("hello", 10)).expect("get failed");
-            assert_eq!(v, &Weighted("jupiter", 500));
-        }
-
-        {
-            let ent = c.entry(Weighted("hello", 10)).expect("entry failed");
-            assert_eq!(ent.get(), &Weighted("jupiter", 500));
-            ent.remove();
-        }
-
-        assert_eq!(c.total_weight(), 0);
-        assert_eq!(c.len(), 0);
     }
 
     #[test]

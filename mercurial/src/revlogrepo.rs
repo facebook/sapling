@@ -17,7 +17,7 @@ use futures::{Async, Future, IntoFuture, Poll, Stream};
 use futures::future::{self, BoxFuture};
 use futures::stream::{self, BoxStream};
 
-use asyncmemo::Filler;
+use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks, Version};
 use mercurial_types::{BlobNode, Changeset, Manifest, NodeHash, Path, Repo};
 use stockbookmarks::StockBookmarks;
@@ -290,7 +290,7 @@ impl Filler for ChangesetBlobFiller {
     type Key = NodeHash;
     type Value = BoxFuture<Arc<BlobNode>, Error>;
 
-    fn fill(&self, key: &Self::Key) -> Self::Value {
+    fn fill(&self, _: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
         self.0
             .get_changeset_blob_by_nodeid(&key)
             .map(Arc::new)
@@ -309,7 +309,7 @@ impl Filler for ManifestBlobFiller {
     type Key = NodeHash;
     type Value = BoxFuture<Arc<BlobNode>, Error>;
 
-    fn fill(&self, key: &Self::Key) -> Self::Value {
+    fn fill(&self, _: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
         self.0
             .get_manifest_blob_by_nodeid(&key)
             .map(Arc::new)
