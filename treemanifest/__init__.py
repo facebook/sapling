@@ -146,10 +146,22 @@ def uisetup(ui):
     wireproto.wirepeer.gettreepack = clientgettreepack
 
     extensions.wrapfunction(repair, 'striptrees', striptrees)
+    extensions.wrapfunction(repair, '_collectmanifest', _collectmanifest)
+    extensions.wrapfunction(repair, 'stripmanifest', stripmanifest)
     extensions.wrapfunction(bundle2, '_addpartsfromopts', _addpartsfromopts)
     extensions.wrapfunction(bundlerepo.bundlerepository, '_handlebundle2part',
                             _handlebundle2part)
     _registerbundle2parts()
+
+def _collectmanifest(orig, repo, striprev):
+    if repo.ui.configbool("treemanifest", "treeonly"):
+        return []
+    return orig(repo, striprev)
+
+def stripmanifest(orig, repo, striprev, tr, files):
+    if repo.ui.configbool("treemanifest", "treeonly"):
+        return
+    orig(repo, striprev, tr, files)
 
 def reposetup(ui, repo):
     wraprepo(repo)
