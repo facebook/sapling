@@ -230,8 +230,23 @@ Test rebasing treeonly commits
   rebasing 2:4b702090309e "hybrid flat+tree commit"
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/4b702090309e-7a0f0c5f-rebase.hg (glob)
 
+Test histedit treeonly commits
+  $ hg up -q 38a88da6315b
+  $ echo y > y
+  $ hg commit -Aqm 'add y'
+  $ hg histedit --config extensions.histedit= --commands - <<EOF
+  > pick 0b82d7242702 add y
+  > pick 38a88da6315b hybrid flat+tree commit
+  > EOF
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/38a88da6315b-77d91db7-histedit.hg (glob)
+  $ hg log -l 2 -G -T '{desc}'
+  @  hybrid flat+tree commit
+  |
+  o  add y
+  |
+  ~
+
 TODO
-# Histedit
 # Push to peer
 # Pull from peer
 # Access the pre-tree commit
