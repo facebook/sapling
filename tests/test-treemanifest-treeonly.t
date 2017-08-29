@@ -290,8 +290,30 @@ Test peer-to-peer push/pull of tree only commits
    y |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
+Test bundling
+  $ hg bundle -r 'tip~3::tip' ../mybundle.hg
+  searching for changes
+  3 changesets found
+  $ cd ..
+  $ hgcloneshallow ssh://user@dummy/master client3 -q
+  $ cd client3
+  $ cp ../client/.hg/hgrc .hg/hgrc
+  $ hg unbundle ../mybundle.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 4 changes to 3 files
+  (run 'hg update' to get a working copy)
+  $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
+  o  modify y
+  |   y |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  hybrid flat+tree commit
+  |   subdir/x |  1 +
+  ~   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
 TODO
-# hg bundle
 # Access the pre-tree commit
 # log -T "{manifest}" #TODO: edit templatekw.showmanifest
