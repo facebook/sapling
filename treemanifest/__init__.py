@@ -209,6 +209,8 @@ def setuptreestores(repo, mfl):
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
 
+    if not util.safehasattr(repo, 'name'):
+        repo.name = repo.ui.config('remotefilelog', 'reponame')
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
 
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
