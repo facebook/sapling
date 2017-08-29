@@ -145,6 +145,7 @@ def uisetup(ui):
     wireproto.wirepeer.gettreepack = clientgettreepack
 
     extensions.wrapfunction(repair, 'striptrees', striptrees)
+    extensions.wrapfunction(bundle2, '_addpartsfromopts', _addpartsfromopts)
     _registerbundle2parts()
 
 def reposetup(ui, repo):
@@ -324,7 +325,7 @@ class treemanifestctx(object):
     @util.propertycache
     def parents(self):
         store = self._manifestlog.historystore
-        p1, p2, linkrev, copyfrom = store.getnodeinfo((self._dir, self._node))
+        p1, p2, linkrev, copyfrom = store.getnodeinfo(self._dir, self._node)
         if copyfrom:
             p1 = nullid
         return p1, p2
@@ -626,6 +627,9 @@ def _backfill(tr, repo, limit):
     ui.progress(converting, None)
 
 def _unpackmanifests(orig, self, repo, *args, **kwargs):
+    if repo.ui.configbool('treemanifest', 'treeonly'):
+        return
+
     mfrevlog = repo.manifestlog._revlog
     oldtip = len(mfrevlog)
 
@@ -1384,3 +1388,9 @@ def striptrees(orig, repo, tr, striprev, files):
             rl.strip(striprev, tr)
 
         treerevlog.strip(striprev, tr)
+
+def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
+    orig(ui, repo, bundler, source, outgoing, opts)
+    if ui.configbool('treemanifest', 'sendtrees'):
+        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
+        bundler.addpart(part)
