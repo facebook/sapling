@@ -59,20 +59,47 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
                           mfs, fnodes):
-        sendmanifests = self._repo.ui.configbool('treemanifest', 'sendflat',
-                                                 True)
-        chunks = super(shallowcg1packer, self).generatemanifests(commonrevs,
-                                                                clrevorder,
-                                                                fastpathlinkrev,
-                                                                mfs,
-                                                                fnodes)
-        # If sendmanifests is false, we still need to consume the generator,
-        # since it populates the list of files we need to send.
-        for val in chunks:
-            if sendmanifests:
-                yield val
+        """
+        - `commonrevs` is the set of known commits on both sides
+        - `clrevorder` is a mapping from cl node to rev number, used for
+                       determining which commit is newer.
+        - `mfs` is the potential manifest nodes to send,
+                with maps to their linknodes
+                { manifest root node -> link node }
+        - `fnodes` is a mapping of { filepath -> { node -> clnode } }
+                If fastpathlinkrev is false, we are responsible for populating
+                fnodes.
+        """
+        sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
+                                            True)
+        if sendflat:
+            # In this code path, generating the manifests populates fnodes for
+            # us.
+            chunks = super(shallowcg1packer, self).generatemanifests(
+                commonrevs,
+                clrevorder,
+                fastpathlinkrev,
+                mfs,
+                fnodes,
+            )
+            for chunk in chunks:
+                yield chunk
+        else:
+            # If not using the fast path, we need to discover what files to send
+            if not fastpathlinkrev:
+                mflog = self._repo.manifestlog
+                for mfnode, clnode in mfs.iteritems():
+                    mfctx = mflog[mfnode]
+                    p1node = mfctx.parents[0]
+                    p1ctx = mflog[p1node]
+                    diff = p1ctx.read().diff(mfctx.read()).iteritems()
+                    for filename, ((anode, aflag), (bnode, bflag)) in diff:
+                        if bnode is not None:
+                            fclnodes = fnodes.setdefault(filename, {})
+                            fclnode = fclnodes.setdefault(bnode, clnode)
+                            if clrevorder[clnode] < clrevorder[fclnode]:
+                                fclnodes[bnode] = clnode
 
-        if not sendmanifests:
             yield self.close()
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
