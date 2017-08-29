@@ -23,13 +23,17 @@
     # limits the number of heuristically found move candidates to check
     maxmovescandidatestocheck = 5
 
-    # whether to enable fast copytracing during amends (requires fastcopytrace)
-    # to be enabled.
+    # whether to enable fast copytracing during amends (requires fastcopytrace
+    # to be enabled.)
     enableamendcopytrace = True
 
     # how many previous commits to search through when looking for amend
     # copytrace data.
     amendcopytracecommitlimit = 100
+
+    # whether to enable full copytracing on small draft branches.
+    # Disabled by default
+    draftusefullcopytrace = False
 
 '''
 
@@ -66,6 +70,9 @@ def extsetup(ui):
     commands.globalopts.append(
         ("", "tracecopies", None,
          _("enable copytracing. Warning: can be very slow!")))
+    commands.globalopts.append(
+        ("", "drafttrace", None,
+         _("enable copytracing for draft branches.")))
 
     # With experimental.disablecopytrace=True there can be cryptic merge errors.
     # Let"s change error message to suggest re-running the command with
@@ -344,8 +351,19 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     if not _fastcopytraceenabled(repo.ui):
         return orig(repo, cdst, csrc, base)
 
-    if not cdst or not csrc or cdst == csrc:
-        return {}, {}, {}, {}, {}
+    # If base, source and destination are all draft branches, let's use full
+    # copytrace for increased capabilities since it will work fast enough
+    if _isfullcopytraceable(repo.ui, cdst, base):
+        configoverrides = {('experimental', 'disablecopytrace'): False}
+        with repo.ui.configoverride(configoverrides, 'mergecopies'):
+            result = orig(repo, cdst, csrc, base)
+            if repo.ui.configbool("copytrace", "enableamendcopytrace", True):
+                # Look for additional amend-copies
+                amend_copies = _getamendcopies(repo, cdst, base.p1())
+                # update result[0] dict w/ amend_copies
+                result[0].update(amend_copies)
+
+        return result
 
     # avoid silly behavior for parent -> working dir
     if csrc.node() is None and cdst.node() == repo.dirstate.p1():
@@ -452,3 +470,16 @@ def _getctxfromfctx(fctx):
 def _gethex(ctx):
     # for workingctx return p1 hex
     return ctx.hex() if ctx.hex() != node.wdirhex else ctx.p1().hex()
+
+def _isfullcopytraceable(ui, cdst, base):
+    if not ui.configbool("copytrace", "draftusefullcopytrace", False):
+        return False
+    if cdst.phase() == phases.draft and base.phase() == phases.draft:
+        # draft branch: Use traditional copytracing if < 100 commits
+        ctx = cdst
+        commits = 0
+        sourcecommitlimit = ui.configint('copytrace', 'sourcecommitlimit', 100)
+        while ctx != base and commits != sourcecommitlimit:
+            ctx = ctx.p1()
+            commits += 1
+        return commits < sourcecommitlimit

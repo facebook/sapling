@@ -189,9 +189,9 @@ Rebase draft commit on top of draft commit
   $ rm -rf repo
 
 Check a few potential move candidates
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ mkdir dir
   $ echo a > dir/a
   $ hg add dir/a
@@ -202,6 +202,10 @@ Check a few potential move candidates
   $ echo b > dir2/a
   $ hg add dir2/a
   $ hg ci -qm 'create dir2/a'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q 0
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
@@ -210,11 +214,11 @@ Check a few potential move candidates
   @  changeset: 6b2f4cece40fd320f41229f23821256ffc08efea
   |   desc: mod dir/a, phase: draft
   | o  changeset: 4494bf7efd2e0dfdd388e767fb913a8a3731e3fa
-  | |   desc: create dir2/a, phase: draft
+  | |   desc: create dir2/a, phase: public
   | o  changeset: b1784dfab6ea6bfafeb11c0ac50a2981b0fe6ade
-  |/    desc: mv dir/a dir/b, phase: draft
+  |/    desc: mv dir/a dir/b, phase: public
   o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s . -d 2
   rebasing 3:6b2f4cece40f "mod dir/a" (tip)
@@ -225,12 +229,16 @@ Check a few potential move candidates
   $ rm -rf repo
 
 Move file in one branch and delete it in another
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg mv a b
   $ hg ci -m 'mv a b'
   $ hg up -q ".^"
@@ -244,7 +252,7 @@ Move file in one branch and delete it in another
   | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
   |/    desc: mv a b, phase: draft
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s 1 -d 2
   rebasing 1:472e38d57782 "mv a b"
@@ -257,9 +265,9 @@ Move file in one branch and delete it in another
   $ rm -rf repo
 
 Too many move candidates
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
@@ -277,6 +285,10 @@ Too many move candidates
   $ hg add f
   $ hg add g
   $ hg ci -m 'rm a, add many files'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q ".^"
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -286,9 +298,9 @@ Too many move candidates
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
   |   desc: mod a, phase: draft
   | o  changeset: d133babe0b735059c360d36b4b47200cdd6bcef5
-  |/    desc: rm a, add many files, phase: draft
+  |/    desc: rm a, add many files, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s 2 -d 1
   rebasing 2:ef716627c70b "mod a" (tip)
@@ -303,13 +315,17 @@ Too many move candidates
   $ rm -rf repo
 
 Move a directory in draft branch
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ mkdir dir
   $ echo a > dir/a
   $ hg add dir/a
   $ hg ci -qm initial
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
   $ hg up -q ".^"
@@ -322,7 +338,7 @@ Move a directory in draft branch
   | o  changeset: 6b2f4cece40fd320f41229f23821256ffc08efea
   |/    desc: mod dir/a, phase: draft
   o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s . -d 1
   rebasing 2:a33d80b6e352 "mv dir/ dir2/" (tip)
@@ -333,9 +349,9 @@ Move a directory in draft branch
   $ rm -rf repo
 
 Move file twice and rebase mod on top of moves
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
@@ -343,6 +359,10 @@ Move file twice and rebase mod on top of moves
   $ hg ci -m 'mv a b'
   $ hg mv b c
   $ hg ci -m 'mv b c'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q 0
   $ echo c > a
   $ hg ci -m 'mod a'
@@ -351,11 +371,11 @@ Move file twice and rebase mod on top of moves
   @  changeset: d413169422167a3fa5275fc5d71f7dea9f5775f3
   |   desc: mod a, phase: draft
   | o  changeset: d3efd280421d24f9f229997c19e654761c942a71
-  | |   desc: mv b c, phase: draft
+  | |   desc: mv b c, phase: public
   | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
-  |/    desc: mv a b, phase: draft
+  |/    desc: mv a b, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
   $ hg rebase -s . -d 2
   rebasing 3:d41316942216 "mod a" (tip)
   merging c and a to c
@@ -366,12 +386,16 @@ Move file twice and rebase mod on top of moves
   $ rm -rf repo
 
 Move file twice and rebase moves on top of mods
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg mv a b
   $ hg ci -m 'mv a b'
   $ hg mv b c
@@ -388,7 +412,7 @@ Move file twice and rebase moves on top of mods
   | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
   |/    desc: mv a b, phase: draft
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
   $ hg rebase -s 1 -d .
   rebasing 1:472e38d57782 "mv a b"
   merging a and b to b
@@ -401,9 +425,9 @@ Move file twice and rebase moves on top of mods
   $ rm -rf repo
 
 Move one file and add another file in the same folder in one branch, modify file in another branch
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
@@ -412,6 +436,10 @@ Move one file and add another file in the same folder in one branch, modify file
   $ echo c > c
   $ hg add c
   $ hg ci -m 'add c'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q 0
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -421,11 +449,11 @@ Move one file and add another file in the same folder in one branch, modify file
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
   |   desc: mod a, phase: draft
   | o  changeset: b1a6187e79fbce851bb584eadcb0cc4a80290fd9
-  | |   desc: add c, phase: draft
+  | |   desc: add c, phase: public
   | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
-  |/    desc: mv a b, phase: draft
+  |/    desc: mv a b, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s . -d 2
   rebasing 3:ef716627c70b "mod a" (tip)
@@ -475,15 +503,19 @@ Merge test
   $ rm -rf repo
 
 Copy and move file
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
   $ hg cp a c
   $ hg mv a b
   $ hg ci -m 'cp a c, mv a b'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q 0
   $ echo b > a
   $ hg ci -m 'mod a'
@@ -493,9 +525,9 @@ Copy and move file
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
   |   desc: mod a, phase: draft
   | o  changeset: 4fc3fd13fbdb89ada6b75bfcef3911a689a0dde8
-  |/    desc: cp a c, mv a b, phase: draft
+  |/    desc: cp a c, mv a b, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg rebase -s . -d 1
   rebasing 2:ef716627c70b "mod a" (tip)
@@ -514,14 +546,18 @@ Copy and move file
   $ rm -rf repo
 
 Do a merge commit with many consequent moves in one branch
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
   $ echo b > a
   $ hg ci -qm 'mod a'
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ hg up -q ".^"
   $ hg mv a b
   $ hg ci -qm 'mv a b'
@@ -534,9 +570,9 @@ Do a merge commit with many consequent moves in one branch
   o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
   |   desc: mv a b, phase: draft
   | @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
-  |/    desc: mod a, phase: draft
+  |/    desc: mod a, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
 
   $ hg merge 3
   merging a and c to c
@@ -551,9 +587,9 @@ Do a merge commit with many consequent moves in one branch
   | o  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
   | |   desc: mv a b, phase: draft
   o |  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
-  |/    desc: mod a, phase: draft
+  |/    desc: mod a, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
   $ ls
   c
   $ cd ..
@@ -561,12 +597,16 @@ Do a merge commit with many consequent moves in one branch
   $ rm -rf repo
 
 Test shelve/unshelve
-  $ hg init repo
-  $ initclient repo
-  $ cd repo
+  $ hg init server
+  $ initclient server
+  $ cd server
   $ echo a > a
   $ hg add a
   $ hg ci -m initial
+  $ cd ..
+  $ hg clone -q server repo
+  $ initclient repo
+  $ cd repo
   $ echo b > a
   $ hg shelve
   shelved as default
@@ -578,7 +618,7 @@ Test shelve/unshelve
   @  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
   |   desc: mv a b, phase: draft
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
-      desc: initial, phase: draft
+      desc: initial, phase: public
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
@@ -589,5 +629,79 @@ Test shelve/unshelve
   $ cat b
   b
   $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Test full copytrace ability on draft branch: File directory and base name
+changed in same move
+  $ hg init repo
+  $ initclient repo
+  $ mkdir repo/dir1
+  $ cd repo/dir1
+  $ echo a > a
+  $ hg add a
+  $ hg ci -qm initial
+  $ cd ..
+  $ hg mv -q dir1 dir2
+  $ hg mv dir2/a dir2/b
+  $ hg ci -qm 'mv a b; mv dir1 dir2'
+  $ hg up -q '.^'
+  $ cd dir1
+  $ echo b >> a
+  $ cd ..
+  $ hg ci -qm 'mod a'
+
+  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
+  @  changeset 6207d2d318e710b882e3d5ada2a89770efc42c96
+  |   desc mod a, phase: draft
+  | o  changeset abffdd4e3dfc04bc375034b970299b2a309a1cce
+  |/    desc mv a b; mv dir1 dir2, phase: draft
+  o  changeset 81973cd24b58db2fdf18ce3d64fb2cc3284e9ab3
+      desc initial, phase: draft
+
+  $ hg rebase -s . -d 1 --tracecopies
+  rebasing 2:6207d2d318e7 "mod a" (tip)
+  merging dir2/b and dir1/a to dir2/b
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/6207d2d318e7-1c9779ad-rebase.hg (glob)
+  $ cat dir2/b
+  a
+  b
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Test full copytrace ability on draft branch: Move directory in one merge parent,
+while adding file to original directory in other merge parent. File moved on rebase.
+  $ hg init repo
+  $ initclient repo
+  $ mkdir repo/dir1
+  $ cd repo/dir1
+  $ echo dummy > dummy
+  $ hg add dummy
+  $ cd ..
+  $ hg ci -qm initial
+  $ cd dir1
+  $ echo a > a
+  $ hg add a
+  $ cd ..
+  $ hg ci -qm 'hg add dir1/a'
+  $ hg up -q '.^'
+  $ hg mv -q dir1 dir2
+  $ hg ci -qm 'mv dir1 dir2'
+
+  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
+  @  changeset e8919e7df8d036e07b906045eddcd4a42ff1915f
+  |   desc mv dir1 dir2, phase: draft
+  | o  changeset 7c7c6f339be00f849c3cb2df738ca91db78b32c8
+  |/    desc hg add dir1/a, phase: draft
+  o  changeset a235dcce55dcf42034c4e374cb200662d0bb4a13
+      desc initial, phase: draft
+
+  $ hg rebase -s . -d 1 --tracecopies
+  rebasing 2:e8919e7df8d0 "mv dir1 dir2" (tip)
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/e8919e7df8d0-f62fab62-rebase.hg (glob)
+  $ ls dir2
+  a
+  dummy
   $ rm -rf server
   $ rm -rf repo
