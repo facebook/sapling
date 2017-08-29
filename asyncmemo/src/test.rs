@@ -103,7 +103,7 @@ fn limit() {
 #[derive(Debug)]
 struct Delay<V> {
     remains: usize,
-    v: Option<V>,
+    v: Option<Result<V, ()>>,
 }
 
 impl<V> Future for Delay<V> {
@@ -114,7 +114,8 @@ impl<V> Future for Delay<V> {
         if self.remains == 0 {
             match self.v.take() {
                 None => Err(()),
-                Some(v) => Ok(Async::Ready(v)),
+                Some(Ok(v)) => Ok(Async::Ready(v)),
+                Some(Err(e)) => Err(e),
             }
         } else {
             self.remains -= 1;
@@ -134,7 +135,7 @@ impl<'a> Filler for Delayed<'a> {
         self.0.fetch_add(1, Ordering::Relaxed);
         Delay {
             remains: 5,
-            v: Some(key.to_uppercase()),
+            v: Some(Ok(key.to_uppercase())),
         }
     }
 }
@@ -188,14 +189,14 @@ impl<'a> Filler for Fib<'a> {
         if key == 1 {
             let f = Delay::<u32> {
                 remains: 1,
-                v: Some(1),
+                v: Some(Ok(1)),
             };
             Box::new(f) as Box<Future<Item = u32, Error = ()> + 'a>
         } else {
             let f = cache.get(key - 1).and_then(move |f| {
                 Delay {
                     remains: 1,
-                    v: Some(key + f),
+                    v: Some(Ok(key + f)),
                 }
             });
             Box::new(f) as Box<Future<Item = u32, Error = ()> + 'a>
@@ -274,4 +275,87 @@ fn fibonacci() {
         assert_eq!(res, Ok(Async::Ready(10)));
         assert_eq!(count.load(Ordering::Relaxed), 4);
     }
+}
+
+#[derive(Debug)]
+struct Fails<'a>(&'a AtomicUsize);
+
+impl<'a> Filler for Fails<'a> {
+    type Key = String;
+    type Value = Delay<String>;
+
+    fn fill(&self, _cache: &Asyncmemo<Self>, _: &Self::Key) -> Self::Value {
+        self.0.fetch_add(1, Ordering::Relaxed);
+        Delay {
+            remains: 3,
+            v: Some(Err(())),
+        }
+    }
+}
+
+#[test]
+fn failing() {
+    let count = AtomicUsize::new(0);
+    let c = Asyncmemo::new_unbounded(Fails(&count));
+
+    assert!(c.is_empty());
+    assert_eq!(c.len(), 0);
+
+    assert_eq!(count.load(Ordering::Relaxed), 0);
+
+    let mut v = c.get("foo");
+    assert_eq!(count.load(Ordering::Relaxed), 0);
+
+    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v.poll(), Err(()), "v={:#?}", v);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    // retry
+    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(count.load(Ordering::Relaxed), 2);
+}
+
+#[test]
+fn multiwait() {
+    let count = AtomicUsize::new(0);
+    let c = Asyncmemo::new_unbounded(Delayed(&count));
+
+    assert!(c.is_empty());
+    assert_eq!(c.len(), 0);
+
+    let mut v1 = c.get("foo");
+    assert_eq!(count.load(Ordering::Relaxed), 0);
+    let mut v2 = c.get("foo");
+    assert_eq!(count.load(Ordering::Relaxed), 0);
+
+    // polling on either future advances the state machine until its complete
+
+    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v2.poll(), Ok(Async::NotReady), "v={:#?}", v2);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v2.poll(), Ok(Async::NotReady), "v={:#?}", v2);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v2.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v2);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+
+    assert_eq!(v1.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v1);
+    assert_eq!(count.load(Ordering::Relaxed), 1);
 }
