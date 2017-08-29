@@ -79,6 +79,7 @@ to prevent accesses of flat manifests.
 
 from mercurial import (
     bundle2,
+    bundlerepo,
     changegroup,
     commands,
     error,
@@ -146,6 +147,8 @@ def uisetup(ui):
 
     extensions.wrapfunction(repair, 'striptrees', striptrees)
     extensions.wrapfunction(bundle2, '_addpartsfromopts', _addpartsfromopts)
+    extensions.wrapfunction(bundlerepo.bundlerepository, '_handlebundle2part',
+                            _handlebundle2part)
     _registerbundle2parts()
 
 def reposetup(ui, repo):
@@ -1394,3 +1397,18 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
     if ui.configbool('treemanifest', 'sendtrees'):
         part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
         bundler.addpart(part)
+
+def _handlebundle2part(orig, self, part):
+    if part.type == TREEGROUP_PARTTYPE2:
+        tempstore = wirepack.wirepackstore(part.read())
+
+        # Point the bundle repo at the temp stores
+        mfl = self.manifestlog
+        mfl.datastore = unioncontentstore(
+            tempstore,
+            mfl.datastore)
+        mfl.historystore = unionmetadatastore(
+            tempstore,
+            mfl.historystore)
+    else:
+        orig(self, part)
