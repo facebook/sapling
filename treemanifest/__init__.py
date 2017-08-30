@@ -446,11 +446,11 @@ class memtreemanifestctx(object):
                 tr.treehistpack.abort()
             def writepending(tr):
                 finalize(tr)
-                transaction.treedatapack = datapack.mutabledatapack(
-                        self.ui,
+                transaction.treedatapack = mutabledatapack(
+                        ui,
                         packpath)
-                transaction.treehistpack = historypack.mutablehistorypack(
-                        self.ui,
+                transaction.treehistpack = mutablehistorypack(
+                        ui,
                         packpath)
                 # re-register to write pending changes so that a series
                 # of writes are correctly flushed to the store.  This
