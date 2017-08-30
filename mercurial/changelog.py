@@ -14,7 +14,6 @@ from .node import (
     bin,
     hex,
     nullid,
-    wdirid,
 )
 
 from . import (
@@ -536,9 +535,6 @@ class changelog(revlog.revlog):
         # overlay over the standard revlog._addrevision to track the new
         # revision on the transaction.
         rev = len(self)
-        if node == wdirid: # nullid is checked in super method
-            raise error.RevlogError(_("%s: attempt to add wdir revision") %
-                                    (self.indexfile))
         node = super(changelog, self)._addrevision(node, rawtext, transaction,
                                                    *args, **kwargs)
         revs = transaction.changes.get('revs')
