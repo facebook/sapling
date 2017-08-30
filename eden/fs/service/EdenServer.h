@@ -65,6 +65,11 @@ class EdenServer {
   virtual ~EdenServer();
 
   /**
+   * Run the EdenServer.
+   */
+  void run();
+
+  /**
    * Prepare to run the EdenServer.
    *
    * This acquires the lock on the eden directory, remounts configured mount

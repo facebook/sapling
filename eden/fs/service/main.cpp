@@ -42,12 +42,6 @@ DEFINE_int32(
 using namespace facebook::eden::fusell;
 using namespace facebook::eden;
 
-namespace facebook {
-namespace eden {
-void runServer(const EdenServer& server);
-}
-}
-
 int main(int argc, char **argv) {
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
@@ -120,24 +114,6 @@ int main(int argc, char **argv) {
       1);
 
   EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
-  // Get the EdenServer ready, then run the thrift server.
-  server.prepare();
-  runServer(server);
-  // Clean up all the server mount points before shutting down the privhelper
-  server.unmountAll().get();
-
-  // Explicitly stop the privhelper process so we can verify that it
-  // exits normally.
-  auto privhelperExitCode = fusell::stopPrivHelper();
-  if (privhelperExitCode != 0) {
-    if (privhelperExitCode > 0) {
-      XLOG(WARNING) << "privhelper process exited with unexpected code "
-                    << privhelperExitCode;
-    } else {
-      XLOG(WARNING) << "privhelper process was killed by signal "
-                    << privhelperExitCode;
-    }
-    return EX_SOFTWARE;
-  }
+  server.run();
   return EX_OK;
 }

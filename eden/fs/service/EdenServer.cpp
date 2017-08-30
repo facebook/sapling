@@ -204,6 +204,33 @@ void EdenServer::prepare() {
   prepareThriftAddress();
 }
 
+// Defined separately in RunServer.cpp
+void runServer(const EdenServer& server);
+
+void EdenServer::run() {
+  // Acquire the eden lock, prepare the thrift server, and start our mounts
+  prepare();
+
+  // Run the thrift server
+  runServer(*this);
+
+  // Clean up all the server mount points before shutting down the privhelper
+  unmountAll().get();
+
+  // Explicitly stop the privhelper process so we can verify that it
+  // exits normally.
+  auto privhelperExitCode = fusell::stopPrivHelper();
+  if (privhelperExitCode != 0) {
+    if (privhelperExitCode > 0) {
+      XLOG(ERR) << "privhelper process exited with unexpected code "
+                << privhelperExitCode;
+    } else {
+      XLOG(ERR) << "privhelper process was killed by signal "
+                << privhelperExitCode;
+    }
+  }
+}
+
 void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
