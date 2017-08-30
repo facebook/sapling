@@ -22,6 +22,7 @@ extern "C" {
 }
 
 #include "cstore/datapackstore.h"
+#include "cstore/datastore.h"
 #include "cstore/key.h"
 #include "cstore/py-structs.h"
 #include "cstore/pythonutil.h"
@@ -76,15 +77,14 @@ static PyObject *datapackstore_getdeltachain(py_datapackstore *self, PyObject *a
 
     PythonObj resultChain = PyList_New(0);
 
-    delta_chain_link_t *link;
     size_t index = 0;
-    while ((link = chain.next()) != NULL) {
-      PythonObj name = PyString_FromStringAndSize(link->filename, link->filename_sz);
-      PythonObj retnode = PyString_FromStringAndSize((const char *) link->node, NODE_SZ);
+    for (DeltaChainLink link = chain.next(); !link.isdone(); link = chain.next()) {
+      PythonObj name = PyString_FromStringAndSize(link.filename(), link.filenamesz());
+      PythonObj retnode = PyString_FromStringAndSize((const char *) link.node(), NODE_SZ);
       PythonObj deltabasenode = PyString_FromStringAndSize(
-          (const char *) link->deltabase_node, NODE_SZ);
+          (const char *) link.deltabasenode(), NODE_SZ);
       PythonObj delta = PyString_FromStringAndSize(
-          (const char *) link->delta, (Py_ssize_t) link->delta_sz);
+          (const char *) link.delta(), (Py_ssize_t) link.deltasz());
 
       PythonObj tuple = PyTuple_Pack(5, (PyObject*)name, (PyObject*)retnode,
                                         (PyObject*)name, (PyObject*)deltabasenode,
@@ -145,10 +145,10 @@ static PyObject *datapackstore_getmissing(py_datapackstore *self, PyObject *keys
     PythonObj inputIterator = PyObject_GetIter(keys);
     PythonKeyIterator keysIter(inputIterator);
 
-    DatapackStoreKeyIterator missingIter = self->datapackstore.getMissing(keysIter);
+    std::shared_ptr<KeyIterator> missingIter = self->datapackstore.getMissing(keysIter);
 
     Key *key;
-    while ((key = missingIter.next()) != NULL) {
+    while ((key = missingIter->next()) != NULL) {
       PythonObj missingKey = Py_BuildValue("(s#s#)", key->name.c_str(), key->name.size(),
                                                      key->node, 20);
       if (PyList_Append(result, (PyObject*)missingKey)) {
@@ -232,7 +232,7 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
   }
 
   try {
-    std::vector<DatapackStore*> stores;
+    std::vector<DataStore*> stores;
     std::vector<PythonObj> pySubStores;
 
     PyObject *item;
@@ -317,14 +317,13 @@ static PyObject *uniondatapackstore_getdeltachain(py_uniondatapackstore *self, P
 
     PythonObj resultChain = PyList_New(0);
 
-    delta_chain_link_t *link;
-    while ((link = chain.next()) != NULL) {
-      PythonObj name = PyString_FromStringAndSize(link->filename, link->filename_sz);
-      PythonObj retnode = PyString_FromStringAndSize((const char *) link->node, NODE_SZ);
+    for (DeltaChainLink link = chain.next(); !link.isdone(); link = chain.next()) {
+      PythonObj name = PyString_FromStringAndSize(link.filename(), link.filenamesz());
+      PythonObj retnode = PyString_FromStringAndSize((const char *) link.node(), NODE_SZ);
       PythonObj deltabasenode = PyString_FromStringAndSize(
-          (const char *) link->deltabase_node, NODE_SZ);
+          (const char *) link.deltabasenode(), NODE_SZ);
       PythonObj delta = PyString_FromStringAndSize(
-          (const char *) link->delta, (Py_ssize_t) link->delta_sz);
+          (const char *) link.delta(), (Py_ssize_t) link.deltasz());
 
       PythonObj tuple = PyTuple_Pack(5, (PyObject*)name, (PyObject*)retnode,
                                         (PyObject*)name, (PyObject*)deltabasenode,

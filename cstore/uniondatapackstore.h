@@ -40,7 +40,7 @@ class UnionDeltaChainIterator: public DeltaChainIterator {
   private:
     UnionDatapackStore &_store;
   protected:
-    delta_chain_t getNextChain(const Key &key) override;
+    std::shared_ptr<DeltaChain> getNextChain(const Key &key) override;
 
   public:
     UnionDeltaChainIterator(UnionDatapackStore &store, const Key &key) :
@@ -52,9 +52,9 @@ class UnionDeltaChainIterator: public DeltaChainIterator {
 
 class UnionDatapackStore : public Store {
   public:
-    std::vector<DatapackStore*> _stores;
+    std::vector<DataStore*> _stores;
 
-    UnionDatapackStore(std::vector<DatapackStore*> stores);
+    UnionDatapackStore(std::vector<DataStore*> stores);
 
     ~UnionDatapackStore() override;
 

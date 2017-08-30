@@ -16,7 +16,7 @@ extern "C" {
 #include "cstore/mpatch.h"
 }
 
-UnionDatapackStore::UnionDatapackStore(std::vector<DatapackStore*> stores) :
+UnionDatapackStore::UnionDatapackStore(std::vector<DataStore*> stores) :
   _stores(stores) {
 }
 
@@ -27,17 +27,17 @@ UnionDatapackStore::~UnionDatapackStore() {
 }
 
 mpatch_flist* getNextLink(void* container, ssize_t index) {
-  std::vector<delta_chain_link_t*> *links = (std::vector<delta_chain_link_t*>*)container;
+  std::vector<DeltaChainLink> *links = (std::vector<DeltaChainLink>*)container;
 
   if (index < 0 || (size_t)index >= links->size()) {
     return NULL;
   }
 
-  delta_chain_link_t *link = links->at(index);
+  DeltaChainLink link = links->at(index);
 
   struct mpatch_flist *res;
-  if ((mpatch_decode((const char*)link->delta,
-		     (ssize_t)link->delta_sz, &res)) < 0) {
+  if ((mpatch_decode((const char*)link.delta(),
+		     (ssize_t)link.deltasz(), &res)) < 0) {
     throw std::logic_error("invalid patch during patch application");
   }
 
@@ -47,20 +47,19 @@ mpatch_flist* getNextLink(void* container, ssize_t index) {
 ConstantStringRef UnionDatapackStore::get(const Key &key) {
   UnionDeltaChainIterator chain = this->getDeltaChain(key);
 
-  std::vector<delta_chain_link_t*> links;
+  std::vector<DeltaChainLink> links;
 
-  delta_chain_link_t *link;
-  while ((link = chain.next()) != NULL) {
+  for (DeltaChainLink link = chain.next(); !link.isdone(); link = chain.next()) {
     links.push_back(link);
   }
 
-  delta_chain_link_t *fulltextLink = links.back();
+  DeltaChainLink fulltextLink = links.back();
   links.pop_back();
 
   // Short circuit and just return the full text if it's one long
   if (links.size() == 0) {
-    return ConstantStringRef((const char*)fulltextLink->delta,
-                             (size_t)fulltextLink->delta_sz);
+    return ConstantStringRef((const char*)fulltextLink.delta(),
+                             (size_t)fulltextLink.deltasz());
   }
 
   std::reverse(links.begin(), links.end());
@@ -70,15 +69,15 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
     throw std::logic_error("mpatch failed to fold patches");
   }
 
-  ssize_t outlen = mpatch_calcsize((ssize_t)fulltextLink->delta_sz, patch);
+  ssize_t outlen = mpatch_calcsize((ssize_t)fulltextLink.deltasz(), patch);
   if (outlen < 0) {
     mpatch_lfree(patch);
     throw std::logic_error("mpatch failed to calculate size");
   }
 
   auto result = std::make_shared<std::string>(outlen, '\0');
-  if (mpatch_apply(&(*result)[0], (const char*)fulltextLink->delta,
-		   (ssize_t)fulltextLink->delta_sz, patch) < 0) {
+  if (mpatch_apply(&(*result)[0], (const char*)fulltextLink.delta(),
+		   (ssize_t)fulltextLink.deltasz(), patch) < 0) {
     mpatch_lfree(patch);
     throw std::logic_error("mpatch failed to apply patches");
   }
@@ -87,16 +86,16 @@ ConstantStringRef UnionDatapackStore::get(const Key &key) {
   return ConstantStringRef(result);
 }
 
-delta_chain_t UnionDeltaChainIterator::getNextChain(const Key &key) {
-  for(std::vector<DatapackStore*>::iterator it = _store._stores.begin();
+std::shared_ptr<DeltaChain> UnionDeltaChainIterator::getNextChain(const Key &key) {
+  for(std::vector<DataStore*>::iterator it = _store._stores.begin();
       it != _store._stores.end();
       it++) {
-    DatapackStore *substore = *it;
-    delta_chain_t chain = substore->getDeltaChainRaw(key);
-    if (chain.code == GET_DELTA_CHAIN_OK) {
+    DataStore *substore = *it;
+    std::shared_ptr<DeltaChain> chain = substore->getDeltaChainRaw(key);
+
+    if (chain->code() == GET_DELTA_CHAIN_OK) {
       return chain;
     }
-    freedeltachain(chain);
   }
 
   throw MissingKeyError("unable to find delta chain");
@@ -106,8 +105,8 @@ UnionDeltaChainIterator UnionDatapackStore::getDeltaChain(const Key &key) {
   return UnionDeltaChainIterator(*this, key);
 }
 
-Key *UnionDatapackStoreKeyIterator::next() {
-  Key *key;
+Key* UnionDatapackStoreKeyIterator::next() {
+  Key* key;
   while ((key = _missing.next()) != NULL) {
     if (!_store.contains(*key)) {
       return key;
@@ -118,10 +117,10 @@ Key *UnionDatapackStoreKeyIterator::next() {
 }
 
 bool UnionDatapackStore::contains(const Key &key) {
-  for(std::vector<DatapackStore*>::iterator it = _stores.begin();
+  for(std::vector<DataStore*>::iterator it = _stores.begin();
       it != _stores.end();
       it++) {
-    DatapackStore *substore = *it;
+    DataStore *substore = *it;
     if (substore->contains(key)) {
       return true;
     }
@@ -134,10 +133,10 @@ UnionDatapackStoreKeyIterator UnionDatapackStore::getMissing(KeyIterator &missin
 }
 
 void UnionDatapackStore::markForRefresh() {
-  for(std::vector<DatapackStore*>::iterator it = _stores.begin();
+  for(std::vector<DataStore*>::iterator it = _stores.begin();
       it != _stores.end();
       it++) {
-    DatapackStore *substore = *it;
+    DataStore *substore = *it;
     substore->markForRefresh();
   }
 }
