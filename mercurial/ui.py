@@ -962,6 +962,7 @@ class ui(object):
             # formatted() will need some adjustment.
             or not self.formatted()
             or self.plain()
+            or self._buffers
             # TODO: expose debugger-enabled on the UI object
             or '--debugger' in pycompat.sysargv):
             # We only want to paginate if the ui appears to be
