@@ -7,8 +7,6 @@
 // cdatapack.c: Datapack implementation in C.
 // no-check-code
 
-#include "cdatapack/cdatapack.h"
-
 // be64toh is only available if _DEFAULT_SOURCE is defined for glibc >= 2.19,
 // or _BSD_SOURCE is defined for glibc < 2.19. These have to be defined before
 // #include <features.h>. Macros testing glibc version are defined by
@@ -20,6 +18,8 @@
 #define _BSD_SOURCE
 #endif /* ndef _BSD_SOURCE */
 
+#include "cdatapack/cdatapack.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
@@ -28,6 +28,7 @@
 #if defined(__linux__)
 #include <endian.h>
 #define ntohll be64toh
+#define ntoh_data_offset ntohll
 
 // NOTE: we actually want MADV_FREE, because we only want to mark the page as
 // eligible for immediate reuse while retaining the data.  however, the exciting

@@ -29,7 +29,6 @@ typedef uint32_t index_offset_t;
 #define FULLTEXTINDEXMARK ((index_offset_t) -1)
 #define NOBASEINDEXMARK   ((index_offset_t) -2)
 typedef uint64_t data_offset_t;
-#define ntoh_data_offset ntohll
 
 struct _disk_index_entry_t;
 struct _fanout_table_entry_t;
