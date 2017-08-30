@@ -2163,7 +2163,12 @@ def matchany(ui, specs, repo=None, localalias=None):
 
 def makematcher(tree):
     """Create a matcher from an evaluatable tree"""
-    def mfunc(repo, subset=None, order=defineorder):
+    def mfunc(repo, subset=None, order=None):
+        if order is None:
+            if subset is None:
+                order = defineorder  # 'x'
+            else:
+                order = followorder  # 'subset & x'
         if subset is None:
             subset = fullreposet(repo)
         return getset(repo, subset, tree, order)

@@ -2559,7 +2559,7 @@ def getgraphlogrevs(repo, pats, opts):
             revs.sort(reverse=True)
     if expr:
         matcher = revset.match(repo.ui, expr)
-        revs = matcher(repo, revs, order=revset.followorder)
+        revs = matcher(repo, revs)
     if limit is not None:
         limitedrevs = []
         for idx, rev in enumerate(revs):
@@ -2585,7 +2585,7 @@ def getlogrevs(repo, pats, opts):
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         matcher = revset.match(repo.ui, expr)
-        revs = matcher(repo, revs, order=revset.followorder)
+        revs = matcher(repo, revs)
     if limit is not None:
         limitedrevs = []
         for idx, r in enumerate(revs):
