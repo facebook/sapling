@@ -996,54 +996,55 @@ class recordhunk(object):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
+messages = {
+    'multiple': {
+        'discard': _("discard change %d/%d to '%s'?"),
+        'record': _("record change %d/%d to '%s'?"),
+        'revert': _("revert change %d/%d to '%s'?"),
+    },
+    'single': {
+        'discard': _("discard this change to '%s'?"),
+        'record': _("record this change to '%s'?"),
+        'revert': _("revert this change to '%s'?"),
+    },
+    'help': {
+        'discard': _('[Ynesfdaq?]'
+                     '$$ &Yes, discard this change'
+                     '$$ &No, skip this change'
+                     '$$ &Edit this change manually'
+                     '$$ &Skip remaining changes to this file'
+                     '$$ Discard remaining changes to this &file'
+                     '$$ &Done, skip remaining changes and files'
+                     '$$ Discard &all changes to all remaining files'
+                     '$$ &Quit, discarding no changes'
+                     '$$ &? (display help)'),
+        'record': _('[Ynesfdaq?]'
+                    '$$ &Yes, record this change'
+                    '$$ &No, skip this change'
+                    '$$ &Edit this change manually'
+                    '$$ &Skip remaining changes to this file'
+                    '$$ Record remaining changes to this &file'
+                    '$$ &Done, skip remaining changes and files'
+                    '$$ Record &all changes to all remaining files'
+                    '$$ &Quit, recording no changes'
+                    '$$ &? (display help)'),
+        'revert': _('[Ynesfdaq?]'
+                    '$$ &Yes, revert this change'
+                    '$$ &No, skip this change'
+                    '$$ &Edit this change manually'
+                    '$$ &Skip remaining changes to this file'
+                    '$$ Revert remaining changes to this &file'
+                    '$$ &Done, skip remaining changes and files'
+                    '$$ Revert &all changes to all remaining files'
+                    '$$ &Quit, reverting no changes'
+                    '$$ &? (display help)')
+    }
+}
+
 def filterpatch(ui, headers, operation=None):
     """Interactively filter patch chunks into applied-only chunks"""
     if operation is None:
         operation = 'record'
-    messages = {
-        'multiple': {
-            'discard': _("discard change %d/%d to '%s'?"),
-            'record': _("record change %d/%d to '%s'?"),
-            'revert': _("revert change %d/%d to '%s'?"),
-        }[operation],
-        'single': {
-            'discard': _("discard this change to '%s'?"),
-            'record': _("record this change to '%s'?"),
-            'revert': _("revert this change to '%s'?"),
-        }[operation],
-        'help': {
-            'discard': _('[Ynesfdaq?]'
-                         '$$ &Yes, discard this change'
-                         '$$ &No, skip this change'
-                         '$$ &Edit this change manually'
-                         '$$ &Skip remaining changes to this file'
-                         '$$ Discard remaining changes to this &file'
-                         '$$ &Done, skip remaining changes and files'
-                         '$$ Discard &all changes to all remaining files'
-                         '$$ &Quit, discarding no changes'
-                         '$$ &? (display help)'),
-            'record': _('[Ynesfdaq?]'
-                        '$$ &Yes, record this change'
-                        '$$ &No, skip this change'
-                        '$$ &Edit this change manually'
-                        '$$ &Skip remaining changes to this file'
-                        '$$ Record remaining changes to this &file'
-                        '$$ &Done, skip remaining changes and files'
-                        '$$ Record &all changes to all remaining files'
-                        '$$ &Quit, recording no changes'
-                        '$$ &? (display help)'),
-            'revert': _('[Ynesfdaq?]'
-                        '$$ &Yes, revert this change'
-                        '$$ &No, skip this change'
-                        '$$ &Edit this change manually'
-                        '$$ &Skip remaining changes to this file'
-                        '$$ Revert remaining changes to this &file'
-                        '$$ &Done, skip remaining changes and files'
-                        '$$ Revert &all changes to all remaining files'
-                        '$$ &Quit, reverting no changes'
-                        '$$ &? (display help)')
-        }[operation]
-    }
 
     def prompt(skipfile, skipall, query, chunk):
         """prompt query, and process base inputs
@@ -1061,7 +1062,7 @@ def filterpatch(ui, headers, operation=None):
         if skipfile is not None:
             return skipfile, skipfile, skipall, newpatches
         while True:
-            resps = messages['help']
+            resps = messages['help'][operation]
             r = ui.promptchoice("%s %s" % (query, resps))
             ui.write("\n")
             if r == 8: # ?
@@ -1166,10 +1167,11 @@ the hunk is left unchanged.
             if skipfile is None and skipall is None:
                 chunk.pretty(ui)
             if total == 1:
-                msg = messages['single'] % chunk.filename()
+                msg = messages['single'][operation] % chunk.filename()
             else:
                 idx = pos - len(h.hunks) + i
-                msg = messages['multiple'] % (idx, total, chunk.filename())
+                msg = messages['multiple'][operation] % (idx, total,
+                                                         chunk.filename())
             r, skipfile, skipall, newpatches = prompt(skipfile,
                     skipall, msg, chunk)
             if r:
