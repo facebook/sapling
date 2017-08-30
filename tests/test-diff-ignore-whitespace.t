@@ -407,7 +407,22 @@ Test \r (carriage return) as used in "DOS" line endings:
   +goodbye\r (no-eol) (esc)
   world
 
+Test \r (carriage return) as used in "DOS" line endings:
+
+  $ printf 'hello world    \r\n\t\ngoodbye world\n' >foo
+
+  $ hg ndiff --ignore-space-at-eol
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+   hello world
+  +\t (esc)
+   goodbye world
+
 No completely blank lines to ignore:
+
+  $ printf 'hello world\r\n\r\ngoodbye\rworld\n' >foo
 
   $ hg ndiff --ignore-blank-lines
   diff -r 540c40a65b78 foo

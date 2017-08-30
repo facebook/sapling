@@ -313,6 +313,9 @@ related options for the diff command.
 ``ignorews``
     Ignore white space when comparing lines.
 
+``ignorewseol``
+    Ignore white space at the end of a line when comparing lines.
+
 ``ignorewsamount``
     Ignore changes in the amount of white space.
 

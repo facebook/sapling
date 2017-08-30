@@ -123,6 +123,8 @@ diffwsopts = [
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
+    ('Z', 'ignore-space-at-eol', None,
+     _('ignore changes in whitespace at EOL')),
 ]
 
 diffopts2 = [

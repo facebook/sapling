@@ -2282,6 +2282,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                                           'ignorewsamount')
         buildopts['ignoreblanklines'] = get('ignore_blank_lines',
                                             'ignoreblanklines')
+        buildopts['ignorewseol'] = get('ignore_space_at_eol', 'ignorewseol')
     if formatchanging:
         buildopts['text'] = opts and opts.get('text')
         binary = None if opts is None else opts.get('binary')

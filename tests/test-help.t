@@ -553,6 +553,7 @@ Test command without options
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
    -U --unified NUM         number of lines of context to show
       --stat                output diffstat-style summary of changes
       --root DIR            produce diffs relative to subdirectory
