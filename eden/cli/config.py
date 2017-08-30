@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import binascii
 import collections
 import configparser
 import errno
@@ -45,6 +46,7 @@ CONFIG_JSON = 'config.json'
 # These are files in a client directory.
 LOCAL_CONFIG = 'edenrc'
 SNAPSHOT = 'SNAPSHOT'
+SNAPSHOT_MAGIC = b'eden\x00\x00\x00\x01'
 
 # In our test environment, when we need to run as root, we
 # may need to launch via a helper script that is whitelisted
@@ -163,8 +165,9 @@ class Config:
         repo_data = self.get_repo_data(repo_name)
 
         snapshot_file = os.path.join(client_dir, SNAPSHOT)
-        with open(snapshot_file) as f:
-            snapshot = f.read().strip()
+        with open(snapshot_file, 'rb') as f:
+            assert f.read(8) == SNAPSHOT_MAGIC
+            snapshot = binascii.hexlify(f.read(20)).decode('utf-8')
 
         return collections.OrderedDict([
             ['bind-mounts', repo_data['bind-mounts']],
@@ -237,8 +240,9 @@ by hand to make changes to the repository or remove it.''' % name)
         # Store snapshot ID
         if snapshot_id:
             client_snapshot = os.path.join(client_dir, SNAPSHOT)
-            with open(client_snapshot, 'w') as f:
-                f.write(snapshot_id + '\n')
+            with open(client_snapshot, 'wb') as f:
+                f.write(SNAPSHOT_MAGIC)
+                f.write(binascii.unhexlify(snapshot_id))
         else:
             raise Exception('snapshot id not provided')
 
