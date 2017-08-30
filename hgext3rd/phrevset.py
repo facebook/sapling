@@ -268,17 +268,16 @@ def revsetdiff(repo, subset, diffid):
             raise error.Abort('Conduit returned unknown '
                                'sourceControlSystem "%s"' % vcs)
 
-def revsetstringset(orig, repo, subset, revstr):
+def revsetstringset(orig, repo, subset, revstr, *args, **kwargs):
     """Wrapper that recognizes revisions starting with 'D'"""
 
     if revstr.startswith('D') and revstr[1:].isdigit():
         return smartset.baseset(revsetdiff(repo, subset, revstr[1:]))
 
-    return orig(repo, subset, revstr)
+    return orig(repo, subset, revstr, *args, **kwargs)
 
 def extsetup(ui):
     extensions.wrapfunction(revset, 'stringset', revsetstringset)
-    revset.symbols['stringset'] = revset.stringset
     revset.methods['string'] = revset.stringset
     revset.methods['symbol'] = revset.stringset
 

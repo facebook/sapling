@@ -12,13 +12,20 @@ shortversion:
   $ hg id -r 'g$HASH'
 
 """
-from mercurial import extensions
-from mercurial import error
-from mercurial import hg
-from mercurial import registrar
-from mercurial import revset
+
+from __future__ import absolute_import
+
+from mercurial (
+    error,
+    extensions,
+    hg,
+    registrar,
+    revset,
+)
 from mercurial.i18n import _
 import re
+
+revsetpredicate = registrar.revsetpredicate()
 
 githashre = re.compile('g([0-9a-fA-F]{40,40})')
 
@@ -32,6 +39,7 @@ def showgitnode(repo, ctx, templ, **args):
     # data exists
     return hexgitnode.encode('hex') if hexgitnode else ''
 
+@revsetpredicate('gitnode(id)')
 def gitnode(repo, subset, x):
     """``gitnode(id)``
     Return the hg revision corresponding to a given git rev."""
@@ -73,15 +81,13 @@ def _lookup_node(repo, hexnode, from_scm_type):
         finally:
             repo.baseui.fout = oldfout
 
-def overridestringset(orig, repo, subset, x):
+def overridestringset(orig, repo, subset, x, *args, **kwargs):
     m = githashre.match(x)
     if m is not None:
         return gitnode(repo, subset, ('string', m.group(1)))
-    return orig(repo, subset, x)
+    return orig(repo, subset, x, *args, **kwargs)
 
 def extsetup(ui):
-    revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
-    revset.symbols['stringset'] = revset.stringset
     revset.methods['string'] = revset.stringset
     revset.methods['symbol'] = revset.stringset

@@ -43,7 +43,6 @@ def extsetup(ui):
 
     revset.symbols['gitnode'] = gitnode
     extensions.wrapfunction(revset, 'stringset', overridestringset)
-    revset.symbols['stringset'] = revset.stringset
     revset.methods['string'] = revset.stringset
     revset.methods['symbol'] = revset.stringset
 
@@ -224,7 +223,7 @@ def gitnode(repo, subset, x):
     rn = repo[node.bin(hghash)].rev()
     return subset.filter(lambda r: r == rn)
 
-def overridestringset(orig, repo, subset, x):
+def overridestringset(orig, repo, subset, x, *args, **kwargs):
     # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
     phabmatch = phabhashre.match(x)
     if phabmatch:
@@ -262,4 +261,4 @@ def overridestringset(orig, repo, subset, x):
             return gitnode(repo, subset, ('string', githash))
         else:
             raise error.Abort('git hash must be 40 characters')
-    return orig(repo, subset, x)
+    return orig(repo, subset, x, *args, **kwargs)
