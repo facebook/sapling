@@ -64,13 +64,13 @@ fullreposet = smartset.fullreposet
 #
 # 'any' means the order doesn't matter. For instance,
 #
-#   (X & Y) | ancestors(Z)
-#        ^              ^
-#        any            any
+#   (X & !Y) | ancestors(Z)
+#         ^              ^
+#         any            any
 #
-# For 'X & Y', 'X' decides order so the order of 'Y' does not matter. For
-# 'ancestors(Z)', Z's order does not matter since 'ancestors' does not care
-# about the order of its argument.
+# For 'X & !Y', 'X' decides the order and 'Y' is subtracted from 'X', so the
+# order of 'Y' does not matter. For 'ancestors(Z)', Z's order does not matter
+# since 'ancestors' does not care about the order of its argument.
 #
 # Currently, most revsets do not care about the order, so 'define' is
 # equivalent to 'follow' for them, and the resulting order is based on the
