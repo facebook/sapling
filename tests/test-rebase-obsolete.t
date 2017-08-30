@@ -206,7 +206,7 @@ More complex case where part of the rebase set were already rebased
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
   rebasing 8:8877864f1edb "B"
-  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D"
+  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D" (tip)
   rebasing 10:5ae4c968c6ac "C"
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
@@ -931,7 +931,7 @@ Rebase merge where successor of one parent is equal to destination (issue5198)
   > EOF
 
   $ hg rebase -d B -s D
-  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
   rebasing 4:66f1a38021c9 "F" (F tip)
   $ hg log -G
   o    5:50e9d60b99c6 F
@@ -962,7 +962,7 @@ Rebase merge where successor of other parent is equal to destination
   > EOF
 
   $ hg rebase -d B -s E
-  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
   rebasing 4:66f1a38021c9 "F" (F tip)
   $ hg log -G
   o    5:aae1787dacee F
@@ -993,7 +993,7 @@ Rebase merge where successor of one parent is ancestor of destination
   > EOF
 
   $ hg rebase -d C -s D
-  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
   rebasing 5:66f1a38021c9 "F" (F tip)
 
   $ hg log -G
@@ -1027,7 +1027,7 @@ Rebase merge where successor of other parent is ancestor of destination
   > EOF
 
   $ hg rebase -d C -s E
-  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
   rebasing 5:66f1a38021c9 "F" (F tip)
   $ hg log -G
   o    6:c6ab0cc6d220 F
@@ -1061,7 +1061,7 @@ Rebase merge where successor of one parent is ancestor of destination
 
   $ hg rebase -d C -b F
   rebasing 2:b18e25de2cf5 "D" (D)
-  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B"
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
   rebasing 5:66f1a38021c9 "F" (F tip)
   note: rebase of 5:66f1a38021c9 created no changes to commit
   $ hg log -G
@@ -1095,7 +1095,7 @@ Rebase merge where successor of other parent is ancestor of destination
   > EOF
 
   $ hg rebase -d C -b F
-  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B"
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
   rebasing 3:7fb047a69f22 "E" (E)
   rebasing 5:66f1a38021c9 "F" (F tip)
   note: rebase of 5:66f1a38021c9 created no changes to commit
@@ -1129,8 +1129,8 @@ Rebase merge where both parents have successors in destination
   > X Y
   > EOS
   $ hg rebase -r A+B+E -d F
-  note: not rebasing 4:a3d17304151f "A" (A), already in destination as 0:96cc3511f894 "C"
-  note: not rebasing 5:b23a2cc00842 "B" (B), already in destination as 1:058c1e1fb10a "D"
+  note: not rebasing 4:a3d17304151f "A" (A), already in destination as 0:96cc3511f894 "C" (C)
+  note: not rebasing 5:b23a2cc00842 "B" (B), already in destination as 1:058c1e1fb10a "D" (D)
   rebasing 7:dac5d11c5a7d "E" (E tip)
   abort: rebasing 7:dac5d11c5a7d will include unwanted changes from 3:59c792af609c, 5:b23a2cc00842 or 2:ba2b7fa7166d, 4:a3d17304151f
   [255]
@@ -1147,7 +1147,7 @@ parent moves as requested.
   > A B C # D/D = D
   > EOS
   $ hg rebase -r A+B+D -d Z
-  note: not rebasing 0:426bada5c675 "A" (A), already in destination as 2:96cc3511f894 "C"
+  note: not rebasing 0:426bada5c675 "A" (A), already in destination as 2:96cc3511f894 "C" (C)
   rebasing 1:fc2b737bb2e5 "B" (B)
   rebasing 3:b8ed089c80ad "D" (D)
 
@@ -1178,7 +1178,7 @@ parent moves as requested.
   > EOS
   $ hg rebase -r B+A+D -d Z
   rebasing 0:426bada5c675 "A" (A)
-  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C"
+  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C" (C)
   rebasing 3:b8ed089c80ad "D" (D)
 
   $ rm .hg/localtags
@@ -1223,7 +1223,7 @@ equivalents in destination
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   2:1e9a3c00cbe9 b (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.stabilization.track-operation=1
-  note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b"
+  note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b" (tip)
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped
   $ hg log -r .
@@ -1251,7 +1251,7 @@ parent gets moved:
   $ hg bookmark book -i
   $ hg rebase -r B+D1 -d E
   rebasing 1:112478962961 "B" (B)
-  note: not rebasing 5:15ecf15e0114 "D1" (D1 tip book), already in destination as 2:0807738e0be9 "D2"
+  note: not rebasing 5:15ecf15e0114 "D1" (D1 tip book), already in destination as 2:0807738e0be9 "D2" (D2)
   $ hg log -G -T '{desc} {bookmarks}'
   @  B book
   |

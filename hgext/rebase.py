@@ -407,10 +407,7 @@ class rebaseruntime(object):
                     msg = _('note: not rebasing %s, it has no '
                             'successor\n') % desc
                 else:
-                    succctx = repo[succ]
-                    succdesc = '%d:%s "%s"' % (
-                        succctx.rev(), succctx,
-                        succctx.description().split('\n', 1)[0])
+                    succdesc = _ctxdesc(repo[succ])
                     msg = (_('note: not rebasing %s, already in '
                              'destination as %s\n') % (desc, succdesc))
                 repo.ui.status(msg)
