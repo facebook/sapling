@@ -1346,20 +1346,31 @@ class ui(object):
             self.write(*msg, **opts)
 
     def edit(self, text, user, extra=None, editform=None, pending=None,
-             repopath=None):
+             repopath=None, action=None):
+        if action is None:
+            self.develwarn('action is None but will soon be a required '
+                           'parameter to ui.edit()')
         extra_defaults = {
             'prefix': 'editor',
             'suffix': '.txt',
         }
         if extra is not None:
+            if extra.get('suffix') is not None:
+                self.develwarn('extra.suffix is not None but will soon be '
+                               'ignored by ui.edit()')
             extra_defaults.update(extra)
         extra = extra_defaults
+
+        if action:
+            suffix = '.%s.hg.txt' % action
+        else:
+            suffix = extra['suffix']
 
         rdir = None
         if self.configbool('experimental', 'editortmpinhg'):
             rdir = repopath
         (fd, name) = tempfile.mkstemp(prefix='hg-' + extra['prefix'] + '-',
-                                      suffix=extra['suffix'],
+                                      suffix=suffix,
                                       dir=rdir)
         try:
             f = os.fdopen(fd, r'wb')

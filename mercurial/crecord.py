@@ -1563,8 +1563,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
             # start the editor and wait for it to complete
             try:
-                patch = self.ui.edit(patch.getvalue(), "",
-                                     extra={"suffix": ".diff"})
+                patch = self.ui.edit(patch.getvalue(), "", action="diff")
             except error.Abort as exc:
                 self.errorstr = str(exc)
                 return None

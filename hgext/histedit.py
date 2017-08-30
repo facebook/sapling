@@ -1370,7 +1370,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     rules += '\n\n'
     rules += editcomment
     rules = ui.edit(rules, ui.username(), {'prefix': 'histedit'},
-                    repopath=repo.path)
+                    repopath=repo.path, action='histedit')
 
     # Save edit rules in .hg/histedit-last-edit.txt in case
     # the user needs to ask for help after something

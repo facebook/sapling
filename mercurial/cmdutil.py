@@ -341,7 +341,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                              + crecordmod.patchhelptext
                              + fp.read())
                 reviewedpatch = ui.edit(patchtext, "",
-                                        extra={"suffix": ".diff"},
+                                        action="diff",
                                         repopath=repo.path)
                 fp.truncate(0)
                 fp.write(reviewedpatch)
@@ -3217,7 +3217,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
     editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
                               editform=editform, pending=pending,
-                              repopath=repo.path)
+                              repopath=repo.path, action='commit')
     text = editortext
 
     # strip away anything below this special string (used for editors that want
