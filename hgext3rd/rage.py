@@ -80,8 +80,9 @@ HG: Feel free to add relevant information.
         ])
     )
     tasknum = shcmd('tasks view ' + taskid).splitlines()[0].split()[0]
-    print('Task created: https://our.intern.facebook.com/intern/tasks/?t=%s'
-          % tasknum)
+    ui.write(
+        'Task created: https://our.intern.facebook.com/intern/tasks/?t=%s\n'
+        % tasknum)
 
 def which(name):
     """ """
@@ -165,8 +166,10 @@ def rage(ui, repo, *pats, **opts):
             _repo = opts['_repo']
             del opts['_repo']
         ui.pushbuffer(error=True)
-        func(ui, _repo, *args, **opts)
-        return ui.popbuffer()
+        try:
+            func(ui, _repo, *args, **opts)
+        finally:
+            return ui.popbuffer()
 
     if opts.get('oncall') and opts.get('preview'):
         raise error.Abort('--preview and --oncall cannot be used together')
@@ -235,7 +238,7 @@ def rage(ui, repo, *pats, **opts):
         msg += '\n' + '\n'.join(_failsafeerrors)
 
     if opts.get('preview'):
-        print(msg)
+        ui.write('%s\n' % msg)
         return
 
     pasteurl = shcmd('arc paste --lang hgrage', msg).split()[1]
@@ -243,6 +246,6 @@ def rage(ui, repo, *pats, **opts):
     if opts.get('oncall'):
         createtask(ui, repo, 'rage info: %s' % pasteurl)
     else:
-        print('Please post your problem and the following link at'
-              ' %s for help:\n%s'
-              % (ui.config('ui', 'supportcontact'), pasteurl))
+        ui.write('Please post your problem and the following link at'
+                 ' %s for help:\n%s\n'
+                 % (ui.config('ui', 'supportcontact'), pasteurl))
