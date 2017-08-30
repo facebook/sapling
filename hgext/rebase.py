@@ -1497,7 +1497,7 @@ def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None):
     # Move bookmark of skipped nodes to destination. This cannot be handled
     # by scmutil.cleanupnodes since it will treat rev as removed (no successor)
     # and move bookmark backwards.
-    bmchanges = [(name, tonode(max(adjustdest(repo, rev, destmap, state))))
+    bmchanges = [(name, tonode(state[rev]))
                  for rev in skipped
                  for name in repo.nodebookmarks(tonode(rev))]
     if bmchanges:
