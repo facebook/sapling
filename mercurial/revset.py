@@ -169,8 +169,8 @@ def andset(repo, subset, x, y, order):
         yorder = followorder
     return getset(repo, getset(repo, subset, x, order), y, yorder)
 
-def flipandset(repo, subset, y, x, order):
-    # 'flipand(y, x)' is equivalent to 'and(x, y)', but faster when y is small
+def andsmallyset(repo, subset, x, y, order):
+    # 'andsmally(x, y)' is equivalent to 'and(x, y)', but faster when y is small
     if order == anyorder:
         yorder = anyorder
     else:
@@ -2101,7 +2101,7 @@ methods = {
     "string": stringset,
     "symbol": stringset,
     "and": andset,
-    "flipand": flipandset,
+    "andsmally": andsmallyset,
     "or": orset,
     "not": notset,
     "difference": differenceset,

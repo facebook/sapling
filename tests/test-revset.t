@@ -714,11 +714,11 @@ verify optimized tree:
       None)
     ('symbol', '2'))
   * optimized:
-  (flipand
-    ('symbol', '2')
+  (andsmally
     (func
       ('symbol', 'r3232')
-      None))
+      None)
+    ('symbol', '2'))
   * analyzed set:
   <baseset [2]>
   * optimized set:
@@ -2056,13 +2056,13 @@ ordering defined by it.
       ('symbol', '_intlist')
       ('string', '0\x001\x002')))
   * optimized:
-  (flipand
-    (func
-      ('symbol', '_intlist')
-      ('string', '0\x001\x002'))
+  (andsmally
     (range
       ('symbol', '2')
-      ('symbol', '0')))
+      ('symbol', '0'))
+    (func
+      ('symbol', '_intlist')
+      ('string', '0\x001\x002')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2130,13 +2130,13 @@ ordering defined by it.
       ('symbol', '2')
       ('symbol', '0')))
   * optimized:
-  (flipand
-    (range
-      ('symbol', '2')
-      ('symbol', '0'))
+  (andsmally
     (func
       ('symbol', '_hexlist')
-      ('string', '*'))) (glob)
+      ('string', '*')) (glob)
+    (range
+      ('symbol', '2')
+      ('symbol', '0')))
   * set:
   <baseset [0, 2, 1]>
   0
@@ -2415,13 +2415,13 @@ ordering defined by it.
           ('symbol', '0')
           ('symbol', '1')))))
   * optimized:
-  (flipand
-    (func
-      ('symbol', '_list')
-      ('string', '2\x000\x001'))
+  (andsmally
     (func
       ('symbol', 'contains')
-      ('string', 'glob:*')))
+      ('string', 'glob:*'))
+    (func
+      ('symbol', '_list')
+      ('string', '2\x000\x001')))
   * set:
   <filteredset
     <baseset+ [0, 1, 2]>,
@@ -2447,15 +2447,15 @@ ordering defined by it.
           ('symbol', '2')
           ('symbol', '1')))))
   * optimized:
-  (flipand
-    (func
-      ('symbol', '_list')
-      ('string', '0\x002\x001'))
+  (andsmally
     (func
       ('symbol', 'reverse')
       (func
         ('symbol', 'contains')
-        ('string', 'glob:*'))))
+        ('string', 'glob:*')))
+    (func
+      ('symbol', '_list')
+      ('string', '0\x002\x001')))
   * set:
   <filteredset
     <baseset- [0, 1, 2]>,
@@ -3154,11 +3154,11 @@ no crash by empty group "()" while optimizing to "only()"
     (group
       None))
   * optimized:
-  (flipand
-    None
+  (andsmally
     (func
       ('symbol', 'ancestors')
-      ('symbol', '1')))
+      ('symbol', '1'))
+    None)
   hg: parse error: missing argument
   [255]
 

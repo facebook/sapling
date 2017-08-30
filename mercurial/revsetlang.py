@@ -374,7 +374,7 @@ def _optimize(x, small):
         if tb is not None and tb[0] == 'not':
             return wa, ('difference', ta, tb[1])
         if wa > wb:
-            return w, ('flipand', tb, ta)
+            op = 'andsmally'
         return w, (op, ta, tb)
     elif op == 'or':
         # fast path for machine-generated expression, that is likely to have
