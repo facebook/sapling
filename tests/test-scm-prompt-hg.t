@@ -248,7 +248,7 @@ Test many remotenames
 
 Test eden snapshots
   $ mkdir -p .eden/client/
-  $ echo "deadbeefcafeface000000000000000000000000" > .eden/client/SNAPSHOT
+  $ echo -e "eden\x00\x00\x00\x01\xde\xad\xbe\xef\xca\xfe\xfa\xce\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" > .eden/client/SNAPSHOT
   $ rm .hg/dirstate
   $ cmd
   (deadbee)
