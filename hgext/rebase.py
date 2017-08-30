@@ -46,6 +46,7 @@ from mercurial import (
     repair,
     repoview,
     revset,
+    revsetlang,
     scmutil,
     smartset,
     util,
@@ -736,8 +737,7 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
         raise error.Abort(_('you must specify a destination'),
                           hint=_('use: hg rebase -d REV'))
 
-    if destf:
-        dest = scmutil.revsingle(repo, destf)
+    dest = None
 
     if revf:
         rebaseset = scmutil.revrange(repo, revf)
@@ -757,7 +757,10 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
             ui.status(_('empty "base" revision set - '
                         "can't compute rebase set\n"))
             return None
-        if not destf:
+        if destf:
+            # --base does not support multiple destinations
+            dest = scmutil.revsingle(repo, destf)
+        else:
             dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
 
@@ -806,9 +809,40 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
 
-    # assign dest to each rev in rebaseset
-    destrev = dest.rev()
-    destmap = {r: destrev for r in rebaseset} # {srcrev: destrev}
+    allsrc = revsetlang.formatspec('%ld', rebaseset)
+    alias = {'ALLSRC': allsrc}
+
+    if dest is None:
+        try:
+            # fast path: try to resolve dest without SRC alias
+            dest = scmutil.revsingle(repo, destf, localalias=alias)
+        except error.RepoLookupError:
+            if not ui.configbool('experimental', 'rebase.multidest'):
+                raise
+            # multi-dest path: resolve dest for each SRC separately
+            destmap = {}
+            for r in rebaseset:
+                alias['SRC'] = revsetlang.formatspec('%d', r)
+                # use repo.anyrevs instead of scmutil.revsingle because we
+                # don't want to abort if destset is empty.
+                destset = repo.anyrevs([destf], user=True, localalias=alias)
+                size = len(destset)
+                if size == 1:
+                    destmap[r] = destset.first()
+                elif size == 0:
+                    ui.note(_('skipping %s - empty destination\n') % repo[r])
+                else:
+                    raise error.Abort(_('rebase destination for %s is not '
+                                        'unique') % repo[r])
+
+    if dest is not None:
+        # single-dest case: assign dest to each rev in rebaseset
+        destrev = dest.rev()
+        destmap = {r: destrev for r in rebaseset} # {srcrev: destrev}
+
+    if not destmap:
+        ui.status(_('nothing to rebase - empty destination\n'))
+        return None
 
     return destmap
 
@@ -903,8 +937,8 @@ def adjustdest(repo, rev, destmap, state):
     adjusted destinations for rev's p1 and p2, respectively. If a parent is
     nullrev, return dest without adjustment for it.
 
-    For example, when doing rebase -r B+E -d F, rebase will first move B to B1,
-    and E's destination will be adjusted from F to B1.
+    For example, when doing rebasing B+E to F, C to G, rebase will first move B
+    to B1, and E's destination will be adjusted from F to B1.
 
         B1 <- written during rebasing B
         |
@@ -916,11 +950,11 @@ def adjustdest(repo, rev, destmap, state):
         | |
         | x <- skipped, ex. no successor or successor in (::dest)
         | |
-        | C
+        | C <- rebased as C', different destination
         | |
-        | B <- rebased as B1
-        |/
-        A
+        | B <- rebased as B1     C'
+        |/                       |
+        A                        G <- destination of C, different
 
     Another example about merge changeset, rebase -r C+G+H -d K, rebase will
     first move C to C1, G to G1, and when it's checking H, the adjusted

@@ -402,11 +402,11 @@ def intrev(ctx):
         return wdirrev
     return rev
 
-def revsingle(repo, revspec, default='.'):
+def revsingle(repo, revspec, default='.', localalias=None):
     if not revspec and revspec != 0:
         return repo[default]
 
-    l = revrange(repo, [revspec])
+    l = revrange(repo, [revspec], localalias=localalias)
     if not l:
         raise error.Abort(_('empty revision set'))
     return repo[l.last()]
@@ -445,7 +445,7 @@ def revpair(repo, revs):
 
     return repo.lookup(first), repo.lookup(second)
 
-def revrange(repo, specs):
+def revrange(repo, specs, localalias=None):
     """Execute 1 to many revsets and return the union.
 
     This is the preferred mechanism for executing revsets using user-specified
@@ -471,7 +471,7 @@ def revrange(repo, specs):
         if isinstance(spec, int):
             spec = revsetlang.formatspec('rev(%d)', spec)
         allspecs.append(spec)
-    return repo.anyrevs(allspecs, user=True)
+    return repo.anyrevs(allspecs, user=True, localalias=localalias)
 
 def meaningfulparents(repo, ctx):
     """Return list of meaningful (or all if debug) parentrevs for rev.
