@@ -76,8 +76,8 @@ fullreposet = smartset.fullreposet
 # equivalent to 'follow' for them, and the resulting order is based on the
 # 'subset' parameter passed down to them:
 #
-#   m = revset.match(..., order=defineorder)
-#   m(repo, subset)
+#   m = revset.match(...)
+#   m(repo, subset, order=defineorder)
 #           ^^^^^^
 #      For most revsets, 'define' means using the order this subset provides
 #
@@ -2120,20 +2120,13 @@ def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
     pass
 
-def match(ui, spec, repo=None, order=defineorder):
-    """Create a matcher for a single revision spec
+def match(ui, spec, repo=None):
+    """Create a matcher for a single revision spec"""
+    return matchany(ui, [spec], repo=repo)
 
-    If order=followorder, a matcher takes the ordering specified by the input
-    set.
-    """
-    return matchany(ui, [spec], repo=repo, order=order)
-
-def matchany(ui, specs, repo=None, order=defineorder, localalias=None):
+def matchany(ui, specs, repo=None, localalias=None):
     """Create a matcher that will include any revisions matching one of the
     given specs
-
-    If order=followorder, a matcher takes the ordering specified by the input
-    set.
 
     If localalias is not None, it is a dict {name: definitionstring}. It takes
     precedence over [revsetalias] config section.
@@ -2166,11 +2159,11 @@ def matchany(ui, specs, repo=None, order=defineorder, localalias=None):
     tree = revsetlang.analyze(tree)
     tree = revsetlang.optimize(tree)
     posttreebuilthook(tree, repo)
-    return makematcher(tree, order)
+    return makematcher(tree)
 
-def makematcher(tree, order=defineorder):
+def makematcher(tree):
     """Create a matcher from an evaluatable tree"""
-    def mfunc(repo, subset=None):
+    def mfunc(repo, subset=None, order=defineorder):
         if subset is None:
             subset = fullreposet(repo)
         return getset(repo, subset, tree, order)
