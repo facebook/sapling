@@ -1963,6 +1963,14 @@ class workingfilectx(committablefilectx):
         self._repo.wwrite(self._path, data, flags,
                           backgroundclose=backgroundclose)
 
+    def clearunknown(self):
+        """Removes conflicting items in the working directory so that
+        ``write()`` can be called successfully.
+        """
+        wvfs = self._repo.wvfs
+        if wvfs.isdir(self._path) and not wvfs.islink(self._path):
+            wvfs.removedirs(self._path)
+
     def setflags(self, l, x):
         self._repo.wvfs.setflags(self._path, l, x)
 

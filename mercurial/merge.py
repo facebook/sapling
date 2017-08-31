@@ -1150,9 +1150,7 @@ def batchget(repo, mctx, wctx, actions):
                 except OSError as e:
                     if e.errno != errno.ENOENT:
                         raise
-
-            if repo.wvfs.isdir(f) and not repo.wvfs.islink(f):
-                repo.wvfs.removedirs(f)
+            wctx[f].clearunknown()
             wctx[f].write(fctx(f).data(), flags, backgroundclose=True)
             if i == 100:
                 yield i, f
