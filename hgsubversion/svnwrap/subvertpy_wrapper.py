@@ -102,6 +102,12 @@ _svntypes = {
     subvertpy.NODE_FILE: 'f',
 }
 
+_unitype = type(u'')
+def _forceutf8(s):
+    if isinstance(s, _unitype):
+        return s.encode('utf-8')
+    return s
+
 class PathAdapter(object):
     __slots__ = ('action', 'copyfrom_path', 'copyfrom_rev')
 
@@ -360,9 +366,9 @@ class SubversionRepo(object):
                              props.get(properties.PROP_REVISION_AUTHOR),
                              props.get(properties.PROP_REVISION_LOG),
                              props.get(properties.PROP_REVISION_DATE),
-                             dict([(k, PathAdapter(*v))
+                             dict([(_forceutf8(k), PathAdapter(*v))
                                    for k, v in paths.iteritems()]),
-                             strip_path=self.subdir)
+                             strip_path=_forceutf8(self.subdir))
                 revisions.append(r)
             # we only access revisions in a FIFO manner
             revisions = collections.deque()
