@@ -211,10 +211,13 @@ class branchcache(dict):
         Raise KeyError for unknown branch.'''
         return self._branchtip(self[branch])[0]
 
+    def iteropen(self, nodes):
+        return (n for n in nodes if n not in self._closednodes)
+
     def branchheads(self, branch, closed=False):
         heads = self[branch]
         if not closed:
-            heads = [h for h in heads if h not in self._closednodes]
+            heads = list(self.iteropen(heads))
         return heads
 
     def iterbranches(self):
