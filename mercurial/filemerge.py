@@ -493,34 +493,38 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         repo.ui.warn(_('warning: %s cannot merge change/delete conflict '
                        'for %s\n') % (tool, fcd.path()))
         return False, 1, None
-    unused, b, c, back = files
+    unused, unused, unused, back = files
     a = _workingpath(repo, fcd)
-    out = ""
-    env = {'HG_FILE': fcd.path(),
-           'HG_MY_NODE': short(mynode),
-           'HG_OTHER_NODE': str(fco.changectx()),
-           'HG_BASE_NODE': str(fca.changectx()),
-           'HG_MY_ISLINK': 'l' in fcd.flags(),
-           'HG_OTHER_ISLINK': 'l' in fco.flags(),
-           'HG_BASE_ISLINK': 'l' in fca.flags(),
-           }
+    b, c = _maketempfiles(repo, fco, fca)
+    try:
+        out = ""
+        env = {'HG_FILE': fcd.path(),
+               'HG_MY_NODE': short(mynode),
+               'HG_OTHER_NODE': str(fco.changectx()),
+               'HG_BASE_NODE': str(fca.changectx()),
+               'HG_MY_ISLINK': 'l' in fcd.flags(),
+               'HG_OTHER_ISLINK': 'l' in fco.flags(),
+               'HG_BASE_ISLINK': 'l' in fca.flags(),
+               }
+        ui = repo.ui
 
-    ui = repo.ui
-
-    args = _toolstr(ui, tool, "args", '$local $base $other')
-    if "$output" in args:
-        out, a = a, back # read input from backup, write to original
-    replace = {'local': a, 'base': b, 'other': c, 'output': out}
-    args = util.interpolate(r'\$', replace, args,
-                            lambda s: util.shellquote(util.localpath(s)))
-    cmd = toolpath + ' ' + args
-    if _toolbool(ui, tool, "gui"):
-        repo.ui.status(_('running merge tool %s for file %s\n') %
-                       (tool, fcd.path()))
-    repo.ui.debug('launching merge tool: %s\n' % cmd)
-    r = ui.system(cmd, cwd=repo.root, environ=env, blockedtag='mergetool')
-    repo.ui.debug('merge tool returned: %s\n' % r)
-    return True, r, False
+        args = _toolstr(ui, tool, "args", '$local $base $other')
+        if "$output" in args:
+            out, a = a, back # read input from backup, write to original
+        replace = {'local': a, 'base': b, 'other': c, 'output': out}
+        args = util.interpolate(r'\$', replace, args,
+                                lambda s: util.shellquote(util.localpath(s)))
+        cmd = toolpath + ' ' + args
+        if _toolbool(ui, tool, "gui"):
+            repo.ui.status(_('running merge tool %s for file %s\n') %
+                           (tool, fcd.path()))
+        repo.ui.debug('launching merge tool: %s\n' % cmd)
+        r = ui.system(cmd, cwd=repo.root, environ=env, blockedtag='mergetool')
+        repo.ui.debug('merge tool returned: %s\n' % r)
+        return True, r, False
+    finally:
+        util.unlink(b)
+        util.unlink(c)
 
 def _formatconflictmarker(repo, ctx, template, label, pad):
     """Applies the given template to the ctx, prefixed by the label.
@@ -603,12 +607,9 @@ def _makebackup(repo, ui, fcd, premerge):
         util.copyfile(a, back)
     return back
 
-def _maketempfiles(repo, fcd, fco, fca):
+def _maketempfiles(repo, fco, fca):
     """Writes out `fco` and `fca` as temporary files, so an external merge
     tool may use them.
-
-    `fcd` is returned as-is, by convention, because it currently doubles as both
-    the local version and merge destination.
     """
     def temp(prefix, ctx):
         fullbase, ext = os.path.splitext(ctx.path())
@@ -620,11 +621,10 @@ def _maketempfiles(repo, fcd, fco, fca):
         f.close()
         return name
 
-    a = repo.wjoin(fcd.path())
     b = temp("base", fca)
     c = temp("other", fco)
 
-    return a, b, c
+    return b, c
 
 def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
@@ -687,7 +687,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         return True, 1, False
 
     back = _makebackup(repo, ui, fcd, premerge)
-    files = _maketempfiles(repo, fcd, fco, fca) + (back,)
+    files = (None, None, None, back)
     r = 1
     try:
         markerstyle = ui.config('ui', 'mergemarkers')
@@ -715,8 +715,6 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     finally:
         if not r and back is not None:
             util.unlink(back)
-        util.unlink(files[1])
-        util.unlink(files[2])
 
 def _check(repo, r, ui, tool, fcd, files):
     fd = fcd.path()
