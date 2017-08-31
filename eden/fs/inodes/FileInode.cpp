@@ -483,7 +483,7 @@ std::string FileInode::readAll() {
   std::string result;
   if (state->file) {
     auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
-    folly::checkUnixError(rc, "unable to seek in materialized FileData");
+    folly::checkUnixError(rc, "unable to seek in materialized FileInode");
     folly::readFile(state->file.fd(), result);
   } else {
     const auto& contentsBuf = state->blob->getContents();

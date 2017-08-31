@@ -28,7 +28,6 @@ class BufVec;
 
 class Blob;
 class FileHandle;
-class FileData;
 class Hash;
 class ObjectStore;
 
@@ -274,7 +273,6 @@ class FileInode : public InodeBase {
   folly::Synchronized<State> state_;
 
   friend class ::facebook::eden::FileHandle;
-  friend class ::facebook::eden::FileData;
 };
 }
 }

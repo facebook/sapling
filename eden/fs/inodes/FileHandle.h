@@ -15,7 +15,6 @@ namespace facebook {
 namespace eden {
 
 class Blob;
-class FileData;
 class FileInode;
 class LocalStore;
 
@@ -41,7 +40,6 @@ class FileHandle : public fusell::FileHandle {
 
  private:
   FileInodePtr inode_;
-  std::shared_ptr<FileData> data_;
   int openFlags_;
 };
 }
