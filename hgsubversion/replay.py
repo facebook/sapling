@@ -185,10 +185,10 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             extra['branch'] = 'default'
         current_ctx = context.memctx(meta.repo,
                                      parents,
-                                     meta.getmessage(rev),
+                                     util.forceutf8(meta.getmessage(rev)),
                                      [util.forceutf8(f) for f in files.keys()],
                                      filectxfn,
-                                     meta.authors[rev.author],
+                                     util.forceutf8(meta.authors[rev.author]),
                                      date,
                                      extra)
 
@@ -225,10 +225,10 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         current_ctx = context.memctx(meta.repo,
                                      (ha, node.nullid),
-                                     meta.getmessage(rev),
+                                     util.forceutf8(meta.getmessage(rev)),
                                      [util.forceutf8(f) for f in files],
                                      del_all_files,
-                                     meta.authors[rev.author],
+                                     util.forceutf8(meta.authors[rev.author]),
                                      date,
                                      extra)
         new_hash = meta.repo.svn_commitctx(current_ctx)

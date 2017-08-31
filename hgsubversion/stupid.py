@@ -783,10 +783,10 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         current_ctx = context.memctx(
             meta.repo,
             [parentctx.node(), revlog.nullid],
-            meta.getmessage(r),
+            util.forceutf8(meta.getmessage(r)),
             [util.forceutf8(f) for f in files_touched],
             filectxfn,
-            meta.authors[r.author],
+            util.forceutf8(meta.authors[r.author]),
             date,
             extra)
         ha = meta.repo.svn_commitctx(current_ctx)

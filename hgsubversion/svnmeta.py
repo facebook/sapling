@@ -458,7 +458,7 @@ class SVNMeta(object):
         return path
 
     def getmessage(self, rev):
-        msg = rev.message
+        msg = util.forceutf8(rev.message)
 
         if msg:
             try:
@@ -816,7 +816,7 @@ class SVNMeta(object):
                              self.getmessage(rev),
                              ['.hgtags', ],
                              hgtagsfn,
-                             self.authors[rev.author],
+                             util.forceutf8(self.authors[rev.author]),
                              date,
                              parentctx.extra())
         new_hash = self.repo.svn_commitctx(ctx)
@@ -884,7 +884,7 @@ class SVNMeta(object):
                                  self.getmessage(rev),
                                  ['.hgtags'],
                                  fctxfun,
-                                 self.authors[rev.author],
+                                 util.forceutf8(self.authors[rev.author]),
                                  date,
                                  extra)
             new = self.repo.svn_commitctx(ctx)
@@ -906,7 +906,7 @@ class SVNMeta(object):
                              self.getmessage(rev),
                              [],
                              lambda x, y, z: None,
-                             self.authors[rev.author],
+                             util.forceutf8(self.authors[rev.author]),
                              self.fixdate(rev.date),
                              extra)
         new = self.repo.svn_commitctx(ctx)
