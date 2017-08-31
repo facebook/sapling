@@ -318,7 +318,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
     if symlink or fcd.isabsent() or fco.isabsent():
         return 1
-    a, b, c, back = files
+    unused, unused, unused, back = files
 
     ui = repo.ui
 
@@ -347,7 +347,8 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
             ui.debug(" premerge successful\n")
             return 0
         if premerge not in validkeep:
-            util.copyfile(back, a) # restore from backup and try again
+            # restore from backup and try again
+            util.copyfile(back, repo.wjoin(fcd.path()))
     return 1 # continue merging
 
 def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
@@ -368,8 +369,6 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file. Markers will have two sections, one for each side
     of merge, unless mode equals 'union' which suppresses the markers."""
-    a, b, c, back = files
-
     ui = repo.ui
 
     r = simplemerge.simplemerge(ui, fcd, fca, fco,
@@ -424,7 +423,6 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
     """
     assert localorother is not None
     tool, toolpath, binary, symlink = toolconf
-    a, b, c, back = files
     r = simplemerge.simplemerge(repo.ui, fcd, fca, fco,
                                 label=labels, localorother=localorother,
                                 repo=repo)
@@ -470,7 +468,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     This implies permerge. Therefore, files aren't dumped, if premerge
     runs successfully. Use :forcedump to forcibly write files out.
     """
-    a, b, c, back = files
+    a, unused, unused, unused = files
 
     fd = fcd.path()
 
@@ -720,7 +718,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
 def _check(r, ui, tool, fcd, files):
     fd = fcd.path()
-    a, b, c, back = files
+    a, unused, unused, back = files
 
     if not r and (_toolbool(ui, tool, "checkconflicts") or
                   'conflicts' in _toollist(ui, tool, "check")):
