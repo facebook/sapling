@@ -10,11 +10,16 @@
 #include "eden/fs/fuse/FileHandleMap.h"
 
 #include <folly/Exception.h>
+#include <folly/FileUtil.h>
 #include <folly/Random.h>
 #include <folly/experimental/logging/xlog.h>
+#include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
+#include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
+
+using apache::thrift::CompactSerializer;
 
 namespace facebook {
 namespace eden {
@@ -49,6 +54,20 @@ std::shared_ptr<DirHandle> FileHandleMap::getDirHandle(uint64_t fh) {
   }
   folly::throwSystemErrorExplicit(
       ENOTDIR, "file number ", fh, " is a FileHandle, not a DirHandle");
+}
+
+void FileHandleMap::recordHandle(
+    std::shared_ptr<FileHandleBase> fh,
+    uint64_t number) {
+  auto handles = handles_.wlock();
+
+  auto it = handles->find(number);
+  if (it != handles->end()) {
+    folly::throwSystemErrorExplicit(
+        EEXIST, "file number ", number, " is already present in the map!?");
+  }
+
+  handles->emplace(number, fh);
 }
 
 uint64_t FileHandleMap::recordHandle(std::shared_ptr<FileHandleBase> fh) {
@@ -103,6 +122,43 @@ std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
   auto result = iter->second;
   handles->erase(iter);
   return result;
+}
+
+SerializedFileHandleMap FileHandleMap::serializeMap() const {
+  SerializedFileHandleMap result;
+
+  auto handles = handles_.rlock();
+  for (auto& it : *handles) {
+    FileHandleMapEntry entry;
+
+    entry.handleId = (int64_t)it.first;
+    entry.isDir = std::dynamic_pointer_cast<DirHandle>(it.second) != nullptr;
+    entry.inodeNumber = it.second->getInodeNumber();
+
+    result.entries.push_back(std::move(entry));
+  }
+
+  return result;
+}
+
+void FileHandleMap::saveFileHandleMap(folly::StringPiece fileName) const {
+  auto serializedData =
+      CompactSerializer::serialize<std::string>(serializeMap());
+
+  // And update the file on disk
+  folly::writeFileAtomic(fileName, serializedData);
+}
+
+SerializedFileHandleMap FileHandleMap::loadFileHandleMap(
+    folly::StringPiece fileName) {
+  auto path = fileName.str();
+  std::string serializedData;
+  if (!folly::readFile(path.c_str(), serializedData)) {
+    folly::throwSystemError("failed to read FileHandleMap from ", path);
+  }
+
+  return CompactSerializer::deserialize<SerializedFileHandleMap>(
+      serializedData);
 }
 }
 }

@@ -8,11 +8,14 @@
  *
  */
 #pragma once
+#include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <unordered_map>
 
 namespace facebook {
 namespace eden {
+class SerializedFileHandleMap;
+
 namespace fusell {
 
 class FileHandle;
@@ -57,10 +60,33 @@ class FileHandleMap {
    **/
   uint64_t recordHandle(std::shared_ptr<FileHandleBase> fh);
 
+  /** Records a file handle mapping when deserializing the map.
+   * This is required to ensure that we record the correct mapping
+   * when bootstrapping the map during a graceful restart. */
+  void recordHandle(std::shared_ptr<FileHandleBase> fh, uint64_t number);
+
   /** Delete the association from the fh to a handle instance.
    * Throws EBADF if the file handle is not tracked by this map.
    * On success, returns the instance. */
   std::shared_ptr<FileHandleBase> forgetGenericHandle(uint64_t fh);
+
+  /** Serializes the current file handle mapping to a file with
+   * the specified path.  This mapping can be used to re-establish
+   * file handle objects when we perform a graceful restart. */
+  void saveFileHandleMap(folly::StringPiece fileName) const;
+
+  /** Serializes the current file handle mapping to its corresponding
+   * thrift data structure representation.  This method is primarily
+   * present to enable testing.  You probably want to call saveFileHandleMap()
+   * rather than calling this method directly */
+  SerializedFileHandleMap serializeMap() const;
+
+  /** Load a file that was previously written by saveFileHandleMap()
+   * and return the deserialized representation.  This method doesn't
+   * construct an instance of FileHandleMap because that requires
+   * coordination with the dispatcher machinery that we don't have
+   * access to here. */
+  static SerializedFileHandleMap loadFileHandleMap(folly::StringPiece fileName);
 
  private:
 

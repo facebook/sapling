@@ -24,6 +24,12 @@ class FileHandleBase {
   virtual ~FileHandleBase();
 
   /**
+   * Return the inode number.
+   * This is used in lieu of getattr() by the code that serializes
+   * the FileHandleMap. */
+  virtual fuse_ino_t getInodeNumber() = 0;
+
+  /**
    * Get file attributes
    */
   virtual folly::Future<Dispatcher::Attr> getattr() = 0;

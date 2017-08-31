@@ -2,11 +2,23 @@ include_defs("//eden/DEFS")
 
 stats_deps = ["@/common/stats:threadlocal"] if is_facebook_internal() else []
 
+thrift_library(
+    name = "handlemap",
+    languages = [
+        "cpp2",
+    ],
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "handlemap.thrift": [],
+    },
+)
+
 cpp_library(
     name = "fusell",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = stats_deps + [
+        ":handlemap-cpp2",
         "@/eden/fs/fuse/privhelper:privhelper",
         "@/eden/fs/utils:utils",
         "@/folly:array",

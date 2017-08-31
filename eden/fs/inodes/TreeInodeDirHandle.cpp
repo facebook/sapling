@@ -137,5 +137,9 @@ folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
 folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::getattr() {
   return inode_->getattr();
 }
+
+fuse_ino_t TreeInodeDirHandle::getInodeNumber() {
+  return inode_->getNodeId();
+}
 }
 }

@@ -26,6 +26,7 @@ class TreeInodeDirHandle : public fusell::DirHandle {
       int to_set) override;
   folly::Future<folly::Unit> fsyncdir(bool datasync) override;
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  fuse_ino_t getInodeNumber() override;
 
  private:
   TreeInodePtr inode_;

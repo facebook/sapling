@@ -29,6 +29,10 @@ folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   return inode_->getattr();
 }
 
+fuse_ino_t FileHandle::getInodeNumber() {
+  return inode_->getNodeId();
+}
+
 folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
     const struct stat& attr,
     int to_set) {
