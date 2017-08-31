@@ -164,7 +164,7 @@ class SimpleStringIO(object):
         self._blocks.append(s)
 
     def getvalue(self):
-        return ''.join(self._blocks)
+        return ''.join(str(s) for s in self._blocks)
 
     def close(self):
         if self._closing:
