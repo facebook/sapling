@@ -15,7 +15,7 @@ shortversion:
 
 from __future__ import absolute_import
 
-from mercurial (
+from mercurial import (
     error,
     extensions,
     hg,
