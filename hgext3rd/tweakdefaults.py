@@ -127,8 +127,8 @@ def extsetup(ui):
         ('d', 'dest', '', _('destination for rebase or update')))
 
     # anonymous function to pass ui object to _analyzewrapper
-    def _analyzewrap(orig, x, order='define'):
-        return _analyzewrapper(orig, x, order, ui)
+    def _analyzewrap(orig, x):
+        return _analyzewrapper(orig, x, ui)
 
     wrapfunction(revsetlang, '_analyze', _analyzewrap)
     try:
@@ -676,10 +676,10 @@ def markermetadatawritingcommand(ui, origcmd, operationame):
             return origcmd(*args, **kwargs)
     return cmd
 
-def _analyzewrapper(orig, x, order, ui):
+def _analyzewrapper(orig, x, ui):
     """Wraps analyzer to detect the use of colons in the revisions
     """
-    result = orig(x, order)
+    result = orig(x)
 
     if isinstance(x, tuple) and \
             (x[0] in ('range', 'rangepre', 'rangepost')) and \
