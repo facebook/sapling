@@ -163,6 +163,8 @@ def cloneshallow(orig, ui, repo, *args, **opts):
                         opts['includepattern'] = '\0'.join(repo.includepattern)
                     if repo.excludepattern:
                         opts['excludepattern'] = '\0'.join(repo.excludepattern)
+                    if repo.ui.configbool("treemanifest", "treeonly"):
+                        opts['noflatmanifest'] = 'True'
                     return remote._callstream('stream_out_shallow', **opts)
                 else:
                     return orig()

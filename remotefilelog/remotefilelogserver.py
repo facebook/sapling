@@ -74,6 +74,7 @@ def onetimesetup(ui):
     class streamstate(object):
         match = None
         shallowremote = False
+        noflatmf = False
     state = streamstate()
 
     def stream_out_shallow(repo, proto, other):
@@ -88,9 +89,11 @@ def onetimesetup(ui):
 
         oldshallow = state.shallowremote
         oldmatch = state.match
+        oldnoflatmf = state.noflatmf
         try:
             state.shallowremote = True
             state.match = match.always(repo.root, '')
+            state.noflatmf = other.get('noflatmanifest') == 'True'
             if includepattern or excludepattern:
                 state.match = match.match(repo.root, '', None,
                     includepattern, excludepattern)
@@ -109,6 +112,7 @@ def onetimesetup(ui):
         finally:
             state.shallowremote = oldshallow
             state.match = oldmatch
+            state.noflatmf = oldnoflatmf
 
     wireproto.commands['stream_out_shallow'] = (stream_out_shallow, '*')
 
@@ -149,6 +153,8 @@ def onetimesetup(ui):
 
             for x in repo.store.topfiles():
                 if shallowtrees and x[0][:15] == '00manifesttree.':
+                    continue
+                if state.noflatmf and x[0][:11] == '00manifest.':
                     continue
                 yield x
 

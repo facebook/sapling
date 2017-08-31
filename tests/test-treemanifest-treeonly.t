@@ -16,6 +16,7 @@ Setup the server
   > server=True
   > [remotefilelog]
   > server=True
+  > shallowtrees=True
   > EOF
 
 Make local commits on the server
@@ -251,10 +252,18 @@ Test histedit treeonly commits
 Test peer-to-peer push/pull of tree only commits
   $ cd ..
   $ clearcache
-# TODO: Test tree only clone
-  $ hgcloneshallow ssh://user@dummy/master client2 -q
+  $ hgcloneshallow ssh://user@dummy/master client2 -q --config treemanifest.treeonly=True --config extensions.treemanifest=
+  2 trees fetched over * (glob)
+  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client2
+  $ ls_l .hg/store
+  -rw-r--r--     277 00changelog.i
+  drwxr-xr-x         data
+  -rw-r--r--       0 undo
+  -rw-r--r--       2 undo.backupfiles
+  -rw-r--r--       0 undo.phaseroots
+  $ rm -rf $CACHEDIR
   $ cp ../client/.hg/hgrc .hg/hgrc
 
 # Test pulling from a treeonly peer
