@@ -780,14 +780,15 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         origbranch = extra.get('branch', None)
         meta.mapbranch(extra)
-        current_ctx = context.memctx(meta.repo,
-                                     [parentctx.node(), revlog.nullid],
-                                     meta.getmessage(r),
-                                     files_touched,
-                                     filectxfn,
-                                     meta.authors[r.author],
-                                     date,
-                                     extra)
+        current_ctx = context.memctx(
+            meta.repo,
+            [parentctx.node(), revlog.nullid],
+            meta.getmessage(r),
+            [util.forceutf8(f) for f in files_touched],
+            filectxfn,
+            meta.authors[r.author],
+            date,
+            extra)
         ha = meta.repo.svn_commitctx(current_ctx)
 
         if not tag:

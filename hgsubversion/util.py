@@ -422,3 +422,9 @@ def get_contexts(repo, fromrev=0):
             yield repo[rev]
         except error.RepoLookupError:
             pass
+
+_unitype = type(u'')
+def forceutf8(s):
+    if isinstance(s, _unitype):
+        return s.encode('utf-8')
+    return s
