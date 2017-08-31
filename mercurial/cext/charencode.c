@@ -294,11 +294,21 @@ static Py_ssize_t jsonescapelen(const char *buf, Py_ssize_t len, bool paranoid)
 				return -1;
 			}
 			esclen += jsonparanoidlentable[(unsigned char)c];
+			if (esclen < 0) {
+				PyErr_SetString(PyExc_MemoryError,
+						"overflow in jsonescapelen");
+				return -1;
+			}
 		}
 	} else {
 		for (i = 0; i < len; i++) {
 			char c = buf[i];
 			esclen += jsonlentable[(unsigned char)c];
+			if (esclen < 0) {
+				PyErr_SetString(PyExc_MemoryError,
+						"overflow in jsonescapelen");
+				return -1;
+			}
 		}
 	}
 
@@ -366,7 +376,7 @@ PyObject *jsonescapeu8fast(PyObject *self, PyObject *args)
 	origlen = PyBytes_GET_SIZE(origstr);
 	esclen = jsonescapelen(origbuf, origlen, paranoid);
 	if (esclen < 0)
-		return NULL;  /* unsupported char found */
+		return NULL;  /* unsupported char found or overflow */
 	if (origlen == esclen) {
 		Py_INCREF(origstr);
 		return origstr;
