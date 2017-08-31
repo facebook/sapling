@@ -586,6 +586,46 @@ def partextras(labels):
         "o": " [%s]" % labels[1],
     }
 
+def _makebackup(repo, ui, fcd, premerge):
+    """Makes a backup of the local `fcd` file prior to merging.
+
+    In addition to preserving the user's pre-existing modifications to `fcd`
+    (if any), the backup is used to undo certain premerges, confirm whether a
+    merge changed anything, and determine what line endings the new file should
+    have.
+    """
+    if fcd.isabsent():
+        return None
+
+    a = repo.wjoin(fcd.path())
+    back = scmutil.origpath(ui, repo, a)
+    if premerge:
+        util.copyfile(a, back)
+    return back
+
+def _maketempfiles(repo, fcd, fco, fca):
+    """Writes out `fco` and `fca` as temporary files, so an external merge
+    tool may use them.
+
+    `fcd` is returned as-is, by convention, because it currently doubles as both
+    the local version and merge destination.
+    """
+    def temp(prefix, ctx):
+        fullbase, ext = os.path.splitext(ctx.path())
+        pre = "%s~%s." % (os.path.basename(fullbase), prefix)
+        (fd, name) = tempfile.mkstemp(prefix=pre, suffix=ext)
+        data = repo.wwritedata(ctx.path(), ctx.data())
+        f = os.fdopen(fd, pycompat.sysstr("wb"))
+        f.write(data)
+        f.close()
+        return name
+
+    a = repo.wjoin(fcd.path())
+    b = temp("base", fca)
+    c = temp("other", fco)
+
+    return a, b, c
+
 def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
 
@@ -598,16 +638,6 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
     Returns whether the merge is complete, the return value of the merge, and
     a boolean indicating whether the file was deleted from disk."""
-
-    def temp(prefix, ctx):
-        fullbase, ext = os.path.splitext(ctx.path())
-        pre = "%s~%s." % (os.path.basename(fullbase), prefix)
-        (fd, name) = tempfile.mkstemp(prefix=pre, suffix=ext)
-        data = repo.wwritedata(ctx.path(), ctx.data())
-        f = os.fdopen(fd, pycompat.sysstr("wb"))
-        f.write(data)
-        f.close()
-        return name
 
     if not fco.cmp(fcd): # files identical?
         return True, None, False
@@ -656,17 +686,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
             ui.warn(onfailure % fd)
         return True, 1, False
 
-    a = repo.wjoin(fd)
-    b = temp("base", fca)
-    c = temp("other", fco)
-    if not fcd.isabsent():
-        back = scmutil.origpath(ui, repo, a)
-        if premerge:
-            util.copyfile(a, back)
-    else:
-        back = None
-    files = (a, b, c, back)
-
+    back = _makebackup(repo, ui, fcd, premerge)
+    files = _maketempfiles(repo, fcd, fco, fca) + (back,)
     r = 1
     try:
         markerstyle = ui.config('ui', 'mergemarkers')
@@ -694,8 +715,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     finally:
         if not r and back is not None:
             util.unlink(back)
-        util.unlink(b)
-        util.unlink(c)
+        util.unlink(files[1])
+        util.unlink(files[2])
 
 def _check(r, ui, tool, fcd, files):
     fd = fcd.path()
