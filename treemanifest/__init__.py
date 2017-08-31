@@ -131,6 +131,9 @@ RECEIVEDNODE_RECORD = 'receivednodes'
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
 
+def treeenabled(ui):
+    return ui.config('extensions', 'treemanifest', None) not in (None, '!')
+
 def uisetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
                             _unpackmanifestscg1)
@@ -499,6 +502,9 @@ def _addmanifestgroup(*args, **kwargs):
                         "server without pushrebase"))
 
 def getmanifestlog(orig, self):
+    if not treeenabled(self.ui):
+        return orig(self)
+
     if self.ui.configbool('treemanifest', 'treeonly'):
         mfl = treeonlymanifestlog(self.svfs)
         setuptreestores(self, mfl)
@@ -520,12 +526,13 @@ def getmanifestlog(orig, self):
 def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
     n = orig(self, transaction, link, p1, p2, added, removed)
 
-    if not self._manifestlog._revlog.opener.treemanifestserver:
+    mfl = self._manifestlog
+    if (not util.safehasattr(mfl._revlog.opener, 'treemanifestserver') or
+        not mfl._revlog.opener.treemanifestserver):
         return n
 
     # Since we're adding the root flat manifest, let's add the corresponding
     # root tree manifest.
-    mfl = self._manifestlog
     treemfl = mfl.treemanifestlog
 
     m = self._manifestdict
@@ -658,6 +665,9 @@ def _backfill(tr, repo, limit):
     ui.progress(converting, None)
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
+    if not treeenabled(repo.ui):
+        return orig(self, repo, *args, **kwargs)
+
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
         chain = None
@@ -667,6 +677,9 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     return orig(self, repo, *args, **kwargs)
 
 def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
+    if not treeenabled(repo.ui):
+        return orig(self, repo, *args, **kwargs)
+
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
         chain = None
@@ -1053,6 +1066,7 @@ def _registerbundle2parts():
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
         if ('treepack' in pushop.stepsdone or
+            not treeenabled(pushop.repo.ui) or
             not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
             return
         pushop.stepsdone.add('treepack')
@@ -1067,6 +1081,7 @@ def _registerbundle2parts():
                                   **kwargs):
         """add parts containing trees being pulled"""
         if ('True' not in b2caps.get('treemanifest', []) or
+            not treeenabled(repo.ui) or
             repo.svfs.treemanifestserver or
             not kwargs.get('cg', True)):
             return
@@ -1101,6 +1116,9 @@ def createtreepackpart(repo, outgoing, partname):
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)
+    if not treeenabled(repo.ui):
+        return result
+
     repo = repo.unfiltered()
 
     ctxs = []
@@ -1437,6 +1455,9 @@ def serverrepack(repo, incremental=False):
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
 
 def striptrees(orig, repo, tr, striprev, files):
+    if not treeenabled(repo.ui):
+        return orig(repo, tr, striprev, files)
+
     if repo.ui.configbool('treemanifest', 'server'):
         treerevlog = repo.manifestlog.treemanifestlog._revlog
         for dir in util.dirs(files):
