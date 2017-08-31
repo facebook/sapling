@@ -375,6 +375,7 @@ class SVNMeta(object):
 
     def fixdate(self, date):
         if date is not None:
+            date = util.forceutf8(date)
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]
             date += ' -0000'
             self.lastdate = date
@@ -410,8 +411,8 @@ class SVNMeta(object):
             extra['branch'] = branch
 
         extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
-            'uuid': self.uuid,
-            'path': path,
+            'uuid': util.forceutf8(self.uuid),
+            'path': util.forceutf8(path),
             'rev': revnum,
         }
         return extra
