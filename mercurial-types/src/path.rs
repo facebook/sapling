@@ -82,9 +82,11 @@ impl Path {
     }
 
     fn fsencode_dir_impl<'a, Iter>(dotencode: bool, iter: Iter) -> PathBuf
-    where Iter: Iterator<Item = &'a PathElement>
-     {
-        iter.map(|p| Path::fsencode_filter(direncode(&p.0), dotencode)).collect()
+    where
+        Iter: Iterator<Item = &'a PathElement>,
+    {
+        iter.map(|p| Path::fsencode_filter(direncode(&p.0), dotencode))
+            .collect()
     }
 
     /// Perform the mapping to a filesystem path used in a .hg directory
@@ -522,7 +524,9 @@ mod test {
     fn join() {
         let prefix = Path::new(b"prefix").unwrap();
         assert_eq!(
-            prefix.join(&Path::new("suffix").unwrap()).fsencode_file(false),
+            prefix
+                .join(&Path::new("suffix").unwrap())
+                .fsencode_file(false),
             PathBuf::from("data/prefix/suffix")
         );
         assert_eq!(
@@ -531,7 +535,9 @@ mod test {
         );
         let empty = Path::new(b"").unwrap();
         assert_eq!(
-            empty.join(&Path::new("suffix").unwrap()).fsencode_file(false),
+            empty
+                .join(&Path::new("suffix").unwrap())
+                .fsencode_file(false),
             PathBuf::from("data/suffix")
         );
 
@@ -539,12 +545,17 @@ mod test {
             Path::new(b"asdf")
                 .unwrap()
                 .join(&Path::new(b"").unwrap())
-                .to_vec().len(),
+                .to_vec()
+                .len(),
             4
         );
 
         assert_eq!(
-            Path::new(b"").unwrap().join(&Path::new(b"").unwrap()).to_vec().len(),
+            Path::new(b"")
+                .unwrap()
+                .join(&Path::new(b"").unwrap())
+                .to_vec()
+                .len(),
             0
         );
 
@@ -552,7 +563,8 @@ mod test {
             Path::new(b"asdf")
                 .unwrap()
                 .join(&PathElement(b"bdc".iter().cloned().collect()))
-                .to_vec().len(),
+                .to_vec()
+                .len(),
             8
         );
     }
@@ -561,13 +573,27 @@ mod test {
     fn empty_paths() {
         assert_eq!(Path::new(b"/").unwrap().to_vec().len(), 0);
         assert_eq!(Path::new(b"////").unwrap().to_vec().len(), 0);
-        assert_eq!(Path::new(b"////").unwrap().join(&Path::new(b"///").unwrap()).to_vec().len(), 0);
+        assert_eq!(
+            Path::new(b"////")
+                .unwrap()
+                .join(&Path::new(b"///").unwrap())
+                .to_vec()
+                .len(),
+            0
+        );
         let p = b"///";
         let elements: Vec<_> = p.split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
             .map(|e| PathElement(e.into()))
             .collect();
-        assert_eq!(Path::new(b"////").unwrap().join(elements.iter()).to_vec().len(), 0);
+        assert_eq!(
+            Path::new(b"////")
+                .unwrap()
+                .join(elements.iter())
+                .to_vec()
+                .len(),
+            0
+        );
         assert!(Path::new(b"////").unwrap().join(elements.iter()).is_empty());
     }
 }

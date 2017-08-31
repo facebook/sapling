@@ -228,10 +228,7 @@ where
     }
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
-        self.entry
-            .get_raw_content()
-            .map_err(self.cvterr)
-            .boxed()
+        self.entry.get_raw_content().map_err(self.cvterr).boxed()
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {

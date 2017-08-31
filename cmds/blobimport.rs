@@ -57,7 +57,7 @@ use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{Blob, hash, Changeset, NodeHash, Parents, Type};
+use mercurial_types::{hash, Blob, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
@@ -113,7 +113,8 @@ fn put_manifest_entry(
         .ok_or("missing blob data".into())
         .map(Bytes::from)
         .into_future();
-    bytes.and_then(move |bytes| {
+    bytes
+        .and_then(move |bytes| {
             let nodeblob = NodeBlob {
                 parents: parents,
                 blob: hash::Sha1::from(bytes.as_ref()),
@@ -130,8 +131,8 @@ fn put_manifest_entry(
             let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
 
             node.join(blob).map(|_| ())
-        }
-    ).boxed()
+        })
+        .boxed()
 }
 
 // Copy a single manifest entry into the blobstore
@@ -152,7 +153,9 @@ where
 
     let copy = blobfuture
         .join(entry.get_parents().map_err(Error::from))
-        .and_then(move |(blob, parents)| put_manifest_entry(blobstore, hash, blob, parents));
+        .and_then(move |(blob, parents)| {
+            put_manifest_entry(blobstore, hash, blob, parents)
+        });
 
     copy.boxed()
 }
@@ -273,12 +276,9 @@ fn copy_changeset(
                                         }
                                     })
                                     .flatten()
-                                    .for_each(move |entry| {
-                                        copy_manifest_entry(
-                                            entry,
-                                            blobstore.clone(),
-                                        )
-                                    })
+                                    .for_each(
+                                        move |entry| copy_manifest_entry(entry, blobstore.clone()),
+                                    )
                             })
                             .into_future()
                             .flatten()
@@ -292,7 +292,7 @@ fn copy_changeset(
             })
     };
 
-    put.join(manifest).map(|(_, _)| ()).boxed()
+    put.join(manifest).map(|_| ()).boxed()
 }
 
 fn convert<H>(
@@ -310,7 +310,7 @@ where
     let mut core = tokio_core::reactor::Core::new()?;
 
     // Generate stream of changesets. For each changeset, save the cs blob, and the manifest blob,
-    // and the files. 
+    // and the files.
     let changesets = revlog.changesets()
         .map_err(Error::from)
         .enumerate()
