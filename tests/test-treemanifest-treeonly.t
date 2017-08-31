@@ -232,13 +232,14 @@ Test rebasing treeonly commits
 
 Test histedit treeonly commits
   $ hg up -q 38a88da6315b
+  $ hg purge --config extensions.purge=
   $ echo y > y
   $ hg commit -Aqm 'add y'
   $ hg histedit --config extensions.histedit= --commands - <<EOF
-  > pick 0b82d7242702 add y
+  > pick eea609e344ca add y
   > pick 38a88da6315b hybrid flat+tree commit
   > EOF
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/38a88da6315b-77d91db7-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/38a88da6315b-320da9c1-histedit.hg (glob)
   $ hg log -l 2 -G -T '{desc}'
   @  hybrid flat+tree commit
   |
@@ -257,25 +258,27 @@ Test peer-to-peer push/pull of tree only commits
 
 # Test pulling from a treeonly peer
   $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup)"
-  bundle2-input-part: total payload size 980
+  bundle2-input-part: total payload size 823
   bundle2-input-part: total payload size 171
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
-  bundle2-input-part: total payload size 948
+  bundle2-input-part: total payload size 663
   $ hg up tip
   2 trees fetched over * (glob)
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg log -G -l 3 -T '{desc}' --stat
-  @  hybrid flat+tree commit subdir/x |  1 +
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G -l 3 -T '{desc}\n' --stat
+  @  hybrid flat+tree commit
+  |   subdir/x |  1 +
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
-  o  add y subdir/x.orig |  2 ++
-  |   y             |  1 +
-  |   2 files changed, 3 insertions(+), 0 deletions(-)
+  o  add y
+  |   y |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
   2 trees fetched over * (glob)
-  o  modify subdir/x subdir/x |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  ~
+  o  modify subdir/x
+  |   subdir/x |  1 +
+  ~   1 files changed, 1 insertions(+), 0 deletions(-)
+  
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 # Test pushing to a treeonly peer
@@ -302,7 +305,7 @@ Test bundling
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 4 changes to 3 files
+  added 3 changesets with 3 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y
