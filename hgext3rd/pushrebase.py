@@ -557,14 +557,16 @@ def _getrevs(bundle, onto):
 
     return revs, oldonto
 
-def _graft(repo, rev, mapping, lastdestnode):
+def _graft(op, rev, mapping, lastdestnode):
     '''duplicate changeset "rev" with parents from "mapping"'''
+    repo = op.repo
     oldp1 = rev.p1().node()
     oldp2 = rev.p2().node()
     newp1 = mapping.get(oldp1, oldp1)
     newp2 = mapping.get(oldp2, oldp2)
 
-    if not repo.ui.configbool("pushrebase", "forcetreereceive"):
+    if (not op.records[treepackrecords] and
+        not repo.ui.configbool("pushrebase", "forcetreereceive")):
         m = rev.manifest()
     else:
         store = rev._repo.manifestlog.datastore
@@ -879,7 +881,7 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
 def prefetchcaches(op, params, bundle):
     bundlerepocache = {}
     # No need to cache trees from the bundle since they are already fast
-    if not op.repo.ui.configbool("pushrebase", "forcetreereceive"):
+    if not op.records[treepackrecords]:
         # We will need the bundle revs after the lock is taken, so let's
         # precache all the bundle rev manifests.
         bundlectxs = list(bundle.set('bundle()'))
@@ -967,7 +969,7 @@ def runrebase(op, revs, oldonto, onto):
 
     lastdestnode = None
     for rev in revs:
-        newrev = _graft(op.repo, rev, mapping, lastdestnode)
+        newrev = _graft(op, rev, mapping, lastdestnode)
 
         new = op.repo[newrev]
         oldnode = rev.node()

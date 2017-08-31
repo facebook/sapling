@@ -36,6 +36,7 @@ Create flat manifest client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
   > EOF
 
 Make a flat-only draft commit
@@ -316,7 +317,67 @@ Test bundling
   |   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
+Test pushing to a hybrid server w/ pushrebase w/ hooks
+  $ cat >> $TESTTMP/filehook.sh <<EOF
+  > set -xe
+  > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'y' ]] && exit 1
+  > echo \$(hg log -r \$HG_NODE -T '{file_adds}')
+  > exit 2
+  > EOF
+  $ chmod a+x $TESTTMP/filehook.sh
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase.fail=$TESTTMP/filehook.sh
+  > EOF
+  $ hg push -r 2 --to master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: +++ hg log -r 7ec3c5c54734448e59a0694af54c51578ee4d4de -T '{file_adds}'
+  remote: ++ [[ y == \y ]]
+  remote: ++ exit 1
+  remote: prepushrebase.fail hook exited with status 1
+  abort: push failed on remote
+  [255]
+
+Test pushing to a hybrid server w/ pushrebase w/o hooks
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase.fail=true
+  > EOF
+  $ hg push -r 2 --to master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     7ec3c5c54734  add y
+  remote: 1 new changeset from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+
+  $ cd ../master
+- Verify the received tree was written down as a flat
+  $ hg debugindex -m
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      51     -1       0 85b359fdb09e 000000000000 000000000000
+       1        51      51     -1       1 d9920715ba88 85b359fdb09e 000000000000
+       2       102      55      1       2 83b03df1c9d6 d9920715ba88 000000000000
+  $ hg debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      50     -1       0 85b359fdb09e 000000000000 000000000000
+       1        50      50     -1       1 d9920715ba88 85b359fdb09e 000000000000
+       2       100      55      1       2 83b03df1c9d6 d9920715ba88 000000000000
+- Verify the manifest data is accessible
+  $ hg log -r tip --stat
+  changeset:   2:4f84204095e0
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add y
+  
+   y |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
 TODO
-# Access the pre-tree commit
 # log -T "{manifest}" #TODO: edit templatekw.showmanifest
