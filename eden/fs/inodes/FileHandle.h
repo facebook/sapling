@@ -20,9 +20,7 @@ class LocalStore;
 
 class FileHandle : public fusell::FileHandle {
  public:
-  explicit FileHandle(
-      FileInodePtr inode,
-      int flags);
+  explicit FileHandle(FileInodePtr inode);
   ~FileHandle() override {}
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -40,7 +38,6 @@ class FileHandle : public fusell::FileHandle {
 
  private:
   FileInodePtr inode_;
-  int openFlags_;
 };
 }
 }

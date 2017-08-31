@@ -283,18 +283,14 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
   }
 
   if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
-    return materializeForWrite(fi.flags).then(
-        [ self = inodePtrFromThis(), flags = fi.flags ]() {
-          self->materializeInParent();
-          return shared_ptr<fusell::FileHandle>{
-              std::make_shared<FileHandle>(self, flags)};
-        });
+    return materializeForWrite(fi.flags).then([self = inodePtrFromThis()]() {
+      self->materializeInParent();
+      return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
+    });
   } else {
-    return ensureDataLoaded().then(
-        [ self = inodePtrFromThis(), flags = fi.flags ]() {
-          return shared_ptr<fusell::FileHandle>{
-              std::make_shared<FileHandle>(self, flags)};
-        });
+    return ensureDataLoaded().then([self = inodePtrFromThis()]() {
+      return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
+    });
   }
 }
 
@@ -310,7 +306,7 @@ std::shared_ptr<FileHandle> FileInode::finishCreate() {
   SCOPE_EXIT {
     fileHandleDidClose();
   };
-  return std::make_shared<FileHandle>(inodePtrFromThis(), 0);
+  return std::make_shared<FileHandle>(inodePtrFromThis());
 }
 
 Future<vector<string>> FileInode::listxattr() {

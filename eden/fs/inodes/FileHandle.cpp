@@ -18,8 +18,7 @@
 namespace facebook {
 namespace eden {
 
-FileHandle::FileHandle(FileInodePtr inode, int flags)
-    : inode_(std::move(inode)), openFlags_(flags) {}
+FileHandle::FileHandle(FileInodePtr inode) : inode_(std::move(inode)) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   FB_LOGF(
