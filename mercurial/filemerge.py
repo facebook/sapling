@@ -348,7 +348,9 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
             return 0
         if premerge not in validkeep:
             # restore from backup and try again
-            util.copyfile(back, repo.wjoin(fcd.path()))
+            # TODO: Add a workingfilectx.write(otherfilectx) path so we can use
+            # util.copy here instead.
+            fcd.write(util.readfile(back), fcd.flags())
     return 1 # continue merging
 
 def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
