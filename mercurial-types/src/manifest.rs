@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::error;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 
@@ -17,7 +18,7 @@ use path::Path;
 
 /// Interface for a manifest
 pub trait Manifest: Send + 'static {
-    type Error: Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     fn lookup(
         &self,
@@ -52,7 +53,7 @@ where
 impl<M, E> BoxManifest<M, E>
 where
     M: Manifest + Sync + Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     pub fn new(manifest: M) -> Box<Manifest<Error = E> + Sync>
     where
@@ -78,7 +79,7 @@ where
 impl<M, E> Manifest for BoxManifest<M, E>
 where
     M: Manifest + Sync + Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     type Error = E;
 
@@ -106,7 +107,10 @@ where
     }
 }
 
-impl<E: Send + 'static> Manifest for Box<Manifest<Error = E> + Sync> {
+impl<E> Manifest for Box<Manifest<Error = E> + Sync>
+where
+    E: error::Error + Send + 'static,
+{
     type Error = E;
 
     fn lookup(
@@ -138,11 +142,11 @@ pub enum Content<E> {
 
 impl<E> Content<E>
 where
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     fn map_err<ME>(self, cvterr: fn(E) -> ME) -> Content<ME>
     where
-        ME: Send + 'static,
+        ME: error::Error + Send + 'static,
     {
         match self {
             Content::Tree(m) => Content::Tree(BoxManifest::new_with_cvterr(m, cvterr)),
@@ -154,7 +158,7 @@ where
 }
 
 pub trait Entry: Send + 'static {
-    type Error: Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     fn get_type(&self) -> Type;
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error>;
@@ -191,7 +195,7 @@ where
 impl<Ent, E> BoxEntry<Ent, E>
 where
     Ent: Entry + Sync + Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     pub fn new(entry: Ent) -> Box<Entry<Error = E> + Sync>
     where
@@ -215,7 +219,7 @@ where
 impl<Ent, E> Entry for BoxEntry<Ent, E>
 where
     Ent: Entry + Sync + Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     type Error = E;
 
@@ -253,7 +257,10 @@ where
     }
 }
 
-impl<E: Send + 'static> Entry for Box<Entry<Error = E> + Sync> {
+impl<E> Entry for Box<Entry<Error = E> + Sync>
+where
+    E: error::Error + Send + 'static,
+{
     type Error = E;
 
     fn get_type(&self) -> Type {

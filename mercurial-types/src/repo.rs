@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -25,7 +26,7 @@ pub type BoxedBookmarks<E> = Box<
 >;
 
 pub trait Repo: 'static {
-    type Error: Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     /// Return a stream of all changeset ids
     ///
@@ -73,7 +74,7 @@ where
 impl<R, E> BoxRepo<R, E>
 where
     R: Repo + Sync + Send,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     pub fn new(repo: R) -> Box<Repo<Error = E> + Sync + Send>
     where
@@ -99,7 +100,7 @@ where
 impl<R, E> Repo for BoxRepo<R, E>
 where
     R: Repo + Sync + Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     type Error = E;
 
@@ -149,7 +150,7 @@ where
 
 impl<RE> Repo for Box<Repo<Error = RE>>
 where
-    RE: Send + 'static,
+    RE: error::Error + Send + 'static,
 {
     type Error = RE;
 
@@ -183,7 +184,7 @@ where
 
 impl<RE> Repo for Arc<Repo<Error = RE>>
 where
-    RE: Send + 'static,
+    RE: error::Error + Send + 'static,
 {
     type Error = RE;
 

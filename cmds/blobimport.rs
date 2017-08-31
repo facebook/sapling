@@ -31,6 +31,7 @@ extern crate serde;
 
 extern crate bincode;
 
+use std::error;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -145,7 +146,7 @@ fn copy_manifest_entry<E>(
 ) -> BoxFuture<(), Error>
 where
     Error: From<E>,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     let hash = *entry.get_hash();
 

@@ -38,6 +38,7 @@ extern crate serde;
 extern crate serde_json;
 
 use std::collections::HashMap;
+use std::error;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
@@ -140,7 +141,7 @@ struct TreeMetadata {
 impl TreeMetadata {
     fn new<E>(size: Option<usize>, entry: Box<mercurial_types::Entry<Error = E>>) -> TreeMetadata
     where
-        E: Send + 'static,
+        E: error::Error + Send + 'static,
     {
         TreeMetadata {
             hash: entry.get_hash().clone(),
