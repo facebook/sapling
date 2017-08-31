@@ -470,8 +470,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     This implies permerge. Therefore, files aren't dumped, if premerge
     runs successfully. Use :forcedump to forcibly write files out.
     """
-    a, unused, unused, unused = files
-
+    a = _workingpath(repo, fcd)
     fd = fcd.path()
 
     util.copyfile(a, a + ".local")
@@ -494,7 +493,8 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         repo.ui.warn(_('warning: %s cannot merge change/delete conflict '
                        'for %s\n') % (tool, fcd.path()))
         return False, 1, None
-    a, b, c, back = files
+    unused, b, c, back = files
+    a = _workingpath(repo, fcd)
     out = ""
     env = {'HG_FILE': fcd.path(),
            'HG_MY_NODE': short(mynode),
@@ -597,7 +597,7 @@ def _makebackup(repo, ui, fcd, premerge):
     if fcd.isabsent():
         return None
 
-    a = repo.wjoin(fcd.path())
+    a = _workingpath(repo, fcd)
     back = scmutil.origpath(ui, repo, a)
     if premerge:
         util.copyfile(a, back)
@@ -705,7 +705,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
                                      toolconf, files, labels=labels)
 
         if needcheck:
-            r = _check(r, ui, tool, fcd, files)
+            r = _check(repo, r, ui, tool, fcd, files)
 
         if r:
             if onfailure:
@@ -718,9 +718,9 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         util.unlink(files[1])
         util.unlink(files[2])
 
-def _check(r, ui, tool, fcd, files):
+def _check(repo, r, ui, tool, fcd, files):
     fd = fcd.path()
-    a, unused, unused, back = files
+    unused, unused, unused, back = files
 
     if not r and (_toolbool(ui, tool, "checkconflicts") or
                   'conflicts' in _toollist(ui, tool, "check")):
@@ -738,16 +738,19 @@ def _check(r, ui, tool, fcd, files):
     if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
                                   'changed' in
                                   _toollist(ui, tool, "check")):
-        if back is not None and filecmp.cmp(a, back):
+        if back is not None and filecmp.cmp(_workingpath(repo, fcd), back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
                                  "was merge successful (yn)?"
                                  "$$ &Yes $$ &No") % fd, 1):
                 r = 1
 
     if back is not None and _toolbool(ui, tool, "fixeol"):
-        _matcheol(a, back)
+        _matcheol(_workingpath(repo, fcd), back)
 
     return r
+
+def _workingpath(repo, ctx):
+    return repo.wjoin(ctx.path())
 
 def premerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     return _filemerge(True, repo, mynode, orig, fcd, fco, fca, labels=labels)
