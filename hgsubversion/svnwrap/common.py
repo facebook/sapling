@@ -108,9 +108,9 @@ class AutoPropsConfig(object):
         return properties
 
     def autoprops_enabled(self):
-        return (self.config.has_option('miscellany', 'enable-auto-props') 
+        return (self.config.has_option('miscellany', 'enable-auto-props')
         and self.config.getboolean( 'miscellany', 'enable-auto-props')
-        and self.config.has_section('auto-props')) 
+        and self.config.has_section('auto-props'))
 
 
 def config_file_path(config_dir):
@@ -169,4 +169,3 @@ class SimpleStringIO(object):
     def close(self):
         if self._closing:
             del self._blocks
-
