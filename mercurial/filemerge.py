@@ -348,9 +348,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
             return 0
         if premerge not in validkeep:
             # restore from backup and try again
-            # TODO: Add a workingfilectx.write(otherfilectx) path so we can use
-            # util.copy here instead.
-            fcd.write(util.readfile(back), fcd.flags())
+            _restorebackup(fcd, back)
     return 1 # continue merging
 
 def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
@@ -589,6 +587,11 @@ def partextras(labels):
         "l": " [%s]" % labels[0],
         "o": " [%s]" % labels[1],
     }
+
+def _restorebackup(fcd, back):
+    # TODO: Add a workingfilectx.write(otherfilectx) path so we can use
+    # util.copy here instead.
+    fcd.write(util.readfile(back), fcd.flags())
 
 def _makebackup(repo, ui, fcd, premerge):
     """Makes a backup of the local `fcd` file prior to merging.
