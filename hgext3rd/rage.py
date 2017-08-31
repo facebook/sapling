@@ -81,7 +81,7 @@ HG: Feel free to add relevant information.
     )
     tasknum = shcmd('tasks view ' + taskid).splitlines()[0].split()[0]
     ui.write(
-        'Task created: https://our.intern.facebook.com/intern/tasks/?t=%s\n'
+        _('Task created: https://our.intern.facebook.com/intern/tasks/?t=%s\n')
         % tasknum)
 
 def which(name):
@@ -246,6 +246,6 @@ def rage(ui, repo, *pats, **opts):
     if opts.get('oncall'):
         createtask(ui, repo, 'rage info: %s' % pasteurl)
     else:
-        ui.write('Please post your problem and the following link at'
-                 ' %s for help:\n%s\n'
+        ui.write(_('Please post your problem and the following link at'
+                   ' %s for help:\n%s\n')
                  % (ui.config('ui', 'supportcontact'), pasteurl))
