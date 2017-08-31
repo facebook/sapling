@@ -285,16 +285,17 @@ def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
     repo.ui.log('update_size', '', update_filecount=sum(stats))
     return stats
 
-def _trackrebasesize(orig, self, dest, rebaseset):
-    result = orig(self, dest, rebaseset)
-    if dest is None:
+def _trackrebasesize(orig, self, destmap):
+    result = orig(self, destmap)
+    if not destmap:
         return result
 
     # The code assumes the rebase source is roughly a linear stack within a
     # single feature branch, and there is only one destination. If that is not
     # the case, the distance might be not accurate.
     repo = self.repo
-    destrev = dest.rev()
+    destrev = max(destmap.values())
+    rebaseset = destmap.keys()
     commitcount = len(rebaseset)
     distance = len(repo.revs('(%ld %% %d) + (%d %% %ld)',
                              rebaseset, destrev, destrev, rebaseset))
