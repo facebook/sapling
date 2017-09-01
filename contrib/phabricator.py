@@ -28,6 +28,11 @@ Config::
     # callsign is "FOO".
     callsign = FOO
 
+    # curl command to use. If not set (default), use builtin HTTP library to
+    # communicate. If set, use the specified curl command. This could be useful
+    # if you need to specify advanced options that is not easily supported by
+    # the internal library.
+    curlcmd = curl --connect-timeout 2 --retry 3 --silent
 """
 
 from __future__ import absolute_import
@@ -108,12 +113,20 @@ def callconduit(repo, name, params):
     """call Conduit API, params is a dict. return json.loads result, or None"""
     host, token = readurltoken(repo)
     url, authinfo = util.url('/'.join([host, 'api', name])).authinfo()
-    urlopener = urlmod.opener(repo.ui, authinfo)
     repo.ui.debug('Conduit Call: %s %s\n' % (url, params))
     params = params.copy()
     params['api.token'] = token
-    request = util.urlreq.request(url, data=urlencodenested(params))
-    body = urlopener.open(request).read()
+    data = urlencodenested(params)
+    curlcmd = repo.ui.config('phabricator', 'curlcmd')
+    if curlcmd:
+        sin, sout = util.popen2('%s -d @- %s' % (curlcmd, util.shellquote(url)))
+        sin.write(data)
+        sin.close()
+        body = sout.read()
+    else:
+        urlopener = urlmod.opener(repo.ui, authinfo)
+        request = util.urlreq.request(url, data=data)
+        body = urlopener.open(request).read()
     repo.ui.debug('Conduit Response: %s\n' % body)
     parsed = json.loads(body)
     if parsed.get(r'error_code'):
