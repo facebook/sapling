@@ -119,7 +119,8 @@ testpats = [
     (r'\[[^\]]+==', '[ foo == bar ] is a bashism, use [ foo = bar ] instead'),
     (r'(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w',
      "use egrep for extended grep syntax"),
-    (r'/bin/', "don't use explicit paths for tools"),
+    (r'(?<!!)/bin/', "don't use explicit paths for tools"),
+    (r'#!.*/bash', "don't use bash in shebang, use sh"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export .*=', "don't export and assign at once"),
     (r'^source\b', "don't use 'source', use '.'"),
@@ -159,7 +160,7 @@ testpats = [
 ]
 
 testfilters = [
-    (r"( *)(#([^\n]*\S)?)", repcomment),
+    (r"( *)(#([^!][^\n]*\S)?)", repcomment),
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
@@ -232,7 +233,7 @@ for i in [0, 1]:
 
 utestfilters = [
     (r"<<(\S+)((.|\n)*?\n  > \1)", rephere),
-    (r"( +)(#([^\n]*\S)?)", repcomment),
+    (r"( +)(#([^!][^\n]*\S)?)", repcomment),
 ]
 
 pypats = [
