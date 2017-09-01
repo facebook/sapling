@@ -9,6 +9,7 @@ hgdemandimport.enable()
 
 from mercurial.i18n import _
 from mercurial import (
+    context,
     error,
     fancyopts,
     simplemerge,
@@ -49,26 +50,6 @@ def showhelp():
     for first, second in out_opts:
         sys.stdout.write(' %-*s  %s\n' % (opts_len, first, second))
 
-class filebackedctx(object):
-    """simplemerge requires context-like objects"""
-    def __init__(self, path):
-        self._path = path
-
-    def decodeddata(self):
-        with open(self._path, "rb") as f:
-            return f.read()
-
-    def flags(self):
-        return ''
-
-    def path(self):
-        return self._path
-
-    def write(self, data, flags):
-        assert not flags
-        with open(self._path, "w") as f:
-            f.write(data)
-
 try:
     for fp in (sys.stdin, sys.stdout, sys.stderr):
         util.setbinary(fp)
@@ -85,9 +66,9 @@ try:
             raise ParseError(_('wrong number of arguments'))
     local, base, other = args
     sys.exit(simplemerge.simplemerge(uimod.ui.load(),
-                                     filebackedctx(local),
-                                     filebackedctx(base),
-                                     filebackedctx(other),
+                                     context.arbitraryfilectx(local),
+                                     context.arbitraryfilectx(base),
+                                     context.arbitraryfilectx(other),
                                      **opts))
 except ParseError as e:
     sys.stdout.write("%s: %s\n" % (sys.argv[0], e))

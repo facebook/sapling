@@ -2385,3 +2385,34 @@ class metadataonlyctx(committablectx):
                 removed.append(f)
 
         return scmutil.status(modified, added, removed, [], [], [], [])
+
+class arbitraryfilectx(object):
+    """Allows you to use filectx-like functions on a file in an arbitrary
+    location on disk, possibly not in the working directory.
+    """
+    def __init__(self, path):
+        self._path = path
+
+    def cmp(self, otherfilectx):
+        return self.data() != otherfilectx.data()
+
+    def path(self):
+        return self._path
+
+    def flags(self):
+        return ''
+
+    def data(self):
+        return util.readfile(self._path)
+
+    def decodeddata(self):
+        with open(self._path, "rb") as f:
+            return f.read()
+
+    def remove(self):
+        util.unlink(self._path)
+
+    def write(self, data, flags):
+        assert not flags
+        with open(self._path, "w") as f:
+            f.write(data)
