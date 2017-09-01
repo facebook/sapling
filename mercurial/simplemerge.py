@@ -413,7 +413,7 @@ def _picklabels(defaults, overrides):
         result[i] = override
     return result
 
-def simplemerge(ui, localctx, basectx, otherctx, repo=None, **opts):
+def simplemerge(ui, localctx, basectx, otherctx, **opts):
     """Performs the simplemerge algorithm.
 
     The merged result is written into `localctx`.
