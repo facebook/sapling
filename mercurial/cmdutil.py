@@ -3039,7 +3039,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
-    newid = None
     with repo.wlock(), repo.lock(), repo.transaction('amend'):
         # See if we got a message from -m or -l, if not, open the editor
         # with the message of the changeset to amend
@@ -3164,6 +3163,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             return old.node()
 
         ph = repo.ui.config('phases', 'new-commit', phases.draft)
+        newid = None
         try:
             if opts.get('secret'):
                 commitphase = 'secret'
