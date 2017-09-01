@@ -1361,7 +1361,9 @@ class ui(object):
             extra_defaults.update(extra)
         extra = extra_defaults
 
-        if action:
+        if action == 'diff':
+            suffix = '.diff'
+        elif action:
             suffix = '.%s.hg.txt' % action
         else:
             suffix = extra['suffix']
