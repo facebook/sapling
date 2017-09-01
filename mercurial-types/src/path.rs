@@ -31,6 +31,14 @@ impl PathElement {
     }
 }
 
+impl From<PathElement> for Path {
+    fn from(element: PathElement) -> Self {
+        Path {
+            elements: vec![element],
+        }
+    }
+}
+
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
 pub struct Path {
     elements: Vec<PathElement>,
