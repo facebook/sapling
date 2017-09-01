@@ -3173,13 +3173,14 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             newid = repo.commitctx(new)
         finally:
             repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
-        if newid != old.node():
-            # Reroute the working copy parent to the new changeset
-            repo.setparents(newid, nullid)
-            mapping = {old.node(): (newid,)}
-            if node:
-                mapping[node] = ()
-            scmutil.cleanupnodes(repo, mapping, 'amend')
+
+        # Reroute the working copy parent to the new changeset
+        repo.setparents(newid, nullid)
+        mapping = {old.node(): (newid,)}
+        if node:
+            mapping[node] = ()
+        scmutil.cleanupnodes(repo, mapping, 'amend')
+
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):
