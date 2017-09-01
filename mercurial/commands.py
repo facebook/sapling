@@ -1550,15 +1550,7 @@ def _docommit(ui, repo, *pats, **opts):
         if not obsolete.isenabled(repo, obsolete.createmarkersopt):
             cmdutil.checkunfinished(repo)
 
-        # commitfunc is used only for temporary amend commit by cmdutil.amend
-        def commitfunc(ui, repo, message, match, opts):
-            return repo.commit(message,
-                               opts.get('user') or old.user(),
-                               opts.get('date') or old.date(),
-                               match,
-                               extra=extra)
-
-        node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
+        node = cmdutil.amend(ui, repo, old, extra, pats, opts)
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1

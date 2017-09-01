@@ -1213,11 +1213,9 @@ Test heads computation on pending index changes with obsolescence markers
   > command = registrar.command(cmdtable)
   > @command(b"amendtransient",[], _('hg amendtransient [rev]'))
   > def amend(ui, repo, *pats, **opts):
-  >   def commitfunc(ui, repo, message, match, opts):
-  >     return repo.commit(message, repo['.'].user(), repo['.'].date(), match)
   >   opts['message'] = 'Test'
   >   opts['logfile'] = None
-  >   cmdutil.amend(ui, repo, commitfunc, repo['.'], {}, pats, opts)
+  >   cmdutil.amend(ui, repo, repo['.'], {}, pats, opts)
   >   ui.write('%s\n' % repo.changelog.headrevs())
   > EOF
   $ cat >> $HGRCPATH << EOF

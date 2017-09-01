@@ -3026,8 +3026,7 @@ def samefile(f, ctx1, ctx2):
     else:
         return f not in ctx2.manifest()
 
-# TODO: remove the commitfunc parameter because it is no longer used
-def amend(ui, repo, commitfunc, old, extra, pats, opts):
+def amend(ui, repo, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
 
