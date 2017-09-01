@@ -28,9 +28,9 @@ Basic amend
   $ hg update B -q
   $ echo 2 >> B
 
-#if obsstore-off
   $ hg amend
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/112478962961-af2c0941-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/112478962961-af2c0941-amend.hg (glob) (obsstore-off !)
+#if obsstore-off
   $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
   @  1 be169c7e8dbe B
   |  diff --git a/B b/B
@@ -50,7 +50,6 @@ Basic amend
      \ No newline at end of file
   
 #else
-  $ hg amend
   $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
   @  3 be169c7e8dbe B
   |  diff --git a/B b/B
@@ -100,12 +99,14 @@ Matcher and metadata options
   $ echo 3 > C
   $ echo 4 > D
   $ hg add C D
-  $ hg amend -m NEWMESSAGE -I C -q
+  $ hg amend -m NEWMESSAGE -I C
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/be169c7e8dbe-c24d73fe-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc} {files}\n'
   c7ba14d9075b NEWMESSAGE B C
   $ echo 5 > E
   $ rm C
-  $ hg amend -d '2000 1000' -u 'Foo <foo@example.com>' -A C D -q
+  $ hg amend -d '2000 1000' -u 'Foo <foo@example.com>' -A C D
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/c7ba14d9075b-b26ed45c-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc} {files} {author} {date}\n'
   14f6c4bcc865 NEWMESSAGE B D Foo <foo@example.com> 2000.01000
 
@@ -118,10 +119,12 @@ Amend with editor
   > EOF
   $ chmod +x $TESTTMP/prefix.sh
 
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend --edit -q
+  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend --edit
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/14f6c4bcc865-6591f15d-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   298f085230c3 EDITED: NEWMESSAGE
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend -e -m MSG -q
+  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend -e -m MSG
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/298f085230c3-d81a6ad3-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   974f07f28537 EDITED: MSG
 
@@ -129,7 +132,8 @@ Amend with editor
   $ hg amend -l $TESTTMP/msg -m BAR
   abort: options --message and --logfile are mutually exclusive
   [255]
-  $ hg amend -l $TESTTMP/msg -q
+  $ hg amend -l $TESTTMP/msg
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/974f07f28537-edb6470a-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   507be9bdac71 FOO
 
@@ -137,7 +141,7 @@ Interactive mode
 
   $ touch F G
   $ hg add F G
-  $ cat <<EOS | hg amend -i --config ui.interactive=1 -q
+  $ cat <<EOS | hg amend -i --config ui.interactive=1
   > y
   > n
   > EOS
@@ -149,6 +153,7 @@ Interactive mode
   new file mode 100644
   examine changes to 'G'? [Ynesfdaq?] n
   
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/507be9bdac71-7ae43d04-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{files}\n'
   B D F
 
@@ -195,7 +200,7 @@ Cannot amend public changeset
 
   $ hg phase -r A --public
   $ hg update -C -q A
-  $ hg amend -m AMEND -q
+  $ hg amend -m AMEND
   abort: cannot amend public changesets
   [255]
 
@@ -209,7 +214,8 @@ Amend a merge changeset
   > A B
   > EOS
   $ hg update -q C
-  $ hg amend -m FOO -q
+  $ hg amend -m FOO
+  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/a35c07e8a2a4-15ff4612-amend.hg (glob) (obsstore-off !)
   $ rm .hg/localtags
   $ hg log -G -T '{desc}\n'
   @    FOO
