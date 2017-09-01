@@ -235,7 +235,8 @@ class wirepeer(repository.legacypeer):
         success, data = d[:-1].split(" ", 1)
         if int(success):
             yield bin(data)
-        self._abort(error.RepoError(data))
+        else:
+            self._abort(error.RepoError(data))
 
     @batchable
     def heads(self):
