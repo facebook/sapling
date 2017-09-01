@@ -1174,3 +1174,96 @@ Test if amend preserves executable bit changes
   new mode 100755
   
 #endif
+
+Test amend with file inclusion options
+--------------------------------------
+
+These tests ensure that we are always amending some files that were part of the
+pre-amend commit. We want to test that the remaining files in the pre-amend
+commit were not changed in the amended commit. We do so by performing a diff of
+the amended commit against its parent commit.
+  $ cd ..
+  $ hg init testfileinclusions
+  $ cd testfileinclusions
+  $ echo a > a
+  $ echo b > b
+  $ hg commit -Aqm "Adding a and b"
+
+Only add changes to a particular file
+  $ echo a >> a
+  $ echo b >> b
+  $ hg commit --amend -I a
+  $ hg diff --git -r null -r .
+  diff --git a/a b/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,2 @@
+  +a
+  +a
+  diff --git a/b b/b
+  new file mode 100644
+  --- /dev/null
+  +++ b/b
+  @@ -0,0 +1,1 @@
+  +b
+
+  $ echo a >> a
+  $ hg commit --amend b
+  $ hg diff --git -r null -r .
+  diff --git a/a b/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,2 @@
+  +a
+  +a
+  diff --git a/b b/b
+  new file mode 100644
+  --- /dev/null
+  +++ b/b
+  @@ -0,0 +1,2 @@
+  +b
+  +b
+
+Exclude changes to a particular file
+  $ echo b >> b
+  $ hg commit --amend -X a
+  $ hg diff --git -r null -r .
+  diff --git a/a b/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/a
+  @@ -0,0 +1,2 @@
+  +a
+  +a
+  diff --git a/b b/b
+  new file mode 100644
+  --- /dev/null
+  +++ b/b
+  @@ -0,0 +1,3 @@
+  +b
+  +b
+  +b
+
+Check the addremove flag
+  $ echo c > c
+  $ rm a
+  $ hg commit --amend -A
+  removing a
+  adding c
+  $ hg diff --git -r null -r .
+  diff --git a/b b/b
+  new file mode 100644
+  --- /dev/null
+  +++ b/b
+  @@ -0,0 +1,3 @@
+  +b
+  +b
+  +b
+  diff --git a/c b/c
+  new file mode 100644
+  --- /dev/null
+  +++ b/c
+  @@ -0,0 +1,1 @@
+  +c
