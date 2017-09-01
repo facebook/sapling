@@ -497,6 +497,17 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     RelativePathPiece path) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
+
+  // Explicitly check for the null ID on the root directory.
+  // This isn't actually present in the mercurial data store; it has to be
+  // handled specially in the code.
+  if (path.empty() && manifestNode == kZeroHash) {
+    auto tree = std::make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
+    auto serialized = store_->serializeTree(tree.get());
+    store_->put(edenTreeID, serialized.second.coalesce());
+    return tree;
+  }
+
   ConstantStringRef content;
   try {
     content = unionStore_->get(
