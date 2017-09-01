@@ -626,11 +626,11 @@ Test hidden changesets in the rebase set (issue4504)
   $ hg add M
   $ hg commit --amend -m "M"
   $ hg log -G
-  @  20:bfaedf8eb73b M
+  @  18:bfaedf8eb73b M
   |
-  | o  18:97219452e4bd L
+  | o  17:97219452e4bd L
   | |
-  | x  17:fc37a630c901 K
+  | x  16:fc37a630c901 K
   |/
   | o  15:5ae8a643467b J
   | |
@@ -660,8 +660,8 @@ Test hidden changesets in the rebase set (issue4504)
   |/
   o  0:cd010b8cd998 A
   
-  $ hg rebase -s 14 -d 18 --config experimental.rebaseskipobsolete=True
-  note: not rebasing 14:9ad579b4a5de "I", already in destination as 17:fc37a630c901 "K"
+  $ hg rebase -s 14 -d 17 --config experimental.rebaseskipobsolete=True
+  note: not rebasing 14:9ad579b4a5de "I", already in destination as 16:fc37a630c901 "K"
   rebasing 15:5ae8a643467b "J"
 
   $ cd ..
@@ -797,9 +797,9 @@ If a rebase is going to create divergence, it should abort
   $ hg add foo
   $ hg commit -m "bar foo"
   $ hg log -G
-  @  15:73568ab6879d bar foo
+  @  14:73568ab6879d bar foo
   |
-  | o  14:77d874d096a2 10'
+  | o  13:77d874d096a2 10'
   | |
   | | o  12:3eb461388009 john doe
   | |/
@@ -814,7 +814,7 @@ If a rebase is going to create divergence, it should abort
   o  0:4a2df7238c3b A
   
   $ hg summary
-  parent: 15:73568ab6879d tip (orphan)
+  parent: 14:73568ab6879d tip (orphan)
    bar foo
   branch: default
   commit: (clean)
@@ -826,9 +826,9 @@ If a rebase is going to create divergence, it should abort
   (to force the rebase please set experimental.allowdivergence=True)
   [255]
   $ hg log -G
-  @  15:73568ab6879d bar foo
+  @  14:73568ab6879d bar foo
   |
-  | o  14:77d874d096a2 10'
+  | o  13:77d874d096a2 10'
   | |
   | | o  12:3eb461388009 john doe
   | |/
@@ -846,9 +846,9 @@ With experimental.allowdivergence=True, rebase can create divergence
 
   $ hg rebase -s 10 -d 12 --config experimental.allowdivergence=True
   rebasing 10:121d9e3bc4c6 "P"
-  rebasing 15:73568ab6879d "bar foo" (tip)
+  rebasing 14:73568ab6879d "bar foo" (tip)
   $ hg summary
-  parent: 17:61bd55f69bc4 tip
+  parent: 16:61bd55f69bc4 tip
    bar foo
   branch: default
   commit: (clean)
@@ -859,8 +859,8 @@ With experimental.allowdivergence=True, rebase can create divergence
 rebase --continue + skipped rev because their successors are in destination
 we make a change in trunk and work on conflicting changes to make rebase abort.
 
-  $ hg log -G -r 17::
-  @  17:61bd55f69bc4 bar foo
+  $ hg log -G -r 16::
+  @  16:61bd55f69bc4 bar foo
   |
   ~
 
@@ -873,7 +873,7 @@ Create the two changes in trunk
   $ hg commit -m "dummy change successor"
 
 Create the changes that we will rebase
-  $ hg update -C 17 -q
+  $ hg update -C 16 -q
   $ printf "b" > willconflict
   $ hg add willconflict
   $ hg commit -m "willconflict second version"
@@ -884,25 +884,25 @@ Create the changes that we will rebase
   $ printf "dummy" > L
   $ hg add L
   $ hg commit -m "dummy change"
-  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 19 -T '{node}'` --config experimental.stabilization=all
+  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 18 -T '{node}'` --config experimental.stabilization=all
   obsoleted 1 changesets
 
-  $ hg log -G -r 17::
-  @  22:7bdc8a87673d dummy change
+  $ hg log -G -r 16::
+  @  21:7bdc8a87673d dummy change
   |
-  x  21:8b31da3c4919 dummy change
+  x  20:8b31da3c4919 dummy change
   |
-  o  20:b82fb57ea638 willconflict second version
+  o  19:b82fb57ea638 willconflict second version
   |
-  | o  19:601db7a18f51 dummy change successor
+  | o  18:601db7a18f51 dummy change successor
   | |
-  | o  18:357ddf1602d5 willconflict first version
+  | o  17:357ddf1602d5 willconflict first version
   |/
-  o  17:61bd55f69bc4 bar foo
+  o  16:61bd55f69bc4 bar foo
   |
   ~
-  $ hg rebase -r ".^^ + .^ + ." -d 19
-  rebasing 20:b82fb57ea638 "willconflict second version"
+  $ hg rebase -r ".^^ + .^ + ." -d 18
+  rebasing 19:b82fb57ea638 "willconflict second version"
   merging willconflict
   warning: conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -912,9 +912,9 @@ Create the changes that we will rebase
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 20:b82fb57ea638 "willconflict second version"
-  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
-  rebasing 22:7bdc8a87673d "dummy change" (tip)
+  rebasing 19:b82fb57ea638 "willconflict second version"
+  note: not rebasing 20:8b31da3c4919 "dummy change", already in destination as 18:601db7a18f51 "dummy change successor"
+  rebasing 21:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
 Rebase merge where successor of one parent is equal to destination (issue5198)

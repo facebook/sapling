@@ -45,24 +45,19 @@ Test setup
   $ HGUSER=test2 hg commit --amend -m "A2" --config devel.default-date="987654321 0"
 
   $ hg log --hidden -G
-  @  changeset:   4:d004c8f274b9
+  @  changeset:   3:d004c8f274b9
   |  tag:         tip
   |  parent:      0:ea207398892e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     A2
   |
-  | x  changeset:   3:a468dc9b3633
+  | x  changeset:   2:a468dc9b3633
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     A1
   |
-  | x  changeset:   2:f137d23bb3e1
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     temporary amend commit for 471f378eab4c
-  | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
@@ -86,8 +81,8 @@ Predecessors template should show current revision as it is the working copy
   |    json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |    map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
   | @  471f378eab4c
-  |/     Successors: 4:d004c8f274b9
-  |      multi-line: 4:d004c8f274b9
+  |/     Successors: 3:d004c8f274b9
+  |      multi-line: 3:d004c8f274b9
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
   o  ea207398892e
   
@@ -95,21 +90,21 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelog
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelog -v
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A1)' --hidden
@@ -118,13 +113,13 @@ Predecessors template should show current revision as it is the working copy
 Predecessors template should show current revision as it is the working copy
   $ hg tlog
   o  d004c8f274b9
-  |    Predecessors: 3:a468dc9b3633
-  |    semi-colon: 3:a468dc9b3633
+  |    Predecessors: 2:a468dc9b3633
+  |    semi-colon: 2:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
-  |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
+  |    map: 2:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
-  |/     Successors: 4:d004c8f274b9
-  |      multi-line: 4:d004c8f274b9
+  |/     Successors: 3:d004c8f274b9
+  |      multi-line: 3:d004c8f274b9
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
   o  ea207398892e
   
@@ -132,30 +127,28 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   o  ea207398892e
   
 Predecessors template should show all the predecessors as we force their display
 with --hidden
   $ hg tlog --hidden
   o  d004c8f274b9
-  |    Predecessors: 3:a468dc9b3633
-  |    semi-colon: 3:a468dc9b3633
+  |    Predecessors: 2:a468dc9b3633
+  |    semi-colon: 2:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
-  |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
+  |    map: 2:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | @  a468dc9b3633
   |/     Predecessors: 1:471f378eab4c
   |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
-  |      Successors: 4:d004c8f274b9
-  |      multi-line: 4:d004c8f274b9
+  |      Successors: 3:d004c8f274b9
+  |      multi-line: 3:d004c8f274b9
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
-  | x  f137d23bb3e1
-  | |
   | x  471f378eab4c
-  |/     Successors: 3:a468dc9b3633
-  |      multi-line: 3:a468dc9b3633
+  |/     Successors: 2:a468dc9b3633
+  |      multi-line: 2:a468dc9b3633
   |      json: [["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]]
   o  ea207398892e
   
@@ -163,11 +156,9 @@ with --hidden
   o  d004c8f274b9
   |
   | @  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
-  | x  f137d23bb3e1
-  | |    Obsfate: pruned by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 2:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
 
@@ -182,23 +173,21 @@ visible.
   
   $ hg tlog --hidden
   @  d004c8f274b9
-  |    Predecessors: 3:a468dc9b3633
-  |    semi-colon: 3:a468dc9b3633
+  |    Predecessors: 2:a468dc9b3633
+  |    semi-colon: 2:a468dc9b3633
   |    json: ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]
-  |    map: 3:a468dc9b36338b14fdb7825f55ce3df4e71517ad
+  |    map: 2:a468dc9b36338b14fdb7825f55ce3df4e71517ad
   | x  a468dc9b3633
   |/     Predecessors: 1:471f378eab4c
   |      semi-colon: 1:471f378eab4c
   |      json: ["471f378eab4c5e25f6c77f785b27c936efb22874"]
   |      map: 1:471f378eab4c5e25f6c77f785b27c936efb22874
-  |      Successors: 4:d004c8f274b9
-  |      multi-line: 4:d004c8f274b9
+  |      Successors: 3:d004c8f274b9
+  |      multi-line: 3:d004c8f274b9
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
-  | x  f137d23bb3e1
-  | |
   | x  471f378eab4c
-  |/     Successors: 3:a468dc9b3633
-  |      multi-line: 3:a468dc9b3633
+  |/     Successors: 2:a468dc9b3633
+  |      multi-line: 2:a468dc9b3633
   |      json: [["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]]
   o  ea207398892e
   
@@ -212,11 +201,9 @@ visible.
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten as 4:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
-  | x  f137d23bb3e1
-  | |    Obsfate: pruned by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten as 2:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -224,8 +211,6 @@ visible.
   |
   | x  a468dc9b3633
   |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
-  | x  f137d23bb3e1
-  | |    Obsfate: [{"markers": [["f137d23bb3e11dc1daeb6264fac9cb2433782e15", [], 0, [["user", "test1"]], [1234567890.0, 0], ["471f378eab4c5e25f6c77f785b27c936efb22874"]]], "successors": []}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["user", "test1"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
   o  ea207398892e

@@ -862,7 +862,7 @@ Committing a empty commit does not duplicate root treemanifest
   $ hg commit -Aqm 'pre-empty commit'
   $ hg rm z
   $ hg commit --amend -m 'empty commit'
-  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-de37743b-amend.hg (glob)
+  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-9e3b6b02-amend.hg (glob)
   $ hg log -r 'tip + tip^' -T '{manifest}\n'
   1:678d3574b88c
   1:678d3574b88c

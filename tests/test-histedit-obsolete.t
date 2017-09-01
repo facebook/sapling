@@ -43,23 +43,22 @@ Test that histedit learns about obsolescence not stored in histedit state
   $ hg commit --amend b
   $ hg histedit --continue
   $ hg log -G
-  @  6:46abc7c4d873 b
+  @  5:46abc7c4d873 b
   |
-  o  5:49d44ab2be1b c
+  o  4:49d44ab2be1b c
   |
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
   e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
-  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
   1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
   114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
 
 With some node gone missing during the edit.
 
   $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
-  $ echo "pick `hg log -r 6 -T '{node|short}'`" >> plan
-  $ echo "edit `hg log -r 5 -T '{node|short}'`" >> plan
+  $ echo "pick `hg log -r 5 -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 4 -T '{node|short}'`" >> plan
   $ hg histedit -r 'all()' --commands plan
   Editing (49d44ab2be1b), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -73,15 +72,14 @@ With some node gone missing during the edit.
   $ hg --hidden --config extensions.strip= strip 'desc(XXXXXX)' --no-backup
   $ hg histedit --continue
   $ hg log -G
-  @  9:273c1f3b8626 c
+  @  8:273c1f3b8626 c
   |
-  o  8:aba7da937030 b2
+  o  7:aba7da937030 b2
   |
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
   e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
-  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
   1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
   114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
   76f72745eac0643d16530e56e2f86e36e40631f1 2ca853e48edbd6453a0674dc0fe28a0974c51b9c 0 (*) {'user': 'test'} (glob)

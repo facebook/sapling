@@ -1029,18 +1029,18 @@ This test issue 3805
   o  0:d20a80d4def3 (draft) [ ] base
   
   $ hg log -G -R ../repo-issue3805
-  @  3:323a9c3ddd91 (draft) [tip ] A
+  @  2:323a9c3ddd91 (draft) [tip ] A
   |
   o  0:d20a80d4def3 (draft) [ ] base
   
   $ hg incoming
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
-  3:323a9c3ddd91 (draft) [tip ] A
+  2:323a9c3ddd91 (draft) [tip ] A
   $ hg incoming --bundle ../issue3805.hg
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
-  3:323a9c3ddd91 (draft) [tip ] A
+  2:323a9c3ddd91 (draft) [tip ] A
   $ hg outgoing
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
@@ -1078,7 +1078,7 @@ This test issue 3814
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  2 new obsolescence markers
+  1 new obsolescence markers
   $ hg out ../repo-issue3814
   comparing with ../repo-issue3814
   searching for changes
@@ -1089,7 +1089,7 @@ Test that a local tag blocks a changeset from being hidden
 
   $ hg tag -l visible -r 1 --hidden
   $ hg log -G
-  @  3:323a9c3ddd91 (draft) [tip ] A
+  @  2:323a9c3ddd91 (draft) [tip ] A
   |
   | x  1:29f0c6921ddd (draft *obsolete*) [visible ] A
   |/
@@ -1099,8 +1099,8 @@ Test that removing a local tag does not cause some commands to fail
 
   $ hg tag -l -r tip tiptag
   $ hg tags
-  tiptag                             3:323a9c3ddd91
-  tip                                3:323a9c3ddd91
+  tiptag                             2:323a9c3ddd91
+  tip                                2:323a9c3ddd91
   visible                            1:29f0c6921ddd
   $ hg --config extensions.strip= strip -r tip --no-backup
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -1142,10 +1142,8 @@ Test bundle overlay onto hidden revision
   $ echo "B+" >> foo
   $ hg ci --amend -m "B+"
   $ hg log -G --hidden
-  @  3:b7d587542d40 (draft) [tip ] B+
+  @  2:b7d587542d40 (draft) [tip ] B+
   |
-  | x  2:eb95e9297e18 (draft *obsolete*) [ ] temporary amend commit for 44526ebb0f98
-  | |
   | x  1:44526ebb0f98 (draft *obsolete*) [ ] B
   |/
   o  0:4b34ecfb0d56 (draft) [ ] A
@@ -1157,9 +1155,9 @@ Test bundle overlay onto hidden revision
   1:44526ebb0f98 (draft) [ ] B
   2:c186d7714947 (draft) [tip ] C
   $ hg log -G -R ../bundleoverlay.hg
-  o  4:c186d7714947 (draft) [tip ] C
+  o  3:c186d7714947 (draft) [tip ] C
   |
-  | @  3:b7d587542d40 (draft) [ ] B+
+  | @  2:b7d587542d40 (draft) [ ] B+
   |/
   o  0:4b34ecfb0d56 (draft) [ ] A
   
@@ -1234,7 +1232,7 @@ Test heads computation on pending index changes with obsolescence markers
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo aa > a
   $ hg amendtransient
-  [1, 3]
+  [1, 2]
 
 Test cache consistency for the visible filter
 1) We want to make sure that the cached filtered revs are invalidated when
@@ -1275,7 +1273,7 @@ bookmarks change
   $ hg commit --amend -m "message"
   $ hg book bookb -r 13bedc178fce --hidden
   $ hg log -r 13bedc178fce
-  5:13bedc178fce (draft *obsolete*) [ bookb] add b
+  4:13bedc178fce (draft *obsolete*) [ bookb] add b
   $ hg book -d bookb
   $ hg log -r 13bedc178fce
   abort: hidden revision '13bedc178fce'!
@@ -1306,17 +1304,15 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ echo bar > f2
   $ hg commit --amend --config experimetnal.stabilization=createmarkers
   $ hg log -G
-  @  4:b0551702f918 (draft) [tip ] 2
+  @  3:b0551702f918 (draft) [tip ] 2
   |
   o  1:e016b03fd86f (draft) [ ] 1
   |
   o  0:a78f55e5508c (draft) [ ] 0
   
   $ hg log -G --hidden
-  @  4:b0551702f918 (draft) [tip ] 2
+  @  3:b0551702f918 (draft) [tip ] 2
   |
-  | x  3:f27abbcc1f77 (draft *obsolete*) [ ] temporary amend commit for e008cf283490
-  | |
   | x  2:e008cf283490 (draft *obsolete*) [ ] 2
   |/
   o  1:e016b03fd86f (draft) [ ] 1
@@ -1325,10 +1321,9 @@ Test ability to pull changeset with locally applying obsolescence markers
   
 
   $ hg strip --hidden -r 2 --config extensions.strip= --config devel.strip-obsmarkers=no
-  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-39c978dc-backup.hg (glob)
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-ede36964-backup.hg (glob)
   $ hg debugobsolete
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
-  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
   $ hg log -G
   @  2:b0551702f918 (draft) [tip ] 2
   |
@@ -1345,22 +1340,17 @@ Test ability to pull changeset with locally applying obsolescence markers
   
   $ hg debugbundle .hg/strip-backup/e008cf283490-*-backup.hg
   Stream params: {Compression: BZ}
-  changegroup -- {nbchanges: 2, version: 02}
+  changegroup -- {nbchanges: 1, version: 02}
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8
-      f27abbcc1f77fb409cf9160482fe619541e2d605
-  obsmarkers -- {}
-      version: 1 (70 bytes)
-      f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   phase-heads -- {}
-      f27abbcc1f77fb409cf9160482fe619541e2d605 draft
+      e008cf2834908e5d6b0f792a9d4b0e2272260fb8 draft
 
   $ hg pull .hg/strip-backup/e008cf283490-*-backup.hg
-  pulling from .hg/strip-backup/e008cf283490-39c978dc-backup.hg
+  pulling from .hg/strip-backup/e008cf283490-ede36964-backup.hg
   searching for changes
   no changes found
   $ hg debugobsolete
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
-  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
   $ hg log -G
   @  2:b0551702f918 (draft) [tip ] 2
   |
@@ -1394,9 +1384,8 @@ Testing that strip remove markers:
       e016b03fd86fcccc54817d120b90b751aaf367d6
       b0551702f918510f01ae838ab03a463054c67b46
   obsmarkers -- {}
-      version: 1 (139 bytes)
+      version: 1 (70 bytes)
       e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-      f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   phase-heads -- {}
       b0551702f918510f01ae838ab03a463054c67b46 draft
 
@@ -1405,11 +1394,10 @@ Testing that strip remove markers:
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  2 new obsolescence markers
+  1 new obsolescence markers
   (run 'hg update' to get a working copy)
   $ hg debugobsolete | sort
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
-  f27abbcc1f77fb409cf9160482fe619541e2d605 0 {e008cf2834908e5d6b0f792a9d4b0e2272260fb8} (*) {'user': 'test'} (glob)
   $ hg log -G
   o  2:b0551702f918 (draft) [tip ] 2
   |

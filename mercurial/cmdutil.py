@@ -3026,6 +3026,7 @@ def samefile(f, ctx1, ctx2):
     else:
         return f not in ctx2.manifest()
 
+# TODO: remove the commitfunc parameter because it is no longer used
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
@@ -3039,42 +3040,25 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     base = old.p1()
 
     with repo.wlock(), repo.lock(), repo.transaction('amend'):
-        # See if we got a message from -m or -l, if not, open the editor
-        # with the message of the changeset to amend
-        message = logmessage(ui, opts)
-        # ensure logfile does not conflict with later enforcement of the
-        # message. potential logfile content has been processed by
-        # `logmessage` anyway.
-        opts.pop('logfile')
-        # First, do a regular commit to record all changes in the working
-        # directory (if there are any)
-        ui.callhooks = False
-        activebookmark = repo._bookmarks.active
-        try:
-            repo._bookmarks.active = None
-            opts['message'] = 'temporary amend commit for %s' % old
-            node = commit(ui, repo, commitfunc, pats, opts)
-        finally:
-            repo._bookmarks.active = activebookmark
-            ui.callhooks = True
-        ctx = repo[node]
-
         # Participating changesets:
         #
-        # node/ctx o - new (intermediate) commit that contains changes
-        #          |   from working dir to go into amending commit
-        #          |   (or a workingctx if there were no changes)
+        # wctx     o - workingctx that contains changes from working copy
+        #          |   to go into amending commit
         #          |
         # old      o - changeset to amend
         #          |
         # base     o - first parent of the changeset to amend
+        wctx = repo[None]
 
         # Update extra dict from amended commit (e.g. to preserve graft
         # source)
         extra.update(old.extra())
 
-        # Also update it from the intermediate commit or from the wctx
-        extra.update(ctx.extra())
+        # Also update it from the from the wctx
+        extra.update(wctx.extra())
+
+        user = opts.get('user') or old.user()
+        date = opts.get('date') or old.date()
 
         if len(old.parents()) > 1:
             # ctx.files() isn't reliable for merges, so fall back to the
@@ -3084,30 +3068,47 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         else:
             files = set(old.files())
 
-        # Second, we use either the commit we just did, or if there were no
-        # changes the parent of the working directory as the version of the
-        # files in the final amend commit
-        if node:
-            ui.note(_('copying changeset %s to %s\n') % (ctx, base))
+        # add/remove the files to the working copy if the "addremove" option
+        # was specified.
+        matcher = scmutil.match(wctx, pats, opts)
+        if (opts.get('addremove')
+            and scmutil.addremove(repo, matcher, "", opts)):
+            raise error.Abort(
+                _("failed to mark all new/missing files as added/removed"))
 
-            user = ctx.user()
-            date = ctx.date()
+        filestoamend = set(f for f in wctx.files() if matcher(f))
+
+        changes = (len(filestoamend) > 0)
+        if changes:
             # Recompute copies (avoid recording a -> b -> a)
-            copied = copies.pathcopies(base, ctx)
+            copied = copies.pathcopies(base, wctx, matcher)
             if old.p2:
-                copied.update(copies.pathcopies(old.p2(), ctx))
+                copied.update(copies.pathcopies(old.p2(), wctx, matcher))
 
             # Prune files which were reverted by the updates: if old
-            # introduced file X and our intermediate commit, node,
-            # renamed that file, then those two files are the same and
+            # introduced file X and the file was renamed in the working
+            # copy, then those two files are the same and
             # we can discard X from our list of files. Likewise if X
             # was deleted, it's no longer relevant
-            files.update(ctx.files())
-            files = [f for f in files if not samefile(f, ctx, base)]
+            files.update(filestoamend)
+            files = [f for f in files if not samefile(f, wctx, base)]
 
             def filectxfn(repo, ctx_, path):
                 try:
-                    fctx = ctx[path]
+                    # If the file being considered is not amongst the files
+                    # to be amended, we should return the file context from the
+                    # old changeset. This avoids issues when only some files in
+                    # the working copy are being amended but there are also
+                    # changes to other files from the old changeset.
+                    if path not in filestoamend:
+                        return old.filectx(path)
+
+                    fctx = wctx[path]
+
+                    # Return None for removed files.
+                    if not fctx.exists():
+                        return None
+
                     flags = fctx.flags()
                     mctx = context.memfilectx(repo,
                                               fctx.path(), fctx.data(),
@@ -3127,11 +3128,14 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 except KeyError:
                     return None
 
-            user = opts.get('user') or old.user()
-            date = opts.get('date') or old.date()
+        # See if we got a message from -m or -l, if not, open the editor with
+        # the message of the changeset to amend.
+        message = logmessage(ui, opts)
+
         editform = mergeeditform(old, 'commit.amend')
         editor = getcommiteditor(editform=editform,
                                  **pycompat.strkwargs(opts))
+
         if not message:
             editor = getcommiteditor(edit=True, editform=editform)
             message = old.description()
@@ -3150,7 +3154,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                              editor=editor)
 
         newdesc = changelog.stripdesc(new.description())
-        if ((not node)
+        if ((not changes)
             and newdesc == old.description()
             and user == old.user()
             and date == old.date()
@@ -3172,9 +3176,26 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         # Reroute the working copy parent to the new changeset
         repo.setparents(newid, nullid)
         mapping = {old.node(): (newid,)}
-        if node:
-            mapping[node] = ()
         scmutil.cleanupnodes(repo, mapping, 'amend')
+
+        # Fixing the dirstate because localrepo.commitctx does not update
+        # it. This is rather convenient because we did not need to update
+        # the dirstate for all the files in the new commit which commitctx
+        # could have done if it updated the dirstate. Now, we can
+        # selectively update the dirstate only for the amended files.
+        dirstate = repo.dirstate
+
+        # Update the state of the files which were added and
+        # and modified in the amend to "normal" in the dirstate.
+        normalfiles = set(wctx.modified() + wctx.added()) & filestoamend
+        for f in normalfiles:
+            dirstate.normal(f)
+
+        # Update the state of files which were removed in the amend
+        # to "removed" in the dirstate.
+        removedfiles = set(wctx.removed()) & filestoamend
+        for f in removedfiles:
+            dirstate.drop(f)
 
     return newid
 
