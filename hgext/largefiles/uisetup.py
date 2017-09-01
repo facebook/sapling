@@ -53,8 +53,7 @@ def uisetup(ui):
 
     # The scmutil function is called both by the (trivial) addremove command,
     # and in the process of handling commit -A (issue3542)
-    entry = extensions.wrapfunction(scmutil, 'addremove',
-                                    overrides.scmutiladdremove)
+    extensions.wrapfunction(scmutil, 'addremove', overrides.scmutiladdremove)
     extensions.wrapfunction(cmdutil, 'add', overrides.cmdutiladd)
     extensions.wrapfunction(cmdutil, 'remove', overrides.cmdutilremove)
     extensions.wrapfunction(cmdutil, 'forget', overrides.cmdutilforget)
@@ -64,8 +63,8 @@ def uisetup(ui):
     # Subrepos call status function
     entry = extensions.wrapcommand(commands.table, 'status',
                                    overrides.overridestatus)
-    entry = extensions.wrapfunction(subrepo.hgsubrepo, 'status',
-                                    overrides.overridestatusfn)
+    extensions.wrapfunction(subrepo.hgsubrepo, 'status',
+                            overrides.overridestatusfn)
 
     entry = extensions.wrapcommand(commands.table, 'log',
                                    overrides.overridelog)
@@ -111,46 +110,41 @@ def uisetup(ui):
     pushopt = [('', 'lfrev', [],
                 _('upload largefiles for these revisions'), _('REV'))]
     entry[1].extend(pushopt)
-    entry = extensions.wrapfunction(exchange, 'pushoperation',
-                                    overrides.exchangepushoperation)
+    extensions.wrapfunction(exchange, 'pushoperation',
+                            overrides.exchangepushoperation)
 
     entry = extensions.wrapcommand(commands.table, 'clone',
                                    overrides.overrideclone)
     cloneopt = [('', 'all-largefiles', None,
                  _('download all versions of all largefiles'))]
     entry[1].extend(cloneopt)
-    entry = extensions.wrapfunction(hg, 'clone', overrides.hgclone)
-    entry = extensions.wrapfunction(hg, 'postshare', overrides.hgpostshare)
+    extensions.wrapfunction(hg, 'clone', overrides.hgclone)
+    extensions.wrapfunction(hg, 'postshare', overrides.hgpostshare)
 
     entry = extensions.wrapcommand(commands.table, 'cat',
                                    overrides.overridecat)
-    entry = extensions.wrapfunction(merge, '_checkunknownfile',
-                                    overrides.overridecheckunknownfile)
-    entry = extensions.wrapfunction(merge, 'calculateupdates',
-                                    overrides.overridecalculateupdates)
-    entry = extensions.wrapfunction(merge, 'recordupdates',
-                                    overrides.mergerecordupdates)
-    entry = extensions.wrapfunction(merge, 'update',
-                                    overrides.mergeupdate)
-    entry = extensions.wrapfunction(filemerge, '_filemerge',
-                                    overrides.overridefilemerge)
-    entry = extensions.wrapfunction(cmdutil, 'copy',
-                                    overrides.overridecopy)
+    extensions.wrapfunction(merge, '_checkunknownfile',
+                            overrides.overridecheckunknownfile)
+    extensions.wrapfunction(merge, 'calculateupdates',
+                            overrides.overridecalculateupdates)
+    extensions.wrapfunction(merge, 'recordupdates',
+                            overrides.mergerecordupdates)
+    extensions.wrapfunction(merge, 'update', overrides.mergeupdate)
+    extensions.wrapfunction(filemerge, '_filemerge',
+                            overrides.overridefilemerge)
+    extensions.wrapfunction(cmdutil, 'copy', overrides.overridecopy)
 
     # Summary calls dirty on the subrepos
-    entry = extensions.wrapfunction(subrepo.hgsubrepo, 'dirty',
-                                    overrides.overridedirty)
+    extensions.wrapfunction(subrepo.hgsubrepo, 'dirty', overrides.overridedirty)
 
-    entry = extensions.wrapfunction(cmdutil, 'revert',
-                                    overrides.overriderevert)
+    extensions.wrapfunction(cmdutil, 'revert', overrides.overriderevert)
 
     extensions.wrapcommand(commands.table, 'archive',
                            overrides.overridearchivecmd)
     extensions.wrapfunction(archival, 'archive', overrides.overridearchive)
     extensions.wrapfunction(subrepo.hgsubrepo, 'archive',
                             overrides.hgsubrepoarchive)
-    extensions.wrapfunction(webcommands, 'archive',
-                            overrides.hgwebarchive)
+    extensions.wrapfunction(webcommands, 'archive', overrides.hgwebarchive)
     extensions.wrapfunction(cmdutil, 'bailifchanged',
                             overrides.overridebailifchanged)
 
