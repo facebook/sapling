@@ -451,7 +451,7 @@ class filefixupstate(object):
                                      for i, _f in visiblefctxs]),
                             self._getline(l)))
         # run editor
-        editedtext = self.ui.edit(editortext, '')
+        editedtext = self.ui.edit(editortext, '', action='absorb')
         if not editedtext:
             raise error.Abort(_('empty editor text'))
         # parse edited result

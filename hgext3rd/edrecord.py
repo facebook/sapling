@@ -92,7 +92,7 @@ def recordfilter(ui, headers, operation=None):
         override = {}
 
     with ui.configoverride(override):
-        patch = ui.edit(patch.getvalue(), "", extra={'suffix': '.diff'})
+        patch = ui.edit(patch.getvalue(), "", action=(operation or 'edit'))
 
     # remove comments from patch
     # if there's an empty line, add a space to it
