@@ -3069,7 +3069,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         #          |
         # old      o - changeset to amend
         #          |
-        # base     o - parent of amending changeset
+        # base     o - first parent of the changeset to amend
 
         # Update extra dict from amended commit (e.g. to preserve graft
         # source)
