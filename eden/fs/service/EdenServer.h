@@ -35,6 +35,10 @@ class ThriftServer;
 }
 }
 
+namespace folly {
+class EventBase;
+}
+
 namespace facebook {
 namespace eden {
 
@@ -185,6 +189,15 @@ class EdenServer {
     return functionScheduler_;
   }
 
+  /**
+   * Get the main thread's EventBase.
+   *
+   * Callers can use this for scheduling work to be run in the main thread.
+   */
+  folly::EventBase* getMainEventBase() const {
+    return mainEventBase_;
+  }
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronizaiton between unmoutFinished
@@ -251,6 +264,17 @@ class EdenServer {
    * Function scheduler to unload free inodes periodically
    */
   std::shared_ptr<folly::FunctionScheduler> functionScheduler_;
+
+  /**
+   * The EventBase driving the main thread loop.
+   *
+   * This is used to drive the the thrift server and can also be used for
+   * scheduling other asynchronous operations.
+   *
+   * This is set when the EdenServer is started and is never updated after
+   * this, so we do not need synchronization when reading it.
+   */
+  folly::EventBase* mainEventBase_;
 };
 }
 } // facebook::eden

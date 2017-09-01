@@ -160,7 +160,11 @@ folly::Future<Unit> EdenServer::unmountAll() {
 
 void EdenServer::prepare() {
   acquireEdenLock();
+  // Store a pointer to the EventBase that will be used to drive
+  // the main thread.  The runServer() code will end up driving this EventBase.
+  mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   createThriftServer();
+
   localStore_ = make_shared<LocalStore>(rocksPath_);
   functionScheduler_ = make_shared<folly::FunctionScheduler>();
   functionScheduler_->setThreadName("EdenFuncSched");
