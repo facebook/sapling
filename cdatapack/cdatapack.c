@@ -25,10 +25,11 @@
 #include <memory.h>
 #include <sys/mman.h>
 
+#define ntoh_data_offset ntohll
+
 #if defined(__linux__)
 #include <endian.h>
 #define ntohll be64toh
-#define ntoh_data_offset ntohll
 
 // NOTE: we actually want MADV_FREE, because we only want to mark the page as
 // eligible for immediate reuse while retaining the data.  however, the exciting
