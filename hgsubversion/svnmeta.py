@@ -227,6 +227,7 @@ class SVNMeta(object):
         return self.__subdir
 
     def _set_subdir(self, subdir):
+        subdir = util.forceutf8(subdir)
         if subdir:
             subdir = '/'.join(p for p in subdir.split('/') if p)
 
@@ -446,6 +447,7 @@ class SVNMeta(object):
         '''Normalize a path to strip of leading slashes and our subdir if we
         have one.
         '''
+        path = util.forceutf8(path)
         if self.subdir and path == self.subdir[:-1]:
             return ''
         if path and path[0] == '/':
