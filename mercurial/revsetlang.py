@@ -353,20 +353,16 @@ def analyze(x):
     """
     return _analyze(x)
 
-def _optimize(x, small):
+def _optimize(x):
     if x is None:
         return 0, x
 
-    smallbonus = 1
-    if small:
-        smallbonus = .5
-
     op = x[0]
     if op in ('string', 'symbol'):
-        return smallbonus, x # single revisions are small
+        return 0.5, x # single revisions are small
     elif op == 'and':
-        wa, ta = _optimize(x[1], True)
-        wb, tb = _optimize(x[2], True)
+        wa, ta = _optimize(x[1])
+        wb, tb = _optimize(x[2])
         w = min(wa, wb)
 
         # (draft/secret/_notpublic() & ::x) have a fast path
@@ -397,12 +393,12 @@ def _optimize(x, small):
             else:
                 s = '\0'.join(t[1] for w, t in ss)
                 y = _build('_list(_)', ('string', s))
-                w, t = _optimize(y, False)
+                w, t = _optimize(y)
             ws.append(w)
             ts.append(t)
             del ss[:]
         for y in getlist(x[1]):
-            w, t = _optimize(y, False)
+            w, t = _optimize(y)
             if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
                 continue
@@ -416,35 +412,35 @@ def _optimize(x, small):
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if _match('public()', x[1]):
-            o = _optimize(_build('_notpublic()'), not small)
+            o = _optimize(_build('_notpublic()'))
             return o[0], o[1]
         else:
-            o = _optimize(x[1], not small)
+            o = _optimize(x[1])
             return o[0], (op, o[1])
     elif op == 'rangeall':
-        return smallbonus, x
+        return 1, x
     elif op in ('rangepre', 'rangepost', 'parentpost'):
-        o = _optimize(x[1], small)
+        o = _optimize(x[1])
         return o[0], (op, o[1])
     elif op in ('dagrange', 'range'):
-        wa, ta = _optimize(x[1], small)
-        wb, tb = _optimize(x[2], small)
+        wa, ta = _optimize(x[1])
+        wb, tb = _optimize(x[2])
         return wa + wb, (op, ta, tb)
     elif op in ('parent', 'ancestor', 'relation', 'subscript'):
-        w, t = _optimize(x[1], small)
+        w, t = _optimize(x[1])
         return w, (op, t, x[2])
     elif op == 'relsubscript':
-        w, t = _optimize(x[1], small)
+        w, t = _optimize(x[1])
         return w, (op, t, x[2], x[3])
     elif op == 'list':
-        ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
+        ws, ts = zip(*(_optimize(y) for y in x[1:]))
         return sum(ws), (op,) + ts
     elif op == 'keyvalue':
-        w, t = _optimize(x[2], small)
+        w, t = _optimize(x[2])
         return w, (op, x[1], t)
     elif op == 'func':
         f = getsymbol(x[1])
-        wa, ta = _optimize(x[2], small)
+        wa, ta = _optimize(x[2])
         if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
                  'keyword', 'outgoing', 'user', 'destination'):
             w = 10 # slow
@@ -453,7 +449,7 @@ def _optimize(x, small):
         elif f == "contains":
             w = 100 # very slow
         elif f == "ancestor":
-            w = 1 * smallbonus
+            w = 0.5
         elif f in ('reverse', 'limit', 'first', 'wdir', '_intlist'):
             w = 0
         elif f == "sort":
@@ -468,7 +464,7 @@ def optimize(tree):
 
     All pseudo operations should be transformed beforehand.
     """
-    _weight, newtree = _optimize(tree, small=True)
+    _weight, newtree = _optimize(tree)
     return newtree
 
 # the set of valid characters for the initial letter of symbols in
