@@ -49,6 +49,8 @@ elements = {
 
 keywords = {'and', 'or', 'not'}
 
+symbols = {}
+
 _quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 
@@ -441,21 +443,7 @@ def _optimize(x):
     elif op == 'func':
         f = getsymbol(x[1])
         wa, ta = _optimize(x[2])
-        if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
-                 'keyword', 'outgoing', 'user', 'destination'):
-            w = 10 # slow
-        elif f in ('modifies', 'adds', 'removes'):
-            w = 30 # slower
-        elif f == "contains":
-            w = 100 # very slow
-        elif f == "ancestor":
-            w = 0.5
-        elif f in ('reverse', 'limit', 'first', 'wdir', '_intlist'):
-            w = 0
-        elif f == "sort":
-            w = 10 # assume most sorts look at changelog
-        else:
-            w = 1
+        w = getattr(symbols.get(f), '_weight', 1)
         return w + wa, (op, x[1], ta)
     raise ValueError('invalid operator %r' % op)
 

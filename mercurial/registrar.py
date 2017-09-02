@@ -166,6 +166,16 @@ class revsetpredicate(_funcregistrarbase):
     Optional argument 'takeorder' indicates whether a predicate function
     takes ordering policy as the last argument.
 
+    Optional argument 'weight' indicates the estimated run-time cost, useful
+    for static optimization, default is 1. Higher weight means more expensive.
+    Usually, revsets that are fast and return only one revision has a weight of
+    0.5 (ex. a symbol); revsets with O(changelog) complexity and read only the
+    changelog have weight 10 (ex. author); revsets reading manifest deltas have
+    weight 30 (ex. adds); revset reading manifest contents have weight 100
+    (ex. contains). Note: those values are flexible. If the revset has a
+    same big-O time complexity as 'contains', but with a smaller constant, it
+    might have a weight of 90.
+
     'revsetpredicate' instance in example above can be used to
     decorate multiple functions.
 
@@ -178,9 +188,10 @@ class revsetpredicate(_funcregistrarbase):
     _getname = _funcregistrarbase._parsefuncdecl
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, safe=False, takeorder=False):
+    def _extrasetup(self, name, func, safe=False, takeorder=False, weight=1):
         func._safe = safe
         func._takeorder = takeorder
+        func._weight = weight
 
 class filesetpredicate(_funcregistrarbase):
     """Decorator to register fileset predicate

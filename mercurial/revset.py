@@ -253,7 +253,7 @@ def func(repo, subset, a, b, order):
 #   repo - current repository instance
 #   subset - of revisions to be examined
 #   x - argument in tree form
-symbols = {}
+symbols = revsetlang.symbols
 
 # symbols which can't be used for a DoS attack for any given input
 # (e.g. those which accept regexes as plain strings shouldn't be included)
@@ -276,7 +276,7 @@ def _destmerge(repo, subset, x):
         sourceset = getset(repo, fullreposet(repo), x)
     return subset & baseset([destutil.destmerge(repo, sourceset=sourceset)])
 
-@predicate('adds(pattern)', safe=True)
+@predicate('adds(pattern)', safe=True, weight=30)
 def adds(repo, subset, x):
     """Changesets that add a file matching pattern.
 
@@ -288,7 +288,7 @@ def adds(repo, subset, x):
     pat = getstring(x, _("adds requires a pattern"))
     return checkstatus(repo, subset, pat, 1)
 
-@predicate('ancestor(*changeset)', safe=True)
+@predicate('ancestor(*changeset)', safe=True, weight=0.5)
 def ancestor(repo, subset, x):
     """A greatest common ancestor of the changesets.
 
@@ -394,7 +394,7 @@ def ancestorspec(repo, subset, x, n, order):
         ps.add(r)
     return subset & ps
 
-@predicate('author(string)', safe=True)
+@predicate('author(string)', safe=True, weight=10)
 def author(repo, subset, x):
     """Alias for ``user(string)``.
     """
@@ -462,7 +462,7 @@ def bookmark(repo, subset, x):
     bms -= {node.nullrev}
     return subset & bms
 
-@predicate('branch(string or set)', safe=True)
+@predicate('branch(string or set)', safe=True, weight=10)
 def branch(repo, subset, x):
     """
     All changesets belonging to the given branch or the branches of the given
@@ -595,7 +595,7 @@ def children(repo, subset, x):
     cs = _children(repo, subset, s)
     return subset & cs
 
-@predicate('closed()', safe=True)
+@predicate('closed()', safe=True, weight=10)
 def closed(repo, subset, x):
     """Changeset is closed.
     """
@@ -604,7 +604,7 @@ def closed(repo, subset, x):
     return subset.filter(lambda r: repo[r].closesbranch(),
                          condrepr='<branch closed>')
 
-@predicate('contains(pattern)')
+@predicate('contains(pattern)', weight=100)
 def contains(repo, subset, x):
     """The revision's manifest contains a file matching pattern (but might not
     modify it). See :hg:`help patterns` for information about file patterns.
@@ -654,7 +654,7 @@ def converted(repo, subset, x):
     return subset.filter(lambda r: _matchvalue(r),
                          condrepr=('<converted %r>', rev))
 
-@predicate('date(interval)', safe=True)
+@predicate('date(interval)', safe=True, weight=10)
 def date(repo, subset, x):
     """Changesets within the interval, see :hg:`help dates`.
     """
@@ -664,7 +664,7 @@ def date(repo, subset, x):
     return subset.filter(lambda x: dm(repo[x].date()[0]),
                          condrepr=('<date %r>', ds))
 
-@predicate('desc(string)', safe=True)
+@predicate('desc(string)', safe=True, weight=10)
 def desc(repo, subset, x):
     """Search commit message for string. The match is case-insensitive.
 
@@ -722,7 +722,7 @@ def _firstdescendants(repo, subset, x):
     # Like ``descendants(set)`` but follows only the first parents.
     return _descendants(repo, subset, x, followfirst=True)
 
-@predicate('destination([set])', safe=True)
+@predicate('destination([set])', safe=True, weight=10)
 def destination(repo, subset, x):
     """Changesets that were created by a graft, transplant or rebase operation,
     with the given revisions specified as the source.  Omitting the optional set
@@ -891,7 +891,7 @@ def filelog(repo, subset, x):
 
     return subset & s
 
-@predicate('first(set, [n])', safe=True, takeorder=True)
+@predicate('first(set, [n])', safe=True, takeorder=True, weight=0)
 def first(repo, subset, x, order):
     """An alias for limit().
     """
@@ -1012,7 +1012,7 @@ def getall(repo, subset, x):
     getargs(x, 0, 0, _("all takes no arguments"))
     return subset & spanset(repo)  # drop "null" if any
 
-@predicate('grep(regex)')
+@predicate('grep(regex)', weight=10)
 def grep(repo, subset, x):
     """Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``
     to ensure special escape characters are handled correctly. Unlike
@@ -1097,7 +1097,7 @@ def _matchfiles(repo, subset, x):
                                    'exclude=%r, default=%r, rev=%r>',
                                    pats, inc, exc, default, rev))
 
-@predicate('file(pattern)', safe=True)
+@predicate('file(pattern)', safe=True, weight=10)
 def hasfile(repo, subset, x):
     """Changesets affecting files matched by pattern.
 
@@ -1139,7 +1139,7 @@ def hidden(repo, subset, x):
     hiddenrevs = repoview.filterrevs(repo, 'visible')
     return subset & hiddenrevs
 
-@predicate('keyword(string)', safe=True)
+@predicate('keyword(string)', safe=True, weight=10)
 def keyword(repo, subset, x):
     """Search commit message, user name, and names of changed files for
     string. The match is case-insensitive.
@@ -1157,7 +1157,7 @@ def keyword(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<keyword %r>', kw))
 
-@predicate('limit(set[, n[, offset]])', safe=True, takeorder=True)
+@predicate('limit(set[, n[, offset]])', safe=True, takeorder=True, weight=0)
 def limit(repo, subset, x, order):
     """First n members of set, defaulting to 1, starting from offset.
     """
@@ -1259,7 +1259,7 @@ def minrev(repo, subset, x):
         pass
     return baseset(datarepr=('<min %r, %r>', subset, os))
 
-@predicate('modifies(pattern)', safe=True)
+@predicate('modifies(pattern)', safe=True, weight=30)
 def modifies(repo, subset, x):
     """Changesets modifying files matched by pattern.
 
@@ -1403,7 +1403,7 @@ def origin(repo, subset, x):
     # some optimizations from the fact this is a baseset.
     return subset & o
 
-@predicate('outgoing([path])', safe=False)
+@predicate('outgoing([path])', safe=False, weight=10)
 def outgoing(repo, subset, x):
     """Changesets not found in the specified destination repository, or the
     default push location.
@@ -1654,7 +1654,7 @@ def remote(repo, subset, x):
             return baseset([r])
     return baseset()
 
-@predicate('removes(pattern)', safe=True)
+@predicate('removes(pattern)', safe=True, weight=30)
 def removes(repo, subset, x):
     """Changesets which remove files matching pattern.
 
@@ -1794,7 +1794,7 @@ def matching(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<matching%r %r>', fields, revs))
 
-@predicate('reverse(set)', safe=True, takeorder=True)
+@predicate('reverse(set)', safe=True, takeorder=True, weight=0)
 def reverse(repo, subset, x, order):
     """Reverse order of set.
     """
@@ -1862,7 +1862,8 @@ def _getsortargs(x):
 
     return args['set'], keyflags, opts
 
-@predicate('sort(set[, [-]key... [, ...]])', safe=True, takeorder=True)
+@predicate('sort(set[, [-]key... [, ...]])', safe=True, takeorder=True,
+           weight=10)
 def sort(repo, subset, x, order):
     """Sort set by keys. The default sort order is ascending, specify a key
     as ``-key`` to sort in descending order.
@@ -2033,7 +2034,7 @@ def orphan(repo, subset, x):
     return subset & orphan
 
 
-@predicate('user(string)', safe=True)
+@predicate('user(string)', safe=True, weight=10)
 def user(repo, subset, x):
     """User name contains string. The match is case-insensitive.
 
@@ -2042,7 +2043,7 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
-@predicate('wdir()', safe=True)
+@predicate('wdir()', safe=True, weight=0)
 def wdir(repo, subset, x):
     """Working directory. (EXPERIMENTAL)"""
     # i18n: "wdir" is a keyword
@@ -2097,7 +2098,7 @@ def _orderedintlist(repo, subset, x):
     return baseset([r for r in ls if r in s])
 
 # for internal use
-@predicate('_intlist', safe=True, takeorder=True)
+@predicate('_intlist', safe=True, takeorder=True, weight=0)
 def _intlist(repo, subset, x, order):
     if order == followorder:
         # slow path to take the subset order
