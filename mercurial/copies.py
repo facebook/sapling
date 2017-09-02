@@ -7,7 +7,9 @@
 
 from __future__ import absolute_import
 
+import collections
 import heapq
+import os
 
 from . import (
     match as matchmod,
@@ -364,6 +366,8 @@ def mergecopies(repo, c1, c2, base):
     # rebase.
     if copytracing == 'off':
         return {}, {}, {}, {}, {}
+    elif copytracing == 'heuristics':
+        return _heuristicscopytracing(repo, c1, c2, base)
     else:
         return _fullcopytracing(repo, c1, c2, base)
 
@@ -598,6 +602,94 @@ def _fullcopytracing(repo, c1, c2, base):
                     break
 
     return copy, movewithdir, diverge, renamedelete, dirmove
+
+def _heuristicscopytracing(repo, c1, c2, base):
+    """ Fast copytracing using filename heuristics
+
+    Assumes that moves or renames are of following two types:
+
+    1) Inside a directory only (same directory name but different filenames)
+    2) Move from one directory to another
+                    (same filenames but different directory names)
+
+    Works only when there are no merge commits in the "source branch".
+    Source branch is commits from base up to c2 not including base.
+
+    If merge is involved it fallbacks to _fullcopytracing().
+
+    Can be used by setting the following config:
+
+        [experimental]
+        copytrace = heuristics
+    """
+
+    if c1.rev() is None:
+        c1 = c1.p1()
+    if c2.rev() is None:
+        c2 = c2.p1()
+
+    copies = {}
+
+    changedfiles = set()
+    m1 = c1.manifest()
+    if not repo.revs('%d::%d', base.rev(), c2.rev()):
+        # If base is not in c2 branch, we switch to fullcopytracing
+        repo.ui.debug("switching to full copytracing as base is not "
+                      "an ancestor of c2\n")
+        return _fullcopytracing(repo, c1, c2, base)
+
+    ctx = c2
+    while ctx != base:
+        if len(ctx.parents()) == 2:
+            # To keep things simple let's not handle merges
+            repo.ui.debug("switching to full copytracing because of merges\n")
+            return _fullcopytracing(repo, c1, c2, base)
+        changedfiles.update(ctx.files())
+        ctx = ctx.p1()
+
+    cp = _forwardcopies(base, c2)
+    for dst, src in cp.iteritems():
+        if src in m1:
+            copies[dst] = src
+
+    # file is missing if it isn't present in the destination, but is present in
+    # the base and present in the source.
+    # Presence in the base is important to exclude added files, presence in the
+    # source is important to exclude removed files.
+    missingfiles = filter(lambda f: f not in m1 and f in base and f in c2,
+                          changedfiles)
+
+    if missingfiles:
+        basenametofilename = collections.defaultdict(list)
+        dirnametofilename = collections.defaultdict(list)
+
+        for f in m1.filesnotin(base.manifest()):
+            basename = os.path.basename(f)
+            dirname = os.path.dirname(f)
+            basenametofilename[basename].append(f)
+            dirnametofilename[dirname].append(f)
+
+        # in case of a rebase/graft, base may not be a common ancestor
+        anc = c1.ancestor(c2)
+
+        for f in missingfiles:
+            basename = os.path.basename(f)
+            dirname = os.path.dirname(f)
+            samebasename = basenametofilename[basename]
+            samedirname = dirnametofilename[dirname]
+            movecandidates = samebasename + samedirname
+            # f is guaranteed to be present in c2, that's why
+            # c2.filectx(f) won't fail
+            f2 = c2.filectx(f)
+            for candidate in movecandidates:
+                f1 = c1.filectx(candidate)
+                if _related(f1, f2, anc.rev()):
+                    # if there are a few related copies then we'll merge
+                    # changes into all of them. This matches the behaviour
+                    # of upstream copytracing
+                    copies[candidate] = f
+
+    return copies, {}, {}, {}, {}
 
 def _related(f1, f2, limit):
     """return True if f1 and f2 filectx have a common ancestor
