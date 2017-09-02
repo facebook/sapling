@@ -410,12 +410,12 @@ def runfilter(context, mapping, data):
         raise error.Abort(msg)
 
 def buildmap(exp, context):
-    func, data = compileexp(exp[1], context, methods)
-    tfunc, tdata = gettemplate(exp[2], context)
-    return (runmap, (func, data, tfunc, tdata))
+    darg = compileexp(exp[1], context, methods)
+    targ = gettemplate(exp[2], context)
+    return (runmap, (darg, targ))
 
 def runmap(context, mapping, data):
-    func, data, tfunc, tdata = data
+    (func, data), (tfunc, tdata) = data
     d = func(context, mapping, data)
     if util.safehasattr(d, 'itermaps'):
         diter = d.itermaps()
