@@ -16,8 +16,8 @@
 #include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <gflags/gflags.h>
-#include <rocksdb/db.h> // @manual=@/rocksdb:rocksdb
-#include <rocksdb/utilities/options_util.h> // @manual=@/rocksdb:rocksdb
+#include <rocksdb/db.h>
+#include <rocksdb/utilities/options_util.h>
 #include <sysexits.h>
 
 #include "eden/fs/model/Tree.h"

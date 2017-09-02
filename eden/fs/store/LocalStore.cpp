@@ -16,7 +16,7 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <rocksdb/db.h> // @manual=@/rocksdb:rocksdb
+#include <rocksdb/db.h>
 #include <array>
 
 #include "eden/fs/model/Blob.h"
