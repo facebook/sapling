@@ -306,9 +306,13 @@ def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
 
 def mergecopies(repo, c1, c2, base):
     """
-    The basic algorithm for copytracing. Copytracing is used in commands like
-    rebase, merge, unshelve, etc to merge files that were moved/ copied in one
-    merge parent and modified in another. For example:
+    The function calling different copytracing algorithms on the basis of config
+    which find moves and copies between context c1 and c2 that are relevant for
+    merging. 'base' will be used as the merge base.
+
+    Copytracing is used in commands like rebase, merge, unshelve, etc to merge
+    files that were moved/ copied in one merge parent and modified in another.
+    For example:
 
     o          ---> 4 another commit
     |
@@ -323,13 +327,6 @@ def mergecopies(repo, c1, c2, base):
     message:
 
     ```other changed <file> which local deleted```
-
-    If copytrace is enabled, this function finds all the new files that were
-    added from merge base up to the top commit (here 4), and for each file it
-    checks if this file was copied from another file (a.txt in the above case).
-
-    Find moves and copies between context c1 and c2 that are relevant
-    for merging. 'base' will be used as the merge base.
 
     Returns five dicts: "copy", "movewithdir", "diverge", "renamedelete" and
     "dirmove".
@@ -360,12 +357,24 @@ def mergecopies(repo, c1, c2, base):
     if c2.node() is None and c1.node() == repo.dirstate.p1():
         return repo.dirstate.copies(), {}, {}, {}, {}
 
+    copytracing = repo.ui.config('experimental', 'copytrace')
+
     # Copy trace disabling is explicitly below the node == p1 logic above
     # because the logic above is required for a simple copy to be kept across a
     # rebase.
-    if repo.ui.config('experimental', 'copytrace') == 'off':
+    if copytracing == 'off':
         return {}, {}, {}, {}, {}
+    else:
+        return _fullcopytracing(repo, c1, c2, base)
 
+def _fullcopytracing(repo, c1, c2, base):
+    """ The full copytracing algorithm which finds all the new files that were
+    added from merge base up to the top commit and for each file it checks if
+    this file was copied from another file.
+
+    This is pretty slow when a lot of changesets are involved but will track all
+    the copies.
+    """
     # In certain scenarios (e.g. graft, update or rebase), base can be
     # overridden We still need to know a real common ancestor in this case We
     # can't just compute _c1.ancestor(_c2) and compare it to ca, because there

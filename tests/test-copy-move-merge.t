@@ -1,3 +1,6 @@
+Test for the full copytracing algorithm
+=======================================
+
   $ hg init t
   $ cd t
 
