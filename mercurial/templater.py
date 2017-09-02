@@ -298,11 +298,17 @@ def findsymbolicname(arg):
         else:
             return None
 
-def evalfuncarg(context, mapping, arg):
+def evalrawexp(context, mapping, arg):
+    """Evaluate given argument as a bare template object which may require
+    further processing (such as folding generator of strings)"""
     func, data = arg
-    # func() may return string, generator of strings or arbitrary object such
-    # as date tuple, but filter does not want generator.
-    thing = func(context, mapping, data)
+    return func(context, mapping, data)
+
+def evalfuncarg(context, mapping, arg):
+    """Evaluate given argument as value type"""
+    thing = evalrawexp(context, mapping, arg)
+    # evalrawexp() may return string, generator of strings or arbitrary object
+    # such as date tuple, but filter does not want generator.
     if isinstance(thing, types.GeneratorType):
         thing = stringify(thing)
     return thing
@@ -331,8 +337,7 @@ def evalinteger(context, mapping, arg, err):
         raise error.ParseError(err)
 
 def evalstring(context, mapping, arg):
-    func, data = arg
-    return stringify(func(context, mapping, data))
+    return stringify(evalrawexp(context, mapping, arg))
 
 def evalstringliteral(context, mapping, arg):
     """Evaluate given argument as string template, but returns symbol name
@@ -380,8 +385,8 @@ def buildtemplate(exp, context):
     return (runtemplate, ctmpl)
 
 def runtemplate(context, mapping, template):
-    for func, data in template:
-        yield func(context, mapping, data)
+    for arg in template:
+        yield evalrawexp(context, mapping, arg)
 
 def buildfilter(exp, context):
     n = getsymbol(exp[2])
@@ -415,15 +420,15 @@ def buildmap(exp, context):
     return (runmap, (darg, targ))
 
 def runmap(context, mapping, data):
-    (func, data), (tfunc, tdata) = data
-    d = func(context, mapping, data)
+    darg, targ = data
+    d = evalrawexp(context, mapping, darg)
     if util.safehasattr(d, 'itermaps'):
         diter = d.itermaps()
     else:
         try:
             diter = iter(d)
         except TypeError:
-            sym = findsymbolicname((func, data))
+            sym = findsymbolicname(darg)
             if sym:
                 raise error.ParseError(_("keyword '%s' is not iterable") % sym)
             else:
@@ -435,7 +440,7 @@ def runmap(context, mapping, data):
         if isinstance(v, dict):
             lm.update(v)
             lm['originalnode'] = mapping.get('node')
-            yield tfunc(context, lm, tdata)
+            yield evalrawexp(context, lm, targ)
         else:
             # v is not an iterable of dicts, this happen when 'key'
             # has been fully expanded already and format is useless.
@@ -718,9 +723,9 @@ def if_(context, mapping, args):
 
     test = evalboolean(context, mapping, args[0])
     if test:
-        yield args[1][0](context, mapping, args[1][1])
+        yield evalrawexp(context, mapping, args[1])
     elif len(args) == 3:
-        yield args[2][0](context, mapping, args[2][1])
+        yield evalrawexp(context, mapping, args[2])
 
 @templatefunc('ifcontains(needle, haystack, then[, else])')
 def ifcontains(context, mapping, args):
@@ -734,9 +739,9 @@ def ifcontains(context, mapping, args):
     haystack = evalfuncarg(context, mapping, args[1])
 
     if needle in haystack:
-        yield args[2][0](context, mapping, args[2][1])
+        yield evalrawexp(context, mapping, args[2])
     elif len(args) == 4:
-        yield args[3][0](context, mapping, args[3][1])
+        yield evalrawexp(context, mapping, args[3])
 
 @templatefunc('ifeq(expr1, expr2, then[, else])')
 def ifeq(context, mapping, args):
@@ -749,9 +754,9 @@ def ifeq(context, mapping, args):
     test = evalstring(context, mapping, args[0])
     match = evalstring(context, mapping, args[1])
     if test == match:
-        yield args[2][0](context, mapping, args[2][1])
+        yield evalrawexp(context, mapping, args[2])
     elif len(args) == 4:
-        yield args[3][0](context, mapping, args[3][1])
+        yield evalrawexp(context, mapping, args[3])
 
 @templatefunc('join(list, sep)')
 def join(context, mapping, args):
@@ -760,7 +765,9 @@ def join(context, mapping, args):
         # i18n: "join" is a keyword
         raise error.ParseError(_("join expects one or two arguments"))
 
-    joinset = args[0][0](context, mapping, args[0][1])
+    # TODO: perhaps this should be evalfuncarg(), but it can't because hgweb
+    # abuses generator as a keyword that returns a list of dicts.
+    joinset = evalrawexp(context, mapping, args[0])
     if util.safehasattr(joinset, 'itermaps'):
         jf = joinset.joinfmt
         joinset = [jf(x) for x in joinset.itermaps()]
