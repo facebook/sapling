@@ -172,11 +172,11 @@ coreconfigitem('experimental', 'changegroup3',
 coreconfigitem('experimental', 'clientcompressionengines',
     default=list,
 )
+coreconfigitem('experimental', 'copytrace',
+    default='on',
+)
 coreconfigitem('experimental', 'crecordtest',
     default=None,
-)
-coreconfigitem('experimental', 'disablecopytrace',
-    default=False,
 )
 coreconfigitem('experimental', 'editortmpinhg',
     default=False,

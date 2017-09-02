@@ -203,7 +203,7 @@ def _forwardcopies(a, b, match=None):
     return cm
 
 def _backwardrenames(a, b):
-    if a._repo.ui.configbool('experimental', 'disablecopytrace'):
+    if a._repo.ui.config('experimental', 'copytrace') == 'off':
         return {}
 
     # Even though we're not taking copies into account, 1:n rename situations
@@ -363,7 +363,7 @@ def mergecopies(repo, c1, c2, base):
     # Copy trace disabling is explicitly below the node == p1 logic above
     # because the logic above is required for a simple copy to be kept across a
     # rebase.
-    if repo.ui.configbool('experimental', 'disablecopytrace'):
+    if repo.ui.config('experimental', 'copytrace') == 'off':
         return {}, {}, {}, {}, {}
 
     # In certain scenarios (e.g. graft, update or rebase), base can be
@@ -728,8 +728,8 @@ def duplicatecopies(repo, rev, fromrev, skiprev=None):
     '''
     exclude = {}
     if (skiprev is not None and
-        not repo.ui.configbool('experimental', 'disablecopytrace')):
-        # disablecopytrace skips this line, but not the entire function because
+        repo.ui.config('experimental', 'copytrace') != 'off'):
+        # copytrace='off' skips this line, but not the entire function because
         # the line below is O(size of the repo) during a rebase, while the rest
         # of the function is much faster (and is required for carrying copy
         # metadata across the rebase anyway).
