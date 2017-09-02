@@ -1457,21 +1457,14 @@ def checknlink(testfile):
 
     # testfile may be open, so we need a separate file for checking to
     # work around issue2543 (or testfile may get lost on Samba shares)
-    f1 = testfile + ".hgtmp1"
-    if os.path.lexists(f1):
-        return False
+    f1, f2, fd = None, None, None
     try:
-        posixfile(f1, 'w').close()
-    except IOError:
-        try:
-            os.unlink(f1)
-        except OSError:
-            pass
-        return False
+        fd, f1 = tempfile.mkstemp(prefix='.%s-' % os.path.basename(testfile),
+                                  suffix='1~', dir=os.path.dirname(testfile))
+        os.close(fd)
+        fd = None
+        f2 = '%s2~' % f1[:-2]
 
-    f2 = testfile + ".hgtmp2"
-    fd = None
-    try:
         oslink(f1, f2)
         # nlinks() may behave differently for files on Windows shares if
         # the file is open.
@@ -1484,7 +1477,8 @@ def checknlink(testfile):
             fd.close()
         for f in (f1, f2):
             try:
-                os.unlink(f)
+                if f is not None:
+                    os.unlink(f)
             except OSError:
                 pass
 
