@@ -63,7 +63,7 @@ testmod('mercurial.parser')
 testmod('mercurial.pycompat')
 testmod('mercurial.revsetlang')
 testmod('mercurial.smartset')
-testmod('mercurial.store', py3=False)  # py3: bytes[n]
+testmod('mercurial.store')
 testmod('mercurial.subrepo')
 testmod('mercurial.templatefilters')
 testmod('mercurial.templater')

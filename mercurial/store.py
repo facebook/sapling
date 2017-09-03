@@ -164,7 +164,7 @@ def _buildlowerencodefun():
     for x in range(ord("A"), ord("Z") + 1):
         cmap[xchr(x)] = xchr(x).lower()
     def lowerencode(s):
-        return "".join([cmap[c] for c in s])
+        return "".join([cmap[c] for c in pycompat.iterbytestr(s)])
     return lowerencode
 
 lowerencode = getattr(parsers, 'lowerencode', None) or _buildlowerencodefun()
