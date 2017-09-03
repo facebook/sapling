@@ -13,6 +13,7 @@ import string
 from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -158,7 +159,6 @@ def parsedag(desc):
 
     Error:
 
-        >>> from . import pycompat
         >>> try: list(parsedag(b'+1 bad'))
         ... except Exception as e: print(pycompat.sysstr(bytes(e)))
         invalid character in dag description: bad...
@@ -167,7 +167,7 @@ def parsedag(desc):
     if not desc:
         return
 
-    wordchars = string.ascii_letters + string.digits
+    wordchars = pycompat.bytestr(string.ascii_letters + string.digits)
 
     labels = {}
     p1 = -1
@@ -176,7 +176,7 @@ def parsedag(desc):
     def resolve(ref):
         if not ref:
             return p1
-        elif ref[0] in string.digits:
+        elif ref[0] in pycompat.bytestr(string.digits):
             return r - int(ref)
         else:
             return labels[ref]
@@ -210,7 +210,7 @@ def parsedag(desc):
 
     c = nextch()
     while c != '\0':
-        while c in string.whitespace:
+        while c in pycompat.bytestr(string.whitespace):
             c = nextch()
         if c == '.':
             yield 'n', (r, [p1])
@@ -218,7 +218,7 @@ def parsedag(desc):
             r += 1
             c = nextch()
         elif c == '+':
-            c, digs = nextrun(nextch(), string.digits)
+            c, digs = nextrun(nextch(), pycompat.bytestr(string.digits))
             n = int(digs)
             for i in xrange(0, n):
                 yield 'n', (r, [p1])
