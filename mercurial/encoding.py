@@ -268,7 +268,7 @@ def trim(s, width, ellipsis='', leftside=False):
     >>> print trim(t, 1, ellipsis=ellipsis)
     +
     >>> u = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
-    >>> t = u.encode(encoding.encoding)
+    >>> t = u.encode(pycompat.sysstr(encoding.encoding))
     >>> print trim(t, 12, ellipsis=ellipsis)
     \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
     >>> print trim(t, 10, ellipsis=ellipsis)
