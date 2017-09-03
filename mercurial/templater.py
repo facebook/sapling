@@ -169,7 +169,7 @@ def _parsetemplate(tmpl, start, stop, quote=''):
             parsed.append(('string', parser.unescapestr(tmpl[pos:stop])))
             pos = stop
             break
-        c = tmpl[n]
+        c = tmpl[n:n + 1]
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
         if bs % 2 == 1:
             # escaped (e.g. '\{', '\\\{', but not '\\{')
