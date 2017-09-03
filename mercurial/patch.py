@@ -205,10 +205,11 @@ def extract(ui, fileobj):
 
     # attempt to detect the start of a patch
     # (this heuristic is borrowed from quilt)
-    diffre = re.compile(r'^(?:Index:[ \t]|diff[ \t]|RCS file: |'
-                        r'retrieving revision [0-9]+(\.[0-9]+)*$|'
-                        r'---[ \t].*?^\+\+\+[ \t]|'
-                        r'\*\*\*[ \t].*?^---[ \t])', re.MULTILINE|re.DOTALL)
+    diffre = re.compile(br'^(?:Index:[ \t]|diff[ \t]|RCS file: |'
+                        br'retrieving revision [0-9]+(\.[0-9]+)*$|'
+                        br'---[ \t].*?^\+\+\+[ \t]|'
+                        br'\*\*\*[ \t].*?^---[ \t])',
+                        re.MULTILINE | re.DOTALL)
 
     data = {}
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
@@ -230,7 +231,7 @@ def extract(ui, fileobj):
                 pend = subject.find(']')
                 if pend >= 0:
                     subject = subject[pend + 1:].lstrip()
-            subject = re.sub(r'\n[ \t]+', ' ', subject)
+            subject = re.sub(br'\n[ \t]+', ' ', subject)
             ui.debug('Subject: %s\n' % subject)
         if data['user']:
             ui.debug('From: %s\n' % data['user'])
@@ -1760,7 +1761,7 @@ def scanpatch(fp):
     - ('hunk',    [hunk_lines])
     - ('range',   (-start,len, +start,len, proc))
     """
-    lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
+    lines_re = re.compile(br'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
     lr = linereader(fp)
 
     def scanwhile(first, p):
