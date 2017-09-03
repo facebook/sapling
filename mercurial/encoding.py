@@ -508,6 +508,7 @@ def toutf8b(s):
         except UnicodeDecodeError:
             pass
 
+    s = pycompat.bytestr(s)
     r = ""
     pos = 0
     l = len(s)
@@ -560,6 +561,7 @@ def fromutf8b(s):
     # points to be escaped. Instead, we use our handy getutf8char
     # helper again to walk the string without "decoding" it.
 
+    s = pycompat.bytestr(s)
     r = ""
     pos = 0
     l = len(s)
