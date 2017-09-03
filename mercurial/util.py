@@ -2804,6 +2804,7 @@ class url(object):
             if v is not None:
                 setattr(self, a, urlreq.unquote(v))
 
+    @encoding.strmethod
     def __repr__(self):
         attrs = []
         for a in ('scheme', 'user', 'passwd', 'host', 'port', 'path',
