@@ -68,7 +68,7 @@ testmod('mercurial.store', py3=False)  # py3: bytes[n]
 testmod('mercurial.subrepo')
 testmod('mercurial.templatefilters')
 testmod('mercurial.templater')
-testmod('mercurial.ui', py3=False)  # py3: __name__
+testmod('mercurial.ui')
 testmod('mercurial.url')
 testmod('mercurial.util', py3=False)  # py3: multiple bytes/unicode issues
 testmod('mercurial.util', testtarget='platform')
