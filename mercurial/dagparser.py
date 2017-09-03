@@ -11,7 +11,10 @@ import re
 import string
 
 from .i18n import _
-from . import error
+from . import (
+    error,
+    util,
+)
 
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
@@ -314,7 +317,7 @@ def dagtextlines(events,
                 if len(ps) == 1 and ps[0] == -1:
                     if needroot:
                         if run:
-                            yield '+' + str(run)
+                            yield '+%d' % run
                             run = 0
                         if wrapnonlinear:
                             yield '\n'
@@ -329,7 +332,7 @@ def dagtextlines(events,
                         run += 1
                 else:
                     if run:
-                        yield '+' + str(run)
+                        yield '+%d' % run
                         run = 0
                     if wrapnonlinear:
                         yield '\n'
@@ -340,11 +343,11 @@ def dagtextlines(events,
                         elif p in labels:
                             prefs.append(labels[p])
                         else:
-                            prefs.append(str(r - p))
+                            prefs.append('%d' % (r - p))
                     yield '*' + '/'.join(prefs)
             else:
                 if run:
-                    yield '+' + str(run)
+                    yield '+%d' % run
                     run = 0
                 if kind == 'l':
                     rid, name = data
@@ -367,10 +370,12 @@ def dagtextlines(events,
                     yield '#' + data
                     yield '\n'
                 else:
-                    raise error.Abort(_("invalid event type in dag: %s")
-                                      % str((kind, data)))
+                    raise error.Abort(_("invalid event type in dag: "
+                                        "('%s', '%s')")
+                                      % (util.escapestr(kind),
+                                         util.escapestr(data)))
         if run:
-            yield '+' + str(run)
+            yield '+%d' % run
 
     line = ''
     for part in gen():
