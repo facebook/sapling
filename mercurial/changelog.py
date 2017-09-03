@@ -42,11 +42,11 @@ def _string_escape(text):
 def decodeextra(text):
     """
     >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
-    ...                    ).iteritems())
+    ...                    ).items())
     [('baz', '\\x002'), ('branch', 'default'), ('foo', 'bar')]
     >>> sorted(decodeextra(encodeextra({b'foo': b'bar',
     ...                                 b'baz': chr(92) + chr(0) + b'2'})
-    ...                    ).iteritems())
+    ...                    ).items())
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """
     extra = _defaultextra.copy()
