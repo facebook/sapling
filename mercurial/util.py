@@ -584,7 +584,7 @@ class sortdict(collections.OrderedDict):
     >>> d2
     sortdict([('a', 0), ('b', 1)])
     >>> d2.update([(b'a', 2)])
-    >>> d2.keys() # should still be in last-set order
+    >>> list(d2.keys()) # should still be in last-set order
     ['b', 'a']
     '''
 

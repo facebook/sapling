@@ -489,10 +489,10 @@ def _buildfuncargs(exp, context, curmethods, funcname, argspec):
     ...     x = _parseexpr(expr)
     ...     n = getsymbol(x[1])
     ...     return _buildfuncargs(x[2], context, exprmethods, n, argspec)
-    >>> fargs(b'a(l=1, k=2)', b'k l m').keys()
+    >>> list(fargs(b'a(l=1, k=2)', b'k l m').keys())
     ['l', 'k']
     >>> args = fargs(b'a(opts=1, k=2)', b'**opts')
-    >>> args.keys(), args[b'opts'].keys()
+    >>> list(args.keys()), list(args[b'opts'].keys())
     (['opts'], ['opts', 'k'])
     """
     def compiledict(xs):
