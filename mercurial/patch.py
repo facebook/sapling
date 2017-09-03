@@ -1693,7 +1693,7 @@ def pathtransform(path, strip, prefix):
                              (count, strip, path))
         i += 1
         # consume '//' in the path
-        while i < pathlen - 1 and path[i] == '/':
+        while i < pathlen - 1 and path[i:i + 1] == '/':
             i += 1
         count -= 1
     return path[:i].lstrip(), prefix + path[i:].rstrip()
@@ -1788,7 +1788,7 @@ def scanpatch(fp):
             else:
                 lr.push(fromfile)
             yield 'file', header
-        elif line[0] == ' ':
+        elif line[0:1] == ' ':
             yield 'context', scanwhile(line, lambda l: l[0] in ' \\')
         elif line[0] in '-+':
             yield 'hunk', scanwhile(line, lambda l: l[0] in '-+\\')
