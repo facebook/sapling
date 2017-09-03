@@ -46,9 +46,7 @@ stringio = util.stringio
 gitre = re.compile(br'diff --git a/(.*) b/(.*)')
 tabsplitter = re.compile(br'(\t+|[^\t]+)')
 
-class PatchError(Exception):
-    pass
-
+PatchError = error.PatchError
 
 # public functions
 

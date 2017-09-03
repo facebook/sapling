@@ -278,7 +278,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         # 1. filter patch, since we are intending to apply subset of it
         try:
             chunks, newopts = filterfn(ui, originalchunks)
-        except patch.PatchError as err:
+        except error.PatchError as err:
             raise error.Abort(_('error parsing patch: %s') % err)
         opts.update(newopts)
 
@@ -360,7 +360,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
                     patch.internalpatch(ui, repo, fp, 1, eolmode=None)
-                except patch.PatchError as err:
+                except error.PatchError as err:
                     raise error.Abort(str(err))
             del fp
 
@@ -1334,7 +1334,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             try:
                 patch.patch(ui, repo, tmpname, strip=strip, prefix=prefix,
                             files=files, eolmode=None, similarity=sim / 100.0)
-            except patch.PatchError as e:
+            except error.PatchError as e:
                 if not partial:
                     raise error.Abort(str(e))
                 if partial:
@@ -1380,7 +1380,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 try:
                     patch.patchrepo(ui, repo, p1, store, tmpname, strip, prefix,
                                     files, eolmode=None)
-                except patch.PatchError as e:
+                except error.PatchError as e:
                     raise error.Abort(str(e))
                 if opts.get('exact'):
                     editor = None
@@ -3729,7 +3729,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             if reversehunks:
                 chunks = patch.reversehunks(chunks)
 
-        except patch.PatchError as err:
+        except error.PatchError as err:
             raise error.Abort(_('error parsing patch: %s') % err)
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
@@ -3751,7 +3751,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         if dopatch:
             try:
                 patch.internalpatch(repo.ui, repo, fp, 1, eolmode=None)
-            except patch.PatchError as err:
+            except error.PatchError as err:
                 raise error.Abort(str(err))
         del fp
     else:
