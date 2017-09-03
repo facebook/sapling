@@ -25,7 +25,7 @@ class py3docchecker(doctest.OutputChecker):
                    for w, g in [(want, got), (want2, got2)])
 
 # TODO: migrate doctests to py3 and enable them on both versions
-def testmod(name, optionflags=0, testtarget=None, py2=True, py3=False):
+def testmod(name, optionflags=0, testtarget=None, py2=True, py3=True):
     if not (not ispy3 and py2 or ispy3 and py3):
         return
     __import__(name)
@@ -48,30 +48,31 @@ testmod('mercurial.changelog')
 testmod('mercurial.color')
 testmod('mercurial.config')
 testmod('mercurial.context')
-testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE)
+testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE,
+        py3=False)  # py3: use of str()
 testmod('mercurial.dispatch')
-testmod('mercurial.encoding')
-testmod('mercurial.formatter')
+testmod('mercurial.encoding', py3=False)  # py3: multiple encoding issues
+testmod('mercurial.formatter', py3=False)  # py3: write bytes to stdout
 testmod('mercurial.hg')
-testmod('mercurial.hgweb.hgwebdir_mod')
+testmod('mercurial.hgweb.hgwebdir_mod', py3=False)  # py3: repr(bytes) ?
 testmod('mercurial.match')
 testmod('mercurial.mdiff')
 testmod('mercurial.minirst')
-testmod('mercurial.patch')
-testmod('mercurial.pathutil')
+testmod('mercurial.patch', py3=False)  # py3: bytes[n], etc. ?
+testmod('mercurial.pathutil', py3=False)  # py3: os.sep
 testmod('mercurial.parser')
-testmod('mercurial.pycompat', py3=True)
+testmod('mercurial.pycompat')
 testmod('mercurial.revsetlang')
 testmod('mercurial.smartset')
-testmod('mercurial.store')
+testmod('mercurial.store', py3=False)  # py3: bytes[n]
 testmod('mercurial.subrepo')
 testmod('mercurial.templatefilters')
 testmod('mercurial.templater')
-testmod('mercurial.ui')
+testmod('mercurial.ui', py3=False)  # py3: __name__
 testmod('mercurial.url')
-testmod('mercurial.util')
+testmod('mercurial.util', py3=False)  # py3: multiple bytes/unicode issues
 testmod('mercurial.util', testtarget='platform')
-testmod('hgext.convert.convcmd')
+testmod('hgext.convert.convcmd', py3=False)  # py3: use of str() ?
 testmod('hgext.convert.cvsps')
 testmod('hgext.convert.filemap')
 testmod('hgext.convert.p4')
