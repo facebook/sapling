@@ -247,6 +247,7 @@ def trim(s, width, ellipsis='', leftside=False):
     If 'leftside' is True, left side of string 's' is trimmed.
     'ellipsis' is always placed at trimmed side.
 
+    >>> from .node import bin
     >>> ellipsis = b'+++'
     >>> from . import encoding
     >>> encoding.encoding = b'utf-8'
@@ -285,7 +286,7 @@ def trim(s, width, ellipsis='', leftside=False):
     +++
     >>> print trim(t, 4, ellipsis=ellipsis, leftside=True)
     +++
-    >>> t = b'\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
+    >>> t = bin(b'112233445566778899aa') # invalid byte sequence
     >>> print trim(t, 12, ellipsis=ellipsis)
     \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
     >>> print trim(t, 10, ellipsis=ellipsis)

@@ -95,7 +95,7 @@ def _buildencodefun():
     >>> dec(b'hello~3aworld~3f')
     'hello:world?'
 
-    >>> enc(b'the\x07quick\xADshot')
+    >>> enc(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
     >>> dec(b'the~07quick~adshot')
     'the\\x07quick\\xadshot'
@@ -154,7 +154,7 @@ def _buildlowerencodefun():
     'hello'
     >>> f(b'hello:world?')
     'hello~3aworld~3f'
-    >>> f(b'the\x07quick\xADshot')
+    >>> f(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
     '''
     cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
