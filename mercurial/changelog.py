@@ -27,6 +27,7 @@ _defaultextra = {'branch': 'default'}
 
 def _string_escape(text):
     """
+    >>> from .pycompat import bytechr as chr
     >>> d = {b'nl': chr(10), b'bs': chr(92), b'cr': chr(13), b'nul': chr(0)}
     >>> s = b"ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
     >>> s
@@ -41,6 +42,7 @@ def _string_escape(text):
 
 def decodeextra(text):
     """
+    >>> from .pycompat import bytechr as chr
     >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
     ...                    ).items())
     [('baz', '\\x002'), ('branch', 'default'), ('foo', 'bar')]
