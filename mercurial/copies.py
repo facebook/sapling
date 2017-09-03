@@ -15,6 +15,7 @@ from . import (
     match as matchmod,
     node,
     pathutil,
+    phases,
     scmutil,
     util,
 )
@@ -367,9 +368,26 @@ def mergecopies(repo, c1, c2, base):
     if copytracing == 'off':
         return {}, {}, {}, {}, {}
     elif copytracing == 'heuristics':
+        # Do full copytracing if only drafts are involved as that will be fast
+        # enough and will also cover the copies which can be missed by
+        # heuristics
+        if _isfullcopytraceable(c1, base):
+            return _fullcopytracing(repo, c1, c2, base)
         return _heuristicscopytracing(repo, c1, c2, base)
     else:
         return _fullcopytracing(repo, c1, c2, base)
+
+def _isfullcopytraceable(c1, base):
+    """ Checks that if base, source and destination are all draft branches, if
+    yes let's use the full copytrace algorithm for increased capabilities since
+    it will be fast enough.
+    """
+
+    nonpublicphases = set([phases.draft, phases.secret])
+
+    if (c1.phase() in nonpublicphases) and (base.phase() in nonpublicphases):
+        return True
+    return False
 
 def _fullcopytracing(repo, c1, c2, base):
     """ The full copytracing algorithm which finds all the new files that were

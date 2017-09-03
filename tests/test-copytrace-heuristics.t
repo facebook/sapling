@@ -589,3 +589,79 @@ Test shelve/unshelve
   $ cd ..
   $ rm -rf server
   $ rm -rf repo
+
+Test full copytrace ability on draft branch
+-------------------------------------------
+
+File directory and base name changed in same move
+  $ hg init repo
+  $ initclient repo
+  $ mkdir repo/dir1
+  $ cd repo/dir1
+  $ echo a > a
+  $ hg add a
+  $ hg ci -qm initial
+  $ cd ..
+  $ hg mv -q dir1 dir2
+  $ hg mv dir2/a dir2/b
+  $ hg ci -qm 'mv a b; mv dir1 dir2'
+  $ hg up -q '.^'
+  $ cd dir1
+  $ echo b >> a
+  $ cd ..
+  $ hg ci -qm 'mod a'
+
+  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
+  @  changeset 6207d2d318e710b882e3d5ada2a89770efc42c96
+  |   desc mod a, phase: draft
+  | o  changeset abffdd4e3dfc04bc375034b970299b2a309a1cce
+  |/    desc mv a b; mv dir1 dir2, phase: draft
+  o  changeset 81973cd24b58db2fdf18ce3d64fb2cc3284e9ab3
+      desc initial, phase: draft
+
+  $ hg rebase -s . -d 1
+  rebasing 2:6207d2d318e7 "mod a" (tip)
+  merging dir2/b and dir1/a to dir2/b
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/6207d2d318e7-1c9779ad-rebase.hg (glob)
+  $ cat dir2/b
+  a
+  b
+  $ cd ..
+  $ rm -rf server
+  $ rm -rf repo
+
+Move directory in one merge parent, while adding file to original directory
+in other merge parent. File moved on rebase.
+  $ hg init repo
+  $ initclient repo
+  $ mkdir repo/dir1
+  $ cd repo/dir1
+  $ echo dummy > dummy
+  $ hg add dummy
+  $ cd ..
+  $ hg ci -qm initial
+  $ cd dir1
+  $ echo a > a
+  $ hg add a
+  $ cd ..
+  $ hg ci -qm 'hg add dir1/a'
+  $ hg up -q '.^'
+  $ hg mv -q dir1 dir2
+  $ hg ci -qm 'mv dir1 dir2'
+
+  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
+  @  changeset e8919e7df8d036e07b906045eddcd4a42ff1915f
+  |   desc mv dir1 dir2, phase: draft
+  | o  changeset 7c7c6f339be00f849c3cb2df738ca91db78b32c8
+  |/    desc hg add dir1/a, phase: draft
+  o  changeset a235dcce55dcf42034c4e374cb200662d0bb4a13
+      desc initial, phase: draft
+
+  $ hg rebase -s . -d 1
+  rebasing 2:e8919e7df8d0 "mv dir1 dir2" (tip)
+  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/e8919e7df8d0-f62fab62-rebase.hg (glob)
+  $ ls dir2
+  a
+  dummy
+  $ rm -rf server
+  $ rm -rf repo
