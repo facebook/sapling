@@ -50,7 +50,6 @@ cpp_library(
         "@/eden/fs/store/hg:hg",
         "@/folly:network_address",
         "@/folly:thread_local",
-        "@/folly/experimental:experimental",
         "@/folly/experimental:string_keyed_map",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
