@@ -162,7 +162,9 @@ def _buildlowerencodefun():
         cmap[chr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z") + 1):
         cmap[chr(x)] = chr(x).lower()
-    return lambda s: "".join([cmap[c] for c in s])
+    def lowerencode(s):
+        return "".join([cmap[c] for c in s])
+    return lowerencode
 
 lowerencode = getattr(parsers, 'lowerencode', None) or _buildlowerencodefun()
 
