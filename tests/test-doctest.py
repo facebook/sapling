@@ -48,8 +48,7 @@ testmod('mercurial.changelog')
 testmod('mercurial.color')
 testmod('mercurial.config')
 testmod('mercurial.context')
-testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE,
-        py3=False)  # py3: use of str()
+testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE)
 testmod('mercurial.dispatch')
 testmod('mercurial.encoding', py3=False)  # py3: multiple encoding issues
 testmod('mercurial.formatter', py3=False)  # py3: write bytes to stdout
