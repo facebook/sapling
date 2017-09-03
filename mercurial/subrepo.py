@@ -134,7 +134,7 @@ def state(ctx, ui):
             # However, we still want to allow back references to go
             # through unharmed, so we turn r'\\1' into r'\1'. Again,
             # extra escapes are needed because re.sub string decodes.
-            repl = re.sub(r'\\\\([0-9]+)', r'\\\1', repl)
+            repl = re.sub(br'\\\\([0-9]+)', br'\\\1', repl)
             try:
                 src = re.sub(pattern, repl, src, 1)
             except re.error as e:
@@ -1154,7 +1154,7 @@ class svnsubrepo(abstractsubrepo):
     @propertycache
     def _svnversion(self):
         output, err = self._svncommand(['--version', '--quiet'], filename=None)
-        m = re.search(r'^(\d+)\.(\d+)', output)
+        m = re.search(br'^(\d+)\.(\d+)', output)
         if not m:
             raise error.Abort(_('cannot retrieve svn tool version'))
         return (int(m.group(1)), int(m.group(2)))
@@ -1373,11 +1373,11 @@ class gitsubrepo(abstractsubrepo):
 
     @staticmethod
     def _gitversion(out):
-        m = re.search(r'^git version (\d+)\.(\d+)\.(\d+)', out)
+        m = re.search(br'^git version (\d+)\.(\d+)\.(\d+)', out)
         if m:
             return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
-        m = re.search(r'^git version (\d+)\.(\d+)', out)
+        m = re.search(br'^git version (\d+)\.(\d+)', out)
         if m:
             return (int(m.group(1)), int(m.group(2)), 0)
 
