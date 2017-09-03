@@ -2812,29 +2812,29 @@ class url(object):
 
         Examples:
 
-        >>> str(url(b'http://user:pw@host:80/c:/bob?fo:oo#ba:ar'))
+        >>> bytes(url(b'http://user:pw@host:80/c:/bob?fo:oo#ba:ar'))
         'http://user:pw@host:80/c:/bob?fo:oo#ba:ar'
-        >>> str(url(b'http://user:pw@host:80/?foo=bar&baz=42'))
+        >>> bytes(url(b'http://user:pw@host:80/?foo=bar&baz=42'))
         'http://user:pw@host:80/?foo=bar&baz=42'
-        >>> str(url(b'http://user:pw@host:80/?foo=bar%3dbaz'))
+        >>> bytes(url(b'http://user:pw@host:80/?foo=bar%3dbaz'))
         'http://user:pw@host:80/?foo=bar%3dbaz'
-        >>> str(url(b'ssh://user:pw@[::1]:2200//home/joe#'))
+        >>> bytes(url(b'ssh://user:pw@[::1]:2200//home/joe#'))
         'ssh://user:pw@[::1]:2200//home/joe#'
-        >>> str(url(b'http://localhost:80//'))
+        >>> bytes(url(b'http://localhost:80//'))
         'http://localhost:80//'
-        >>> str(url(b'http://localhost:80/'))
+        >>> bytes(url(b'http://localhost:80/'))
         'http://localhost:80/'
-        >>> str(url(b'http://localhost:80'))
+        >>> bytes(url(b'http://localhost:80'))
         'http://localhost:80/'
-        >>> str(url(b'bundle:foo'))
+        >>> bytes(url(b'bundle:foo'))
         'bundle:foo'
-        >>> str(url(b'bundle://../foo'))
+        >>> bytes(url(b'bundle://../foo'))
         'bundle:../foo'
-        >>> str(url(b'path'))
+        >>> bytes(url(b'path'))
         'path'
-        >>> str(url(b'file:///tmp/foo/bar'))
+        >>> bytes(url(b'file:///tmp/foo/bar'))
         'file:///tmp/foo/bar'
-        >>> str(url(b'file:///c:/tmp/foo/bar'))
+        >>> bytes(url(b'file:///c:/tmp/foo/bar'))
         'file:///c:/tmp/foo/bar'
         >>> print url(br'bundle:foo\bar')
         bundle:foo\bar
