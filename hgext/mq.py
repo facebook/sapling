@@ -155,7 +155,7 @@ PLAINHEADERS = {
 def inserthgheader(lines, header, value):
     """Assuming lines contains a HG patch header, add a header line with value.
     >>> try: inserthgheader([], b'# Date ', b'z')
-    ... except ValueError, inst: print("oops")
+    ... except ValueError as inst: print("oops")
     oops
     >>> inserthgheader([b'# HG changeset patch'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']
