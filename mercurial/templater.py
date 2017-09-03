@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import os
 import re
@@ -192,7 +192,7 @@ def _unnesttemplatelist(tree):
     """Expand list of templates to node tuple
 
     >>> def f(tree):
-    ...     print prettyformat(_unnesttemplatelist(tree))
+    ...     print(pycompat.sysstr(prettyformat(_unnesttemplatelist(tree))))
     >>> f((b'template', []))
     (string '')
     >>> f((b'template', [(b'string', b'foo')]))

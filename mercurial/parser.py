@@ -16,7 +16,7 @@
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 from .i18n import _
 from . import (
@@ -220,8 +220,10 @@ def prettyformat(tree, leafnodes):
 def simplifyinfixops(tree, targetnodes):
     """Flatten chained infix operations to reduce usage of Python stack
 
+    >>> from . import pycompat
     >>> def f(tree):
-    ...     print prettyformat(simplifyinfixops(tree, (b'or',)), (b'symbol',))
+    ...     s = prettyformat(simplifyinfixops(tree, (b'or',)), (b'symbol',))
+    ...     print(pycompat.sysstr(s))
     >>> f((b'or',
     ...     (b'or',
     ...       (b'symbol', b'1'),
@@ -555,6 +557,7 @@ class basealiasrules(object):
         ``args`` is a list of alias argument names, or None if the alias
         is declared as a symbol.
 
+        >>> from . import pycompat
         >>> parsemap = {
         ...     b'$1 or foo': (b'or', (b'symbol', b'$1'), (b'symbol', b'foo')),
         ...     b'$1 or $bar':
@@ -569,7 +572,8 @@ class basealiasrules(object):
         ...     _trygetfunc = staticmethod(lambda x: None)
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
-        ...     print prettyformat(tree, (b'_aliasarg', b'string', b'symbol'))
+        ...     s = prettyformat(tree, (b'_aliasarg', b'string', b'symbol'))
+        ...     print(pycompat.sysstr(s))
         >>> args = [b'$1', b'$2', b'foo']
         >>> pprint(builddefn(b'$1 or foo', args))
         (or
@@ -578,7 +582,7 @@ class basealiasrules(object):
         >>> try:
         ...     builddefn(b'$1 or $bar', args)
         ... except error.ParseError as inst:
-        ...     print parseerrordetail(inst)
+        ...     print(pycompat.sysstr(parseerrordetail(inst)))
         invalid symbol '$bar'
         >>> args = [b'$1', b'$10', b'foo']
         >>> pprint(builddefn(b'$10 or baz', args))

@@ -13,7 +13,7 @@ This contains helper routines that are independent of the SCM core and
 hide platform-specific details from the core.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import abc
 import bz2
@@ -2836,9 +2836,9 @@ class url(object):
         'file:///tmp/foo/bar'
         >>> bytes(url(b'file:///c:/tmp/foo/bar'))
         'file:///c:/tmp/foo/bar'
-        >>> print url(br'bundle:foo\bar')
+        >>> print(url(br'bundle:foo\bar'))
         bundle:foo\bar
-        >>> print url(br'file:///D:\data\hg')
+        >>> print(url(br'file:///D:\data\hg'))
         file:///D:\data\hg
         """
         if self._localpath:

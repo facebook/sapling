@@ -62,7 +62,7 @@ This extension used to provide a strip command. This command now lives
 in the strip extension.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import errno
 import os
@@ -155,7 +155,7 @@ PLAINHEADERS = {
 def inserthgheader(lines, header, value):
     """Assuming lines contains a HG patch header, add a header line with value.
     >>> try: inserthgheader([], b'# Date ', b'z')
-    ... except ValueError, inst: print "oops"
+    ... except ValueError, inst: print("oops")
     oops
     >>> inserthgheader([b'# HG changeset patch'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import copy
 import os
@@ -580,6 +580,7 @@ class subdirmatcher(basematcher):
 
     The paths are remapped to remove/insert the path as needed:
 
+    >>> from . import pycompat
     >>> m1 = match(b'root', b'', [b'a.txt', b'sub/b.txt'])
     >>> m2 = subdirmatcher(b'sub', m1)
     >>> bool(m2(b'a.txt'))
@@ -597,7 +598,7 @@ class subdirmatcher(basematcher):
     >>> util.pconvert(m2.rel(b'b.txt'))
     'sub/b.txt'
     >>> def bad(f, msg):
-    ...     print b"%s: %s" % (f, msg)
+    ...     print(pycompat.sysstr(b"%s: %s" % (f, msg)))
     >>> m1.bad = bad
     >>> m2.bad(b'x.txt', b'No such file')
     sub/x.txt: No such file
@@ -703,21 +704,24 @@ def _patsplit(pattern, default):
 def _globre(pat):
     r'''Convert an extended glob string to a regexp string.
 
-    >>> print _globre(br'?')
+    >>> from . import pycompat
+    >>> def bprint(s):
+    ...     print(pycompat.sysstr(s))
+    >>> bprint(_globre(br'?'))
     .
-    >>> print _globre(br'*')
+    >>> bprint(_globre(br'*'))
     [^/]*
-    >>> print _globre(br'**')
+    >>> bprint(_globre(br'**'))
     .*
-    >>> print _globre(br'**/a')
+    >>> bprint(_globre(br'**/a'))
     (?:.*/)?a
-    >>> print _globre(br'a/**/b')
+    >>> bprint(_globre(br'a/**/b'))
     a\/(?:.*/)?b
-    >>> print _globre(br'[a*?!^][^b][!c]')
+    >>> bprint(_globre(br'[a*?!^][^b][!c]'))
     [a*?!^][\^b][^c]
-    >>> print _globre(br'{a,b}')
+    >>> bprint(_globre(br'{a,b}'))
     (?:a|b)
-    >>> print _globre(br'.\*\?')
+    >>> bprint(_globre(br'.\*\?'))
     \.\*\?
     '''
     i, n = 0, len(pat)

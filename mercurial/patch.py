@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import collections
 import copy
@@ -1505,7 +1505,7 @@ def reversehunks(hunks):
     ...      c.write(fp)
     >>> fp.seek(0)
     >>> reversedpatch = fp.read()
-    >>> print reversedpatch
+    >>> print(pycompat.sysstr(reversedpatch))
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
@@ -1562,7 +1562,7 @@ def parsepatch(originalchunks, maxcontext=None):
     ...     header.write(out)
     ...     for hunk in header.hunks:
     ...         hunk.write(out)
-    >>> print(out.getvalue())
+    >>> print(pycompat.sysstr(out.getvalue()))
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
