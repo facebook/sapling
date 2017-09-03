@@ -473,7 +473,7 @@ def optimize(tree):
 
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
-_aliassyminitletters = _syminitletters | set(pycompat.sysstr('$'))
+_aliassyminitletters = _syminitletters | {'$'}
 
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
