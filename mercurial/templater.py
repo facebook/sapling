@@ -194,18 +194,18 @@ def _unnesttemplatelist(tree):
     >>> def f(tree):
     ...     print prettyformat(_unnesttemplatelist(tree))
     >>> f(('template', []))
-    ('string', '')
+    (string '')
     >>> f(('template', [('string', 'foo')]))
-    ('string', 'foo')
+    (string 'foo')
     >>> f(('template', [('string', 'foo'), ('symbol', 'rev')]))
     (template
-      ('string', 'foo')
-      ('symbol', 'rev'))
+      (string 'foo')
+      (symbol 'rev'))
     >>> f(('template', [('symbol', 'rev')]))  # template(rev) -> str
     (template
-      ('symbol', 'rev'))
+      (symbol 'rev'))
     >>> f(('template', [('template', [('string', 'foo')])]))
-    ('string', 'foo')
+    (string 'foo')
     """
     if not isinstance(tree, tuple):
         return tree

@@ -41,62 +41,62 @@ Test division:
   $ hg debugtemplate -r0 -v '{5 / 2} {mod(5, 2)}\n'
   (template
     (/
-      ('integer', '5')
-      ('integer', '2'))
-    ('string', ' ')
+      (integer '5')
+      (integer '2'))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
-        ('integer', '5')
-        ('integer', '2')))
-    ('string', '\n'))
+        (integer '5')
+        (integer '2')))
+    (string '\n'))
   2 1
   $ hg debugtemplate -r0 -v '{5 / -2} {mod(5, -2)}\n'
   (template
     (/
-      ('integer', '5')
+      (integer '5')
       (negate
-        ('integer', '2')))
-    ('string', ' ')
+        (integer '2')))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
-        ('integer', '5')
+        (integer '5')
         (negate
-          ('integer', '2'))))
-    ('string', '\n'))
+          (integer '2'))))
+    (string '\n'))
   -3 -1
   $ hg debugtemplate -r0 -v '{-5 / 2} {mod(-5, 2)}\n'
   (template
     (/
       (negate
-        ('integer', '5'))
-      ('integer', '2'))
-    ('string', ' ')
+        (integer '5'))
+      (integer '2'))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
         (negate
-          ('integer', '5'))
-        ('integer', '2')))
-    ('string', '\n'))
+          (integer '5'))
+        (integer '2')))
+    (string '\n'))
   -3 1
   $ hg debugtemplate -r0 -v '{-5 / -2} {mod(-5, -2)}\n'
   (template
     (/
       (negate
-        ('integer', '5'))
+        (integer '5'))
       (negate
-        ('integer', '2')))
-    ('string', ' ')
+        (integer '2')))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
         (negate
-          ('integer', '5'))
+          (integer '5'))
         (negate
-          ('integer', '2'))))
-    ('string', '\n'))
+          (integer '2'))))
+    (string '\n'))
   2 -1
 
 Filters bind closer than arithmetic:
@@ -106,11 +106,11 @@ Filters bind closer than arithmetic:
     (-
       (|
         (func
-          ('symbol', 'revset')
-          ('string', '.'))
-        ('symbol', 'count'))
-      ('integer', '1'))
-    ('string', '\n'))
+          (symbol 'revset')
+          (string '.'))
+        (symbol 'count'))
+      (integer '1'))
+    (string '\n'))
   0
 
 But negate binds closer still:
@@ -118,20 +118,20 @@ But negate binds closer still:
   $ hg debugtemplate -r0 -v '{1-3|stringify}\n'
   (template
     (-
-      ('integer', '1')
+      (integer '1')
       (|
-        ('integer', '3')
-        ('symbol', 'stringify')))
-    ('string', '\n'))
+        (integer '3')
+        (symbol 'stringify')))
+    (string '\n'))
   hg: parse error: arithmetic only defined on integers
   [255]
   $ hg debugtemplate -r0 -v '{-3|stringify}\n'
   (template
     (|
       (negate
-        ('integer', '3'))
-      ('symbol', 'stringify'))
-    ('string', '\n'))
+        (integer '3'))
+      (symbol 'stringify'))
+    (string '\n'))
   -3
 
 Keyword arguments:
@@ -139,10 +139,10 @@ Keyword arguments:
   $ hg debugtemplate -r0 -v '{foo=bar|baz}'
   (template
     (keyvalue
-      ('symbol', 'foo')
+      (symbol 'foo')
       (|
-        ('symbol', 'bar')
-        ('symbol', 'baz'))))
+        (symbol 'bar')
+        (symbol 'baz'))))
   hg: parse error: can't use a key-value pair in this context
   [255]
 
@@ -3174,21 +3174,21 @@ Test integer literal:
   $ hg debugtemplate -v '{(0)}\n'
   (template
     (group
-      ('integer', '0'))
-    ('string', '\n'))
+      (integer '0'))
+    (string '\n'))
   0
   $ hg debugtemplate -v '{(123)}\n'
   (template
     (group
-      ('integer', '123'))
-    ('string', '\n'))
+      (integer '123'))
+    (string '\n'))
   123
   $ hg debugtemplate -v '{(-4)}\n'
   (template
     (group
       (negate
-        ('integer', '4')))
-    ('string', '\n'))
+        (integer '4')))
+    (string '\n'))
   -4
   $ hg debugtemplate '{(-)}\n'
   hg: parse error at 3: not a prefix: )
@@ -3201,25 +3201,25 @@ top-level integer literal is interpreted as symbol (i.e. variable name):
 
   $ hg debugtemplate -D 1=one -v '{1}\n'
   (template
-    ('integer', '1')
-    ('string', '\n'))
+    (integer '1')
+    (string '\n'))
   one
   $ hg debugtemplate -D 1=one -v '{if("t", "{1}")}\n'
   (template
     (func
-      ('symbol', 'if')
+      (symbol 'if')
       (list
-        ('string', 't')
+        (string 't')
         (template
-          ('integer', '1'))))
-    ('string', '\n'))
+          (integer '1'))))
+    (string '\n'))
   one
   $ hg debugtemplate -D 1=one -v '{1|stringify}\n'
   (template
     (|
-      ('integer', '1')
-      ('symbol', 'stringify'))
-    ('string', '\n'))
+      (integer '1')
+      (symbol 'stringify'))
+    (string '\n'))
   one
 
 unless explicit symbol is expected:
@@ -3235,27 +3235,27 @@ Test string literal:
 
   $ hg debugtemplate -Ra -r0 -v '{"string with no template fragment"}\n'
   (template
-    ('string', 'string with no template fragment')
-    ('string', '\n'))
+    (string 'string with no template fragment')
+    (string '\n'))
   string with no template fragment
   $ hg debugtemplate -Ra -r0 -v '{"template: {rev}"}\n'
   (template
     (template
-      ('string', 'template: ')
-      ('symbol', 'rev'))
-    ('string', '\n'))
+      (string 'template: ')
+      (symbol 'rev'))
+    (string '\n'))
   template: 0
   $ hg debugtemplate -Ra -r0 -v '{r"rawstring: {rev}"}\n'
   (template
-    ('string', 'rawstring: {rev}')
-    ('string', '\n'))
+    (string 'rawstring: {rev}')
+    (string '\n'))
   rawstring: {rev}
   $ hg debugtemplate -Ra -r0 -v '{files % r"rawstring: {file}"}\n'
   (template
     (%
-      ('symbol', 'files')
-      ('string', 'rawstring: {file}'))
-    ('string', '\n'))
+      (symbol 'files')
+      (string 'rawstring: {file}'))
+    (string '\n'))
   rawstring: {file}
 
 Test string escaping:
@@ -4242,49 +4242,49 @@ Templater supports aliases of symbol and func() styles:
 
   $ hg debugtemplate -vr0 '{rn} {utcdate(date)|isodate}\n'
   (template
-    ('symbol', 'rn')
-    ('string', ' ')
+    (symbol 'rn')
+    (string ' ')
     (|
       (func
-        ('symbol', 'utcdate')
-        ('symbol', 'date'))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+        (symbol 'utcdate')
+        (symbol 'date'))
+      (symbol 'isodate'))
+    (string '\n'))
   * expanded:
   (template
     (template
-      ('symbol', 'rev')
-      ('string', ':')
+      (symbol 'rev')
+      (string ':')
       (|
-        ('symbol', 'node')
-        ('symbol', 'short')))
-    ('string', ' ')
+        (symbol 'node')
+        (symbol 'short')))
+    (string ' ')
     (|
       (func
-        ('symbol', 'localdate')
+        (symbol 'localdate')
         (list
-          ('symbol', 'date')
-          ('string', 'UTC')))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+          (symbol 'date')
+          (string 'UTC')))
+      (symbol 'isodate'))
+    (string '\n'))
   0:1e4e1b8f71e0 1970-01-12 13:46 +0000
 
   $ hg debugtemplate -vr0 '{status("A", file_adds)}'
   (template
     (func
-      ('symbol', 'status')
+      (symbol 'status')
       (list
-        ('string', 'A')
-        ('symbol', 'file_adds'))))
+        (string 'A')
+        (symbol 'file_adds'))))
   * expanded:
   (template
     (%
-      ('symbol', 'file_adds')
+      (symbol 'file_adds')
       (template
-        ('string', 'A')
-        ('string', ' ')
-        ('symbol', 'file')
-        ('string', '\n'))))
+        (string 'A')
+        (string ' ')
+        (symbol 'file')
+        (string '\n'))))
   A a
 
 A unary function alias can be called as a filter:
@@ -4293,20 +4293,20 @@ A unary function alias can be called as a filter:
   (template
     (|
       (|
-        ('symbol', 'date')
-        ('symbol', 'utcdate'))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+        (symbol 'date')
+        (symbol 'utcdate'))
+      (symbol 'isodate'))
+    (string '\n'))
   * expanded:
   (template
     (|
       (func
-        ('symbol', 'localdate')
+        (symbol 'localdate')
         (list
-          ('symbol', 'date')
-          ('string', 'UTC')))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+          (symbol 'date')
+          (string 'UTC')))
+      (symbol 'isodate'))
+    (string '\n'))
   1970-01-12 13:46 +0000
 
 Aliases should be applied only to command arguments and templates in hgrc.
@@ -4341,7 +4341,7 @@ Unparsable alias:
 
   $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
   (template
-    ('symbol', 'bad'))
+    (symbol 'bad'))
   abort: bad definition of template alias "bad": at 2: not a prefix: end
   [255]
   $ hg log --config templatealias.bad='x(' -T '{bad}'

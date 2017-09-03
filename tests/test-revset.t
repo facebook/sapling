@@ -155,8 +155,8 @@ trivial
 
   $ try 0:1
   (range
-    ('symbol', '0')
-    ('symbol', '1'))
+    (symbol '0')
+    (symbol '1'))
   * set:
   <spanset+ 0:2>
   0
@@ -181,8 +181,8 @@ trivial
   9
   $ try 3::6
   (dagrange
-    ('symbol', '3')
-    ('symbol', '6'))
+    (symbol '3')
+    (symbol '6'))
   * set:
   <baseset+ [3, 5, 6]>
   3
@@ -191,9 +191,9 @@ trivial
   $ try '0|1|2'
   (or
     (list
-      ('symbol', '0')
-      ('symbol', '1')
-      ('symbol', '2')))
+      (symbol '0')
+      (symbol '1')
+      (symbol '2')))
   * set:
   <baseset [0, 1, 2]>
   0
@@ -203,14 +203,14 @@ trivial
 names that should work without quoting
 
   $ try a
-  ('symbol', 'a')
+  (symbol 'a')
   * set:
   <baseset [0]>
   0
   $ try b-a
   (minus
-    ('symbol', 'b')
-    ('symbol', 'a'))
+    (symbol 'b')
+    (symbol 'a'))
   * set:
   <filteredset
     <baseset [1]>,
@@ -218,14 +218,14 @@ names that should work without quoting
       <baseset [0]>>>
   1
   $ try _a_b_c_
-  ('symbol', '_a_b_c_')
+  (symbol '_a_b_c_')
   * set:
   <baseset [6]>
   6
   $ try _a_b_c_-a
   (minus
-    ('symbol', '_a_b_c_')
-    ('symbol', 'a'))
+    (symbol '_a_b_c_')
+    (symbol 'a'))
   * set:
   <filteredset
     <baseset [6]>,
@@ -233,14 +233,14 @@ names that should work without quoting
       <baseset [0]>>>
   6
   $ try .a.b.c.
-  ('symbol', '.a.b.c.')
+  (symbol '.a.b.c.')
   * set:
   <baseset [7]>
   7
   $ try .a.b.c.-a
   (minus
-    ('symbol', '.a.b.c.')
-    ('symbol', 'a'))
+    (symbol '.a.b.c.')
+    (symbol 'a'))
   * set:
   <filteredset
     <baseset [7]>,
@@ -251,20 +251,20 @@ names that should work without quoting
 names that should be caught by fallback mechanism
 
   $ try -- '-a-b-c-'
-  ('symbol', '-a-b-c-')
+  (symbol '-a-b-c-')
   * set:
   <baseset [4]>
   4
   $ log -a-b-c-
   4
   $ try '+a+b+c+'
-  ('symbol', '+a+b+c+')
+  (symbol '+a+b+c+')
   * set:
   <baseset [3]>
   3
   $ try '+a+b+c+:'
   (rangepost
-    ('symbol', '+a+b+c+'))
+    (symbol '+a+b+c+'))
   * set:
   <spanset+ 3:10>
   3
@@ -276,7 +276,7 @@ names that should be caught by fallback mechanism
   9
   $ try ':+a+b+c+'
   (rangepre
-    ('symbol', '+a+b+c+'))
+    (symbol '+a+b+c+'))
   * set:
   <spanset+ 0:4>
   0
@@ -285,8 +285,8 @@ names that should be caught by fallback mechanism
   3
   $ try -- '-a-b-c-:+a+b+c+'
   (range
-    ('symbol', '-a-b-c-')
-    ('symbol', '+a+b+c+'))
+    (symbol '-a-b-c-')
+    (symbol '+a+b+c+'))
   * set:
   <spanset- 3:5>
   4
@@ -300,15 +300,15 @@ names that should be caught by fallback mechanism
     (minus
       (minus
         (negate
-          ('symbol', 'a'))
-        ('symbol', 'b'))
-      ('symbol', 'c'))
+          (symbol 'a'))
+        (symbol 'b'))
+      (symbol 'c'))
     (negate
-      ('symbol', 'a')))
+      (symbol 'a')))
   abort: unknown revision '-a'!
   [255]
   $ try é
-  ('symbol', '\xc3\xa9')
+  (symbol '\xc3\xa9')
   * set:
   <baseset [9]>
   9
@@ -324,8 +324,8 @@ quoting needed
 
   $ try '"-a-b-c-"-a'
   (minus
-    ('string', '-a-b-c-')
-    ('symbol', 'a'))
+    (string '-a-b-c-')
+    (symbol 'a'))
   * set:
   <filteredset
     <baseset [4]>,
@@ -345,9 +345,9 @@ quoting needed
   (or
     (list
       (and
-        ('symbol', '1')
-        ('symbol', '2'))
-      ('symbol', '3')))
+        (symbol '1')
+        (symbol '2'))
+      (symbol '3')))
   * set:
   <addset
     <baseset []>,
@@ -356,10 +356,10 @@ quoting needed
   $ try '1|2&3'
   (or
     (list
-      ('symbol', '1')
+      (symbol '1')
       (and
-        ('symbol', '2')
-        ('symbol', '3'))))
+        (symbol '2')
+        (symbol '3'))))
   * set:
   <addset
     <baseset [1]>,
@@ -368,20 +368,20 @@ quoting needed
   $ try '1&2&3' # associativity
   (and
     (and
-      ('symbol', '1')
-      ('symbol', '2'))
-    ('symbol', '3'))
+      (symbol '1')
+      (symbol '2'))
+    (symbol '3'))
   * set:
   <baseset []>
   $ try '1|(2|3)'
   (or
     (list
-      ('symbol', '1')
+      (symbol '1')
       (group
         (or
           (list
-            ('symbol', '2')
-            ('symbol', '3'))))))
+            (symbol '2')
+            (symbol '3'))))))
   * set:
   <addset
     <baseset [1]>,
@@ -471,11 +471,11 @@ keyword arguments
 
   $ try 'foo=bar|baz'
   (keyvalue
-    ('symbol', 'foo')
+    (symbol 'foo')
     (or
       (list
-        ('symbol', 'bar')
-        ('symbol', 'baz'))))
+        (symbol 'bar')
+        (symbol 'baz'))))
   hg: parse error: can't use a key-value pair in this context
   [255]
 
@@ -483,17 +483,17 @@ keyword arguments
 
   $ try --optimize 'foo=(not public())'
   (keyvalue
-    ('symbol', 'foo')
+    (symbol 'foo')
     (group
       (not
         (func
-          ('symbol', 'public')
+          (symbol 'public')
           None))))
   * optimized:
   (keyvalue
-    ('symbol', 'foo')
+    (symbol 'foo')
     (func
-      ('symbol', '_notpublic')
+      (symbol '_notpublic')
       None))
   hg: parse error: can't use a key-value pair in this context
   [255]
@@ -503,13 +503,13 @@ relation-subscript operator has the highest binding strength (as function call):
   $ hg debugrevspec -p parsed 'tip:tip^#generations[-1]'
   * parsed:
   (range
-    ('symbol', 'tip')
+    (symbol 'tip')
     (relsubscript
       (parentpost
-        ('symbol', 'tip'))
-      ('symbol', 'generations')
+        (symbol 'tip'))
+      (symbol 'generations')
       (negate
-        ('symbol', '1'))))
+        (symbol '1'))))
   9
   8
   7
@@ -522,10 +522,10 @@ relation-subscript operator has the highest binding strength (as function call):
   (not
     (relsubscript
       (func
-        ('symbol', 'public')
+        (symbol 'public')
         None)
-      ('symbol', 'generations')
-      ('symbol', '0')))
+      (symbol 'generations')
+      (symbol '0')))
 
 left-hand side of relation-subscript operator should be optimized recursively:
 
@@ -535,34 +535,34 @@ left-hand side of relation-subscript operator should be optimized recursively:
   (relsubscript
     (not
       (func
-        ('symbol', 'public')
+        (symbol 'public')
         None))
-    ('symbol', 'generations')
-    ('symbol', '0'))
+    (symbol 'generations')
+    (symbol '0'))
   * optimized:
   (relsubscript
     (func
-      ('symbol', '_notpublic')
+      (symbol '_notpublic')
       None)
-    ('symbol', 'generations')
-    ('symbol', '0'))
+    (symbol 'generations')
+    (symbol '0'))
 
 resolution of subscript and relation-subscript ternary operators:
 
   $ hg debugrevspec -p analyzed 'tip[0]'
   * analyzed:
   (subscript
-    ('symbol', 'tip')
-    ('symbol', '0'))
+    (symbol 'tip')
+    (symbol '0'))
   hg: parse error: can't use a subscript in this context
   [255]
 
   $ hg debugrevspec -p analyzed 'tip#rel[0]'
   * analyzed:
   (relsubscript
-    ('symbol', 'tip')
-    ('symbol', 'rel')
-    ('symbol', '0'))
+    (symbol 'tip')
+    (symbol 'rel')
+    (symbol '0'))
   hg: parse error: unknown identifier: rel
   [255]
 
@@ -570,9 +570,9 @@ resolution of subscript and relation-subscript ternary operators:
   * analyzed:
   (subscript
     (relation
-      ('symbol', 'tip')
-      ('symbol', 'rel'))
-    ('symbol', '0'))
+      (symbol 'tip')
+      (symbol 'rel'))
+    (symbol '0'))
   hg: parse error: can't use a subscript in this context
   [255]
 
@@ -580,10 +580,10 @@ resolution of subscript and relation-subscript ternary operators:
   * analyzed:
   (subscript
     (relsubscript
-      ('symbol', 'tip')
-      ('symbol', 'rel')
-      ('symbol', '0'))
-    ('symbol', '1'))
+      (symbol 'tip')
+      (symbol 'rel')
+      (symbol '0'))
+    (symbol '1'))
   hg: parse error: can't use a subscript in this context
   [255]
 
@@ -591,10 +591,10 @@ resolution of subscript and relation-subscript ternary operators:
   * analyzed:
   (relsubscript
     (relation
-      ('symbol', 'tip')
-      ('symbol', 'rel0'))
-    ('symbol', 'rel1')
-    ('symbol', '1'))
+      (symbol 'tip')
+      (symbol 'rel0'))
+    (symbol 'rel1')
+    (symbol '1'))
   hg: parse error: unknown identifier: rel1
   [255]
 
@@ -602,11 +602,11 @@ resolution of subscript and relation-subscript ternary operators:
   * analyzed:
   (relsubscript
     (relsubscript
-      ('symbol', 'tip')
-      ('symbol', 'rel0')
-      ('symbol', '0'))
-    ('symbol', 'rel1')
-    ('symbol', '1'))
+      (symbol 'tip')
+      (symbol 'rel0')
+      (symbol '0'))
+    (symbol 'rel1')
+    (symbol '1'))
   hg: parse error: unknown identifier: rel1
   [255]
 
@@ -675,23 +675,23 @@ parsed tree at stages:
     (group
       (or
         (list
-          ('symbol', '0')
-          ('symbol', '1'))))
-    ('symbol', '1'))
+          (symbol '0')
+          (symbol '1'))))
+    (symbol '1'))
   * analyzed:
   (and
     (or
       (list
-        ('symbol', '0')
-        ('symbol', '1')))
+        (symbol '0')
+        (symbol '1')))
     (not
-      ('symbol', '1')))
+      (symbol '1')))
   * optimized:
   (difference
     (func
-      ('symbol', '_list')
-      ('string', '0\x001'))
-    ('symbol', '1'))
+      (symbol '_list')
+      (string '0\x001'))
+    (symbol '1'))
   0
 
   $ hg debugrevspec -p unknown '0'
@@ -710,15 +710,15 @@ verify optimized tree:
   * analyzed:
   (and
     (func
-      ('symbol', 'r3232')
+      (symbol 'r3232')
       None)
-    ('symbol', '2'))
+    (symbol '2'))
   * optimized:
   (andsmally
     (func
-      ('symbol', 'r3232')
+      (symbol 'r3232')
       None)
-    ('symbol', '2'))
+    (symbol '2'))
   * analyzed set:
   <baseset [2]>
   * optimized set:
@@ -766,7 +766,7 @@ may be hidden (issue5385)
   $ try -p analyzed ':1'
   * analyzed:
   (rangepre
-    ('symbol', '1'))
+    (symbol '1'))
   * set:
   <spanset+ 0:2>
   0
@@ -776,8 +776,8 @@ may be hidden (issue5385)
   (rangepre
     (or
       (list
-        ('symbol', '1')
-        ('symbol', '2'))))
+        (symbol '1')
+        (symbol '2'))))
   * set:
   <spanset+ 0:3>
   0
@@ -787,8 +787,8 @@ may be hidden (issue5385)
   * analyzed:
   (rangepre
     (and
-      ('symbol', '1')
-      ('symbol', '2')))
+      (symbol '1')
+      (symbol '2')))
   * set:
   <baseset []>
 
@@ -799,8 +799,8 @@ infix/suffix resolution of ^ operator (issue2884):
   $ try '1^:2'
   (range
     (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
+      (symbol '1'))
+    (symbol '2'))
   * set:
   <spanset+ 0:3>
   0
@@ -810,8 +810,8 @@ infix/suffix resolution of ^ operator (issue2884):
   $ try '1^::2'
   (dagrange
     (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
+      (symbol '1'))
+    (symbol '2'))
   * set:
   <baseset+ [0, 1, 2]>
   0
@@ -821,7 +821,7 @@ infix/suffix resolution of ^ operator (issue2884):
   $ try '9^:'
   (rangepost
     (parentpost
-      ('symbol', '9')))
+      (symbol '9')))
   * set:
   <spanset+ 8:10>
   8
@@ -831,10 +831,10 @@ infix/suffix resolution of ^ operator (issue2884):
 
   $ try '1^(:2)'
   (parent
-    ('symbol', '1')
+    (symbol '1')
     (group
       (rangepre
-        ('symbol', '2'))))
+        (symbol '2'))))
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
@@ -842,11 +842,11 @@ infix/suffix resolution of ^ operator (issue2884):
 
   $ try 'sort(1^:2)'
   (func
-    ('symbol', 'sort')
+    (symbol 'sort')
     (range
       (parentpost
-        ('symbol', '1'))
-      ('symbol', '2')))
+        (symbol '1'))
+      (symbol '2')))
   * set:
   <spanset+ 0:3>
   0
@@ -859,9 +859,9 @@ infix/suffix resolution of ^ operator (issue2884):
       (group
         (range
           (parentpost
-            ('symbol', '3'))
-          ('symbol', '4'))))
-    ('symbol', '2'))
+            (symbol '3'))
+          (symbol '4'))))
+    (symbol '2'))
   * set:
   <spanset+ 0:3>
   0
@@ -874,9 +874,9 @@ infix/suffix resolution of ^ operator (issue2884):
       (group
         (dagrange
           (parentpost
-            ('symbol', '3'))
-          ('symbol', '4'))))
-    ('symbol', '2'))
+            (symbol '3'))
+          (symbol '4'))))
+    (symbol '2'))
   * set:
   <baseset+ [0, 1, 2]>
   0
@@ -889,7 +889,7 @@ infix/suffix resolution of ^ operator (issue2884):
       (group
         (rangepost
           (parentpost
-            ('symbol', '9'))))))
+            (symbol '9'))))))
   * set:
   <spanset+ 4:10>
   4
@@ -902,12 +902,12 @@ infix/suffix resolution of ^ operator (issue2884):
  x^ in alias should also be resolved
 
   $ try 'A' --config 'revsetalias.A=1^:2'
-  ('symbol', 'A')
+  (symbol 'A')
   * expanded:
   (range
     (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
+      (symbol '1'))
+    (symbol '2'))
   * set:
   <spanset+ 0:3>
   0
@@ -916,13 +916,13 @@ infix/suffix resolution of ^ operator (issue2884):
 
   $ try 'A:2' --config 'revsetalias.A=1^'
   (range
-    ('symbol', 'A')
-    ('symbol', '2'))
+    (symbol 'A')
+    (symbol '2'))
   * expanded:
   (range
     (parentpost
-      ('symbol', '1'))
-    ('symbol', '2'))
+      (symbol '1'))
+    (symbol '2'))
   * set:
   <spanset+ 0:3>
   0
@@ -934,13 +934,13 @@ infix/suffix resolution of ^ operator (issue2884):
 
   $ try '1^A' --config 'revsetalias.A=:2'
   (parent
-    ('symbol', '1')
-    ('symbol', 'A'))
+    (symbol '1')
+    (symbol 'A'))
   * expanded:
   (parent
-    ('symbol', '1')
+    (symbol '1')
     (rangepre
-      ('symbol', '2')))
+      (symbol '2')))
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
@@ -1168,11 +1168,11 @@ test ancestors/descendants relation subscript:
   * parsed:
   (relsubscript
     (func
-      ('symbol', 'roots')
+      (symbol 'roots')
       (rangeall
         None))
-    ('symbol', 'g')
-    ('symbol', '2'))
+    (symbol 'g')
+    (symbol '2'))
   2
   3
 
@@ -1270,22 +1270,22 @@ test author
   6
   $ try 'grep("(")' # invalid regular expression
   (func
-    ('symbol', 'grep')
-    ('string', '('))
+    (symbol 'grep')
+    (string '('))
   hg: parse error: invalid match pattern: unbalanced parenthesis
   [255]
   $ try 'grep("\bissue\d+")'
   (func
-    ('symbol', 'grep')
-    ('string', '\x08issue\\d+'))
+    (symbol 'grep')
+    (string '\x08issue\\d+'))
   * set:
   <filteredset
     <fullreposet+ 0:10>,
     <grep '\x08issue\\d+'>>
   $ try 'grep(r"\bissue\d+")'
   (func
-    ('symbol', 'grep')
-    ('string', '\\bissue\\d+'))
+    (symbol 'grep')
+    (string '\\bissue\\d+'))
   * set:
   <filteredset
     <fullreposet+ 0:10>,
@@ -1602,17 +1602,17 @@ Test operand of '%' is optimized recursively (issue4670)
   (onlypost
     (minus
       (range
-        ('symbol', '8')
-        ('symbol', '9'))
-      ('symbol', '8')))
+        (symbol '8')
+        (symbol '9'))
+      (symbol '8')))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (difference
       (range
-        ('symbol', '8')
-        ('symbol', '9'))
-      ('symbol', '8')))
+        (symbol '8')
+        (symbol '9'))
+      (symbol '8')))
   * set:
   <baseset+ [8, 9]>
   8
@@ -1620,15 +1620,15 @@ Test operand of '%' is optimized recursively (issue4670)
   $ try --optimize '(9)%(5)'
   (only
     (group
-      ('symbol', '9'))
+      (symbol '9'))
     (group
-      ('symbol', '5')))
+      (symbol '5')))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (list
-      ('symbol', '9')
-      ('symbol', '5')))
+      (symbol '9')
+      (symbol '5')))
   * set:
   <baseset+ [2, 4, 8, 9]>
   2
@@ -1962,14 +1962,14 @@ ordering defined by it.
   (difference
     (and
       (range
-        ('symbol', '3')
-        ('symbol', '0'))
+        (symbol '3')
+        (symbol '0'))
       (range
-        ('symbol', '0')
-        ('symbol', '3')))
+        (symbol '0')
+        (symbol '3')))
     (range
-      ('symbol', '2')
-      ('symbol', '1')))
+      (symbol '2')
+      (symbol '1')))
   * set:
   <filteredset
     <filteredset
@@ -1986,22 +1986,22 @@ ordering defined by it.
   $ try --optimize '2:0 & (0 + 1 + 2)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (group
       (or
         (list
-          ('symbol', '0')
-          ('symbol', '1')
-          ('symbol', '2')))))
+          (symbol '0')
+          (symbol '1')
+          (symbol '2')))))
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_list')
-      ('string', '0\x001\x002')))
+      (symbol '_list')
+      (string '0\x001\x002')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2015,26 +2015,26 @@ ordering defined by it.
   $ try --optimize '2:0 & (0:1 + 2)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (group
       (or
         (list
           (range
-            ('symbol', '0')
-            ('symbol', '1'))
-          ('symbol', '2')))))
+            (symbol '0')
+            (symbol '1'))
+          (symbol '2')))))
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (or
       (list
         (range
-          ('symbol', '0')
-          ('symbol', '1'))
-        ('symbol', '2'))))
+          (symbol '0')
+          (symbol '1'))
+        (symbol '2'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2050,19 +2050,19 @@ ordering defined by it.
   $ trylist --optimize '2:0 & %ld' 0 1 2
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_intlist')
-      ('string', '0\x001\x002')))
+      (symbol '_intlist')
+      (string '0\x001\x002')))
   * optimized:
   (andsmally
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_intlist')
-      ('string', '0\x001\x002')))
+      (symbol '_intlist')
+      (string '0\x001\x002')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2074,19 +2074,19 @@ ordering defined by it.
   $ trylist --optimize '%ld & 2:0' 0 2 1
   (and
     (func
-      ('symbol', '_intlist')
-      ('string', '0\x002\x001'))
+      (symbol '_intlist')
+      (string '0\x002\x001'))
     (range
-      ('symbol', '2')
-      ('symbol', '0')))
+      (symbol '2')
+      (symbol '0')))
   * optimized:
   (and
     (func
-      ('symbol', '_intlist')
-      ('string', '0\x002\x001'))
+      (symbol '_intlist')
+      (string '0\x002\x001'))
     (range
-      ('symbol', '2')
-      ('symbol', '0')))
+      (symbol '2')
+      (symbol '0')))
   * set:
   <filteredset
     <baseset [0, 2, 1]>,
@@ -2100,19 +2100,19 @@ ordering defined by it.
   $ trylist --optimize --bin '2:0 & %ln' `hg log -T '{node} ' -r0:2`
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_hexlist')
-      ('string', '*'))) (glob)
+      (symbol '_hexlist')
+      (string '*'))) (glob)
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_hexlist')
-      ('string', '*'))) (glob)
+      (symbol '_hexlist')
+      (string '*'))) (glob)
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2124,19 +2124,19 @@ ordering defined by it.
   $ trylist --optimize --bin '%ln & 2:0' `hg log -T '{node} ' -r0+2+1`
   (and
     (func
-      ('symbol', '_hexlist')
-      ('string', '*')) (glob)
+      (symbol '_hexlist')
+      (string '*')) (glob)
     (range
-      ('symbol', '2')
-      ('symbol', '0')))
+      (symbol '2')
+      (symbol '0')))
   * optimized:
   (andsmally
     (func
-      ('symbol', '_hexlist')
-      ('string', '*')) (glob)
+      (symbol '_hexlist')
+      (string '*')) (glob)
     (range
-      ('symbol', '2')
-      ('symbol', '0')))
+      (symbol '2')
+      (symbol '0')))
   * set:
   <baseset [0, 2, 1]>
   0
@@ -2150,11 +2150,11 @@ ordering defined by it.
   * optimized:
   (difference
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', '_list')
-      ('string', '0\x001')))
+      (symbol '_list')
+      (string '0\x001')))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2166,15 +2166,15 @@ ordering defined by it.
   * optimized:
   (difference
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (and
       (range
-        ('symbol', '0')
-        ('symbol', '2'))
+        (symbol '0')
+        (symbol '2'))
       (func
-        ('symbol', '_list')
-        ('string', '0\x001'))))
+        (symbol '_list')
+        (string '0\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2188,10 +2188,10 @@ ordering defined by it.
   $ try -p optimized 'present(2 + 0 + 1)'
   * optimized:
   (func
-    ('symbol', 'present')
+    (symbol 'present')
     (func
-      ('symbol', '_list')
-      ('string', '2\x000\x001')))
+      (symbol '_list')
+      (string '2\x000\x001')))
   * set:
   <baseset [2, 0, 1]>
   2
@@ -2201,25 +2201,25 @@ ordering defined by it.
   $ try --optimize '2:0 & present(0 + 1 + 2)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', 'present')
+      (symbol 'present')
       (or
         (list
-          ('symbol', '0')
-          ('symbol', '1')
-          ('symbol', '2')))))
+          (symbol '0')
+          (symbol '1')
+          (symbol '2')))))
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', 'present')
+      (symbol 'present')
       (func
-        ('symbol', '_list')
-        ('string', '0\x001\x002'))))
+        (symbol '_list')
+        (string '0\x001\x002'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2233,22 +2233,22 @@ ordering defined by it.
   $ try --optimize '0:2 & reverse(all())'
   (and
     (range
-      ('symbol', '0')
-      ('symbol', '2'))
+      (symbol '0')
+      (symbol '2'))
     (func
-      ('symbol', 'reverse')
+      (symbol 'reverse')
       (func
-        ('symbol', 'all')
+        (symbol 'all')
         None)))
   * optimized:
   (and
     (range
-      ('symbol', '0')
-      ('symbol', '2'))
+      (symbol '0')
+      (symbol '2'))
     (func
-      ('symbol', 'reverse')
+      (symbol 'reverse')
       (func
-        ('symbol', 'all')
+        (symbol 'all')
         None)))
   * set:
   <filteredset
@@ -2263,28 +2263,28 @@ ordering defined by it.
   $ try --optimize '0:2 & sort(all(), -rev)'
   (and
     (range
-      ('symbol', '0')
-      ('symbol', '2'))
+      (symbol '0')
+      (symbol '2'))
     (func
-      ('symbol', 'sort')
+      (symbol 'sort')
       (list
         (func
-          ('symbol', 'all')
+          (symbol 'all')
           None)
         (negate
-          ('symbol', 'rev')))))
+          (symbol 'rev')))))
   * optimized:
   (and
     (range
-      ('symbol', '0')
-      ('symbol', '2'))
+      (symbol '0')
+      (symbol '2'))
     (func
-      ('symbol', 'sort')
+      (symbol 'sort')
       (list
         (func
-          ('symbol', 'all')
+          (symbol 'all')
           None)
-        ('string', '-rev'))))
+        (string '-rev'))))
   * set:
   <filteredset
     <spanset+ 0:3>,
@@ -2307,25 +2307,25 @@ ordering defined by it.
   $ try --optimize '2:0 & first(1 + 0 + 2)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', 'first')
+      (symbol 'first')
       (or
         (list
-          ('symbol', '1')
-          ('symbol', '0')
-          ('symbol', '2')))))
+          (symbol '1')
+          (symbol '0')
+          (symbol '2')))))
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', 'first')
+      (symbol 'first')
       (func
-        ('symbol', '_list')
-        ('string', '1\x000\x002'))))
+        (symbol '_list')
+        (string '1\x000\x002'))))
   * set:
   <filteredset
     <baseset [1]>,
@@ -2335,26 +2335,26 @@ ordering defined by it.
   $ try --optimize '2:0 & not last(0 + 2 + 1)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (not
       (func
-        ('symbol', 'last')
+        (symbol 'last')
         (or
           (list
-            ('symbol', '0')
-            ('symbol', '2')
-            ('symbol', '1'))))))
+            (symbol '0')
+            (symbol '2')
+            (symbol '1'))))))
   * optimized:
   (difference
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (func
-      ('symbol', 'last')
+      (symbol 'last')
       (func
-        ('symbol', '_list')
-        ('string', '0\x002\x001'))))
+        (symbol '_list')
+        (string '0\x002\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2368,33 +2368,33 @@ ordering defined by it.
   $ try --optimize '2:0 & (1 + 0 + 2):(0 + 2 + 1)'
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (range
       (group
         (or
           (list
-            ('symbol', '1')
-            ('symbol', '0')
-            ('symbol', '2'))))
+            (symbol '1')
+            (symbol '0')
+            (symbol '2'))))
       (group
         (or
           (list
-            ('symbol', '0')
-            ('symbol', '2')
-            ('symbol', '1'))))))
+            (symbol '0')
+            (symbol '2')
+            (symbol '1'))))))
   * optimized:
   (and
     (range
-      ('symbol', '2')
-      ('symbol', '0'))
+      (symbol '2')
+      (symbol '0'))
     (range
       (func
-        ('symbol', '_list')
-        ('string', '1\x000\x002'))
+        (symbol '_list')
+        (string '1\x000\x002'))
       (func
-        ('symbol', '_list')
-        ('string', '0\x002\x001'))))
+        (symbol '_list')
+        (string '0\x002\x001'))))
   * set:
   <filteredset
     <spanset- 0:3>,
@@ -2406,22 +2406,22 @@ ordering defined by it.
   $ try --optimize 'contains("glob:*") & (2 + 0 + 1)'
   (and
     (func
-      ('symbol', 'contains')
-      ('string', 'glob:*'))
+      (symbol 'contains')
+      (string 'glob:*'))
     (group
       (or
         (list
-          ('symbol', '2')
-          ('symbol', '0')
-          ('symbol', '1')))))
+          (symbol '2')
+          (symbol '0')
+          (symbol '1')))))
   * optimized:
   (andsmally
     (func
-      ('symbol', 'contains')
-      ('string', 'glob:*'))
+      (symbol 'contains')
+      (string 'glob:*'))
     (func
-      ('symbol', '_list')
-      ('string', '2\x000\x001')))
+      (symbol '_list')
+      (string '2\x000\x001')))
   * set:
   <filteredset
     <baseset+ [0, 1, 2]>,
@@ -2436,26 +2436,26 @@ ordering defined by it.
   $ try --optimize 'reverse(contains("glob:*")) & (0 + 2 + 1)'
   (and
     (func
-      ('symbol', 'reverse')
+      (symbol 'reverse')
       (func
-        ('symbol', 'contains')
-        ('string', 'glob:*')))
+        (symbol 'contains')
+        (string 'glob:*')))
     (group
       (or
         (list
-          ('symbol', '0')
-          ('symbol', '2')
-          ('symbol', '1')))))
+          (symbol '0')
+          (symbol '2')
+          (symbol '1')))))
   * optimized:
   (andsmally
     (func
-      ('symbol', 'reverse')
+      (symbol 'reverse')
       (func
-        ('symbol', 'contains')
-        ('string', 'glob:*')))
+        (symbol 'contains')
+        (string 'glob:*')))
     (func
-      ('symbol', '_list')
-      ('string', '0\x002\x001')))
+      (symbol '_list')
+      (string '0\x002\x001')))
   * set:
   <filteredset
     <baseset- [0, 1, 2]>,
@@ -2791,13 +2791,13 @@ test that `or` operation skips duplicated revisions from right-hand side
   (or
     (list
       (func
-        ('symbol', 'reverse')
+        (symbol 'reverse')
         (dagrange
-          ('symbol', '1')
-          ('symbol', '5')))
+          (symbol '1')
+          (symbol '5')))
       (func
-        ('symbol', 'ancestors')
-        ('symbol', '4'))))
+        (symbol 'ancestors')
+        (symbol '4'))))
   * set:
   <addset
     <baseset- [1, 3, 5]>,
@@ -2810,17 +2810,17 @@ test that `or` operation skips duplicated revisions from right-hand side
   4
   $ try 'sort(ancestors(4) or reverse(1::5))'
   (func
-    ('symbol', 'sort')
+    (symbol 'sort')
     (or
       (list
         (func
-          ('symbol', 'ancestors')
-          ('symbol', '4'))
+          (symbol 'ancestors')
+          (symbol '4'))
         (func
-          ('symbol', 'reverse')
+          (symbol 'reverse')
           (dagrange
-            ('symbol', '1')
-            ('symbol', '5'))))))
+            (symbol '1')
+            (symbol '5'))))))
   * set:
   <addset+
     <generatorset+>,
@@ -2837,18 +2837,18 @@ test optimization of trivial `or` operation
   $ try --optimize '0|(1)|"2"|-2|tip|null'
   (or
     (list
-      ('symbol', '0')
+      (symbol '0')
       (group
-        ('symbol', '1'))
-      ('string', '2')
+        (symbol '1'))
+      (string '2')
       (negate
-        ('symbol', '2'))
-      ('symbol', 'tip')
-      ('symbol', 'null')))
+        (symbol '2'))
+      (symbol 'tip')
+      (symbol 'null')))
   * optimized:
   (func
-    ('symbol', '_list')
-    ('string', '0\x001\x002\x00-2\x00tip\x00null'))
+    (symbol '_list')
+    (string '0\x001\x002\x00-2\x00tip\x00null'))
   * set:
   <baseset [0, 1, 2, 8, 9, -1]>
   0
@@ -2861,20 +2861,20 @@ test optimization of trivial `or` operation
   $ try --optimize '0|1|2:3'
   (or
     (list
-      ('symbol', '0')
-      ('symbol', '1')
+      (symbol '0')
+      (symbol '1')
       (range
-        ('symbol', '2')
-        ('symbol', '3'))))
+        (symbol '2')
+        (symbol '3'))))
   * optimized:
   (or
     (list
       (func
-        ('symbol', '_list')
-        ('string', '0\x001'))
+        (symbol '_list')
+        (string '0\x001'))
       (range
-        ('symbol', '2')
-        ('symbol', '3'))))
+        (symbol '2')
+        (symbol '3'))))
   * set:
   <addset
     <baseset [0, 1]>,
@@ -2888,27 +2888,27 @@ test optimization of trivial `or` operation
   (or
     (list
       (range
-        ('symbol', '0')
-        ('symbol', '1'))
-      ('symbol', '2')
+        (symbol '0')
+        (symbol '1'))
+      (symbol '2')
       (range
-        ('symbol', '3')
-        ('symbol', '4'))
-      ('symbol', '5')
-      ('symbol', '6')))
+        (symbol '3')
+        (symbol '4'))
+      (symbol '5')
+      (symbol '6')))
   * optimized:
   (or
     (list
       (range
-        ('symbol', '0')
-        ('symbol', '1'))
-      ('symbol', '2')
+        (symbol '0')
+        (symbol '1'))
+      (symbol '2')
       (range
-        ('symbol', '3')
-        ('symbol', '4'))
+        (symbol '3')
+        (symbol '4'))
       (func
-        ('symbol', '_list')
-        ('string', '5\x006'))))
+        (symbol '_list')
+        (string '5\x006'))))
   * set:
   <addset
     <addset
@@ -2931,11 +2931,11 @@ unoptimized `or` looks like this
   * analyzed:
   (or
     (list
-      ('symbol', '0')
-      ('symbol', '1')
-      ('symbol', '2')
-      ('symbol', '3')
-      ('symbol', '4')))
+      (symbol '0')
+      (symbol '1')
+      (symbol '2')
+      (symbol '3')
+      (symbol '4')))
   * set:
   <addset
     <addset
@@ -2999,9 +2999,9 @@ test ',' in `_list`
   [255]
   $ try '0,1,2'
   (list
-    ('symbol', '0')
-    ('symbol', '1')
-    ('symbol', '2'))
+    (symbol '0')
+    (symbol '1')
+    (symbol '2'))
   hg: parse error: can't use a list in this context
   (see hg help "revsets.x or y")
   [255]
@@ -3012,20 +3012,20 @@ test that chained `or` operations make balanced addsets
   (or
     (list
       (range
-        ('symbol', '0')
-        ('symbol', '1'))
+        (symbol '0')
+        (symbol '1'))
       (range
-        ('symbol', '1')
-        ('symbol', '2'))
+        (symbol '1')
+        (symbol '2'))
       (range
-        ('symbol', '2')
-        ('symbol', '3'))
+        (symbol '2')
+        (symbol '3'))
       (range
-        ('symbol', '3')
-        ('symbol', '4'))
+        (symbol '3')
+        (symbol '4'))
       (range
-        ('symbol', '4')
-        ('symbol', '5'))))
+        (symbol '4')
+        (symbol '5'))))
   * set:
   <addset
     <addset
@@ -3048,13 +3048,13 @@ no crash by empty group "()" while optimizing `or` operations
   $ try --optimize '0|()'
   (or
     (list
-      ('symbol', '0')
+      (symbol '0')
       (group
         None)))
   * optimized:
   (or
     (list
-      ('symbol', '0')
+      (symbol '0')
       None))
   hg: parse error: missing argument
   [255]
@@ -3077,47 +3077,47 @@ check that conversion to only works
   $ try --optimize '::3 - ::1'
   (minus
     (dagrangepre
-      ('symbol', '3'))
+      (symbol '3'))
     (dagrangepre
-      ('symbol', '1')))
+      (symbol '1')))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (list
-      ('symbol', '3')
-      ('symbol', '1')))
+      (symbol '3')
+      (symbol '1')))
   * set:
   <baseset+ [3]>
   3
   $ try --optimize 'ancestors(1) - ancestors(3)'
   (minus
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '1'))
+      (symbol 'ancestors')
+      (symbol '1'))
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '3')))
+      (symbol 'ancestors')
+      (symbol '3')))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (list
-      ('symbol', '1')
-      ('symbol', '3')))
+      (symbol '1')
+      (symbol '3')))
   * set:
   <baseset+ []>
   $ try --optimize 'not ::2 and ::6'
   (and
     (not
       (dagrangepre
-        ('symbol', '2')))
+        (symbol '2')))
     (dagrangepre
-      ('symbol', '6')))
+      (symbol '6')))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (list
-      ('symbol', '6')
-      ('symbol', '2')))
+      (symbol '6')
+      (symbol '2')))
   * set:
   <baseset+ [3, 4, 5, 6]>
   3
@@ -3127,18 +3127,18 @@ check that conversion to only works
   $ try --optimize 'ancestors(6) and not ancestors(4)'
   (and
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '6'))
+      (symbol 'ancestors')
+      (symbol '6'))
     (not
       (func
-        ('symbol', 'ancestors')
-        ('symbol', '4'))))
+        (symbol 'ancestors')
+        (symbol '4'))))
   * optimized:
   (func
-    ('symbol', 'only')
+    (symbol 'only')
     (list
-      ('symbol', '6')
-      ('symbol', '4')))
+      (symbol '6')
+      (symbol '4')))
   * set:
   <baseset+ [3, 5, 6]>
   3
@@ -3150,14 +3150,14 @@ no crash by empty group "()" while optimizing to "only()"
   $ try --optimize '::1 and ()'
   (and
     (dagrangepre
-      ('symbol', '1'))
+      (symbol '1'))
     (group
       None))
   * optimized:
   (andsmally
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '1'))
+      (symbol 'ancestors')
+      (symbol '1'))
     None)
   hg: parse error: missing argument
   [255]
@@ -3168,13 +3168,13 @@ optimization to only() works only if ancestors() takes only one argument
   * optimized:
   (difference
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '6'))
+      (symbol 'ancestors')
+      (symbol '6'))
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (list
-        ('symbol', '4')
-        ('symbol', '1'))))
+        (symbol '4')
+        (symbol '1'))))
   0
   1
   3
@@ -3184,13 +3184,13 @@ optimization to only() works only if ancestors() takes only one argument
   * optimized:
   (difference
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (list
-        ('symbol', '6')
-        ('symbol', '1')))
+        (symbol '6')
+        (symbol '1')))
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '4')))
+      (symbol 'ancestors')
+      (symbol '4')))
   5
   6
 
@@ -3201,15 +3201,15 @@ to support it)
   * optimized:
   (difference
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (keyvalue
-        ('symbol', 'set')
-        ('symbol', '6')))
+        (symbol 'set')
+        (symbol '6')))
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (keyvalue
-        ('symbol', 'set')
-        ('symbol', '4'))))
+        (symbol 'set')
+        (symbol '4'))))
   3
   5
   6
@@ -3492,10 +3492,10 @@ aliases:
   $ echo 'rs4(ARG1, ARGA, ARGB, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
 
   $ try m
-  ('symbol', 'm')
+  (symbol 'm')
   * expanded:
   (func
-    ('symbol', 'merge')
+    (symbol 'merge')
     None)
   * set:
   <filteredset
@@ -3506,17 +3506,17 @@ aliases:
   $ HGPLAIN=1
   $ export HGPLAIN
   $ try m
-  ('symbol', 'm')
+  (symbol 'm')
   abort: unknown revision 'm'!
   [255]
 
   $ HGPLAINEXCEPT=revsetalias
   $ export HGPLAINEXCEPT
   $ try m
-  ('symbol', 'm')
+  (symbol 'm')
   * expanded:
   (func
-    ('symbol', 'merge')
+    (symbol 'merge')
     None)
   * set:
   <filteredset
@@ -3529,12 +3529,12 @@ aliases:
 
   $ try 'p2(.)'
   (func
-    ('symbol', 'p2')
-    ('symbol', '.'))
+    (symbol 'p2')
+    (symbol '.'))
   * expanded:
   (func
-    ('symbol', 'p1')
-    ('symbol', '.'))
+    (symbol 'p1')
+    (symbol '.'))
   * set:
   <baseset+ [8]>
   8
@@ -3543,8 +3543,8 @@ aliases:
   $ export HGPLAIN
   $ try 'p2(.)'
   (func
-    ('symbol', 'p2')
-    ('symbol', '.'))
+    (symbol 'p2')
+    (symbol '.'))
   * set:
   <baseset+ []>
 
@@ -3552,12 +3552,12 @@ aliases:
   $ export HGPLAINEXCEPT
   $ try 'p2(.)'
   (func
-    ('symbol', 'p2')
-    ('symbol', '.'))
+    (symbol 'p2')
+    (symbol '.'))
   * expanded:
   (func
-    ('symbol', 'p1')
-    ('symbol', '.'))
+    (symbol 'p1')
+    (symbol '.'))
   * set:
   <baseset+ [8]>
   8
@@ -3568,12 +3568,12 @@ aliases:
 test alias recursion
 
   $ try sincem
-  ('symbol', 'sincem')
+  (symbol 'sincem')
   * expanded:
   (func
-    ('symbol', 'descendants')
+    (symbol 'descendants')
     (func
-      ('symbol', 'merge')
+      (symbol 'merge')
       None))
   * set:
   <generatorset+>
@@ -3585,7 +3585,7 @@ test infinite recursion
   $ echo 'recurse1 = recurse2' >> .hg/hgrc
   $ echo 'recurse2 = recurse1' >> .hg/hgrc
   $ try recurse1
-  ('symbol', 'recurse1')
+  (symbol 'recurse1')
   hg: parse error: infinite expansion of revset alias "recurse1" detected
   [255]
 
@@ -3593,22 +3593,22 @@ test infinite recursion
   $ echo 'level2($1, $2) = level1($2, $1)' >> .hg/hgrc
   $ try "level2(level1(1, 2), 3)"
   (func
-    ('symbol', 'level2')
+    (symbol 'level2')
     (list
       (func
-        ('symbol', 'level1')
+        (symbol 'level1')
         (list
-          ('symbol', '1')
-          ('symbol', '2')))
-      ('symbol', '3')))
+          (symbol '1')
+          (symbol '2')))
+      (symbol '3')))
   * expanded:
   (or
     (list
-      ('symbol', '3')
+      (symbol '3')
       (or
         (list
-          ('symbol', '1')
-          ('symbol', '2')))))
+          (symbol '1')
+          (symbol '2')))))
   * set:
   <addset
     <baseset [3]>,
@@ -3624,16 +3624,16 @@ test nesting and variable passing
   $ echo 'nested3($1) = max($1)' >> .hg/hgrc
   $ try 'nested(2:5)'
   (func
-    ('symbol', 'nested')
+    (symbol 'nested')
     (range
-      ('symbol', '2')
-      ('symbol', '5')))
+      (symbol '2')
+      (symbol '5')))
   * expanded:
   (func
-    ('symbol', 'max')
+    (symbol 'max')
     (range
-      ('symbol', '2')
-      ('symbol', '5')))
+      (symbol '2')
+      (symbol '5')))
   * set:
   <baseset
     <max
@@ -3646,29 +3646,29 @@ test chained `or` operations are flattened at parsing phase
   $ echo 'chainedorops($1, $2, $3) = $1|$2|$3' >> .hg/hgrc
   $ try 'chainedorops(0:1, 1:2, 2:3)'
   (func
-    ('symbol', 'chainedorops')
+    (symbol 'chainedorops')
     (list
       (range
-        ('symbol', '0')
-        ('symbol', '1'))
+        (symbol '0')
+        (symbol '1'))
       (range
-        ('symbol', '1')
-        ('symbol', '2'))
+        (symbol '1')
+        (symbol '2'))
       (range
-        ('symbol', '2')
-        ('symbol', '3'))))
+        (symbol '2')
+        (symbol '3'))))
   * expanded:
   (or
     (list
       (range
-        ('symbol', '0')
-        ('symbol', '1'))
+        (symbol '0')
+        (symbol '1'))
       (range
-        ('symbol', '1')
-        ('symbol', '2'))
+        (symbol '1')
+        (symbol '2'))
       (range
-        ('symbol', '2')
-        ('symbol', '3'))))
+        (symbol '2')
+        (symbol '3'))))
   * set:
   <addset
     <spanset+ 0:2>,
@@ -3688,16 +3688,16 @@ far away.
   $ echo 'callinjection($1) = descendants(injectparamasstring)' >> .hg/hgrc
   $ try 'callinjection(2:5)'
   (func
-    ('symbol', 'callinjection')
+    (symbol 'callinjection')
     (range
-      ('symbol', '2')
-      ('symbol', '5')))
+      (symbol '2')
+      (symbol '5')))
   * expanded:
   (func
-    ('symbol', 'descendants')
+    (symbol 'descendants')
     (func
-      ('symbol', 'max')
-      ('string', '$1')))
+      (symbol 'max')
+      (string '$1')))
   abort: unknown revision '$1'!
   [255]
 
@@ -3708,13 +3708,13 @@ but 'all()' should never be substituted to '0()'.
   $ echo 'shadowall(all) = all and universe' >> .hg/hgrc
   $ try 'shadowall(0)'
   (func
-    ('symbol', 'shadowall')
-    ('symbol', '0'))
+    (symbol 'shadowall')
+    (symbol '0'))
   * expanded:
   (and
-    ('symbol', '0')
+    (symbol '0')
     (func
-      ('symbol', 'all')
+      (symbol 'all')
       None))
   * set:
   <filteredset
@@ -3726,26 +3726,26 @@ test unknown reference:
 
   $ try "unknownref(0)" --config 'revsetalias.unknownref($1)=$1:$2'
   (func
-    ('symbol', 'unknownref')
-    ('symbol', '0'))
+    (symbol 'unknownref')
+    (symbol '0'))
   abort: bad definition of revset alias "unknownref": invalid symbol '$2'
   [255]
 
   $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
-  ('symbol', 'tip')
+  (symbol 'tip')
   warning: bad definition of revset alias "anotherbadone": at 7: not a prefix: end
   * set:
   <baseset [9]>
   9
 
   $ try 'tip'
-  ('symbol', 'tip')
+  (symbol 'tip')
   * set:
   <baseset [9]>
   9
 
   $ hg debugrevspec --debug --config revsetalias.'bad name'='tip' "tip"
-  ('symbol', 'tip')
+  (symbol 'tip')
   warning: bad declaration of revset alias "bad name": at 4: invalid token
   * set:
   <baseset [9]>
@@ -3753,17 +3753,17 @@ test unknown reference:
   $ echo 'strictreplacing($1, $10) = $10 or desc("$1")' >> .hg/hgrc
   $ try 'strictreplacing("foo", tip)'
   (func
-    ('symbol', 'strictreplacing')
+    (symbol 'strictreplacing')
     (list
-      ('string', 'foo')
-      ('symbol', 'tip')))
+      (string 'foo')
+      (symbol 'tip')))
   * expanded:
   (or
     (list
-      ('symbol', 'tip')
+      (symbol 'tip')
       (func
-        ('symbol', 'desc')
-        ('string', '$1'))))
+        (symbol 'desc')
+        (string '$1'))))
   * set:
   <addset
     <baseset [9]>,
@@ -3774,20 +3774,20 @@ test unknown reference:
 
   $ try 'd(2:5)'
   (func
-    ('symbol', 'd')
+    (symbol 'd')
     (range
-      ('symbol', '2')
-      ('symbol', '5')))
+      (symbol '2')
+      (symbol '5')))
   * expanded:
   (func
-    ('symbol', 'reverse')
+    (symbol 'reverse')
     (func
-      ('symbol', 'sort')
+      (symbol 'sort')
       (list
         (range
-          ('symbol', '2')
-          ('symbol', '5'))
-        ('symbol', 'date'))))
+          (symbol '2')
+          (symbol '5'))
+        (symbol 'date'))))
   * set:
   <baseset [4, 5, 3, 2]>
   4
@@ -3796,71 +3796,71 @@ test unknown reference:
   2
   $ try 'rs(2 or 3, date)'
   (func
-    ('symbol', 'rs')
+    (symbol 'rs')
     (list
       (or
         (list
-          ('symbol', '2')
-          ('symbol', '3')))
-      ('symbol', 'date')))
+          (symbol '2')
+          (symbol '3')))
+      (symbol 'date')))
   * expanded:
   (func
-    ('symbol', 'reverse')
+    (symbol 'reverse')
     (func
-      ('symbol', 'sort')
+      (symbol 'sort')
       (list
         (or
           (list
-            ('symbol', '2')
-            ('symbol', '3')))
-        ('symbol', 'date'))))
+            (symbol '2')
+            (symbol '3')))
+        (symbol 'date'))))
   * set:
   <baseset [3, 2]>
   3
   2
   $ try 'rs()'
   (func
-    ('symbol', 'rs')
+    (symbol 'rs')
     None)
   hg: parse error: invalid number of arguments: 0
   [255]
   $ try 'rs(2)'
   (func
-    ('symbol', 'rs')
-    ('symbol', '2'))
+    (symbol 'rs')
+    (symbol '2'))
   hg: parse error: invalid number of arguments: 1
   [255]
   $ try 'rs(2, data, 7)'
   (func
-    ('symbol', 'rs')
+    (symbol 'rs')
     (list
-      ('symbol', '2')
-      ('symbol', 'data')
-      ('symbol', '7')))
+      (symbol '2')
+      (symbol 'data')
+      (symbol '7')))
   hg: parse error: invalid number of arguments: 3
   [255]
   $ try 'rs4(2 or 3, x, x, date)'
   (func
-    ('symbol', 'rs4')
+    (symbol 'rs4')
     (list
       (or
         (list
-          ('symbol', '2')
-          ('symbol', '3')))
-      ('symbol', 'x')
-      ('symbol', 'x')
-      ('symbol', 'date')))
+          (symbol '2')
+          (symbol '3')))
+      (symbol 'x')
+      (symbol 'x')
+      (symbol 'date')))
   * expanded:
   (func
-    ('symbol', 'reverse')
+    (symbol 'reverse')
     (func
-      ('symbol', 'sort')
+      (symbol 'sort')
       (list
         (or
           (list
-            ('symbol', '2')
-            ('symbol', '3')))
-        ('symbol', 'date'))))
+            (symbol '2')
+            (symbol '3')))
+        (symbol 'date'))))
   * set:
   <baseset [3, 2]>
   3
@@ -3927,16 +3927,16 @@ issue2549 - correct optimizations
   $ try 'limit(1 or 2 or 3, 2) and not 2'
   (and
     (func
-      ('symbol', 'limit')
+      (symbol 'limit')
       (list
         (or
           (list
-            ('symbol', '1')
-            ('symbol', '2')
-            ('symbol', '3')))
-        ('symbol', '2')))
+            (symbol '1')
+            (symbol '2')
+            (symbol '3')))
+        (symbol '2')))
     (not
-      ('symbol', '2')))
+      (symbol '2')))
   * set:
   <filteredset
     <baseset [1, 2]>,
@@ -3946,13 +3946,13 @@ issue2549 - correct optimizations
   $ try 'max(1 or 2) and not 2'
   (and
     (func
-      ('symbol', 'max')
+      (symbol 'max')
       (or
         (list
-          ('symbol', '1')
-          ('symbol', '2'))))
+          (symbol '1')
+          (symbol '2'))))
     (not
-      ('symbol', '2')))
+      (symbol '2')))
   * set:
   <filteredset
     <baseset
@@ -3964,13 +3964,13 @@ issue2549 - correct optimizations
   $ try 'min(1 or 2) and not 1'
   (and
     (func
-      ('symbol', 'min')
+      (symbol 'min')
       (or
         (list
-          ('symbol', '1')
-          ('symbol', '2'))))
+          (symbol '1')
+          (symbol '2'))))
     (not
-      ('symbol', '1')))
+      (symbol '1')))
   * set:
   <filteredset
     <baseset
@@ -3982,15 +3982,15 @@ issue2549 - correct optimizations
   $ try 'last(1 or 2, 1) and not 2'
   (and
     (func
-      ('symbol', 'last')
+      (symbol 'last')
       (list
         (or
           (list
-            ('symbol', '1')
-            ('symbol', '2')))
-        ('symbol', '1')))
+            (symbol '1')
+            (symbol '2')))
+        (symbol '1')))
     (not
-      ('symbol', '2')))
+      (symbol '2')))
   * set:
   <filteredset
     <baseset [2]>,
@@ -4065,12 +4065,12 @@ tests for concatenation of strings/symbols by "##"
   (_concat
     (_concat
       (_concat
-        ('symbol', '278')
-        ('string', '5f5'))
-      ('symbol', '1ee'))
-    ('string', 'ce5'))
+        (symbol '278')
+        (string '5f5'))
+      (symbol '1ee'))
+    (string 'ce5'))
   * concatenated:
-  ('string', '2785f51eece5')
+  (string '2785f51eece5')
   * set:
   <baseset [0]>
   0
@@ -4078,22 +4078,22 @@ tests for concatenation of strings/symbols by "##"
   $ echo 'cat4($1, $2, $3, $4) = $1 ## $2 ## $3 ## $4' >> .hg/hgrc
   $ try "cat4(278, '5f5', 1ee, 'ce5')"
   (func
-    ('symbol', 'cat4')
+    (symbol 'cat4')
     (list
-      ('symbol', '278')
-      ('string', '5f5')
-      ('symbol', '1ee')
-      ('string', 'ce5')))
+      (symbol '278')
+      (string '5f5')
+      (symbol '1ee')
+      (string 'ce5')))
   * expanded:
   (_concat
     (_concat
       (_concat
-        ('symbol', '278')
-        ('string', '5f5'))
-      ('symbol', '1ee'))
-    ('string', 'ce5'))
+        (symbol '278')
+        (string '5f5'))
+      (symbol '1ee'))
+    (string 'ce5'))
   * concatenated:
-  ('string', '2785f51eece5')
+  (string '2785f51eece5')
   * set:
   <baseset [0]>
   0
@@ -4370,98 +4370,98 @@ Test `draft() & ::x` optimization
   * analyzed:
   (and
     (func
-      ('symbol', 'draft')
+      (symbol 'draft')
       None)
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (or
         (list
           (and
             (or
               (list
-                ('symbol', 'S1')
-                ('symbol', 'D1')
-                ('symbol', 'P5')))
+                (symbol 'S1')
+                (symbol 'D1')
+                (symbol 'P5')))
             (not
-              ('symbol', 'D3')))
-          ('symbol', 'S2')))))
+              (symbol 'D3')))
+          (symbol 'S2')))))
   * optimized:
   (func
-    ('symbol', '_phaseandancestors')
+    (symbol '_phaseandancestors')
     (list
-      ('symbol', 'draft')
+      (symbol 'draft')
       (or
         (list
           (difference
             (func
-              ('symbol', '_list')
-              ('string', 'S1\x00D1\x00P5'))
-            ('symbol', 'D3'))
-          ('symbol', 'S2')))))
+              (symbol '_list')
+              (string 'S1\x00D1\x00P5'))
+            (symbol 'D3'))
+          (symbol 'S2')))))
   $ hg debugrevspec --verify -p analyzed -p optimized 'secret() & ::9'
   * analyzed:
   (and
     (func
-      ('symbol', 'secret')
+      (symbol 'secret')
       None)
     (func
-      ('symbol', 'ancestors')
-      ('symbol', '9')))
+      (symbol 'ancestors')
+      (symbol '9')))
   * optimized:
   (func
-    ('symbol', '_phaseandancestors')
+    (symbol '_phaseandancestors')
     (list
-      ('symbol', 'secret')
-      ('symbol', '9')))
+      (symbol 'secret')
+      (symbol '9')))
   $ hg debugrevspec --verify -p analyzed -p optimized '7 & ( (not public()) & ::(tag()) )'
   * analyzed:
   (and
-    ('symbol', '7')
+    (symbol '7')
     (and
       (not
         (func
-          ('symbol', 'public')
+          (symbol 'public')
           None))
       (func
-        ('symbol', 'ancestors')
+        (symbol 'ancestors')
         (func
-          ('symbol', 'tag')
+          (symbol 'tag')
           None))))
   * optimized:
   (and
-    ('symbol', '7')
+    (symbol '7')
     (func
-      ('symbol', '_phaseandancestors')
+      (symbol '_phaseandancestors')
       (list
-        ('symbol', '_notpublic')
+        (symbol '_notpublic')
         (func
-          ('symbol', 'tag')
+          (symbol 'tag')
           None))))
   $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, 1)'
   * optimized:
   (and
     (func
-      ('symbol', '_notpublic')
+      (symbol '_notpublic')
       None)
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (list
         (func
-          ('symbol', '_list')
-          ('string', 'S1\x00D2\x00P5'))
-        ('symbol', '1'))))
+          (symbol '_list')
+          (string 'S1\x00D2\x00P5'))
+        (symbol '1'))))
   $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, depth=1)'
   * optimized:
   (and
     (func
-      ('symbol', '_notpublic')
+      (symbol '_notpublic')
       None)
     (func
-      ('symbol', 'ancestors')
+      (symbol 'ancestors')
       (list
         (func
-          ('symbol', '_list')
-          ('string', 'S1\x00D2\x00P5'))
+          (symbol '_list')
+          (string 'S1\x00D2\x00P5'))
         (keyvalue
-          ('symbol', 'depth')
-          ('symbol', '1')))))
+          (symbol 'depth')
+          (symbol '1')))))

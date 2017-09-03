@@ -20,6 +20,7 @@ from __future__ import absolute_import
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     util,
 )
@@ -193,9 +194,17 @@ def unescapestr(s):
         # mangle Python's exception into our format
         raise error.ParseError(str(e).lower())
 
+def _brepr(obj):
+    if isinstance(obj, bytes):
+        return b"'%s'" % util.escapestr(obj)
+    return encoding.strtolocal(repr(obj))
+
 def _prettyformat(tree, leafnodes, level, lines):
-    if not isinstance(tree, tuple) or tree[0] in leafnodes:
-        lines.append((level, str(tree)))
+    if not isinstance(tree, tuple):
+        lines.append((level, _brepr(tree)))
+    elif tree[0] in leafnodes:
+        rs = map(_brepr, tree[1:])
+        lines.append((level, '(%s %s)' % (tree[0], ' '.join(rs))))
     else:
         lines.append((level, '(%s' % tree[0]))
         for s in tree[1:]:
@@ -219,9 +228,9 @@ def simplifyinfixops(tree, targetnodes):
     ...       ('symbol', '2')),
     ...     ('symbol', '3')))
     (or
-      ('symbol', '1')
-      ('symbol', '2')
-      ('symbol', '3'))
+      (symbol '1')
+      (symbol '2')
+      (symbol '3'))
     >>> f(('func',
     ...     ('symbol', 'p1'),
     ...     ('or',
@@ -246,25 +255,25 @@ def simplifyinfixops(tree, targetnodes):
     ...               ('symbol', '7'))))),
     ...       ('symbol', '8'))))
     (func
-      ('symbol', 'p1')
+      (symbol 'p1')
       (or
         (func
-          ('symbol', 'sort')
+          (symbol 'sort')
           (list
             (or
-              ('symbol', '1')
-              ('symbol', '2')
-              ('symbol', '3'))
+              (symbol '1')
+              (symbol '2')
+              (symbol '3'))
             (negate
-              ('symbol', 'rev'))))
+              (symbol 'rev'))))
         (and
-          ('symbol', '4')
+          (symbol '4')
           (group
             (or
-              ('symbol', '5')
-              ('symbol', '6')
-              ('symbol', '7'))))
-        ('symbol', '8')))
+              (symbol '5')
+              (symbol '6')
+              (symbol '7'))))
+        (symbol '8')))
     """
     if not isinstance(tree, tuple):
         return tree
@@ -561,8 +570,8 @@ class basealiasrules(object):
         >>> args = ['$1', '$2', 'foo']
         >>> pprint(builddefn('$1 or foo', args))
         (or
-          ('_aliasarg', '$1')
-          ('_aliasarg', 'foo'))
+          (_aliasarg '$1')
+          (_aliasarg 'foo'))
         >>> try:
         ...     builddefn('$1 or $bar', args)
         ... except error.ParseError as inst:
@@ -571,12 +580,12 @@ class basealiasrules(object):
         >>> args = ['$1', '$10', 'foo']
         >>> pprint(builddefn('$10 or baz', args))
         (or
-          ('_aliasarg', '$10')
-          ('symbol', 'baz'))
+          (_aliasarg '$10')
+          (symbol 'baz'))
         >>> pprint(builddefn('"$1" or "foo"', args))
         (or
-          ('string', '$1')
-          ('string', 'foo'))
+          (string '$1')
+          (string 'foo'))
         """
         tree = cls._parse(defn)
         if args:
