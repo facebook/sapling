@@ -157,11 +157,12 @@ def _buildlowerencodefun():
     >>> f(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
     '''
-    cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
+    xchr = pycompat.bytechr
+    cmap = dict([(xchr(x), xchr(x)) for x in xrange(127)])
     for x in _reserved():
-        cmap[chr(x)] = "~%02x" % x
+        cmap[xchr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z") + 1):
-        cmap[chr(x)] = chr(x).lower()
+        cmap[xchr(x)] = xchr(x).lower()
     def lowerencode(s):
         return "".join([cmap[c] for c in s])
     return lowerencode
