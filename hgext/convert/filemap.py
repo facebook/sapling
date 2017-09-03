@@ -18,7 +18,7 @@ SKIPREV = common.SKIPREV
 def rpairs(path):
     '''Yield tuples with path split at '/', starting with the full path.
     No leading, trailing or double '/', please.
-    >>> for x in rpairs('foo/bar/baz'): print x
+    >>> for x in rpairs(b'foo/bar/baz'): print x
     ('foo/bar/baz', '')
     ('foo/bar', 'baz')
     ('foo', 'bar/baz')

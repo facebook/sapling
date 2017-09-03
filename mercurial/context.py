@@ -1112,16 +1112,16 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     Additionally, if `skipchild` is True, replace all other lines with parent
     annotate data as well such that child is never blamed for any lines.
 
-    >>> oldfctx = 'old'
-    >>> p1fctx, p2fctx, childfctx = 'p1', 'p2', 'c'
-    >>> olddata = 'a\nb\n'
-    >>> p1data = 'a\nb\nc\n'
-    >>> p2data = 'a\nc\nd\n'
-    >>> childdata = 'a\nb2\nc\nc2\nd\n'
+    >>> oldfctx = b'old'
+    >>> p1fctx, p2fctx, childfctx = b'p1', b'p2', b'c'
+    >>> olddata = b'a\nb\n'
+    >>> p1data = b'a\nb\nc\n'
+    >>> p2data = b'a\nc\nd\n'
+    >>> childdata = b'a\nb2\nc\nc2\nd\n'
     >>> diffopts = mdiff.diffopts()
 
     >>> def decorate(text, rev):
-    ...     return ([(rev, i) for i in xrange(1, text.count('\n') + 1)], text)
+    ...     return ([(rev, i) for i in xrange(1, text.count(b'\n') + 1)], text)
 
     Basic usage:
 

@@ -27,8 +27,8 @@ _defaultextra = {'branch': 'default'}
 
 def _string_escape(text):
     """
-    >>> d = {'nl': chr(10), 'bs': chr(92), 'cr': chr(13), 'nul': chr(0)}
-    >>> s = "ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
+    >>> d = {b'nl': chr(10), b'bs': chr(92), b'cr': chr(13), b'nul': chr(0)}
+    >>> s = b"ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
     >>> s
     'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
     >>> res = _string_escape(s)
@@ -41,11 +41,11 @@ def _string_escape(text):
 
 def decodeextra(text):
     """
-    >>> sorted(decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'})
+    >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
     ...                    ).iteritems())
     [('baz', '\\x002'), ('branch', 'default'), ('foo', 'bar')]
-    >>> sorted(decodeextra(encodeextra({'foo': 'bar',
-    ...                                 'baz': chr(92) + chr(0) + '2'})
+    >>> sorted(decodeextra(encodeextra({b'foo': b'bar',
+    ...                                 b'baz': chr(92) + chr(0) + b'2'})
     ...                    ).iteritems())
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """

@@ -154,23 +154,25 @@ PLAINHEADERS = {
 
 def inserthgheader(lines, header, value):
     """Assuming lines contains a HG patch header, add a header line with value.
-    >>> try: inserthgheader([], '# Date ', 'z')
+    >>> try: inserthgheader([], b'# Date ', b'z')
     ... except ValueError, inst: print "oops"
     oops
-    >>> inserthgheader(['# HG changeset patch'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', ''], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b''], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '']
-    >>> inserthgheader(['# HG changeset patch', '# User y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# User y'], b'# Date ', b'z')
     ['# HG changeset patch', '# User y', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', '# Date x', '# User y'],
-    ...                '# User ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Date x', b'# User y'],
+    ...                b'# User ', b'z')
     ['# HG changeset patch', '# Date x', '# User z']
-    >>> inserthgheader(['# HG changeset patch', '# Date y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Date y'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', '', '# Date y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'', b'# Date y'],
+    ...                b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '', '# Date y']
-    >>> inserthgheader(['# HG changeset patch', '# Parent  y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Parent  y'],
+    ...                b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '# Parent  y']
     """
     start = lines.index('# HG changeset patch') + 1
@@ -194,19 +196,19 @@ def inserthgheader(lines, header, value):
 
 def insertplainheader(lines, header, value):
     """For lines containing a plain patch header, add a header line with value.
-    >>> insertplainheader([], 'Date', 'z')
+    >>> insertplainheader([], b'Date', b'z')
     ['Date: z']
-    >>> insertplainheader([''], 'Date', 'z')
+    >>> insertplainheader([b''], b'Date', b'z')
     ['Date: z', '']
-    >>> insertplainheader(['x'], 'Date', 'z')
+    >>> insertplainheader([b'x'], b'Date', b'z')
     ['Date: z', '', 'x']
-    >>> insertplainheader(['From: y', 'x'], 'Date', 'z')
+    >>> insertplainheader([b'From: y', b'x'], b'Date', b'z')
     ['From: y', 'Date: z', '', 'x']
-    >>> insertplainheader([' date : x', ' from : y', ''], 'From', 'z')
+    >>> insertplainheader([b' date : x', b' from : y', b''], b'From', b'z')
     [' date : x', 'From: z', '']
-    >>> insertplainheader(['', 'Date: y'], 'Date', 'z')
+    >>> insertplainheader([b'', b'Date: y'], b'Date', b'z')
     ['Date: z', '', 'Date: y']
-    >>> insertplainheader(['foo: bar', 'DATE: z', 'x'], 'From', 'y')
+    >>> insertplainheader([b'foo: bar', b'DATE: z', b'x'], b'From', b'y')
     ['From: y', 'foo: bar', 'DATE: z', '', 'x']
     """
     newprio = PLAINHEADERS[header.lower()]

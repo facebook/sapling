@@ -78,7 +78,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     letters of symbols, if ``c.isalnum() or c in '-._/@' or ord(c) > 127``.
 
     Check that @ is a valid unquoted token character (issue3686):
-    >>> list(tokenize("@::"))
+    >>> list(tokenize(b"@::"))
     [('symbol', '@', 0), ('::', None, 1), ('end', None, 3)]
 
     '''
@@ -252,7 +252,7 @@ def _cachedtree(spec):
 def _build(tmplspec, *repls):
     """Create raw parsed tree from a template revset statement
 
-    >>> _build('f(_) and _', ('string', '1'), ('symbol', '2'))
+    >>> _build(b'f(_) and _', (b'string', b'1'), (b'symbol', b'2'))
     ('and', ('func', ('symbol', 'f'), ('string', '1')), ('symbol', '2'))
     """
     template = _cachedtree(tmplspec)
@@ -261,10 +261,10 @@ def _build(tmplspec, *repls):
 def _match(patspec, tree):
     """Test if a tree matches the given pattern statement; return the matches
 
-    >>> _match('f(_)', parse('f()'))
-    >>> _match('f(_)', parse('f(1)'))
+    >>> _match(b'f(_)', parse(b'f()'))
+    >>> _match(b'f(_)', parse(b'f(1)'))
     [('func', ('symbol', 'f'), ('symbol', '1')), ('symbol', '1')]
-    >>> _match('f(_)', parse('f(1, 2)'))
+    >>> _match(b'f(_)', parse(b'f(1, 2)'))
     """
     pattern = _cachedtree(patspec)
     return parser.matchtree(pattern, tree, ('symbol', '_'),
@@ -478,13 +478,13 @@ _aliassyminitletters = _syminitletters | {'$'}
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
 
-    >>> _parsewith('foo($1)', syminitletters=_aliassyminitletters)
+    >>> _parsewith(b'foo($1)', syminitletters=_aliassyminitletters)
     ('func', ('symbol', 'foo'), ('symbol', '$1'))
-    >>> _parsewith('$1')
+    >>> _parsewith(b'$1')
     Traceback (most recent call last):
       ...
     ParseError: ("syntax error in revset '$1'", 0)
-    >>> _parsewith('foo bar')
+    >>> _parsewith(b'foo bar')
     Traceback (most recent call last):
       ...
     ParseError: ('invalid token', 4)
@@ -554,11 +554,11 @@ def parse(spec, lookup=None):
 def _quote(s):
     r"""Quote a value in order to make it safe for the revset engine.
 
-    >>> _quote('asdf')
+    >>> _quote(b'asdf')
     "'asdf'"
-    >>> _quote("asdf'\"")
+    >>> _quote(b"asdf'\"")
     '\'asdf\\\'"\''
-    >>> _quote('asdf\'')
+    >>> _quote(b'asdf\'')
     "'asdf\\''"
     >>> _quote(1)
     "'1'"
@@ -582,19 +582,19 @@ def formatspec(expr, *args):
 
     Prefixing the type with 'l' specifies a parenthesized list of that type.
 
-    >>> formatspec('%r:: and %lr', '10 or 11', ("this()", "that()"))
+    >>> formatspec(b'%r:: and %lr', b'10 or 11', (b"this()", b"that()"))
     '(10 or 11):: and ((this()) or (that()))'
-    >>> formatspec('%d:: and not %d::', 10, 20)
+    >>> formatspec(b'%d:: and not %d::', 10, 20)
     '10:: and not 20::'
-    >>> formatspec('%ld or %ld', [], [1])
+    >>> formatspec(b'%ld or %ld', [], [1])
     "_list('') or 1"
-    >>> formatspec('keyword(%s)', 'foo\\xe9')
+    >>> formatspec(b'keyword(%s)', b'foo\\xe9')
     "keyword('foo\\\\xe9')"
-    >>> b = lambda: 'default'
+    >>> b = lambda: b'default'
     >>> b.branch = b
-    >>> formatspec('branch(%b)', b)
+    >>> formatspec(b'branch(%b)', b)
     "branch('default')"
-    >>> formatspec('root(%ls)', ['a', 'b', 'c', 'd'])
+    >>> formatspec(b'root(%ls)', [b'a', b'b', b'c', b'd'])
     "root(_list('a\\x00b\\x00c\\x00d'))"
     '''
 

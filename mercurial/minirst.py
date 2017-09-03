@@ -46,13 +46,13 @@ def replace(text, substs):
     '''
     Apply a list of (find, replace) pairs to a text.
 
-    >>> replace("foo bar", [('f', 'F'), ('b', 'B')])
+    >>> replace(b"foo bar", [(b'f', b'F'), (b'b', b'B')])
     'Foo Bar'
-    >>> encoding.encoding = 'latin1'
-    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    >>> encoding.encoding = b'latin1'
+    >>> replace(b'\\x81\\\\', [(b'\\\\', b'/')])
     '\\x81/'
-    >>> encoding.encoding = 'shiftjis'
-    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    >>> encoding.encoding = b'shiftjis'
+    >>> replace(b'\\x81\\\\', [(b'\\\\', b'/')])
     '\\x81\\\\'
     '''
 

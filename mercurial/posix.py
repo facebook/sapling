@@ -52,14 +52,14 @@ def split(p):
     '''Same as posixpath.split, but faster
 
     >>> import posixpath
-    >>> for f in ['/absolute/path/to/file',
-    ...           'relative/path/to/file',
-    ...           'file_alone',
-    ...           'path/to/directory/',
-    ...           '/multiple/path//separators',
-    ...           '/file_at_root',
-    ...           '///multiple_leading_separators_at_root',
-    ...           '']:
+    >>> for f in [b'/absolute/path/to/file',
+    ...           b'relative/path/to/file',
+    ...           b'file_alone',
+    ...           b'path/to/directory/',
+    ...           b'/multiple/path//separators',
+    ...           b'/file_at_root',
+    ...           b'///multiple_leading_separators_at_root',
+    ...           b'']:
     ...     assert split(f) == posixpath.split(f), f
     '''
     ht = p.rsplit('/', 1)
@@ -342,13 +342,13 @@ if pycompat.sysplatform == 'darwin':
         - lowercase
         - omit ignored characters [200c-200f, 202a-202e, 206a-206f,feff]
 
-        >>> normcase('UPPER')
+        >>> normcase(b'UPPER')
         'upper'
-        >>> normcase('Caf\xc3\xa9')
+        >>> normcase(b'Caf\xc3\xa9')
         'cafe\\xcc\\x81'
-        >>> normcase('\xc3\x89')
+        >>> normcase(b'\xc3\x89')
         'e\\xcc\\x81'
-        >>> normcase('\xb8\xca\xc3\xca\xbe\xc8.JPG') # issue3918
+        >>> normcase(b'\xb8\xca\xc3\xca\xbe\xc8.JPG') # issue3918
         '%b8%ca%c3\\xca\\xbe%c8.jpg'
         '''
 

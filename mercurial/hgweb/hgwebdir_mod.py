@@ -70,9 +70,9 @@ def urlrepos(prefix, roothead, paths):
     """yield url paths and filesystem paths from a list of repo paths
 
     >>> conv = lambda seq: [(v, util.pconvert(p)) for v,p in seq]
-    >>> conv(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv(urlrepos(b'hg', b'/opt', [b'/opt/r', b'/opt/r/r', b'/opt']))
     [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg', '/opt')]
-    >>> conv(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv(urlrepos(b'', b'/opt', [b'/opt/r', b'/opt/r/r', b'/opt']))
     [('r', '/opt/r'), ('r/r', '/opt/r/r'), ('', '/opt')]
     """
     for path in paths:
@@ -84,17 +84,17 @@ def geturlcgivars(baseurl, port):
     """
     Extract CGI variables from baseurl
 
-    >>> geturlcgivars("http://host.org/base", "80")
+    >>> geturlcgivars(b"http://host.org/base", b"80")
     ('host.org', '80', '/base')
-    >>> geturlcgivars("http://host.org:8000/base", "80")
+    >>> geturlcgivars(b"http://host.org:8000/base", b"80")
     ('host.org', '8000', '/base')
-    >>> geturlcgivars('/base', 8000)
+    >>> geturlcgivars(b'/base', 8000)
     ('', '8000', '/base')
-    >>> geturlcgivars("base", '8000')
+    >>> geturlcgivars(b"base", b'8000')
     ('', '8000', '/base')
-    >>> geturlcgivars("http://host", '8000')
+    >>> geturlcgivars(b"http://host", b'8000')
     ('host', '8000', '/')
-    >>> geturlcgivars("http://host/", '8000')
+    >>> geturlcgivars(b"http://host/", b'8000')
     ('host', '8000', '/')
     """
     u = util.url(baseurl)

@@ -1479,7 +1479,7 @@ def reversehunks(hunks):
     This function operates on hunks coming out of patch.filterpatch, that is
     a list of the form: [header1, hunk1, hunk2, header2...]. Example usage:
 
-    >>> rawpatch = """diff --git a/folder1/g b/folder1/g
+    >>> rawpatch = b"""diff --git a/folder1/g b/folder1/g
     ... --- a/folder1/g
     ... +++ b/folder1/g
     ... @@ -1,7 +1,7 @@
@@ -1541,7 +1541,7 @@ def parsepatch(originalchunks, maxcontext=None):
 
     If maxcontext is not None, trim context lines if necessary.
 
-    >>> rawpatch = '''diff --git a/folder1/g b/folder1/g
+    >>> rawpatch = b'''diff --git a/folder1/g b/folder1/g
     ... --- a/folder1/g
     ... +++ b/folder1/g
     ... @@ -1,8 +1,10 @@
@@ -1667,17 +1667,17 @@ def pathtransform(path, strip, prefix):
 
     Returns (stripped components, path in repository).
 
-    >>> pathtransform('a/b/c', 0, '')
+    >>> pathtransform(b'a/b/c', 0, b'')
     ('', 'a/b/c')
-    >>> pathtransform('   a/b/c   ', 0, '')
+    >>> pathtransform(b'   a/b/c   ', 0, b'')
     ('', '   a/b/c')
-    >>> pathtransform('   a/b/c   ', 2, '')
+    >>> pathtransform(b'   a/b/c   ', 2, b'')
     ('a/b/', 'c')
-    >>> pathtransform('a/b/c', 0, 'd/e/')
+    >>> pathtransform(b'a/b/c', 0, b'd/e/')
     ('', 'd/e/a/b/c')
-    >>> pathtransform('   a//b/c   ', 2, 'd/e/')
+    >>> pathtransform(b'   a//b/c   ', 2, b'd/e/')
     ('a//b/', 'd/e/c')
-    >>> pathtransform('a/b/c', 3, '')
+    >>> pathtransform(b'a/b/c', 3, b'')
     Traceback (most recent call last):
     PatchError: unable to strip away 1 of 3 dirs from a/b/c
     '''

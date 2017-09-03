@@ -97,15 +97,15 @@ class parser(object):
 def splitargspec(spec):
     """Parse spec of function arguments into (poskeys, varkey, keys, optkey)
 
-    >>> splitargspec('')
+    >>> splitargspec(b'')
     ([], None, [], None)
-    >>> splitargspec('foo bar')
+    >>> splitargspec(b'foo bar')
     ([], None, ['foo', 'bar'], None)
-    >>> splitargspec('foo *bar baz **qux')
+    >>> splitargspec(b'foo *bar baz **qux')
     (['foo'], 'bar', ['baz'], 'qux')
-    >>> splitargspec('*foo')
+    >>> splitargspec(b'*foo')
     ([], 'foo', [], None)
-    >>> splitargspec('**foo')
+    >>> splitargspec(b'**foo')
     ([], None, [], 'foo')
     """
     optkey = None
@@ -221,39 +221,39 @@ def simplifyinfixops(tree, targetnodes):
     """Flatten chained infix operations to reduce usage of Python stack
 
     >>> def f(tree):
-    ...     print prettyformat(simplifyinfixops(tree, ('or',)), ('symbol',))
-    >>> f(('or',
-    ...     ('or',
-    ...       ('symbol', '1'),
-    ...       ('symbol', '2')),
-    ...     ('symbol', '3')))
+    ...     print prettyformat(simplifyinfixops(tree, (b'or',)), (b'symbol',))
+    >>> f((b'or',
+    ...     (b'or',
+    ...       (b'symbol', b'1'),
+    ...       (b'symbol', b'2')),
+    ...     (b'symbol', b'3')))
     (or
       (symbol '1')
       (symbol '2')
       (symbol '3'))
-    >>> f(('func',
-    ...     ('symbol', 'p1'),
-    ...     ('or',
-    ...       ('or',
-    ...         ('func',
-    ...           ('symbol', 'sort'),
-    ...           ('list',
-    ...             ('or',
-    ...               ('or',
-    ...                 ('symbol', '1'),
-    ...                 ('symbol', '2')),
-    ...               ('symbol', '3')),
-    ...             ('negate',
-    ...               ('symbol', 'rev')))),
-    ...         ('and',
-    ...           ('symbol', '4'),
-    ...           ('group',
-    ...             ('or',
-    ...               ('or',
-    ...                 ('symbol', '5'),
-    ...                 ('symbol', '6')),
-    ...               ('symbol', '7'))))),
-    ...       ('symbol', '8'))))
+    >>> f((b'func',
+    ...     (b'symbol', b'p1'),
+    ...     (b'or',
+    ...       (b'or',
+    ...         (b'func',
+    ...           (b'symbol', b'sort'),
+    ...           (b'list',
+    ...             (b'or',
+    ...               (b'or',
+    ...                 (b'symbol', b'1'),
+    ...                 (b'symbol', b'2')),
+    ...               (b'symbol', b'3')),
+    ...             (b'negate',
+    ...               (b'symbol', b'rev')))),
+    ...         (b'and',
+    ...           (b'symbol', b'4'),
+    ...           (b'group',
+    ...             (b'or',
+    ...               (b'or',
+    ...                 (b'symbol', b'5'),
+    ...                 (b'symbol', b'6')),
+    ...               (b'symbol', b'7'))))),
+    ...       (b'symbol', b'8'))))
     (func
       (symbol 'p1')
       (or
@@ -304,13 +304,13 @@ def _buildtree(template, placeholder, replstack):
 def buildtree(template, placeholder, *repls):
     """Create new tree by substituting placeholders by replacements
 
-    >>> _ = ('symbol', '_')
+    >>> _ = (b'symbol', b'_')
     >>> def f(template, *repls):
     ...     return buildtree(template, _, *repls)
-    >>> f(('func', ('symbol', 'only'), ('list', _, _)),
+    >>> f((b'func', (b'symbol', b'only'), (b'list', _, _)),
     ...   ('symbol', '1'), ('symbol', '2'))
     ('func', ('symbol', 'only'), ('list', ('symbol', '1'), ('symbol', '2')))
-    >>> f(('and', _, ('not', _)), ('symbol', '1'), ('symbol', '2'))
+    >>> f((b'and', _, (b'not', _)), (b'symbol', b'1'), (b'symbol', b'2'))
     ('and', ('symbol', '1'), ('not', ('symbol', '2')))
     """
     if not isinstance(placeholder, tuple):
@@ -339,34 +339,34 @@ def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
     matched with the placeholder; Otherwise None
 
     >>> def f(pattern, tree):
-    ...     m = matchtree(pattern, tree, _, {'keyvalue', 'list'})
+    ...     m = matchtree(pattern, tree, _, {b'keyvalue', b'list'})
     ...     if m:
     ...         return m[1:]
 
-    >>> _ = ('symbol', '_')
-    >>> f(('func', ('symbol', 'ancestors'), _),
-    ...   ('func', ('symbol', 'ancestors'), ('symbol', '1')))
+    >>> _ = (b'symbol', b'_')
+    >>> f((b'func', (b'symbol', b'ancestors'), _),
+    ...   (b'func', (b'symbol', b'ancestors'), (b'symbol', b'1')))
     [('symbol', '1')]
-    >>> f(('func', ('symbol', 'ancestors'), _),
-    ...   ('func', ('symbol', 'ancestors'), None))
-    >>> f(('range', ('dagrange', _, _), _),
-    ...   ('range',
-    ...     ('dagrange', ('symbol', '1'), ('symbol', '2')),
-    ...     ('symbol', '3')))
+    >>> f((b'func', (b'symbol', b'ancestors'), _),
+    ...   (b'func', (b'symbol', b'ancestors'), None))
+    >>> f((b'range', (b'dagrange', _, _), _),
+    ...   (b'range',
+    ...     (b'dagrange', (b'symbol', b'1'), (b'symbol', b'2')),
+    ...     (b'symbol', b'3')))
     [('symbol', '1'), ('symbol', '2'), ('symbol', '3')]
 
     The placeholder does not match the specified incomplete nodes because
     an incomplete node (e.g. argument list) cannot construct an expression.
 
-    >>> f(('func', ('symbol', 'ancestors'), _),
-    ...   ('func', ('symbol', 'ancestors'),
-    ...     ('list', ('symbol', '1'), ('symbol', '2'))))
+    >>> f((b'func', (b'symbol', b'ancestors'), _),
+    ...   (b'func', (b'symbol', b'ancestors'),
+    ...     (b'list', (b'symbol', b'1'), (b'symbol', b'2'))))
 
     The placeholder may be omitted, but which shouldn't match a None node.
 
     >>> _ = None
-    >>> f(('func', ('symbol', 'ancestors'), None),
-    ...   ('func', ('symbol', 'ancestors'), ('symbol', '0')))
+    >>> f((b'func', (b'symbol', b'ancestors'), None),
+    ...   (b'func', (b'symbol', b'ancestors'), (b'symbol', b'0')))
     """
     if placeholder is not None and not isinstance(placeholder, tuple):
         raise error.ProgrammingError('placeholder must be a node tuple')
@@ -436,27 +436,27 @@ class basealiasrules(object):
         - ``args``: list of argument names (or None for symbol declaration)
         - ``errorstr``: detail about detected error (or None)
 
-        >>> sym = lambda x: ('symbol', x)
-        >>> symlist = lambda *xs: ('list',) + tuple(sym(x) for x in xs)
-        >>> func = lambda n, a: ('func', sym(n), a)
+        >>> sym = lambda x: (b'symbol', x)
+        >>> symlist = lambda *xs: (b'list',) + tuple(sym(x) for x in xs)
+        >>> func = lambda n, a: (b'func', sym(n), a)
         >>> parsemap = {
-        ...     'foo': sym('foo'),
-        ...     '$foo': sym('$foo'),
-        ...     'foo::bar': ('dagrange', sym('foo'), sym('bar')),
-        ...     'foo()': func('foo', None),
-        ...     '$foo()': func('$foo', None),
-        ...     'foo($1, $2)': func('foo', symlist('$1', '$2')),
-        ...     'foo(bar_bar, baz.baz)':
-        ...         func('foo', symlist('bar_bar', 'baz.baz')),
-        ...     'foo(bar($1, $2))':
-        ...         func('foo', func('bar', symlist('$1', '$2'))),
-        ...     'foo($1, $2, nested($1, $2))':
-        ...         func('foo', (symlist('$1', '$2') +
-        ...                      (func('nested', symlist('$1', '$2')),))),
-        ...     'foo("bar")': func('foo', ('string', 'bar')),
-        ...     'foo($1, $2': error.ParseError('unexpected token: end', 10),
-        ...     'foo("bar': error.ParseError('unterminated string', 5),
-        ...     'foo($1, $2, $1)': func('foo', symlist('$1', '$2', '$1')),
+        ...     b'foo': sym(b'foo'),
+        ...     b'$foo': sym(b'$foo'),
+        ...     b'foo::bar': (b'dagrange', sym(b'foo'), sym(b'bar')),
+        ...     b'foo()': func(b'foo', None),
+        ...     b'$foo()': func(b'$foo', None),
+        ...     b'foo($1, $2)': func(b'foo', symlist(b'$1', b'$2')),
+        ...     b'foo(bar_bar, baz.baz)':
+        ...         func(b'foo', symlist(b'bar_bar', b'baz.baz')),
+        ...     b'foo(bar($1, $2))':
+        ...         func(b'foo', func(b'bar', symlist(b'$1', b'$2'))),
+        ...     b'foo($1, $2, nested($1, $2))':
+        ...         func(b'foo', (symlist(b'$1', b'$2') +
+        ...                      (func(b'nested', symlist(b'$1', b'$2')),))),
+        ...     b'foo("bar")': func(b'foo', (b'string', b'bar')),
+        ...     b'foo($1, $2': error.ParseError(b'unexpected token: end', 10),
+        ...     b'foo("bar': error.ParseError(b'unterminated string', 5),
+        ...     b'foo($1, $2, $1)': func(b'foo', symlist(b'$1', b'$2', b'$1')),
         ... }
         >>> def parse(expr):
         ...     x = parsemap[expr]
@@ -464,42 +464,42 @@ class basealiasrules(object):
         ...         raise x
         ...     return x
         >>> def trygetfunc(tree):
-        ...     if not tree or tree[0] != 'func' or tree[1][0] != 'symbol':
+        ...     if not tree or tree[0] != b'func' or tree[1][0] != b'symbol':
         ...         return None
         ...     if not tree[2]:
         ...         return tree[1][1], []
-        ...     if tree[2][0] == 'list':
+        ...     if tree[2][0] == b'list':
         ...         return tree[1][1], list(tree[2][1:])
         ...     return tree[1][1], [tree[2]]
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parse)
         ...     _trygetfunc = staticmethod(trygetfunc)
         >>> builddecl = aliasrules._builddecl
-        >>> builddecl('foo')
+        >>> builddecl(b'foo')
         ('foo', None, None)
-        >>> builddecl('$foo')
+        >>> builddecl(b'$foo')
         ('$foo', None, "invalid symbol '$foo'")
-        >>> builddecl('foo::bar')
+        >>> builddecl(b'foo::bar')
         ('foo::bar', None, 'invalid format')
-        >>> builddecl('foo()')
+        >>> builddecl(b'foo()')
         ('foo', [], None)
-        >>> builddecl('$foo()')
+        >>> builddecl(b'$foo()')
         ('$foo()', None, "invalid function '$foo'")
-        >>> builddecl('foo($1, $2)')
+        >>> builddecl(b'foo($1, $2)')
         ('foo', ['$1', '$2'], None)
-        >>> builddecl('foo(bar_bar, baz.baz)')
+        >>> builddecl(b'foo(bar_bar, baz.baz)')
         ('foo', ['bar_bar', 'baz.baz'], None)
-        >>> builddecl('foo($1, $2, nested($1, $2))')
+        >>> builddecl(b'foo($1, $2, nested($1, $2))')
         ('foo($1, $2, nested($1, $2))', None, 'invalid argument list')
-        >>> builddecl('foo(bar($1, $2))')
+        >>> builddecl(b'foo(bar($1, $2))')
         ('foo(bar($1, $2))', None, 'invalid argument list')
-        >>> builddecl('foo("bar")')
+        >>> builddecl(b'foo("bar")')
         ('foo("bar")', None, 'invalid argument list')
-        >>> builddecl('foo($1, $2')
+        >>> builddecl(b'foo($1, $2')
         ('foo($1, $2', None, 'at 10: unexpected token: end')
-        >>> builddecl('foo("bar')
+        >>> builddecl(b'foo("bar')
         ('foo("bar', None, 'at 5: unterminated string')
-        >>> builddecl('foo($1, $2, $1)')
+        >>> builddecl(b'foo($1, $2, $1)')
         ('foo', None, 'argument names collide with each other')
         """
         try:
@@ -556,33 +556,36 @@ class basealiasrules(object):
         is declared as a symbol.
 
         >>> parsemap = {
-        ...     '$1 or foo': ('or', ('symbol', '$1'), ('symbol', 'foo')),
-        ...     '$1 or $bar': ('or', ('symbol', '$1'), ('symbol', '$bar')),
-        ...     '$10 or baz': ('or', ('symbol', '$10'), ('symbol', 'baz')),
-        ...     '"$1" or "foo"': ('or', ('string', '$1'), ('string', 'foo')),
+        ...     b'$1 or foo': (b'or', (b'symbol', b'$1'), (b'symbol', b'foo')),
+        ...     b'$1 or $bar':
+        ...         (b'or', (b'symbol', b'$1'), (b'symbol', b'$bar')),
+        ...     b'$10 or baz':
+        ...         (b'or', (b'symbol', b'$10'), (b'symbol', b'baz')),
+        ...     b'"$1" or "foo"':
+        ...         (b'or', (b'string', b'$1'), (b'string', b'foo')),
         ... }
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parsemap.__getitem__)
         ...     _trygetfunc = staticmethod(lambda x: None)
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
-        ...     print prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
-        >>> args = ['$1', '$2', 'foo']
-        >>> pprint(builddefn('$1 or foo', args))
+        ...     print prettyformat(tree, (b'_aliasarg', b'string', b'symbol'))
+        >>> args = [b'$1', b'$2', b'foo']
+        >>> pprint(builddefn(b'$1 or foo', args))
         (or
           (_aliasarg '$1')
           (_aliasarg 'foo'))
         >>> try:
-        ...     builddefn('$1 or $bar', args)
+        ...     builddefn(b'$1 or $bar', args)
         ... except error.ParseError as inst:
         ...     print parseerrordetail(inst)
         invalid symbol '$bar'
-        >>> args = ['$1', '$10', 'foo']
-        >>> pprint(builddefn('$10 or baz', args))
+        >>> args = [b'$1', b'$10', b'foo']
+        >>> pprint(builddefn(b'$10 or baz', args))
         (or
           (_aliasarg '$10')
           (symbol 'baz'))
-        >>> pprint(builddefn('"$1" or "foo"', args))
+        >>> pprint(builddefn(b'"$1" or "foo"', args))
         (or
           (string '$1')
           (string 'foo'))

@@ -147,15 +147,15 @@ def tokenize(program, start, end, term=None):
 
 def _parsetemplate(tmpl, start, stop, quote=''):
     r"""
-    >>> _parsetemplate('foo{bar}"baz', 0, 12)
+    >>> _parsetemplate(b'foo{bar}"baz', 0, 12)
     ([('string', 'foo'), ('symbol', 'bar'), ('string', '"baz')], 12)
-    >>> _parsetemplate('foo{bar}"baz', 0, 12, quote='"')
+    >>> _parsetemplate(b'foo{bar}"baz', 0, 12, quote=b'"')
     ([('string', 'foo'), ('symbol', 'bar')], 9)
-    >>> _parsetemplate('foo"{bar}', 0, 9, quote='"')
+    >>> _parsetemplate(b'foo"{bar}', 0, 9, quote=b'"')
     ([('string', 'foo')], 4)
-    >>> _parsetemplate(r'foo\"bar"baz', 0, 12, quote='"')
+    >>> _parsetemplate(br'foo\"bar"baz', 0, 12, quote=b'"')
     ([('string', 'foo"'), ('string', 'bar')], 9)
-    >>> _parsetemplate(r'foo\\"bar', 0, 10, quote='"')
+    >>> _parsetemplate(br'foo\\"bar', 0, 10, quote=b'"')
     ([('string', 'foo\\')], 6)
     """
     parsed = []
@@ -193,18 +193,18 @@ def _unnesttemplatelist(tree):
 
     >>> def f(tree):
     ...     print prettyformat(_unnesttemplatelist(tree))
-    >>> f(('template', []))
+    >>> f((b'template', []))
     (string '')
-    >>> f(('template', [('string', 'foo')]))
+    >>> f((b'template', [(b'string', b'foo')]))
     (string 'foo')
-    >>> f(('template', [('string', 'foo'), ('symbol', 'rev')]))
+    >>> f((b'template', [(b'string', b'foo'), (b'symbol', b'rev')]))
     (template
       (string 'foo')
       (symbol 'rev'))
-    >>> f(('template', [('symbol', 'rev')]))  # template(rev) -> str
+    >>> f((b'template', [(b'symbol', b'rev')]))  # template(rev) -> str
     (template
       (symbol 'rev'))
-    >>> f(('template', [('template', [('string', 'foo')])]))
+    >>> f((b'template', [(b'template', [(b'string', b'foo')])]))
     (string 'foo')
     """
     if not isinstance(tree, tuple):
@@ -231,15 +231,15 @@ def parse(tmpl):
 def _parseexpr(expr):
     """Parse a template expression into tree
 
-    >>> _parseexpr('"foo"')
+    >>> _parseexpr(b'"foo"')
     ('string', 'foo')
-    >>> _parseexpr('foo(bar)')
+    >>> _parseexpr(b'foo(bar)')
     ('func', ('symbol', 'foo'), ('symbol', 'bar'))
-    >>> _parseexpr('foo(')
+    >>> _parseexpr(b'foo(')
     Traceback (most recent call last):
       ...
     ParseError: ('not a prefix: end', 4)
-    >>> _parseexpr('"foo" "bar"')
+    >>> _parseexpr(b'"foo" "bar"')
     Traceback (most recent call last):
       ...
     ParseError: ('invalid token', 7)
@@ -489,10 +489,10 @@ def _buildfuncargs(exp, context, curmethods, funcname, argspec):
     ...     x = _parseexpr(expr)
     ...     n = getsymbol(x[1])
     ...     return _buildfuncargs(x[2], context, exprmethods, n, argspec)
-    >>> fargs('a(l=1, k=2)', 'k l m').keys()
+    >>> fargs(b'a(l=1, k=2)', b'k l m').keys()
     ['l', 'k']
-    >>> args = fargs('a(opts=1, k=2)', '**opts')
-    >>> args.keys(), args['opts'].keys()
+    >>> args = fargs(b'a(opts=1, k=2)', b'**opts')
+    >>> args.keys(), args[b'opts'].keys()
     (['opts'], ['opts', 'k'])
     """
     def compiledict(xs):

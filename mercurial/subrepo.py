@@ -1388,23 +1388,23 @@ class gitsubrepo(abstractsubrepo):
         '''ensure git version is new enough
 
         >>> _checkversion = gitsubrepo._checkversion
-        >>> _checkversion('git version 1.6.0')
+        >>> _checkversion(b'git version 1.6.0')
         'ok'
-        >>> _checkversion('git version 1.8.5')
+        >>> _checkversion(b'git version 1.8.5')
         'ok'
-        >>> _checkversion('git version 1.4.0')
+        >>> _checkversion(b'git version 1.4.0')
         'abort'
-        >>> _checkversion('git version 1.5.0')
+        >>> _checkversion(b'git version 1.5.0')
         'warning'
-        >>> _checkversion('git version 1.9-rc0')
+        >>> _checkversion(b'git version 1.9-rc0')
         'ok'
-        >>> _checkversion('git version 1.9.0.265.g81cdec2')
+        >>> _checkversion(b'git version 1.9.0.265.g81cdec2')
         'ok'
-        >>> _checkversion('git version 1.9.0.GIT')
+        >>> _checkversion(b'git version 1.9.0.GIT')
         'ok'
-        >>> _checkversion('git version 12345')
+        >>> _checkversion(b'git version 12345')
         'unknown'
-        >>> _checkversion('no')
+        >>> _checkversion(b'no')
         'unknown'
         '''
         version = gitsubrepo._gitversion(out)

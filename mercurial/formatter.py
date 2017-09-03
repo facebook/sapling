@@ -52,14 +52,14 @@ Doctest helper:
 Basic example:
 
 >>> def files(ui, fm):
-...     files = [('foo', 123, (0, 0)), ('bar', 456, (1, 0))]
+...     files = [(b'foo', 123, (0, 0)), (b'bar', 456, (1, 0))]
 ...     for f in files:
 ...         fm.startitem()
-...         fm.write('path', '%s', f[0])
-...         fm.condwrite(ui.verbose, 'date', '  %s',
-...                      fm.formatdate(f[2], '%Y-%m-%d %H:%M:%S'))
+...         fm.write(b'path', b'%s', f[0])
+...         fm.condwrite(ui.verbose, b'date', b'  %s',
+...                      fm.formatdate(f[2], b'%Y-%m-%d %H:%M:%S'))
 ...         fm.data(size=f[1])
-...         fm.plain('\\n')
+...         fm.plain(b'\\n')
 ...     fm.end()
 >>> show(files)
 foo
@@ -67,7 +67,7 @@ bar
 >>> show(files, verbose=True)
 foo  1970-01-01 00:00:00
 bar  1970-01-01 00:00:01
->>> show(files, template='json')
+>>> show(files, template=b'json')
 [
  {
   "date": [0, 0],
@@ -80,7 +80,7 @@ bar  1970-01-01 00:00:01
   "size": 456
  }
 ]
->>> show(files, template='path: {path}\\ndate: {date|rfc3339date}\\n')
+>>> show(files, template=b'path: {path}\\ndate: {date|rfc3339date}\\n')
 path: foo
 date: 1970-01-01T00:00:00+00:00
 path: bar
@@ -90,14 +90,14 @@ Nested example:
 
 >>> def subrepos(ui, fm):
 ...     fm.startitem()
-...     fm.write('repo', '[%s]\\n', 'baz')
-...     files(ui, fm.nested('files'))
+...     fm.write(b'repo', b'[%s]\\n', b'baz')
+...     files(ui, fm.nested(b'files'))
 ...     fm.end()
 >>> show(subrepos)
 [baz]
 foo
 bar
->>> show(subrepos, template='{repo}: {join(files % "{path}", ", ")}\\n')
+>>> show(subrepos, template=b'{repo}: {join(files % "{path}", ", ")}\\n')
 baz: foo, bar
 """
 

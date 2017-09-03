@@ -607,20 +607,20 @@ def _earlygetopt(aliases, args):
     The values are listed in the order they appear in args.
     The options and values are removed from args.
 
-    >>> args = ['x', '--cwd', 'foo', 'y']
-    >>> _earlygetopt(['--cwd'], args), args
+    >>> args = [b'x', b'--cwd', b'foo', b'y']
+    >>> _earlygetopt([b'--cwd'], args), args
     (['foo'], ['x', 'y'])
 
-    >>> args = ['x', '--cwd=bar', 'y']
-    >>> _earlygetopt(['--cwd'], args), args
+    >>> args = [b'x', b'--cwd=bar', b'y']
+    >>> _earlygetopt([b'--cwd'], args), args
     (['bar'], ['x', 'y'])
 
-    >>> args = ['x', '-R', 'foo', 'y']
-    >>> _earlygetopt(['-R'], args), args
+    >>> args = [b'x', b'-R', b'foo', b'y']
+    >>> _earlygetopt([b'-R'], args), args
     (['foo'], ['x', 'y'])
 
-    >>> args = ['x', '-Rbar', 'y']
-    >>> _earlygetopt(['-R'], args), args
+    >>> args = [b'x', b'-Rbar', b'y']
+    >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
     """
     try:

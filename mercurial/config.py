@@ -183,7 +183,7 @@ class config(object):
 def parselist(value):
     """parse a configuration value as a list of comma/space separated strings
 
-    >>> parselist('this,is "a small" ,test')
+    >>> parselist(b'this,is "a small" ,test')
     ['this', 'is', 'a small', 'test']
     """
 

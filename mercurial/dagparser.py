@@ -54,7 +54,7 @@ def parsedag(desc):
 
     Example of a complex graph (output not shown for brevity):
 
-        >>> len(list(parsedag("""
+        >>> len(list(parsedag(b"""
         ...
         ... +3         # 3 nodes in linear run
         ... :forkhere  # a label for the last of the 3 nodes from above
@@ -74,88 +74,88 @@ def parsedag(desc):
 
     Empty list:
 
-        >>> list(parsedag(""))
+        >>> list(parsedag(b""))
         []
 
     A simple linear run:
 
-        >>> list(parsedag("+3"))
+        >>> list(parsedag(b"+3"))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [1]))]
 
     Some non-standard ways to define such runs:
 
-        >>> list(parsedag("+1+2"))
+        >>> list(parsedag(b"+1+2"))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [1]))]
 
-        >>> list(parsedag("+1*1*"))
+        >>> list(parsedag(b"+1*1*"))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [1]))]
 
-        >>> list(parsedag("*"))
+        >>> list(parsedag(b"*"))
         [('n', (0, [-1]))]
 
-        >>> list(parsedag("..."))
+        >>> list(parsedag(b"..."))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [1]))]
 
     A fork and a join, using numeric back references:
 
-        >>> list(parsedag("+2*2*/2"))
+        >>> list(parsedag(b"+2*2*/2"))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [0])), ('n', (3, [2, 1]))]
 
-        >>> list(parsedag("+2<2+1/2"))
+        >>> list(parsedag(b"+2<2+1/2"))
         [('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [0])), ('n', (3, [2, 1]))]
 
     Placing a label:
 
-        >>> list(parsedag("+1 :mylabel +1"))
+        >>> list(parsedag(b"+1 :mylabel +1"))
         [('n', (0, [-1])), ('l', (0, 'mylabel')), ('n', (1, [0]))]
 
     An empty label (silly, really):
 
-        >>> list(parsedag("+1:+1"))
+        >>> list(parsedag(b"+1:+1"))
         [('n', (0, [-1])), ('l', (0, '')), ('n', (1, [0]))]
 
     Fork and join, but with labels instead of numeric back references:
 
-        >>> list(parsedag("+1:f +1:p2 *f */p2"))
+        >>> list(parsedag(b"+1:f +1:p2 *f */p2"))
         [('n', (0, [-1])), ('l', (0, 'f')), ('n', (1, [0])), ('l', (1, 'p2')),
          ('n', (2, [0])), ('n', (3, [2, 1]))]
 
-        >>> list(parsedag("+1:f +1:p2 <f +1 /p2"))
+        >>> list(parsedag(b"+1:f +1:p2 <f +1 /p2"))
         [('n', (0, [-1])), ('l', (0, 'f')), ('n', (1, [0])), ('l', (1, 'p2')),
          ('n', (2, [0])), ('n', (3, [2, 1]))]
 
     Restarting from the root:
 
-        >>> list(parsedag("+1 $ +1"))
+        >>> list(parsedag(b"+1 $ +1"))
         [('n', (0, [-1])), ('n', (1, [-1]))]
 
     Annotations, which are meant to introduce sticky state for subsequent nodes:
 
-        >>> list(parsedag("+1 @ann +1"))
+        >>> list(parsedag(b"+1 @ann +1"))
         [('n', (0, [-1])), ('a', 'ann'), ('n', (1, [0]))]
 
-        >>> list(parsedag('+1 @"my annotation" +1'))
+        >>> list(parsedag(b'+1 @"my annotation" +1'))
         [('n', (0, [-1])), ('a', 'my annotation'), ('n', (1, [0]))]
 
     Commands, which are meant to operate on the most recently created node:
 
-        >>> list(parsedag("+1 !cmd +1"))
+        >>> list(parsedag(b"+1 !cmd +1"))
         [('n', (0, [-1])), ('c', 'cmd'), ('n', (1, [0]))]
 
-        >>> list(parsedag('+1 !"my command" +1'))
+        >>> list(parsedag(b'+1 !"my command" +1'))
         [('n', (0, [-1])), ('c', 'my command'), ('n', (1, [0]))]
 
-        >>> list(parsedag('+1 !!my command line\\n +1'))
+        >>> list(parsedag(b'+1 !!my command line\\n +1'))
         [('n', (0, [-1])), ('C', 'my command line'), ('n', (1, [0]))]
 
     Comments, which extend to the end of the line:
 
-        >>> list(parsedag('+1 # comment\\n+1'))
+        >>> list(parsedag(b'+1 # comment\\n+1'))
         [('n', (0, [-1])), ('n', (1, [0]))]
 
     Error:
 
-        >>> try: list(parsedag('+1 bad'))
+        >>> try: list(parsedag(b'+1 bad'))
         ... except Exception, e: print(e)
         invalid character in dag description: bad...
 
@@ -413,52 +413,54 @@ def dagtext(dag,
 
     Linear run:
 
-        >>> dagtext([('n', (0, [-1])), ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'n', (1, [0]))])
         '+2'
 
     Two roots:
 
-        >>> dagtext([('n', (0, [-1])), ('n', (1, [-1]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'n', (1, [-1]))])
         '+1 $ +1'
 
     Fork and join:
 
-        >>> dagtext([('n', (0, [-1])), ('n', (1, [0])), ('n', (2, [0])),
-        ...          ('n', (3, [2, 1]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'n', (1, [0])), (b'n', (2, [0])),
+        ...          (b'n', (3, [2, 1]))])
         '+2 *2 */2'
 
     Fork and join with labels:
 
-        >>> dagtext([('n', (0, [-1])), ('l', (0, 'f')), ('n', (1, [0])),
-        ...          ('l', (1, 'p2')), ('n', (2, [0])), ('n', (3, [2, 1]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'l', (0, b'f')), (b'n', (1, [0])),
+        ...          (b'l', (1, b'p2')), (b'n', (2, [0])), (b'n', (3, [2, 1]))])
         '+1 :f +1 :p2 *f */p2'
 
     Annotations:
 
-        >>> dagtext([('n', (0, [-1])), ('a', 'ann'), ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'a', b'ann'), (b'n', (1, [0]))])
         '+1 @ann +1'
 
-        >>> dagtext([('n', (0, [-1])),
-        ...          ('a', 'my annotation'),
-        ...          ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])),
+        ...          (b'a', b'my annotation'),
+        ...          (b'n', (1, [0]))])
         '+1 @"my annotation" +1'
 
     Commands:
 
-        >>> dagtext([('n', (0, [-1])), ('c', 'cmd'), ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'c', b'cmd'), (b'n', (1, [0]))])
         '+1 !cmd +1'
 
-        >>> dagtext([('n', (0, [-1])), ('c', 'my command'), ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])),
+        ...          (b'c', b'my command'),
+        ...          (b'n', (1, [0]))])
         '+1 !"my command" +1'
 
-        >>> dagtext([('n', (0, [-1])),
-        ...          ('C', 'my command line'),
-        ...          ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])),
+        ...          (b'C', b'my command line'),
+        ...          (b'n', (1, [0]))])
         '+1 !!my command line\\n+1'
 
     Comments:
 
-        >>> dagtext([('n', (0, [-1])), ('#', ' comment'), ('n', (1, [0]))])
+        >>> dagtext([(b'n', (0, [-1])), (b'#', b' comment'), (b'n', (1, [0]))])
         '+1 # comment\\n+1'
 
         >>> dagtext([])
@@ -466,7 +468,7 @@ def dagtext(dag,
 
     Combining parsedag and dagtext:
 
-        >>> dagtext(parsedag('+1 :f +1 :p2 *f */p2'))
+        >>> dagtext(parsedag(b'+1 :f +1 :p2 *f */p2'))
         '+1 :f +1 :p2 *f */p2'
 
     '''

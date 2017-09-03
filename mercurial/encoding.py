@@ -108,19 +108,19 @@ def tolocal(s):
     strings next to their local representation to allow lossless
     round-trip conversion back to UTF-8.
 
-    >>> u = 'foo: \\xc3\\xa4' # utf-8
+    >>> u = b'foo: \\xc3\\xa4' # utf-8
     >>> l = tolocal(u)
     >>> l
     'foo: ?'
     >>> fromlocal(l)
     'foo: \\xc3\\xa4'
-    >>> u2 = 'foo: \\xc3\\xa1'
+    >>> u2 = b'foo: \\xc3\\xa1'
     >>> d = { l: 1, tolocal(u2): 2 }
     >>> len(d) # no collision
     2
-    >>> 'foo: ?' in d
+    >>> b'foo: ?' in d
     False
-    >>> l1 = 'foo: \\xe4' # historical latin1 fallback
+    >>> l1 = b'foo: \\xe4' # historical latin1 fallback
     >>> l = tolocal(l1)
     >>> l
     'foo: ?'
@@ -247,10 +247,10 @@ def trim(s, width, ellipsis='', leftside=False):
     If 'leftside' is True, left side of string 's' is trimmed.
     'ellipsis' is always placed at trimmed side.
 
-    >>> ellipsis = '+++'
+    >>> ellipsis = b'+++'
     >>> from . import encoding
-    >>> encoding.encoding = 'utf-8'
-    >>> t= '1234567890'
+    >>> encoding.encoding = b'utf-8'
+    >>> t = b'1234567890'
     >>> print trim(t, 12, ellipsis=ellipsis)
     1234567890
     >>> print trim(t, 10, ellipsis=ellipsis)
@@ -285,7 +285,7 @@ def trim(s, width, ellipsis='', leftside=False):
     +++
     >>> print trim(t, 4, ellipsis=ellipsis, leftside=True)
     +++
-    >>> t = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
+    >>> t = b'\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
     >>> print trim(t, 12, ellipsis=ellipsis)
     \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
     >>> print trim(t, 10, ellipsis=ellipsis)
@@ -406,35 +406,35 @@ def jsonescape(s, paranoid=False):
 
     (escapes are doubled in these tests)
 
-    >>> jsonescape('this is a test')
+    >>> jsonescape(b'this is a test')
     'this is a test'
-    >>> jsonescape('escape characters: \\0 \\x0b \\x7f')
+    >>> jsonescape(b'escape characters: \\0 \\x0b \\x7f')
     'escape characters: \\\\u0000 \\\\u000b \\\\u007f'
-    >>> jsonescape('escape characters: \\b \\t \\n \\f \\r \\" \\\\')
+    >>> jsonescape(b'escape characters: \\b \\t \\n \\f \\r \\" \\\\')
     'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\" \\\\\\\\'
-    >>> jsonescape('a weird byte: \\xdd')
+    >>> jsonescape(b'a weird byte: \\xdd')
     'a weird byte: \\xed\\xb3\\x9d'
-    >>> jsonescape('utf-8: caf\\xc3\\xa9')
+    >>> jsonescape(b'utf-8: caf\\xc3\\xa9')
     'utf-8: caf\\xc3\\xa9'
-    >>> jsonescape('')
+    >>> jsonescape(b'')
     ''
 
     If paranoid, non-ascii and common troublesome characters are also escaped.
     This is suitable for web output.
 
-    >>> s = 'escape characters: \\0 \\x0b \\x7f'
+    >>> s = b'escape characters: \\0 \\x0b \\x7f'
     >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
-    >>> s = 'escape characters: \\b \\t \\n \\f \\r \\" \\\\'
+    >>> s = b'escape characters: \\b \\t \\n \\f \\r \\" \\\\'
     >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
-    >>> jsonescape('escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
+    >>> jsonescape(b'escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
     'escape boundary: ~ \\\\u007f \\\\u0080'
-    >>> jsonescape('a weird byte: \\xdd', paranoid=True)
+    >>> jsonescape(b'a weird byte: \\xdd', paranoid=True)
     'a weird byte: \\\\udcdd'
-    >>> jsonescape('utf-8: caf\\xc3\\xa9', paranoid=True)
+    >>> jsonescape(b'utf-8: caf\\xc3\\xa9', paranoid=True)
     'utf-8: caf\\\\u00e9'
-    >>> jsonescape('non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
+    >>> jsonescape(b'non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
     'non-BMP: \\\\ud834\\\\udd1e'
-    >>> jsonescape('<foo@example.org>', paranoid=True)
+    >>> jsonescape(b'<foo@example.org>', paranoid=True)
     '\\\\u003cfoo@example.org\\\\u003e'
     '''
 
@@ -531,18 +531,18 @@ def fromutf8b(s):
     that's was passed through tolocal will remain in UTF-8.
 
     >>> roundtrip = lambda x: fromutf8b(toutf8b(x)) == x
-    >>> m = "\\xc3\\xa9\\x99abcd"
+    >>> m = b"\\xc3\\xa9\\x99abcd"
     >>> toutf8b(m)
     '\\xc3\\xa9\\xed\\xb2\\x99abcd'
     >>> roundtrip(m)
     True
-    >>> roundtrip("\\xc2\\xc2\\x80")
+    >>> roundtrip(b"\\xc2\\xc2\\x80")
     True
-    >>> roundtrip("\\xef\\xbf\\xbd")
+    >>> roundtrip(b"\\xef\\xbf\\xbd")
     True
-    >>> roundtrip("\\xef\\xef\\xbf\\xbd")
+    >>> roundtrip(b"\\xef\\xef\\xbf\\xbd")
     True
-    >>> roundtrip("\\xf1\\x80\\x80\\x80\\x80")
+    >>> roundtrip(b"\\xf1\\x80\\x80\\x80\\x80")
     True
     '''
 

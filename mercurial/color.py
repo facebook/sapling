@@ -320,10 +320,10 @@ def _effect_str(ui, effect):
 def _mergeeffects(text, start, stop):
     """Insert start sequence at every occurrence of stop sequence
 
-    >>> s = _mergeeffects('cyan', '[C]', '|')
-    >>> s = _mergeeffects(s + 'yellow', '[Y]', '|')
-    >>> s = _mergeeffects('ma' + s + 'genta', '[M]', '|')
-    >>> s = _mergeeffects('red' + s, '[R]', '|')
+    >>> s = _mergeeffects(b'cyan', b'[C]', b'|')
+    >>> s = _mergeeffects(s + b'yellow', b'[Y]', b'|')
+    >>> s = _mergeeffects(b'ma' + s + b'genta', b'[M]', b'|')
+    >>> s = _mergeeffects(b'red' + s, b'[R]', b'|')
     >>> s
     '[R]red[M]ma[Y][C]cyan|[R][M][Y]yellow|[R][M]genta|'
     """

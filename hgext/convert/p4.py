@@ -32,9 +32,9 @@ def decodefilename(filename):
     """Perforce escapes special characters @, #, *, or %
     with %40, %23, %2A, or %25 respectively
 
-    >>> decodefilename('portable-net45%252Bnetcore45%252Bwp8%252BMonoAndroid')
+    >>> decodefilename(b'portable-net45%252Bnetcore45%252Bwp8%252BMonoAndroid')
     'portable-net45%2Bnetcore45%2Bwp8%2BMonoAndroid'
-    >>> decodefilename('//Depot/Directory/%2525/%2523/%23%40.%2A')
+    >>> decodefilename(b'//Depot/Directory/%2525/%2523/%23%40.%2A')
     '//Depot/Directory/%25/%23/#@.*'
     """
     replacements = [('%2A', '*'), ('%23', '#'), ('%40', '@'), ('%25', '%')]

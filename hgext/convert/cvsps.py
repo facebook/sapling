@@ -54,23 +54,23 @@ class logerror(Exception):
 def getrepopath(cvspath):
     """Return the repository path from a CVS path.
 
-    >>> getrepopath('/foo/bar')
+    >>> getrepopath(b'/foo/bar')
     '/foo/bar'
-    >>> getrepopath('c:/foo/bar')
+    >>> getrepopath(b'c:/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:10/foo/bar')
+    >>> getrepopath(b':pserver:10/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:10c:/foo/bar')
+    >>> getrepopath(b':pserver:10c:/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:/foo/bar')
+    >>> getrepopath(b':pserver:/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:c:/foo/bar')
+    >>> getrepopath(b':pserver:c:/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:truc@foo.bar:/foo/bar')
+    >>> getrepopath(b':pserver:truc@foo.bar:/foo/bar')
     '/foo/bar'
-    >>> getrepopath(':pserver:truc@foo.bar:c:/foo/bar')
+    >>> getrepopath(b':pserver:truc@foo.bar:c:/foo/bar')
     '/foo/bar'
-    >>> getrepopath('user@server/path/to/repository')
+    >>> getrepopath(b'user@server/path/to/repository')
     '/path/to/repository'
     """
     # According to CVS manual, CVS paths are expressed like:

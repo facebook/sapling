@@ -91,7 +91,7 @@ class RangeableFileObject(object):
     Examples:
         # expose 10 bytes, starting at byte position 20, from
         # /etc/aliases.
-        >>> fo = RangeableFileObject(file('/etc/passwd', 'r'), (20,30))
+        >>> fo = RangeableFileObject(file(b'/etc/passwd', b'r'), (20,30))
         # seek seeks within the range (to position 23 in this case)
         >>> fo.seek(3)
         # tell tells where your at _within the range_ (position 3 in
