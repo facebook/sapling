@@ -232,6 +232,18 @@ def loadall(ui, whitelist=None):
             if isinstance(inst, error.Hint) and inst.hint:
                 ui.warn(_("*** (%s)\n") % inst.hint)
             ui.traceback()
+    # list of (objname, loadermod, loadername) tuple:
+    # - objname is the name of an object in extension module,
+    #   from which extra information is loaded
+    # - loadermod is the module where loader is placed
+    # - loadername is the name of the function,
+    #   which takes (ui, extensionname, extraobj) arguments
+    #
+    # This one is for the list of item that must be run before running any setup
+    earlyextraloaders = [
+        ('configtable', configitems, 'loadconfigtable'),
+    ]
+    _loadextra(ui, newindex, earlyextraloaders)
 
     broken = set()
     for name in _order[newindex:]:
@@ -280,7 +292,6 @@ def loadall(ui, whitelist=None):
     extraloaders = [
         ('cmdtable', commands, 'loadcmdtable'),
         ('colortable', color, 'loadcolortable'),
-        ('configtable', configitems, 'loadconfigtable'),
         ('filesetpredicate', fileset, 'loadpredicate'),
         ('internalmerge', filemerge, 'loadinternalmerge'),
         ('revsetpredicate', revset, 'loadpredicate'),
