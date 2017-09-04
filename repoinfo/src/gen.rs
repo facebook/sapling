@@ -10,19 +10,17 @@
 //! changeset and memoized for efficiency.
 
 use std::cmp;
-use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::usize;
 
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
-use heapsize::HeapSizeOf;
 
 use asyncmemo::{Asyncmemo, Filler, MemoFuture};
 use mercurial_types::{NodeHash, Repo};
 
-use ptrwrap::PtrWrap;
+use nodehashkey::Key;
 
 /// Generation number
 ///
@@ -81,47 +79,6 @@ impl<R> GenFiller<R> {
         GenFiller {
             _phantom: PhantomData,
         }
-    }
-}
-
-#[derive(Debug)]
-pub struct Key<R>(PtrWrap<R>, NodeHash);
-
-impl<R> Clone for Key<R> {
-    fn clone(&self) -> Self {
-        Key(self.0.clone(), self.1)
-    }
-}
-
-impl<R> Eq for Key<R> {}
-impl<R> PartialEq for Key<R> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(&other.0) && self.1.eq(&other.1)
-    }
-}
-
-impl<R> Hash for Key<R> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-        self.1.hash(state);
-    }
-}
-
-impl<R> HeapSizeOf for Key<R> {
-    fn heap_size_of_children(&self) -> usize {
-        self.0.heap_size_of_children() + self.1.heap_size_of_children()
-    }
-}
-
-impl<'a, R> From<(&'a Arc<R>, NodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a Arc<R>, NodeHash)) -> Self {
-        Key(From::from(repo), hash)
-    }
-}
-
-impl<'a, R> From<(&'a PtrWrap<R>, NodeHash)> for Key<R> {
-    fn from((repo, hash): (&'a PtrWrap<R>, NodeHash)) -> Self {
-        Key(repo.clone(), hash)
     }
 }
 

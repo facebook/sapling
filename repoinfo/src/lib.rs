@@ -19,6 +19,7 @@ extern crate heapsize_derive;
 extern crate heapsize;
 
 mod gen;
+mod nodehashkey;
 mod ptrwrap;
 
 pub use ptrwrap::PtrWrap;
