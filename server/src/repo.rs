@@ -6,33 +6,33 @@
 
 //! State for a single source control Repo
 
+use std::collections::{HashMap, HashSet};
+use std::error;
 use std::fmt::{self, Debug};
 use std::io::Cursor;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
-use std::mem;
 
 use bytes::Bytes;
-use futures::{Async, BoxFuture, Future, IntoFuture, Poll, Stream, future, stream};
+use futures::{future, stream, Async, BoxFuture, Future, IntoFuture, Poll, Stream};
 use futures_ext::StreamExt;
-use error_chain::ChainedError;
 
 use slog::Logger;
 
 use async_compression::CompressorType;
 use bookmarks::Bookmarks;
 use mercurial;
-use mercurial_bundles::{Bundle2EncodeBuilder, parts};
-use mercurial_types::{BoxRepo, Changeset, NULL_HASH, NodeHash, Parents, Repo, percent_encode};
+use mercurial_bundles::{parts, Bundle2EncodeBuilder};
+use mercurial_types::{percent_encode, BoxRepo, Changeset, NodeHash, Parents, Repo, NULL_HASH};
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
 
-use fileheads::FileHeads;
-use filebookmarks::FileBookmarks;
-use fileblob::Fileblob;
-use rocksblob::Rocksblob;
 use blobrepo::BlobRepo;
+use fileblob::Fileblob;
+use filebookmarks::FileBookmarks;
+use fileheads::FileHeads;
+use rocksblob::Rocksblob;
 
 use errors::Result;
 
@@ -49,8 +49,8 @@ impl RepoType {
         use self::RepoType::*;
         use hgproto::{Error, ErrorKind};
 
-        fn repo_chain<E: ChainedError>(err: E) -> Error {
-            ChainedError::with_chain(err, ErrorKind::Repo)
+        fn repo_chain<E: error::Error + Send + 'static>(err: E) -> Error {
+            Error::with_chain(err, ErrorKind::Repo)
         }
 
         let ret = match *self {
