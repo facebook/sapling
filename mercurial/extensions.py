@@ -288,7 +288,9 @@ def loadall(ui, whitelist=None):
         ('templatefunc', templater, 'loadfunction'),
         ('templatekeyword', templatekw, 'loadkeyword'),
     ]
+    _loadextra(ui, newindex, extraloaders)
 
+def _loadextra(ui, newindex, extraloaders):
     for name in _order[newindex:]:
         module = _extensions[name]
         if not module:
