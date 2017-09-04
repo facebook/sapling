@@ -19,7 +19,7 @@ fn simple() {
         .and_then(|_| blobstore.get(&"foo"));
     let out = res.wait().expect("pub/get failed").expect("missing");
 
-    assert!(dir.path().join("blob:foo").is_file());
+    assert!(dir.path().join("blob-foo").is_file());
 
     assert_eq!(&*out, b"bar".as_ref());
 }
@@ -51,7 +51,7 @@ fn boxable() {
     let out: Vec<u8> = res.wait().expect("pub/get failed").expect("missing");
     let out = Vec::from(out);
 
-    assert!(dir.path().join("blob:foo").is_file());
+    assert!(dir.path().join("blob-foo").is_file());
 
     assert_eq!(&*out, b"bar".as_ref());
 }

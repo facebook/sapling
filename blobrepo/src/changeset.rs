@@ -36,7 +36,7 @@ pub struct BlobChangeset {
 }
 
 fn cskey(nodeid: &NodeHash) -> String {
-    format!("changeset:{}.bincode", nodeid)
+    format!("changeset-{}.bincode", nodeid)
 }
 
 impl BlobChangeset {

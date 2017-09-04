@@ -120,8 +120,9 @@ fn put_manifest_entry(
                 parents: parents,
                 blob: hash::Sha1::from(bytes.as_ref()),
             };
-            let nodekey = format!("node:{}.bincode", entry_hash);
-            let blobkey = format!("sha1:{}", nodeblob.blob);
+            // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create blobs.
+            let nodekey = format!("node-{}.bincode", entry_hash);
+            let blobkey = format!("sha1-{}", nodeblob.blob);
             let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
                 .expect("bincode serialize failed");
 

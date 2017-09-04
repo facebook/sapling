@@ -48,7 +48,7 @@ mod errors {
 }
 pub use errors::*;
 
-static PREFIX: &'static str = "head:";
+static PREFIX: &'static str = "head-";
 
 /// Wrapper struct to work around the fact that serde_urlencoded can only operate on
 /// non-tuple structs and maps.

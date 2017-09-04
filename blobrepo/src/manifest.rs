@@ -35,7 +35,7 @@ where
             .and_then({
                 let blobstore = blobstore.clone();
                 move |nodeblob| {
-                    let blobkey = format!("sha1:{}", nodeblob.blob);
+                    let blobkey = format!("sha1-{}", nodeblob.blob);
                     blobstore.get(&blobkey).map_err(blobstore_err)
                 }
             })

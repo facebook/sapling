@@ -82,7 +82,7 @@ where
     fn path(&self, key: &K) -> PathBuf {
         let key = key.to_string();
         let key = percent_encode(key.as_bytes(), DEFAULT_ENCODE_SET);
-        self.base.join(format!("{}:{}", PREFIX, key))
+        self.base.join(format!("{}-{}", PREFIX, key))
     }
 }
 
