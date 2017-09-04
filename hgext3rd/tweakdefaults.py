@@ -568,6 +568,10 @@ del commands.table['grep']
      ('E', 'extended-regexp', None, 'use POSIX extended regexps'),
      ('F', 'fixed-strings', None, 'interpret pattern as fixed string'),
      ('P', 'perl-regexp', None, 'use Perl-compatible regexps'),
+     ('I', 'include', [],
+      _('include names matching the given patterns'), _('PATTERN')),
+     ('X', 'exclude', [],
+      _('exclude names matching the given patterns'), _('PATTERN')),
      ], '[OPTION]... PATTERN [FILE]...',
      inferrepo=True)
 def grep(ui, repo, pattern, *pats, **opts):
@@ -622,13 +626,19 @@ def grep(ui, repo, pattern, *pats, **opts):
     if colormode == 'ansi':
         cmd.append('--color=always')
 
+    # Copy match specific options
+    match_opts = {}
+    for k in ('include', 'exclude'):
+        if k in opts:
+            match_opts[k] = opts.get(k)
+
     wctx = repo[None]
     if not pats:
         # Search everything in the current directory
-        m = scmutil.match(wctx, ['.'])
+        m = scmutil.match(wctx, ['.'], match_opts)
     else:
         # Search using the specified patterns
-        m = scmutil.match(wctx, pats)
+        m = scmutil.match(wctx, pats, match_opts)
 
     # Add '--' to make sure grep recognizes all remaining arguments
     # (passed in by xargs) as filenames.

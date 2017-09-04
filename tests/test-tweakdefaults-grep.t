@@ -73,3 +73,25 @@ Test using alternative grep commands
   searching * -- subdir1/subfile1 (glob)
   $ hg grep --config grep.command='echo foo ; false' FooBarB subdir2
   foo ; false * -- subdir2/subfile2 (glob)
+
+Test --include flag
+  $ hg grep --include '**/*file1' -n foobar
+  grepfile1:1:foobarbaz
+  subdir1/subfile1:1:foobar_subdir
+  $ hg grep -I '**/*file1' -n foobar
+  grepfile1:1:foobarbaz
+  subdir1/subfile1:1:foobar_subdir
+
+Test --exclude flag
+  $ hg grep --exclude '**/*file1' -n foobar
+  grepfile2:1:foobarboo
+  subdir2/subfile2:1:foobar_dirsub
+  $ hg grep -X '**/*file1' -n foobar
+  grepfile2:1:foobarboo
+  subdir2/subfile2:1:foobar_dirsub
+
+Test --include and --exclude flags together
+  $ hg grep --include '**/*file1' --exclude '**/grepfile1' -n foobar
+  subdir1/subfile1:1:foobar_subdir
+  $ hg grep -I '**/*file1' -X '**/grepfile1' -n foobar
+  subdir1/subfile1:1:foobar_subdir
