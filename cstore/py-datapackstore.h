@@ -26,6 +26,7 @@ extern "C" {
 #include "cstore/key.h"
 #include "cstore/py-structs.h"
 #include "cstore/pythonutil.h"
+#include "cstore/pythonkeyiterator.h"
 #include "cstore/uniondatapackstore.h"
 
 // --------- DatapackStore Implementation ---------
@@ -108,35 +109,6 @@ static PyObject *datapackstore_getdeltachain(py_datapackstore *self, PyObject *a
     return NULL;
   }
 }
-
-class PythonKeyIterator : public KeyIterator {
-  private:
-    PythonObj _input;
-    Key _current;
-  public:
-    PythonKeyIterator(PythonObj input) :
-      _input(input) {}
-
-    Key *next() {
-      PyObject *item;
-      while ((item = PyIter_Next((PyObject*)_input)) != NULL) {
-        PythonObj itemObj = item;
-
-        char *name;
-        Py_ssize_t namelen;
-        char *node;
-        Py_ssize_t nodelen;
-        if (!PyArg_ParseTuple(item, "s#s#", &name, &namelen, &node, &nodelen)) {
-          throw pyexception();
-        }
-
-        _current = Key(name, namelen, node, nodelen);
-        return &_current;
-      }
-
-      return NULL;
-    }
-};
 
 static PyObject *datapackstore_getmissing(py_datapackstore *self, PyObject *keys) {
   try {
