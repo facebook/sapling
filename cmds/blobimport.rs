@@ -18,6 +18,7 @@ extern crate mercurial_types;
 extern crate blobstore;
 extern crate fileblob;
 extern crate rocksblob;
+extern crate manifoldblob;
 extern crate futures_ext;
 extern crate futures_cpupool;
 extern crate bytes;
@@ -42,6 +43,8 @@ use futures::{Future, IntoFuture, Stream};
 use futures::future::BoxFuture;
 use futures_ext::StreamExt;
 
+use tokio_core::reactor::{Core, Remote};
+
 use futures_cpupool::CpuPool;
 
 use clap::{App, Arg};
@@ -49,6 +52,7 @@ use slog::{Drain, Level, LevelFilter, Logger};
 
 use blobstore::Blobstore;
 use fileblob::Fileblob;
+use manifoldblob::ManifoldBlob;
 use rocksblob::Rocksblob;
 
 use fileheads::FileHeads;
@@ -58,7 +62,7 @@ use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{hash, Blob, Changeset, NodeHash, Parents, Type};
+use mercurial_types::{Blob, Changeset, NodeHash, Parents, Type, hash};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
@@ -72,6 +76,7 @@ pub struct NodeBlob {
 enum BlobstoreType {
     Files,
     Rocksdb,
+    Manifold,
 }
 
 type BBlobstore = Arc<
@@ -98,6 +103,7 @@ error_chain! {
         Rocksblob(::rocksblob::Error, ::rocksblob::ErrorKind);
         FileHeads(::fileheads::Error, ::fileheads::ErrorKind);
         Fileblob(::fileblob::Error, ::fileblob::ErrorKind);
+        Manifold(::manifoldblob::Error, ::manifoldblob::ErrorKind);
     }
     foreign_links {
         Io(::std::io::Error);
@@ -301,6 +307,7 @@ fn convert<H>(
     revlog: RevlogRepo,
     blobstore: BBlobstore,
     headstore: H,
+    core: Core,
     cpupool: Arc<CpuPool>,
     logger: &Logger,
 ) -> Result<()>
@@ -308,8 +315,7 @@ where
     H: Heads<Key = String>,
     H::Error: Into<Error>,
 {
-
-    let mut core = tokio_core::reactor::Core::new()?;
+    let mut core = core;
 
     // Generate stream of changesets. For each changeset, save the cs blob, and the manifest blob,
     // and the files.
@@ -354,13 +360,14 @@ where
     In: AsRef<Path>,
     Out: AsRef<Path>,
 {
+    let core = tokio_core::reactor::Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
     let repo = open_repo(&input)?;
-    let blobstore = open_blobstore(&output, blobtype)?;
+    let blobstore = open_blobstore(&output, blobtype, &core.remote())?;
     let headstore = open_headstore(&output, &cpupool)?;
 
-    convert(repo, blobstore, headstore, cpupool, logger)
+    convert(repo, blobstore, headstore, core, cpupool, logger)
 }
 
 fn open_repo<P: AsRef<Path>>(input: P) -> Result<RevlogRepo> {
@@ -384,19 +391,31 @@ fn open_headstore<P: AsRef<Path>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileH
     Ok(headstore)
 }
 
-fn open_blobstore<P: AsRef<Path>>(output: P, ty: BlobstoreType) -> Result<BBlobstore> {
+fn open_blobstore<P: AsRef<Path>>(
+    output: P,
+    ty: BlobstoreType,
+    remote: &Remote,
+) -> Result<BBlobstore> {
     let mut output = PathBuf::from(output.as_ref());
     output.push("blobs");
 
     let blobstore = match ty {
-        BlobstoreType::Files => Fileblob::<_, Bytes>::create(output)
-            .map_err(Error::from)
-            .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
-            .arced(),
-        BlobstoreType::Rocksdb => Rocksblob::create(output)
-            .map_err(Error::from)
-            .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
-            .arced(),
+        BlobstoreType::Files => {
+            Fileblob::<_, Bytes>::create(output)
+                .map_err(Error::from)
+                .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
+                .arced()
+        }
+        BlobstoreType::Rocksdb => {
+            Rocksblob::create(output)
+                .map_err(Error::from)
+                .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
+                .arced()
+        }
+        BlobstoreType::Manifold => {
+            let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic("mononoke", remote);
+            mb.arced()
+        }
     };
 
     _assert_clone(&blobstore);
@@ -417,7 +436,7 @@ fn main() {
                 .long("blobstore")
                 .short("B")
                 .takes_value(true)
-                .possible_values(&["files", "rocksdb"])
+                .possible_values(&["files", "rocksdb", "manifold"])
                 .required(true)
                 .help("blobstore type"),
         )
@@ -443,6 +462,7 @@ fn main() {
     let blobtype = match matches.value_of("blobstore").unwrap() {
         "files" => BlobstoreType::Files,
         "rocksdb" => BlobstoreType::Rocksdb,
+        "manifold" => BlobstoreType::Manifold,
         bad => panic!("unexpected blobstore type {}", bad),
     };
 
