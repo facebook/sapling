@@ -377,7 +377,8 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
             break
 
     origfn = entry[0]
-    wrap = bind(util.checksignature(wrapper), util.checksignature(origfn))
+    wrap = functools.partial(util.checksignature(wrapper),
+                             util.checksignature(origfn))
     _updatewrapper(wrap, origfn, wrapper)
     if docstring is not None:
         wrap.__doc__ += docstring
