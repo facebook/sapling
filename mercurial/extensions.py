@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import functools
 import imp
 import inspect
 import os
@@ -332,6 +333,7 @@ def bind(func, *args):
 
 def _updatewrapper(wrap, origfn, unboundwrapper):
     '''Copy and add some useful attributes to wrapper'''
+    wrap.__name__ = origfn.__name__
     wrap.__module__ = getattr(origfn, '__module__')
     wrap.__doc__ = getattr(origfn, '__doc__')
     wrap.__dict__.update(getattr(origfn, '__dict__', {}))
@@ -459,7 +461,14 @@ def wrapfunction(container, funcname, wrapper):
 
     origfn = getattr(container, funcname)
     assert callable(origfn)
-    wrap = bind(wrapper, origfn)
+    if inspect.ismodule(container):
+        # origfn is not an instance or class method. "partial" can be used.
+        # "partial" won't insert a frame in traceback.
+        wrap = functools.partial(wrapper, origfn)
+    else:
+        # "partial" cannot be safely used. Emulate its effect by using "bind".
+        # The downside is one more frame in traceback.
+        wrap = bind(wrapper, origfn)
     _updatewrapper(wrap, origfn, wrapper)
     setattr(container, funcname, wrap)
     return origfn
