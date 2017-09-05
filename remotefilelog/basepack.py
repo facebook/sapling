@@ -286,11 +286,7 @@ class mutablebasepack(versionmixin):
 
     def abort(self):
         # Unclean exit
-        try:
-            self.opener.unlink(self.packpath)
-            self.opener.unlink(self.idxpath)
-        except Exception:
-            pass
+        self._cleantemppacks()
 
     def writeraw(self, data):
         self.packfp.write(data)
@@ -307,20 +303,24 @@ class mutablebasepack(versionmixin):
 
             if len(self.entries) == 0:
                 # Empty pack
-                self.opener.unlink(self.packpath)
-                self.opener.unlink(self.idxpath)
+                self._cleantemppacks()
                 self._closed = True
                 return None
 
             self.opener.rename(self.packpath, sha + self.PACKSUFFIX)
-            self.opener.rename(self.idxpath, sha + self.INDEXSUFFIX)
-        except Exception:
-            for path in [self.packpath, self.idxpath,
-                         sha + self.PACKSUFFIX, sha + self.INDEXSUFFIX]:
+            try:
+                self.opener.rename(self.idxpath, sha + self.INDEXSUFFIX)
+            except Exception as ex:
                 try:
-                    self.opener.unlink(path)
+                    self.opener.unlink(sha + self.PACKSUFFIX)
                 except Exception:
                     pass
+                # Throw exception 'ex' explicitly since a normal 'raise' would
+                # potentially throw an exception from the unlink cleanup.
+                raise ex
+        except Exception:
+            # Clean up temp packs in all exception cases
+            self._cleantemppacks()
             raise
 
         self._closed = True
@@ -328,6 +328,16 @@ class mutablebasepack(versionmixin):
         if ledger:
             ledger.addcreated(result)
         return result
+
+    def _cleantemppacks(self):
+        try:
+            self.opener.unlink(self.packpath)
+        except Exception:
+            pass
+        try:
+            self.opener.unlink(self.idxpath)
+        except Exception:
+            pass
 
     def writeindex(self):
         rawindex = ''
