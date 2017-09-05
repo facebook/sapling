@@ -2001,19 +2001,19 @@ def show_changeset(ui, repo, opts, buffered=False):
     regular display via changeset_printer() is done.
     """
     # options
-    matchfn = None
+    match = None
     if opts.get('patch') or opts.get('stat'):
-        matchfn = scmutil.matchall(repo)
+        match = scmutil.matchall(repo)
 
     if opts.get('template') == 'json':
-        return jsonchangeset(ui, repo, matchfn, opts, buffered)
+        return jsonchangeset(ui, repo, match, opts, buffered)
 
     spec = _lookuplogtemplate(ui, opts.get('template'), opts.get('style'))
 
     if not spec.ref and not spec.tmpl and not spec.mapfile:
-        return changeset_printer(ui, repo, matchfn, opts, buffered)
+        return changeset_printer(ui, repo, match, opts, buffered)
 
-    return changeset_templater(ui, repo, spec, matchfn, opts, buffered)
+    return changeset_templater(ui, repo, spec, match, opts, buffered)
 
 def showmarker(fm, marker, index=None):
     """utility function to display obsolescence marker in a readable way

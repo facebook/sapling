@@ -477,9 +477,9 @@ def archive(ui, repo, dest, **opts):
             prefix = os.path.basename(repo.root) + '-%h'
 
     prefix = cmdutil.makefilename(repo, prefix, node)
-    matchfn = scmutil.match(ctx, [], opts)
+    match = scmutil.match(ctx, [], opts)
     archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
-                     matchfn, prefix, subrepos=opts.get('subrepos'))
+                     match, prefix, subrepos=opts.get('subrepos'))
 
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
@@ -2489,7 +2489,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     skip = {}
     revfiles = {}
-    matchfn = scmutil.match(repo[None], pats, opts)
+    match = scmutil.match(repo[None], pats, opts)
     found = False
     follow = opts.get('follow')
 
@@ -2530,7 +2530,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     ui.pager('grep')
     fm = ui.formatter('grep', opts)
-    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
+    for ctx in cmdutil.walkchangerevs(repo, match, opts, prep):
         rev = ctx.rev()
         parent = ctx.p1().rev()
         for fn in sorted(revfiles.get(rev, [])):

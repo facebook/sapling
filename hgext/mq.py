@@ -1664,15 +1664,15 @@ class queue(object):
             changes = repo.changelog.read(top)
             man = repo.manifestlog[changes[0]].read()
             aaa = aa[:]
-            matchfn = scmutil.match(repo[None], pats, opts)
+            match1 = scmutil.match(repo[None], pats, opts)
             # in short mode, we only diff the files included in the
             # patch already plus specified files
             if opts.get('short'):
                 # if amending a patch, we start with existing
                 # files plus specified files - unfiltered
-                match = scmutil.matchfiles(repo, mm + aa + dd + matchfn.files())
+                match = scmutil.matchfiles(repo, mm + aa + dd + match1.files())
                 # filter with include/exclude options
-                matchfn = scmutil.match(repo[None], opts=opts)
+                match1 = scmutil.match(repo[None], opts=opts)
             else:
                 match = scmutil.matchall(repo)
             m, a, r, d = repo.status(match=match)[:4]
@@ -1713,8 +1713,8 @@ class queue(object):
             a = list(aa)
 
             # create 'match' that includes the files to be recommitted.
-            # apply matchfn via repo.status to ensure correct case handling.
-            cm, ca, cr, cd = repo.status(patchparent, match=matchfn)[:4]
+            # apply match1 via repo.status to ensure correct case handling.
+            cm, ca, cr, cd = repo.status(patchparent, match=match1)[:4]
             allmatches = set(cm + ca + cr + cd)
             refreshchanges = [x.intersection(allmatches) for x in (mm, aa, dd)]
 
@@ -1764,7 +1764,7 @@ class queue(object):
                 # file with mtime=0 so status can see it.
                 mm = []
                 for i in xrange(len(m) - 1, -1, -1):
-                    if not matchfn(m[i]):
+                    if not match1(m[i]):
                         mm.append(m[i])
                         del m[i]
                 for f in m:
