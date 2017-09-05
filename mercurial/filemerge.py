@@ -468,7 +468,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     a = _workingpath(repo, fcd)
     fd = fcd.path()
 
-    util.copyfile(a, a + ".local")
+    util.writefile(a + ".local", fcd.decodeddata())
     repo.wwrite(fd + ".other", fco.data(), fco.flags())
     repo.wwrite(fd + ".base", fca.data(), fca.flags())
     return False, 1, False
