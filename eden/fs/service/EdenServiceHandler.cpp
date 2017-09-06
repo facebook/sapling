@@ -68,7 +68,7 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   try {
-    mountImpl(*info);
+    mountImpl(*info).get();
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
@@ -76,7 +76,8 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   }
 }
 
-void EdenServiceHandler::mountImpl(const MountInfo& info) {
+folly::Future<folly::Unit> EdenServiceHandler::mountImpl(
+    const MountInfo& info) {
   server_->reloadConfig();
   auto initialConfig = ClientConfig::loadFromClientDirectory(
       AbsolutePathPiece{info.mountPoint},
@@ -89,60 +90,68 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
 
-  // TODO: return future rather than blocking on get()
-  auto edenMount = EdenMount::create(
-                       std::move(initialConfig),
-                       std::move(objectStore),
-                       server_->getSocketPath(),
-                       server_->getStats())
-                       .get();
-  // We gave ownership of initialConfig to the EdenMount.
-  // Get a pointer to it that we can use for the remainder of this function.
-  auto* config = edenMount->getConfig();
+  return EdenMount::create(
+             std::move(initialConfig),
+             std::move(objectStore),
+             server_->getSocketPath(),
+             server_->getStats())
+      .then([this, info, repoType](std::shared_ptr<EdenMount> edenMount) {
+        // We gave ownership of initialConfig to the EdenMount.
+        // Get a pointer to it that we can use for the remainder of this
+        // function.
+        auto* config = edenMount->getConfig();
 
-  // Load InodeBase objects for any materialized files in this mount point
-  // before we start mounting.
-  edenMount->getRootInode()->loadMaterializedChildren().wait();
+        // Load InodeBase objects for any materialized files in this mount point
+        // before we start mounting.
+        edenMount->getRootInode()->loadMaterializedChildren().wait();
 
-  // TODO(mbolin): Use the result of config.getBindMounts() to perform the
-  // appropriate bind mounts for the client.
-  server_->mount(edenMount);
+        // TODO(mbolin): Use the result of config.getBindMounts() to perform the
+        // appropriate bind mounts for the client.
+        server_->mount(edenMount);
 
-  auto cloneSuccessPath = config->getCloneSuccessPath();
-  bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
-  if (isInitialMount) {
-    auto repoHooks = config->getRepoHooks();
-    auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
-    auto repoSource = config->getRepoSource();
+        auto cloneSuccessPath = config->getCloneSuccessPath();
+        bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
+        if (isInitialMount) {
+          auto repoHooks = config->getRepoHooks();
+          auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
+          auto repoSource = config->getRepoSource();
 
-    XLOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
-               << info.mountPoint;
-    try {
-      // TODO(mbolin): It would be preferable to pass the name of the repository
-      // as defined in ~/.edenrc so that the script can derive the repoType and
-      // repoSource from that. Then the hook would only take two args.
-      folly::Subprocess proc(
-          {postCloneScript.c_str(), repoType, info.mountPoint, repoSource},
-          folly::Subprocess::Options().pipeStdin());
-      proc.closeParentFd(STDIN_FILENO);
-      proc.waitChecked();
-      XLOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
-                 << info.mountPoint;
-    } catch (const folly::SubprocessSpawnError& ex) {
-      // If this failed because postCloneScript does not exist, then ignore the
-      // error because we are tolerant of the case where /etc/eden/hooks does
-      // not exist, by design.
-      if (ex.errnoValue() != ENOENT) {
-        // TODO(13448173): If clone fails, then we should roll back the mount.
-        throw;
-      }
-      XLOG(INFO) << "Did not run post-clone hook '" << postCloneScript
-                 << "' for " << info.mountPoint << " because it was not found.";
-    }
-  }
+          XLOG(INFO) << "Running post-clone hook '" << postCloneScript
+                     << "' for " << info.mountPoint;
+          try {
+            // TODO(mbolin): It would be preferable to pass the name of the
+            // repository as defined in ~/.edenrc so that the script can derive
+            // the repoType and repoSource from that. Then the hook would only
+            // take two args.
+            folly::Subprocess proc(
+                {postCloneScript.c_str(),
+                 repoType,
+                 info.mountPoint,
+                 repoSource},
+                folly::Subprocess::Options().pipeStdin());
+            proc.closeParentFd(STDIN_FILENO);
+            proc.waitChecked();
+            XLOG(INFO) << "Finished post-clone hook '" << postCloneScript
+                       << "' for " << info.mountPoint;
+          } catch (const folly::SubprocessSpawnError& ex) {
+            // If this failed because postCloneScript does not exist, then
+            // ignore the error because we are tolerant of the case where
+            // /etc/eden/hooks does not exist, by design.
+            if (ex.errnoValue() != ENOENT) {
+              // TODO(13448173): If clone fails, then we should roll back the
+              // mount.
+              throw;
+            }
+            XLOG(INFO) << "Did not run post-clone hook '" << postCloneScript
+                       << "' for " << info.mountPoint
+                       << " because it was not found.";
+          }
+        }
 
-  // The equivalent of `touch` to signal that clone completed successfully.
-  folly::writeFile(string(), cloneSuccessPath.c_str());
+        // The equivalent of `touch` to signal that clone completed
+        // successfully.
+        folly::writeFile(string(), cloneSuccessPath.c_str());
+      });
 }
 
 /**

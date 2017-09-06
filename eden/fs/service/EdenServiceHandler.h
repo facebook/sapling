@@ -188,7 +188,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece mountPoint,
       folly::StringPiece path) noexcept;
 
-  void mountImpl(const MountInfo& info);
+  FOLLY_NODISCARD folly::Future<folly::Unit> mountImpl(const MountInfo& info);
 
   AbsolutePath getPathToDirstateStorage(AbsolutePathPiece mountPointPath);
 
