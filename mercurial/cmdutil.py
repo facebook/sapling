@@ -35,7 +35,6 @@ from . import (
     obsolete,
     patch,
     pathutil,
-    phases,
     pycompat,
     registrar,
     revlog,
@@ -3162,16 +3161,13 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # This not what we expect from amend.
             return old.node()
 
-        ph = repo.ui.config('phases', 'new-commit', phases.draft)
-        try:
-            if opts.get('secret'):
-                commitphase = 'secret'
-            else:
-                commitphase = old.phase()
-            repo.ui.setconfig('phases', 'new-commit', commitphase, 'amend')
+        if opts.get('secret'):
+            commitphase = 'secret'
+        else:
+            commitphase = old.phase()
+        overrides = {('phases', 'new-commit'): commitphase}
+        with ui.configoverride(overrides, 'amend'):
             newid = repo.commitctx(new)
-        finally:
-            repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
 
         # Reroute the working copy parent to the new changeset
         repo.setparents(newid, nullid)
