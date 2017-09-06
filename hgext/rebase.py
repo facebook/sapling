@@ -192,7 +192,8 @@ class rebaseruntime(object):
                 self._writestatus(f)
 
     def _writestatus(self, f):
-        repo = self.repo.unfiltered()
+        repo = self.repo
+        assert repo.filtername is None
         f.write(repo[self.originalwd].hex() + '\n')
         # was "dest". we now write dest per src root below.
         f.write('\n')
@@ -215,7 +216,8 @@ class rebaseruntime(object):
     def restorestatus(self):
         """Restore a previously stored status"""
         self.prepared = True
-        repo = self.repo.unfiltered()
+        repo = self.repo
+        assert repo.filtername is None
         keepbranches = None
         legacydest = None
         collapse = False
@@ -1067,9 +1069,9 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
               "experimental.allowdivergence=True")
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
 
-def successorrevs(repo, rev):
+def successorrevs(unfi, rev):
     """yield revision numbers for successors of rev"""
-    unfi = repo.unfiltered()
+    assert unfi.filtername is None
     nodemap = unfi.changelog.nodemap
     for s in obsutil.allsuccessors(unfi.obsstore, [unfi[rev].node()]):
         if s in nodemap:
@@ -1091,7 +1093,8 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     block below.
     """
     # use unfiltered changelog since successorrevs may return filtered nodes
-    cl = repo.unfiltered().changelog
+    assert repo.filtername is None
+    cl = repo.changelog
     def isancestor(a, b):
         # take revision numbers instead of nodes
         if a == b:
@@ -1607,7 +1610,8 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
     obsolete => None entries in the mapping indicate nodes with no successor"""
     obsoletenotrebased = {}
 
-    cl = repo.unfiltered().changelog
+    assert repo.filtername is None
+    cl = repo.changelog
     nodemap = cl.nodemap
     for srcrev in rebaseobsrevs:
         srcnode = cl.node(srcrev)
