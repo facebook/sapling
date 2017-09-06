@@ -3163,7 +3163,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             return old.node()
 
         ph = repo.ui.config('phases', 'new-commit', phases.draft)
-        newid = None
         try:
             if opts.get('secret'):
                 commitphase = 'secret'
