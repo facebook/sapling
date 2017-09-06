@@ -44,7 +44,6 @@ from mercurial import (
     phases,
     registrar,
     repair,
-    repoview,
     revset,
     revsetlang,
     scmutil,
@@ -137,7 +136,17 @@ class rebaseruntime(object):
         if opts is None:
             opts = {}
 
-        self.repo = repo
+        # prepared: whether we have rebasestate prepared or not. Currently it
+        # decides whether "self.repo" is unfiltered or not.
+        # The rebasestate has explicit hash to hash instructions not depending
+        # on visibility. If rebasestate exists (in-memory or on-disk), use
+        # unfiltered repo to avoid visibility issues.
+        # Before knowing rebasestate (i.e. when starting a new rebase (not
+        # --continue or --abort)), the original repo should be used so
+        # visibility-dependent revsets are correct.
+        self.prepared = False
+        self._repo = repo
+
         self.ui = ui
         self.opts = opts
         self.originalwd = None
@@ -165,6 +174,13 @@ class rebaseruntime(object):
         # other extensions
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
+
+    @property
+    def repo(self):
+        if self.prepared:
+            return self._repo.unfiltered()
+        else:
+            return self._repo
 
     def storestatus(self, tr=None):
         """Store the current status to allow recovery"""
@@ -198,6 +214,7 @@ class rebaseruntime(object):
 
     def restorestatus(self):
         """Restore a previously stored status"""
+        self.prepared = True
         repo = self.repo.unfiltered()
         keepbranches = None
         legacydest = None
@@ -266,7 +283,6 @@ class rebaseruntime(object):
         repo.ui.debug('computed skipped revs: %s\n' %
                         (' '.join(str(r) for r in sorted(skipped)) or None))
         repo.ui.debug('rebase status resumed\n')
-        _setrebasesetvisibility(repo, set(state.keys()) | {originalwd})
 
         self.originalwd = originalwd
         self.destmap = destmap
@@ -355,6 +371,8 @@ class rebaseruntime(object):
             dest = self.repo[destrev]
             if dest.closesbranch() and not self.keepbranchesf:
                 self.ui.status(_('reopening closed branch head %s\n') % dest)
+
+        self.prepared = True
 
     def _performrebase(self, tr):
         repo, ui = self.repo, self.ui
@@ -1323,7 +1341,6 @@ def restorecollapsemsg(repo, isabort):
 
 def clearstatus(repo):
     'Remove the status files'
-    _clearrebasesetvisibiliy(repo)
     # Make sure the active transaction won't write the state file
     tr = repo.currenttransaction()
     if tr:
@@ -1438,7 +1455,6 @@ def buildstate(repo, destmap, collapse):
     '''
     rebaseset = destmap.keys()
     originalwd = repo['.'].rev()
-    _setrebasesetvisibility(repo, set(rebaseset) | {originalwd})
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
@@ -1580,30 +1596,6 @@ def pullrebase(orig, ui, repo, *args, **opts):
 
     return ret
 
-def _setrebasesetvisibility(repo, revs):
-    """store the currently rebased set on the repo object
-
-    This is used by another function to prevent rebased revision to because
-    hidden (see issue4504)"""
-    repo = repo.unfiltered()
-    repo._rebaseset = revs
-    # invalidate cache if visibility changes
-    hiddens = repo.filteredrevcache.get('visible', set())
-    if revs & hiddens:
-        repo.invalidatevolatilesets()
-
-def _clearrebasesetvisibiliy(repo):
-    """remove rebaseset data from the repo"""
-    repo = repo.unfiltered()
-    if '_rebaseset' in vars(repo):
-        del repo._rebaseset
-
-def _rebasedvisible(orig, repo):
-    """ensure rebased revs stay visible (see issue4504)"""
-    blockers = orig(repo)
-    blockers.update(getattr(repo, '_rebaseset', ()))
-    return blockers
-
 def _filterobsoleterevs(repo, revs):
     """returns a set of the obsolete revisions in revs"""
     return set(r for r in revs if repo[r].obsolete())
@@ -1668,5 +1660,3 @@ def uisetup(ui):
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
     cmdutil.afterresolvedstates.append(
         ['rebasestate', _('hg rebase --continue')])
-    # ensure rebased rev are not hidden
-    extensions.wrapfunction(repoview, 'pinnedrevs', _rebasedvisible)
