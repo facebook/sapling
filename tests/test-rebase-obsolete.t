@@ -1301,3 +1301,73 @@ Rebasing a merge with one of its parent having a hidden successor
    /
   o  0:426bada5c675 A
   
+For some reasons (--hidden, rebaseskipobsolete=0, directaccess, etc.),
+rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
+
+  $ hg init $TESTTMP/hidden-state1
+  $ cd $TESTTMP/hidden-state1
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > rebaseskipobsolete=0
+  > EOF
+
+  $ hg debugdrawdag <<'EOS'
+  >    C
+  >    |
+  >  D B # prune: B, C
+  >  |/  # B/D=B
+  >  A
+  > EOS
+
+  $ eval `hg tags -T '{tag}={node}\n'`
+  $ rm .hg/localtags
+
+  $ hg update -q $C --hidden
+  $ hg rebase -s $B -d $D
+  rebasing 1:2ec65233581b "B"
+  merging D
+  warning: conflicts while merging D! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ cp -R . $TESTTMP/hidden-state2
+
+  $ hg log -G
+  @  2:b18e25de2cf5 D
+  |
+  | @  1:2ec65233581b B
+  |/
+  o  0:426bada5c675 A
+  
+  $ hg summary
+  parent: 2:b18e25de2cf5 tip
+   D
+  parent: 1:2ec65233581b  (obsolete)
+   B
+  branch: default
+  commit: 2 modified, 1 unknown, 1 unresolved (merge)
+  update: (current)
+  phases: 3 draft
+  rebase: 0 rebased, 2 remaining (rebase --continue)
+
+  $ hg rebase --abort
+  rebase aborted
+
+Also test --continue for the above case
+
+  $ cd $TESTTMP/hidden-state2
+  $ hg resolve -m
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 1:2ec65233581b "B"
+  rebasing 3:7829726be4dc "C" (tip)
+  $ hg log -G
+  @  5:1964d5d5b547 C
+  |
+  o  4:68deb90c12a2 B
+  |
+  o  2:b18e25de2cf5 D
+  |
+  o  0:426bada5c675 A
+  

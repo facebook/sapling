@@ -198,7 +198,7 @@ class rebaseruntime(object):
 
     def restorestatus(self):
         """Restore a previously stored status"""
-        repo = self.repo
+        repo = self.repo.unfiltered()
         keepbranches = None
         legacydest = None
         collapse = False
