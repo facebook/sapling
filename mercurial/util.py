@@ -1457,24 +1457,23 @@ def checknlink(testfile):
 
     # testfile may be open, so we need a separate file for checking to
     # work around issue2543 (or testfile may get lost on Samba shares)
-    f1, f2, fd = None, None, None
+    f1, f2, fp = None, None, None
     try:
         fd, f1 = tempfile.mkstemp(prefix='.%s-' % os.path.basename(testfile),
                                   suffix='1~', dir=os.path.dirname(testfile))
         os.close(fd)
-        fd = None
         f2 = '%s2~' % f1[:-2]
 
         oslink(f1, f2)
         # nlinks() may behave differently for files on Windows shares if
         # the file is open.
-        fd = posixfile(f2)
+        fp = posixfile(f2)
         return nlinks(f2) > 1
     except OSError:
         return False
     finally:
-        if fd is not None:
-            fd.close()
+        if fp is not None:
+            fp.close()
         for f in (f1, f2):
             try:
                 if f is not None:
