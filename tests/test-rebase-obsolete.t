@@ -1267,3 +1267,37 @@ parent gets moved:
   |/
   o  A
   
+Rebasing a merge with one of its parent having a hidden successor
+
+  $ hg init $TESTTMP/merge-p1-hidden-successor
+  $ cd $TESTTMP/merge-p1-hidden-successor
+
+  $ hg debugdrawdag <<'EOS'
+  >  E
+  >  |
+  > B3 B2 # amend: B1 -> B2 -> B3
+  >  |/   # B2 is hidden
+  >  |  D
+  >  |  |\
+  >  | B1 C
+  >  |/
+  >  A
+  > EOS
+
+  $ eval `hg tags -T '{tag}={node}\n'`
+  $ rm .hg/localtags
+
+  $ hg rebase -r $D -d $E
+  rebasing 5:9e62094e4d94 "D"
+
+  $ hg log -G
+  o    7:a699d059adcf D
+  |\
+  | o  6:ecc93090a95c E
+  | |
+  | o  4:0dc878468a23 B3
+  | |
+  o |  1:96cc3511f894 C
+   /
+  o  0:426bada5c675 A
+  

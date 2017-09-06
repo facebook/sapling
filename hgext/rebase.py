@@ -1072,7 +1072,8 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
     The new parents of a merge is slightly more complicated. See the comment
     block below.
     """
-    cl = repo.changelog
+    # use unfiltered changelog since successorrevs may return filtered nodes
+    cl = repo.unfiltered().changelog
     def isancestor(a, b):
         # take revision numbers instead of nodes
         if a == b:
