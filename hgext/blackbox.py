@@ -142,40 +142,37 @@ def wrapui(ui):
             if getattr(ui, '_bbinlog', False):
                 # recursion and failure guard
                 return
+            ui._bbinlog = True
+            default = self.configdate('devel', 'default-date')
+            date = util.datestr(default, '%Y/%m/%d %H:%M:%S')
+            user = util.getuser()
+            pid = '%d' % util.getpid()
+            formattedmsg = msg[0] % msg[1:]
+            rev = '(unknown)'
+            changed = ''
+            if repo:
+                ctx = repo[None]
+                parents = ctx.parents()
+                rev = ('+'.join([hex(p.node()) for p in parents]))
+                if (ui.configbool('blackbox', 'dirty') and
+                    ctx.dirty(missing=True, merge=False, branch=False)):
+                    changed = '+'
+            if ui.configbool('blackbox', 'logsource'):
+                src = ' [%s]' % event
+            else:
+                src = ''
             try:
-                ui._bbinlog = True
-                default = self.configdate('devel', 'default-date')
-                date = util.datestr(default, '%Y/%m/%d %H:%M:%S')
-                user = util.getuser()
-                pid = '%d' % util.getpid()
-                formattedmsg = msg[0] % msg[1:]
-                rev = '(unknown)'
-                changed = ''
-                if repo:
-                    ctx = repo[None]
-                    parents = ctx.parents()
-                    rev = ('+'.join([hex(p.node()) for p in parents]))
-                    if (ui.configbool('blackbox', 'dirty') and
-                        ctx.dirty(missing=True, merge=False, branch=False)):
-                        changed = '+'
-                if ui.configbool('blackbox', 'logsource'):
-                    src = ' [%s]' % event
-                else:
-                    src = ''
-                try:
-                    fmt = '%s %s @%s%s (%s)%s> %s'
-                    args = (date, user, rev, changed, pid, src, formattedmsg)
-                    with ui._openlogfile() as fp:
-                        fp.write(fmt % args)
-                except (IOError, OSError) as err:
-                    self.debug('warning: cannot write to blackbox.log: %s\n' %
-                               err.strerror)
-                    # do not restore _bbinlog intentionally to avoid failed
-                    # logging again
-                else:
-                    ui._bbinlog = False
-            finally:
-                pass
+                fmt = '%s %s @%s%s (%s)%s> %s'
+                args = (date, user, rev, changed, pid, src, formattedmsg)
+                with ui._openlogfile() as fp:
+                    fp.write(fmt % args)
+            except (IOError, OSError) as err:
+                self.debug('warning: cannot write to blackbox.log: %s\n' %
+                           err.strerror)
+                # do not restore _bbinlog intentionally to avoid failed
+                # logging again
+            else:
+                ui._bbinlog = False
 
         def setrepo(self, repo):
             self._bbrepo = repo
