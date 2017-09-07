@@ -199,23 +199,36 @@ class cg1unpacker(object):
         network API. To do so, it parse the changegroup data, otherwise it will
         block in case of sshrepo because it don't know the end of the stream.
         """
-        # an empty chunkgroup is the end of the changegroup
-        # a changegroup has at least 2 chunkgroups (changelog and manifest).
-        # after that, changegroup versions 1 and 2 have a series of groups
-        # with one group per file. changegroup 3 has a series of directory
-        # manifests before the files.
-        count = 0
-        emptycount = 0
-        while emptycount < self._grouplistcount:
-            empty = True
-            count += 1
+        # For changegroup 1 and 2, we expect 3 parts: changelog, manifestlog,
+        # and a list of filelogs. For changegroup 3, we expect 4 parts:
+        # changelog, manifestlog, a list of tree manifestlogs, and a list of
+        # filelogs.
+        #
+        # Changelog and manifestlog parts are terminated with empty chunks. The
+        # tree and file parts are a list of entry sections. Each entry section
+        # is a series of chunks terminating in an empty chunk. The list of these
+        # entry sections is terminated in yet another empty chunk, so we know
+        # we've reached the end of the tree/file list when we reach an empty
+        # chunk that was proceeded by no non-empty chunks.
+
+        parts = 0
+        while parts < 2 + self._grouplistcount:
+            noentries = True
             while True:
                 chunk = getchunk(self)
                 if not chunk:
-                    if empty and count > 2:
-                        emptycount += 1
+                    # The first two empty chunks represent the end of the
+                    # changelog and the manifestlog portions. The remaining
+                    # empty chunks represent either A) the end of individual
+                    # tree or file entries in the file list, or B) the end of
+                    # the entire list. It's the end of the entire list if there
+                    # were no entries (i.e. noentries is True).
+                    if parts < 2:
+                        parts += 1
+                    elif noentries:
+                        parts += 1
                     break
-                empty = False
+                noentries = False
                 yield chunkheader(len(chunk))
                 pos = 0
                 while pos < len(chunk):
