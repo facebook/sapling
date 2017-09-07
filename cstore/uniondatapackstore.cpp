@@ -93,7 +93,7 @@ std::shared_ptr<DeltaChain> UnionDeltaChainIterator::getNextChain(const Key &key
     DataStore *substore = *it;
     std::shared_ptr<DeltaChain> chain = substore->getDeltaChainRaw(key);
 
-    if (chain->code() == GET_DELTA_CHAIN_OK) {
+    if (chain->status() == GET_DELTA_CHAIN_OK) {
       return chain;
     }
   }

@@ -102,7 +102,7 @@ DatapackStore::~DatapackStore() {
 
 DeltaChainIterator DatapackStore::getDeltaChain(const Key &key) {
   std::shared_ptr<DeltaChain> chain = this->getDeltaChainRaw(key);
-  if (chain->code() == GET_DELTA_CHAIN_OK) {
+  if (chain->status() == GET_DELTA_CHAIN_OK) {
     return DeltaChainIterator(chain);
   }
   throw MissingKeyError("unable to find delta chain");
@@ -125,8 +125,8 @@ std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key &key) {
       continue;
     }
 
-    // Pass ownership of chain to DeltaChain
-    return std::make_shared<DeltaChain>(chain);
+    // Pass ownership of chain to CDeltaChain
+    return std::make_shared<CDeltaChain>(chain);
   }
 
   // Check if there are new packs available
@@ -147,11 +147,11 @@ std::shared_ptr<DeltaChain> DatapackStore::getDeltaChainRaw(const Key &key) {
       continue;
     }
 
-    // Pass ownership of chain to DeltaChain
-    return std::make_shared<DeltaChain>(chain);
+    // Pass ownership of chain to CDeltaChain
+    return std::make_shared<CDeltaChain>(chain);
   }
 
-  return std::make_shared<DeltaChain>(GET_DELTA_CHAIN_NOT_FOUND);
+  return std::make_shared<CDeltaChain>(GET_DELTA_CHAIN_NOT_FOUND);
 }
 
 Key *DatapackStoreKeyIterator::next() {

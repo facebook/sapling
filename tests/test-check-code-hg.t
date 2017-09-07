@@ -65,6 +65,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cstore/datapackstore.cpp it has no-che?k-code (glob)
   Skipping cstore/datapackstore.h it has no-che?k-code (glob)
   Skipping cstore/datastore.h it has no-che?k-code (glob)
+  Skipping cstore/deltachain.cpp it has no-che?k-code (glob)
+  Skipping cstore/deltachain.h it has no-che?k-code (glob)
   Skipping cstore/key.h it has no-che?k-code (glob)
   Skipping cstore/match.h it has no-che?k-code (glob)
   Skipping cstore/py-cdatapack.h it has no-che?k-code (glob)

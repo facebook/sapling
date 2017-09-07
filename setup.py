@@ -239,6 +239,7 @@ else:
             Extension('cstore',
                 sources=[
                     'cstore/datapackstore.cpp',
+                    'cstore/deltachain.cpp',
                     'cstore/py-cstore.cpp',
                     'cstore/pythonutil.cpp',
                     'cstore/uniondatapackstore.cpp',
