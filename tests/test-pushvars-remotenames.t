@@ -6,7 +6,7 @@ Setup
   $ export PYTHONPATH
 
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
-  > #!/bin/bash
+  > #!/bin/sh
   > env | grep -E "^HG_USERVAR"
   > exit 0
   > EOF

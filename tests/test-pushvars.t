@@ -4,7 +4,7 @@ Setup
   $ export PYTHONPATH
 
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
-  > #!/bin/bash
+  > #!/bin/sh
   > env | grep -E "^HG_USERVAR_DEBUG"
   > env | grep -E "^HG_USERVAR_BYPASS_REVIEW"
   > exit 0
