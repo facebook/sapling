@@ -13,16 +13,13 @@
 #include <folly/Synchronized.h>
 #include <folly/experimental/StringKeyedUnorderedSet.h>
 #include <memory>
+#include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <typename T>
 class Optional;
-}
-namespace rocksdb {
-class DB;
-class WriteBatch;
 }
 
 namespace facebook {
@@ -53,6 +50,19 @@ class LocalStore {
   virtual ~LocalStore();
 
   /**
+   * Which key space (and thus column family) should be used to store
+   * a specific key.  The values of these are coupled to the ordering
+   * of the columnFamilies descriptor in LocalStore.cpp. */
+  enum KeySpace {
+    /* 0 is the default column family, which we are not using */
+    BlobFamily = 1,
+    BlobMetaDataFamily = 2,
+    TreeFamily = 3,
+    HgProxyHashFamily = 4,
+    HgCommitToTreeFamily = 5,
+  };
+
+  /**
    * Get arbitrary unserialized data from the store.
    *
    * StoreResult::isValid() will be true if the key was found, and false
@@ -60,8 +70,8 @@ class LocalStore {
    *
    * May throw exceptions on error.
    */
-  StoreResult get(folly::ByteRange key) const;
-  StoreResult get(const Hash& id) const;
+  StoreResult get(KeySpace keySpace, folly::ByteRange key) const;
+  StoreResult get(KeySpace keySpace, const Hash& id) const;
 
   /**
    * Get a Tree from the store.
@@ -121,8 +131,8 @@ class LocalStore {
   /**
    * Put arbitrary data in the store.
    */
-  void put(folly::ByteRange key, folly::ByteRange value);
-  void put(const Hash& id, folly::ByteRange value);
+  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value);
+  void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
 
   /**
    * Enables batch loading mode.
@@ -152,8 +162,8 @@ class LocalStore {
   /**
    * Test whether the key is stored, or whether the key is pending storage
    * as part of batch mode */
-  bool hasKey(folly::ByteRange key) const;
-  bool hasKey(const Hash& id) const;
+  bool hasKey(KeySpace keySpace, folly::ByteRange key) const;
+  bool hasKey(KeySpace keySpace, const Hash& id) const;
 
  private:
   /**
@@ -168,17 +178,13 @@ class LocalStore {
    * if the writeBatchBufferSize_ is exceeded */
   void flushIfNotBatch();
 
-  std::unique_ptr<rocksdb::DB> db_;
+  RocksHandles dbHandles_;
 
   struct PendingWrite {
     /**
      * We need to track this via a pointer to avoid pulling in the full
      * rocksdb headers */
     std::unique_ptr<rocksdb::WriteBatch> writeBatch;
-    /**
-     * Tracks all of the keys inserted since enableBatchMode() was
-     * called. */
-    folly::StringKeyedUnorderedSet batchedKeys;
   };
   mutable folly::Synchronized<PendingWrite> pending_;
 

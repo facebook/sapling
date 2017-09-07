@@ -17,14 +17,16 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <rocksdb/db.h>
+#include <rocksdb/filter_policy.h>
+#include <rocksdb/table.h>
 #include <array>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
-#include "eden/fs/rocksdb/RocksDbUtil.h"
 #include "eden/fs/rocksdb/RocksException.h"
+#include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/StoreResult.h"
 
 using facebook::eden::Hash;
@@ -44,34 +46,42 @@ using std::unique_ptr;
 namespace {
 using namespace facebook::eden;
 
+rocksdb::ColumnFamilyOptions makeColumnOptions(uint64_t LRUblockCacheSizeMB) {
+  rocksdb::ColumnFamilyOptions options;
+
+  // We'll never perform range scans on any of the keys that we store.
+  // This enables bloom filters and a hash policy that improves our
+  // get/put performance.
+  options.OptimizeForPointLookup(LRUblockCacheSizeMB);
+
+  options.OptimizeLevelStyleCompaction();
+  return options;
+}
+
 /**
- * For each blob, we also store an entry containing the blob metadata.
- * This is stored under a key that is the blob's key plus the
- * ATTRIBUTE_METADATA suffix.
- *
- * (We should potentially switch to RocksDB column families instead in the
- * future, rather than using a key suffix.)
+ * The different key spaces that we desire.
+ * The ordering is coupled with the values of the LocalStore::KeySpace enum.
  */
-const unsigned char ATTRIBUTE_METADATA = 'x';
+const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
+  // Most of the column families will share the same cache.  We
+  // want the blob data to live in its own smaller cache; the assumption
+  // is that the vfs cache will compensate for that, together with the
+  // idea that we shouldn't need to materialize a great many files.
+  auto options = makeColumnOptions(64);
+  auto blobOptions = makeColumnOptions(8);
 
-class BlobMetadataKey {
- public:
-  explicit BlobMetadataKey(const Hash& id) {
-    memcpy(key_.data(), id.getBytes().data(), Hash::RAW_SIZE);
-    key_[Hash::RAW_SIZE] = ATTRIBUTE_METADATA;
-  }
-
-  ByteRange bytes() const {
-    return ByteRange(key_.data(), key_.size());
-  }
-
-  Slice slice() const {
-    return Slice{reinterpret_cast<const char*>(key_.data()), key_.size()};
-  }
-
- private:
-  std::array<uint8_t, Hash::RAW_SIZE + 1> key_;
-};
+  // Meyers singleton to avoid SIOF issues
+  static const std::vector<rocksdb::ColumnFamilyDescriptor> families{
+      rocksdb::ColumnFamilyDescriptor{rocksdb::kDefaultColumnFamilyName,
+                                      options},
+      rocksdb::ColumnFamilyDescriptor{"blob", blobOptions},
+      rocksdb::ColumnFamilyDescriptor{"blobmeta", options},
+      rocksdb::ColumnFamilyDescriptor{"tree", options},
+      rocksdb::ColumnFamilyDescriptor{"hgproxyhash", options},
+      rocksdb::ColumnFamilyDescriptor{"hgcommit2tree", options},
+  };
+  return families;
+}
 
 class SerializedBlobMetadata {
  public:
@@ -125,14 +135,13 @@ class SerializedBlobMetadata {
 rocksdb::Slice _createSlice(folly::ByteRange bytes) {
   return Slice(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
-
 }
 
 namespace facebook {
 namespace eden {
 
 LocalStore::LocalStore(AbsolutePathPiece pathToRocksDb)
-    : db_(createRocksDb(pathToRocksDb.stringPiece())) {}
+    : dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()) {}
 
 LocalStore::~LocalStore() {
 #ifdef FOLLY_SANITIZE_ADDRESS
@@ -149,10 +158,14 @@ LocalStore::~LocalStore() {
 #endif
 }
 
-StoreResult LocalStore::get(ByteRange key) const {
+StoreResult LocalStore::get(KeySpace keySpace, ByteRange key) const {
   string value;
   flushForRead();
-  auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
+  auto status = dbHandles_.db.get()->Get(
+      ReadOptions(),
+      dbHandles_.columns[keySpace].get(),
+      _createSlice(key),
+      &value);
   if (!status.ok()) {
     if (status.IsNotFound()) {
       // Return an empty StoreResult
@@ -170,8 +183,8 @@ StoreResult LocalStore::get(ByteRange key) const {
   return StoreResult(std::move(value));
 }
 
-StoreResult LocalStore::get(const Hash& id) const {
-  return get(id.getBytes());
+StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
+  return get(keySpace, id.getBytes());
 }
 
 // TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
@@ -181,7 +194,7 @@ StoreResult LocalStore::get(const Hash& id) const {
 // or deserializeGitBlob().
 
 std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
-  auto result = get(id.getBytes());
+  auto result = get(KeySpace::TreeFamily, id.getBytes());
   if (!result.isValid()) {
     return nullptr;
   }
@@ -191,7 +204,7 @@ std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
 std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   // We have to hold this string in scope while we deserialize and build
   // the blob; otherwise, the results are undefined.
-  auto result = get(id.getBytes());
+  auto result = get(KeySpace::BlobFamily, id.getBytes());
   if (!result.isValid()) {
     return nullptr;
   }
@@ -200,8 +213,7 @@ std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
 }
 
 Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {
-  BlobMetadataKey key(id);
-  auto result = get(key.bytes());
+  auto result = get(KeySpace::BlobMetaDataFamily, id);
   if (!result.isValid()) {
     return folly::none;
   }
@@ -221,11 +233,10 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
 
   BlobMetadata metadata{Hash::sha1(&contents),
                         contents.computeChainDataLength()};
-  if (hasKey(id)) {
+  if (hasKey(KeySpace::BlobMetaDataFamily, id)) {
     return metadata;
   }
 
-  BlobMetadataKey metadataKey(id);
   SerializedBlobMetadata metadataBytes(metadata);
 
   auto hashSlice = _createSlice(id.getBytes());
@@ -258,14 +269,12 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
       pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
     }
 
-    pending->writeBatch->Put(keyParts, bodyParts);
-    pending->writeBatch->Put(metadataKey.slice(), metadataBytes.slice());
-
-    if (writeBatchBufferSize_ > 0) {
-      // Only track the inserted keys in batch mode
-      pending->batchedKeys.insert(StringPiece{id.getBytes()});
-      pending->batchedKeys.insert(StringPiece{metadataKey.bytes()});
-    }
+    pending->writeBatch->Put(
+        dbHandles_.columns[KeySpace::BlobFamily].get(), keyParts, bodyParts);
+    pending->writeBatch->Put(
+        dbHandles_.columns[KeySpace::BlobMetaDataFamily].get(),
+        hashSlice,
+        metadataBytes.slice());
   }
 
   flushIfNotBatch();
@@ -293,16 +302,22 @@ Hash LocalStore::putTree(const Tree* tree) {
   ByteRange treeData = serialized.second.coalesce();
 
   auto& id = serialized.first;
-  put(id.getBytes(), treeData);
+  put(KeySpace::TreeFamily, id.getBytes(), treeData);
   return id;
 }
 
-void LocalStore::put(const Hash& id, folly::ByteRange value) {
-  put(id.getBytes(), value);
+void LocalStore::put(
+    KeySpace keySpace,
+    const Hash& id,
+    folly::ByteRange value) {
+  put(keySpace, id.getBytes(), value);
 }
 
-void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {
-  if (hasKey(key)) {
+void LocalStore::put(
+    KeySpace keySpace,
+    folly::ByteRange key,
+    folly::ByteRange value) {
+  if (hasKey(keySpace, key)) {
     // Don't try to overwrite an existing key
     return;
   }
@@ -313,11 +328,10 @@ void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {
       pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
     }
 
-    pending->writeBatch->Put(_createSlice(key), _createSlice(value));
-    if (writeBatchBufferSize_ > 0) {
-      // Only track the inserted keys in batch mode
-      pending->batchedKeys.insert(StringPiece{key});
-    }
+    pending->writeBatch->Put(
+        dbHandles_.columns[keySpace].get(),
+        _createSlice(key),
+        _createSlice(value));
   }
 
   flushIfNotBatch();
@@ -350,7 +364,6 @@ void LocalStore::enableBatchMode(size_t bufferSize) {
 void LocalStore::disableBatchMode() {
   CHECK_NE(writeBatchBufferSize_, 0) << "Should not already be in batch mode";
   writeBatchBufferSize_ = 0;
-  pending_.wlock()->batchedKeys.clear();
   flush();
 }
 
@@ -363,7 +376,7 @@ void LocalStore::flush() {
   XLOG(DBG5) << "Flushing " << pending->writeBatch->Count()
              << " entries with data size of "
              << pending->writeBatch->GetDataSize();
-  auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
+  auto status = dbHandles_.db->Write(WriteOptions(), pending->writeBatch.get());
   XLOG(DBG5) << "... Flushed";
   pending->writeBatch.reset();
 
@@ -382,7 +395,7 @@ void LocalStore::flushForRead() const {
   XLOG(DBG5) << "READ op: Flushing " << pending->writeBatch->Count()
              << " entries with data size of "
              << pending->writeBatch->GetDataSize();
-  auto status = db_->Write(WriteOptions(), pending->writeBatch.get());
+  auto status = dbHandles_.db->Write(WriteOptions(), pending->writeBatch.get());
   XLOG(DBG5) << "... Flushed";
   pending->writeBatch.reset();
 
@@ -392,16 +405,13 @@ void LocalStore::flushForRead() const {
   }
 }
 
-bool LocalStore::hasKey(folly::ByteRange key) const {
-  {
-    auto pending = pending_.rlock();
-    auto keyStr = StringPiece{key};
-    if (pending->batchedKeys.find(keyStr) != pending->batchedKeys.end()) {
-      return true;
-    }
-  }
+bool LocalStore::hasKey(KeySpace keySpace, folly::ByteRange key) const {
   string value;
-  auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
+  auto status = dbHandles_.db->Get(
+      ReadOptions(),
+      dbHandles_.columns[keySpace].get(),
+      _createSlice(key),
+      &value);
   if (!status.ok()) {
     if (status.IsNotFound()) {
       return false;
@@ -418,8 +428,8 @@ bool LocalStore::hasKey(folly::ByteRange key) const {
   return true;
 }
 
-bool LocalStore::hasKey(const Hash& id) const {
-  return hasKey(id.getBytes());
+bool LocalStore::hasKey(KeySpace keySpace, const Hash& id) const {
+  return hasKey(keySpace, id.getBytes());
 }
 
 }

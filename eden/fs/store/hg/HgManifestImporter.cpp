@@ -129,7 +129,7 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
   DCHECK(computed_) << "Must have computed PartialTree prior to recording";
   // If the store already has data on this node, then we don't need to
   // recurse into any of our children; we're done!
-  if (store->hasKey(id_)) {
+  if (store->hasKey(LocalStore::KeySpace::TreeFamily, id_)) {
     return id_;
   }
 
@@ -140,7 +140,7 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
     it.record(store);
   }
 
-  store->put(id_, treeData_.coalesce());
+  store->put(LocalStore::KeySpace::TreeFamily, id_, treeData_.coalesce());
 
   XLOG(DBG6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
              << numPaths_ << " paths, " << trees_.size() << " trees)";

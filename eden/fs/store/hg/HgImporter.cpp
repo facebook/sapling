@@ -43,6 +43,7 @@ using folly::IOBuf;
 using folly::StringPiece;
 using folly::Subprocess;
 using std::string;
+using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 DEFINE_string(
     hgImportHelper,
@@ -111,7 +112,7 @@ struct HgProxyHash {
    */
   HgProxyHash(LocalStore* store, Hash edenBlobHash) {
     // Read the path name and file rev hash
-    auto infoResult = store->get(StringPiece(getBlobKey(edenBlobHash)));
+    auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenBlobHash);
     if (!infoResult.isValid()) {
       XLOG(ERR) << "received unknown mercurial proxy hash "
                 << edenBlobHash.toString();
@@ -174,7 +175,8 @@ struct HgProxyHash {
       LocalStore* store,
       const std::pair<Hash, IOBuf>& computedPair) {
     store->put(
-        StringPiece(getBlobKey(computedPair.first)),
+        KeySpace::HgProxyHashFamily,
+        computedPair.first,
         // Note that this depends on prepareToStore() having called
         // buf.coalesce()!
         ByteRange(computedPair.second.data(), computedPair.second.length()));
@@ -189,14 +191,6 @@ struct HgProxyHash {
   HgProxyHash& operator=(const HgProxyHash&) = delete;
   HgProxyHash(HgProxyHash&&) = delete;
   HgProxyHash& operator=(HgProxyHash&&) = delete;
-
-  static std::string getBlobKey(Hash edenBlobHash) {
-    // TODO: Use a RocksDB column family for this rather than having to
-    // use a key suffix.
-    auto key = StringPiece(edenBlobHash.getBytes()).str();
-    key.append("hgx");
-    return key;
-  }
 
   /**
    * Serialize the (path, hgRevHash) data into a buffer that will be stored in
@@ -504,7 +498,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   if (path.empty() && manifestNode == kZeroHash) {
     auto tree = std::make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
     auto serialized = store_->serializeTree(tree.get());
-    store_->put(edenTreeID, serialized.second.coalesce());
+    store_->put(KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
     return tree;
   }
 
@@ -634,7 +628,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
   auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
   auto serialized = store_->serializeTree(tree.get());
-  store_->put(edenTreeID, serialized.second.coalesce());
+  store_->put(KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
   return tree;
 }
 

@@ -27,6 +27,7 @@ using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 using folly::unhexlify;
 using std::string;
+using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 class LocalStoreTest : public ::testing::Test {
  protected:
@@ -113,7 +114,8 @@ TEST_F(LocalStoreTest, testReadsAndWriteTree) {
       string("100644 xdebug.ini\x00", 18),
       unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  store_->put(hash.getBytes(), folly::StringPiece{gitTreeObject});
+  store_->put(
+      KeySpace::TreeFamily, hash.getBytes(), folly::StringPiece{gitTreeObject});
   auto tree = store_->getTree(hash);
   EXPECT_EQ(Hash("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
@@ -131,15 +133,15 @@ TEST_F(LocalStoreTest, testGetResult) {
   StringPiece key1 = "foo";
   StringPiece key2 = "bar";
 
-  EXPECT_FALSE(store_->get(key1).isValid());
-  EXPECT_FALSE(store_->get(key2).isValid());
+  EXPECT_FALSE(store_->get(KeySpace::BlobFamily, key1).isValid());
+  EXPECT_FALSE(store_->get(KeySpace::BlobFamily, key2).isValid());
 
-  store_->put(key1, StringPiece{"hello world"});
-  auto result1 = store_->get(key1);
+  store_->put(KeySpace::BlobFamily, key1, StringPiece{"hello world"});
+  auto result1 = store_->get(KeySpace::BlobFamily, key1);
   ASSERT_TRUE(result1.isValid());
   EXPECT_EQ("hello world", result1.piece());
 
-  auto result2 = store_->get(key2);
+  auto result2 = store_->get(KeySpace::BlobFamily, key2);
   EXPECT_FALSE(result2.isValid());
   EXPECT_THROW(result2.piece(), std::domain_error);
 }

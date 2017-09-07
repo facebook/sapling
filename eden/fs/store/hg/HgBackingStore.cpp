@@ -24,6 +24,7 @@ using folly::StringPiece;
 using folly::makeFuture;
 using std::make_unique;
 using std::unique_ptr;
+using KeySpace = facebook::eden::LocalStore::KeySpace;
 
 namespace facebook {
 namespace eden {
@@ -59,17 +60,8 @@ Future<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
 }
 
 unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
-  // TODO: We should probably switch to using a RocksDB column family rather
-  // than a key suffix here.
-  static constexpr StringPiece mappingSuffix{"hgc"};
-  std::array<uint8_t, Hash::RAW_SIZE + mappingSuffix.size()> mappingKeyStorage;
-  memcpy(mappingKeyStorage.data(), commitID.getBytes().data(), Hash::RAW_SIZE);
-  memcpy(
-      mappingKeyStorage.data() + Hash::RAW_SIZE, "hgc", mappingSuffix.size());
-  ByteRange mappingKey(mappingKeyStorage.data(), mappingKeyStorage.size());
-
   Hash rootTreeHash;
-  auto result = localStore_->get(mappingKey);
+  auto result = localStore_->get(KeySpace::HgCommitToTreeFamily, commitID);
   if (result.isValid()) {
     rootTreeHash = Hash{result.bytes()};
     XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
@@ -79,7 +71,8 @@ unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
     XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
                << " as tree " << rootTreeHash.toString();
 
-    localStore_->put(mappingKey, rootTreeHash.getBytes());
+    localStore_->put(
+        KeySpace::HgCommitToTreeFamily, commitID, rootTreeHash.getBytes());
   }
 
   return localStore_->getTree(rootTreeHash);
