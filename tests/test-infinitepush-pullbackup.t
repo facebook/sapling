@@ -221,17 +221,11 @@ Test debugcheckbackup
   [255]
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
   checking \$TESTTMP/backupsource on .* (re)
-  unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
-  [255]
   $ hg debugcheckbackup --all 2>&1 | sort
   checking \$TESTTMP on .* (re)
   checking \$TESTTMP/backupsource on .* (re)
   checking \$TESTTMP/backupsource2 on .* (re)
   checking \$TESTTMP/bookmarks/backupsource3 on .* (re)
-  unknown revision '0e1a088ff2825213eaa838a82a842bc186f10dd5'
-  unknown revision 'a2a9ae518b62f1d9d1e884d2c16f87bb2e368c5c'
-  unknown revision 'a2a9ae518b62f1d9d1e884d2c16f87bb2e368c5c'
-  unknown revision 'c1bfda8efb6e73473d6874e35125861a34a5594d'
   $ rm ../repo/.hg/scratchbranches/index/nodemap/e0230a60975b38a9014f098fb973199efd25c46f
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
   checking \$TESTTMP/backupsource on .* (re)
@@ -253,7 +247,6 @@ Make sure that both repos were checked even though check for one of them fails
   $ hg debugcheckbackup --user anotheruser --all 2>&1 | sort
   checking \$TESTTMP/backupsource on .* (re)
   checking \$TESTTMP/backupsource2 on .* (re)
-  unknown revision 'c03baa769a209c549603380d7bf496aaf42687bb'
   unknown revision 'e0230a60975b38a9014f098fb973199efd25c46f'
 
 Test getavailablebackups command
