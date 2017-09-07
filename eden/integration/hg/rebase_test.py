@@ -104,7 +104,7 @@ class RebaseTest:
                 str(num_fast_path))
         )
         self.assertEqual(num_slow_path, stdout.count(
-            'falling back to non-eden update code path\n'), msg=(
+            'falling back to non-eden update code path: '), msg=(
                 'Number of times `hg update` should exercise the slow path: ' +
                 str(num_slow_path))
         )
