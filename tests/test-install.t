@@ -76,6 +76,11 @@ hg debuginstall with no username
   1 problems detected, please check your install!
   [1]
 
+hg debuginstall with invalid encoding
+  $ HGENCODING=invalidenc hg debuginstall | grep encoding
+  checking encoding (invalidenc)...
+   unknown encoding: invalidenc
+
 path variables are expanded (~ is the same as $TESTTMP)
   $ mkdir tools
   $ touch tools/testeditor.exe

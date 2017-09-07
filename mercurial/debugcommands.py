@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import codecs
 import collections
 import difflib
 import errno
@@ -997,8 +998,8 @@ def debuginstall(ui, **opts):
     fm.write('encoding', _("checking encoding (%s)...\n"), encoding.encoding)
     err = None
     try:
-        encoding.fromlocal("test")
-    except error.Abort as inst:
+        codecs.lookup(pycompat.sysstr(encoding.encoding))
+    except LookupError as inst:
         err = inst
         problems += 1
     fm.condwrite(err, 'encodingerror', _(" %s\n"
