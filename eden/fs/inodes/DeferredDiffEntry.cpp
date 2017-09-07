@@ -249,6 +249,16 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       return diffRemovedTree(context_, getPath(), scmEntry_);
     }
 
+    {
+      auto contents = treeInode->getContents().wlock();
+      if (!contents->isMaterialized() &&
+          contents->treeHash.value() == scmEntry_.getHash()) {
+        // It did not change since it was loaded,
+        // and it matches the scmEntry we're diffing against.
+        return makeFuture();
+      }
+    }
+
     // Possibly modified directory.  Load the Tree in question.
     return context_->store->getTree(scmEntry_.getHash()).then([
       this,
@@ -274,25 +284,9 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       return treeInode->diff(context_, getPath(), nullptr, ignore_, isIgnored_);
     }
 
-    // Possibly modified file.  First check the mode.
-    // If it is different the file is definitely modified.
-    if (fileInode->getMode() != scmEntry_.getMode()) {
-      context_->callback->modifiedFile(getPath(), scmEntry_);
-      return makeFuture();
-    }
-
-    // TODO: If at some point we add file size info to the TreeEntry, we could
-    // first check to see if the file size is different, before having to load
-    // the SHA1 data.
-
-    // Load the blob SHA1 and the file contents SHA1, so we can check if the
-    // contents are modified.  Note that we want the FileInode to always
-    // return a SHA1 to us, even for symlink contents.
-    auto blobSha1Future = context_->store->getBlobMetadata(scmEntry_.getHash());
-    auto fileSha1Future = fileInode->getSHA1(false);
-    return folly::collect(blobSha1Future, fileSha1Future)
-        .then([this](const std::tuple<BlobMetadata, Hash>& result) {
-          if (std::get<0>(result).sha1 != std::get<1>(result)) {
+    return fileInode->isSameAs(scmEntry_.getHash(), scmEntry_.getMode())
+        .then([this](bool isSame) {
+          if (!isSame) {
             context_->callback->modifiedFile(getPath(), scmEntry_);
           }
         });
