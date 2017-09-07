@@ -232,16 +232,8 @@ Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
     auto data = data_.wlock();
     bool madeChanges = false;
 
-    if (!data->hgDestToSourceCopyMap.empty()) {
-      // For now, we blindly assume that when the snapshot changes, the copymap
-      // data is no longer valid.
-      data->hgDestToSourceCopyMap.clear();
-      madeChanges = true;
-    }
-
-    // For now, we also blindly assume that when the snapshot changes, we can
-    // remove all dirstate tuples except for those that have a merge state of
-    // OtherParent.
+    // For now, we assume that when the snapshot changes, we should
+    // remove all dirstate tuples with a merge state of NotApplicable.
     auto iter = data->hgDirstateTuples.begin();
     while (iter != data->hgDirstateTuples.end()) {
       // If we need to erase this element, it will erase iterators pointing to
@@ -249,7 +241,12 @@ Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
       auto current = iter;
       ++iter;
 
-      if (current->second.get_mergeState() != DirstateMergeState::OtherParent) {
+      if (current->second.get_mergeState() ==
+          DirstateMergeState::NotApplicable) {
+        XLOG(INFO) << "Removing " << current->first.str()
+                   << " from hgDirstateTuples via onSnapshotChanged("
+                   << rootTree->getHash()
+                   << ") because it has merge state NotApplicable.";
         data->hgDirstateTuples.erase(current);
         madeChanges = true;
       }

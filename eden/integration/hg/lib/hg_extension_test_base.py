@@ -7,6 +7,8 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from textwrap import dedent
+from typing import List
 from ...lib import find_executables, hgrepo, testcase
 import configparser
 import json
@@ -131,13 +133,63 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         with open(edenrc, 'w') as f:
             config.write(f)
 
-    def hg(self, *args, stdout_charset='utf-8'):
+    def hg(self, *args, stdout_charset='utf-8', shell=False, hgeditor=None):
         '''Runs `hg.real` with the specified args in the Eden mount.
+
+        If hgeditor is specified, it will be used as the value of the $HGEDITOR
+        environment variable when the hg command is run. See
+        self.create_editor_that_writes_commit_messages().
 
         Returns the stdout decoded as a utf8 string. To use a different charset,
         specify the `stdout_charset` as a keyword argument.
         '''
-        return self.repo.hg(*args, stdout_charset=stdout_charset)
+        return self.repo.hg(*args, stdout_charset=stdout_charset,
+                            shell=shell, hgeditor=hgeditor)
+
+    def create_editor_that_writes_commit_messages(self,
+                                                  messages: List[str]) -> str:
+        '''
+        Creates a program that writes the next message in `messages` to the
+        file specified via $1 each time it is invoked.
+
+        Returns the path to the program. This is intended to be used as the
+        value for hgeditor in self.hg().
+        '''
+        tmp_dir = self.tmp_dir
+
+        messages_dir = os.path.join(tmp_dir, 'commit_messages')
+        os.makedirs(messages_dir)
+        for i, message in enumerate(messages):
+            file_name = '{:04d}'.format(i)
+            with open(os.path.join(messages_dir, file_name), 'w') as f:
+                f.write(message)
+
+        editor = os.path.join(tmp_dir, 'commit_message_editor')
+
+        # Each time this script runs, it takes the "first" message file that is
+        # left in messages_dir and moves it to overwrite the path that it was
+        # asked to edit. This makes it so that the next time it runs, it will
+        # use the "next" message in the queue.
+        with open(editor, 'w') as f:
+            f.write(
+                dedent(
+                    f'''\
+            #!/bin/bash
+            set -e
+
+            for entry in {messages_dir}/*
+            do
+                mv "$entry" "$1"
+                exit 0
+            done
+
+            # There was no message to write.
+            exit 1
+            '''
+                )
+            )
+        os.chmod(editor, 0o755)
+        return editor
 
     def status(self):
         '''Returns the output of `hg status` as a string.'''
