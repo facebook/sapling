@@ -14,11 +14,11 @@ extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate nix;
+extern crate percent_encoding;
 extern crate rand;
 extern crate serde;
 #[cfg(test)]
 extern crate tempdir;
-extern crate url;
 
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
@@ -37,11 +37,9 @@ use futures::stream::{self, BoxStream, Stream};
 use futures_cpupool::CpuPool;
 use nix::fcntl::{self, FlockArg};
 use nix::sys::stat;
+use percent_encoding::{DEFAULT_ENCODE_SET, percent_decode, percent_encode};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-// TODO: the percent_encoding stuff now lives in a separate percent_encoding crate, re-exported by
-// url. Switch to that crate.
-use url::percent_encoding::{DEFAULT_ENCODE_SET, percent_decode, percent_encode};
 
 use bookmarks::{Bookmarks, BookmarksMut, Version};
 
