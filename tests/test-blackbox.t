@@ -230,3 +230,57 @@ Test log recursion from dirty status check
 
 cleanup
   $ cd ..
+
+#if chg
+
+when using chg, blackbox.log should get rotated correctly
+
+  $ cat > $TESTTMP/noop.py << EOF
+  > from __future__ import absolute_import
+  > import time
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('noop')
+  > def noop(ui, repo):
+  >     pass
+  > EOF
+
+  $ hg init blackbox-chg
+  $ cd blackbox-chg
+
+  $ cat > .hg/hgrc << EOF
+  > [blackbox]
+  > maxsize = 500B
+  > [extensions]
+  > # extension change forces chg to restart
+  > noop=$TESTTMP/noop.py
+  > EOF
+
+  $ $PYTHON -c 'print("a" * 400)' > .hg/blackbox.log
+  $ chg noop
+  $ chg noop
+  $ chg noop
+  $ chg noop
+  $ chg noop
+
+  $ cat > showsize.py << 'EOF'
+  > import os, sys
+  > limit = 500
+  > for p in sys.argv[1:]:
+  >     size = os.stat(p).st_size
+  >     if size >= limit:
+  >         desc = '>='
+  >     else:
+  >         desc = '<'
+  >     print('%s: %s %d' % (p, desc, limit))
+  > EOF
+
+  $ $PYTHON showsize.py .hg/blackbox*
+  .hg/blackbox.log: < 500
+  .hg/blackbox.log.1: >= 500
+  .hg/blackbox.log.2: >= 500
+
+  $ cd ..
+
+#endif

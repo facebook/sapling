@@ -73,21 +73,6 @@ configitem('blackbox', 'logsource',
 
 lastui = None
 
-filehandles = {}
-
-def _openlog(vfs):
-    path = vfs.join('blackbox.log')
-    if path in filehandles:
-        return filehandles[path]
-    filehandles[path] = fp = vfs('blackbox.log', 'a')
-    return fp
-
-def _closelog(vfs):
-    path = vfs.join('blackbox.log')
-    fp = filehandles[path]
-    del filehandles[path]
-    fp.close()
-
 def wrapui(ui):
     class blackboxui(ui.__class__):
         def __init__(self, src=None):
@@ -132,21 +117,23 @@ def wrapui(ui):
                         self.debug("warning: cannot rename '%s' to '%s': %s\n" %
                                    (newpath, oldpath, err.strerror))
 
-            fp = _openlog(self._bbvfs)
             maxsize = self.configbytes('blackbox', 'maxsize')
+            name = 'blackbox.log'
             if maxsize > 0:
-                st = self._bbvfs.fstat(fp)
-                if st.st_size >= maxsize:
-                    path = fp.name
-                    _closelog(self._bbvfs)
-                    maxfiles = self.configint('blackbox', 'maxfiles', 7)
-                    for i in xrange(maxfiles - 1, 1, -1):
-                        rotate(oldpath='%s.%d' % (path, i - 1),
-                               newpath='%s.%d' % (path, i))
-                    rotate(oldpath=path,
-                           newpath=maxfiles > 0 and path + '.1')
-                    fp = _openlog(self._bbvfs)
-            return fp
+                try:
+                    st = self._bbvfs.stat(name)
+                except OSError:
+                    pass
+                else:
+                    if st.st_size >= maxsize:
+                        path = self._bbvfs.join(name)
+                        maxfiles = self.configint('blackbox', 'maxfiles', 7)
+                        for i in xrange(maxfiles - 1, 1, -1):
+                            rotate(oldpath='%s.%d' % (path, i - 1),
+                                   newpath='%s.%d' % (path, i))
+                        rotate(oldpath=path,
+                               newpath=maxfiles > 0 and path + '.1')
+            return self._bbvfs(name, 'a')
 
         def _bbwrite(self, fmt, *args):
             self._bbfp.write(fmt % args)
