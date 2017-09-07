@@ -135,10 +135,6 @@ def wrapui(ui):
                                newpath=maxfiles > 0 and path + '.1')
             return self._bbvfs(name, 'a')
 
-        def _bbwrite(self, fmt, *args):
-            self._bbfp.write(fmt % args)
-            self._bbfp.flush()
-
         def log(self, event, *msg, **opts):
             global lastui
             super(blackboxui, self).log(event, *msg, **opts)
@@ -192,8 +188,11 @@ def wrapui(ui):
                 else:
                     src = ''
                 try:
-                    ui._bbwrite('%s %s @%s%s (%s)%s> %s',
-                        date, user, rev, changed, pid, src, formattedmsg)
+                    fp = ui._bbfp
+                    fmt = '%s %s @%s%s (%s)%s> %s'
+                    args = (date, user, rev, changed, pid, src, formattedmsg)
+                    fp.write(fmt % args)
+                    fp.flush()
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
