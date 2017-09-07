@@ -62,11 +62,8 @@ where
     }
 
     /// Get a `Future` for a `Generation` number for a given changeset in a repo.
-    pub fn get<AR>(&self, repo: AR, nodeid: NodeHash) -> MemoFuture<GenFiller<R>>
-    where
-        AR: AsRef<Arc<R>>,
-    {
-        self.cache.get((repo.as_ref(), nodeid))
+    pub fn get(&self, repo: &Arc<R>, nodeid: NodeHash) -> MemoFuture<GenFiller<R>> {
+        self.cache.get((repo, nodeid))
     }
 }
 
