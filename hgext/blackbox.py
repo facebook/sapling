@@ -82,18 +82,22 @@ def wrapui(ui):
             else:
                 self._bbinlog = False
                 self._bbrepo = getattr(src, '_bbrepo', None)
-                self._bbvfs = getattr(src, '_bbvfs', None)
 
         def _partialinit(self):
-            if util.safehasattr(self, '_bbvfs'):
+            if self._bbvfs:
                 return
             self._bbinlog = False
             self._bbrepo = None
-            self._bbvfs = None
 
         def copy(self):
             self._partialinit()
             return self.__class__(self)
+
+        @property
+        def _bbvfs(self):
+            repo = getattr(self, '_bbrepo', None)
+            if repo:
+                return repo.vfs
 
         @util.propertycache
         def track(self):
@@ -194,7 +198,6 @@ def wrapui(ui):
         def setrepo(self, repo):
             self._bbinlog = False
             self._bbrepo = repo
-            self._bbvfs = repo.vfs
 
     ui.__class__ = blackboxui
     uimod.ui = blackboxui
