@@ -1000,7 +1000,7 @@ def debuginstall(ui, **opts):
     try:
         codecs.lookup(pycompat.sysstr(encoding.encoding))
     except LookupError as inst:
-        err = inst
+        err = util.forcebytestr(inst)
         problems += 1
     fm.condwrite(err, 'encodingerror', _(" %s\n"
                  " (check that your locale is properly set)\n"), err)
@@ -1056,7 +1056,7 @@ def debuginstall(ui, **opts):
             )
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
         except Exception as inst:
-            err = inst
+            err = util.forcebytestr(inst)
             problems += 1
         fm.condwrite(err, 'extensionserror', " %s\n", err)
 
@@ -1088,7 +1088,7 @@ def debuginstall(ui, **opts):
             try:
                 templater.templater.frommapfile(m)
             except Exception as inst:
-                err = inst
+                err = util.forcebytestr(inst)
                 p = None
             fm.condwrite(err, 'defaulttemplateerror', " %s\n", err)
         else:
@@ -1124,7 +1124,7 @@ def debuginstall(ui, **opts):
     try:
         username = ui.username()
     except error.Abort as e:
-        err = e
+        err = util.forcebytestr(e)
         problems += 1
 
     fm.condwrite(username, 'username',  _("checking username (%s)\n"), username)
