@@ -80,7 +80,6 @@ def wrapui(ui):
             if src is None:
                 self._partialinit()
             else:
-                self._bbfp = getattr(src, '_bbfp', None)
                 self._bbinlog = False
                 self._bbrepo = getattr(src, '_bbrepo', None)
                 self._bbvfs = getattr(src, '_bbvfs', None)
@@ -88,7 +87,6 @@ def wrapui(ui):
         def _partialinit(self):
             if util.safehasattr(self, '_bbvfs'):
                 return
-            self._bbfp = None
             self._bbinlog = False
             self._bbrepo = None
             self._bbvfs = None
@@ -143,16 +141,7 @@ def wrapui(ui):
             if not '*' in self.track and not event in self.track:
                 return
 
-            if self._bbfp:
-                ui = self
-            elif self._bbvfs:
-                try:
-                    self._bbfp = self._openlogfile()
-                except (IOError, OSError) as err:
-                    self.debug('warning: cannot write to blackbox.log: %s\n' %
-                               err.strerror)
-                    del self._bbvfs
-                    self._bbfp = None
+            if self._bbvfs:
                 ui = self
             else:
                 # certain ui instances exist outside the context of
@@ -160,12 +149,12 @@ def wrapui(ui):
                 # was seen.
                 ui = lastui
 
-            if not ui or not ui._bbfp:
+            if not ui:
                 return
             if not lastui or ui._bbrepo:
                 lastui = ui
             if ui._bbinlog:
-                # recursion guard
+                # recursion and failure guard
                 return
             try:
                 ui._bbinlog = True
@@ -188,19 +177,21 @@ def wrapui(ui):
                 else:
                     src = ''
                 try:
-                    fp = ui._bbfp
                     fmt = '%s %s @%s%s (%s)%s> %s'
                     args = (date, user, rev, changed, pid, src, formattedmsg)
-                    fp.write(fmt % args)
-                    fp.flush()
-                except IOError as err:
+                    with ui._openlogfile() as fp:
+                        fp.write(fmt % args)
+                except (IOError, OSError) as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
+                    # do not restore _bbinlog intentionally to avoid failed
+                    # logging again
+                else:
+                    ui._bbinlog = False
             finally:
-                ui._bbinlog = False
+                pass
 
         def setrepo(self, repo):
-            self._bbfp = None
             self._bbinlog = False
             self._bbrepo = repo
             self._bbvfs = repo.vfs
