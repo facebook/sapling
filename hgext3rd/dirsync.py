@@ -126,7 +126,7 @@ def _updateworkingcopy(repo, matcher):
 
     return mirroredfiles
 
-def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+def _amend(orig, ui, repo, old, extra, pats, opts):
     # Only wrap if not disabled and repo is instance of
     # localrepo.localrepository
     if _disabled[0] or not isinstance(repo, localrepo.localrepository):
@@ -150,7 +150,7 @@ def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
             opts['include'] = [
                 f for f in wctx.files() if matcher(f)] + list(mirroredfiles)
 
-        return orig(ui, repo, commitfunc, old, extra, pats, opts)
+        return orig(ui, repo, old, extra, pats, opts)
 
 def _commit(orig, self, *args, **kwargs):
     if _disabled[0]:

@@ -132,7 +132,7 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
                      False, "--tracecopies")
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
-def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+def _amend(orig, ui, repo, old, extra, pats, opts):
     """Wraps amend to collect copytrace data on amend
 
     If a file is created in one commit, modified in a subsequent commit, and
@@ -158,7 +158,7 @@ def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
 
     # Check if amend copytracing has been disabled.
     if not ui.configbool("copytrace", "enableamendcopytrace", True):
-        return orig(ui, repo, commitfunc, old, extra, pats, opts)
+        return orig(ui, repo, old, extra, pats, opts)
 
     # Need to get the amend-copies before calling the command because files from
     # the working copy will be used during the amend.
@@ -169,7 +169,7 @@ def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
     amend_copies = copiesmod.pathcopies(old, wctx, matcher)
 
     # Finally, invoke the command.
-    node = orig(ui, repo, commitfunc, old, extra, pats, opts)
+    node = orig(ui, repo, old, extra, pats, opts)
     amended_ctx = repo[node]
 
     # Store the amend-copies against the amended context.

@@ -223,44 +223,15 @@ def amend(ui, repo, *pats, **opts):
     if not opts.get('noeditmessage') and not opts.get('message'):
         opts['message'] = old.description()
 
-    tempnode = []
     commitdate = opts.get('date')
     if not commitdate:
         if ui.config('fbamend', 'date') == 'implicitupdate':
             commitdate = 'now'
         else:
             commitdate = old.date()
-    commituser = old.user() if not opts.get('user') else opts.get('user')
-    def commitfunc(ui, repo, message, match, opts):
-        e = cmdutil.commiteditor
-        noderesult = repo.commit(message,
-                           commituser,
-                           commitdate,
-                           match,
-                           editor=e,
-                           extra={})
-
-        # the temporary commit is the very first commit
-        if not tempnode:
-            tempnode.append(noderesult)
-
-        return noderesult
 
     active = bmactive(repo)
     oldbookmarks = old.bookmarks()
-
-    if haschildren:
-        def fakestrip(orig, ui, repo, *args, **kwargs):
-            if tempnode:
-                if tempnode[0]:
-                    # don't strip everything, just the temp node
-                    # this is very hacky
-                    orig(ui, repo, tempnode[0], backup='none')
-                tempnode.pop()
-            else:
-                orig(ui, repo, *args, **kwargs)
-        extensions.wrapfunction(repair, 'strip', fakestrip)
-
     tr = None
     wlock = None
     lock = None
@@ -276,7 +247,7 @@ def amend(ui, repo, *pats, **opts):
             return
 
         else:
-            node = cmdutil.amend(ui, repo, commitfunc, old, {}, pats, opts)
+            node = cmdutil.amend(ui, repo, old, {}, pats, opts)
 
         if node == old.node():
             ui.status(_("nothing changed\n"))
