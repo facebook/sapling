@@ -200,26 +200,20 @@ Test syncing a edit + rename
 Test amending a change where there has already been a sync before
   $ echo c > dir1/b
   $ hg commit --amend -m "amend b in dir1"
-  amending changeset a6e4f018e982
   mirrored changes in 'dir1/b' to 'dir2/subdir/b'
+  amending changeset a6e4f018e982
   committing files:
   dir1/b
   dir2/subdir/b
   committing manifest
   committing changelog
-  copying changeset 32cbac0ffaa1 to 4cc69952853e
-  committing files:
-  dir1/b
-  dir2/subdir/b
-  committing manifest
-  committing changelog
-  2 changesets found
+  1 changesets found
   uncompressed size of bundle content:
-       468 (changelog)
-       442 (manifests)
-       317  dir1/b
-       331  dir2/subdir/b
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-f4dc39cf-amend.hg (glob)
+       241 (changelog)
+       223 (manifests)
+       199  dir1/b
+       213  dir2/subdir/b
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-44b76a2e-amend.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
        282 (changelog)
@@ -380,11 +374,10 @@ Test committing part of the working copy
    2 files changed, 2 insertions(+), 0 deletions(-)
   
 
-
   $ echo a >> dir2/a
   $ hg commit --amend -m "add dir1/a" dir2/a
   mirrored changes in 'dir2/a' to 'dir1/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-2c09d2e4-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-c2e9da44-amend.hg (glob)
   $ hg status
   A dir1/b
   $ hg log -r . --stat
@@ -399,7 +392,6 @@ Test committing part of the working copy
    2 files changed, 4 insertions(+), 0 deletions(-)
   
 
-
   $ echo a >> dir1/a
   $ hg commit --amend -m "add dir1/a" dir2/a
   nothing changed
@@ -408,7 +400,7 @@ Test committing part of the working copy
   $ hg commit --amend -m "add dir1/a"
   mirrored adding 'dir1/b' to 'dir2/b'
   mirrored changes in 'dir1/a' to 'dir2/a'
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-ac54e4d9-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-d4070811-amend.hg (glob)
   $ hg status
   $ hg log -r . --stat
   changeset:   0:5245011388b8

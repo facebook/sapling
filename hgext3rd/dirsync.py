@@ -35,10 +35,12 @@ from __future__ import absolute_import
 from collections import defaultdict
 import errno
 from mercurial import (
+    cmdutil,
     error,
     extensions,
     localrepo,
     match as matchmod,
+    scmutil,
     util,
 )
 from mercurial.i18n import _
@@ -48,7 +50,9 @@ testedwith = 'ships-with-fb-hgext'
 _disabled = [False]
 
 def extsetup(ui):
+    extensions.wrapfunction(cmdutil, 'amend', _amend)
     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
+
     def wrapshelve(loaded=False):
         try:
             shelvemod = extensions.find('shelve')
@@ -96,47 +100,76 @@ def getmirrors(maps, filename):
 
     return []
 
+def _updateworkingcopy(repo, matcher):
+    maps = getconfigs(repo)
+    mirroredfiles = set()
+    if maps:
+        status = repo.status()
+
+        for added in status.added:
+            mirrors = getmirrors(maps, added)
+            if mirrors and matcher(added):
+                mirroredfiles.update(applytomirrors(repo, status, added,
+                    mirrors, 'a'))
+
+        for modified in status.modified:
+            mirrors = getmirrors(maps, modified)
+            if mirrors and matcher(modified):
+                mirroredfiles.update(applytomirrors(repo, status, modified,
+                    mirrors, 'm'))
+
+        for removed in status.removed:
+            mirrors = getmirrors(maps, removed)
+            if mirrors and matcher(removed):
+                mirroredfiles.update(applytomirrors(repo, status, removed,
+                    mirrors, 'r'))
+
+    return mirroredfiles
+
+def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+    # Only wrap if not disabled and repo is instance of
+    # localrepo.localrepository
+    if _disabled[0] or not isinstance(repo, localrepo.localrepository):
+        return orig(ui, repo, old, extra, pats, opts)
+
+    with repo.wlock(), repo.lock(), repo.transaction('dirsyncamend'):
+        wctx = repo[None]
+        matcher = scmutil.match(wctx, pats, opts)
+        if (opts.get('addremove')
+            and scmutil.addremove(repo, matcher, "", opts)):
+            raise error.Abort(
+                _("failed to mark all new/missing files as added/removed"))
+
+        mirroredfiles = _updateworkingcopy(repo, matcher)
+        if mirroredfiles and not matcher.always():
+            # Ensure that all the files to be amended (original + synced) are
+            # under consideration during the amend operation. We do so by
+            # setting the value against 'include' key in opts as the only source
+            # of truth.
+            pats = ()
+            opts['include'] = [
+                f for f in wctx.files() if matcher(f)] + list(mirroredfiles)
+
+        return orig(ui, repo, commitfunc, old, extra, pats, opts)
+
 def _commit(orig, self, *args, **kwargs):
     if _disabled[0]:
         return orig(self, *args, **kwargs)
 
-    wlock = self.wlock()
-    try:
-        maps = getconfigs(self)
-        mirroredfiles = set()
-        if maps:
-            match = args[3] if len(args) >= 4 else kwargs.get('match')
-            match = match or matchmod.always(self.root, '')
-            status = self.status()
+    with self.wlock(), self.lock(), self.transaction('dirsynccommit'):
+        matcher = args[3] if len(args) >= 4 else kwargs.get('match')
+        matcher = matcher or matchmod.always(self.root, '')
 
-            for added in status.added:
-                mirrors = getmirrors(maps, added)
-                if mirrors and match(added):
-                    mirroredfiles.update(applytomirrors(self, status, added,
-                        mirrors, 'a'))
-
-            for modified in status.modified:
-                mirrors = getmirrors(maps, modified)
-                if mirrors and match(modified):
-                    mirroredfiles.update(applytomirrors(self, status, modified,
-                        mirrors, 'm'))
-
-            for removed in status.removed:
-                mirrors = getmirrors(maps, removed)
-                if mirrors and match(removed):
-                    mirroredfiles.update(applytomirrors(self, status, removed,
-                        mirrors, 'r'))
-
-        if mirroredfiles and not match.always():
-            origmatch = match.matchfn
+        mirroredfiles = _updateworkingcopy(self, matcher)
+        if mirroredfiles and not matcher.always():
+            origmatch = matcher.matchfn
             def extramatches(path):
                 return path in mirroredfiles or origmatch(path)
-            match.matchfn = extramatches
-            match._files.extend(mirroredfiles)
-            match._fileset.update(mirroredfiles)
+            matcher.matchfn = extramatches
+            matcher._files.extend(mirroredfiles)
+            matcher._fileset.update(mirroredfiles)
+
         return orig(self, *args, **kwargs)
-    finally:
-        wlock.release()
 
 def applytomirrors(repo, status, sourcepath, mirrors, action):
     """Applies the changes that are in the sourcepath to all the mirrors."""
