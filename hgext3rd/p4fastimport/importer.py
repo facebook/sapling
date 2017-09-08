@@ -11,6 +11,7 @@ from mercurial.node import nullid, short
 from mercurial import (
     error,
     extensions,
+    manifest,
     util,
 )
 
@@ -22,12 +23,14 @@ KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
                 "Revision|Author).*?\$"
 
 class ImportSet(object):
-    def __init__(self, repo, client, changelists, filelist, storagepath):
+    def __init__(self, repo, client, changelists, filelist, storagepath,
+            isbranchpoint=False):
         self.repo = repo
         self.client = client
         self.changelists = sorted(changelists)
         self.filelist = filelist
         self.storagepath = storagepath
+        self.isbranchpoint = isbranchpoint
 
     def linkrev(self, cl):
         return self._linkrevmap[cl]
@@ -47,10 +50,11 @@ class ImportSet(object):
             yield filelog
 
 class ChangeManifestImporter(object):
-    def __init__(self, ui, repo, importset):
+    def __init__(self, ui, repo, importset, p1ctx):
         self._ui = ui
         self._repo = repo
         self._importset = importset
+        self._p1ctx = p1ctx
 
     @util.propertycache
     def usermap(self):
@@ -65,12 +69,15 @@ class ChangeManifestImporter(object):
     def creategen(self, tr, fileinfo):
         mrevlog = self._repo.manifestlog._revlog
         clog = self._repo.changelog
-        cp1 = self._repo['tip'].node()
+        cp1 = self._p1ctx.node()
         cp2 = nullid
         p1 = self._repo[cp1]
         mp1 = p1.manifestnode()
         mp2 = nullid
-        mf = p1.manifest().copy()
+        if self._importset.isbranchpoint:
+            mf = manifest.manifestdict()
+        else:
+            mf = p1.manifest().copy()
         for i, change in enumerate(self._importset.changelists):
             self._ui.progress(_('importing change'), pos=i, item=change,
                     unit='changes', total=len(self._importset.changelists))

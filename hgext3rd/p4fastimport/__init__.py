@@ -148,6 +148,35 @@ def getfilelist(ui, client, startcl, endcl):
                                                     fileinfo['depotFile']))
     return filelist
 
+def startfrom(ui, repo, opts):
+    base, dest = 'null', 'tip'
+    if opts.get('bookmark'):
+        dest = opts.get('bookmark')
+    if opts.get('base'):
+        base = opts['base']
+        if opts.get('bookmark') not in repo:
+            dest = base
+
+    basectx = scmutil.revsingle(repo, base)
+    destctx = scmutil.revsingle(repo, dest)
+    ctx = list(repo.set("""
+        last(
+          %n::%n and (
+             extra(p4changelist) or
+             extra(p4fullimportbasechangelist)))""",
+             basectx.node(), destctx.node()))
+    if ctx:
+        ctx = ctx[0]
+        startcl = lastcl(ctx)
+        ui.note(_('incremental import from changelist: %d, node: %s\n') %
+                (startcl, short(ctx.node())))
+        if ctx.node() == basectx.node():
+            ui.note(_('creating branchpoint, base %s\n') %
+                    short(basectx.node()))
+            return ctx, startcl, True
+        return ctx, startcl, False
+    raise error.Abort(_('no valid p4 changelist number.'))
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -155,6 +184,7 @@ command = registrar.command(cmdtable)
     'p4fastimport',
     [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
      ('B', 'bookmark', '', _('bookmark to set'), _('NAME')),
+     ('', 'base', '', _('base changeset (must exist in the repository)')),
      ('', 'limit', '',
          _('number of changelists to import at a time'), _('N'))],
     _('[-P PATH] [-B NAME] [--limit N] [CLIENT]'),
@@ -163,17 +193,16 @@ def p4fastimport(ui, repo, client, **opts):
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
 
+    if opts.get('base') and not opts.get('bookmark'):
+        raise error.Abort(_('must set --bookmark when using --base'))
+
     if opts.get('bookmark'):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
 
-    startcl = None
-    if len(repo) > 0 and startcl is None:
-        latestctx = list(repo.set(
-            "last(extra(p4changelist) or extra(p4fullimportbasechangelist))"))
-        if latestctx:
-            startcl = lastcl(latestctx[0])
-            ui.note(_('incremental import from changelist: %d, node: %s\n') %
-                    (startcl, short(latestctx[0].node())))
+    if len(repo) > 0:
+        p1ctx, startcl, isbranchpoint = startfrom(ui, repo, opts)
+    else:
+        p1ctx, startcl, isbranchpoint = repo['tip'], None, False
 
     # A client defines checkout behavior for a user. It contains a list of
     # views.A view defines a set of files and directories to check out from a
@@ -202,9 +231,8 @@ def p4fastimport(ui, repo, client, **opts):
     limit = len(changelists)
     if opts.get('limit'):
         limit = int(opts.get('limit'))
-    run_import(ui, repo, client, changelists[0:limit], **opts)
+        changelists = changelists[0:limit]
 
-def run_import(ui, repo, client, changelists, **opts):
     if len(changelists) == 0:
         return
 
@@ -218,7 +246,7 @@ def run_import(ui, repo, client, changelists, **opts):
     ui.note(_('%d files to import.\n') % len(filelist))
 
     importset = importer.ImportSet(repo, client, changelists,
-            filelist, basepath)
+            filelist, basepath, isbranchpoint=isbranchpoint)
     p4filelogs = []
     for i, f in enumerate(importset.filelogs()):
         ui.debug('reading filelog %s\n' % f.depotfile)
@@ -273,7 +301,8 @@ def run_import(ui, repo, client, changelists, **opts):
             try:
                 # 4. Generate manifest and changelog based on the filelogs
                 # we imported
-                clog = importer.ChangeManifestImporter(ui, repo, importset)
+                clog = importer.ChangeManifestImporter(ui, repo, importset,
+                        p1ctx=p1ctx)
                 revisions = []
                 for cl, hgnode in clog.creategen(tr, fileinfo):
                     revisions.append((cl, hex(hgnode)))
@@ -309,18 +338,12 @@ def run_import(ui, repo, client, changelists, **opts):
 def p4syncimport(ui, repo, client, **opts):
     if opts.get('bookmark'):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
-    startcl = None
-    if len(repo) > 0 and startcl is None:
-        latestctx = list(repo.set(
-            "last(extra(p4changelist) or extra(p4fullimportbasechangelist))"))
-        if latestctx:
-            startcl = lastcl(latestctx[0])
-            ui.note(_('incremental import from changelist: %d, node: %s\n') %
-                    (startcl, short(latestctx[0].node())))
-        else:
-            raise error.Abort(_('no valid p4 changelist number.'))
-    elif len(repo) == 0:
+
+    if len(repo) == 0:
         raise error.Abort(_('p4 blob commit does not support empty repo yet.'))
+
+    p1ctx, startcl, __ = startfrom(ui, repo, opts)
+
     # Fail if the specified client does not exist
     if not p4.exists_client(client):
         raise error.Abort(_('p4 client %s does not exist.') % client)
@@ -370,7 +393,8 @@ def p4syncimport(ui, repo, client, **opts):
                 largefileslist.extend(largefiles)
                 count += 1
             # Generate manifest and changelog
-            clog = importer.BlobChangeManifestImporter(ui, repo, importset)
+            clog = importer.BlobChangeManifestImporter(ui, repo, importset,
+                    p1ctx=p1ctx)
             revisions = []
             for cl, hgnode in clog.creategen(tr, fileinfo):
                 revisions.append((cl, hex(hgnode)))

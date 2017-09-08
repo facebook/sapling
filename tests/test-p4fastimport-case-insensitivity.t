@@ -46,9 +46,10 @@ import
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
   changelist 1: writing manifest. node: f495e209f723 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: af76bc402ee6 p1: f495e209f723 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: * p1: * p2: 000000000000 linkrev: 1 (glob)
+  updating the branch cache (?)
   changelist 2: writing changelog: delete
-  changelist 3: writing manifest. node: c1187994dfbb p1: af76bc402ee6 p2: 000000000000 linkrev: 2
+  changelist 3: writing manifest. node: * p1: * p2: 000000000000 linkrev: 2 (glob)
   changelist 3: writing changelog: add with case-inensitivity match
   updating the branch cache (?)
   3 revision(s), 2 file(s) imported.
