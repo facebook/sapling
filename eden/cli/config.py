@@ -319,6 +319,7 @@ by hand to make changes to the repository or remove it.''' % name)
               extra_args=None,
               gdb=False,
               gdb_args=None,
+              strace_file=None,
               foreground=False):
         '''
         Start edenfs.
@@ -335,6 +336,10 @@ by hand to make changes to the repository or remove it.''' % name)
             raise EdenStartError('edenfs is already running (pid {})'.format(
                 health_info.pid))
 
+        if gdb and strace_file is not None:
+            raise EdenStartError('cannot run eden under gdb and '
+                                 'strace together')
+
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir,
                '--etcEdenDir', self._etc_eden_dir,
@@ -343,6 +348,8 @@ by hand to make changes to the repository or remove it.''' % name)
             gdb_args = gdb_args or []
             cmd = ['gdb'] + gdb_args + ['--args'] + cmd
             foreground = True
+        if strace_file is not None:
+            cmd = ['strace', '-fttT', '-o', strace_file] + cmd
         if extra_args:
             cmd.extend(extra_args)
 

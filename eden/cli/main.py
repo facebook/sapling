@@ -200,6 +200,7 @@ def do_daemon(args):
     try:
         health_info = config.spawn(daemon_binary, edenfs_args,
                                    gdb=args.gdb, gdb_args=args.gdb_arg,
+                                   strace_file=args.strace,
                                    foreground=args.foreground)
     except config_mod.EdenStartError as ex:
         print_stderr('error: {}', ex)
@@ -341,6 +342,10 @@ def create_parser():
     daemon_parser.add_argument(
         '--gdb-arg', action='append', default=[],
         help='Extra arguments to pass to gdb')
+    daemon_parser.add_argument(
+        '--strace', '-s',
+        metavar='FILE',
+        help='Run eden under strace, and write strace output to FILE')
     daemon_parser.add_argument(
         'edenfs_args', nargs=argparse.REMAINDER,
         help='Any extra arguments after an "--" argument will be passed to the '
