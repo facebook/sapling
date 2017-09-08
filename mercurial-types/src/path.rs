@@ -139,6 +139,15 @@ impl Path {
     }
 }
 
+impl IntoIterator for Path {
+    type Item = PathElement;
+    type IntoIter = ::std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
+}
+
 impl<'a> IntoIterator for &'a Path {
     type Item = &'a PathElement;
     type IntoIter = Iter<'a, PathElement>;
@@ -320,7 +329,12 @@ impl Display for Path {
 // Implement our own Debug so that strings are displayed properly
 impl fmt::Debug for PathElement {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "PathElement({:?})", self.0)
+        write!(
+            fmt,
+            "PathElement({:?} \"{}\")",
+            self.0,
+            String::from_utf8_lossy(&self.0)
+        )
     }
 }
 
