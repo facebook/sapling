@@ -47,6 +47,7 @@ from mercurial import (
     filemerge,
     node,
     phases,
+    scmutil,
     util,
 )
 from mercurial.i18n import _
@@ -149,50 +150,29 @@ def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
     lets rebases onto files that been renamed or copied in an amend commit
     work without conflicts.
 
-    When an amend commit is created, mercurial first creates a temporary
-    intermediate commit that contains the amendments, and then merges these
-    two commits into the single amended commit:
-
-        intermediate_ctx    o
-                            |
-        orig_ctx            o   o    amended_ctx
-                            | /
-                            o        parent of original commit
-
-    This function finds the intermediate commit and stores its copytrace
-    information against the amended commit in a separate dbm file.  Later,
+    This function collects the copytrace information from the working copy and
+    stores it against the amended commit in a separate dbm file. Later,
     in _domergecopies, this information will be merged with the rebase
     copytrace data to incorporate renames and copies made during the amend.
     """
-    node = orig(ui, repo, commitfunc, old, extra, pats, opts)
 
     # Check if amend copytracing has been disabled.
     if not ui.configbool("copytrace", "enableamendcopytrace", True):
-        return node
+        return orig(ui, repo, commitfunc, old, extra, pats, opts)
 
-    # Find the amended commit context and the intermediate context that
-    # was used for the amend.  The two commits were created in sequence, so
-    # the intermediate commit will be the commit with a revision number one
-    # before the amended commit.  This commit is filtered, so look at the
-    # unfiltered view of the repo to access it.
+    # Need to get the amend-copies before calling the command because files from
+    # the working copy will be used during the amend.
+    wctx = repo[None]
+
+    # Find the amend-copies.
+    matcher = scmutil.match(wctx, pats, opts)
+    amend_copies = copiesmod.pathcopies(old, wctx, matcher)
+
+    # Finally, invoke the command.
+    node = orig(ui, repo, commitfunc, old, extra, pats, opts)
     amended_ctx = repo[node]
-    intermediate_ctx = repo.unfiltered()[amended_ctx.rev() - 1]
 
-    # Sanity check that both contexts have a single parent.  The intermediate
-    # context's parent is the original commit, so its parent should be the
-    # same as the amended commit's, and it should have the temporary commit
-    # message that the amend function gave it.  If any of this is not true,
-    # then bail out.  Otherwise, find the original commit.
-    if (len(amended_ctx.parents()) != 1 or
-            len(intermediate_ctx.parents()) != 1 or
-            intermediate_ctx.p1().parents() != amended_ctx.parents() or
-            intermediate_ctx.description() !=
-                    'temporary amend commit for %s' % intermediate_ctx.p1()):
-        return node
-    orig_ctx = intermediate_ctx.p1()
-
-    # Find the amend-copies, and store them against the amended context.
-    amend_copies = copiesmod.pathcopies(orig_ctx, intermediate_ctx)
+    # Store the amend-copies against the amended context.
     if amend_copies:
         path = repo.vfs.join('amendcopytrace')
         try:
@@ -205,12 +185,13 @@ def _amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
 
         # Merge in any existing amend copies from any previous amends.
         try:
-            orig_data = db.get(orig_ctx.node(), '{}')
+            orig_data = db.get(old.node(), '{}')
         except anydbm.error as e:
             ui.log('copytrace',
                    'Failed to read key %s from amendcopytrace db: %s' %
-                   (orig_ctx.hex(), e))
+                   (old.hex(), e))
             return node
+
         orig_encoded = json.loads(orig_data)
         orig_amend_copies = dict((k.decode('base64'), v.decode('base64'))
                 for (k, v) in orig_encoded.iteritems())
