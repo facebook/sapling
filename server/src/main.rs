@@ -6,9 +6,9 @@
 
 #![deny(warnings)]
 
+extern crate bytes;
 #[macro_use]
 extern crate futures;
-extern crate bytes;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_uds;
@@ -20,33 +20,33 @@ extern crate error_chain;
 
 #[macro_use]
 extern crate slog;
-extern crate slog_term;
 extern crate slog_kvfilter;
+extern crate slog_term;
 
 #[macro_use]
 extern crate maplit;
 
 extern crate async_compression;
+extern crate blobrepo;
+extern crate blobstore;
+extern crate bookmarks;
+extern crate fileblob;
+extern crate filebookmarks;
+extern crate fileheads;
+extern crate futures_ext;
+extern crate heads;
 extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
-extern crate sshrelay;
-extern crate futures_ext;
-extern crate heads;
-extern crate fileheads;
-extern crate bookmarks;
-extern crate filebookmarks;
-extern crate blobstore;
-extern crate fileblob;
 extern crate rocksblob;
-extern crate blobrepo;
+extern crate sshrelay;
 
-use std::thread;
-use std::path::{Path, PathBuf};
-use std::panic;
-use std::sync::Arc;
 use std::io;
+use std::panic;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::thread;
 
 use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
@@ -58,10 +58,10 @@ use slog::{Drain, Level, LevelFilter, Logger};
 use slog_kvfilter::KVFilter;
 
 use bytes::Bytes;
-use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
-use hgproto::HgService;
 use errors::ResultExt;
-use futures_ext::{StreamLayeredExt, encode};
+use futures_ext::{encode, StreamLayeredExt};
+use hgproto::HgService;
+use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
 
 mod errors;
 mod repo;
@@ -69,7 +69,7 @@ mod listener;
 
 use errors::*;
 
-use listener::{Stdio, ssh_server_mux};
+use listener::{ssh_server_mux, Stdio};
 
 use repo::RepoType;
 
@@ -136,7 +136,7 @@ fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Resu
                 Level::Critical,
                 hashmap! {
                     "remote".into() => hashset!["true".into()],
-                }
+                },
             );
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = slog::Logger::root(drain, o![]);
