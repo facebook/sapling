@@ -278,7 +278,7 @@ Non-fastforward scratch bookmark push
   $ echo 1 > amend
   $ hg add amend
   $ hg ci --amend -m 'scratch amended commit'
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6c10d49fe927-a7adb791-amend.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/6c10d49fe927-c99ffec5-amend.hg (glob)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratch amended commit draft scratch/mybranch
   |

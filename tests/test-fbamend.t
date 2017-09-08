@@ -124,7 +124,7 @@ Test that bookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-81b0ec5b-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/edf5fd2f5332-97de2fcf-amend.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  0889a0030a17 aa bm
   |
@@ -176,7 +176,7 @@ Test that unbookmarked re-amends work well
   
   $ echo a >> a
   $ hg amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-30a7ee2c-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/94eb429c9465-34f29971-amend.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  83455f1f6049 aa
   |
@@ -301,7 +301,7 @@ Test that --addremove/-A works
   $ echo new > new
   $ hg amend -A
   adding new
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/772f45f5a69d-90a7bd63-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/772f45f5a69d-e0102ff5-amend.hg (glob)
 
 Test that the extension disables itself when evolution is enabled
 
@@ -347,11 +347,6 @@ Fbamend respects the createmarkers option
   $ hg amend --debug
   amending changeset 048e86baa19d
   committing files:
-  bb
-  committing manifest
-  committing changelog
-  copying changeset 4e21ff9ac40b to cb9a9f314b8b
-  committing files:
   a
   bb
   committing manifest
@@ -366,11 +361,11 @@ Fbamend respects the createmarkers option
   rebasing 3:3166f3b5587d "commit --amend message"
   rebasing 4:01dd7a39383a "bar"
   $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
-  o  8 9752120dcffe bar
+  o  7 9752120dcffe bar
   |
-  o  7 bc3b6a46cdb4 commit --amend message
+  o  6 bc3b6a46cdb4 commit --amend message
   |
-  @  6 3a4d2824efc1 message from exec
+  @  5 3a4d2824efc1 message from exec
   |
   | o  1 3f6197b00eba extra commit to test multiple heads
   |/
@@ -380,8 +375,8 @@ Fbamend respects the createmarkers option
   $ hg add cc
   $ hg amend --rebase --traceback
   rebasing the children of 1c16dd8e35d2.preamend
-  rebasing 7:bc3b6a46cdb4 "commit --amend message"
-  rebasing 8:9752120dcffe "bar"
+  rebasing 6:bc3b6a46cdb4 "commit --amend message"
+  rebasing 7:9752120dcffe "bar"
 
 Test that fbamend works with interactive commits (crecord)
   $ cat >> $HGRCPATH << EOF
@@ -414,7 +409,7 @@ preamend bookmark exists
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
   rebasing the children of 6cd3bb4b4ada.preamend
-  rebasing 14:ab75b93512f7 "descendant commit"
+  rebasing 12:ab75b93512f7 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
@@ -432,7 +427,7 @@ preamend bookmark exists
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
   rebasing the children of 039ee914a5fd.preamend
-  rebasing 17:2c40a2aa23f1 "descendant commit"
+  rebasing 14:2c40a2aa23f1 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
@@ -579,7 +574,7 @@ Amend a commit
 
 See how the amended commit looks
   $ hg log
-  changeset:   2:551468b37da8
+  changeset:   1:551468b37da8
   bookmark:    b1
   bookmark:    b2
   tag:         tip
@@ -625,7 +620,7 @@ Check whether unamend works with dirty working directory
   $ hg amend -m "bring back the amended commit"
   $ hg st
   $ hg log -r .
-  changeset:   3:dd05d03a1c51
+  changeset:   2:dd05d03a1c51
   bookmark:    b1
   bookmark:    b2
   tag:         tip

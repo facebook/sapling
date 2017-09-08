@@ -182,13 +182,13 @@ Hidden changesets are not considered as successors
 
   $ hg up 1 --hidden -q
   $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
-  o  3 1ef61e92c901
+  o  2 1ef61e92c901
   |
   | @  1 66f7d451a68b (amend as 1ef61e92c901)
   |/
   o  0 1ea73414a91b
   
-  $ hg prune 3 -q
+  $ hg prune 2 -q
   $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
   x  1 66f7d451a68b
   |

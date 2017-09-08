@@ -148,11 +148,11 @@ stop on a commit
 check histedit_source
 
   $ hg log --debug --rev d51720eb7a133e2dabf74a445e509a3900e9c0b5
-  changeset:   10:d51720eb7a133e2dabf74a445e509a3900e9c0b5
+  changeset:   9:d51720eb7a133e2dabf74a445e509a3900e9c0b5
   phase:       draft
   parent:      3:055a42cdd88768532f9cf79daa407fc8d138de9b
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    7:b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
+  manifest:    6:b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      added e

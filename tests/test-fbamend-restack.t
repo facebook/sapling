@@ -65,7 +65,7 @@ Test basic case of a single amend in a small stack.
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
-  @  5 add b
+  @  4 add b
   |
   | o  3 add d
   | |
@@ -78,11 +78,11 @@ Test basic case of a single amend in a small stack.
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
   $ showgraph
-  o  7 add d
+  o  6 add d
   |
-  o  6 add c
+  o  5 add c
   |
-  @  5 add b
+  @  4 add b
   |
   o  0 add a
 
@@ -107,7 +107,7 @@ Test multiple amends of same commit.
   $ echo b >> b
   $ hg amend
   $ showgraph
-  @  6 add b
+  @  4 add b
   |
   | o  2 add c
   | |
@@ -117,9 +117,9 @@ Test multiple amends of same commit.
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   $ showgraph
-  o  7 add c
+  o  5 add c
   |
-  @  6 add b
+  @  4 add b
   |
   o  0 add a
 
@@ -138,7 +138,7 @@ Test conflict during rebasing.
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
-  @  6 add b
+  @  5 add b
   |
   | o  4 add e
   | |
@@ -169,13 +169,13 @@ Test conflict during rebasing.
   rebasing 3:47d2a3944de8 "add d"
   rebasing 4:9d206ffc875e "add e"
   $ showgraph
-  o  9 add e
+  o  8 add e
   |
-  o  8 add d
+  o  7 add d
   |
-  o  7 add c
+  o  6 add c
   |
-  @  6 add b
+  @  5 add b
   |
   o  0 add a
 
@@ -194,7 +194,7 @@ Test finding a stable base commit from within the old stack.
   $ hg up 3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  5 add b
+  o  4 add b
   |
   | @  3 add d
   | |
@@ -207,11 +207,11 @@ Test finding a stable base commit from within the old stack.
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
   $ showgraph
-  @  7 add d
+  @  6 add d
   |
-  o  6 add c
+  o  5 add c
   |
-  o  5 add b
+  o  4 add b
   |
   o  0 add a
 
@@ -229,9 +229,9 @@ Test finding a stable base commit from a new child of the amended commit.
   (use 'hg restack' to rebase them)
   $ mkcommit e
   $ showgraph
-  @  6 add e
+  @  5 add e
   |
-  o  5 add b
+  o  4 add b
   |
   | o  3 add d
   | |
@@ -244,13 +244,13 @@ Test finding a stable base commit from a new child of the amended commit.
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
   $ showgraph
-  o  8 add d
+  o  7 add d
   |
-  o  7 add c
+  o  6 add c
   |
-  | @  6 add e
+  | @  5 add e
   |/
-  o  5 add b
+  o  4 add b
   |
   o  0 add a
 
@@ -275,14 +275,14 @@ a commit on top of one of the obsolete intermediate commits.
   $ hg amend
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
-  $ hg up 6
+  $ hg up 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  8 add b
+  o  6 add b
   |
-  | @  6 add e
+  | @  5 add e
   | |
-  | x  5 add b
+  | x  4 add b
   |/
   | o  3 add d
   | |
@@ -294,15 +294,15 @@ a commit on top of one of the obsolete intermediate commits.
   $ hg rebase --restack
   rebasing 2:4538525df7e2 "add c"
   rebasing 3:47d2a3944de8 "add d"
-  rebasing 6:c1992d8998fa "add e"
+  rebasing 5:c1992d8998fa "add e"
   $ showgraph
-  @  11 add e
+  @  9 add e
   |
-  | o  10 add d
+  | o  8 add d
   | |
-  | o  9 add c
+  | o  7 add c
   |/
-  o  8 add b
+  o  6 add b
   |
   o  0 add a
 
@@ -329,9 +329,9 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   $ hg up 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  7 add c
+  o  5 add c
   |
-  | o  5 add b
+  | o  4 add b
   | |
   | | @  3 add d
   | | |
@@ -342,14 +342,14 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   o  0 add a
   $ hg rebase --restack
   rebasing 3:47d2a3944de8 "add d"
-  rebasing 7:a43fcd08f41f "add c" (tip)
-  rebasing 8:49b119a57122 "add d"
+  rebasing 5:a43fcd08f41f "add c" (tip)
+  rebasing 6:49b119a57122 "add d"
   $ showgraph
-  @  10 add d
+  @  8 add d
   |
-  o  9 add c
+  o  7 add c
   |
-  o  5 add b
+  o  4 add b
   |
   o  0 add a
 
@@ -375,9 +375,9 @@ below the current commit alone.
   $ hg up 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ showgraph
-  o  7 add f
+  o  6 add f
   |
-  | o  6 add d
+  | o  5 add d
   | |
   | | o  4 add e
   | | |
@@ -391,11 +391,11 @@ below the current commit alone.
   $ hg rebase --restack
   rebasing 4:9d206ffc875e "add e"
   $ showgraph
-  o  8 add e
+  o  7 add e
   |
-  | o  7 add f
+  | o  6 add f
   | |
-  o |  6 add d
+  o |  5 add d
   | |
   o |  2 add c
   | |
@@ -421,7 +421,7 @@ Test having an unamended commit.
   $ hg up -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  4 Amended
+  o  3 Amended
   |
   | o  2 add c
   | |
@@ -432,9 +432,9 @@ Test having an unamended commit.
   rebasing 2:4538525df7e2 "add c"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  7 add c
+  o  5 add c
   |
-  @  4 Amended
+  @  3 Amended
   |
   | x  1 add b
   |/
@@ -497,7 +497,7 @@ since the successor is obsolete.
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
-  @  4 add b
+  @  3 add b
   |
   | o  2 add c
   | |
@@ -511,9 +511,9 @@ since the successor is obsolete.
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
-  @  6 add b
+  @  4 add b
   |
-  | o  4 add b
+  | o  3 add b
   |/
   | o  2 add c
   | |
@@ -524,7 +524,7 @@ since the successor is obsolete.
   $ hg up -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  4 add b
+  o  3 add b
   |
   | o  2 add c
   | |
@@ -535,9 +535,9 @@ since the successor is obsolete.
   rebasing 2:4538525df7e2 "add c"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  7 add c
+  o  5 add c
   |
-  @  4 add b
+  @  3 add b
   |
   | o  1 add b
   |/
@@ -564,9 +564,9 @@ Test recursive restacking -- basic case.
   $ hg up 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ showgraph
-  o  7 add c
+  o  5 add c
   |
-  | o  5 add b
+  | o  4 add b
   | |
   | | o  3 add d
   | | |
@@ -577,15 +577,15 @@ Test recursive restacking -- basic case.
   o  0 add a
   $ hg rebase --restack
   rebasing 3:47d2a3944de8 "add d"
-  rebasing 7:a43fcd08f41f "add c" (tip)
-  rebasing 8:49b119a57122 "add d"
+  rebasing 5:a43fcd08f41f "add c" (tip)
+  rebasing 6:49b119a57122 "add d"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  10 add d
+  o  8 add d
   |
-  o  9 add c
+  o  7 add c
   |
-  @  5 add b
+  @  4 add b
   |
   | x  1 add b
   |/
@@ -633,21 +633,21 @@ stack is lost upon rebasing lower levels.
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
-  o  15 add g
+  o  11 add g
   |
-  | o  13 add h
+  | o  10 add h
   | |
-  | x  12 add g
+  | x  9 add g
   |/
-  o  11 add c
+  o  8 add c
   |
-  | o  9 add e
+  | o  7 add e
   | |
-  | | o  7 add f
+  | | o  6 add f
   | | |
-  | | x  6 add e
+  | | x  5 add e
   | |/
-  | o  5 add b
+  | o  4 add b
   | |
   | | o  3 add d
   | | |
@@ -657,28 +657,28 @@ stack is lost upon rebasing lower levels.
   |/
   o  0 add a
   $ hg rebase --restack
-  rebasing 13:9f2a7cefd4b4 "add h"
-  rebasing 7:2a79e3a98cd6 "add f"
+  rebasing 10:9f2a7cefd4b4 "add h"
+  rebasing 6:2a79e3a98cd6 "add f"
   rebasing 3:47d2a3944de8 "add d"
-  rebasing 11:a43fcd08f41f "add c"
-  rebasing 15:604f34a1983d "add g" (tip)
-  rebasing 16:e1df23499b99 "add h"
-  rebasing 18:49b119a57122 "add d"
+  rebasing 8:a43fcd08f41f "add c"
+  rebasing 11:604f34a1983d "add g" (tip)
+  rebasing 12:e1df23499b99 "add h"
+  rebasing 14:49b119a57122 "add d"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  22 add d
+  o  18 add d
   |
-  | o  21 add h
+  | o  17 add h
   | |
-  | o  20 add g
+  | o  16 add g
   |/
-  o  19 add c
+  o  15 add c
   |
-  | o  17 add f
+  | o  13 add f
   | |
-  | o  9 add e
+  | o  7 add e
   |/
-  @  5 add b
+  @  4 add b
   |
   | x  1 add b
   |/

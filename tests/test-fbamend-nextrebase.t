@@ -369,7 +369,7 @@ Test a situation where there is a conflict.
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
-  @  5 amended to add c
+  @  4 amended to add c
   |
   | o  3 add d
   | |
@@ -386,7 +386,7 @@ Test a situation where there is a conflict.
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ showgraph
-  @  5 amended to add c
+  @  4 amended to add c
   |
   | o  3 add d
   | |
@@ -410,9 +410,9 @@ Now resolve the conflict and resume the rebase.
   $ hg rebase --continue
   rebasing 2:4538525df7e2 "add c"
   $ showgraph
-  o  6 add c
+  o  5 add c
   |
-  @  5 amended to add c
+  @  4 amended to add c
   |
   | o  3 add d
   | |
