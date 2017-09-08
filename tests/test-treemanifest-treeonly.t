@@ -123,10 +123,10 @@ Make a local tree-only draft commit
 Tree-only amend
   $ echo >> subdir/x
   $ hg commit --amend
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/779a137458d0-42851918-amend.hg (glob)
-# Two sets of packs were added (temp commit + amend commit)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/779a137458d0-0b309c3a-amend.hg (glob)
+# amend commit was added
   $ ls_l .hg/store/packs/manifests | wc -l
-  \s*16 (re)
+  \s*12 (re)
 # No manifest revlog revision was added
   $ hg debugindex -m --config treemanifest.treeonly=False
      rev    offset  length  delta linkrev nodeid       p1           p2
@@ -138,45 +138,46 @@ Tree-only amend
   $ rm -rf .hg/store/packs/manifests/26653c55cb54ab20aeb188315d736fb2ece04cd1*
   $ rm -rf .hg/store/packs/manifests/2a492611dfb8fbde1652e7e54fa1f64b82bd8ff7*
   $ ls_l .hg/store/packs/manifests | wc -l
-  \s*12 (re)
+  \s*8 (re)
 
 Test looking at the tree from inside the bundle
-  $ hg log -r tip -vp -R $TESTTMP/client/.hg/strip-backup/779a137458d0-42851918-amend.hg --pager=off
-  changeset:   5:5fb87f99628c
+  $ hg log -r tip -vp -R $TESTTMP/client/.hg/strip-backup/779a137458d0-0b309c3a-amend.hg --pager=off
+  changeset:   4:779a137458d0
   tag:         tip
+  parent:      0:2278cc8c6ce6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x
   description:
-  temporary amend commit for 779a137458d0
+  tree only commit
   
   
-  diff -r 779a137458d0 -r 5fb87f99628c subdir/x
+  diff -r 2278cc8c6ce6 -r 779a137458d0 subdir/x
   --- a/subdir/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/subdir/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,2 +1,3 @@
+  @@ -1,1 +1,2 @@
    x
-   t
-  +
+  +t
   
 
 Test unbundling the original commit
 # Bring the original commit back from the bundle
-  $ hg unbundle $TESTTMP/client/.hg/strip-backup/779a137458d0-42851918-amend.hg
+  $ hg unbundle $TESTTMP/client/.hg/strip-backup/779a137458d0-0b309c3a-amend.hg
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 0 changes to 0 files (+1 heads)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
 # Verify the packs were brought back and the data is accessible
   $ ls_l .hg/store/packs/manifests | wc -l
-  \s*16 (re)
+  \s*12 (re)
   $ hg log -r tip --stat
-  changeset:   5:5fb87f99628c
+  changeset:   4:779a137458d0
   tag:         tip
+  parent:      0:2278cc8c6ce6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     temporary amend commit for 779a137458d0
+  summary:     tree only commit
   
    subdir/x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -205,7 +206,7 @@ Test pulling new commits from a hybrid server
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
   $ hg log -r tip --stat --pager=off
   2 trees fetched over * (glob)
-  changeset:   6:2937cde31c19
+  changeset:   5:2937cde31c19
   tag:         tip
   parent:      0:2278cc8c6ce6
   user:        test
@@ -218,7 +219,7 @@ Test pulling new commits from a hybrid server
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
 Test rebasing treeonly commits
-  $ hg rebase -d 6 -b 2
+  $ hg rebase -d 5 -b 2
   rebasing 2:4b702090309e "hybrid flat+tree commit"
   merging subdir/x
   warning: conflicts while merging subdir/x! (edit, then use 'hg resolve --mark')
