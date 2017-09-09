@@ -9,7 +9,6 @@
  */
 #include "EdenDispatcher.h"
 
-#include <dirent.h>
 #include <folly/Format.h>
 #include <folly/experimental/logging/xlog.h>
 #include <gflags/gflags.h>
@@ -17,7 +16,6 @@
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
 
-#include "eden/fs/fuse/Channel.h"
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"

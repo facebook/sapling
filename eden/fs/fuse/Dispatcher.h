@@ -31,16 +31,17 @@ namespace fusell {
 
 
 class Dispatcher;
-class SessionDeleter;
-class Channel;
 class RequestData;
 class FileHandle;
 class DirHandle;
 class MountPoint;
 
+/** Low level fuse operations are exposed here so that we can
+ * tie them into the fuse channel in the MountPoint class. */
+extern const fuse_lowlevel_ops dispatcher_ops;
+
 class Dispatcher {
   fuse_conn_info connInfo_;
-  Channel* chan_{nullptr};
   /**
    * The MountPoint using this dispatcher.
    *
@@ -55,17 +56,7 @@ class Dispatcher {
 
   explicit Dispatcher(ThreadLocalEdenStats* stats);
   static void disp_init(void* userdata, struct fuse_conn_info* conn);
-  std::unique_ptr<fuse_session, SessionDeleter> makeSession(
-      Channel& channel,
-      bool debug);
   ThreadLocalEdenStats* getStats() const;
-
-  // Returns the channel.  Must not be called if the channel
-  // is not assigned!  (will terminate the program)
-  Channel& getChannel() const;
-
-  // Returns the channel.  May be nullptr in test environments!
-  Channel* getChannelPtr() const;
 
   const fuse_conn_info& getConnInfo() const;
   FileHandleMap& getFileHandles();

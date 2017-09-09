@@ -100,10 +100,6 @@ const fuse_ctx& RequestData::getContext() const {
   return *ctx;
 }
 
-Channel& RequestData::getChannel() const {
-  return getDispatcher()->getChannel();
-}
-
 Dispatcher* RequestData::getDispatcher() const {
   return static_cast<Dispatcher*>(fuse_req_userdata(getReq()));
 }

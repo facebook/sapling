@@ -218,8 +218,20 @@ void EdenServer::run() {
   // Run the thrift server
   runServer(*this);
 
-  // Clean up all the server mount points before shutting down the privhelper
-  unmountAll().get();
+  // Clean up all the server mount points before shutting down the privhelper.
+  // This is made a little bit more complicated because we're running on
+  // the main event base thread here, and the unmount handling relies on
+  // scheduling the unmount to run in our thread; we can't simply block
+  // on the future returned from unmountAll() as that would prevent those
+  // actions from completing, so we perform a somewhat inelegant polling
+  // loop on both the eventBase and the future.
+  auto unmounted = unmountAll();
+
+  CHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
+  while (!unmounted.isReady()) {
+    mainEventBase_->loopOnce();
+  }
+  unmounted.get();
 
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
@@ -251,7 +263,8 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
 
   auto onFinish = [this, edenMount]() { this->mountFinished(edenMount.get()); };
   try {
-    edenMount->getMountPoint()->start(FLAGS_debug, onFinish);
+    edenMount->getMountPoint()->start(
+        getMainEventBase(), onFinish, FLAGS_debug);
   } catch (...) {
     // If we fail to start the mount point, call mountFinished()
     // to make sure it gets removed from mountPoints_.

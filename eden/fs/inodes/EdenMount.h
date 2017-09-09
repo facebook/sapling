@@ -32,7 +32,7 @@ class Future;
 namespace facebook {
 namespace eden {
 namespace fusell {
-class Channel;
+class FuseChannel;
 class MountPoint;
 }
 
@@ -137,7 +137,7 @@ class EdenMount {
    * synchronization here with the mount start operation.  This method provides
    * no internal synchronization of its own.)
    */
-  fusell::Channel* getFuseChannel() const;
+  fusell::FuseChannel* getFuseChannel() const;
 
   /**
    * Return the path to the mount point.

@@ -208,8 +208,8 @@ Future<Unit> EdenMount::shutdownImpl() {
   });
 }
 
-fusell::Channel* EdenMount::getFuseChannel() const {
-  return mountPoint_->getChannel();
+fusell::FuseChannel* EdenMount::getFuseChannel() const {
+  return mountPoint_->getFuseChannel();
 }
 
 const AbsolutePath& EdenMount::getPath() const {

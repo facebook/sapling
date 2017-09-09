@@ -15,7 +15,6 @@
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
 #include <pwd.h>
-#include <stdlib.h>
 #include <sysexits.h>
 #include "EdenServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
@@ -33,11 +32,6 @@ DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
 // The logging configuration parameter.  We default to DBG2 for everything in
 // eden, and WARNING for all other categories.
 DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
-
-DEFINE_int32(
-    fuseThreadStack,
-    1 * 1024 * 1024,
-    "thread stack size for fuse dispatcher threads");
 
 using namespace facebook::eden::fusell;
 using namespace facebook::eden;
@@ -104,14 +98,6 @@ int main(int argc, char **argv) {
   } else {
     configPath = canonicalPath(configPathStr);
   }
-
-  // Set the FUSE_THREAD_STACK environment variable.
-  // Do this early on before we spawn any other threads, since setenv()
-  // is not thread-safe.
-  setenv(
-      "FUSE_THREAD_STACK",
-      folly::to<std::string>(FLAGS_fuseThreadStack).c_str(),
-      1);
 
   EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
   server.run();

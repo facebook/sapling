@@ -12,16 +12,23 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <thread>
+#include <vector>
+#include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 struct stat;
+
+namespace folly {
+class EventBase;
+}
 
 namespace facebook {
 namespace eden {
 namespace fusell {
 
 class Dispatcher;
-class Channel;
+class FuseChannel;
 
 class MountPoint {
  public:
@@ -33,26 +40,20 @@ class MountPoint {
   }
 
   /**
-   * Spawn a new thread to mount the filesystem and run the fuse channel.
+   * Mounts the filesystem in the VFS and spawns worker threads to
+   * dispatch the fuse session.
    *
-   * This is similar to run(), except that it returns as soon as the filesystem
-   * has been successfully mounted.
+   * Returns as soon as the filesystem has been successfully mounted, or
+   * as soon as the mount fails.
    *
-   * If an onStop() argument is supplied, this will be called from the FUSE
-   * channel thread after the mount point is stopped, just before the thread
-   * terminates.  (This happens once the mount point is unmounted.)
-   *
-   * If start() throws an exception, onStop() will not be called.
+   * The onStop argument will be called from the thread associated with
+   * the provided eventBase after the mount point is stopped, but only
+   * in the case that the mount was successfully initiated, and then
+   * cleanly torn down.  In other words, if start() throws an exception,
+   * onStop() will not be called.
    */
-  void start(bool debug);
-  void start(bool debug, const std::function<void()>& onStop);
-
-  /**
-   * Mount the file system, and run the fuse channel.
-   *
-   * This function will not return until the filesystem is unmounted.
-   */
-  void run(bool debug);
+  void
+  start(folly::EventBase* eventBase, std::function<void()> onStop, bool debug);
 
   uid_t getUid() const {
     return uid_;
@@ -60,21 +61,6 @@ class MountPoint {
 
   gid_t getGid() const {
     return gid_;
-  }
-
-  /**
-   * Returns the channel associated with this mount point.
-   *
-   * No smart pointer because the lifetime is managed solely
-   * by the MountPoint instance.
-   *
-   * This method does not perform any synchronization.  It is the caller's
-   * responsibility to synchronize any calls to getChannel() with the call to
-   * start().  It is safe to access before start() has been called and once
-   * start() returns.
-   */
-  Channel* getChannel() {
-    return channel_.get();
   }
 
   /**
@@ -93,8 +79,16 @@ class MountPoint {
    */
   struct stat initStatData() const;
 
+  /**
+   * Returns the associated FuseChannel or nullptr if there is none assigned.
+   */
+  FuseChannel* getFuseChannel() const;
+
  private:
-  enum class Status { UNINIT, STARTING, RUNNING, ERROR };
+  enum class Status { UNINIT, STARTING, RUNNING, ERROR, STOPPING };
+
+  // Dispatches fuse requests
+  void fuseWorkerThread();
 
   // Forbidden copy constructor and assignment operator
   MountPoint(MountPoint const&) = delete;
@@ -105,12 +99,15 @@ class MountPoint {
   gid_t gid_;
 
   Dispatcher* const dispatcher_;
-  std::unique_ptr<Channel> channel_;
+  std::unique_ptr<FuseChannel> channel_;
 
   std::mutex mutex_;
   std::condition_variable statusCV_;
   Status status_{Status::UNINIT};
-  std::exception_ptr startError_;
+
+  std::vector<std::thread> threads_;
+  folly::EventBase* eventBase_{nullptr};
+  std::function<void()> onStop_;
 };
 }
 }

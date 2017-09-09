@@ -18,7 +18,7 @@
 #include <unordered_set>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/Channel.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/DirstatePersistence.h"

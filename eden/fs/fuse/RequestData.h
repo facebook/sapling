@@ -18,7 +18,6 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-class Channel;
 class Dispatcher;
 
 class RequestData : public folly::RequestData {
@@ -62,9 +61,6 @@ class RequestData : public folly::RequestData {
 
   // Returns the dispatcher embedded in the request
   Dispatcher* getDispatcher() const;
-
-  // Returns the channel associated with the request
-  Channel& getChannel() const;
 
   // Returns the underlying fuse request, throwing an error if it has
   // already been released

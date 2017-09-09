@@ -15,7 +15,7 @@
 #include <folly/futures/Future.h>
 #include <vector>
 
-#include "eden/fs/fuse/Channel.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/CheckoutAction.h"

@@ -19,7 +19,6 @@
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
-#include "eden/fs/fuse/SessionDeleter.h"
 
 using namespace folly;
 using namespace std::chrono;
@@ -905,7 +904,7 @@ static void disp_poll(
 }
 #endif
 
-static const fuse_lowlevel_ops dispatcher_ops = {
+const fuse_lowlevel_ops dispatcher_ops = {
     .init = Dispatcher::disp_init,
     .destroy = disp_destroy,
     .lookup = disp_lookup,
@@ -956,50 +955,8 @@ static const fuse_lowlevel_ops dispatcher_ops = {
 
 const fuse_conn_info& Dispatcher::getConnInfo() const { return connInfo_; }
 
-Channel& Dispatcher::getChannel() const {
-  CHECK(chan_ != nullptr) << "Channel not yet assigned!?";
-  return *chan_;
-}
-
-Channel* Dispatcher::getChannelPtr() const {
-  return chan_;
-}
-
 ThreadLocalEdenStats* Dispatcher::getStats() const {
   return stats_;
-}
-
-std::unique_ptr<fuse_session, SessionDeleter> Dispatcher::makeSession(
-    Channel& channel,
-    bool debug) {
-  chan_ = &channel;
-
-  // libfuse may decide to mutate these arguments when we call fuse_lowlevel_new
-  // so we use fuse_opt_add_arg() to mutate it.  Start with a well-defined
-  // initial state.
-  fuse_args fargs{0, nullptr, 0};
-  SCOPE_EXIT {
-    // Ensure that the allocations associated with fargs are released when
-    // we exit this function.
-    fuse_opt_free_args(&fargs);
-  };
-
-  // Each of these calls will duplicate the input string and expand the storage
-  // in fargs.
-  fuse_opt_add_arg(&fargs, "fuse");
-  fuse_opt_add_arg(&fargs, "-o");
-  fuse_opt_add_arg(&fargs, "allow_root");
-  if (debug) {
-    fuse_opt_add_arg(&fargs, "-d");
-  }
-
-  auto sess =
-      fuse_lowlevel_new(&fargs, &dispatcher_ops, sizeof(dispatcher_ops), this);
-  if (!sess) {
-    throw std::runtime_error("failed to create session");
-  }
-  return std::unique_ptr<fuse_session, SessionDeleter>(sess,
-                                                       SessionDeleter(chan_));
 }
 }
 }
