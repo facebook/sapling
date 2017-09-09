@@ -10,6 +10,8 @@
 //! for changesets within a repo.
 #![deny(warnings)]
 #![deny(missing_docs)]
+// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
+#![allow(deprecated)]
 
 extern crate asyncmemo;
 extern crate futures;
