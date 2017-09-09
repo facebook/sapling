@@ -166,38 +166,50 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 
 EdenMount::~EdenMount() {}
 
+bool EdenMount::doStateTransition(State expected, State newState) {
+  return state_.compare_exchange_strong(expected, newState);
+}
+
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING);
-  if (oldState == State::RUNNING) {
-    // Start the shutdown ourselves.
-    // Use shutdownImpl() since we have already updated state_ to DESTROYING.
-    auto shutdownFuture = shutdownImpl();
-    // We intentionally ignore the returned future.
-    // shutdown() will automatically destroy us when it completes now that
-    // we have set the state to DESTROYING
-    (void)shutdownFuture;
-    return;
-  } else if (oldState == State::SHUTTING_DOWN) {
-    // Nothing else to do.  shutdown() will destroy us when it completes.
-    return;
-  } else if (oldState == State::SHUT_DOWN) {
-    // We were already shut down, and can delete ourselves immediately.
-    XLOG(DBG1) << "destroying shut-down EdenMount " << getPath();
-    delete this;
-  } else {
-    // No other states should be possible.
-    XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
-                << " in unexpected state " << static_cast<uint32_t>(oldState);
+  switch (oldState) {
+    case State::RUNNING:
+    case State::STARTING:
+    case State::UNINITIALIZED: {
+      // Start the shutdown ourselves.
+      // Use shutdownImpl() since we have already updated state_ to DESTROYING.
+      auto shutdownFuture = shutdownImpl();
+      // We intentionally ignore the returned future.
+      // shutdown() will automatically destroy us when it completes now that
+      // we have set the state to DESTROYING
+      (void)shutdownFuture;
+      return;
+    }
+    case State::SHUTTING_DOWN:
+      // Nothing else to do.  shutdown() will destroy us when it completes.
+      return;
+    case State::SHUT_DOWN:
+      // We were already shut down, and can delete ourselves immediately.
+      XLOG(DBG1) << "destroying shut-down EdenMount " << getPath();
+      delete this;
+      return;
+    default:
+      // No other states should be possible.
+      XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
+                  << " in unexpected state " << static_cast<uint32_t>(oldState);
   }
 }
 
 Future<Unit> EdenMount::shutdown() {
-  // shutdown() should only be called on mounts in the RUNNING state.
-  // Confirm this is the case, and move to SHUTTING_DOWN.
-  auto expected = State::RUNNING;
-  if (!state_.compare_exchange_strong(expected, State::SHUTTING_DOWN)) {
+  // shutdown() should only be called on mounts that have not yet reached
+  // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
+  // SHUTTING_DOWN.
+  if (!doStateTransition(State::RUNNING, State::SHUTTING_DOWN) &&
+      !doStateTransition(State::STARTING, State::SHUTTING_DOWN) &&
+      !doStateTransition(State::FUSE_DONE, State::SHUTTING_DOWN) &&
+      !doStateTransition(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
-               << "state was " << static_cast<uint32_t>(expected);
+               << "state was " << static_cast<uint32_t>(state_.load());
   }
   return shutdownImpl();
 }
@@ -421,46 +433,44 @@ std::string EdenMount::getCounterName(CounterName name) {
   folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
 }
 
-void EdenMount::start(
+folly::Future<folly::File> EdenMount::getFuseCompletionFuture() {
+  return fuseCompletionPromise_.getFuture();
+}
+
+folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
-    std::function<void()> onStop,
     bool debug) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  if (fuseStatus_ != FuseStatus::UNINIT) {
-    throw std::runtime_error("mount point has already been started");
-  }
+  return folly::makeFutureWith([this, eventBase, debug] {
+    if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
+      throw std::runtime_error("mount point has already been started");
+    }
 
-  eventBase_ = eventBase;
-  onStop_ = onStop;
+    eventBase_ = eventBase;
 
-  fuseStatus_ = FuseStatus::STARTING;
+    auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
+    channel_ = std::make_unique<fusell::FuseChannel>(
+        std::move(fuseDevice), debug, dispatcher_.get());
 
-  auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
-  channel_ = std::make_unique<fusell::FuseChannel>(
-      std::move(fuseDevice), debug, dispatcher_.get());
+    // we'll use this shortly to wait until the mount is started successfully.
+    auto initFuture = initFusePromise_.getFuture();
 
-  // Now, while holding the initialization mutex, start up the workers.
-  threads_.reserve(FLAGS_fuseNumThreads);
-  for (auto i = 0; i < FLAGS_fuseNumThreads; ++i) {
-    threads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
-  }
+    threads_.reserve(FLAGS_fuseNumThreads);
+    for (auto i = 0; i < FLAGS_fuseNumThreads; ++i) {
+      threads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
+    }
 
-  // Wait until the mount is started successfully.
-  while (fuseStatus_ == FuseStatus::STARTING) {
-    statusCV_.wait(lock);
-  }
-  if (fuseStatus_ == FuseStatus::ERROR) {
-    throw std::runtime_error("fuse session failed to initialize");
-  }
+    // wait for init to complete or error; this will throw an exception
+    // if the init procedure failed.
+    return initFuture;
+  });
 }
 
 void EdenMount::mountStarted() {
-  std::lock_guard<std::mutex> guard(mutex_);
   // Don't update status_ if it has already been put into an error
   // state or something.
-  if (fuseStatus_ == FuseStatus::STARTING) {
-    fuseStatus_ = FuseStatus::RUNNING;
-    statusCV_.notify_one();
+  if (doStateTransition(State::STARTING, State::RUNNING)) {
+    // Let ::start() know that we're up and running
+    initFusePromise_.setValue();
   }
 }
 
@@ -473,51 +483,37 @@ void EdenMount::fuseWorkerThread() {
   // because FuseChannel::requestSessionExit() was called.
   channel_->processSession();
 
-  bool shouldCallonStop = false;
   bool shouldJoin = false;
+  bool shouldComplete = false;
 
-  {
-    std::lock_guard<std::mutex> guard(mutex_);
-    if (fuseStatus_ == FuseStatus::STARTING) {
-      // If we didn't get as far as setting the state to RUNNING,
-      // we must have experienced an error
-      fuseStatus_ = FuseStatus::ERROR;
-      statusCV_.notify_one();
-      shouldJoin = true;
-    } else if (fuseStatus_ == FuseStatus::RUNNING) {
-      // We are the first one to stop, so we get to share the news.
-      fuseStatus_ = FuseStatus::STOPPING;
-      shouldCallonStop = true;
-      shouldJoin = true;
-    }
+  if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
+    // If we didn't get as far as setting the state to RUNNING,
+    // we must have experienced an error
+    shouldJoin = true;
+    initFusePromise_.setException(
+        std::runtime_error("fuse session failed to initialize"));
+  } else if (doStateTransition(State::RUNNING, State::FUSE_DONE)) {
+    // We are the first one to stop, so we get to share the news.
+    shouldJoin = true;
+    shouldComplete = true;
   }
 
   if (shouldJoin) {
     // We are the first thread to exit the loop; we get to arrange
     // to join and notify the server of our completion
-    eventBase_->runInEventBaseThread([this, shouldCallonStop] {
+    eventBase_->runInEventBaseThread([this, shouldComplete] {
       // Wait for all workers to be done
       for (auto& thr : threads_) {
         thr.join();
       }
 
-      // and tear down the fuse session.  For a graceful restart,
-      // we will want to FuseChannel::stealFuseDevice() before
-      // this point, or perhaps pass it through the onStop_
-      // call.
+      // and tear down the fuse session.  In case we are performing a graceful
+      // restart, extract the fuse device now.
+      folly::File fuseDevice = channel_->stealFuseDevice();
       channel_.reset();
 
-      // Do a little dance to steal ownership of the indirect
-      // reference to the EdenMount that is held by the
-      // onStop_ function; we can't leave it owned by ourselves
-      // because that reference will block the completion of
-      // the shutdown future.
-      std::function<void()> stopper;
-      std::swap(stopper, onStop_);
-
-      // And let the edenMount know that all is done
-      if (shouldCallonStop) {
-        stopper();
+      if (shouldComplete) {
+        fuseCompletionPromise_.setValue(std::move(fuseDevice));
       }
     });
   }

@@ -14,6 +14,7 @@
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/experimental/logging/Logger.h>
+#include <folly/futures/Promise.h>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -26,6 +27,8 @@
 
 namespace folly {
 class EventBase;
+class File;
+
 template <typename T>
 class Future;
 }
@@ -330,17 +333,19 @@ class EdenMount {
    * Mounts the filesystem in the VFS and spawns worker threads to
    * dispatch the fuse session.
    *
-   * Returns as soon as the filesystem has been successfully mounted, or
-   * as soon as the mount fails.
-   *
-   * The onStop argument will be called from the thread associated with
-   * the provided eventBase after the mount point is stopped, but only
-   * in the case that the mount was successfully initiated, and then
-   * cleanly torn down.  In other words, if start() throws an exception,
-   * onStop() will not be called.
+   * Returns a Future that will complete as soon as the filesystem has been
+   * successfully mounted, or as soon as the mount fails (state transitions
+   * to RUNNING or FUSE_ERROR).
    */
-  void
-  start(folly::EventBase* eventBase, std::function<void()> onStop, bool debug);
+  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
+      folly::EventBase* eventBase,
+      bool debug);
+
+  /**
+   * Obtains a future that will complete once the state transitions to
+   * FUSE_DONE and the thread pool has been joined.
+   */
+  FOLLY_NODISCARD folly::Future<folly::File> getFuseCompletionFuture();
 
   uid_t getUid() const {
     return uid_;
@@ -386,13 +391,37 @@ class EdenMount {
    */
   enum class State : uint32_t {
     /**
+     * Freshly created.
+     */
+    UNINITIALIZED,
+
+    /**
+     * Starting to mount fuse.
+     */
+    STARTING,
+
+    /**
      * The EdenMount is running normally.
      */
     RUNNING,
+
+    /**
+     * Encountered an error while starting fuse mount.
+     */
+    FUSE_ERROR,
+
+    /**
+     * Fuse session completed and the thread pools are stopping or stopped.
+     * fuseCompletionPromise_ is about to be fulfilled, which will cause
+     * someone else to call EdenMount::shutdown().
+     */
+    FUSE_DONE,
+
     /**
      * EdenMount::shutdown() has been called, but it is not complete yet.
      */
     SHUTTING_DOWN,
+
     /**
      * EdenMount::shutdown() has completed, but there are still outstanding
      * references so EdenMount::destroy() has not been called yet.
@@ -401,6 +430,7 @@ class EdenMount {
      * immediately.
      */
     SHUT_DOWN,
+
     /**
      * EdenMount::destroy() has been called, but the shutdown is not complete
      * yet.  There are no remaining references to the EdenMount at this point,
@@ -408,6 +438,14 @@ class EdenMount {
      */
     DESTROYING
   };
+
+  /**
+   * Attempt to transition from expected -> newState.
+   * If the current state is expected then the state is set to newState
+   * and returns boolean.
+   * Otherwise the current state is left untouched and returns false.
+   */
+  bool doStateTransition(State expected, State newState);
 
   EdenMount(
       std::unique_ptr<ClientConfig> config,
@@ -514,22 +552,51 @@ class EdenMount {
   /**
    * The current state of the mount point.
    */
-  std::atomic<State> state_{State::RUNNING};
+  std::atomic<State> state_{State::UNINITIALIZED};
+
+  /**
+   * A promise associated with the future returned from EdenMount::startFuse()
+   * that completes when the state transitions to RUNNING or FUSE_ERROR.
+   */
+  folly::Promise<folly::Unit> initFusePromise_;
+
+  /**
+   * A promise associated with the future returned from
+   * EdenMount::getFuseCompletionFuture() that completes when the state
+   * transitions to FUSE_DONE.
+   * The future yields the underlying fuseDevice descriptor; it can
+   * be passed on during graceful restart or simply closed if we're
+   * unmounting and shutting down completely.  In the unmount scenario
+   * the device should be closed prior to calling EdenMount::shutdown()
+   * so that the subsequent privilegedFuseUnmount() call won't block
+   * waiting on us for a response.
+   */
+  folly::Promise<folly::File> fuseCompletionPromise_;
 
   AbsolutePath const path_; // the path where this MountPoint is mounted
+
+  /**
+   * uid and gid that we'll set as the owners in the stat information
+   * returned via initStatData().
+   */
   uid_t uid_;
   gid_t gid_;
 
+  /**
+   * The associated fuse channel to the kernel.
+   */
   std::unique_ptr<fusell::FuseChannel> channel_;
 
-  enum class FuseStatus { UNINIT, STARTING, RUNNING, ERROR, STOPPING };
-  std::mutex mutex_;
-  std::condition_variable statusCV_;
-  FuseStatus fuseStatus_{FuseStatus::UNINIT};
-
+  /**
+   * The pool of fuse dispatching threads.
+   */
   std::vector<std::thread> threads_;
+
+  /**
+   * The main eventBase of the program; this is used to join and dispatch
+   * promises when transitioning to FUSE_DONE.
+   */
   folly::EventBase* eventBase_{nullptr};
-  std::function<void()> onStop_;
 };
 
 /**

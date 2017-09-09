@@ -260,19 +260,24 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
     }
   }
 
-  auto onFinish = [this, edenMount]() { this->mountFinished(edenMount.get()); };
-  try {
-    edenMount->start(getMainEventBase(), onFinish, FLAGS_debug);
-  } catch (...) {
-    // If we fail to start the mount point, call mountFinished()
-    // to make sure it gets removed from mountPoints_.
-    //
-    // Note that we can't perform this clean-up using SCOPE_FAIL() for now, due
-    // to a bug in some versions of gcc:
-    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62258
-    this->mountFinished(edenMount.get());
-    throw;
-  }
+  // Start up the fuse workers.  If an error occurs we want to call
+  // mountFinished and throw the error here.
+  auto startFuture =
+      edenMount->startFuse(getMainEventBase(), FLAGS_debug)
+          .onError([this, edenMount](folly::exception_wrapper ew) {
+            mountFinished(edenMount.get());
+            return makeFuture<folly::Unit>(ew);
+          });
+  // Will throw a possible error condition raised during init
+  startFuture.get();
+
+  // Now that we've started the workers, arrange to call mountFinished
+  // once the pool is torn down.
+  auto finishFuture = edenMount->getFuseCompletionFuture().ensure(
+      [this, edenMount] { mountFinished(edenMount.get()); });
+  // We're deliberately discarding the future here; we don't need to
+  // wait for it to finish.
+  (void)finishFuture;
 
   // Adding function for the newly added mountpoint to Schedule
   // a periodic job to unload unused inodes based on the last access time.
