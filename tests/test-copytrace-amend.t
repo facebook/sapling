@@ -8,7 +8,7 @@
   > [fbamend]
   > userestack=True
   > [experimental]
-  > disablecopytrace=True
+  > copytrace=off
   > evolution=createmarkers
   > EOF
 

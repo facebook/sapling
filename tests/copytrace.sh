@@ -5,6 +5,6 @@ remote = False
 enablefilldb = True
 fastcopytrace = True
 [experimental]
-disablecopytrace = True
+copytrace = off
 EOF
 }

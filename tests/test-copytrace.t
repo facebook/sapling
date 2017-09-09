@@ -5,7 +5,7 @@
   > rebase=
   > shelve=
   > [experimental]
-  > disablecopytrace=True
+  > copytrace=off
   > EOF
 
 Check filename heuristics (same dirname and same basename)

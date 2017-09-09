@@ -75,7 +75,7 @@ def extsetup(ui):
         ("", "drafttrace", None,
          _("enable copytracing for draft branches.")))
 
-    # With experimental.disablecopytrace=True there can be cryptic merge errors.
+    # With experimental.copytrace=off there can be cryptic merge errors.
     # Let"s change error message to suggest re-running the command with
     # enabled copytracing
     filemerge._localchangedotherdeletedmsg = _(
@@ -105,10 +105,10 @@ def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
         # even with disabled copytracing, so we don't want to log it.
         if orig != fco.path() and fco.cmp(fcd):
             # copytracing was in action, let's record it
-            if not repo.ui.configbool("experimental", "disablecopytrace"):
-                msg = "success"
+            if repo.ui.config('experimental', 'copytrace') == 'on':
+                msg = 'success (fastcopytracing)'
             else:
-                msg = "success (fastcopytracing)"
+                msg = 'success'
 
             try:
                 destctx = _getctxfromfctx(fcd)
@@ -128,8 +128,7 @@ def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
 
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
     if "--tracecopies" in fullargs:
-        ui.setconfig("experimental", "disablecopytrace",
-                     False, "--tracecopies")
+        ui.setconfig('experimental', 'copytrace', 'on', '--tracecopies')
     return orig(lui, repo, cmd, fullargs, ui, *args, **kwargs)
 
 def _amend(orig, ui, repo, old, extra, pats, opts):
@@ -325,7 +324,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
 
     """
 
-    if not repo.ui.configbool("experimental", "disablecopytrace"):
+    if repo.ui.config('experimental', 'copytrace') == 'on':
         # user explicitly enabled copytracing - use it
         return orig(repo, cdst, csrc, base)
 
@@ -335,7 +334,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     # If base, source and destination are all draft branches, let's use full
     # copytrace for increased capabilities since it will work fast enough
     if _isfullcopytraceable(repo.ui, cdst, base):
-        configoverrides = {('experimental', 'disablecopytrace'): False}
+        configoverrides = {('experimental', 'copytrace'): 'on'}
         with repo.ui.configoverride(configoverrides, 'mergecopies'):
             result = orig(repo, cdst, csrc, base)
             if repo.ui.configbool("copytrace", "enableamendcopytrace", True):

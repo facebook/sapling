@@ -363,7 +363,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1 --config experimental.disablecopytrace=True
+  $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
   rebasing 1:ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
@@ -437,7 +437,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1 --config experimental.disablecopytrace=True
+  $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
   rebasing 1:e6e7483a8950 "source"
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u

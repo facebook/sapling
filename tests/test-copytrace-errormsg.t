@@ -4,7 +4,7 @@
   > rebase=
   > copytrace=$TESTDIR/../hgext3rd/copytrace.py
   > [experimental]
-  > disablecopytrace=True
+  > copytrace=off
   > EOF
 
   $ hg init repo
