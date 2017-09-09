@@ -44,6 +44,7 @@ class Dispatcher {
   fuse_conn_info connInfo_;
   ThreadLocalEdenStats* stats_{nullptr};
   FileHandleMap fileHandles_;
+  std::atomic<size_t> numOutstandingRequests_{0};
 
  public:
   virtual ~Dispatcher();
@@ -51,6 +52,29 @@ class Dispatcher {
   explicit Dispatcher(ThreadLocalEdenStats* stats);
   static void disp_init(void* userdata, struct fuse_conn_info* conn);
   ThreadLocalEdenStats* getStats() const;
+
+  /**
+   * Called by RequestData to advise of requests that are in-flight
+   * and pending completion.
+   */
+  inline void incNumOutstandingRequests() {
+    numOutstandingRequests_++;
+  }
+
+  inline void decNumOutstandingRequests() {
+    numOutstandingRequests_--;
+  }
+
+  /**
+   * Returns true if there are no outstanding fuse requests.
+   * This is intended to be used only after the associated fuse
+   * channel has stopped servicing new requests during graceful
+   * shutdown; once that has happened, and hasOutstandingRequests()
+   * returns false we know that it is safe to proceed with the
+   * graceful shutdown. */
+  inline bool hasOutstandingRequests() const {
+    return numOutstandingRequests_ == 0;
+  }
 
   const fuse_conn_info& getConnInfo() const;
   FileHandleMap& getFileHandles();

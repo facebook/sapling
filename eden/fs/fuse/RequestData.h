@@ -28,6 +28,7 @@ class RequestData : public folly::RequestData {
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStats::HistogramPtr latencyHistogram_{nullptr};
   ThreadLocalEdenStats* stats_{nullptr};
+  Dispatcher* dispatcher_{nullptr};
 
   static void interrupter(fuse_req_t req, void* data);
   fuse_req_t stealReq();
@@ -43,7 +44,8 @@ class RequestData : public folly::RequestData {
   RequestData& operator=(const RequestData&) = delete;
   RequestData(RequestData&&) = default;
   RequestData& operator=(RequestData&&) = default;
-  explicit RequestData(fuse_req_t req);
+  explicit RequestData(fuse_req_t req, Dispatcher* dispatcher);
+  ~RequestData();
   static RequestData& get();
   static RequestData& create(fuse_req_t req);
 
@@ -59,7 +61,7 @@ class RequestData : public folly::RequestData {
   // Returns the request context, which holds uid, gid, pid and umask info
   const fuse_ctx& getContext() const;
 
-  // Returns the dispatcher embedded in the request
+  // Returns the associated dispatcher instance
   Dispatcher* getDispatcher() const;
 
   // Returns the underlying fuse request, throwing an error if it has

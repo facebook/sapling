@@ -21,9 +21,16 @@ namespace fusell {
 
 const std::string RequestData::kKey("fusell");
 
-RequestData::RequestData(fuse_req_t req)
-    : req_(req), requestContext_(folly::RequestContext::saveContext()) {
+RequestData::RequestData(fuse_req_t req, Dispatcher* dispatcher)
+    : req_(req),
+      requestContext_(folly::RequestContext::saveContext()),
+      dispatcher_(dispatcher) {
   fuse_req_interrupt_func(req, RequestData::interrupter, this);
+  dispatcher_->incNumOutstandingRequests();
+}
+
+RequestData::~RequestData() {
+  dispatcher_->decNumOutstandingRequests();
 }
 
 void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
@@ -56,8 +63,9 @@ RequestData& RequestData::get() {
 
 RequestData& RequestData::create(fuse_req_t req) {
   folly::RequestContext::create();
+  auto dispatcher = static_cast<Dispatcher*>(fuse_req_userdata(req));
   folly::RequestContext::get()->setContextData(
-      RequestData::kKey, std::make_unique<RequestData>(req));
+      RequestData::kKey, std::make_unique<RequestData>(req, dispatcher));
   return get();
 }
 
@@ -101,7 +109,7 @@ const fuse_ctx& RequestData::getContext() const {
 }
 
 Dispatcher* RequestData::getDispatcher() const {
-  return static_cast<Dispatcher*>(fuse_req_userdata(getReq()));
+  return dispatcher_;
 }
 
 bool RequestData::wasInterrupted() const {
