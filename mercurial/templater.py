@@ -35,6 +35,7 @@ from . import (
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
     "(": (20, None, ("group", 1, ")"), ("func", 1, ")"), None),
+    ".": (18, None, None, (".", 18), None),
     "%": (15, None, None, ("%", 15), None),
     "|": (15, None, None, ("|", 15), None),
     "*": (5, None, None, ("*", 5), None),
@@ -60,7 +61,7 @@ def tokenize(program, start, end, term=None):
         c = program[pos]
         if c.isspace(): # skip inter-token whitespace
             pass
-        elif c in "(=,)%|+-*/": # handle simple operators
+        elif c in "(=,).%|+-*/": # handle simple operators
             yield (c, None, pos)
         elif c in '"\'': # handle quoted templates
             s = pos + 1
@@ -449,6 +450,26 @@ def runmap(context, mapping, data):
             # has been fully expanded already and format is useless.
             # If so, return the expanded value.
             yield v
+
+def buildmember(exp, context):
+    darg = compileexp(exp[1], context, methods)
+    memb = getsymbol(exp[2])
+    return (runmember, (darg, memb))
+
+def runmember(context, mapping, data):
+    darg, memb = data
+    d = evalrawexp(context, mapping, darg)
+    if util.safehasattr(d, 'tomap'):
+        lm = mapping.copy()
+        lm.update(d.tomap())
+        return runsymbol(context, lm, memb)
+    # TODO: d.get(memb) if dict-like?
+
+    sym = findsymbolicname(darg)
+    if sym:
+        raise error.ParseError(_("keyword '%s' has no member") % sym)
+    else:
+        raise error.ParseError(_("%r has no member") % d)
 
 def buildnegate(exp, context):
     arg = compileexp(exp[1], context, exprmethods)
@@ -1152,7 +1173,7 @@ exprmethods = {
     "symbol": lambda e, c: (runsymbol, e[1]),
     "template": buildtemplate,
     "group": lambda e, c: compileexp(e[1], c, exprmethods),
-#    ".": buildmember,
+    ".": buildmember,
     "|": buildfilter,
     "%": buildmap,
     "func": buildfunc,

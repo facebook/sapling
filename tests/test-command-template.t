@@ -3147,6 +3147,51 @@ Test manifest/get() can be join()-ed as before, though it's silly:
   $ hg log -R latesttag -r tip -T '{join(get(extras, "branch"), "")}\n'
   default
 
+Test dot operator precedence:
+
+  $ hg debugtemplate -R latesttag -r0 -v '{manifest.node|short}\n'
+  (template
+    (|
+      (.
+        (symbol 'manifest')
+        (symbol 'node'))
+      (symbol 'short'))
+    (string '\n'))
+  89f4071fec70
+
+ (the following examples are invalid, but seem natural in parsing POV)
+
+  $ hg debugtemplate -R latesttag -r0 -v '{foo|bar.baz}\n' 2> /dev/null
+  (template
+    (|
+      (symbol 'foo')
+      (.
+        (symbol 'bar')
+        (symbol 'baz')))
+    (string '\n'))
+  [255]
+  $ hg debugtemplate -R latesttag -r0 -v '{foo.bar()}\n' 2> /dev/null
+  (template
+    (.
+      (symbol 'foo')
+      (func
+        (symbol 'bar')
+        None))
+    (string '\n'))
+  [255]
+
+Test evaluation of dot operator:
+
+  $ hg log -R latesttag -l1 -T '{min(revset("0:9")).node}\n'
+  ce3cec86e6c26bd9bdfc590a6b92abc9680f1796
+
+  $ hg log -R latesttag -l1 -T '{author.invalid}\n'
+  hg: parse error: keyword 'author' has no member
+  [255]
+  $ hg log -R latesttag -l1 -T '{min("abc").invalid}\n'
+  hg: parse error: 'a' has no member
+  [255]
+
 Test the sub function of templating for expansion:
 
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'

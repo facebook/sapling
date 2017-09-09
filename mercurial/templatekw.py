@@ -73,6 +73,7 @@ class _mappable(object):
     This class allows us to handle both:
     - "{manifest}"
     - "{manifest % '{rev}:{node}'}"
+    - "{manifest.rev}"
 
     Unlike a _hybrid, this does not simulate the behavior of the underling
     value. Use unwrapvalue() or unwraphybrid() to obtain the inner object.
