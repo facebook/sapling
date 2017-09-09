@@ -302,8 +302,6 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
         std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
-  // TODO(T21262294): We will have to implement a mechanism to get the counter
-  // names for a mount point.
   // Register callback for getting Loaded inodes in the memory for a mountPoint.
   stats::ServiceData::get()->getDynamicCounters()->registerCallback(
       edenMount->getCounterName(CounterName::LOADED), [edenMount] {
