@@ -21,7 +21,6 @@
 #include <wangle/concurrent/GlobalExecutor.h>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -263,8 +262,7 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
 
   auto onFinish = [this, edenMount]() { this->mountFinished(edenMount.get()); };
   try {
-    edenMount->getMountPoint()->start(
-        getMainEventBase(), onFinish, FLAGS_debug);
+    edenMount->start(getMainEventBase(), onFinish, FLAGS_debug);
   } catch (...) {
     // If we fail to start the mount point, call mountFinished()
     // to make sure it gets removed from mountPoints_.

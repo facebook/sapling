@@ -11,7 +11,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -107,8 +106,8 @@ void basicAttrChecks(
     const fusell::Dispatcher::Attr& attr) {
   EXPECT_EQ(inode->getNodeId(), attr.st.st_ino);
   EXPECT_EQ(1, attr.st.st_nlink);
-  EXPECT_EQ(inode->getMount()->getMountPoint()->getUid(), attr.st.st_uid);
-  EXPECT_EQ(inode->getMount()->getMountPoint()->getGid(), attr.st.st_gid);
+  EXPECT_EQ(inode->getMount()->getUid(), attr.st.st_uid);
+  EXPECT_EQ(inode->getMount()->getGid(), attr.st.st_gid);
   EXPECT_EQ(0, attr.st.st_rdev);
   EXPECT_GT(attr.st.st_atime, 0);
   EXPECT_GT(attr.st.st_mtime, 0);
@@ -268,7 +267,7 @@ TEST_F(FileInodeTest, setattrFileType) {
 
 TEST_F(FileInodeTest, setattrUid) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  uid_t uid = inode->getMount()->getMountPoint()->getUid();
+  uid_t uid = inode->getMount()->getUid();
   struct stat desired = {};
   desired.st_uid = uid + 1;
 
@@ -289,7 +288,7 @@ TEST_F(FileInodeTest, setattrUid) {
 
 TEST_F(FileInodeTest, setattrGid) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  gid_t gid = inode->getMount()->getMountPoint()->getGid();
+  gid_t gid = inode->getMount()->getGid();
   struct stat desired = {};
   desired.st_gid = gid + 1;
 
@@ -310,7 +309,6 @@ TEST_F(FileInodeTest, setattrGid) {
 
 TEST_F(FileInodeTest, setattrAtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  gid_t gid = inode->getMount()->getMountPoint()->getGid();
   struct stat desired = {};
 
   // Set the atime to a specific value
@@ -335,7 +333,6 @@ TEST_F(FileInodeTest, setattrAtime) {
 
 TEST_F(FileInodeTest, setattrMtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  gid_t gid = inode->getMount()->getMountPoint()->getGid();
   struct stat desired = {};
 
   // Set the mtime to a specific value

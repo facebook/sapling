@@ -14,7 +14,6 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -109,7 +108,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
   return ensureDataLoaded().then([self = inodePtrFromThis()]() {
-    auto attr = fusell::Dispatcher::Attr{self->getMount()->getMountPoint()};
+    auto attr = fusell::Dispatcher::Attr{self->getMount()->initStatData()};
     attr.st = self->stat();
     attr.st.st_ino = self->getNodeId();
     return attr;
@@ -133,7 +132,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
         self->materializeInParent();
 
         auto result =
-            fusell::Dispatcher::Attr{self->getMount()->getMountPoint()};
+            fusell::Dispatcher::Attr{self->getMount()->initStatData()};
 
         auto state = self->state_.wlock();
         CHECK(state->file) << "MUST have a materialized file at this point";
@@ -360,7 +359,7 @@ Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
 }
 
 struct stat FileInode::stat() {
-  auto st = getMount()->getMountPoint()->initStatData();
+  auto st = getMount()->initStatData();
   st.st_nlink = 1;
 
   auto state = state_.rlock();

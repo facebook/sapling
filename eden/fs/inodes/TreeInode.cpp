@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -53,6 +52,9 @@ using std::vector;
 
 namespace facebook {
 namespace eden {
+
+TreeInode::CreateResult::CreateResult(const EdenMount* mount)
+    : attr(mount->initStatData()) {}
 
 /**
  * A helper class to track info about inode loads that we started while holding
@@ -151,7 +153,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
 }
 
 fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
-  fusell::Dispatcher::Attr attr(getMount()->getMountPoint());
+  fusell::Dispatcher::Attr attr(getMount()->initStatData());
 
   attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId();
@@ -719,7 +721,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   auto getattrResult = handle->getattr();
   return getattrResult.then(
       [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
-        CreateResult result(getMount()->getMountPoint());
+        CreateResult result(getMount());
 
         // Return all of the results back to the kernel.
         result.inode = inode;
@@ -2853,7 +2855,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
     const struct stat& attr,
     int to_set) {
   materialize();
-  fusell::Dispatcher::Attr result(getMount()->getMountPoint());
+  fusell::Dispatcher::Attr result(getMount()->initStatData());
 
   // We do not have size field for directories and currently TreeInode does not
   // have any field like FileInode::state_::mode to set the mode. May be in the

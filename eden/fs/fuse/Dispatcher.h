@@ -115,7 +115,9 @@ class Dispatcher {
     struct stat st;
     double timeout;
 
-    explicit Attr(const MountPoint* mountPoint);
+    explicit Attr(
+        const struct stat& st,
+        double timeout = std::numeric_limits<double>::max());
   };
 
   /**

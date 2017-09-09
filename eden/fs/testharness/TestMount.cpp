@@ -14,7 +14,6 @@
 #include <folly/io/IOBuf.h>
 #include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileHandle.h"
@@ -31,7 +30,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-using facebook::eden::fusell::MountPoint;
 using folly::ByteRange;
 using folly::Future;
 using folly::makeFuture;

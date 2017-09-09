@@ -18,7 +18,6 @@
 
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileHandle.h"
@@ -47,7 +46,7 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
       inodeMap_(mount_->getInodeMap()) {}
 
 void EdenDispatcher::initConnection(fuse_conn_info&) {
-  mount_->getMountPoint()->mountStarted();
+  mount_->mountStarted();
 }
 
 namespace {

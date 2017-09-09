@@ -17,7 +17,6 @@
 #include <folly/experimental/logging/xlog.h>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"

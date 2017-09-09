@@ -264,7 +264,7 @@ class TreeInode : public InodeBase {
     /// The newly opened file handle.
     std::shared_ptr<FileHandle> file;
 
-    explicit CreateResult(const fusell::MountPoint* mount) : attr(mount) {}
+    explicit CreateResult(const EdenMount* mount);
   };
 
   TreeInode(

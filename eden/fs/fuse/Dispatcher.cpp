@@ -17,7 +17,6 @@
 
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/fuse/RequestData.h"
 
 using namespace folly;
@@ -27,10 +26,8 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-Dispatcher::Attr::Attr(const MountPoint* mount)
-    : timeout(std::numeric_limits<double>::max()) {
-  st = mount->initStatData();
-}
+Dispatcher::Attr::Attr(const struct stat& st, double timeout)
+    : st(st), timeout(timeout) {}
 
 Dispatcher::~Dispatcher() {}
 

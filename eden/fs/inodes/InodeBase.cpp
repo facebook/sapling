@@ -12,7 +12,6 @@
 #include <folly/Likely.h>
 #include <folly/experimental/logging/xlog.h>
 
-#include "eden/fs/fuse/MountPoint.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
@@ -327,10 +326,8 @@ folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
     int to_set) {
   // Check if gid and uid are same or not.
   if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
-    if ((to_set & FUSE_SET_ATTR_UID &&
-         attr.st_uid != getMount()->getMountPoint()->getUid()) ||
-        (to_set & FUSE_SET_ATTR_GID &&
-         attr.st_gid != getMount()->getMountPoint()->getGid())) {
+    if ((to_set & FUSE_SET_ATTR_UID && attr.st_uid != getMount()->getUid()) ||
+        (to_set & FUSE_SET_ATTR_GID && attr.st_gid != getMount()->getGid())) {
       folly::throwSystemErrorExplicit(
           EACCES, "changing the owner/group is not supported");
     }

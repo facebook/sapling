@@ -11,12 +11,15 @@
 
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
+#include <folly/File.h>
+#include <folly/ThreadName.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/fuse/MountPoint.h"
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/Dirstate.h"
@@ -39,6 +42,10 @@ using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
+using folly::setThreadName;
+using folly::to;
+
+DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
 namespace facebook {
 namespace eden {
@@ -86,8 +93,6 @@ EdenMount::EdenMount(
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
-      mountPoint_(
-          new fusell::MountPoint(config_->getMountPath(), dispatcher_.get())),
       objectStore_(std::move(objectStore)),
       overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
       dirstate_(std::make_unique<Dirstate>(this)),
@@ -96,7 +101,10 @@ EdenMount::EdenMount(
       socketPath_(socketPath),
       straceLogger_{kEdenStracePrefix.str() +
                     config_->getMountPath().value().toStdString()},
-      lastCheckoutTime_(lastCheckOutTime) {}
+      lastCheckoutTime_(lastCheckOutTime),
+      path_(config_->getMountPath()),
+      uid_(getuid()),
+      gid_(getgid()) {}
 
 folly::Future<folly::Unit> EdenMount::initialize() {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
@@ -209,11 +217,11 @@ Future<Unit> EdenMount::shutdownImpl() {
 }
 
 fusell::FuseChannel* EdenMount::getFuseChannel() const {
-  return mountPoint_->getFuseChannel();
+  return channel_.get();
 }
 
 const AbsolutePath& EdenMount::getPath() const {
-  return mountPoint_->getPath();
+  return path_;
 }
 
 const AbsolutePath& EdenMount::getSocketPath() const {
@@ -411,6 +419,121 @@ std::string EdenMount::getCounterName(CounterName name) {
     return getPath().stringPiece().str() + ".unloaded";
   }
   folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
+}
+
+void EdenMount::start(
+    folly::EventBase* eventBase,
+    std::function<void()> onStop,
+    bool debug) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (fuseStatus_ != FuseStatus::UNINIT) {
+    throw std::runtime_error("mount point has already been started");
+  }
+
+  eventBase_ = eventBase;
+  onStop_ = onStop;
+
+  fuseStatus_ = FuseStatus::STARTING;
+
+  auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
+  channel_ = std::make_unique<fusell::FuseChannel>(
+      std::move(fuseDevice), debug, dispatcher_.get());
+
+  // Now, while holding the initialization mutex, start up the workers.
+  threads_.reserve(FLAGS_fuseNumThreads);
+  for (auto i = 0; i < FLAGS_fuseNumThreads; ++i) {
+    threads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
+  }
+
+  // Wait until the mount is started successfully.
+  while (fuseStatus_ == FuseStatus::STARTING) {
+    statusCV_.wait(lock);
+  }
+  if (fuseStatus_ == FuseStatus::ERROR) {
+    throw std::runtime_error("fuse session failed to initialize");
+  }
+}
+
+void EdenMount::mountStarted() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  // Don't update status_ if it has already been put into an error
+  // state or something.
+  if (fuseStatus_ == FuseStatus::STARTING) {
+    fuseStatus_ = FuseStatus::RUNNING;
+    statusCV_.notify_one();
+  }
+}
+
+void EdenMount::fuseWorkerThread() {
+  setThreadName(to<std::string>("fuse", path_.basename()));
+
+  // The channel is responsible for running the loop.  It will
+  // continue to do so until the fuse session is exited, either
+  // due to error or because the filesystem was unmounted, or
+  // because FuseChannel::requestSessionExit() was called.
+  channel_->processSession();
+
+  bool shouldCallonStop = false;
+  bool shouldJoin = false;
+
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (fuseStatus_ == FuseStatus::STARTING) {
+      // If we didn't get as far as setting the state to RUNNING,
+      // we must have experienced an error
+      fuseStatus_ = FuseStatus::ERROR;
+      statusCV_.notify_one();
+      shouldJoin = true;
+    } else if (fuseStatus_ == FuseStatus::RUNNING) {
+      // We are the first one to stop, so we get to share the news.
+      fuseStatus_ = FuseStatus::STOPPING;
+      shouldCallonStop = true;
+      shouldJoin = true;
+    }
+  }
+
+  if (shouldJoin) {
+    // We are the first thread to exit the loop; we get to arrange
+    // to join and notify the server of our completion
+    eventBase_->runInEventBaseThread([this, shouldCallonStop] {
+      // Wait for all workers to be done
+      for (auto& thr : threads_) {
+        thr.join();
+      }
+
+      // and tear down the fuse session.  For a graceful restart,
+      // we will want to FuseChannel::stealFuseDevice() before
+      // this point, or perhaps pass it through the onStop_
+      // call.
+      channel_.reset();
+
+      // Do a little dance to steal ownership of the indirect
+      // reference to the EdenMount that is held by the
+      // onStop_ function; we can't leave it owned by ourselves
+      // because that reference will block the completion of
+      // the shutdown future.
+      std::function<void()> stopper;
+      std::swap(stopper, onStop_);
+
+      // And let the edenMount know that all is done
+      if (shouldCallonStop) {
+        stopper();
+      }
+    });
+  }
+}
+
+struct stat EdenMount::initStatData() const {
+  struct stat st;
+  memset(&st, 0, sizeof(st));
+
+  st.st_uid = uid_;
+  st.st_gid = gid_;
+  // We don't really use the block size for anything.
+  // 4096 is fairly standard for many file systems.
+  st.st_blksize = 4096;
+
+  return st;
 }
 }
 } // facebook::eden

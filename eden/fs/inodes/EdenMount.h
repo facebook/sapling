@@ -25,6 +25,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
+class EventBase;
 template <typename T>
 class Future;
 }
@@ -117,17 +118,6 @@ class EdenMount {
    * destroyed.
    */
   folly::Future<folly::Unit> shutdown();
-
-  /**
-   * Get the MountPoint object.
-   *
-   * This returns a raw pointer since the EdenMount owns the mount point.
-   * The caller should generally maintain a reference to the EdenMount object,
-   * and not directly to the MountPoint object itself.
-   */
-  fusell::MountPoint* getMountPoint() const {
-    return mountPoint_.get();
-  }
 
   /**
    * Get the FUSE channel for this mount point.
@@ -336,6 +326,46 @@ class EdenMount {
     std::chrono::system_clock::time_point lastCheckoutTime;
   };
 
+  /**
+   * Mounts the filesystem in the VFS and spawns worker threads to
+   * dispatch the fuse session.
+   *
+   * Returns as soon as the filesystem has been successfully mounted, or
+   * as soon as the mount fails.
+   *
+   * The onStop argument will be called from the thread associated with
+   * the provided eventBase after the mount point is stopped, but only
+   * in the case that the mount was successfully initiated, and then
+   * cleanly torn down.  In other words, if start() throws an exception,
+   * onStop() will not be called.
+   */
+  void
+  start(folly::EventBase* eventBase, std::function<void()> onStop, bool debug);
+
+  uid_t getUid() const {
+    return uid_;
+  }
+
+  gid_t getGid() const {
+    return gid_;
+  }
+
+  /**
+   * Indicate that the mount point has been successfully started.
+   *
+   * This function should only be invoked by the Dispatcher class.
+   */
+  void mountStarted();
+
+  /**
+   * Return a new stat structure that has been minimally initialized with
+   * data for this mount point.
+   *
+   * The caller must still initialize all file-specific data (inode number,
+   * file mode, size, timestamps, link count, etc).
+   */
+  struct stat initStatData() const;
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -401,6 +431,9 @@ class EdenMount {
   folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::Future<folly::Unit> shutdownImpl();
 
+  // Dispatches fuse requests
+  void fuseWorkerThread();
+
   /**
    * Private destructor.
    *
@@ -421,7 +454,6 @@ class EdenMount {
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
-  std::unique_ptr<fusell::MountPoint> mountPoint_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
   std::unique_ptr<Dirstate> dirstate_;
@@ -483,6 +515,21 @@ class EdenMount {
    * The current state of the mount point.
    */
   std::atomic<State> state_{State::RUNNING};
+
+  AbsolutePath const path_; // the path where this MountPoint is mounted
+  uid_t uid_;
+  gid_t gid_;
+
+  std::unique_ptr<fusell::FuseChannel> channel_;
+
+  enum class FuseStatus { UNINIT, STARTING, RUNNING, ERROR, STOPPING };
+  std::mutex mutex_;
+  std::condition_variable statusCV_;
+  FuseStatus fuseStatus_{FuseStatus::UNINIT};
+
+  std::vector<std::thread> threads_;
+  folly::EventBase* eventBase_{nullptr};
+  std::function<void()> onStop_;
 };
 
 /**

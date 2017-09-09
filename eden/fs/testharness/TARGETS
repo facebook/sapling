@@ -6,7 +6,6 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "@/eden/fs/config:config",
-        "@/eden/fs/fuse:fusell",
         "@/eden/fs/inodes:inodes",
         "@/eden/fs/inodes:serialization-cpp2",
         "@/eden/fs/model:model",
