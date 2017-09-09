@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
 from .lib.hg_extension_test_base import hg_test
 from ..lib import eden_server_inspector
 
@@ -90,6 +91,17 @@ class RebaseTest:
             'but if we included unloaded inodes, there would be 2: one for '
             'numbers/1 and one for numbers/2.'
         ))
+
+    def test_rebasing_a_commit_that_removes_a_file(self):
+        # Rebase a commit that removes the numbers/README file.
+        self.hg('rm', 'numbers/README')
+        removal_commit = self.repo.commit('removing README')
+        self.hg('rebase', '-s', removal_commit, '-d', self._c15)
+
+        # Verify we end up in the expected state.
+        self.assert_status_empty()
+        self.assertFalse(os.path.exists(self.get_path('numbers/README')))
+        self.assertEqual(7, len(self.repo.log()))
 
     def assert_update_logic(self, stdout: str, num_fast_path: int=0,
                             num_slow_path: int=0):

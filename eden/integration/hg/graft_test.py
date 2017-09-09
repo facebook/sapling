@@ -71,3 +71,26 @@ class GraftTest:
         commits = self.repo.log()
         self.assertEqual(3, len(commits))
         self.assertEqual([self.commit1, commit3], commits[:2])
+
+    def test_graft_that_removes_a_file(self):
+        # Create a new head that adds second.txt and removes first.txt.
+        self.write_file('second.txt', '2')
+        self.repo.add_file('second.txt')
+        self.hg('rm', 'first.txt')
+        commit2 = self.repo.commit('Add second.txt and remove first.txt.')
+
+        # Create a separate head that adds third.txt.
+        self.repo.update(self.commit1)
+        self.write_file('third.txt', '3')
+        self.repo.add_file('third.txt')
+        commit3 = self.repo.commit('Add third.txt.')
+
+        # Perform the graft and verify we end up in the right state.
+        self.hg('graft', commit2)
+        self.assert_status_empty()
+        commits = self.repo.log()
+        self.assertEqual(3, len(commits))
+        self.assertEqual([self.commit1, commit3], commits[:2])
+        self.assertFalse(os.path.exists(self.get_path('first.txt')))
+        self.assertTrue(os.path.exists(self.get_path('second.txt')))
+        self.assertTrue(os.path.exists(self.get_path('third.txt')))

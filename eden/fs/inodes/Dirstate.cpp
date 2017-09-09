@@ -241,11 +241,13 @@ Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
       ++iter;
 
       if (current->second.get_mergeState() ==
-          DirstateMergeState::NotApplicable) {
-        XLOG(INFO) << "Removing " << current->first.str()
-                   << " from hgDirstateTuples via onSnapshotChanged("
-                   << rootTree->getHash()
-                   << ") because it has merge state NotApplicable.";
+              DirstateMergeState::NotApplicable &&
+          current->second.get_status() == DirstateNonnormalFileStatus::Normal) {
+        XLOG(INFO)
+            << "Removing " << current->first.str()
+            << " from hgDirstateTuples via onSnapshotChanged("
+            << rootTree->getHash()
+            << ") because it has merge state NotApplicable and status Normal.";
         data->hgDirstateTuples.erase(current);
         madeChanges = true;
       }
