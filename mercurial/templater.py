@@ -730,7 +730,10 @@ def get(context, mapping, args):
         raise error.ParseError(_("get() expects a dict as first argument"))
 
     key = evalfuncarg(context, mapping, args[1])
-    return dictarg.get(key)
+    val = dictarg.get(key)
+    if val is None:
+        return
+    return templatekw.wraphybridvalue(dictarg, key, val)
 
 @templatefunc('if(expr, then[, else])')
 def if_(context, mapping, args):
@@ -874,10 +877,11 @@ def max_(context, mapping, args, **kwargs):
 
     iterable = evalfuncarg(context, mapping, args[0])
     try:
-        return max(iterable)
+        x = max(iterable)
     except (TypeError, ValueError):
         # i18n: "max" is a keyword
         raise error.ParseError(_("max first argument should be an iterable"))
+    return templatekw.wraphybridvalue(iterable, x, x)
 
 @templatefunc('min(iterable)')
 def min_(context, mapping, args, **kwargs):
@@ -888,10 +892,11 @@ def min_(context, mapping, args, **kwargs):
 
     iterable = evalfuncarg(context, mapping, args[0])
     try:
-        return min(iterable)
+        x = min(iterable)
     except (TypeError, ValueError):
         # i18n: "min" is a keyword
         raise error.ParseError(_("min first argument should be an iterable"))
+    return templatekw.wraphybridvalue(iterable, x, x)
 
 @templatefunc('mod(a, b)')
 def mod(context, mapping, args):

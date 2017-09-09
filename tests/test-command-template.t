@@ -3128,10 +3128,24 @@ Test new-style inline templating of non-list/dict type:
   $ hg log -R latesttag -r tip -T '{manifest % "{rev}:{node}"}\n'
   11:2bc6e9006ce29882383a22d39fd1f4e66dd3e2fc
 
-Test manifest can be join()-ed as before, though it's silly:
+  $ hg log -R latesttag -r tip -T '{get(extras, "branch") % "{key}: {value}\n"}'
+  branch: default
+  $ hg log -R latesttag -r tip -T '{get(extras, "unknown") % "{key}\n"}'
+  hg: parse error: None is not iterable
+  [255]
+  $ hg log -R latesttag -r tip -T '{min(extras) % "{key}: {value}\n"}'
+  branch: default
+  $ hg log -R latesttag -l1 -T '{min(revset("0:9")) % "{rev}:{node|short}\n"}'
+  0:ce3cec86e6c2
+  $ hg log -R latesttag -l1 -T '{max(revset("0:9")) % "{rev}:{node|short}\n"}'
+  9:fbc7cd862e9c
+
+Test manifest/get() can be join()-ed as before, though it's silly:
 
   $ hg log -R latesttag -r tip -T '{join(manifest, "")}\n'
   11:2bc6e9006ce2
+  $ hg log -R latesttag -r tip -T '{join(get(extras, "branch"), "")}\n'
+  default
 
 Test the sub function of templating for expansion:
 
