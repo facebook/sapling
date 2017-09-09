@@ -51,9 +51,6 @@ void MountPoint::start(
 
   status_ = Status::STARTING;
 
-  // This next line is responsible for indirectly calling mount().
-  dispatcher_->setMountPoint(this);
-
   auto fuseDevice = privilegedFuseMount(path_.stringPiece());
   channel_ =
       std::make_unique<FuseChannel>(std::move(fuseDevice), debug, dispatcher_);
@@ -137,8 +134,6 @@ void MountPoint::fuseWorkerThread() {
       // the shutdown future.
       std::function<void()> stopper;
       std::swap(stopper, onStop_);
-
-      dispatcher_->unsetMountPoint();
 
       // And let the edenMount know that all is done
       if (shouldCallonStop) {

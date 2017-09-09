@@ -42,12 +42,6 @@ extern const fuse_lowlevel_ops dispatcher_ops;
 
 class Dispatcher {
   fuse_conn_info connInfo_;
-  /**
-   * The MountPoint using this dispatcher.
-   *
-   * This pointer is not set until the MountPoint is started.
-   */
-  MountPoint* mountPoint_{nullptr};
   ThreadLocalEdenStats* stats_{nullptr};
   FileHandleMap fileHandles_;
 
@@ -67,20 +61,6 @@ class Dispatcher {
   std::shared_ptr<FileHandle> getFileHandle(uint64_t fh);
   // delegates to FileHandleMap::getDirHandle
   std::shared_ptr<DirHandle> getDirHandle(uint64_t dh);
-
-  /**
-   * Set the MountPoint currently using this Dispatcher.
-   *
-   * This is called when the MountPoint begins the mounting process.
-   */
-  void setMountPoint(MountPoint* mountPoint);
-
-  /**
-   * Clear the MountPoint.
-   *
-   * This is called once the MountPoint is unmounted.
-   */
-  void unsetMountPoint();
 
   /**
    * Called during filesystem mounting.  It informs the filesystem

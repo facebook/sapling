@@ -30,6 +30,7 @@ class EdenDispatcher : public fusell::Dispatcher {
    * setRootInode() must be called before using this dispatcher.
    */
   explicit EdenDispatcher(EdenMount* mount);
+  void initConnection(fuse_conn_info& conn) override;
 
   folly::Future<Attr> getattr(fuse_ino_t ino) override;
   folly::Future<Attr> setattr(fuse_ino_t ino,
