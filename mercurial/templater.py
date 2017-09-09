@@ -423,8 +423,9 @@ def runmap(context, mapping, data):
         try:
             diter = iter(d)
         except TypeError:
-            if func is runsymbol:
-                raise error.ParseError(_("keyword '%s' is not iterable") % data)
+            sym = findsymbolicname((func, data))
+            if sym:
+                raise error.ParseError(_("keyword '%s' is not iterable") % sym)
             else:
                 raise error.ParseError(_("%r is not iterable") % d)
 
