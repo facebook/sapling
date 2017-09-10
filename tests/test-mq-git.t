@@ -208,5 +208,40 @@ git=no: regular patch after qrefresh with copy:
   @@ -0,0 +1,1 @@
   +a
 
+Test how [diff] configuration influence and cause invalid or lossy patches:
+
+  $ cat <<EOF >> .hg/hgrc
+  > [mq]
+  > git = AUTO
+  > [diff]
+  > nobinary = True
+  > noprefix = True
+  > showfunc = True
+  > ignorews = True
+  > ignorewsamount = True
+  > ignoreblanklines = True
+  > unified = 1
+  > EOF
+
+  $ echo ' a' > a
+  $ hg qnew prepare -d '0 0'
+  $ echo '  a' > a
+  $ printf '\0' > b
+  $ echo >> c
+  $ hg qnew diff -d '0 0'
+
+  $ cat .hg/patches/prepare
+  # HG changeset patch
+  # Date 0 0
+  # Parent  cf0bfe72686a47d8d7d7b4529a3adb8b0b449a9f
+  
+  $ cat .hg/patches/diff
+  # HG changeset patch
+  # Date 0 0
+  # Parent  fb9c4422b0f37dd576522dd9a3f99b825c177efe
+  
+  diff --git b b
+  Binary file b has changed
+
   $ cd ..
 
