@@ -5,7 +5,7 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/folly:conv",
         "@/folly:format",
         "@/folly:optional",

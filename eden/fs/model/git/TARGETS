@@ -33,7 +33,7 @@ cpp_library(
     ],
     deps = [
         ":glob",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/folly:optional",
         "@/folly:range",
     ],

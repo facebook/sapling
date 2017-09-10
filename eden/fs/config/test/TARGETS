@@ -5,7 +5,7 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     deps = [
         "@/eden/fs/config:config",
-        "@/eden/fs/utils:utils",
+        "@/eden/fs/utils:path",
         "@/eden/fs/utils/test:test_lib",
         "@/folly:file_util",
         "@/folly/experimental:test_util",
