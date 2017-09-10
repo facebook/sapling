@@ -54,3 +54,11 @@ with wrap1:
         print('context manager', dummy.getstack())
     print('context manager', dummy.getstack())
 print('context manager', dummy.getstack())
+
+# Wrap callable object which has no __name__
+class callableobj(object):
+    def __call__(self):
+        return ['orig']
+dummy.cobj = callableobj()
+extensions.wrapfunction(dummy, 'cobj', wrappers[0])
+print('wrap callable object', dummy.cobj())

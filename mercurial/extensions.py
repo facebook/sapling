@@ -333,7 +333,10 @@ def bind(func, *args):
 
 def _updatewrapper(wrap, origfn, unboundwrapper):
     '''Copy and add some useful attributes to wrapper'''
-    wrap.__name__ = origfn.__name__
+    try:
+        wrap.__name__ = origfn.__name__
+    except AttributeError:
+        pass
     wrap.__module__ = getattr(origfn, '__module__')
     wrap.__doc__ = getattr(origfn, '__doc__')
     wrap.__dict__.update(getattr(origfn, '__dict__', {}))
