@@ -235,13 +235,35 @@ Test how [diff] configuration influence and cause invalid or lossy patches:
   # Date 0 0
   # Parent  cf0bfe72686a47d8d7d7b4529a3adb8b0b449a9f
   
+  diff -r cf0bfe72686a -r fb9c4422b0f3 a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -a
+  + a
   $ cat .hg/patches/diff
   # HG changeset patch
   # Date 0 0
   # Parent  fb9c4422b0f37dd576522dd9a3f99b825c177efe
   
-  diff --git b b
-  Binary file b has changed
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  - a
+  +  a
+  diff --git a/b b/b
+  index 78981922613b2afb6025042ff6bd878ac1994e85..f76dd238ade08917e6712764a16a22005a50573d
+  GIT binary patch
+  literal 1
+  Ic${MZ000310RR91
+  
+  diff --git a/c b/c
+  --- a/c
+  +++ b/c
+  @@ -1,1 +1,2 @@
+   a
+  +
 
   $ cd ..
 

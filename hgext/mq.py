@@ -503,8 +503,11 @@ class queue(object):
         self.guardsdirty = False
         self.activeguards = None
 
-    def diffopts(self, opts=None, patchfn=None):
-        diffopts = patchmod.diffopts(self.ui, opts)
+    def diffopts(self, opts=None, patchfn=None, plain=False):
+        """Return diff options tweaked for this mq use, possibly upgrading to
+        git format, and possibly plain and without lossy options."""
+        diffopts = patchmod.difffeatureopts(self.ui, opts,
+            git=True, whitespace=not plain, formatchanging=not plain)
         if self.gitmode == 'auto':
             diffopts.upgrade = True
         elif self.gitmode == 'keep':
@@ -1177,7 +1180,7 @@ class queue(object):
         date = opts.get('date')
         if date:
             date = util.parsedate(date)
-        diffopts = self.diffopts({'git': opts.get('git')})
+        diffopts = self.diffopts({'git': opts.get('git')}, plain=True)
         if opts.get('checkname', True):
             self.checkpatchname(patchfn)
         inclsubs = checksubstate(repo)
@@ -1642,7 +1645,8 @@ class queue(object):
                 substatestate = repo.dirstate['.hgsubstate']
 
             ph = patchheader(self.join(patchfn), self.plainmode)
-            diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
+            diffopts = self.diffopts({'git': opts.get('git')}, patchfn,
+                                     plain=True)
             if newuser:
                 ph.setuser(newuser)
             if newdate:
