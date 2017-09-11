@@ -495,12 +495,14 @@ class mergestate(object):
                 f.close()
             else:
                 wctx[dfile].remove(ignoremissing=True)
-            complete, r, deleted = filemerge.premerge(self._repo, self._local,
-                                                      lfile, fcd, fco, fca,
+            complete, r, deleted = filemerge.premerge(self._repo, wctx,
+                                                      self._local, lfile, fcd,
+                                                      fco, fca,
                                                       labels=self._labels)
         else:
-            complete, r, deleted = filemerge.filemerge(self._repo, self._local,
-                                                       lfile, fcd, fco, fca,
+            complete, r, deleted = filemerge.filemerge(self._repo, wctx,
+                                                       self._local, lfile, fcd,
+                                                       fco, fca,
                                                        labels=self._labels)
         if r is None:
             # no real conflict
