@@ -324,7 +324,7 @@ def notbackedup(repo, subset, x):
     bkpstate = _readlocalbackupstate(repo.ui, repo)
     visiblebkpheads = [head for head in bkpstate.heads if head in repo]
     expectedbkpheads = _backupheads(repo.ui, repo)
-    return subset & repo.revs('draft() and only(%ls, %ls)',
+    return subset & repo.revs('draft() and ::%ls - ::%ls',
                               expectedbkpheads, visiblebkpheads)
 
 def smartlogsummary(ui, repo):
@@ -334,7 +334,7 @@ def smartlogsummary(ui, repo):
     bkpstate = _readlocalbackupstate(ui, repo)
     visiblebkpheads = [head for head in bkpstate.heads if head in repo]
     expectedbkpheads = _backupheads(ui, repo)
-    unbackeduprevs = repo.revs('draft() and only(%ls, %ls)',
+    unbackeduprevs = repo.revs('draft() and ::%ls - ::%ls',
                                expectedbkpheads, visiblebkpheads)
 
     # Count the number of changesets that haven't been backed up for 10 minutes.
