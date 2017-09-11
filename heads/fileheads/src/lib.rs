@@ -14,56 +14,37 @@ extern crate heads;
 extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_urlencoded;
-#[cfg(test)]
-extern crate tempdir;
 #[cfg(test)]
 extern crate mercurial_types;
+#[cfg(test)]
+extern crate tempdir;
 
+use std::error;
 use std::fs::{self, File};
 use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::string::ToString;
 use std::sync::Arc;
 
 use futures::Async;
-use futures::future::{BoxFuture, Future, IntoFuture, poll_fn};
+use futures::future::{poll_fn, BoxFuture, Future, IntoFuture};
 use futures::stream::{self, BoxStream, Stream};
 use futures_cpupool::CpuPool;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
-use serde_urlencoded::{from_str, to_string};
 
 use heads::Heads;
 
 mod errors {
     error_chain!{
         foreign_links {
-            De(::serde::de::value::Error);
             Io(::std::io::Error);
-            Ser(::serde_urlencoded::ser::Error);
         }
     }
 }
 pub use errors::*;
 
 static PREFIX: &'static str = "head-";
-
-/// Wrapper struct to work around the fact that serde_urlencoded can only operate on
-/// non-tuple structs and maps.
-#[derive(Debug, Deserialize, Serialize)]
-struct UrlEncodeWrapper<K> {
-    key: K,
-}
-
-impl<K> UrlEncodeWrapper<K> {
-    fn new(key: K) -> Self {
-        UrlEncodeWrapper { key: key }
-    }
-}
 
 /// A basic file-based persistent head store.
 ///
@@ -76,7 +57,10 @@ pub struct FileHeads<T> {
     _marker: PhantomData<T>,
 }
 
-impl<T: Serialize> FileHeads<T> {
+impl<T> FileHeads<T>
+where
+    T: ToString + Send,
+{
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_pool(path, Arc::new(CpuPool::new_num_cpus()))
     }
@@ -106,14 +90,14 @@ impl<T: Serialize> FileHeads<T> {
     }
 
     fn get_path(&self, key: &T) -> Result<PathBuf> {
-        let key_string = to_string(UrlEncodeWrapper::new(key))?;
-        Ok(self.base.join(format!("{}{}", PREFIX, key_string)))
+        Ok(self.base.join(format!("{}{}", PREFIX, key.to_string())))
     }
 }
 
 impl<T> Heads for FileHeads<T>
 where
-    T: Serialize + DeserializeOwned + Send + 'static,
+    T: FromStr + ToString + Send + 'static,
+    <T as FromStr>::Err: error::Error + Send,
 {
     type Key = T;
     type Error = Error;
@@ -175,16 +159,14 @@ where
                         .map_err(From::from)
                         .map(|entry| entry.file_name().to_string_lossy().into_owned())
                 })
-                .filter(|result| match result {
-                    &Ok(ref name) => name.starts_with(PREFIX),
-                    &Err(_) => true,
-                })
-                .map(|result| {
-                    result.and_then(|name| {
-                        from_str::<UrlEncodeWrapper<T>>(&name[PREFIX.len()..])
-                            .map(|wrapper| wrapper.key)
-                            .map_err(From::from)
-                    })
+                .filter_map(|result| match result {
+                    Ok(ref name) if name.starts_with(PREFIX) => {
+                        let name = &name[PREFIX.len()..];
+                        let name = T::from_str(name).chain_err(|| "can't parse name");
+                        Some(name)
+                    }
+                    Ok(_) => None,
+                    Err(err) => Some(Err(err)),
                 })
         });
         match names {
@@ -198,11 +180,11 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::str::FromStr;
     use futures::{Future, Stream};
-    use tempdir::TempDir;
     use mercurial_types::NodeHash;
     use mercurial_types::hash::Sha1;
+    use std::str::FromStr;
+    use tempdir::TempDir;
 
     #[test]
     fn basic() {
