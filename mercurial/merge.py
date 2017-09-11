@@ -1712,6 +1712,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             repo.vfs.write('updatestate', p2.hex())
 
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
+        wc.flushall()
 
         if not partial:
             with repo.dirstate.parentchange():
