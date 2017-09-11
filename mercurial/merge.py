@@ -1126,6 +1126,10 @@ def batchremove(repo, wctx, actions):
                            "(consider changing to repo root: %s)\n") %
                          repo.root)
 
+    # It's necessary to flush here in case we're inside a worker fork and will
+    # quit after this function.
+    wctx.flushall()
+
 def batchget(repo, mctx, wctx, actions):
     """apply gets to the working directory
 
@@ -1160,6 +1164,10 @@ def batchget(repo, mctx, wctx, actions):
             i += 1
     if i > 0:
         yield i, f
+
+    # It's necessary to flush here in case we're inside a worker fork and will
+    # quit after this function.
+    wctx.flushall()
 
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """apply the merge action list to the working directory
@@ -1228,6 +1236,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
     removed = len(actions['r'])
+
+    # We should flush before forking into worker processes, since those workers
+    # flush when they complete, and we don't want to duplicate work.
+    wctx.flushall()
 
     # get in parallel
     prog = worker.worker(repo.ui, 0.001, batchget, (repo, mctx, wctx),
