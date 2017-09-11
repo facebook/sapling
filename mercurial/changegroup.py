@@ -911,11 +911,6 @@ def _changegroupinfo(repo, nodes, source):
         for node in nodes:
             repo.ui.debug("%s\n" % hex(node))
 
-def makestream(repo, outgoing, version, source, fastpath=False,
-               bundlecaps=None):
-    bundler = getbundler(version, repo, bundlecaps=bundlecaps)
-    return getsubsetraw(repo, outgoing, bundler, source, fastpath=fastpath)
-
 def makechangegroup(repo, outgoing, version, source, fastpath=False,
                     bundlecaps=None):
     cgstream = makestream(repo, outgoing, version, source,
@@ -923,7 +918,10 @@ def makechangegroup(repo, outgoing, version, source, fastpath=False,
     return getunbundler(version, util.chunkbuffer(cgstream), None,
                         {'clcount': len(outgoing.missing) })
 
-def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
+def makestream(repo, outgoing, version, source, fastpath=False,
+               bundlecaps=None):
+    bundler = getbundler(version, repo, bundlecaps=bundlecaps)
+
     repo = repo.unfiltered()
     commonrevs = outgoing.common
     csets = outgoing.missing
