@@ -666,6 +666,11 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         onfailure = _("merging %s failed!\n")
         precheck = None
 
+        # If using deferred writes, must flush any deferred contents if running
+        # an external merge tool since it has arbitrary access to the working
+        # copy.
+        wctx.flushall()
+
     toolconf = tool, toolpath, binary, symlink
 
     if mergetype == nomerge:
