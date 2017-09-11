@@ -221,17 +221,21 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
       switch (iscdatapack) {
         case 1:
           // Store is C datapack
-          cSubStores.push_back(store);
-          py_datapackstore *subStore = (py_datapackstore*)item;
-          stores.push_back(&subStore->datapackstore);
+          {
+            cSubStores.push_back(store);
+            py_datapackstore *subStore = (py_datapackstore*)item;
+            stores.push_back(&subStore->datapackstore);
+          }
           break;
         case 0:
           // Store is PythonDataStore, it's memory management
           // is performed by py_uniondatapackstore
-          std::shared_ptr<PythonDataStore> pystore =
-            std::make_shared<PythonDataStore>(store);
-          pySubStores.push_back(pystore);
-          stores.push_back(pystore.get());
+          {
+            std::shared_ptr<PythonDataStore> pystore =
+              std::make_shared<PythonDataStore>(store);
+            pySubStores.push_back(pystore);
+            stores.push_back(pystore.get());
+          }
           break;
         default:
           // Error
