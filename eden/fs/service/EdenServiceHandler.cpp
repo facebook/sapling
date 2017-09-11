@@ -454,10 +454,11 @@ void EdenServiceHandler::hgGetDirstateTuple(
                       out.get_status())
                << " "
                << _DirstateMergeState_VALUES_TO_NAMES.at(out.get_mergeState());
-  } catch (const std::exception& e) {
-    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") failed with "
-               << e.what();
-    throw;
+  } catch (const std::out_of_range& e) {
+    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") returns None";
+    NoValueForKeyError error;
+    error.set_key(*relativePath);
+    throw error;
   }
 }
 
@@ -535,10 +536,11 @@ void EdenServiceHandler::hgCopyMapGet(
     relativePathSource = source.stringPiece().str();
     XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") returning "
                << relativePathSource;
-  } catch (const std::exception& e) {
-    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") failed with "
-               << e.what();
-    throw;
+  } catch (const std::out_of_range& e) {
+    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") returns None";
+    NoValueForKeyError error;
+    error.set_key(*relativePathDest);
+    throw error;
   }
 }
 

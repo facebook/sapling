@@ -297,7 +297,7 @@ DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {
     // support subrepos in Eden, this seems to have the desired effect as it is
     // ultimately reflected as a KeyError in the Hg extension (though it could
     // be swallowing a real logical error in that case, as well).
-    throw std::domain_error(folly::to<std::string>(
+    throw std::out_of_range(folly::to<std::string>(
         "No hgDirstateTuple for ",
         filename.stringPiece(),
         " because Eden acts as if this file does not exist."));
@@ -313,7 +313,7 @@ DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {
     tuple.set_mergeState(DirstateMergeState::NotApplicable);
     return tuple;
   } else {
-    throw std::domain_error(folly::to<std::string>(
+    throw std::out_of_range(folly::to<std::string>(
         "No hgDirstateTuple for ",
         filename.stringPiece(),
         " because there is no entry for it in the root Tree as a file."));

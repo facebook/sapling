@@ -26,6 +26,9 @@ exception EdenError {
   2: optional i32 errorCode
 } (message = 'message')
 
+exception NoValueForKeyError {
+  1: string key
+}
 
 struct MountInfo {
   1: string mountPoint
@@ -373,7 +376,10 @@ service EdenService extends fb303.FacebookService {
   hgdirstate.DirstateTuple hgGetDirstateTuple(
     1: string mountPoint,
     2: string relativePath,
-  ) throws (1: EdenError ex)
+  ) throws (
+    1: EdenError ex
+    2: NoValueForKeyError noValueForKeyError
+  )
 
   /** Return a boolean indicating whether something was actually deleted. */
   bool hgDeleteDirstateTuple(
@@ -396,7 +402,7 @@ service EdenService extends fb303.FacebookService {
   string hgCopyMapGet(
     1: string mountPoint,
     2: string relativePathDest,
-  )
+  ) throws (1: NoValueForKeyError noValueForKeyError)
 
   /**
    * In practice, this map should be fairly small.
