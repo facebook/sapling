@@ -951,11 +951,6 @@ def getchangegroup(repo, source, outgoing, bundlecaps=None,
     return makechangegroup(repo, outgoing, version, source,
                            bundlecaps=bundlecaps)
 
-def getlocalchangegroup(repo, *args, **kwargs):
-    repo.ui.deprecwarn('getlocalchangegroup is deprecated, use getchangegroup',
-                       '4.3')
-    return getchangegroup(repo, *args, **kwargs)
-
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
     outgoing = discovery.outgoing(repo, missingroots=basenodes,
