@@ -940,22 +940,6 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def changegroupsubset(repo, roots, heads, source, version='01'):
-    """Compute a changegroup consisting of all the nodes that are
-    descendants of any of the roots and ancestors of any of the heads.
-    Return a chunkbuffer object whose read() method will return
-    successive changegroup chunks.
-
-    It is fairly complex as determining which filenodes and which
-    manifest nodes need to be included for the changeset to be complete
-    is non-trivial.
-
-    Another wrinkle is doing the reverse, figuring out which changeset in
-    the changegroup a particular filenode or manifestnode belongs to.
-    """
-    outgoing = discovery.outgoing(repo, missingroots=roots, missingheads=heads)
-    return makechangegroup(repo, outgoing, version, source)
-
 def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
                            version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
@@ -985,7 +969,9 @@ def getlocalchangegroup(repo, *args, **kwargs):
 
 def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
-    return changegroupsubset(repo, basenodes, repo.heads(), source)
+    outgoing = discovery.outgoing(repo, missingroots=basenodes,
+                                  missingheads=repo.heads())
+    return makechangegroup(repo, outgoing, '01', source)
 
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0

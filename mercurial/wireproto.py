@@ -21,6 +21,7 @@ from .node import (
 from . import (
     bundle2,
     changegroup as changegroupmod,
+    discovery,
     encoding,
     error,
     exchange,
@@ -801,7 +802,9 @@ def changegroup(repo, proto, roots):
 def changegroupsubset(repo, proto, bases, heads):
     bases = decodelist(bases)
     heads = decodelist(heads)
-    cg = changegroupmod.changegroupsubset(repo, bases, heads, 'serve')
+    outgoing = discovery.outgoing(repo, missingroots=bases,
+                                  missingheads=heads)
+    cg = changegroupmod.makechangegroup(repo, outgoing, '01', 'serve')
     return streamres(reader=cg, v1compressible=True)
 
 @wireprotocommand('debugwireargs', 'one two *')

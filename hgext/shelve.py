@@ -33,6 +33,7 @@ from mercurial import (
     bundlerepo,
     changegroup,
     cmdutil,
+    discovery,
     error,
     exchange,
     hg,
@@ -145,8 +146,11 @@ class shelvedfile(object):
             btype = 'HG20'
             compression = 'BZ'
 
-        cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve',
-                                           version=cgversion)
+        outgoing = discovery.outgoing(self.repo, missingroots=bases,
+                                      missingheads=[node])
+        cg = changegroup.makechangegroup(self.repo, outgoing, cgversion,
+                                         'shelve')
+
         bundle2.writebundle(self.ui, cg, self.fname, btype, self.vfs,
                                 compression=compression)
 

@@ -31,6 +31,7 @@ from . import (
     context,
     dirstate,
     dirstateguard,
+    discovery,
     encoding,
     error,
     exchange,
@@ -289,7 +290,9 @@ class locallegacypeer(repository.legacypeer, localpeer):
         return changegroup.changegroup(self._repo, basenodes, source)
 
     def changegroupsubset(self, bases, heads, source):
-        return changegroup.changegroupsubset(self._repo, bases, heads, source)
+        outgoing = discovery.outgoing(self._repo, missingroots=bases,
+                                      missingheads=heads)
+        return changegroup.makechangegroup(self._repo, outgoing, '01', source)
 
     # End of baselegacywirecommands interface.
 
