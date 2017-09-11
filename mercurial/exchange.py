@@ -755,10 +755,9 @@ def _pushb2ctx(pushop, bundler):
         if not cgversions:
             raise ValueError(_('no common changegroup version'))
         version = max(cgversions)
-    cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
-                                            pushop.outgoing,
-                                            version=version)
-    cgpart = bundler.newpart('changegroup', data=cg)
+    cgstream = changegroup.makestream(pushop.repo, pushop.outgoing, version,
+                                      'push')
+    cgpart = bundler.newpart('changegroup', data=cgstream)
     if cgversions:
         cgpart.addparam('version', version)
     if 'treemanifest' in pushop.repo.requirements:
@@ -1621,7 +1620,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
 def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                               b2caps=None, heads=None, common=None, **kwargs):
     """add a changegroup part to the requested bundle"""
-    cg = None
+    cgstream = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
         version = '01'
@@ -1633,12 +1632,11 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                 raise ValueError(_('no common changegroup version'))
             version = max(cgversions)
         outgoing = _computeoutgoing(repo, heads, common)
-        cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
-                                                bundlecaps=bundlecaps,
-                                                version=version)
+        cgstream = changegroup.makestream(repo, outgoing, version, source,
+                                          bundlecaps=bundlecaps)
 
-    if cg:
-        part = bundler.newpart('changegroup', data=cg)
+    if cgstream:
+        part = bundler.newpart('changegroup', data=cgstream)
         if cgversions:
             part.addparam('version', version)
         part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
