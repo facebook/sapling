@@ -662,7 +662,7 @@ class cg1packer(object):
             'treemanifest' not in repo.requirements)
 
         for chunk in self.generatemanifests(commonrevs, clrevorder,
-                fastpathlinkrev, mfs, fnodes):
+                fastpathlinkrev, mfs, fnodes, source):
             yield chunk
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
@@ -688,7 +688,12 @@ class cg1packer(object):
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
-                          fnodes):
+                          fnodes, source):
+        """Returns an iterator of changegroup chunks containing manifests.
+
+        `source` is unused here, but is used by extensions like remotefilelog to
+        change what is sent based in pulls vs pushes, etc.
+        """
         repo = self._repo
         mfl = repo.manifestlog
         dirlog = mfl._revlog.dirlog
