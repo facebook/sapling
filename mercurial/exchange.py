@@ -963,12 +963,8 @@ def _pushchangeset(pushop):
                             or pushop.repo.changelog.filteredrevs):
         # push everything,
         # use the fast path, no race possible on push
-        bundler = changegroup.cg1packer(pushop.repo, bundlecaps)
-        cg = changegroup.getsubset(pushop.repo,
-                                   outgoing,
-                                   bundler,
-                                   'push',
-                                   fastpath=True)
+        cg = changegroup.makechangegroup(pushop.repo, outgoing, '01', 'push',
+                fastpath=True, bundlecaps=bundlecaps)
     else:
         cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing,
                                         bundlecaps=bundlecaps)

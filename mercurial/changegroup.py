@@ -912,6 +912,18 @@ def _changegroupinfo(repo, nodes, source):
         for node in nodes:
             repo.ui.debug("%s\n" % hex(node))
 
+def makestream(repo, outgoing, version, source, fastpath=False,
+               bundlecaps=None):
+    bundler = getbundler(version, repo, bundlecaps=bundlecaps)
+    return getsubsetraw(repo, outgoing, bundler, source, fastpath=fastpath)
+
+def makechangegroup(repo, outgoing, version, source, fastpath=False,
+                    bundlecaps=None):
+    cgstream = makestream(repo, outgoing, version, source,
+                          fastpath=fastpath, bundlecaps=bundlecaps)
+    return getunbundler(version, util.chunkbuffer(cgstream), None,
+                        {'clcount': len(outgoing.missing) })
+
 def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     repo = repo.unfiltered()
     commonrevs = outgoing.common
@@ -928,11 +940,6 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def getsubset(repo, outgoing, bundler, source, fastpath=False):
-    gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return getunbundler(bundler.version, util.chunkbuffer(gengroup), None,
-                        {'clcount': len(outgoing.missing)})
-
 def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are
     descendants of any of the roots and ancestors of any of the heads.
@@ -947,8 +954,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     the changegroup a particular filenode or manifestnode belongs to.
     """
     outgoing = discovery.outgoing(repo, missingroots=roots, missingheads=heads)
-    bundler = getbundler(version, repo)
-    return getsubset(repo, outgoing, bundler, source)
+    return makechangegroup(repo, outgoing, version, source)
 
 def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
                            version='01'):
@@ -969,8 +975,8 @@ def getchangegroup(repo, source, outgoing, bundlecaps=None,
     precomputed sets in outgoing."""
     if not outgoing.missing:
         return None
-    bundler = getbundler(version, repo, bundlecaps)
-    return getsubset(repo, outgoing, bundler, source)
+    return makechangegroup(repo, outgoing, version, source,
+                           bundlecaps=bundlecaps)
 
 def getlocalchangegroup(repo, *args, **kwargs):
     repo.ui.deprecwarn('getlocalchangegroup is deprecated, use getchangegroup',
