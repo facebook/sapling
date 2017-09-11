@@ -939,17 +939,6 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def getchangegroup(repo, source, outgoing, bundlecaps=None,
-                   version='01'):
-    """Like getbundle, but taking a discovery.outgoing as an argument.
-
-    This is only implemented for local repos and reuses potentially
-    precomputed sets in outgoing."""
-    if not outgoing.missing:
-        return None
-    return makechangegroup(repo, outgoing, version, source,
-                           bundlecaps=bundlecaps)
-
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0

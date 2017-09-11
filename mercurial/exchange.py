@@ -965,8 +965,8 @@ def _pushchangeset(pushop):
         cg = changegroup.makechangegroup(pushop.repo, outgoing, '01', 'push',
                 fastpath=True, bundlecaps=bundlecaps)
     else:
-        cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing,
-                                        bundlecaps=bundlecaps)
+        cg = changegroup.makechangegroup(pushop.repo, outgoing, '01',
+                                        'push', bundlecaps=bundlecaps)
 
     # apply changegroup to remote
     # local repo finds heads on server, finds out what

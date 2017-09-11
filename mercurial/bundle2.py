@@ -1393,7 +1393,7 @@ def obsmarkersversion(caps):
 def writenewbundle(ui, repo, source, filename, bundletype, outgoing, opts,
                    vfs=None, compression=None, compopts=None):
     if bundletype.startswith('HG10'):
-        cg = changegroup.getchangegroup(repo, source, outgoing, version='01')
+        cg = changegroup.makechangegroup(repo, outgoing, '01', source)
         return writebundle(ui, cg, filename, bundletype, vfs=vfs,
                            compression=compression, compopts=compopts)
     elif not bundletype.startswith('HG20'):
@@ -1421,8 +1421,7 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
     cgversion = opts.get('cg.version')
     if cgversion is None:
         cgversion = changegroup.safeversion(repo)
-    cg = changegroup.getchangegroup(repo, source, outgoing,
-                                    version=cgversion)
+    cg = changegroup.makechangegroup(repo, outgoing, cgversion, source)
     part = bundler.newpart('changegroup', data=cg.getchunks())
     part.addparam('version', cg.version)
     if 'clcount' in cg.extras:

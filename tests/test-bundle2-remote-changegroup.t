@@ -64,7 +64,8 @@ Create an extension to test bundle2 remote-changegroup parts
   >             common.extend(repo.lookup(r) for r in repo.revs(_common))
   >             heads = [repo.lookup(r) for r in repo.revs(heads)]
   >             outgoing = discovery.outgoing(repo, common, heads)
-  >             cg = changegroup.getchangegroup(repo, 'changegroup', outgoing)
+  >             cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >                                              'changegroup')
   >             newpart('changegroup', cg.getchunks())
   >         else:
   >             raise Exception('unknown verb')
