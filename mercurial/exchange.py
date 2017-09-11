@@ -1595,8 +1595,8 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
         outgoing = _computeoutgoing(repo, heads, common)
-        bundler = changegroup.getbundler('01', repo, bundlecaps)
-        return changegroup.getsubsetraw(repo, outgoing, bundler, source)
+        return changegroup.makestream(repo, outgoing, '01', source,
+                                      bundlecaps=bundlecaps)
 
     # bundle20 case
     b2caps = {}
