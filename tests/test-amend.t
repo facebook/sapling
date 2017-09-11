@@ -85,6 +85,14 @@ Nothing changed
   nothing changed
   [1]
 
+  $ hg amend -d "0 0"
+  nothing changed
+  [1]
+
+  $ hg amend -d "Thu Jan 01 00:00:00 1970 UTC"
+  nothing changed
+  [1]
+
 Matcher and metadata options
 
   $ echo 3 > C

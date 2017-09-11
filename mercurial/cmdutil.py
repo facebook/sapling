@@ -3059,6 +3059,9 @@ def amend(ui, repo, old, extra, pats, opts):
         user = opts.get('user') or old.user()
         date = opts.get('date') or old.date()
 
+        # Parse the date to allow comparison between date and old.date()
+        date = util.parsedate(date)
+
         if len(old.parents()) > 1:
             # ctx.files() isn't reliable for merges, so fall back to the
             # slower repo.status() method
