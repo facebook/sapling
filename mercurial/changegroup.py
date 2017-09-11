@@ -21,7 +21,6 @@ from .node import (
 
 from . import (
     dagutil,
-    discovery,
     error,
     mdiff,
     phases,
@@ -950,12 +949,6 @@ def getchangegroup(repo, source, outgoing, bundlecaps=None,
         return None
     return makechangegroup(repo, outgoing, version, source,
                            bundlecaps=bundlecaps)
-
-def changegroup(repo, basenodes, source):
-    # to avoid a race we use changegroupsubset() (issue1320)
-    outgoing = discovery.outgoing(repo, missingroots=basenodes,
-                                  missingheads=repo.heads())
-    return makechangegroup(repo, outgoing, '01', source)
 
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0

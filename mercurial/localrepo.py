@@ -287,7 +287,9 @@ class locallegacypeer(repository.legacypeer, localpeer):
         return self._repo.branches(nodes)
 
     def changegroup(self, basenodes, source):
-        return changegroup.changegroup(self._repo, basenodes, source)
+        outgoing = discovery.outgoing(self._repo, missingroots=basenodes,
+                                      missingheads=self._repo.heads())
+        return changegroup.makechangegroup(self._repo, outgoing, '01', source)
 
     def changegroupsubset(self, bases, heads, source):
         outgoing = discovery.outgoing(self._repo, missingroots=bases,

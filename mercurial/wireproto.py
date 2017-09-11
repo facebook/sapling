@@ -795,7 +795,9 @@ def capabilities(repo, proto):
 @wireprotocommand('changegroup', 'roots')
 def changegroup(repo, proto, roots):
     nodes = decodelist(roots)
-    cg = changegroupmod.changegroup(repo, nodes, 'serve')
+    outgoing = discovery.outgoing(repo, missingroots=nodes,
+                                  missingheads=repo.heads())
+    cg = changegroupmod.makechangegroup(repo, outgoing, '01', 'serve')
     return streamres(reader=cg, v1compressible=True)
 
 @wireprotocommand('changegroupsubset', 'bases heads')
