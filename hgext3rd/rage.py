@@ -256,11 +256,11 @@ def rage(ui, repo, *pats, **opts):
             'language': 'hgrage'
         }, timeout=timeout)
         pasteurl = resp.get('uri')
-    except arcconfig.ArcConfigError as ex:
+    except arcconfig.ArcConfigError:
         ui.warn(_('arcconfig configuration problem.\n'))
-    except conduit.ClientError as ex:
+    except conduit.ClientError:
         ui.warn(_('Error talking to phabricator.\n'))
-    except ValueError as ex:
+    except ValueError:
         ui.warn(_('Bad response from phabricator.\n'))
 
     if pasteurl:
