@@ -1260,7 +1260,7 @@ test .orig files go where the user wants them to
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ ls .hg/origbackups
-  root.orig
+  root
   $ rm -rf .hg/origbackups
 
 test Abort unshelve always gets user out of the unshelved state

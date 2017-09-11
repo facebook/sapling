@@ -553,7 +553,7 @@ def origpath(ui, repo, filepath):
     '''customize where .orig files are created
 
     Fetch user defined path from config file: [ui] origbackuppath = <path>
-    Fall back to default (filepath) if not specified
+    Fall back to default (filepath with .orig suffix) if not specified
     '''
     origbackuppath = ui.config('ui', 'origbackuppath')
     if origbackuppath is None:
@@ -567,7 +567,7 @@ def origpath(ui, repo, filepath):
         ui.note(_('creating directory: %s\n') % origbackupdir)
         util.makedirs(origbackupdir)
 
-    return fullorigpath + ".orig"
+    return fullorigpath
 
 class _containsnode(object):
     """proxy __contains__(node) to container.__contains__ which accepts revs"""

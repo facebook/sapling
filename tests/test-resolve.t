@@ -255,8 +255,8 @@ resolve --all should re-merge all unresolved files
   warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ ls .hg/origbackups
-  file1.orig
-  file2.orig
+  file1
+  file2
   $ grep '<<<' file1 > /dev/null
   $ grep '<<<' file2 > /dev/null
 

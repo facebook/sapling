@@ -465,7 +465,7 @@ test mq.keepchanges setting
 test previous qpop (with --force and --config) saved .orig files to where user
 wants them
   $ ls .hg/origbackups
-  b.orig
+  b
   $ rm -rf .hg/origbackups
 
   $ cd ..

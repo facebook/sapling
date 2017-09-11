@@ -2007,7 +2007,9 @@ User interface controls.
 
 ``origbackuppath``
     The path to a directory used to store generated .orig files. If the path is
-    not a directory, one will be created.
+    not a directory, one will be created.  If set, files stored in this
+    directory have the same name as the original file and do not have a .orig
+    suffix.
 
 ``paginate``
   Control the pagination of command output (default: True). See :hg:`help pager`
