@@ -25,8 +25,9 @@ extern "C" {
 #include "cstore/datastore.h"
 #include "cstore/key.h"
 #include "cstore/py-structs.h"
-#include "cstore/pythonutil.h"
+#include "cstore/pythondatastore.h"
 #include "cstore/pythonkeyiterator.h"
+#include "cstore/pythonutil.h"
 #include "cstore/uniondatapackstore.h"
 
 // --------- DatapackStore Implementation ---------
@@ -205,7 +206,8 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
 
   try {
     std::vector<DataStore*> stores;
-    std::vector<PythonObj> pySubStores;
+    std::vector<PythonObj> cSubStores;
+    std::vector< std::shared_ptr<PythonDataStore> > pySubStores;
 
     PyObject *item;
     PythonObj inputIterator = PyObject_GetIter(storeList);
@@ -213,26 +215,38 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
       // Record the substore references, so:
       // A) We can decref them in case of an error.
       // B) They don't get GC'd while the uniondatapackstore holds on to them.
-      pySubStores.push_back(PythonObj(item));
+      int iscdatapack = PyObject_IsInstance(item, (PyObject*)&datapackstoreType);
 
-      int isinstance = PyObject_IsInstance(item, (PyObject*)&datapackstoreType);
-      if (isinstance == 0) {
-        PyErr_SetString(PyExc_RuntimeError, "cuniondatapackstore only accepts cdatapackstore");
-        return -1;
-      } else if (isinstance != 1) {
-        // Error
-        return -1;
+      PythonObj store(item);
+      switch (iscdatapack) {
+        case 1:
+          // Store is C datapack
+          cSubStores.push_back(store);
+          py_datapackstore *subStore = (py_datapackstore*)item;
+          stores.push_back(&subStore->datapackstore);
+          break;
+        case 0:
+          // Store is PythonDataStore, it's memory management
+          // is performed by py_uniondatapackstore
+          std::shared_ptr<PythonDataStore> pystore =
+            std::make_shared<PythonDataStore>(store);
+          pySubStores.push_back(pystore);
+          stores.push_back(pystore.get());
+          break;
+        default:
+          // Error
+          return -1;
       }
-
-      py_datapackstore *pySubStore = (py_datapackstore*)item;
-      stores.push_back(&pySubStore->datapackstore);
     }
 
     // We have to manually call the member constructor, since the provided 'self'
     // is just zerod out memory.
     new(&self->uniondatapackstore) std::shared_ptr<UnionDatapackStore>(new UnionDatapackStore(stores));
-    new(&self->substores) std::vector<PythonObj>();
-    self->substores = pySubStores;
+    new(&self->cstores) std::vector<PythonObj>();
+    new(&self->pystores) std::vector< std::shared_ptr<PythonDataStore> >();
+
+    self->cstores = cSubStores;
+    self->pystores = pySubStores;
   } catch (const std::exception &ex) {
     PyErr_SetString(PyExc_RuntimeError, ex.what());
     return -1;
@@ -243,7 +257,8 @@ static int uniondatapackstore_init(py_uniondatapackstore *self, PyObject *args) 
 
 static void uniondatapackstore_dealloc(py_uniondatapackstore *self) {
   self->uniondatapackstore.~shared_ptr<UnionDatapackStore>();
-  self->substores.~vector<PythonObj>();
+  self->cstores.~vector<PythonObj>();
+  self->pystores.~vector< std::shared_ptr<PythonDataStore> >();
   PyObject_Del(self);
 }
 

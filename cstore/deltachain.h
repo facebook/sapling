@@ -160,39 +160,6 @@ class CDeltaChain : public DeltaChain {
     }
 };
 
-/*
- * Wrapper around python delta chain
- */
-class PyDeltaChain : public DeltaChain {
-  private:
-    std::shared_ptr< std::vector<DeltaChainLink> > _chain;
-
-  public:
-    PyDeltaChain(std::shared_ptr< std::vector<DeltaChainLink> > chain) :
-      _chain(chain) {}
-
-    // Default destructor is used, because the destructor of _chain object
-    // will free the allocated memory automatically.
-    ~PyDeltaChain() {}
-
-    const DeltaChainLink getlink(const size_t idx) {
-      return _chain->at(idx);
-    }
-
-    size_t linkcount() {
-      return _chain->size();
-    }
-
-    get_delta_chain_code_t status() {
-      if (_chain->size()) {
-        return GET_DELTA_CHAIN_OK;
-      } else {
-        return GET_DELTA_CHAIN_NOT_FOUND;
-      }
-    }
-
-};
-
 class DeltaChainIterator {
   private:
     size_t _index;

@@ -74,6 +74,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cstore/py-datapackstore.h it has no-che?k-code (glob)
   Skipping cstore/py-structs.h it has no-che?k-code (glob)
   Skipping cstore/py-treemanifest.h it has no-che?k-code (glob)
+  Skipping cstore/pythondatastore.cpp it has no-che?k-code (glob)
+  Skipping cstore/pythondatastore.h it has no-che?k-code (glob)
   Skipping cstore/pythonkeyiterator.h it has no-che?k-code (glob)
   Skipping cstore/pythonutil.cpp it has no-che?k-code (glob)
   Skipping cstore/pythonutil.h it has no-che?k-code (glob)

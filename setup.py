@@ -242,6 +242,7 @@ else:
                     'cstore/deltachain.cpp',
                     'cstore/py-cstore.cpp',
                     'cstore/pythonutil.cpp',
+                    'cstore/pythondatastore.cpp',
                     'cstore/uniondatapackstore.cpp',
                     'ctreemanifest/manifest.cpp',
                     'ctreemanifest/manifest_entry.cpp',

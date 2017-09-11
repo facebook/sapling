@@ -16,6 +16,7 @@ class PythonKeyIterator : public KeyIterator {
   private:
     PythonObj _input;
     Key _current;
+
   public:
     PythonKeyIterator(PythonObj input) :
       _input(input) {}
@@ -23,7 +24,7 @@ class PythonKeyIterator : public KeyIterator {
     Key *next() {
         PyObject *item;
         while ((item = PyIter_Next((PyObject*)_input)) != NULL) {
-          PythonObj itemObj = item;
+          PythonObj itemObj(item);
 
           char *name;
           Py_ssize_t namelen;

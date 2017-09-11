@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// deltachain.h - c++ implementation of deltachain and related classes
+// deltachain.cpp - c++ implementation of deltachain and related classes
 // no-check-code
 
 #include "cstore/deltachain.h"

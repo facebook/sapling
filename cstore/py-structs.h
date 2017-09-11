@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "cstore/datapackstore.h"
+#include "cstore/pythondatastore.h"
 #include "cstore/pythonutil.h"
 #include "cstore/uniondatapackstore.h"
 
@@ -28,7 +29,8 @@ struct py_uniondatapackstore {
   std::shared_ptr<UnionDatapackStore> uniondatapackstore;
 
   // Keep a reference to the python objects so we can decref them later.
-  std::vector<PythonObj> substores;
+  std::vector<PythonObj> cstores;
+  std::vector< std::shared_ptr<PythonDataStore> > pystores;
 };
 
 #endif // FBHGEXT_CSTORE_PY_STRUCTS_H
