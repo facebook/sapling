@@ -1206,7 +1206,7 @@ permanently delete a commit, we do not want to undo to this state.
   $ hg undo
   undone to *, before rebase -r 00617 -d 28dfc (glob)
   $ hg rebase -r 00617 -d 28dfc
-  rebasing 28:00617a57f780 "bfile" (tip)
+  rebasing 28:00617a57f780 "bfile"
   merging afile
   warning: conflicts while merging afile! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

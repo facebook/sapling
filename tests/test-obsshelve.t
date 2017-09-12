@@ -503,7 +503,7 @@ Shelve should leave dirstate clean (issue4055)
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -d 1 --config extensions.rebase=
-  rebasing 2:323bfa07f744 "xyz" (tip)
+  rebasing 2:323bfa07f744 "xyz"
   merging x
   $ hg unshelve
   unshelving change 'default'
