@@ -2085,10 +2085,10 @@ def debugssl(ui, repo, source=None, **opts):
                             'Windows'))
 
     if not source:
+        if not repo:
+            raise error.Abort(_("there is no Mercurial repository here, and no "
+                                "server specified"))
         source = "default"
-    elif not repo:
-        raise error.Abort(_("there is no Mercurial repository here, and no "
-                            "server specified"))
 
     source, branches = hg.parseurl(ui.expandpath(source))
     url = util.url(source)
