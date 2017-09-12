@@ -1632,8 +1632,9 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                 raise ValueError(_('no common changegroup version'))
             version = max(cgversions)
         outgoing = _computeoutgoing(repo, heads, common)
-        cgstream = changegroup.makestream(repo, outgoing, version, source,
-                                          bundlecaps=bundlecaps)
+        if outgoing.missing:
+            cgstream = changegroup.makestream(repo, outgoing, version, source,
+                                              bundlecaps=bundlecaps)
 
     if cgstream:
         part = bundler.newpart('changegroup', data=cgstream)
