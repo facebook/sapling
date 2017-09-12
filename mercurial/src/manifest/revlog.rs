@@ -28,6 +28,7 @@ pub struct Details {
 /// Revlog Manifest v1
 #[derive(Debug, PartialEq)]
 pub struct RevlogManifest {
+    // This is None for testing only -- the public API ensures `repo` always exists.
     repo: Option<RevlogRepo>,
     files: BTreeMap<Path, Details>,
 }
@@ -82,13 +83,6 @@ pub fn parse_with_prefix(data: &[u8], prefix: &Path) -> Result<BTreeMap<Path, De
 }
 
 impl RevlogManifest {
-    pub fn empty() -> RevlogManifest {
-        RevlogManifest {
-            repo: None,
-            files: BTreeMap::new(),
-        }
-    }
-
     pub fn new(repo: RevlogRepo, node: BlobNode) -> Result<RevlogManifest> {
         node.as_blob()
             .as_slice()
@@ -96,15 +90,17 @@ impl RevlogManifest {
             .and_then(|blob| Self::parse(Some(repo), blob))
     }
 
-    pub fn parse(repo: Option<RevlogRepo>, data: &[u8]) -> Result<RevlogManifest> {
+    fn parse(repo: Option<RevlogRepo>, data: &[u8]) -> Result<RevlogManifest> {
+        // This is private because it allows one to create a RevlogManifest with repo set to None.
         parse(data).map(|files| RevlogManifest { repo, files })
     }
 
-    pub fn parse_with_prefix(
+    fn parse_with_prefix(
         repo: Option<RevlogRepo>,
         data: &[u8],
         prefix: &Path,
     ) -> Result<RevlogManifest> {
+        // This is private because it allows one to create a RevlogManifest with repo set to None.
         parse_with_prefix(data, prefix).map(|files| RevlogManifest { repo, files })
     }
 
