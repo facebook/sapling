@@ -13,6 +13,10 @@
 extern crate error_chain;
 extern crate futures;
 extern crate mercurial_types;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate toml;
 extern crate vfs;
 
 pub mod errors;
