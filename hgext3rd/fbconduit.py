@@ -234,7 +234,7 @@ def overridestringset(orig, repo, subset, x, *args, **kwargs):
             return overridestringset(orig, repo, subset, 'g%s' % phabhash)
 
         if phabhash in repo:
-            return orig(repo, subset, phabhash)
+            return orig(repo, subset, phabhash, *args, **kwargs)
 
     # Is the given revset a phabricator svn revision (rO11223232323232)?
     svnrev = fbsvnhash.match(x)

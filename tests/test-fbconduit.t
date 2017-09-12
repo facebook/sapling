@@ -8,13 +8,15 @@ Basic functionality.
 
   $ hg init basic
   $ cd basic
-  $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
-  $ echo "[fbconduit]" >> .hg/hgrc
-  $ echo "reponame = basic" >> .hg/hgrc
-  $ echo "host = localhost:$CONDUIT_PORT" >> .hg/hgrc
-  $ echo "path = /intern/conduit/" >> .hg/hgrc
-  $ echo "protocol = http" >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fbconduit = $TESTDIR/../hgext3rd/fbconduit.py
+  > [fbconduit]
+  > reponame = basic
+  > host = localhost:$CONDUIT_PORT
+  > path = /intern/conduit/
+  > protocol = http
+  > EOF
   $ touch file
   $ hg add file
   $ hg ci -m "initial commit"
@@ -154,4 +156,10 @@ Make sure the template keywords are documented correctly
   $ cd basic
   $ hg help templates | grep gitnode
       gitnode       Return the git revision corresponding to a given hg rev
+  $ cd ..
+
+Make sure that locally found commits actually work
+  $ cd basic
+  $ hg up rFBS4772e01e369e598da6a916e3f4fc83dd8944bf23
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
