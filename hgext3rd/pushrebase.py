@@ -218,7 +218,7 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
 
     validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing))
 
-    cg = changegroup.getlocalchangegroupraw(repo, 'push', outgoing)
+    cg = changegroup.makestream(repo, outgoing, '01', 'push')
 
     # Explicitly notify the server what obsmarker versions the client supports
     # so the client could receive marker from the server.
@@ -670,10 +670,10 @@ def _addpushbackchangegroup(repo, reply, outgoing):
         cgversions.add('01')
     version = max(cgversions & set(changegroup.supportedoutgoingversions(repo)))
 
-    cg = changegroup.getlocalchangegroupraw(repo,
-                                            'rebase:reply',
-                                            outgoing,
-                                            version = version)
+    cg = changegroup.makestream(repo,
+                                outgoing,
+                                version,
+                                'rebase:reply')
 
     cgpart = reply.newpart('CHANGEGROUP', data=cg)
     if version != '01':

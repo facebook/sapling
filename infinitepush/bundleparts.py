@@ -36,8 +36,7 @@ def getscratchbranchpart(repo, peer, outgoing, confignonforwardmove,
     supportedversions.discard('01')
     cgversion = min(supportedversions)
     _handlelfs(repo, outgoing.missing)
-    cg = changegroup.getlocalchangegroupraw(repo, 'push',
-                                            outgoing, version=cgversion)
+    cg = changegroup.makestream(repo, outgoing, cgversion, 'push')
 
     params = {}
     params['cgversion'] = cgversion

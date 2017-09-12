@@ -444,9 +444,8 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, version):
     '''
     outgoing = discovery.outgoing(bundlerepo, commonheads=bundleroots,
                                   missingheads=[unknownhead])
-    outputbundleraw = changegroup.getlocalchangegroupraw(bundlerepo, 'pull',
-                                                         outgoing,
-                                                         version=version)
+    outputbundleraw = changegroup.makestream(bundlerepo, outgoing, version,
+                                             'pull')
     return util.chunkbuffer(outputbundleraw).read()
 
 def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
