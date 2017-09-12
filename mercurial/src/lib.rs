@@ -9,6 +9,7 @@
 #![allow(deprecated)]
 
 // External dependencies
+
 extern crate flate2;
 extern crate futures;
 
@@ -24,19 +25,19 @@ extern crate bitflags;
 #[cfg(test)]
 extern crate assert_matches;
 
-extern crate memmap;
-extern crate lz4;
-extern crate time;
 extern crate itertools;
+extern crate lz4;
+extern crate memmap;
+extern crate time;
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
 extern crate asyncmemo;
+extern crate bookmarks;
 extern crate mercurial_types;
 extern crate stockbookmarks;
-extern crate bookmarks;
 
 pub mod revlog;
 pub mod manifest;

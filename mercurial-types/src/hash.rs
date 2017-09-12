@@ -214,19 +214,23 @@ mod test {
             Ok(_) => panic!("unexpected OK - zero len"),
             Err(_) => (),
         };
-        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070") {    // one char missing
+        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070") {
+            // one char missing
             Ok(_) => panic!("unexpected OK - trunc"),
             Err(_) => (),
         };
-        match Sha1::from_str("xda39a3ee5e6b4b0d3255bfef95601890afd8070") {    // one char bad
+        match Sha1::from_str("xda39a3ee5e6b4b0d3255bfef95601890afd8070") {
+            // one char bad
             Ok(_) => panic!("unexpected OK - badchar end"),
             Err(_) => (),
         };
-        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070x") {    // one char bad
+        match Sha1::from_str("da39a3ee5e6b4b0d3255bfef95601890afd8070x") {
+            // one char bad
             Ok(_) => panic!("unexpected OK - badchar end"),
             Err(_) => (),
         };
-        match Sha1::from_str("da39a3ee5e6b4b0d325Xbfef95601890afd80709") {    // one char missing
+        match Sha1::from_str("da39a3ee5e6b4b0d325Xbfef95601890afd80709") {
+            // one char missing
             Ok(_) => panic!("unexpected OK - trunc"),
             Err(_) => (),
         };

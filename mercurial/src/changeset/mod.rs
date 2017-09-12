@@ -211,8 +211,8 @@ impl RevlogChangeset {
                 .chain_err(|| "can't get hash")?;
             ret.user = parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec()))
                 .chain_err(|| "can't get user")?;
-            let (time, extra) = parseline(&mut lines, parsetimeextra)
-                .chain_err(|| "can't get time/extra")?;
+            let (time, extra) =
+                parseline(&mut lines, parsetimeextra).chain_err(|| "can't get time/extra")?;
 
             ret.time = time;
             ret.extra = extra;

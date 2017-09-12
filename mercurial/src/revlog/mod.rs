@@ -28,8 +28,8 @@ mod lz4;
 mod test;
 
 use self::parser::{Header, Version};
-pub use self::revidx::RevIdx;
 pub use self::parser::Entry;
+pub use self::revidx::RevIdx;
 
 #[derive(Debug)]
 enum Datafile {
@@ -154,8 +154,7 @@ impl Revlog {
     where
         IP: AsRef<Path>,
     {
-        let idx = Datafile::map(idxpath)
-            .chain_err(|| format!("Can't map idxpath"))?;
+        let idx = Datafile::map(idxpath).chain_err(|| format!("Can't map idxpath"))?;
 
         let revlog = Revlog::init(idx, None)?;
 
@@ -171,8 +170,8 @@ impl Revlog {
         IP: AsRef<Path> + Debug,
         DP: AsRef<Path> + Debug,
     {
-        let mut revlog = Self::from_idx(&idxpath)
-            .chain_err(|| format!("Can't open index {:?}", idxpath))?;
+        let mut revlog =
+            Self::from_idx(&idxpath).chain_err(|| format!("Can't open index {:?}", idxpath))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
@@ -180,11 +179,11 @@ impl Revlog {
             let datafile = match datapath {
                 None => {
                     let path = idxpath.with_extension("d");
-                    Datafile::map(&path)
-                        .chain_err(|| format!("Can't open data file {:?}", path))?
+                    Datafile::map(&path).chain_err(|| format!("Can't open data file {:?}", path))?
                 }
-                Some(path) => Datafile::map(&path)
-                    .chain_err(|| format!("Can't open data file {:?}", path))?,
+                Some(path) => {
+                    Datafile::map(&path).chain_err(|| format!("Can't open data file {:?}", path))?
+                }
             };
             Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);
         }
@@ -321,7 +320,7 @@ impl RevlogInner {
     /// Return the ordinal index of an entry with the given nodeid.
     fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
         match self.nodeidx.get(nodeid).cloned() {
-            Some(idx) => Ok(idx),   // cache hit
+            Some(idx) => Ok(idx), // cache hit
             None => Err(
                 ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into(),
             ),
@@ -472,10 +471,9 @@ impl RevlogInner {
                 idx = baserev;
             } else {
                 let idx = chunks.pop().unwrap();
-                let chunk = self.get_chunk(idx)
-                    .chain_err::<_, Error>(|| {
-                        format!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx).into()
-                    })?;
+                let chunk = self.get_chunk(idx).chain_err::<_, Error>(|| {
+                    format!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx).into()
+                })?;
                 match chunk {
                     Chunk::Literal(v) => data = v,
                     _ => panic!("Non-literal chunk with no baserev."),

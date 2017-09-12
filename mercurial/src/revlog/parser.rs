@@ -216,7 +216,7 @@ fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 named!(remains_owned<Vec<u8> >,
-    map!(remains, |x: &[u8]| x.into()));
+map!(remains, |x: &[u8]| x.into()));
 
 /// Parse some literal data, possibly compressed
 named!(pub literal<Vec<u8> >,

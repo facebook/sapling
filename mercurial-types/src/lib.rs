@@ -27,13 +27,13 @@ extern crate quickcheck;
 
 extern crate bookmarks;
 
+extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
-extern crate heapsize;
 
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 
 pub mod bdiff;
 pub mod delta;

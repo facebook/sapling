@@ -106,8 +106,8 @@ impl FromStr for Required {
 pub struct RevlogRepo {
     basepath: PathBuf,               // path to .hg directory
     requirements: HashSet<Required>, // requirements
-    changelog: Revlog,                   // changes
-    manifest: Revlog,                    // manifest
+    changelog: Revlog,               // changes
+    manifest: Revlog,                // manifest
     inner: Arc<Mutex<RevlogInner>>,  // Inner parts
 }
 
@@ -133,15 +133,14 @@ impl RevlogRepo {
         let changelog = Revlog::from_idx_data(store.join("00changelog.i"), None as Option<String>)?;
         let tree_manifest_path = store.join("00manifesttree.i");
         let manifest = if tree_manifest_path.exists() {
-             Revlog::from_idx_data(tree_manifest_path, None as Option<String>)?
+            Revlog::from_idx_data(tree_manifest_path, None as Option<String>)?
         } else {
             // Fallback to flat manifest
             Revlog::from_idx_data(store.join("00manifest.i"), None as Option<String>)?
         };
 
         let mut req = HashSet::new();
-        let file = fs::File::open(base.join("requires"))
-            .chain_err(|| "Can't open `requires`")?;
+        let file = fs::File::open(base.join("requires")).chain_err(|| "Can't open `requires`")?;
         for line in BufReader::new(file).lines() {
             req.insert(line.chain_err(|| "Line read failed")?.parse()?);
         }
@@ -185,7 +184,7 @@ impl RevlogRepo {
 
     pub fn get_changelog_revlog_entry_by_nodeid(
         &self,
-        nodeid: &NodeHash
+        nodeid: &NodeHash,
     ) -> FutureResult<revlog::Entry> {
         self.changelog.get_entry_by_nodeid(nodeid).into_future()
     }
