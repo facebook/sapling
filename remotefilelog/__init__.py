@@ -268,7 +268,10 @@ def onetimeclientsetup(ui):
     else:
         fn = 'addchangegroupfiles' # hg <= 3.5
     wrapfunction(changegroup, fn, shallowbundle.addchangegroupfiles)
-    wrapfunction(changegroup, 'makechangegroup', shallowbundle.makechangegroup)
+    if util.safehasattr(changegroup, 'getchangegroup'):
+        wrapfunction(changegroup, 'getchangegroup', shallowbundle.getchangegroup)
+    else:
+        wrapfunction(changegroup, 'makechangegroup', shallowbundle.makechangegroup)
 
     def storewrapper(orig, requirements, path, vfstype):
         s = orig(requirements, path, vfstype)

@@ -223,6 +223,14 @@ if util.safehasattr(changegroup, 'cg2packer'):
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
                                 units=units)
 
+# Unused except in older versions of Mercurial
+def getchangegroup(orig, repo, source, outgoing, bundlecaps=None, version='01'):
+    def origmakechangegroup(repo, outgoing, version, source):
+        return orig(repo, source, outgoing, bundlecaps=bundlecaps,
+                    version=version)
+
+    return makechangegroup(origmakechangegroup, repo, outgoing, version, source)
+
 def makechangegroup(orig, repo, outgoing, version, source, *args, **kwargs):
     if not requirement in repo.requirements:
         return orig(repo, outgoing, version, source, *args, **kwargs)
