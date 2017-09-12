@@ -7,8 +7,6 @@
 //! Provides traits for walking and reading the content of a Virtual File System as well as
 //! implementation of those traits for Vfs based on Manifest
 #![deny(missing_docs)]
-// TODO(luk, T20453159) Remove once the library is ready to be used
-#![allow(dead_code)]
 #![deny(warnings)]
 
 #[macro_use]
@@ -19,9 +17,16 @@ extern crate mercurial_types;
 
 #[cfg(test)]
 extern crate boxfnonce;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 
 pub mod errors;
+mod manifest_vfs;
 mod node;
 mod tree;
 
+pub use manifest_vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile};
 pub use node::{VfsDir, VfsFile, VfsNode, VfsWalker};
+
+#[cfg(test)]
+mod test;

@@ -168,6 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::*;
 
     use boxfnonce::BoxFnOnce;
     use itertools::assert_equal;
@@ -226,10 +227,6 @@ mod tests {
     ) -> VfsNode<MockVfsDir, MockVfsFile> {
         let path = Path::new(path).unwrap().into_iter().collect();
         (MockVfsDir(path, file)).into_node()
-    }
-
-    fn pel(path: &'static str) -> PathElement {
-        Path::new(path).unwrap().into_iter().next().unwrap()
     }
 
     fn cmp_paths<'a, Els, P>(value: Els, expected: P)

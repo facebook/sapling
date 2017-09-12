@@ -35,5 +35,10 @@ error_chain! {
             description("maximum number of steps during a walk on Vfs was reached")
             display("{}", msg)
         }
+        /// One of the paths in entries listed by manifest contained an invalid (f.e. empty) Path
+        ManifestInvalidPath(msg: String) {
+            description("manifest contained an invalid path in one of it's entries")
+            display("{}", msg)
+        }
     }
 }

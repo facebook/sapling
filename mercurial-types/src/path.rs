@@ -17,6 +17,11 @@ use quickcheck::{Arbitrary, Gen};
 
 use errors::*;
 
+lazy_static! {
+    pub static ref DOT: PathElement = PathElement(b".".to_vec());
+    pub static ref DOTDOT: PathElement = PathElement(b"..".to_vec());
+}
+
 /// A path or filename within Mercurial (typically within manifests or changegroups).
 ///
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
