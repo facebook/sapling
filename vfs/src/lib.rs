@@ -10,8 +10,6 @@
 // TODO(luk, T20453159) Remove once the library is ready to be used
 #![allow(dead_code)]
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 #[macro_use]
 extern crate error_chain;
@@ -24,5 +22,6 @@ extern crate boxfnonce;
 
 pub mod errors;
 mod node;
+mod tree;
 
 pub use node::{VfsDir, VfsFile, VfsNode, VfsWalker};

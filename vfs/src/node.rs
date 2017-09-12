@@ -11,7 +11,6 @@ use std::collections::VecDeque;
 use std::mem;
 
 use futures::{Async, Future, Poll, Stream};
-use futures::future::BoxFuture;
 
 use mercurial_types::manifest::Content;
 use mercurial_types::path::PathElement;
@@ -61,7 +60,7 @@ where
     type Error: Send + 'static + ::std::error::Error;
 
     /// Returns a future with the content of the file
-    fn read(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
+    fn read(&self) -> Box<Future<Item = Content<Self::Error>, Error = Self::Error> + Send>;
 
     /// Returns directory that contains this file
     fn parent_dir(&self) -> Self::TDir;
@@ -109,9 +108,9 @@ where
     }
 
     /// Consumes this Stream and returns a Future that resolves into the last VfsNode on the path
-    pub fn walk(self) -> BoxFuture<VfsNode<TDir, TFile>, Error> {
+    pub fn walk(self) -> Box<Future<Item = VfsNode<TDir, TFile>, Error = Error> + Send> {
         let node = self.current_node.clone();
-        self.fold(node, |_, node| Ok::<_, Error>(node)).boxed()
+        Box::new(self.fold(node, |_, node| Ok::<_, Error>(node)))
     }
 }
 
@@ -213,7 +212,7 @@ mod tests {
         type TDir = MockVfsDir;
         type Error = Error;
 
-        fn read(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
+        fn read(&self) -> Box<Future<Item = Content<Self::Error>, Error = Self::Error> + Send> {
             unimplemented!();
         }
         fn parent_dir(&self) -> Self::TDir {

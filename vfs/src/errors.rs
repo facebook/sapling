@@ -10,9 +10,14 @@ use std::collections::VecDeque;
 
 use mercurial_types::path::PathElement;
 
-#[recursion_limit = "1024"]
 error_chain! {
     errors {
+        /// Inserting a leaf into the tree in an invalid position. Most commonly this can happen
+        /// when inserting a leaf would change an existing leaf into a node
+        TreeInsert(msg: String) {
+            description("inserting element into tree error")
+            display("{}", msg)
+        }
         /// Tried to walk on a path that does not exists. Returns the remainder of walk.
         PathDoNotExists(msg: String, remainder: VecDeque<PathElement>) {
             description("the provided path does not exist in Vfs")
