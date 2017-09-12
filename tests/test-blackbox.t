@@ -6,6 +6,7 @@ setup
   > mq=
   > [alias]
   > confuse = log --limit 3
+  > so-confusing = confuse --style compact
   > EOF
   $ hg init blackboxtest
   $ cd blackboxtest
@@ -27,6 +28,16 @@ alias expansion is logged
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> confuse
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'confuse' expands to 'log --limit 3'
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> confuse exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
+
+recursive aliases work correctly
+  $ rm ./.hg/blackbox.log
+  $ hg so-confusing
+  $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> so-confusing
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'so-confusing' expands to 'confuse --style compact'
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'confuse' expands to 'log --limit 3'
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> so-confusing exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
 
 incoming change tracking
