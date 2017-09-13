@@ -1231,7 +1231,8 @@ class manifestrevlog(revlog.revlog):
 
         super(manifestrevlog, self).__init__(opener, indexfile,
                                              # only root indexfile is cached
-                                             checkambig=not bool(dir))
+                                             checkambig=not bool(dir),
+                                             mmaplargeindex=True)
 
     @property
     def fulltextcache(self):

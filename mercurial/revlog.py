@@ -268,8 +268,13 @@ class revlog(object):
 
     If checkambig, indexfile is opened with checkambig=True at
     writing, to avoid file stat ambiguity.
+
+    If mmaplargeindex is True, and an mmapindexthreshold is set, the
+    index will be mmapped rather than read if it is larger than the
+    configured threshold.
     """
-    def __init__(self, opener, indexfile, datafile=None, checkambig=False):
+    def __init__(self, opener, indexfile, datafile=None, checkambig=False,
+                 mmaplargeindex=False):
         """
         create a revlog object
 
@@ -301,6 +306,7 @@ class revlog(object):
         self._compengine = 'zlib'
         self._maxdeltachainspan = -1
 
+        mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, 'options', None)
         if opts is not None:
@@ -323,6 +329,8 @@ class revlog(object):
                 self._compengine = opts['compengine']
             if 'maxdeltachainspan' in opts:
                 self._maxdeltachainspan = opts['maxdeltachainspan']
+            if mmaplargeindex and 'mmapindexthreshold' in opts:
+                mmapindexthreshold = opts['mmapindexthreshold']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -335,7 +343,11 @@ class revlog(object):
         self._initempty = True
         try:
             f = self.opener(self.indexfile)
-            indexdata = f.read()
+            if (mmapindexthreshold is not None and
+                    self.opener.fstat(f).st_size >= mmapindexthreshold):
+                indexdata = util.buffer(util.mmapread(f))
+            else:
+                indexdata = f.read()
             f.close()
             if len(indexdata) > 0:
                 v = versionformat_unpack(indexdata[:4])[0]

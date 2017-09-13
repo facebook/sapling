@@ -604,6 +604,10 @@ class localrepository(object):
         chainspan = self.ui.configbytes('experimental', 'maxdeltachainspan', -1)
         if 0 <= chainspan:
             self.svfs.options['maxdeltachainspan'] = chainspan
+        mmapindexthreshold = self.ui.configbytes('experimental',
+                                                 'mmapindexthreshold', None)
+        if mmapindexthreshold is not None:
+            self.svfs.options['mmapindexthreshold'] = mmapindexthreshold
 
         for r in self.requirements:
             if r.startswith('exp-compression-'):
