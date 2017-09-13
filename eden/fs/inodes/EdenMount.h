@@ -371,6 +371,20 @@ class EdenMount {
    */
   struct stat initStatData() const;
 
+  /**
+   * mount any configured bind mounts.
+   * This requires that the filesystem already be mounted, and must not
+   * be called in the context of a fuseWorkerThread().
+   */
+  void performBindMounts();
+
+  /**
+   * Execute any post-clone script that may be configured.
+   * This requires that the filesystem already be mounted, and must not
+   * be called in the context of a fuseWorkerThread().
+   */
+  void performPostClone();
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

@@ -62,6 +62,7 @@ cpp_library(
         "@/folly:range",
         "@/folly:shared_mutex",
         "@/folly:string",
+        "@/folly:subprocess",
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly:thread_name",

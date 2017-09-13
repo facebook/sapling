@@ -9,10 +9,8 @@
  */
 #include "EdenServiceHandler.h"
 
-#include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
-#include <folly/Subprocess.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <unordered_set>
@@ -94,62 +92,19 @@ folly::Future<folly::Unit> EdenServiceHandler::mountImpl(
              std::move(objectStore),
              server_->getSocketPath(),
              server_->getStats())
-      .then([this, info, repoType](std::shared_ptr<EdenMount> edenMount) {
-        // We gave ownership of initialConfig to the EdenMount.
-        // Get a pointer to it that we can use for the remainder of this
-        // function.
-        auto* config = edenMount->getConfig();
-
+      .then([this](std::shared_ptr<EdenMount> edenMount) {
         // Load InodeBase objects for any materialized files in this mount point
         // before we start mounting.
-        edenMount->getRootInode()->loadMaterializedChildren().wait();
-
-        // TODO(mbolin): Use the result of config.getBindMounts() to perform the
-        // appropriate bind mounts for the client.
-        server_->mount(edenMount);
-
-        auto cloneSuccessPath = config->getCloneSuccessPath();
-        bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
-        if (isInitialMount) {
-          auto repoHooks = config->getRepoHooks();
-          auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
-          auto repoSource = config->getRepoSource();
-
-          XLOG(INFO) << "Running post-clone hook '" << postCloneScript
-                     << "' for " << info.mountPoint;
-          try {
-            // TODO(mbolin): It would be preferable to pass the name of the
-            // repository as defined in ~/.edenrc so that the script can derive
-            // the repoType and repoSource from that. Then the hook would only
-            // take two args.
-            folly::Subprocess proc(
-                {postCloneScript.c_str(),
-                 repoType,
-                 info.mountPoint,
-                 repoSource},
-                folly::Subprocess::Options().pipeStdin());
-            proc.closeParentFd(STDIN_FILENO);
-            proc.waitChecked();
-            XLOG(INFO) << "Finished post-clone hook '" << postCloneScript
-                       << "' for " << info.mountPoint;
-          } catch (const folly::SubprocessSpawnError& ex) {
-            // If this failed because postCloneScript does not exist, then
-            // ignore the error because we are tolerant of the case where
-            // /etc/eden/hooks does not exist, by design.
-            if (ex.errnoValue() != ENOENT) {
-              // TODO(13448173): If clone fails, then we should roll back the
-              // mount.
-              throw;
-            }
-            XLOG(INFO) << "Did not run post-clone hook '" << postCloneScript
-                       << "' for " << info.mountPoint
-                       << " because it was not found.";
-          }
-        }
-
-        // The equivalent of `touch` to signal that clone completed
-        // successfully.
-        folly::writeFile(string(), cloneSuccessPath.c_str());
+        auto rootInode = edenMount->getRootInode();
+        return rootInode->loadMaterializedChildren().then(
+            [this, edenMount](folly::Try<folly::Unit> t) {
+              (void)t; // We're explicitly ignoring possible failure in
+                       // loadMaterializedChildren, but only because we were
+                       // previously using .wait() on the future.  We could
+                       // just let potential errors propagate.
+              return server_->mount(edenMount).then(
+                  [edenMount] { edenMount->performPostClone(); });
+            });
       });
 }
 

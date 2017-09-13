@@ -13,12 +13,11 @@
 #include <boost/filesystem/path.hpp>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
-#include <wangle/concurrent/CPUThreadPoolExecutor.h>
-#include <wangle/concurrent/GlobalExecutor.h>
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
@@ -122,7 +121,9 @@ EdenServer::EdenServer(
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
-      rocksPath_(rocksPath) {}
+      rocksPath_(rocksPath),
+      threadPool_(
+          make_shared<folly::CPUThreadPoolExecutor>(FLAGS_num_eden_threads)) {}
 
 EdenServer::~EdenServer() {
   shutdown();
@@ -220,10 +221,6 @@ void EdenServer::prepare() {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
-  auto pool =
-      make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
-  wangle::setCPUExecutor(pool);
-
   reloadConfig();
 
   // Remount existing mount points
@@ -289,7 +286,7 @@ void EdenServer::run() {
   }
 }
 
-void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
+folly::Future<folly::Unit> EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
@@ -305,54 +302,44 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
 
   // Start up the fuse workers.  If an error occurs we want to call
   // mountFinished and throw the error here.
-  auto startFuture =
-      edenMount->startFuse(getMainEventBase(), FLAGS_debug)
-          .onError([this, edenMount](folly::exception_wrapper ew) {
-            mountFinished(edenMount.get());
-            return makeFuture<folly::Unit>(ew);
-          });
-  // Will throw a possible error condition raised during init
-  startFuture.get();
+  return edenMount->startFuse(getMainEventBase(), FLAGS_debug)
+      .onError([this, edenMount](folly::exception_wrapper ew) {
+        mountFinished(edenMount.get());
+        return makeFuture<folly::Unit>(ew);
+      })
+      // Explicitly move the remainder of processing to a utility
+      // thread; we're likely to reach this point in the context of a
+      // fuse mount thread prior to it responding to the mount
+      // initiation request from the kernel, so if we were to block
+      // here, that would lead to deadlock.  In addition, if we were
+      // to run this via mainEventBase_ we could also deadlock during
+      // started when remounting configured mounts.
+      .via(threadPool_.get())
+      .then([edenMount, this] {
+        // Now that we've started the workers, arrange to call mountFinished
+        // once the pool is torn down.
+        auto finishFuture = edenMount->getFuseCompletionFuture().ensure(
+            [this, edenMount] { mountFinished(edenMount.get()); });
+        // We're deliberately discarding the future here; we don't need to
+        // wait for it to finish.
+        (void)finishFuture;
 
-  // Now that we've started the workers, arrange to call mountFinished
-  // once the pool is torn down.
-  auto finishFuture = edenMount->getFuseCompletionFuture().ensure(
-      [this, edenMount] { mountFinished(edenMount.get()); });
-  // We're deliberately discarding the future here; we don't need to
-  // wait for it to finish.
-  (void)finishFuture;
+        // Register callback for getting Loaded inodes in the memory for a
+        // mountPoint.
+        stats::ServiceData::get()->getDynamicCounters()->registerCallback(
+            edenMount->getCounterName(CounterName::LOADED), [edenMount] {
+              return edenMount.get()->getInodeMap()->getLoadedInodeCount();
+            });
+        // Register callback for getting Unloaded inodes in the memory for a
+        // mountpoint
+        stats::ServiceData::get()->getDynamicCounters()->registerCallback(
+            edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
+              return edenMount.get()->getInodeMap()->getUnloadedInodeCount();
+            });
 
-  // Register callback for getting Loaded inodes in the memory for a mountPoint.
-  stats::ServiceData::get()->getDynamicCounters()->registerCallback(
-      edenMount->getCounterName(CounterName::LOADED), [edenMount] {
-        return edenMount.get()->getInodeMap()->getLoadedInodeCount();
+        // Perform all of the bind mounts associated with the client.
+        edenMount->performBindMounts();
       });
-  // Register callback for getting Unloaded inodes in the memory for a
-  // mountpoint
-  stats::ServiceData::get()->getDynamicCounters()->registerCallback(
-      edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
-        return edenMount.get()->getInodeMap()->getUnloadedInodeCount();
-      });
-
-  // Perform all of the bind mounts associated with the client.
-  for (auto& bindMount : edenMount->getBindMounts()) {
-    auto pathInMountDir = bindMount.pathInMountDir;
-    try {
-      // If pathInMountDir does not exist, then it must be created before the
-      // bind mount is performed.
-      boost::system::error_code errorCode;
-      boost::filesystem::path mountDir = pathInMountDir.c_str();
-      boost::filesystem::create_directories(mountDir, errorCode);
-
-      fusell::privilegedBindMount(
-          bindMount.pathInClientDir.c_str(), pathInMountDir.c_str());
-    } catch (...) {
-      // Consider recording all failed bind mounts in a way that can be
-      // communicated back to the caller in a structured way.
-      XLOG(ERR) << "Failed to perform bind mount for "
-                << pathInMountDir.stringPiece() << ".";
-    }
-  }
 }
 
 Future<Unit> EdenServer::unmount(StringPiece mountPath) {

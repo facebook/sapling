@@ -9,9 +9,12 @@
  */
 #include "EdenMount.h"
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
 #include <folly/File.h>
+#include <folly/Subprocess.h>
 #include <folly/ThreadName.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
@@ -165,6 +168,72 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 }
 
 EdenMount::~EdenMount() {}
+
+void EdenMount::performBindMounts() {
+  for (auto& bindMount : bindMounts_) {
+    auto& pathInMountDir = bindMount.pathInMountDir;
+    try {
+      // If pathInMountDir does not exist, then it must be created before
+      // the bind mount is performed.
+      boost::system::error_code errorCode;
+      boost::filesystem::path mountDir = pathInMountDir.c_str();
+      boost::filesystem::create_directories(mountDir, errorCode);
+
+      fusell::privilegedBindMount(
+          bindMount.pathInClientDir.c_str(), pathInMountDir.c_str());
+    } catch (...) {
+      // Consider recording all failed bind mounts in a way that can be
+      // communicated back to the caller in a structured way.
+      XLOG(ERR) << "Failed to perform bind mount for "
+                << pathInMountDir.stringPiece() << ".";
+    }
+  }
+}
+
+void EdenMount::performPostClone() {
+  auto cloneSuccessPath = config_->getCloneSuccessPath();
+  bool isInitialMount = access(cloneSuccessPath.c_str(), F_OK) != 0;
+  if (isInitialMount) {
+    auto repoHooks = config_->getRepoHooks();
+    auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
+    auto repoSource = config_->getRepoSource();
+
+    XLOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
+               << path_;
+    try {
+      // TODO(mbolin): It would be preferable to pass the name of the
+      // repository as defined in ~/.edenrc so that the script can derive
+      // the repoType and repoSource from that. Then the hook would only
+      // take two args.
+      auto repoType = config_->getRepoType();
+      folly::Subprocess proc(
+          {postCloneScript.c_str(),
+           repoType,
+           path_.stringPiece().str(),
+           repoSource},
+          folly::Subprocess::Options().pipeStdin());
+      proc.closeParentFd(STDIN_FILENO);
+      proc.waitChecked();
+      XLOG(INFO) << "Finished post-clone hook '" << postCloneScript << "' for "
+                 << path_;
+    } catch (const folly::SubprocessSpawnError& ex) {
+      // If this failed because postCloneScript does not exist, then
+      // ignore the error because we are tolerant of the case where
+      // /etc/eden/hooks does not exist, by design.
+      if (ex.errnoValue() != ENOENT) {
+        // TODO(13448173): If clone fails, then we should roll back the
+        // mount.
+        throw;
+      }
+      XLOG(INFO) << "Did not run post-clone hook '" << postCloneScript
+                 << "' for " << path_ << " because it was not found.";
+    }
+  }
+
+  // The equivalent of `touch` to signal that clone completed
+  // successfully.
+  folly::writeFile(std::string(), cloneSuccessPath.c_str());
+}
 
 bool EdenMount::doStateTransition(State expected, State newState) {
   return state_.compare_exchange_strong(expected, newState);

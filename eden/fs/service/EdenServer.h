@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/Executor.h>
 #include <folly/File.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
@@ -98,7 +99,8 @@ class EdenServer {
    * This function blocks until the main mount point is successfully started,
    * and throws an error if an error occurs.
    */
-  void mount(std::shared_ptr<EdenMount> edenMount);
+  FOLLY_NODISCARD folly::Future<folly::Unit> mount(
+      std::shared_ptr<EdenMount> edenMount);
 
   /**
    * Unmount an EdenMount.
@@ -276,6 +278,13 @@ class EdenServer {
    * this, so we do not need synchronization when reading it.
    */
   folly::EventBase* mainEventBase_;
+
+  /**
+   * A CPU executor for running arbitrary tasks.
+   * This is here because we need to keep it alive for the duration
+   * of the server lifetime.
+   */
+  std::shared_ptr<folly::Executor> threadPool_;
 };
 }
 } // facebook::eden
