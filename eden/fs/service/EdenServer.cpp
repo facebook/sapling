@@ -157,6 +157,44 @@ folly::Future<Unit> EdenServer::unmountAll() {
       });
 }
 
+void EdenServer::scheduleFlushStats() {
+  mainEventBase_->timer().scheduleTimeoutFn(
+      [this] {
+        flushStatsNow();
+        scheduleFlushStats();
+      },
+      std::chrono::seconds(1));
+}
+
+void EdenServer::unloadInodes() {
+  std::vector<TreeInodePtr> roots;
+  {
+    auto mountPoints = mountPoints_.wlock();
+    for (auto& entry : *mountPoints) {
+      roots.emplace_back(entry.second.edenMount->getRootInode());
+    }
+  }
+
+  if (!roots.empty()) {
+    XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
+    auto serviceData = stats::ServiceData::get();
+
+    uint64_t totalUnloaded = serviceData->getCounter(kPeriodicUnloadCounterKey);
+    for (auto& rootInode : roots) {
+      totalUnloaded += rootInode->unloadChildrenNow(
+          std::chrono::minutes(FLAGS_unload_age_minutes));
+    }
+    serviceData->setCounter(kPeriodicUnloadCounterKey, totalUnloaded);
+  }
+
+  scheduleInodeUnload(std::chrono::hours(FLAGS_unload_interval_hours));
+}
+
+void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
+  mainEventBase_->timer().scheduleTimeoutFn(
+      [this] { unloadInodes(); }, timeout);
+}
+
 void EdenServer::prepare() {
   acquireEdenLock();
   // Store a pointer to the EventBase that will be used to drive
@@ -165,17 +203,22 @@ void EdenServer::prepare() {
   createThriftServer();
 
   localStore_ = make_shared<LocalStore>(rocksPath_);
-  functionScheduler_ = make_shared<folly::FunctionScheduler>();
-  functionScheduler_->setThreadName("EdenFuncSched");
-  functionScheduler_->start();
 
   // Start stats aggregation
-  functionScheduler_->addFunction(
-      [this] { flushStatsNow(); }, std::chrono::seconds(1));
+  scheduleFlushStats();
 
   // Set the ServiceData counter for tracking number of inodes unloaded by
   // periodic job for unloading inodes to zero on EdenServer start.
   stats::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
+
+  // Schedule a periodic job to unload unused inodes based on the last access
+  // time. currently Eden does not have accurate timestamp tracking for inodes,
+  // so using unloadChildrenNow just to validate the behaviour. We will have to
+  // modify current unloadChildrenNow function to unload inodes based on the
+  // last access time.
+  if (FLAGS_unload_interval_hours > 0) {
+    scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
+  }
 
   auto pool =
       make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
@@ -279,29 +322,6 @@ void EdenServer::mount(shared_ptr<EdenMount> edenMount) {
   // wait for it to finish.
   (void)finishFuture;
 
-  // Adding function for the newly added mountpoint to Schedule
-  // a periodic job to unload unused inodes based on the last access time.
-  // currently Eden doesnot have accurate timestamp tracking for inodes, so
-  // using unloadChildrenNow just to validate the behaviour. We will have to
-  // modify current unloadChildrenNow function to unload inodes based on the
-  // last access time.
-  if (FLAGS_unload_interval_hours > 0) {
-    functionScheduler_->addFunction(
-        [edenMount] {
-          auto rootInode = (edenMount.get())->getRootInode();
-          XLOG(INFO) << "UnloadInodeScheduler Unloading Free Inodes";
-          auto unloadCount = rootInode->unloadChildrenNow(
-              std::chrono::minutes(FLAGS_unload_age_minutes));
-          unloadCount +=
-              stats::ServiceData::get()->getCounter(kPeriodicUnloadCounterKey);
-          stats::ServiceData::get()->setCounter(
-              kPeriodicUnloadCounterKey, unloadCount);
-        },
-        std::chrono::hours(FLAGS_unload_interval_hours),
-        getPeriodicUnloadFunctionName(edenMount.get()),
-        std::chrono::minutes(FLAGS_start_delay_minutes));
-  }
-
   // Register callback for getting Loaded inodes in the memory for a mountPoint.
   stats::ServiceData::get()->getDynamicCounters()->registerCallback(
       edenMount->getCounterName(CounterName::LOADED), [edenMount] {
@@ -361,8 +381,6 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
-  functionScheduler_->cancelFunctionAndWait(
-      getPeriodicUnloadFunctionName(edenMount));
   stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
       edenMount->getCounterName(CounterName::LOADED));
   stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
@@ -384,10 +402,6 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
       .then([unmountPromise = std::move(unmountPromise)]() mutable {
         unmountPromise.setValue();
       });
-}
-
-string EdenServer::getPeriodicUnloadFunctionName(const EdenMount* mount) {
-  return folly::to<string>("unload:", mount->getPath().stringPiece());
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
@@ -527,7 +541,6 @@ void EdenServer::stop() const {
 
 void EdenServer::shutdown() {
   unmountAll().get();
-  functionScheduler_->shutdown();
 }
 
 void EdenServer::flushStatsNow() const {

@@ -181,15 +181,6 @@ class EdenServer {
   void flushStatsNow() const;
 
   /**
-   * Returns shared_ptr of FunctionScheduler which can be used to schedule
-   * periodic jobs in EdenServer, Currently this function scheduler is used for
-   * unloading free inodes periodically and stats aggregation
-   */
-  std::shared_ptr<folly::FunctionScheduler> getFunctionScheduler() {
-    return functionScheduler_;
-  }
-
-  /**
    * Get the main thread's EventBase.
    *
    * Callers can use this for scheduling work to be run in the main thread.
@@ -221,6 +212,22 @@ class EdenServer {
   EdenServer(EdenServer const&) = delete;
   EdenServer& operator=(EdenServer const&) = delete;
 
+  // Schedules a timer to flush stats (and reschedule itself).
+  // We should have at most one of these pending at a time.
+  // Must be called only from the eventBase thread.
+  void scheduleFlushStats();
+
+  // Schedule a call to unloadInodes() to happen after timeout
+  // has expired.
+  // Must be called only from the eventBase thread.
+  void scheduleInodeUnload(std::chrono::milliseconds timeout);
+
+  // Perform unloading of inodes based on their last access time
+  // and then schedule another call to unloadInodes() to happen
+  // at the next appropriate interval.  The unload attempt applies to
+  // all mounts.
+  void unloadInodes();
+
   std::shared_ptr<BackingStore> createBackingStore(
       folly::StringPiece type,
       folly::StringPiece name);
@@ -230,7 +237,6 @@ class EdenServer {
 
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(EdenMount* mountPoint);
-  std::string getPeriodicUnloadFunctionName(const EdenMount* mount);
 
   // Called before destructing EdenServer
   void shutdown();
@@ -259,11 +265,6 @@ class EdenServer {
 
   folly::Synchronized<MountMap> mountPoints_;
   mutable fusell::ThreadLocalEdenStats edenStats_;
-
-  /**
-   * Function scheduler to unload free inodes periodically
-   */
-  std::shared_ptr<folly::FunctionScheduler> functionScheduler_;
 
   /**
    * The EventBase driving the main thread loop.
