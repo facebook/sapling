@@ -1084,18 +1084,21 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
 
     return prunedactions, diverge, renamedelete
 
+def _getcwd():
+    try:
+        return pycompat.getcwd()
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            return None
+        raise
+
 def batchremove(repo, wctx, actions):
     """apply removes to the working directory
 
     yields tuples for progress updates
     """
     verbose = repo.ui.verbose
-    try:
-        cwd = pycompat.getcwd()
-    except OSError as err:
-        if err.errno != errno.ENOENT:
-            raise
-        cwd = None
+    cwd = _getcwd()
     i = 0
     for f, args, msg in actions:
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
@@ -1113,18 +1116,12 @@ def batchremove(repo, wctx, actions):
         i += 1
     if i > 0:
         yield i, f
-    if cwd:
-        # cwd was present before we started to remove files
-        # let's check if it is present after we removed them
-        try:
-            pycompat.getcwd()
-        except OSError as err:
-            if err.errno != errno.ENOENT:
-                raise
-            # Print a warning if cwd was deleted
-            repo.ui.warn(_("current directory was removed\n"
-                           "(consider changing to repo root: %s)\n") %
-                         repo.root)
+
+    if cwd and not _getcwd():
+        # cwd was removed in the course of removing files; print a helpful
+        # warning.
+        repo.ui.warn(_("current directory was removed\n"
+                       "(consider changing to repo root: %s)\n") % repo.root)
 
     # It's necessary to flush here in case we're inside a worker fork and will
     # quit after this function.
