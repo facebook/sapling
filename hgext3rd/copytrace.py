@@ -94,7 +94,7 @@ def extsetup(ui):
     extensions.wrapfunction(copiesmod, 'mergecopies', _mergecopies)
     extensions.wrapfunction(cmdutil, 'amend', _amend)
 
-def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
+def _filemerge(origfunc, premerge, repo, wctx, mynode, orig, fcd, fco, fca,
                labels=None, *args, **kwargs):
     if premerge:
         # copytracing worked if files to merge have different file names
@@ -123,7 +123,7 @@ def _filemerge(origfunc, premerge, repo, mynode, orig, fcd, fco, fca,
             repo.ui.log("copytrace", msg=msg,
                         reponame=_getreponame(repo, repo.ui))
 
-    return origfunc(premerge, repo, mynode, orig, fcd, fco, fca, labels,
+    return origfunc(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels,
                 *args, **kwargs)
 
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, *args, **kwargs):
