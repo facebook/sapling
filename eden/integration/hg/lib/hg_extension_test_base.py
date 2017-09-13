@@ -133,7 +133,8 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         with open(edenrc, 'w') as f:
             config.write(f)
 
-    def hg(self, *args, stdout_charset='utf-8', shell=False, hgeditor=None):
+    def hg(self, *args, stdout_charset='utf-8', cwd=None, shell=False,
+           hgeditor=None):
         '''Runs `hg.real` with the specified args in the Eden mount.
 
         If hgeditor is specified, it will be used as the value of the $HGEDITOR
@@ -143,7 +144,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         Returns the stdout decoded as a utf8 string. To use a different charset,
         specify the `stdout_charset` as a keyword argument.
         '''
-        return self.repo.hg(*args, stdout_charset=stdout_charset,
+        return self.repo.hg(*args, stdout_charset=stdout_charset, cwd=cwd,
                             shell=shell, hgeditor=hgeditor)
 
     def create_editor_that_writes_commit_messages(self,

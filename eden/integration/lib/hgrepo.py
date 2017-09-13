@@ -69,7 +69,7 @@ class HgRepository(repobase.Repository):
             'hg.real') or distutils.spawn.find_executable('hg')
 
     def hg(self, *args, stdout_charset='utf-8', stdout=subprocess.PIPE,
-           stderr=subprocess.PIPE, shell=False, hgeditor=None):
+           stderr=subprocess.PIPE, shell=False, hgeditor=None, cwd=None):
         if shell:
             cmd = self.hg_bin + ' ' + args[0]
         else:
@@ -79,10 +79,12 @@ class HgRepository(repobase.Repository):
             env = dict(env)
             env['HGEDITOR'] = hgeditor
 
+        if cwd is None:
+            cwd = self.path
         try:
             completed_process = subprocess.run(cmd, stdout=stdout,
                                                stderr=stderr,
-                                               check=True, cwd=self.path,
+                                               check=True, cwd=cwd,
                                                env=env, shell=shell)
         except subprocess.CalledProcessError as ex:
             raise HgError(ex) from ex
