@@ -1916,11 +1916,11 @@ class revlog(object):
                 flags = chunkdata['flags'] or REVIDX_DEFAULT_FLAGS
 
                 nodes.append(node)
+                chain = node
 
                 link = linkmapper(cs)
                 if node in self.nodemap:
                     # this can happen if two branches make the same change
-                    chain = node
                     continue
 
                 for p in (p1, p2):
@@ -1954,13 +1954,13 @@ class revlog(object):
                 # We're only using addgroup() in the context of changegroup
                 # generation so the revision data can always be handled as raw
                 # by the flagprocessor.
-                chain = self._addrevision(node, None, transaction, link,
-                                          p1, p2, flags, (baserev, delta),
-                                          ifh, dfh,
-                                          alwayscache=bool(addrevisioncb))
+                self._addrevision(node, None, transaction, link,
+                                  p1, p2, flags, (baserev, delta),
+                                  ifh, dfh,
+                                  alwayscache=bool(addrevisioncb))
 
                 if addrevisioncb:
-                    addrevisioncb(self, chain)
+                    addrevisioncb(self, node)
 
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
