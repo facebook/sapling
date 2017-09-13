@@ -1872,7 +1872,7 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, cg, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, transaction, addrevisioncb=None):
         """
         add a delta group
 
@@ -1905,20 +1905,12 @@ class revlog(object):
             ifh.flush()
         try:
             # loop through our set of deltas
-            chain = None
-            for chunkdata in iter(lambda: cg.deltachunk(chain), {}):
-                node = chunkdata['node']
-                p1 = chunkdata['p1']
-                p2 = chunkdata['p2']
-                cs = chunkdata['cs']
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
-                flags = chunkdata['flags'] or REVIDX_DEFAULT_FLAGS
+            for data in deltas:
+                node, p1, p2, link, deltabase, delta, flags = data
+                flags = flags or REVIDX_DEFAULT_FLAGS
 
                 nodes.append(node)
-                chain = node
 
-                link = linkmapper(cs)
                 if node in self.nodemap:
                     # this can happen if two branches make the same change
                     continue
