@@ -28,6 +28,7 @@
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 
@@ -232,13 +233,13 @@ void EdenServer::prepare() {
               << " Skipping remount step.";
   }
   for (auto& client : dirs.items()) {
-    auto mountInfo = std::make_unique<MountInfo>();
-    mountInfo->mountPoint = client.first.c_str();
+    MountInfo mountInfo;
+    mountInfo.mountPoint = client.first.c_str();
     auto edenClientPath = edenDir_ + PathComponent("clients") +
         PathComponent(client.second.c_str());
-    mountInfo->edenClientPath = edenClientPath.stringPiece().str();
+    mountInfo.edenClientPath = edenClientPath.stringPiece().str();
     try {
-      handler_->mount(std::move(mountInfo));
+      mount(mountInfo).get();
     } catch (const std::exception& ex) {
       XLOG(ERR) << "Failed to perform remount for " << client.first.c_str()
                 << ": " << ex.what();
@@ -286,9 +287,7 @@ void EdenServer::run() {
   }
 }
 
-folly::Future<folly::Unit> EdenServer::mount(shared_ptr<EdenMount> edenMount) {
-  // Add the mount point to mountPoints_.
-  // This also makes sure we don't have this path mounted already
+void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   {
     auto mountPoints = mountPoints_.wlock();
@@ -299,46 +298,96 @@ folly::Future<folly::Unit> EdenServer::mount(shared_ptr<EdenMount> edenMount) {
           "mount point \"", mountPath, "\" is already mounted"));
     }
   }
+}
 
-  // Start up the fuse workers.  If an error occurs we want to call
-  // mountFinished and throw the error here.
-  return edenMount->startFuse(getMainEventBase(), FLAGS_debug)
-      .onError([this, edenMount](folly::exception_wrapper ew) {
-        mountFinished(edenMount.get());
-        return makeFuture<folly::Unit>(ew);
-      })
-      // Explicitly move the remainder of processing to a utility
-      // thread; we're likely to reach this point in the context of a
-      // fuse mount thread prior to it responding to the mount
-      // initiation request from the kernel, so if we were to block
-      // here, that would lead to deadlock.  In addition, if we were
-      // to run this via mainEventBase_ we could also deadlock during
-      // started when remounting configured mounts.
-      .via(threadPool_.get())
-      .then([edenMount, this] {
-        // Now that we've started the workers, arrange to call mountFinished
-        // once the pool is torn down.
-        auto finishFuture = edenMount->getFuseCompletionFuture().ensure(
-            [this, edenMount] { mountFinished(edenMount.get()); });
-        // We're deliberately discarding the future here; we don't need to
-        // wait for it to finish.
-        (void)finishFuture;
+void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
+  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  // Register callback for getting Loaded inodes in the memory
+  // for a mountPoint.
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::LOADED),
+      [edenMount] { return edenMount->getInodeMap()->getLoadedInodeCount(); });
+  // Register callback for getting Unloaded inodes in the
+  // memory for a mountpoint
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
+        return edenMount->getInodeMap()->getUnloadedInodeCount();
+      });
+}
 
-        // Register callback for getting Loaded inodes in the memory for a
-        // mountPoint.
-        stats::ServiceData::get()->getDynamicCounters()->registerCallback(
-            edenMount->getCounterName(CounterName::LOADED), [edenMount] {
-              return edenMount.get()->getInodeMap()->getLoadedInodeCount();
+void EdenServer::unregisterStats(EdenMount* edenMount) {
+  auto counters = stats::ServiceData::get()->getDynamicCounters();
+  counters->unregisterCallback(edenMount->getCounterName(CounterName::LOADED));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::UNLOADED));
+}
+
+folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
+    const MountInfo& info) {
+  reloadConfig();
+  auto initialConfig = ClientConfig::loadFromClientDirectory(
+      AbsolutePathPiece{info.mountPoint},
+      AbsolutePathPiece{info.edenClientPath},
+      getConfig().get());
+
+  auto repoType = initialConfig->getRepoType();
+  auto backingStore = getBackingStore(repoType, initialConfig->getRepoSource());
+  auto objectStore =
+      std::make_unique<ObjectStore>(getLocalStore(), backingStore);
+
+  return EdenMount::create(
+             std::move(initialConfig),
+             std::move(objectStore),
+             getSocketPath(),
+             getStats())
+      .then([this](std::shared_ptr<EdenMount> edenMount) {
+        // Load InodeBase objects for any materialized files in this mount point
+        // before we start mounting.
+        auto rootInode = edenMount->getRootInode();
+        return rootInode->loadMaterializedChildren()
+            .then([this, edenMount](folly::Try<folly::Unit> t) {
+              (void)t; // We're explicitly ignoring possible failure in
+                       // loadMaterializedChildren, but only because we were
+                       // previously using .wait() on the future.  We could
+                       // just let potential errors propagate.
+
+              addToMountPoints(edenMount);
+
+              // Start up the fuse workers.
+              return edenMount->startFuse(getMainEventBase(), FLAGS_debug);
+            })
+            // If an error occurs we want to call mountFinished and throw the
+            // error here.  Once the pool is up and running, the finishFuture
+            // will ensure that this happens.
+            .onError([this, edenMount](folly::exception_wrapper ew) {
+              mountFinished(edenMount.get());
+              return makeFuture<folly::Unit>(ew);
+            })
+            // Explicitly move the remainder of processing to a utility
+            // thread; we're likely to reach this point in the context of
+            // a fuse mount thread prior to it responding to the mount
+            // initiation request from the kernel, so if we were to block
+            // here, that would lead to deadlock.  In addition, if we were
+            // to run this via mainEventBase_ we could also deadlock
+            // during started when remounting configured mounts.
+            .via(threadPool_.get())
+            .then([edenMount, this] {
+              // Now that we've started the workers, arrange to call
+              // mountFinished once the pool is torn down.
+              auto finishFuture = edenMount->getFuseCompletionFuture().ensure(
+                  [this, edenMount] { mountFinished(edenMount.get()); });
+              // We're deliberately discarding the future here; we don't
+              // need to wait for it to finish.
+              (void)finishFuture;
+
+              registerStats(edenMount);
+
+              // Perform all of the bind mounts associated with the
+              // client.
+              edenMount->performBindMounts();
+              edenMount->performPostClone();
+              return edenMount;
             });
-        // Register callback for getting Unloaded inodes in the memory for a
-        // mountpoint
-        stats::ServiceData::get()->getDynamicCounters()->registerCallback(
-            edenMount->getCounterName(CounterName::UNLOADED), [edenMount] {
-              return edenMount.get()->getInodeMap()->getUnloadedInodeCount();
-            });
-
-        // Perform all of the bind mounts associated with the client.
-        edenMount->performBindMounts();
       });
 }
 
@@ -368,10 +417,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
-  stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
-      edenMount->getCounterName(CounterName::LOADED));
-  stats::ServiceData::get()->getDynamicCounters()->unregisterCallback(
-      edenMount->getCounterName(CounterName::UNLOADED));
+  unregisterStats(edenMount);
 
   // Erase the EdenMount from our mountPoints_ map
   folly::SharedPromise<Unit> unmountPromise;

@@ -65,47 +65,12 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   try {
-    mountImpl(*info).get();
+    server_->mount(*info).get();
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
     throw newEdenError(ex);
   }
-}
-
-folly::Future<folly::Unit> EdenServiceHandler::mountImpl(
-    const MountInfo& info) {
-  server_->reloadConfig();
-  auto initialConfig = ClientConfig::loadFromClientDirectory(
-      AbsolutePathPiece{info.mountPoint},
-      AbsolutePathPiece{info.edenClientPath},
-      server_->getConfig().get());
-
-  auto repoType = initialConfig->getRepoType();
-  auto backingStore =
-      server_->getBackingStore(repoType, initialConfig->getRepoSource());
-  auto objectStore =
-      make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
-
-  return EdenMount::create(
-             std::move(initialConfig),
-             std::move(objectStore),
-             server_->getSocketPath(),
-             server_->getStats())
-      .then([this](std::shared_ptr<EdenMount> edenMount) {
-        // Load InodeBase objects for any materialized files in this mount point
-        // before we start mounting.
-        auto rootInode = edenMount->getRootInode();
-        return rootInode->loadMaterializedChildren().then(
-            [this, edenMount](folly::Try<folly::Unit> t) {
-              (void)t; // We're explicitly ignoring possible failure in
-                       // loadMaterializedChildren, but only because we were
-                       // previously using .wait() on the future.  We could
-                       // just let potential errors propagate.
-              return server_->mount(edenMount).then(
-                  [edenMount] { edenMount->performPostClone(); });
-            });
-      });
 }
 
 /**

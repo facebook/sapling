@@ -48,6 +48,7 @@ class Dirstate;
 class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
+class MountInfo;
 
 /*
  * EdenServer contains logic for running the Eden main loop.
@@ -94,13 +95,10 @@ class EdenServer {
   void stop() const;
 
   /**
-   * Mount an EdenMount.
-   *
-   * This function blocks until the main mount point is successfully started,
-   * and throws an error if an error occurs.
+   * Mount and return an EdenMount.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> mount(
-      std::shared_ptr<EdenMount> edenMount);
+  FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
+      const MountInfo& info);
 
   /**
    * Unmount an EdenMount.
@@ -242,6 +240,16 @@ class EdenServer {
 
   // Called before destructing EdenServer
   void shutdown();
+
+  // Add the mount point to mountPoints_.
+  // This also makes sure we don't have this path mounted already.
+  void addToMountPoints(std::shared_ptr<EdenMount> edenMount);
+
+  // Registers (or removes) stats callbacks for edenMount.
+  // These are here rather than in EdenMount because we need to
+  // hold an owning reference to the mount to safely sample stats.
+  void registerStats(std::shared_ptr<EdenMount> edenMount);
+  void unregisterStats(EdenMount* edenMount);
 
   /*
    * Member variables.
