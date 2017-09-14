@@ -348,8 +348,9 @@ def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
         return op
 
 class partiterator(object):
-    def __init__(self, repo, unbundler):
+    def __init__(self, repo, op, unbundler):
         self.repo = repo
+        self.op = op
         self.unbundler = unbundler
         self.iterator = None
         self.count = 0
@@ -363,9 +364,42 @@ class partiterator(object):
         self.iterator = func()
         return self.iterator
 
-    def __exit__(self, type, value, tb):
+    def __exit__(self, type, exc, tb):
         if not self.iterator:
             return
+
+        if exc:
+            # Any exceptions seeking to the end of the bundle at this point are
+            # almost certainly related to the underlying stream being bad.
+            # And, chances are that the exception we're handling is related to
+            # getting in that bad state. So, we swallow the seeking error and
+            # re-raise the original error.
+            seekerror = False
+            try:
+                for part in self.iterator:
+                    # consume the bundle content
+                    part.seek(0, 2)
+            except Exception:
+                seekerror = True
+
+            # Small hack to let caller code distinguish exceptions from bundle2
+            # processing from processing the old format. This is mostly needed
+            # to handle different return codes to unbundle according to the type
+            # of bundle. We should probably clean up or drop this return code
+            # craziness in a future version.
+            exc.duringunbundle2 = True
+            salvaged = []
+            replycaps = None
+            if self.op.reply is not None:
+                salvaged = self.op.reply.salvageoutput()
+                replycaps = self.op.reply.capabilities
+            exc._replycaps = replycaps
+            exc._bundle2salvagedoutput = salvaged
+
+            # Re-raising from a variable loses the original stack. So only use
+            # that form if we need to.
+            if seekerror:
+                raise exc
 
         self.repo.ui.debug('bundle2-input-bundle: %i parts total\n' %
                            self.count)
@@ -402,45 +436,9 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         msg.append('\n')
         repo.ui.debug(''.join(msg))
 
-    with partiterator(repo, unbundler) as parts:
-        part = None
-        try:
-            for part in parts:
-                _processpart(op, part)
-        except Exception as exc:
-            # Any exceptions seeking to the end of the bundle at this point are
-            # almost certainly related to the underlying stream being bad.
-            # And, chances are that the exception we're handling is related to
-            # getting in that bad state. So, we swallow the seeking error and
-            # re-raise the original error.
-            seekerror = False
-            try:
-                for part in parts:
-                    # consume the bundle content
-                    part.seek(0, 2)
-            except Exception:
-                seekerror = True
-
-            # Small hack to let caller code distinguish exceptions from bundle2
-            # processing from processing the old format. This is mostly needed
-            # to handle different return codes to unbundle according to the type
-            # of bundle. We should probably clean up or drop this return code
-            # craziness in a future version.
-            exc.duringunbundle2 = True
-            salvaged = []
-            replycaps = None
-            if op.reply is not None:
-                salvaged = op.reply.salvageoutput()
-                replycaps = op.reply.capabilities
-            exc._replycaps = replycaps
-            exc._bundle2salvagedoutput = salvaged
-
-            # Re-raising from a variable loses the original stack. So only use
-            # that form if we need to.
-            if seekerror:
-                raise exc
-            else:
-                raise
+    with partiterator(repo, op, unbundler) as parts:
+        for part in parts:
+            _processpart(op, part)
 
     return op
 
