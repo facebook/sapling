@@ -550,7 +550,8 @@ class dirstate(object):
             for d in util.finddirs(f):
                 if d in self._dirs:
                     break
-                if d in self._map and self[d] != 'r':
+                entry = self._map.get(d)
+                if entry is not None and entry[0] != 'r':
                     raise error.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
         if oldstate in "?r" and "_dirs" in self.__dict__:
@@ -580,22 +581,23 @@ class dirstate(object):
 
     def normallookup(self, f):
         '''Mark a file normal, but possibly dirty.'''
-        if self._pl[1] != nullid and f in self._map:
+        if self._pl[1] != nullid:
             # if there is a merge going on and the file was either
             # in state 'm' (-1) or coming from other parent (-2) before
             # being removed, restore that state.
-            entry = self._map[f]
-            if entry[0] == 'r' and entry[2] in (-1, -2):
-                source = self._copymap.get(f)
-                if entry[2] == -1:
-                    self.merge(f)
-                elif entry[2] == -2:
-                    self.otherparent(f)
-                if source:
-                    self.copy(source, f)
-                return
-            if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
-                return
+            entry = self._map.get(f)
+            if entry is not None:
+                if entry[0] == 'r' and entry[2] in (-1, -2):
+                    source = self._copymap.get(f)
+                    if entry[2] == -1:
+                        self.merge(f)
+                    elif entry[2] == -2:
+                        self.otherparent(f)
+                    if source:
+                        self.copy(source, f)
+                    return
+                if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
+                    return
         self._addpath(f, 'n', 0, -1, -1)
         self._copymap.pop(f, None)
         if f in self._nonnormalset:
@@ -624,14 +626,15 @@ class dirstate(object):
         self._dirty = True
         self._droppath(f)
         size = 0
-        if self._pl[1] != nullid and f in self._map:
-            # backup the previous state
-            entry = self._map[f]
-            if entry[0] == 'm': # merge
-                size = -1
-            elif entry[0] == 'n' and entry[2] == -2: # other parent
-                size = -2
-                self._otherparentset.add(f)
+        if self._pl[1] != nullid:
+            entry = self._map.get(f)
+            if entry is not None:
+                # backup the previous state
+                if entry[0] == 'm': # merge
+                    size = -1
+                elif entry[0] == 'n' and entry[2] == -2: # other parent
+                    size = -2
+                    self._otherparentset.add(f)
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self._nonnormalset.add(f)
         if size == 0:
