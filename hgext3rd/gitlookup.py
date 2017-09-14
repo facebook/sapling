@@ -110,40 +110,57 @@ def gitgetmeta(ui, repo, source='default'):
 gitmetafiles = set(['git-mapfile', 'git-named-branches', 'git-tags',
                     'git-remote-refs'])
 
+def _getfile(repo, filename):
+    try:
+        return repo.vfs(filename)
+    except (IOError, OSError) as e:
+        if e.errno != errno.ENOENT:
+            repo.ui.warn(_("warning: unable to read %s: %s\n") % (filename, e))
+
+    return None
+
 @exchange.getbundle2partsgenerator('b2x:fb:gitmeta')
 def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
     '''send git metadata via bundle2'''
     if 'fb_gitmeta' in bundlecaps:
         for fname in sorted(gitmetafiles):
-            try:
-                f = repo.vfs(fname)
-            except (IOError, OSError) as e:
-                if e.errno != errno.ENOENT:
-                    repo.ui.warn(_("warning: unable to read %s: %s\n") %
-                                 (fname, e))
+            f = _getfile(repo, fname)
+            if not f:
                 continue
+
             part = bundle2.bundlepart('b2x:fb:gitmeta',
                                       [('filename', fname)],
                                       data=f.read())
             bundler.addpart(part)
+
+def _writefile(op, filename, data):
+    with op.repo.vfs(filename, 'w+', atomictemp=True) as f:
+        op.repo.ui.note(_('writing .hg/%s\n') % filename)
+        f.write(data)
+        op.records.add('fb:gitmeta:writebytes', len(data))
+
+def _validatepartparams(op, params):
+    if 'filename' not in params:
+        raise error.Abort(_("gitmeta: 'filename' missing"))
+
+    fname = params['filename']
+    if fname not in gitmetafiles:
+        op.repo.ui.warn(
+            _("warning: gitmeta: unknown file '%s' skipped\n") % fname)
+        return False
+
+    return True
 
 @bundle2.parthandler('b2x:fb:gitmeta', ('filename',))
 @bundle2.parthandler('fb:gitmeta', ('filename',))
 def bundle2getgitmeta(op, part):
     '''unbundle a bundle2 containing git metadata on the client'''
     params = dict(part.mandatoryparams)
-    if 'filename' not in params:
-        raise error.Abort(_("gitmeta: 'filename' missing"))
-    fname = params['filename']
-    if fname not in gitmetafiles:
-        op.repo.ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n")
-                        % fname)
-        return
-    with op.repo.wlock(), op.repo.vfs(fname, 'w+', atomictemp=True) as f:
-        data = part.read()
-        op.repo.ui.note(_('writing .hg/%s\n') % fname)
-        f.write(data)
-        op.records.add('fb:gitmeta:writebytes', len(data))
+    if _validatepartparams(op, params):
+        filename = params['filename']
+        with op.repo.wlock():
+            data = part.read()
+            _writefile(op, filename, data)
 
 def extsetup(ui):
     wrapwireprotocommand('lookup', remotelookup)
