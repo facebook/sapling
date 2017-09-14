@@ -505,32 +505,28 @@ def _processpart(op, part):
 
     The part is guaranteed to have been fully consumed when the function exits
     (even if an exception is raised)."""
+    handler = _gethandler(op, part)
+    if handler is None:
+        return
+
+    # handler is called outside the above try block so that we don't
+    # risk catching KeyErrors from anything other than the
+    # parthandlermapping lookup (any KeyError raised by handler()
+    # itself represents a defect of a different variety).
+    output = None
+    if op.captureoutput and op.reply is not None:
+        op.ui.pushbuffer(error=True, subproc=True)
+        output = ''
     try:
-        handler = _gethandler(op, part)
-        if handler is None:
-            return
-
-        # handler is called outside the above try block so that we don't
-        # risk catching KeyErrors from anything other than the
-        # parthandlermapping lookup (any KeyError raised by handler()
-        # itself represents a defect of a different variety).
-        output = None
-        if op.captureoutput and op.reply is not None:
-            op.ui.pushbuffer(error=True, subproc=True)
-            output = ''
-        try:
-            handler(op, part)
-        finally:
-            if output is not None:
-                output = op.ui.popbuffer()
-            if output:
-                outpart = op.reply.newpart('output', data=output,
-                                           mandatory=False)
-                outpart.addparam(
-                    'in-reply-to', pycompat.bytestr(part.id), mandatory=False)
+        handler(op, part)
     finally:
-        pass
-
+        if output is not None:
+            output = op.ui.popbuffer()
+        if output:
+            outpart = op.reply.newpart('output', data=output,
+                                       mandatory=False)
+            outpart.addparam(
+                'in-reply-to', pycompat.bytestr(part.id), mandatory=False)
 
 def decodecaps(blob):
     """decode a bundle2 caps bytes blob into a dictionary
