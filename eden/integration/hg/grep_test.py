@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-import unittest
 from .lib.hg_extension_test_base import hg_test
 from ..lib import hgrepo
 
@@ -51,7 +50,6 @@ class GrepTest:
 
         self.assertEqual(expected, stdout)
 
-    @unittest.skip('`hg grep` is throwing an exception in this case.')
     def test_grep_that_does_not_match_anything(self):
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg('grep', 'NOT IN THERE')
