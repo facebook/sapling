@@ -8,11 +8,12 @@ use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use futures::future::{BoxFuture, Future};
-use futures::stream::{BoxStream, Stream};
+use futures::future::Future;
+use futures::stream::Stream;
 
 use bookmarks::{self, Bookmarks, Version};
 use changeset::Changeset;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use manifest::{BoxManifest, Manifest};
 use nodehash::NodeHash;
 
@@ -105,11 +106,11 @@ where
     type Error = E;
 
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.repo.get_changesets().map_err(self.cvterr).boxed()
+        self.repo.get_changesets().map_err(self.cvterr).boxify()
     }
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.repo.get_heads().map_err(self.cvterr).boxed()
+        self.repo.get_heads().map_err(self.cvterr).boxify()
     }
 
     fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
@@ -121,7 +122,7 @@ where
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
         let cvterr = self.cvterr;
 
-        self.repo.changeset_exists(nodeid).map_err(cvterr).boxed()
+        self.repo.changeset_exists(nodeid).map_err(cvterr).boxify()
     }
 
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
@@ -130,7 +131,7 @@ where
         self.repo
             .get_changeset_by_nodeid(nodeid)
             .map_err(cvterr)
-            .boxed()
+            .boxify()
     }
 
     fn get_manifest_by_nodeid(
@@ -143,7 +144,7 @@ where
             .get_manifest_by_nodeid(nodeid)
             .map(move |m| BoxManifest::new_with_cvterr(m, cvterr))
             .map_err(cvterr)
-            .boxed()
+            .boxify()
     }
 }
 

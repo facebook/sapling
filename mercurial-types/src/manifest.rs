@@ -8,11 +8,12 @@ use std::error;
 use std::fmt::{self, Display};
 use std::marker::PhantomData;
 
-use futures::future::{BoxFuture, Future};
-use futures::stream::{BoxStream, Stream};
+use futures::future::Future;
+use futures::stream::Stream;
 
 use blob::Blob;
 use blobnode::Parents;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::NodeHash;
 use path::Path;
 
@@ -93,7 +94,7 @@ where
             .lookup(path)
             .map(move |oe| oe.map(|e| BoxEntry::new_with_cvterr(e, cvterr)))
             .map_err(cvterr)
-            .boxed()
+            .boxify()
     }
 
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
@@ -103,7 +104,7 @@ where
             .list()
             .map(move |e| BoxEntry::new_with_cvterr(e, cvterr))
             .map_err(cvterr)
-            .boxed()
+            .boxify()
     }
 }
 
@@ -228,11 +229,11 @@ where
     }
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
-        self.entry.get_parents().map_err(self.cvterr).boxed()
+        self.entry.get_parents().map_err(self.cvterr).boxify()
     }
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
-        self.entry.get_raw_content().map_err(self.cvterr).boxed()
+        self.entry.get_raw_content().map_err(self.cvterr).boxify()
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
@@ -241,11 +242,11 @@ where
             .get_content()
             .map(move |c| Content::map_err(c, cvterr))
             .map_err(self.cvterr)
-            .boxed()
+            .boxify()
     }
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
-        self.entry.get_size().map_err(self.cvterr).boxed()
+        self.entry.get_size().map_err(self.cvterr).boxify()
     }
 
     fn get_hash(&self) -> &NodeHash {

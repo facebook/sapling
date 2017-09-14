@@ -7,10 +7,11 @@
 use std::collections::BTreeMap;
 use std::ops::Deref;
 
-use futures::future::{BoxFuture, Future};
-use futures::stream::{self, BoxStream, Stream};
+use futures::future::Future;
+use futures::stream::{self, Stream};
 
 use blobnode::Parents;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use node::Node;
 use nodehash::NodeHash;
 use path::Path;
@@ -111,16 +112,16 @@ where
 
     fn get_parents(&self) -> Self::GetParents {
         self.repo.get_changeset_by_nodeid(&self.csid) // Future<Changeset>
-            .map(|cs| stream::iter(cs.parents().into_iter().map(|p| Ok(p)))) // Future<Stream<>>
+            .map(|cs| stream::iter_ok(cs.parents().into_iter())) // Future<Stream<>>
             .flatten_stream() // Stream<NodeHash>
             .map({
                 let repo = self.repo.clone();
                 move |p| Self::new(repo.clone(), p)
             }) // Stream<Self>
-            .boxed()
+            .boxify()
     }
 
     fn get_content(&self) -> Self::GetContent {
-        self.repo.get_changeset_by_nodeid(&self.csid).boxed()
+        self.repo.get_changeset_by_nodeid(&self.csid).boxify()
     }
 }

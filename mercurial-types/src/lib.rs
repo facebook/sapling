@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 extern crate ascii;
 extern crate itertools;
@@ -26,6 +24,7 @@ extern crate error_chain;
 extern crate quickcheck;
 
 extern crate bookmarks;
+extern crate futures_ext;
 
 extern crate heapsize;
 #[macro_use]
