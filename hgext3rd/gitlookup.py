@@ -34,11 +34,29 @@
 
 '''
 
-from mercurial import bundle2, exchange, encoding, extensions, hg
-from mercurial import localrepo, util, wireproto, error, registrar
-from mercurial.node import bin, hex, nullid
+import errno
+import json
+
+from mercurial import (
+    bundle2,
+    encoding,
+    error,
+    exchange,
+    extensions,
+    hg,
+    localrepo,
+    registrar,
+    util,
+    wireproto,
+)
+
+from mercurial.node import (
+    bin,
+    hex,
+    nullid,
+)
+
 from mercurial.i18n import _
-import errno, json
 
 cmdtable = {}
 command = registrar.command(cmdtable)
