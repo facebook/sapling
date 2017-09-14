@@ -1432,7 +1432,10 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         lfdirstate.write()
 
         oldstandins = lfutil.getstandinsstate(repo)
-
+        # Make sure the merge runs on disk, not in-memory. largefiles is not a
+        # good candidate for in-memory merge (large files, custom dirstate,
+        # matcher usage).
+        kwargs['wc'] = repo[None]
         result = orig(repo, node, branchmerge, force, *args, **kwargs)
 
         newstandins = lfutil.getstandinsstate(repo)
