@@ -38,7 +38,7 @@ from mercurial import bundle2, exchange, encoding, extensions, hg
 from mercurial import localrepo, util, wireproto, error, registrar
 from mercurial.node import bin, hex, nullid
 from mercurial.i18n import _
-import errno, json, urllib
+import errno, json
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -106,7 +106,7 @@ def gitgetmeta(ui, repo, source='default'):
 
     kwargs = {'bundlecaps': exchange.caps20to10(repo)}
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-    kwargs['bundlecaps'].add('bundle2=' + urllib.quote(capsblob))
+    kwargs['bundlecaps'].add('bundle2=' + util.urlreq.quote(capsblob))
     # this would ideally not be in the bundlecaps at all, but adding new kwargs
     # for wire transmissions is not possible as of Mercurial d19164a018a1
     kwargs['bundlecaps'].add('fb_gitmeta')
