@@ -447,11 +447,14 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         msg.append('\n')
         repo.ui.debug(''.join(msg))
 
+    processparts(repo, op, unbundler)
+
+    return op
+
+def processparts(repo, op, unbundler):
     with partiterator(repo, op, unbundler) as parts:
         for part in parts:
             _processpart(op, part)
-
-    return op
 
 def _processchangegroup(op, cg, tr, source, url, **kwargs):
     ret = cg.apply(op.repo, tr, source, url, **kwargs)
