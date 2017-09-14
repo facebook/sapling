@@ -1097,3 +1097,25 @@ we have reusable code here
   112478962961147124edd43549aedd1a335e44bf 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
   08ebfeb61bac6e3f12079de774d285a0d6689eba 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
   26805aba1e600a82e93661149f2313866a221a7b 0 {112478962961147124edd43549aedd1a335e44bf} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
+  $ cd ..
+
+Test that obsmarkers are restored even when not using generaldelta
+
+  $ hg --config format.usegeneraldelta=no init issue5678
+  $ cd issue5678
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > evolution=all
+  > EOF
+  $ echo a > a
+  $ hg ci -Aqm a
+  $ hg ci --amend -m a2
+  $ hg debugobsolete
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  $ hg strip .
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/489bac576828-bef27e14-backup.hg (glob)
+  $ hg unbundle -q .hg/strip-backup/*
+BROKEN: obsmarker got lost
+  $ hg debugobsolete
+  $ cd ..

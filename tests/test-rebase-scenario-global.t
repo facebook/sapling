@@ -375,6 +375,40 @@ Source phase lower than destination phase: new changeset get the phase of destin
 
   $ cd ..
 
+Check that temporary bundle doesn't lose phase when not using generaldelta
+
+  $ hg --config format.usegeneraldelta=no init issue5678
+  $ cd issue5678
+  $ grep generaldelta .hg/requires
+  [1]
+  $ echo a > a
+  $ hg ci -Aqm a
+  $ echo b > b
+  $ hg ci -Aqm b
+  $ hg co -q '.^'
+  $ echo c > c
+  $ hg ci -Aqm c
+  $ hg phase --public
+  $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
+  @  2:d36c public c
+  |
+  | o  1:d2ae draft b
+  |/
+  o  0:cb9a public a
+  
+  $ hg rebase -s 1 -d 2
+  rebasing 1:d2ae7f538514 "b"
+  saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/d2ae7f538514-2953539b-rebase.hg (glob)
+BROKEN: d36c should remain public
+  $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
+  o  2:c882 draft b
+  |
+  @  1:d36c draft c
+  |
+  o  0:cb9a public a
+  
+  $ cd ..
+
 Test for revset
 
 We need a bit different graph
