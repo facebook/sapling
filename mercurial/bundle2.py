@@ -348,14 +348,27 @@ def applybundle(repo, unbundler, tr, source=None, url=None, **kwargs):
         return op
 
 class partiterator(object):
-    def __init__(self, unbundler):
+    def __init__(self, repo, unbundler):
+        self.repo = repo
         self.unbundler = unbundler
+        self.iterator = None
+        self.count = 0
 
     def __enter__(self):
-        return enumerate(self.unbundler.iterparts())
+        def func():
+            itr = enumerate(self.unbundler.iterparts())
+            for count, p in itr:
+                self.count = count
+                yield p
+        self.iterator = func()
+        return self.iterator
 
     def __exit__(self, type, value, tb):
-        pass
+        if not self.iterator:
+            return
+
+        self.repo.ui.debug('bundle2-input-bundle: %i parts total\n' %
+                           self.count)
 
 def processbundle(repo, unbundler, transactiongetter=None, op=None):
     """This function process a bundle, apply effect to/from a repo
@@ -389,11 +402,10 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
         msg.append('\n')
         repo.ui.debug(''.join(msg))
 
-    with partiterator(unbundler) as parts:
+    with partiterator(repo, unbundler) as parts:
         part = None
-        nbpart = 0
         try:
-            for nbpart, part in parts:
+            for part in parts:
                 _processpart(op, part)
         except Exception as exc:
             # Any exceptions seeking to the end of the bundle at this point are
@@ -403,7 +415,7 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
             # re-raise the original error.
             seekerror = False
             try:
-                for nbpart, part in parts:
+                for part in parts:
                     # consume the bundle content
                     part.seek(0, 2)
             except Exception:
@@ -429,8 +441,6 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
                 raise exc
             else:
                 raise
-        finally:
-            repo.ui.debug('bundle2-input-bundle: %i parts total\n' % nbpart)
 
     return op
 
