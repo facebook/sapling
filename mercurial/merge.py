@@ -1479,7 +1479,7 @@ def recordupdates(repo, actions, branchmerge):
 
 def update(repo, node, branchmerge, force, ancestor=None,
            mergeancestor=False, labels=None, matcher=None, mergeforce=False,
-           updatecheck=None):
+           updatecheck=None, wc=None):
     """
     Perform a merge between the working directory and the given node
 
@@ -1527,6 +1527,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
     2 = abort: uncommitted changes (commit or update --clean to discard changes)
     3 = abort: uncommitted changes (checked in commands.py)
 
+    The merge is performed inside ``wc``, a workingctx-like objects. It defaults
+    to repo[None] if None is passed.
+
     Return the same tuple as applyupdates().
     """
     # Avoid cycle.
@@ -1550,7 +1553,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
     else:
         partial = True
     with repo.wlock():
-        wc = repo[None]
+        if wc is None:
+            wc = repo[None]
         pl = wc.parents()
         p1 = pl[0]
         pas = [None]
