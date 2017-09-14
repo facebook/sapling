@@ -399,11 +399,10 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   $ hg rebase -s 1 -d 2
   rebasing 1:d2ae7f538514 "b"
   saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/d2ae7f538514-2953539b-rebase.hg (glob)
-BROKEN: d36c should remain public
   $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
   o  2:c882 draft b
   |
-  @  1:d36c draft c
+  @  1:d36c public c
   |
   o  0:cb9a public a
   

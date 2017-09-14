@@ -1116,6 +1116,6 @@ Test that obsmarkers are restored even when not using generaldelta
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/489bac576828-bef27e14-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
-BROKEN: obsmarker got lost
   $ hg debugobsolete
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   $ cd ..
