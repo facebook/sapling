@@ -1,3 +1,5 @@
+#testcases onlymapdelta.true onlymapdelta.false
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "gitlookup = $TESTDIR/../hgext3rd/gitlookup.py" >> $HGRCPATH
   $ echo "gitrevset = $TESTDIR/../hgext3rd/gitrevset.py" >> $HGRCPATH
@@ -30,7 +32,6 @@ Clone new repo from local repo and check that git metadata syncs properly
   $ cd ../..
   $ hg clone repo1 repo2 -q
   $ cd repo2
-
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   writing .hg/git-mapfile
@@ -47,18 +48,42 @@ Clone new repo from local repo and check that git metadata syncs properly
   $ cat .hg/git-tags
   ffffffffffffffffffffffffffffffffffffffff 0.1
 
+Simulate config change from serving complete hg map to only missing delta
+-------------------------------------------------------------------------
+
+Making this change here instead of during repo setup earlier ensures that we
+test scenarios where the config changes after repos have been syncing.
+#if onlymapdelta.true
+  $ cd ../repo1/.hg
+  $ echo "onlymapdelta = True" >> hgrc
+  $ cd ..
+#endif
+
 Clone new repo from remote repo and check that git metadata syncs properly
 --------------------------------------------------------------------------
 
   $ cd ..
   $ hg clone ssh://user@dummy/repo1 repo3 -q
   $ cd repo3
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 4 files (223 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  fc5f87aa174b7d4016abf3e908fd63cc99774540
+#else
   $ hg gitgetmeta -v
   getting git metadata from ssh://user@dummy/repo1
   writing .hg/git-mapfile
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 3 files (183 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   ffffffffffffffffffffffffffffffffffffffff fc5f87aa174b7d4016abf3e908fd63cc99774540
@@ -68,6 +93,22 @@ Clone new repo from remote repo and check that git metadata syncs properly
 
   $ cat .hg/git-tags
   ffffffffffffffffffffffffffffffffffffffff 0.1
+
+Redundant sync just to see that the hg-git map file is not synced with
+onlymapdelta being True
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 2 files (101 bytes)
+
+  $ cat .hg/git-remote-refs
+  ffffffffffffffffffffffffffffffffffffffff default/master
+
+  $ cat .hg/git-tags
+  ffffffffffffffffffffffffffffffffffffffff 0.1
+#endif
 
 Make changes upstream and check that they get reflected in clones
 -----------------------------------------------------------------
@@ -81,12 +122,25 @@ Make changes upstream and check that they get reflected in clones
 
 Check local repo syncing
   $ cd ../repo2
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 4 files (305 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  d4a59f7c570a8794e6ec20865090e7b848395b92
+#else
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   writing .hg/git-mapfile
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 3 files (265 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   1111111111111111111111111111111111111111 d4a59f7c570a8794e6ec20865090e7b848395b92
@@ -115,6 +169,20 @@ Make more changes upstream
 
 Check remote repo syncing
   $ cd ../repo3
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (529 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  8ea31c3efb6d2edb6d9fe608c29034e7e7ed5f91
+  c411819f7fd6036d50b17a28d3edb7aa9121985a
+#else
   $ hg gitgetmeta -v
   getting git metadata from ssh://user@dummy/repo1
   writing .hg/git-mapfile
@@ -122,6 +190,7 @@ Check remote repo syncing
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 4 files (448 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   1111111111111111111111111111111111111111 d4a59f7c570a8794e6ec20865090e7b848395b92
@@ -148,6 +217,19 @@ Strip changes upstream and see that they get reflected in clones
 
 Check local repo syncing
   $ cd ../repo2
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (406 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  c411819f7fd6036d50b17a28d3edb7aa9121985a
+#else
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   writing .hg/git-mapfile
@@ -155,6 +237,7 @@ Check local repo syncing
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 4 files (366 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   1111111111111111111111111111111111111111 d4a59f7c570a8794e6ec20865090e7b848395b92
@@ -185,6 +268,19 @@ Add a new head upstream
 
 Check remote repo syncing
   $ cd ../repo3
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from ssh://user@dummy/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (324 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
+#else
   $ hg gitgetmeta -v
   getting git metadata from ssh://user@dummy/repo1
   writing .hg/git-mapfile
@@ -192,6 +288,7 @@ Check remote repo syncing
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 4 files (284 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   2222222222222222222222222222222222222222 3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
@@ -208,6 +305,19 @@ Check remote repo syncing
 
 Check local repo syncing
   $ cd ../repo2
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (324 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
+#else
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   writing .hg/git-mapfile
@@ -215,6 +325,7 @@ Check local repo syncing
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 4 files (284 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   2222222222222222222222222222222222222222 3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
@@ -242,6 +353,20 @@ Create unrelated history upstream and check that the syncing works
 
 Check local repo syncing
   $ cd ../repo2
+#if onlymapdelta.true
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (447 bytes)
+
+  $ sort .hg/git-synced-hgheads
+  3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
+  627ddeb6657d60a21b87c725b5c4e60d91b75f19
+#else
   $ hg gitgetmeta -v
   getting git metadata from $TESTTMP/repo1
   writing .hg/git-mapfile
@@ -249,6 +374,7 @@ Check local repo syncing
   writing .hg/git-remote-refs
   writing .hg/git-tags
   wrote 4 files (366 bytes)
+#endif
 
   $ sort .hg/git-mapfile
   2222222222222222222222222222222222222222 3bfa460515b210d1e6f7e21bde166ef5c5f0d9b6
@@ -263,6 +389,54 @@ Check local repo syncing
 
   $ cat .hg/git-tags
   ffffffffffffffffffffffffffffffffffffffff 0.1
+
+Check corrupted git-hg map data
+-------------------------------
+
+This is only valid when we are serving missing map data because when we serve
+the complete map, we just simply serve the file without any validations on the
+map data.
+#if onlymapdelta.true
+  $ cd ../repo1
+  $ touch a
+  $ hg ci -Aqm "adding a"
+  $ hg log -r . --template "{node}\n"
+  1e2e1480acd77a0155ee53e30aab1bb4a08f9f22
+
+Not updating the map file intentionally to simulate missing map data. Instead,
+we try to sync changes and check that the syncing fails.
+  $ cd ../repo2
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  abort: gitmeta: missing hashes in file $TESTTMP/repo1/.hg/git-mapfile
+  [255]
+
+Now adding the map entries to both the repos to simulate corruption on the
+client side
+  $ cd ../repo1
+  $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
+  $ cd ../repo2
+  $ echo "4444444444444444444444444444444444444444 1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" >> .hg/git-mapfile
+  $ hg gitgetmeta -v
+  getting git metadata from $TESTTMP/repo1
+  warning: gitmeta: unexpected lines in .hg/git-mapfile
+  writing .hg/git-mapfile
+  writing .hg/git-synced-hgheads
+  writing .hg/git-named-branches
+  writing .hg/git-remote-refs
+  writing .hg/git-tags
+  wrote 5 files (529 bytes)
+
+Strip the last commit and restore map entries to have same state as
+onlymapdelta.false
+
+  $ grep -v "1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" .hg/git-mapfile > tempfile
+  $ mv tempfile .hg/git-mapfile
+  $ cd ../repo1
+  $ hg strip -q "tip"
+  $ grep -v "1e2e1480acd77a0155ee53e30aab1bb4a08f9f22" .hg/git-mapfile > tempfile
+  $ mv tempfile .hg/git-mapfile
+#endif
 
 Check that our revset and template mappings work
 ------------------------------------------------
