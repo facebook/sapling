@@ -354,13 +354,17 @@ class partiterator(object):
         self.unbundler = unbundler
         self.iterator = None
         self.count = 0
+        self.current = None
 
     def __enter__(self):
         def func():
             itr = enumerate(self.unbundler.iterparts())
             for count, p in itr:
                 self.count = count
+                self.current = p
                 yield p
+                p.seek(0, 2)
+                self.current = None
         self.iterator = func()
         return self.iterator
 
@@ -369,6 +373,13 @@ class partiterator(object):
             return
 
         if exc:
+            # If exiting or interrupted, do not attempt to seek the stream in
+            # the finally block below. This makes abort faster.
+            if (self.current and
+                not isinstance(exc, (SystemExit, KeyboardInterrupt))):
+                # consume the part content to not corrupt the stream.
+                self.current.seek(0, 2)
+
             # Any exceptions seeking to the end of the bundle at this point are
             # almost certainly related to the underlying stream being bad.
             # And, chances are that the exception we're handling is related to
@@ -455,7 +466,6 @@ def _processpart(op, part):
     The part is guaranteed to have been fully consumed when the function exits
     (even if an exception is raised)."""
     status = 'unknown' # used by debug output
-    hardabort = False
     try:
         try:
             handler = parthandlermapping.get(part.type)
@@ -511,15 +521,8 @@ def _processpart(op, part):
                                            mandatory=False)
                 outpart.addparam(
                     'in-reply-to', pycompat.bytestr(part.id), mandatory=False)
-    # If exiting or interrupted, do not attempt to seek the stream in the
-    # finally block below. This makes abort faster.
-    except (SystemExit, KeyboardInterrupt):
-        hardabort = True
-        raise
     finally:
-        # consume the part content to not corrupt the stream.
-        if not hardabort:
-            part.seek(0, 2)
+        pass
 
 
 def decodecaps(blob):
@@ -1147,7 +1150,15 @@ class interrupthandler(unpackermixin):
             return
         part = unbundlepart(self.ui, headerblock, self._fp)
         op = interruptoperation(self.ui)
-        _processpart(op, part)
+        hardabort = False
+        try:
+            _processpart(op, part)
+        except (SystemExit, KeyboardInterrupt):
+            hardabort = True
+            raise
+        finally:
+            if not hardabort:
+                part.seek(0, 2)
         self.ui.debug('bundle2-input-stream-interrupt:'
                       ' closing out of band context\n')
 
