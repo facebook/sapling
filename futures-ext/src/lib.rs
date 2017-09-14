@@ -15,14 +15,14 @@ extern crate bytes;
 #[macro_use]
 extern crate futures;
 #[cfg(test)]
-extern crate tokio_core;
-extern crate tokio_io;
-#[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
+#[cfg(test)]
+extern crate tokio_core;
+extern crate tokio_io;
 
-use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
 use bytes::Bytes;
+use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
 use tokio_io::AsyncRead;
 use tokio_io::codec::{Decoder, Encoder};
 
@@ -35,7 +35,7 @@ pub mod decode;
 pub mod encode;
 
 pub use frame::{FramedStream, ReadLeadingBuffer};
-pub use futures_ordered::{FuturesOrdered, futures_ordered};
+pub use futures_ordered::{futures_ordered, FuturesOrdered};
 pub use stream_wrappers::{BoxStreamWrapper, StreamWrapper, TakeWhile};
 
 /// Map `Item` and `Error` to `()`
@@ -66,6 +66,12 @@ where
     }
 }
 
+// Replacements for BoxFuture and BoxStream, deprecated in upstream futures-rs.
+pub type BoxFuture<T, E> = Box<Future<Item = T, Error = E> + Send>;
+pub type BoxFutureNonSend<T, E> = Box<Future<Item = T, Error = E>>;
+pub type BoxStream<T, E> = Box<Stream<Item = T, Error = E> + Send>;
+pub type BoxStreamNonSend<T, E> = Box<Stream<Item = T, Error = E>>;
+
 pub trait FutureExt: Future + Sized {
     /// Map a `Future` to have `Item=()` and `Error=()`. This is
     /// useful when a future is being used to drive a computation
@@ -73,6 +79,25 @@ pub trait FutureExt: Future + Sized {
     /// with `Handle::spawn()`).
     fn discard(self) -> Discard<Self> {
         Discard(self)
+    }
+
+    /// Create a `Send`able boxed version of this `Future`.
+    #[inline]
+    fn boxify(self) -> BoxFuture<Self::Item, Self::Error>
+    where
+        Self: 'static + Send,
+    {
+        // TODO: (sid0) T21801845 rename to 'boxed' once gone from upstream.
+        Box::new(self)
+    }
+
+    /// Create a non-`Send`able boxed version of this `Future`.
+    #[inline]
+    fn boxify_nonsend(self) -> BoxFutureNonSend<Self::Item, Self::Error>
+    where
+        Self: 'static,
+    {
+        Box::new(self)
     }
 }
 
@@ -130,6 +155,25 @@ pub trait StreamExt: Stream {
         Self: Sized,
     {
         Enumerate::new(self)
+    }
+
+    /// Create a `Send`able boxed version of this `Stream`.
+    #[inline]
+    fn boxify(self) -> BoxStream<Self::Item, Self::Error>
+    where
+        Self: 'static + Send + Sized,
+    {
+        // TODO: (sid0) T21801845 rename to 'boxed' once gone from upstream.
+        Box::new(self)
+    }
+
+    /// Create a non-`Send`able boxed version of this `Stream`.
+    #[inline]
+    fn boxify_nonsend(self) -> BoxStreamNonSend<Self::Item, Self::Error>
+    where
+        Self: 'static + Sized,
+    {
+        Box::new(self)
     }
 }
 
