@@ -37,6 +37,6 @@ mod utils;
 
 pub use errors::*;
 
-pub use repo::BlobRepo;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
+pub use repo::BlobRepo;

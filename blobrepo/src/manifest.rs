@@ -11,8 +11,8 @@ use std::collections::BTreeMap;
 use futures::future::{BoxFuture, Future, IntoFuture};
 use futures::stream::{self, BoxStream, Stream};
 
-use mercurial_types::{Entry, Manifest, NodeHash, Path};
 use mercurial::manifest::revlog::{self, Details};
+use mercurial_types::{Entry, Manifest, NodeHash, Path};
 
 use blobstore::Blobstore;
 
@@ -58,8 +58,10 @@ where
 }
 
 impl<B> Manifest for BlobManifest<B>
-    where B: Blobstore<Key=String> + Sync + Clone,
-          B::ValueOut: AsRef<[u8]> + Send, {
+where
+    B: Blobstore<Key = String> + Sync + Clone,
+    B::ValueOut: AsRef<[u8]> + Send,
+{
     type Error = Error;
 
     fn lookup(

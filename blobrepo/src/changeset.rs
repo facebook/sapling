@@ -7,13 +7,13 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
-use futures::future::{BoxFuture, Future, IntoFuture};
 use bincode;
+use futures::future::{BoxFuture, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
-use mercurial_types::{Blob, BlobNode, Changeset, NodeHash, Parents, Path, Time};
 use mercurial::revlogrepo::RevlogChangeset;
+use mercurial_types::{Blob, BlobNode, Changeset, NodeHash, Parents, Path, Time};
 
 use errors::*;
 

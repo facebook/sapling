@@ -16,12 +16,12 @@ use futures::stream::{self, BoxStream, Stream};
 use blobstore::Blobstore;
 use bookmarks::{Bookmarks, BoxedBookmarks};
 use heads::Heads;
-use mercurial_types::{Changeset, Manifest, NodeHash, Repo, repo};
+use mercurial_types::{repo, Changeset, Manifest, NodeHash, Repo};
 
 use BlobChangeset;
 use BlobManifest;
-use file::fetch_file_blob_from_blobstore;
 use errors::*;
+use file::fetch_file_blob_from_blobstore;
 
 pub struct BlobRepo<Head, Book, Blob> {
     inner: Arc<BlobRepoInner<Head, Book, Blob>>,

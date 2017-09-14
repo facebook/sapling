@@ -8,7 +8,7 @@ use std::error;
 
 use error_chain::ChainedError;
 
-use mercurial_types::{NodeHash, hash};
+use mercurial_types::{hash, NodeHash};
 
 #[recursion_limit = "1024"]
 error_chain! {

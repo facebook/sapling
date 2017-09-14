@@ -48,11 +48,7 @@ where
                     })
             }
         })
-        .and_then({
-            |blob| {
-                Ok(Vec::from(blob.as_ref()))
-            }
-        })
+        .and_then({ |blob| Ok(Vec::from(blob.as_ref())) })
         .boxed()
 }
 
