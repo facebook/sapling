@@ -183,6 +183,40 @@ where
     }
 }
 
+impl<R> Repo for Box<R>
+where
+    R: Repo,
+{
+    type Error = R::Error;
+
+    fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
+        (**self).get_changesets()
+    }
+
+    fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
+        (**self).get_heads()
+    }
+
+    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+        (**self).get_bookmarks()
+    }
+
+    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
+        (**self).changeset_exists(nodeid)
+    }
+
+    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
+        (**self).get_changeset_by_nodeid(nodeid)
+    }
+
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+        (**self).get_manifest_by_nodeid(nodeid)
+    }
+}
+
 impl<RE> Repo for Arc<Repo<Error = RE>>
 where
     RE: error::Error + Send + 'static,
@@ -214,5 +248,96 @@ where
         nodeid: &NodeHash,
     ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         (**self).get_manifest_by_nodeid(nodeid)
+    }
+}
+
+impl<R> Repo for Arc<R>
+where
+    R: Repo,
+{
+    type Error = R::Error;
+
+    fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
+        (**self).get_changesets()
+    }
+
+    fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
+        (**self).get_heads()
+    }
+
+    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+        (**self).get_bookmarks()
+    }
+
+    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
+        (**self).changeset_exists(nodeid)
+    }
+
+    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
+        (**self).get_changeset_by_nodeid(nodeid)
+    }
+
+    fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+        (**self).get_manifest_by_nodeid(nodeid)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[derive(Copy, Clone)]
+    struct DummyRepo;
+
+    impl Repo for DummyRepo {
+        type Error = !;
+
+        fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn changeset_exists(&self, _nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn get_changeset_by_nodeid(
+            &self,
+            _nodeid: &NodeHash,
+        ) -> BoxFuture<Box<Changeset>, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn get_manifest_by_nodeid(
+            &self,
+            _nodeid: &NodeHash,
+        ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+    }
+
+    #[test]
+    fn test_impl() {
+        fn _assert_repo<T: Repo>(_: &T) {}
+
+        let repo = DummyRepo;
+        let a = Arc::new(repo);
+        let b = Box::new(repo);
+
+        _assert_repo(&repo);
+        _assert_repo(&a);
+        _assert_repo(&(a as Arc<Repo<Error = !>>));
+        _assert_repo(&b);
+        _assert_repo(&(b as Box<Repo<Error = !>>));
     }
 }

@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(never_type)]
 
 extern crate ascii;
 extern crate itertools;
