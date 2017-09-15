@@ -458,9 +458,9 @@ def getutf8char(s, pos):
     '''
 
     # find how many bytes to attempt decoding from first nibble
-    l = _utf8len[ord(s[pos]) >> 4]
+    l = _utf8len[ord(s[pos:pos + 1]) >> 4]
     if not l: # ascii
-        return s[pos]
+        return s[pos:pos + 1]
 
     c = s[pos:pos + l]
     # validate with attempted decode
