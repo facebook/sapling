@@ -173,7 +173,8 @@ class hgwebdir(object):
         encoding.encoding = self.ui.config('web', 'encoding',
                                            encoding.encoding)
         self.style = self.ui.config('web', 'style', 'paper')
-        self.templatepath = self.ui.config('web', 'templates', None)
+        self.templatepath = self.ui.config('web', 'templates', None,
+                                           untrusted=False)
         self.stripecount = self.ui.config('web', 'stripes', 1)
         if self.stripecount:
             self.stripecount = int(self.stripecount)
