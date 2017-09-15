@@ -1321,7 +1321,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ hg strip --hidden -r 2 --config extensions.strip= --config devel.strip-obsmarkers=no
   saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-ede36964-backup.hg (glob)
   $ hg debugobsolete
-  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg log -G
   @  2:b0551702f918 (draft) [tip ] 2
   |
@@ -1348,7 +1348,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   searching for changes
   no changes found
   $ hg debugobsolete
-  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg log -G
   @  2:b0551702f918 (draft) [tip ] 2
   |
@@ -1382,8 +1382,8 @@ Testing that strip remove markers:
       e016b03fd86fcccc54817d120b90b751aaf367d6
       b0551702f918510f01ae838ab03a463054c67b46
   obsmarkers -- {}
-      version: 1 (70 bytes)
-      e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+      version: 1 (86 bytes)
+      e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   phase-heads -- {}
       b0551702f918510f01ae838ab03a463054c67b46 draft
 
@@ -1395,7 +1395,7 @@ Testing that strip remove markers:
   1 new obsolescence markers
   (run 'hg update' to get a working copy)
   $ hg debugobsolete | sort
-  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (*) {'user': 'test'} (glob)
+  e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg log -G
   o  2:b0551702f918 (draft) [tip ] 2
   |
@@ -1431,7 +1431,7 @@ only a subset of those are displayed (because of --rev option)
   adding d
   $ hg ci --amend -m dd --config experimental.stabilization.track-operation=1
   $ hg debugobsolete --index --rev "3+7"
-  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 \(.*\) {'user': 'test'} (re)
+  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 \(.*\) {'operation': 'amend', 'user': 'test'} (re)
   $ hg debugobsolete --index --rev "3+7" -Tjson
   [
@@ -1439,7 +1439,7 @@ only a subset of those are displayed (because of --rev option)
     "date": [0.0, 0],
     "flag": 0,
     "index": 1,
-    "metadata": {"user": "test"},
+    "metadata": {"operation": "amend", "user": "test"},
     "prednode": "6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1",
     "succnodes": ["d27fb9b066076fd921277a4b9e8b9cb48c95bc6a"]
    },
@@ -1455,15 +1455,15 @@ only a subset of those are displayed (because of --rev option)
 
 Test the --delete option of debugobsolete command
   $ hg debugobsolete --index
-  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  2 1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  2 1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg debugobsolete --delete 1 --delete 3
   deleted 2 obsolescence markers
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  1ab51af8f9b41ef8c7f6f3312d4706d870b1fb74 29346082e4a9e27042b62d2da0e2de211c027621 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
 
 Test adding changeset after obsmarkers affecting it
 (eg: during pull, or unbundle)

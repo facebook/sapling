@@ -210,9 +210,9 @@ visible.
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
+  |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["operation", "amend"], ["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
   | x  471f378eab4c
-  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["user", "test1"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
+  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["operation", "amend"], ["user", "test1"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
   o  ea207398892e
   
 Test templates with splitted commit
@@ -721,11 +721,11 @@ Predecessors template should the predecessors as we force their display with
   o  019fadeab383
   |
   | x  65b757b745b9
-  |/     Obsfate: [{"markers": [["65b757b745b935093c87a2bccd877521cccffcbd", ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"]}]
+  |/     Obsfate: [{"markers": [["65b757b745b935093c87a2bccd877521cccffcbd", ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["019fadeab383f6699fa83ad7bdb4d82ed2c0e5ab"]}]
   | @  fdf9bde5129a
   |/
   | x  471f378eab4c
-  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"]}, {"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["65b757b745b935093c87a2bccd877521cccffcbd"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["65b757b745b935093c87a2bccd877521cccffcbd"]}]
+  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"]}, {"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["65b757b745b935093c87a2bccd877521cccffcbd"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["65b757b745b935093c87a2bccd877521cccffcbd"]}]
   o  ea207398892e
   
 
@@ -954,7 +954,7 @@ with --hidden
   | x  b7ea6d14e664
   | |    Obsfate: [{"markers": [["b7ea6d14e664bdc8922221f7992631b50da3fb07", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
   | | x  0dec01379d3b
-  | |/     Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["b7ea6d14e664bdc8922221f7992631b50da3fb07"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["b7ea6d14e664bdc8922221f7992631b50da3fb07"]}]
+  | |/     Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["b7ea6d14e664bdc8922221f7992631b50da3fb07"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["b7ea6d14e664bdc8922221f7992631b50da3fb07"]}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
   o  ea207398892e
@@ -1044,8 +1044,8 @@ Test setup
   
 
   $ hg debugobsolete
-  471f378eab4c5e25f6c77f785b27c936efb22874 fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 7a230b46bf61e50b30308c6cfd7bd1269ef54702 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  471f378eab4c5e25f6c77f785b27c936efb22874 fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e 7a230b46bf61e50b30308c6cfd7bd1269ef54702 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
 
 Check templates
 ---------------
@@ -1532,7 +1532,7 @@ Check templates
   | o  ba2ed02b0c9a
   | |
   | x  4a004186e638
-  |/     Obsfate: [{"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["b18bc8331526a22cbb1801022bd1555bf291c48b"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["b18bc8331526a22cbb1801022bd1555bf291c48b"]}, {"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["0b997eb7ceeee06200a02f8aab185979092d514e"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["0b997eb7ceeee06200a02f8aab185979092d514e"]}]
+  |/     Obsfate: [{"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["b18bc8331526a22cbb1801022bd1555bf291c48b"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["b18bc8331526a22cbb1801022bd1555bf291c48b"]}, {"markers": [["4a004186e63889f20cb16434fcbd72220bd1eace", ["0b997eb7ceeee06200a02f8aab185979092d514e"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["0b997eb7ceeee06200a02f8aab185979092d514e"]}]
   o  dd800401bd8c
   |
   | x  9bd10a0775e4

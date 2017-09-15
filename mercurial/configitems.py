@@ -191,7 +191,7 @@ coreconfigitem('experimental', 'stabilization.bundle-obsmarker',
     alias=[('experimental', 'evolution.bundle-obsmarker')],
 )
 coreconfigitem('experimental', 'stabilization.track-operation',
-    default=False,
+    default=True,
     alias=[('experimental', 'evolution.track-operation')]
 )
 coreconfigitem('experimental', 'exportableenviron',
