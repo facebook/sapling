@@ -20,6 +20,8 @@ Configs:
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
       days after which it is no longer prefetched.
+    ``remotefilelog.prefetchdelay`` specifies delay between background
+      prefetches in seconds after operations that change the working copy parent
     ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
       include in an incremental data repack.
     ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
@@ -63,6 +65,7 @@ from mercurial import (
 )
 
 import os
+import time
 import traceback
 
 # ensures debug commands are registered
@@ -781,26 +784,47 @@ def revdatelimit(ui, revset):
         revset = '(%s) & date(-%s)' % (revset, days)
     return revset
 
+def readytofetch(repo):
+    """Check that enough time has passed since the last background prefetch.
+    This only relates to prefetches after operations that change the working
+    copy parent. Default delay between background prefetches is 2 minutes.
+    """
+    timeout = repo.ui.configint('remotefilelog', 'prefetchdelay', 120)
+    fname = repo.vfs.join('lastprefetch')
+
+    ready = False
+    with open(fname, 'a'):
+        # the with construct above is used to avoid race conditions
+        modtime = os.path.getmtime(fname)
+        if (time.time() - modtime) > timeout:
+            os.utime(fname, None)
+            ready = True
+
+    return ready
+
 def wcpprefetch(ui, repo, **kwargs):
     """Prefetches in background revisions specified by bgprefetchrevs revset.
     Does background repack if backgroundrepack flag is set in config.
     """
     shallow = shallowrepo.requirement in repo.requirements
     bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
+    isready = readytofetch(repo)
 
-    if shallow and bgprefetchrevs:
-        bgrepack = repo.ui.configbool('remotefilelog',
-                                      'backgroundrepack', False)
-        # update a revset with a date limit
-        bgprefetchrevs = revdatelimit(ui, bgprefetchrevs)
+    if not (shallow and bgprefetchrevs and isready):
+        return
 
-        def anon():
-            if util.safehasattr(repo, 'ranprefetch') and repo.ranprefetch:
-                return
-            repo.ranprefetch = True
-            repo.backgroundprefetch(bgprefetchrevs, repack=bgrepack)
+    bgrepack = repo.ui.configbool('remotefilelog',
+                                  'backgroundrepack', False)
+    # update a revset with a date limit
+    bgprefetchrevs = revdatelimit(ui, bgprefetchrevs)
 
-        repo._afterlock(anon)
+    def anon():
+        if util.safehasattr(repo, 'ranprefetch') and repo.ranprefetch:
+            return
+        repo.ranprefetch = True
+        repo.backgroundprefetch(bgprefetchrevs, repack=bgrepack)
+
+    repo._afterlock(anon)
 
 def pull(orig, ui, repo, *pats, **opts):
     result = orig(ui, repo, *pats, **opts)

@@ -32,11 +32,13 @@
   no changes found
 
 # Set the prefetchdays config to zero so that all commits are prefetched
-# no matter what their creation date is.
+# no matter what their creation date is. Also set prefetchdelay config
+# to zero so that there is no delay between prefetches.
   $ cd shallow
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > prefetchdays=0
+  > prefetchdelay=0
   > EOF
   $ cd ..
 
