@@ -95,6 +95,7 @@ type BBlobstore = Arc<
 
 fn _assert_clone<T: Clone>(_: &T) {}
 fn _assert_send<T: Send>(_: &T) {}
+fn _assert_sized<T: Sized>(_: &T) {}
 fn _assert_static<T: 'static>(_: &T) {}
 fn _assert_blobstore<T: Blobstore>(_: &T) {}
 
@@ -117,7 +118,10 @@ fn put_manifest_entry(
     entry_hash: NodeHash,
     blob: Blob<Vec<u8>>,
     parents: Parents,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> + Send + 'static
+where
+    Error: Send + 'static,
+{
     let bytes = blob.into_inner()
         .ok_or("missing blob data".into())
         .map(Bytes::from)
@@ -142,17 +146,14 @@ fn put_manifest_entry(
 
             node.join(blob).map(|_| ())
         })
-        .boxed()
 }
 
 // Copy a single manifest entry into the blobstore
-// TODO: recast as `impl Future<...>` - remove most of these type constraints (which are mostly
-// for BoxFuture)
 // TODO: #[async]
 fn copy_manifest_entry<E>(
     entry: Box<Entry<Error = E>>,
     blobstore: BBlobstore,
-) -> impl Future<Item = (), Error = Error> + 'static
+) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: From<E>,
     E: error::Error + Send + 'static,
@@ -229,7 +230,10 @@ fn copy_changeset(
     revlog_repo: RevlogRepo,
     blobstore: BBlobstore,
     csid: NodeHash,
-) -> BoxFuture<(), Error> {
+) -> impl Future<Item = (), Error = Error> + Send + 'static
+where
+    Error: Send + 'static,
+{
     let put = {
         let blobstore = blobstore.clone();
         let csid = csid;
@@ -289,8 +293,10 @@ fn copy_changeset(
                                     )
                             })
                             .into_future()
-                            .flatten()
-                            .boxed();
+                            .flatten();
+
+                        _assert_sized(&files);
+                        let files = files.boxed(); // Huh? No idea why this is needed to avoid an error below.
 
                         putmf.join(files)
                     })
@@ -300,7 +306,10 @@ fn copy_changeset(
             })
     };
 
-    put.join(manifest).map(|_| ()).boxed()
+    _assert_sized(&put);
+    _assert_sized(&manifest);
+
+    put.join(manifest).map(|_| ())
 }
 
 fn convert<H>(
