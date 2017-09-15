@@ -5,30 +5,30 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate clap;
-extern crate futures;
 #[macro_use]
 extern crate error_chain;
+extern crate futures;
 #[macro_use]
 extern crate slog;
 extern crate slog_term;
 extern crate tokio_core;
 
+extern crate blobrepo;
+extern crate blobstore;
+extern crate bytes;
+extern crate fileblob;
+extern crate fileheads;
+extern crate futures_cpupool;
+extern crate futures_ext;
+extern crate heads;
+extern crate manifoldblob;
 extern crate mercurial;
 extern crate mercurial_types;
-extern crate blobstore;
-extern crate fileblob;
 extern crate rocksblob;
-extern crate manifoldblob;
-extern crate futures_ext;
-extern crate futures_cpupool;
-extern crate bytes;
-extern crate heads;
-extern crate fileheads;
-extern crate blobrepo;
 
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 
 extern crate bincode;
 
@@ -62,7 +62,7 @@ use blobrepo::BlobChangeset;
 
 use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{Blob, Changeset, NodeHash, Parents, Type, hash};
+use mercurial_types::{hash, Blob, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Copy, Clone)]
@@ -400,18 +400,14 @@ fn open_blobstore<P: AsRef<Path>>(
     output.push("blobs");
 
     let blobstore = match ty {
-        BlobstoreType::Files => {
-            Fileblob::<_, Bytes>::create(output)
-                .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
-                .arced()
-        }
-        BlobstoreType::Rocksdb => {
-            Rocksblob::create(output)
-                .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
-                .arced()
-        }
+        BlobstoreType::Files => Fileblob::<_, Bytes>::create(output)
+            .map_err(Error::from)
+            .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
+            .arced(),
+        BlobstoreType::Rocksdb => Rocksblob::create(output)
+            .map_err(Error::from)
+            .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
+            .arced(),
         BlobstoreType::Manifold => {
             let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic("mononoke", remote);
             mb.arced()
