@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![feature(conservative_impl_trait)]
+
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
@@ -150,7 +152,7 @@ fn put_manifest_entry(
 fn copy_manifest_entry<E>(
     entry: Box<Entry<Error = E>>,
     blobstore: BBlobstore,
-) -> BoxFuture<(), Error>
+) -> impl Future<Item = (), Error = Error> + 'static
 where
     Error: From<E>,
     E: error::Error + Send + 'static,
@@ -159,13 +161,11 @@ where
 
     let blobfuture = entry.get_raw_content().map_err(Error::from);
 
-    let copy = blobfuture
+    blobfuture
         .join(entry.get_parents().map_err(Error::from))
         .and_then(move |(blob, parents)| {
             put_manifest_entry(blobstore, hash, blob, parents)
-        });
-
-    copy.boxed()
+        })
 }
 
 fn get_stream_of_manifest_entries(
