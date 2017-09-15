@@ -878,6 +878,23 @@ def mod(context, mapping, args):
     func = lambda a, b: a % b
     return runarithmetic(context, mapping, (func, args[0], args[1]))
 
+@templatefunc('obsfateoperations(markers)')
+def obsfateoperations(context, mapping, args):
+    """Compute obsfate related information based on markers (EXPERIMENTAL)"""
+    if len(args) != 1:
+        # i18n: "obsfateoperations" is a keyword
+        raise error.ParseError(_("obsfateoperations expects one arguments"))
+
+    markers = evalfuncarg(context, mapping, args[0])
+
+    try:
+        data = obsutil.markersoperations(markers)
+        return templatekw.hybridlist(data, name='operation')
+    except (TypeError, KeyError):
+        # i18n: "obsfateoperations" is a keyword
+        errmsg = _("obsfateoperations first argument should be an iterable")
+        raise error.ParseError(errmsg)
+
 @templatefunc('obsfatedate(markers)')
 def obsfatedate(context, mapping, args):
     """Compute obsfate related information based on markers (EXPERIMENTAL)"""

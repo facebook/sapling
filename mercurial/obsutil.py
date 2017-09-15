@@ -646,3 +646,12 @@ def markersusers(markers):
     users = set(meta.get('user') for meta in markersmeta if meta.get('user'))
 
     return sorted(users)
+
+def markersoperations(markers):
+    """ Returns a sorted list of markers operations without duplicates
+    """
+    markersmeta = [dict(m[3]) for m in markers]
+    operations = set(meta.get('operation') for meta in markersmeta
+                     if meta.get('operation'))
+
+    return sorted(operations)
