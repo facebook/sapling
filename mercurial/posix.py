@@ -379,7 +379,7 @@ if pycompat.sysplatform == 'darwin':
             u = s.decode('utf-8')
 
         # Decompose then lowercase (HFS+ technote specifies lower)
-        enc = unicodedata.normalize('NFD', u).lower().encode('utf-8')
+        enc = unicodedata.normalize(r'NFD', u).lower().encode('utf-8')
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
