@@ -1023,41 +1023,7 @@ def shortest(context, mapping, args):
     # which would be unacceptably slow. so we look for hash collision in
     # unfiltered space, which means some hashes may be slightly longer.
     cl = mapping['ctx']._repo.unfiltered().changelog
-    def isvalid(test):
-        try:
-            if cl._partialmatch(test) is None:
-                return False
-
-            try:
-                i = int(test)
-                # if we are a pure int, then starting with zero will not be
-                # confused as a rev; or, obviously, if the int is larger than
-                # the value of the tip rev
-                if test[0] == '0' or i > len(cl):
-                    return True
-                return False
-            except ValueError:
-                return True
-        except error.RevlogError:
-            return False
-        except error.WdirUnsupported:
-            # single 'ff...' match
-            return True
-
-    shortest = node
-    startlength = max(6, minlength)
-    length = startlength
-    while True:
-        test = node[:length]
-        if isvalid(test):
-            shortest = test
-            if length == minlength or length > startlength:
-                return shortest
-            length -= 1
-        else:
-            length += 1
-            if len(shortest) <= length:
-                return shortest
+    return cl.shortest(node, minlength)
 
 @templatefunc('strip(text[, chars])')
 def strip(context, mapping, args):

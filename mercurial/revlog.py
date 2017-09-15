@@ -1128,6 +1128,44 @@ class revlog(object):
 
         raise LookupError(id, self.indexfile, _('no match found'))
 
+    def shortest(self, hexnode, minlength=1):
+        """Find the shortest unambiguous prefix that matches hexnode."""
+        def isvalid(test):
+            try:
+                if self._partialmatch(test) is None:
+                    return False
+
+                try:
+                    i = int(test)
+                    # if we are a pure int, then starting with zero will not be
+                    # confused as a rev; or, obviously, if the int is larger
+                    # than the value of the tip rev
+                    if test[0] == '0' or i > len(self):
+                        return True
+                    return False
+                except ValueError:
+                    return True
+            except error.RevlogError:
+                return False
+            except error.WdirUnsupported:
+                # single 'ff...' match
+                return True
+
+        shortest = hexnode
+        startlength = max(6, minlength)
+        length = startlength
+        while True:
+            test = hexnode[:length]
+            if isvalid(test):
+                shortest = test
+                if length == minlength or length > startlength:
+                    return shortest
+                length -= 1
+            else:
+                length += 1
+                if len(shortest) <= length:
+                    return shortest
+
     def cmp(self, node, text):
         """compare text with a given file revision
 
