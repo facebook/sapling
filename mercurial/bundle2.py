@@ -1050,7 +1050,11 @@ class bundlepart(object):
             header.append(key)
             header.append(value)
         ## finalize header
-        headerchunk = ''.join(header)
+        try:
+            headerchunk = ''.join(header)
+        except TypeError:
+            raise TypeError(r'Found a non-bytes trying to '
+                            r'build bundle part header: %r' % header)
         outdebug(ui, 'header chunk size: %i' % len(headerchunk))
         yield _pack(_fpartheadersize, len(headerchunk))
         yield headerchunk
