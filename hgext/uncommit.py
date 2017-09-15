@@ -133,7 +133,7 @@ def _uncommitdirstate(repo, oldctx, match):
         ds.copy(src, dst)
 
 @command('uncommit',
-    [('', 'empty', False, _('allow an empty commit after uncommiting')),
+    [('', 'keep', False, _('allow an empty commit after uncommiting')),
     ] + commands.walkopts,
     _('[OPTION]... [FILE]...'))
 def uncommit(ui, repo, *pats, **opts):
@@ -163,7 +163,7 @@ def uncommit(ui, repo, *pats, **opts):
 
         with repo.transaction('uncommit'):
             match = scmutil.match(old, pats, opts)
-            newid = _commitfiltered(repo, old, match, opts.get('empty'))
+            newid = _commitfiltered(repo, old, match, opts.get('keep'))
             if newid is None:
                 ui.status(_("nothing to uncommit\n"))
                 return 1

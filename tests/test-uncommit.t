@@ -30,7 +30,7 @@ Help for uncommit
   
   options ([+] can be repeated):
   
-      --empty               allow an empty commit after uncommiting
+      --keep                allow an empty commit after uncommiting
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
   
@@ -286,7 +286,7 @@ Uncommit leaving an empty changeset
   > P
   > EOS
   $ hg up Q -q
-  $ hg uncommit --empty
+  $ hg uncommit --keep
   $ hg log -G -T '{desc} FILES: {files}'
   @  Q FILES:
   |
