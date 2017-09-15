@@ -1640,7 +1640,8 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         part = bundler.newpart('changegroup', data=cgstream)
         if cgversions:
             part.addparam('version', version)
-        part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
+        part.addparam('nbchanges', '%d' % len(outgoing.missing),
+                      mandatory=False)
         if 'treemanifest' in repo.requirements:
             part.addparam('treemanifest', '1')
 

@@ -1444,7 +1444,7 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
     part = bundler.newpart('changegroup', data=cg.getchunks())
     part.addparam('version', cg.version)
     if 'clcount' in cg.extras:
-        part.addparam('nbchanges', str(cg.extras['clcount']),
+        part.addparam('nbchanges', '%d' % cg.extras['clcount'],
                       mandatory=False)
     if opts.get('phases') and repo.revs('%ln and secret()',
                                         outgoing.missingheads):
@@ -1520,7 +1520,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None,
         part = bundle.newpart('changegroup', data=cg.getchunks())
         part.addparam('version', cg.version)
         if 'clcount' in cg.extras:
-            part.addparam('nbchanges', str(cg.extras['clcount']),
+            part.addparam('nbchanges', '%d' % cg.extras['clcount'],
                           mandatory=False)
         chunkiter = bundle.getchunks()
     else:
