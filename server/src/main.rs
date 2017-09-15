@@ -260,6 +260,8 @@ fn main() {
                 .help("repo type"),
         )
         .args_from_usage("<REPODIR>...            'paths to repo dirs'")
+        .args_from_usage("[dry] --dry             'temporary flag that tells \
+                                                   the server to do nothing'")
         .get_matches();
 
     let level = if matches.is_present("debug") {
@@ -275,6 +277,14 @@ fn main() {
     let root_log = slog::Logger::root(drain, o![]);
 
     info!(root_log, "Starting up");
+
+    if matches.is_present("dry") {
+        info!(root_log, "Server started in dry mode, doing nothing");
+        loop {
+            thread::sleep(::std::time::Duration::from_secs(15));
+            info!(root_log, "I am still here, sleeping for another 15 sec...");
+        }
+    }
 
     let repos = matches.values_of("REPODIR").unwrap().map(
         |p| match matches.value_of("repotype").unwrap() {
