@@ -344,11 +344,11 @@ if pycompat.sysplatform == 'darwin':
 
         >>> normcase(b'UPPER')
         'upper'
-        >>> normcase(b'Caf\xc3\xa9')
+        >>> normcase(b'Caf\\xc3\\xa9')
         'cafe\\xcc\\x81'
-        >>> normcase(b'\xc3\x89')
+        >>> normcase(b'\\xc3\\x89')
         'e\\xcc\\x81'
-        >>> normcase(b'\xb8\xca\xc3\xca\xbe\xc8.JPG') # issue3918
+        >>> normcase(b'\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
         '%b8%ca%c3\\xca\\xbe%c8.jpg'
         '''
 
