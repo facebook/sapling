@@ -491,7 +491,7 @@ class hgwebdir(object):
             else:
                 yield config('web', 'motd', '')
 
-        def config(section, name, default=None, untrusted=True):
+        def config(section, name, default=uimod._unset, untrusted=True):
             return self.ui.config(section, name, default, untrusted)
 
         self.updatereqenv(req.env)
