@@ -8,16 +8,16 @@
 // TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
 
-extern crate heads;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate heads;
 
 use std::hash::Hash;
 use std::sync::Mutex;
 
-use futures::future::{FutureResult, ok};
-use futures::stream::{BoxStream, Stream, iter};
+use futures::future::{ok, FutureResult};
+use futures::stream::{iter, BoxStream, Stream};
 use std::collections::HashSet;
 
 use heads::Heads;
@@ -35,8 +35,10 @@ pub struct MemHeads<T: Hash + Eq + Clone> {
 
 impl<T: Hash + Eq + Clone + Send> MemHeads<T> {
     #[allow(dead_code)]
-    fn new() -> Self {
-        MemHeads { heads: Mutex::new(HashSet::new()) }
+    pub fn new() -> Self {
+        MemHeads {
+            heads: Mutex::new(HashSet::new()),
+        }
     }
 }
 
