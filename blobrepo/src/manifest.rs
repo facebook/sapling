@@ -8,8 +8,9 @@
 
 use std::collections::BTreeMap;
 
-use futures::future::{BoxFuture, Future, IntoFuture};
-use futures::stream::{self, BoxStream, Stream};
+use futures::future::{Future, IntoFuture};
+use futures::stream;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::{self, Details};
 use mercurial_types::{Entry, Manifest, NodeHash, Path};
@@ -46,7 +47,7 @@ where
                     Some(blob) => Ok(Some(Self::parse(blobstore, blob)?)),
                 }
             })
-            .boxed()
+            .boxify()
     }
 
     pub fn parse<D: AsRef<[u8]>>(blobstore: B, data: D) -> Result<Self> {
@@ -76,7 +77,7 @@ where
             })
             .map(|e| e.boxed());
 
-        Ok(res).into_future().boxed()
+        Ok(res).into_future().boxify()
     }
 
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
@@ -87,7 +88,7 @@ where
                 let blobstore = self.blobstore.clone();
                 move |(path, d)| BlobEntry::new(blobstore.clone(), path, *d.nodeid(), d.flag())
             })
-            .map(|e| Ok(e.boxed()));
-        stream::iter(entries).boxed()
+            .map(|e| e.boxed());
+        stream::iter_ok(entries).boxify()
     }
 }

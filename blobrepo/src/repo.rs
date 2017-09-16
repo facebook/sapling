@@ -10,8 +10,9 @@ use std::mem;
 use std::sync::Arc;
 
 use futures::{Async, Poll};
-use futures::future::{BoxFuture, Future};
-use futures::stream::{self, BoxStream, Stream};
+use futures::future::Future;
+use futures::stream::{self, Stream};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobstore::Blobstore;
 use bookmarks::{Bookmarks, BoxedBookmarks};
@@ -70,20 +71,20 @@ where
             repo: BlobRepo {
                 inner: self.inner.clone(),
             },
-            heads: self.inner.heads.heads().map_err(heads_err).boxed(),
+            heads: self.inner.heads.heads().map_err(heads_err).boxify(),
             state: BCState::Idle,
             seen: HashSet::new(),
-        }.boxed()
+        }.boxify()
     }
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.inner.heads.heads().map_err(heads_err).boxed()
+        self.inner.heads.heads().map_err(heads_err).boxify()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
         BlobChangeset::load(&self.inner.blobstore, nodeid)
             .map(|cs| cs.is_some())
-            .boxed()
+            .boxify()
     }
 
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
@@ -93,7 +94,7 @@ where
                 cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into())
             })
             .map(|cs| cs.boxed())
-            .boxed()
+            .boxify()
     }
 
     fn get_manifest_by_nodeid(
@@ -106,7 +107,7 @@ where
                 mf.ok_or(ErrorKind::ManifestMissing(nodeid).into())
             })
             .map(|m| m.boxed())
-            .boxed()
+            .boxify()
     }
 
     fn get_bookmarks(&self) -> Result<repo::BoxedBookmarks<Self::Error>> {
@@ -179,11 +180,11 @@ where
                     let cs = try_ready!(csfut.poll());
 
                     // get current heads stream and replace it with a placeholder
-                    let heads = mem::replace(&mut self.heads, stream::empty().boxed());
+                    let heads = mem::replace(&mut self.heads, stream::empty().boxify());
 
                     // Add new heads - existing first, then new to get BFS
-                    let parents = cs.parents().into_iter().map(|v| Ok(v));
-                    self.heads = heads.chain(stream::iter(parents)).boxed();
+                    let parents = cs.parents().into_iter();
+                    self.heads = heads.chain(stream::iter_ok(parents)).boxify();
 
                     (Some(Some(*next)), Idle)
                 }

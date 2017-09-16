@@ -8,7 +8,8 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use bincode;
-use futures::future::{BoxFuture, Future, IntoFuture};
+use futures::future::{Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
 
@@ -72,7 +73,7 @@ impl BlobChangeset {
                     Ok(Some(cs))
                 }
             })
-            .boxed()
+            .boxify()
     }
 
     pub fn save<B>(&self, blobstore: B) -> BoxFuture<(), Error>
@@ -100,7 +101,7 @@ impl BlobChangeset {
             .into_future()
             .and_then(move |blob| blobstore.put(key, blob.into())
                                 .map_err(blobstore_err))
-            .boxed()
+            .boxify()
     }
 }
 

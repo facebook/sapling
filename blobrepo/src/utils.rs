@@ -4,7 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::future::{BoxFuture, Future, IntoFuture};
+use futures::future::{Future, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 
 use bincode;
 
@@ -34,5 +35,5 @@ where
         .and_then(move |blob| {
             bincode::deserialize(blob.as_ref()).into_future().from_err()
         })
-        .boxed()
+        .boxify()
 }

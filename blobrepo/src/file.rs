@@ -6,7 +6,8 @@
 
 //! Plain files, symlinks
 
-use futures::future::{BoxFuture, Future};
+use futures::future::Future;
+use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial_types::{Blob, NodeHash, Parents, Path};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
@@ -49,7 +50,7 @@ where
             }
         })
         .and_then({ |blob| Ok(Vec::from(blob.as_ref())) })
-        .boxed()
+        .boxify()
 }
 
 impl<B> BlobEntry<B>
@@ -89,7 +90,7 @@ where
                         .map(|blob| Vec::from(blob.as_ref()))
                 }
             })
-            .boxed()
+            .boxify()
     }
 }
 
@@ -105,13 +106,13 @@ where
     }
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
-        self.get_node().map(|node| node.parents).boxed()
+        self.get_node().map(|node| node.parents).boxify()
     }
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
         self.get_raw_content_inner()
             .map(|blob| Blob::from(blob.as_ref()))
-            .boxed()
+            .boxify()
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
@@ -132,7 +133,7 @@ where
                     Ok(res)
                 }
             })
-            .boxed()
+            .boxify()
     }
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
@@ -142,7 +143,7 @@ where
                 Content::Symlink(path) => Ok(Some(path.to_vec().len())),
                 Content::Tree(_) => Ok(None),
             })
-            .boxed()
+            .boxify()
     }
 
     fn get_hash(&self) -> &NodeHash {
