@@ -1,6 +1,7 @@
 test-addremove.t
 test-ancestor.py
 test-backwards-remove.t
+test-bookmarks-strip.t
 test-branch-tag-confict.t
 test-casecollision.t
 test-check-commit.t
@@ -30,6 +31,7 @@ test-imports-checker.t
 test-issue1089.t
 test-issue1993.t
 test-issue842.t
+test-journal-exists.t
 test-locate.t
 test-lrucachedict.py
 test-manifest.py
@@ -51,6 +53,7 @@ test-push-checkheads-unpushed-D7.t
 test-rename.t
 test-revlog-packentry.t
 test-run-tests.py
+test-status-terse.t
 test-terse-status.t
 test-unified-test.t
 test-update-dest.t
