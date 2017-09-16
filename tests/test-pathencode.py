@@ -188,7 +188,7 @@ def main():
         if o in ('-c', '--count'):
             count = int(a)
         elif o in ('-s', '--seed'):
-            seed = long(a, base=0) # accepts base 10 or 16 strings
+            seed = int(a, base=0) # accepts base 10 or 16 strings
         elif o == '--build':
             buildprobtable(sys.stdout,
                            'find .hg/store/data -type f && '
@@ -197,9 +197,9 @@ def main():
 
     if seed is None:
         try:
-            seed = long(binascii.hexlify(os.urandom(16)), 16)
+            seed = int(binascii.hexlify(os.urandom(16)), 16)
         except AttributeError:
-            seed = long(time.time() * 1000)
+            seed = int(time.time() * 1000)
 
     rng = random.Random(seed)
     if runtests(rng, seed, count):
