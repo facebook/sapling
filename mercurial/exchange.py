@@ -423,7 +423,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
     if opargs is None:
         opargs = {}
     pushop = pushoperation(repo, remote, force, revs, newbranch, bookmarks,
-                           **opargs)
+                           **pycompat.strkwargs(opargs))
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
