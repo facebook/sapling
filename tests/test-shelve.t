@@ -352,7 +352,7 @@ force a conflicted merge to occur
   
   # Unresolved merge conflicts:
   # 
-  #     a/a
+  #     a/a (glob)
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   
