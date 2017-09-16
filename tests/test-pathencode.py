@@ -19,6 +19,11 @@ from mercurial import (
     store,
 )
 
+try:
+    xrange
+except NameError:
+    xrange = range
+
 validchars = set(map(chr, range(0, 256)))
 alphanum = range(ord('A'), ord('Z'))
 
