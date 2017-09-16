@@ -64,6 +64,11 @@ def jsonescapeu8fast(u8chars, paranoid):
     except IndexError:
         raise ValueError
 
+if pycompat.ispy3:
+    _utf8strict = r'surrogatepass'
+else:
+    _utf8strict = r'strict'
+
 def jsonescapeu8fallback(u8chars, paranoid):
     """Convert a UTF-8 byte string to JSON-escaped form (slow path)
 
@@ -74,6 +79,7 @@ def jsonescapeu8fallback(u8chars, paranoid):
     else:
         jm = _jsonmap
     # non-BMP char is represented as UTF-16 surrogate pair
-    u16codes = array.array(r'H', u8chars.decode('utf-8').encode('utf-16'))
+    u16b = u8chars.decode('utf-8', _utf8strict).encode('utf-16', _utf8strict)
+    u16codes = array.array(r'H', u16b)
     u16codes.pop(0)  # drop BOM
     return ''.join(jm[x] if x < 128 else '\\u%04x' % x for x in u16codes)

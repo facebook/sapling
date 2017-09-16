@@ -448,6 +448,13 @@ def jsonescape(s, paranoid=False):
         pass
     return charencodepure.jsonescapeu8fallback(u8chars, paranoid)
 
+# We need to decode/encode U+DCxx codes transparently since invalid UTF-8
+# bytes are mapped to that range.
+if pycompat.ispy3:
+    _utf8strict = r'surrogatepass'
+else:
+    _utf8strict = r'strict'
+
 _utf8len = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4]
 
 def getutf8char(s, pos):
@@ -464,7 +471,7 @@ def getutf8char(s, pos):
 
     c = s[pos:pos + l]
     # validate with attempted decode
-    c.decode("utf-8")
+    c.decode("utf-8", _utf8strict)
     return c
 
 def toutf8b(s):
@@ -503,7 +510,7 @@ def toutf8b(s):
         if isinstance(s, localstr):
             return s._utf8
         try:
-            s.decode('utf-8')
+            s.decode('utf-8', _utf8strict)
             return s
         except UnicodeDecodeError:
             pass
@@ -517,12 +524,12 @@ def toutf8b(s):
             c = getutf8char(s, pos)
             if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
-                c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+                c = unichr(0xdc00 + ord(s[pos])).encode('utf-8', _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
-            c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+            c = unichr(0xdc00 + ord(s[pos])).encode('utf-8', _utf8strict)
             pos += 1
         r += c
     return r
@@ -570,7 +577,7 @@ def fromutf8b(s):
         pos += len(c)
         # unescape U+DCxx characters
         if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
-            c = chr(ord(c.decode("utf-8")) & 0xff)
+            c = pycompat.bytechr(ord(c.decode("utf-8", _utf8strict)) & 0xff)
         r += c
     return r
 
