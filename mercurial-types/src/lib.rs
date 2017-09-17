@@ -61,3 +61,6 @@ pub use repo::{BoxRepo, Repo};
 pub use utils::percent_encode;
 
 pub use errors::{Error, ErrorKind};
+
+#[cfg(test)]
+mod test;

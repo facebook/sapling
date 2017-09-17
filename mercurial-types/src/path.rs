@@ -4,15 +4,19 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+
 use std::cmp;
 use std::convert::From;
+use std::ffi::OsStr;
 use std::fmt::{self, Display};
+use std::os::unix::ffi::OsStrExt;
 use std::io::{self, Write};
 use std::iter::{once, Once};
 use std::path::PathBuf;
 use std::slice::Iter;
 use std::str;
 
+use hash::Sha1;
 use quickcheck::{Arbitrary, Gen};
 
 use errors::*;
@@ -21,6 +25,8 @@ lazy_static! {
     pub static ref DOT: PathElement = PathElement(b".".to_vec());
     pub static ref DOTDOT: PathElement = PathElement(b"..".to_vec());
 }
+
+const MAXSTOREPATHLEN: usize = 120;
 
 /// A path or filename within Mercurial (typically within manifests or changegroups).
 ///
@@ -136,13 +142,24 @@ pub fn fsencode(elements: &Vec<PathElement>, dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let path = path.rev();
-    let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path);
+    let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path.clone());
 
-    if let Some(file) = file {
-        ret.push(Path::fsencode_filter(&file.0, dotencode));
+    if let Some(basename) = file {
+        ret.push(Path::fsencode_filter(&basename.0, dotencode));
+        let os_str: &OsStr = ret.as_ref();
+        if os_str.as_bytes().len() > MAXSTOREPATHLEN {
+            hashencode(
+                path.map(|elem| elem.0.clone()).collect(),
+                &basename.0,
+                dotencode
+            )
+        } else {
+            ret.clone()
+        }
+    } else {
+        PathBuf::new()
     }
 
-    ret
 }
 
 impl<'a> IntoIterator for &'a Path {
@@ -257,7 +274,6 @@ fn fnencode<E: AsRef<[u8]>>(elem: E) -> Vec<u8> {
     ret
 }
 
-#[allow(dead_code)] // XXX TODO
 fn lowerencode(elem: &[u8]) -> Vec<u8> {
     let mut ret = Vec::new();
 
@@ -315,6 +331,127 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
     }
 
     ret
+}
+
+/// Returns file extension with period; leading periods are ignored
+///
+/// # Examples
+/// ```
+/// assert_eq(get_extension(b".foo"), b"");
+/// assert_eq(get_extension(b"bar.foo"), b".foo");
+/// assert_eq(get_extension(b"foo."), b".");
+///
+/// ```
+fn get_extension(basename: &[u8]) -> &[u8] {
+    let idx = basename.iter()
+        .enumerate()
+        .rev()
+        .find(|&(_, c)| *c == b'.')
+        .map(|(idx, _)| idx);
+    match idx {
+        None | Some(0) => b"",
+        Some(idx) => &basename[idx..],
+    }
+}
+
+/// Returns sha-1 hash of the file name
+///
+/// # Example
+/// ```
+/// let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
+/// let file = b"file.txt";
+/// assert_eq!(hashed_file(&dirs, Some(file)), Sha1::from(&b"asdf/asdf/file.txt"[..]));
+///
+/// ```
+fn hashed_file(dirs: &Vec<Vec<u8>>, file: &[u8]) -> Sha1 {
+    let mut elements: Vec<_> = dirs.iter()
+        .map(|elem| direncode(&elem))
+        .collect();
+    elements.push(Vec::from(file));
+
+    Sha1::from(elements.join(&b'/').as_ref())
+}
+
+/// This function emulates core mercurial _hashencode() function. In core mercurial it is used
+/// if path is longer than MAXSTOREPATHLEN.
+/// Resulting path starts with "dh/" prefix, it has the same extension as initial file, and it
+/// also contains sha-1 hash of the initial file.
+/// Each path element is encoded to avoid file name collisions, and they are combined
+/// in such way that resulting path is shorter than MAXSTOREPATHLEN.
+fn hashencode(dirs: Vec<Vec<u8>>, file: &[u8], dotencode: bool) -> PathBuf {
+    let sha1 = hashed_file(&dirs, file);
+
+    let mut parts = dirs.iter()
+        .map(|elem| direncode(&elem))
+        .map(|elem| lowerencode(&elem))
+        .map(|elem| auxencode(elem, dotencode));
+
+    let mut shortdirs = Vec::new();
+    // Prefix (which is usually 'data' or 'meta') is replaced with 'dh'.
+    // Other directories will be converted.
+    let prefix = parts.next();
+    let prefix_len = prefix.map(|elem| elem.len()).unwrap_or(0);
+    // Each directory is no longer than `dirprefixlen`, and total length is less than
+    // `maxshortdirslen`. These constants are copied from core mercurial code.
+    let dirprefixlen = 8;
+    let maxshortdirslen = 8 * (dirprefixlen + 1) - prefix_len;
+    let mut shortdirslen = 0;
+    for p in parts {
+        let size = cmp::min(dirprefixlen, p.len());
+        let dir = &p[..size];
+        let dir = match dir.split_last() {
+            Some((last, prefix)) => {
+                if last == &b'.' || last == &b' ' {
+                    let mut vec = Vec::from(prefix);
+                    vec.push(b'_');
+                    vec
+                } else {
+                    Vec::from(dir)
+                }
+            },
+            _ => Vec::from(dir),
+        };
+
+        if shortdirslen == 0 {
+            shortdirslen = dir.len();
+        } else {
+            // 1 is for '/'
+            let t = shortdirslen + 1 + dir.len();
+            if t > maxshortdirslen {
+                break;
+            }
+            shortdirslen = t;
+        }
+        shortdirs.push(dir);
+    }
+    let mut shortdirs = shortdirs.join(&b'/');
+    if !shortdirs.is_empty() {
+        shortdirs.push(b'/');
+    }
+
+    // File name encoding is a bit different from directory element encoding - direncode() is not
+    // applied.
+    let basename = auxencode(lowerencode(file), dotencode);
+    let hex_sha = sha1.to_hex();
+
+    let mut res = vec![];
+    res.push(&b"dh/"[..]);
+    res.push(&shortdirs);
+    // filler is inserted after shortdirs but before sha. Let's remember the index.
+    // This is part of the basename that is as long as possible given that the resulting string
+    // is shorter that MAXSTOREPATHLEN.
+    let filler_index = res.len();
+    res.push(hex_sha.as_bytes());
+    res.push(get_extension(&basename));
+
+    let filler = {
+        let current_len = res.iter().map(|elem| elem.len()).sum::<usize>();
+        let spaceleft = MAXSTOREPATHLEN - current_len;
+        let size = cmp::min(basename.len(), spaceleft);
+        &basename[..size]
+    };
+    res.insert(filler_index, filler);
+    PathBuf::from(String::from_utf8(res.concat()).expect("bad utf8"))
 }
 
 impl Display for Path {
@@ -526,5 +663,32 @@ mod test {
             0
         );
         assert!(Path::new(b"////").unwrap().join(elements.iter()).is_empty());
+    }
+
+    #[test]
+    fn test_get_extension() {
+        assert_eq!(get_extension(b".foo"), b"");
+        assert_eq!(get_extension(b"foo."), b".");
+        assert_eq!(get_extension(b"foo"), b"");
+        assert_eq!(get_extension(b"foo.txt"), b".txt");
+        assert_eq!(get_extension(b"foo.bar.blat"), b".blat");
+    }
+
+    #[test]
+    fn test_hashed_file() {
+        let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
+        let file = b"file.txt";
+        assert_eq!(hashed_file(&dirs, file), Sha1::from(&b"asdf/asdf/file.txt"[..]));
+    }
+
+    #[test]
+    fn test_fsencode() {
+        let toencode = b"data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
+        let expected = "data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}";
+        check_fsencode(&toencode[..], expected);
+
+        let toencode = b"data/\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
+        let expected = "data/~01~02~03~04~05~06~07~08~09~0a~0b~0c~0d~0e~0f~10~11~12~13~14~15~16~17~18~19~1a~1b~1c~1d~1e~1f";
+        check_fsencode(&toencode[..], expected);
     }
 }
