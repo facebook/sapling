@@ -228,17 +228,9 @@ impl RevlogRepo {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
             Entry::Vacant(missing) => {
-                let dotencode = self.requirements.contains(&Required::Dotencode);
-                let mut elements: Vec<PathElement> = vec![
-                    PathElement::new(Vec::from("meta".as_bytes()))
-                ];
-                elements.extend(path.into_iter().cloned());
-                elements.push(PathElement::new(Vec::from("00manifest.i".as_bytes())));
-                let path = self.basepath
-                    .join("store")
-                    .join(fsencode(&elements, dotencode));
-
-                let revlog = Revlog::from_idx_data(path, None as Option<String>)?;
+                let idxpath = self.get_tree_log_idx_path(path);
+                let datapath = self.get_tree_log_data_path(path);
+                let revlog = Revlog::from_idx_data(idxpath, Some(datapath))?;
                 Ok(missing.insert(revlog).clone())
             }
         }
@@ -255,22 +247,56 @@ impl RevlogRepo {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
             Entry::Vacant(missing) => {
-                let dotencode = self.requirements.contains(&Required::Dotencode);
-                let mut elements: Vec<PathElement> = vec![
-                    PathElement::new(Vec::from("data".as_bytes()))
-                ];
-                elements.extend(path.into_iter().cloned());
-                if let Some(last) = elements.last_mut() {
-                    last.extend(".i".as_bytes());
-                }
-                let path = self.basepath
-                    .join("store")
-                    .join(fsencode(&elements, dotencode));
-
-                let revlog = Revlog::from_idx_data(path, None as Option<String>)?;
+                let idxpath = self.get_file_log_idx_path(path);
+                let datapath = self.get_file_log_data_path(path);
+                let revlog = Revlog::from_idx_data(idxpath, Some(datapath))?;
                 Ok(missing.insert(revlog).clone())
             }
         }
+    }
+
+    fn get_tree_log_idx_path(&self, path: &Path) -> PathBuf {
+        self.get_tree_log_path(path, "00manifest.i".as_bytes())
+    }
+
+    fn get_tree_log_data_path(&self, path: &Path) -> PathBuf {
+        self.get_tree_log_path(path, "00manifest.d".as_bytes())
+    }
+
+    fn get_file_log_idx_path(&self, path: &Path) -> PathBuf {
+        self.get_file_log_path(path, ".i")
+    }
+
+    fn get_file_log_data_path(&self, path: &Path) -> PathBuf {
+        self.get_file_log_path(path, ".d")
+    }
+
+    fn get_tree_log_path<E: AsRef<[u8]>>(&self, path: &Path, filename: E) -> PathBuf {
+        let filename = filename.as_ref();
+        let dotencode = self.requirements.contains(&Required::Dotencode);
+        let mut elements: Vec<PathElement> = vec![
+            PathElement::new(Vec::from("meta".as_bytes()))
+        ];
+        elements.extend(path.into_iter().cloned());
+        elements.push(PathElement::new(Vec::from(filename)));
+        self.basepath
+            .join("store")
+            .join(fsencode(&elements, dotencode))
+    }
+
+    fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &Path, extension: E) -> PathBuf {
+        let extension = extension.as_ref();
+        let dotencode = self.requirements.contains(&Required::Dotencode);
+        let mut elements: Vec<PathElement> = vec![
+            PathElement::new(Vec::from("data".as_bytes()))
+        ];
+        elements.extend(path.into_iter().cloned());
+        if let Some(last) = elements.last_mut() {
+            last.extend(extension);
+        }
+        self.basepath
+            .join("store")
+            .join(fsencode(&elements, dotencode))
     }
 
     pub fn bookmarks(&self) -> Result<StockBookmarks> {
