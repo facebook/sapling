@@ -45,9 +45,12 @@ Doctest helper:
 ...     import sys
 ...     from . import ui as uimod
 ...     ui = uimod.ui()
-...     ui.fout = sys.stdout  # redirect to doctest
 ...     ui.verbose = verbose
-...     return fn(ui, ui.formatter(fn.__name__, opts))
+...     ui.pushbuffer()
+...     try:
+...         return fn(ui, ui.formatter(fn.__name__, opts))
+...     finally:
+...         print(pycompat.sysstr(ui.popbuffer()), end='')
 
 Basic example:
 
@@ -101,7 +104,7 @@ bar
 baz: foo, bar
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import collections
 import contextlib
