@@ -58,7 +58,7 @@ testmod('mercurial.match')
 testmod('mercurial.mdiff')
 testmod('mercurial.minirst')
 testmod('mercurial.patch')
-testmod('mercurial.pathutil', py3=False)  # py3: os.sep
+testmod('mercurial.pathutil')
 testmod('mercurial.parser')
 testmod('mercurial.pycompat')
 testmod('mercurial.revsetlang')

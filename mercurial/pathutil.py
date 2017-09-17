@@ -203,9 +203,9 @@ def normasprefix(path):
 
     See also issue3033 for detail about need of this function.
 
-    >>> normasprefix(b'/foo/bar').replace(os.sep, b'/')
+    >>> normasprefix(b'/foo/bar').replace(pycompat.ossep, b'/')
     '/foo/bar/'
-    >>> normasprefix(b'/').replace(os.sep, b'/')
+    >>> normasprefix(b'/').replace(pycompat.ossep, b'/')
     '/'
     '''
     d, p = os.path.splitdrive(path)
