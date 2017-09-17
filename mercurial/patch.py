@@ -960,8 +960,8 @@ class recordhunk(object):
 
     def countchanges(self, hunk):
         """hunk -> (n+,n-)"""
-        add = len([h for h in hunk if h[0] == '+'])
-        rem = len([h for h in hunk if h[0] == '-'])
+        add = len([h for h in hunk if h.startswith('+')])
+        rem = len([h for h in hunk if h.startswith('-')])
         return add, rem
 
     def reversehunk(self):
@@ -972,7 +972,7 @@ class recordhunk(object):
         unchanged.
         """
         m = {'+': '-', '-': '+', '\\': '\\'}
-        hunk = ['%s%s' % (m[l[0]], l[1:]) for l in self.hunk]
+        hunk = ['%s%s' % (m[l[0:1]], l[1:]) for l in self.hunk]
         return recordhunk(self.header, self.toline, self.fromline, self.proc,
                           self.before, hunk, self.after)
 
