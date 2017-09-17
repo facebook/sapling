@@ -19,7 +19,7 @@ use futures::stream::{self, BoxStream};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks, Version};
-use mercurial_types::{BlobNode, Changeset, Manifest, NodeHash, Path, Repo};
+use mercurial_types::{BlobNode, Changeset, fsencode, Manifest, NodeHash, Path, PathElement, Repo};
 use stockbookmarks::StockBookmarks;
 
 pub use changeset::RevlogChangeset;
@@ -229,10 +229,14 @@ impl RevlogRepo {
 
             Entry::Vacant(missing) => {
                 let dotencode = self.requirements.contains(&Required::Dotencode);
+                let mut elements: Vec<PathElement> = vec![
+                    PathElement::new(Vec::from("meta".as_bytes()))
+                ];
+                elements.extend(path.into_iter().cloned());
+                elements.push(PathElement::new(Vec::from("00manifest.i".as_bytes())));
                 let path = self.basepath
                     .join("store")
-                    .join(path.fsencode_dir(dotencode))
-                    .join("00manifest.i");
+                    .join(fsencode(&elements, dotencode));
 
                 let revlog = Revlog::from_idx_data(path, None as Option<String>)?;
                 Ok(missing.insert(revlog).clone())
@@ -252,16 +256,16 @@ impl RevlogRepo {
 
             Entry::Vacant(missing) => {
                 let dotencode = self.requirements.contains(&Required::Dotencode);
-                let mut path = self.basepath
-                    .join("store")
-                    .join(path.fsencode_file(dotencode));
-                if let Some(ext) = path.extension()
-                    .map(|ext| ext.to_string_lossy().into_owned())
-                {
-                    path.set_extension(format!("{}.i", ext));
-                } else {
-                    path.set_extension("i");
+                let mut elements: Vec<PathElement> = vec![
+                    PathElement::new(Vec::from("data".as_bytes()))
+                ];
+                elements.extend(path.into_iter().cloned());
+                if let Some(last) = elements.last_mut() {
+                    last.extend(".i".as_bytes());
                 }
+                let path = self.basepath
+                    .join("store")
+                    .join(fsencode(&elements, dotencode));
 
                 let revlog = Revlog::from_idx_data(path, None as Option<String>)?;
                 Ok(missing.insert(revlog).clone())

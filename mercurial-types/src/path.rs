@@ -31,8 +31,16 @@ lazy_static! {
 pub struct PathElement(Vec<u8>);
 
 impl PathElement {
+    pub fn new(element: Vec<u8>) -> PathElement {
+        PathElement(element)
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_slice()
+    }
+
+    pub fn extend(&mut self, toappend: &[u8]) {
+        self.0.extend(toappend.iter());
     }
 }
 
@@ -102,37 +110,6 @@ impl Path {
             .collect()
     }
 
-    /// Perform the mapping to a filesystem path used in a .hg directory
-    /// Assumes that this path is a directory. That means that last path component will also
-    /// be mapped as a directory component, not as a file name.
-    /// This is necessary if there is file inside .hg that corresponds to the directory in the
-    /// repository. For example, this happens in tree manifest. Since directory and files elements
-    /// need to be encoded differently, we have two separate methods `fsencode_dir` and
-    /// `fsencode_file`. It's up to the user to decide what method to use.
-    pub fn fsencode_dir(&self, dotencode: bool) -> PathBuf {
-        let prefix = PathElement(Vec::from("meta".as_bytes()));
-        let path = ::std::iter::once(&prefix).chain(self.elements.iter());
-        Path::fsencode_dir_impl(dotencode, path)
-    }
-
-    /// Perform the mapping to a filesystem path used in a .hg directory
-    pub fn fsencode_file(&self, dotencode: bool) -> PathBuf {
-        // TODO assume fncache
-        // TODO doesn't do long path hashing
-        let mut path = self.elements.iter().rev();
-        let file = path.next();
-
-        let prefix = PathElement(Vec::from("data".as_bytes()));
-        let path = ::std::iter::once(&prefix).chain(path.rev());
-        let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path);
-
-        if let Some(file) = file {
-            ret.push(Path::fsencode_filter(&file.0, dotencode));
-        }
-
-        ret
-    }
-
     pub fn to_vec(&self) -> Vec<u8> {
         let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
         ret.join(&b'/')
@@ -151,6 +128,21 @@ impl IntoIterator for Path {
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
     }
+}
+
+/// Perform the mapping to a filesystem path used in a .hg directory
+/// Assumes that this path is a file.
+pub fn fsencode(elements: &Vec<PathElement>, dotencode: bool) -> PathBuf {
+    let mut path = elements.iter().rev();
+    let file = path.next();
+    let path = path.rev();
+    let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path);
+
+    if let Some(file) = file {
+        ret.push(Path::fsencode_filter(&file.0, dotencode));
+    }
+
+    ret
 }
 
 impl<'a> IntoIterator for &'a Path {
@@ -401,172 +393,84 @@ mod test {
         assert!(a <= b);
     }
 
+    fn check_fsencode(path: &[u8], expected: &str) {
+        let mut elements = vec![];
+        let path = &Path::new(path).unwrap();
+        elements.extend(path.into_iter().cloned());
+
+        assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
+    }
+
     #[test]
     fn fsencode_simple() {
-        let a = Path::new(b"foo/bar").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/foo/bar"));
+        check_fsencode(b"foo/bar", "foo/bar");
     }
 
     #[test]
     fn fsencode_simple_single() {
-        let a = Path::new(b"bar").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/bar"));
+        check_fsencode(b"bar", "bar");
     }
 
     #[test]
     fn fsencode_hexquote() {
-        let a = Path::new(b"oh?/wow~:<>").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/oh~3f/wow~7e~3a~3c~3e"));
+        check_fsencode(b"oh?/wow~:<>", "oh~3f/wow~7e~3a~3c~3e");
     }
 
     #[test]
     fn fsencode_direncode() {
-        assert_eq!(
-            Path::new(b"foo.d/bar.d").unwrap().fsencode_file(false),
-            PathBuf::from("data/foo.d.hg/bar.d")
-        );
-        assert_eq!(
-            Path::new(b"foo.d/bar.d").unwrap().fsencode_dir(false),
-            PathBuf::from("meta/foo.d.hg/bar.d.hg")
-        );
-        assert_eq!(
-            Path::new(b"foo.hg/bar.d").unwrap().fsencode_file(false),
-            PathBuf::from("data/foo.hg.hg/bar.d")
-        );
-        assert_eq!(
-            Path::new(b"foo.hg/bar.d").unwrap().fsencode_dir(false),
-            PathBuf::from("meta/foo.hg.hg/bar.d.hg")
-        );
-        assert_eq!(
-            Path::new(b"tests/legacy-encoding.hg")
-                .unwrap()
-                .fsencode_file(false),
-            PathBuf::from("data/tests/legacy-encoding.hg")
-        );
-        assert_eq!(
-            Path::new(b"tests/legacy-encoding.hg")
-                .unwrap()
-                .fsencode_dir(false),
-            PathBuf::from("meta/tests/legacy-encoding.hg.hg")
-        );
+        check_fsencode(b"foo.d/bar.d", "foo.d.hg/bar.d");
+        check_fsencode(b"foo.d/bar.d/file", "foo.d.hg/bar.d.hg/file");
+        check_fsencode(b"tests/legacy-encoding.hg", "tests/legacy-encoding.hg");
+        check_fsencode(b"tests/legacy-encoding.hg/file", "tests/legacy-encoding.hg.hg/file");
     }
 
     #[test]
     fn fsencode_direncode_single() {
-        let a = Path::new(b"bar.d").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/bar.d"));
+        check_fsencode(b"bar.d", "bar.d");
     }
 
     #[test]
     fn fsencode_upper() {
-        let a = Path::new(b"HELLO/WORLD").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/_h_e_l_l_o/_w_o_r_l_d"));
+        check_fsencode(b"HELLO/WORLD", "_h_e_l_l_o/_w_o_r_l_d");
     }
 
     #[test]
     fn fsencode_upper_direncode() {
-        let a = Path::new(b"HELLO.d/WORLD.d").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/_h_e_l_l_o.d.hg/_w_o_r_l_d.d"));
+        check_fsencode(b"HELLO.d/WORLD.d", "_h_e_l_l_o.d.hg/_w_o_r_l_d.d");
     }
 
     #[test]
     fn fsencode_single_underscore_fileencode() {
-        let a = Path::new(b"_").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/__"));
+        check_fsencode(b"_", "__");
     }
 
     #[test]
     fn fsencode_auxencode() {
-        let a = Path::new(b"com3").unwrap();
-        let p = a.fsencode_file(false);
+        check_fsencode(b"com3", "co~6d3");
+        check_fsencode(b"lpt9", "lp~749");
+        check_fsencode(b"com", "com");
+        check_fsencode(b"lpt.3", "lpt.3");
+        check_fsencode(b"com3x", "com3x");
+        check_fsencode(b"xcom3", "xcom3");
+        check_fsencode(b"aux", "au~78");
+        check_fsencode(b"auxx", "auxx");
+        check_fsencode(b" ", "~20");
+        check_fsencode(b"aux ", "aux~20");
+    }
 
-        assert_eq!(p, PathBuf::from("data/co~6d3"));
-
-        let a = Path::new(b"lpt9").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/lp~749"));
-
-        let a = Path::new(b"com").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/com"));
-
-        let a = Path::new(b"lpt.3").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/lpt.3"));
-
-        let a = Path::new(b"com3x").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/com3x"));
-
-        let a = Path::new(b"xcom3").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/xcom3"));
-
-        let a = Path::new(b"aux").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/au~78"));
-
-        let a = Path::new(b"auxx").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/auxx"));
-
-        let a = Path::new(b" ").unwrap();
-        let p = a.fsencode_file(true);
-
-        assert_eq!(p, PathBuf::from("data/~20"));
-
-        let a = Path::new(b"aux ").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/aux~20"));
-
-        let a = Path::new(b"").unwrap();
-        let p = a.fsencode_file(false);
-
-        assert_eq!(p, PathBuf::from("data/"));
+    fn join_and_check(prefix: &str, suffix: &str, expected: &str) {
+        let prefix = Path::new(prefix).unwrap();
+        let mut elements = vec![];
+        let joined = &prefix.join(&Path::new(suffix).unwrap());
+        elements.extend(joined.into_iter().cloned());
+        assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
     }
 
     #[test]
     fn join() {
-        let prefix = Path::new(b"prefix").unwrap();
-        assert_eq!(
-            prefix
-                .join(&Path::new("suffix").unwrap())
-                .fsencode_file(false),
-            PathBuf::from("data/prefix/suffix")
-        );
-        assert_eq!(
-            prefix.join(&Path::new("").unwrap()).fsencode_file(false),
-            PathBuf::from("data/prefix")
-        );
-        let empty = Path::new(b"").unwrap();
-        assert_eq!(
-            empty
-                .join(&Path::new("suffix").unwrap())
-                .fsencode_file(false),
-            PathBuf::from("data/suffix")
-        );
+        join_and_check("prefix", "suffix", "prefix/suffix");
+        join_and_check("prefix", "", "prefix");
+        join_and_check("", "suffix", "suffix");
 
         assert_eq!(
             Path::new(b"asdf")
