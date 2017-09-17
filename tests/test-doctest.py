@@ -57,7 +57,7 @@ testmod('mercurial.hgweb.hgwebdir_mod', py3=False)  # py3: repr(bytes) ?
 testmod('mercurial.match')
 testmod('mercurial.mdiff')
 testmod('mercurial.minirst')
-testmod('mercurial.patch', py3=False)  # py3: bytes[n], etc. ?
+testmod('mercurial.patch')
 testmod('mercurial.pathutil', py3=False)  # py3: os.sep
 testmod('mercurial.parser')
 testmod('mercurial.pycompat')

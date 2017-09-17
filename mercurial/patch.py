@@ -1490,7 +1490,7 @@ def reversehunks(hunks):
     ...  5
     ...  d
     ... +lastline"""
-    >>> hunks = parsepatch(rawpatch)
+    >>> hunks = parsepatch([rawpatch])
     >>> hunkscomingfromfilterpatch = []
     >>> for h in hunks:
     ...     hunkscomingfromfilterpatch.append(h)
@@ -1501,7 +1501,7 @@ def reversehunks(hunks):
     >>> fp = util.stringio()
     >>> for c in reversedhunks:
     ...      c.write(fp)
-    >>> fp.seek(0)
+    >>> fp.seek(0) or None
     >>> reversedpatch = fp.read()
     >>> print(pycompat.sysstr(reversedpatch))
     diff --git a/folder1/g b/folder1/g
