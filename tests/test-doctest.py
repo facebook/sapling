@@ -51,7 +51,7 @@ testmod('mercurial.context')
 testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE)
 testmod('mercurial.dispatch')
 testmod('mercurial.encoding')
-testmod('mercurial.formatter', py3=False)  # py3: write bytes to stdout
+testmod('mercurial.formatter')
 testmod('mercurial.hg')
 testmod('mercurial.hgweb.hgwebdir_mod', py3=False)  # py3: repr(bytes) ?
 testmod('mercurial.match')

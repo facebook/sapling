@@ -48,7 +48,8 @@ Doctest helper:
 ...     ui.verbose = verbose
 ...     ui.pushbuffer()
 ...     try:
-...         return fn(ui, ui.formatter(fn.__name__, opts))
+...         return fn(ui, ui.formatter(pycompat.sysbytes(fn.__name__),
+...                   pycompat.byteskwargs(opts)))
 ...     finally:
 ...         print(pycompat.sysstr(ui.popbuffer()), end='')
 
