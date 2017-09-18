@@ -463,7 +463,8 @@ def runmember(context, mapping, data):
         lm = mapping.copy()
         lm.update(d.tomap())
         return runsymbol(context, lm, memb)
-    # TODO: d.get(memb) if dict-like?
+    if util.safehasattr(d, 'get'):
+        return _getdictitem(d, memb)
 
     sym = findsymbolicname(darg)
     if sym:
@@ -751,6 +752,9 @@ def get(context, mapping, args):
         raise error.ParseError(_("get() expects a dict as first argument"))
 
     key = evalfuncarg(context, mapping, args[1])
+    return _getdictitem(dictarg, key)
+
+def _getdictitem(dictarg, key):
     val = dictarg.get(key)
     if val is None:
         return

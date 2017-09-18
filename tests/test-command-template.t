@@ -3184,6 +3184,8 @@ Test evaluation of dot operator:
 
   $ hg log -R latesttag -l1 -T '{min(revset("0:9")).node}\n'
   ce3cec86e6c26bd9bdfc590a6b92abc9680f1796
+  $ hg log -R latesttag -r0 -T '{extras.branch}\n'
+  default
 
   $ hg log -R latesttag -l1 -T '{author.invalid}\n'
   hg: parse error: keyword 'author' has no member
