@@ -68,9 +68,9 @@ Create an extension to test bundle2 API
   >     else:
   >         op.ui.write(b'debugreply: capabilities:\n')
   >         for cap in sorted(op.reply.capabilities):
-  >             op.ui.write(b'debugreply:     %r\n' % cap)
+  >             op.ui.write(b"debugreply:     '%s'\n" % cap)
   >             for val in op.reply.capabilities[cap]:
-  >                 op.ui.write(b'debugreply:         %r\n' % val)
+  >                 op.ui.write(b"debugreply:         '%s'\n" % val)
   > 
   > @command(b'bundle2',
   >          [(b'', b'param', [], b'stream level parameter'),
