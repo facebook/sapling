@@ -29,7 +29,6 @@ pub struct BlobManifest<B> {
 impl<B> BlobManifest<B>
 where
     B: Blobstore<Key = String> + Clone,
-    B::ValueOut: AsRef<[u8]>,
 {
     pub fn load(blobstore: &B, manifestid: &NodeHash) -> BoxFuture<Option<Self>, Error> {
         get_node(blobstore, manifestid.clone())
@@ -61,7 +60,6 @@ where
 impl<B> Manifest for BlobManifest<B>
 where
     B: Blobstore<Key = String> + Sync + Clone,
-    B::ValueOut: AsRef<[u8]> + Send,
 {
     type Error = Error;
 

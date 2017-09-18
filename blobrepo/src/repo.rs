@@ -48,7 +48,6 @@ impl<Head, Book, Blob> BlobRepo<Head, Book, Blob> {
 impl<Head, Book, Blob> BlobRepo<Head, Book, Blob>
 where
     Blob: Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]> + Send,
 {
     pub fn get_file_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
         fetch_file_blob_from_blobstore(self.inner.blobstore.clone(), *key)
@@ -60,7 +59,6 @@ where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
     Blob: Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]> + Send,
 {
     type Error = Error;
 
@@ -128,7 +126,6 @@ where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks + Sync,
     Blob: Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]> + Send,
 {
     repo: BlobRepo<Head, Book, Blob>,
     seen: HashSet<NodeHash>,
@@ -146,7 +143,6 @@ where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
     Blob: Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]>,
 {
     type Item = NodeHash;
     type Error = Error;

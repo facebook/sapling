@@ -33,7 +33,6 @@ pub fn fetch_file_blob_from_blobstore<B>(
 ) -> BoxFuture<Vec<u8>, Error>
 where
     B: Blobstore<Key = String> + Clone,
-    B::ValueOut: AsRef<[u8]>,
 {
     get_node(&blobstore, nodeid)
         .and_then({
@@ -56,7 +55,6 @@ where
 impl<B> BlobEntry<B>
 where
     B: Blobstore<Key = String> + Sync + Clone,
-    B::ValueOut: AsRef<[u8]>,
 {
     pub fn new(blobstore: B, path: Path, nodeid: NodeHash, ty: Type) -> Self {
         Self {
@@ -97,7 +95,6 @@ where
 impl<B> Entry for BlobEntry<B>
 where
     B: Blobstore<Key = String> + Sync + Clone,
-    B::ValueOut: AsRef<[u8]>,
 {
     type Error = Error;
 

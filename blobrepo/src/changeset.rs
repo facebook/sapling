@@ -51,7 +51,6 @@ impl BlobChangeset {
     pub fn load<B>(blobstore: &B, nodeid: &NodeHash) -> BoxFuture<Option<Self>, Error>
     where
         B: Blobstore<Key = String>,
-        B::ValueOut: AsRef<[u8]>,
     {
         let nodeid = *nodeid;
         let key = cskey(&nodeid);

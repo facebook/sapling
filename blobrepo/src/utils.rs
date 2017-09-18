@@ -24,7 +24,6 @@ pub struct RawNodeBlob {
 pub fn get_node<B>(blobstore: &B, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error>
 where
     B: Blobstore<Key = String>,
-    B::ValueOut: AsRef<[u8]>,
 {
     let key = format!("node-{}.bincode", nodeid);
 

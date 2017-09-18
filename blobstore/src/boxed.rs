@@ -48,7 +48,7 @@ where
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
     Vi: Send + 'static,
-    Vo: From<B::ValueOut> + Send + 'static,
+    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     let new = BlobstoreInner {
@@ -66,7 +66,7 @@ where
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
     Vi: Send + 'static,
-    Vo: From<B::ValueOut> + Send + 'static,
+    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     let new = BlobstoreInner {
@@ -96,7 +96,7 @@ where
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
     Vi: Send + 'static,
-    Vo: From<B::ValueOut> + Send + 'static,
+    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     type Error = E;

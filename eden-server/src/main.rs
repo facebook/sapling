@@ -162,7 +162,6 @@ impl<Head, Book, Blob> EdenServer<Head, Book, Blob>
 where
     EdenServer<Head, Book, Blob>: Service,
     Blob: blobstore::Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]> + Send,
     Book: Bookmarks<Value = NodeHash> + Sync,
     Head: Heads<Key = NodeHash> + Sync,
 {
@@ -237,7 +236,6 @@ where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
     Blob: Blobstore<Key = String> + Clone + Sync,
-    Blob::ValueOut: AsRef<[u8]> + Send,
 {
     type Request = Request;
     type Response = Response;

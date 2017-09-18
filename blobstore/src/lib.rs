@@ -81,7 +81,7 @@ pub use boxed::{ArcBlobstore, BoxBlobstore};
 pub trait Blobstore: Send + 'static {
     type Key: Send + 'static;
     type ValueIn: Send + 'static;
-    type ValueOut: Send + 'static;
+    type ValueOut: AsRef<[u8]> + Send + 'static;
     type Error: error::Error + Send + 'static;
 
     type GetBlob: Future<Item = Option<Self::ValueOut>, Error = Self::Error> + Send + 'static;
@@ -96,7 +96,7 @@ pub trait Blobstore: Send + 'static {
         Self::Key: Sized,
         Self::ValueIn: From<Vi>,
         Vi: Send + 'static,
-        Vo: From<Self::ValueOut> + Send + 'static,
+        Vo: From<Self::ValueOut> + AsRef<[u8]> + Send + 'static,
         E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::boxed(self)
@@ -108,7 +108,7 @@ pub trait Blobstore: Send + 'static {
         Self::Key: Sized,
         Self::ValueIn: From<Vi>,
         Vi: Send + 'static,
-        Vo: From<Self::ValueOut> + Send + 'static,
+        Vo: From<Self::ValueOut> + AsRef<[u8]> + Send + 'static,
         E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::arced(self)
@@ -123,7 +123,7 @@ impl<K, Vi, Vo, E, GB, PB> Blobstore
 where
     K: Send + 'static,
     Vi: Send + 'static,
-    Vo: Send + 'static,
+    Vo: AsRef<[u8]> + Send + 'static,
     E: error::Error + Send + 'static,
     GB: Future<Item = Option<Vo>, Error = E> + Send + 'static,
     PB: Future<Item = (), Error = E> + Send + 'static,
@@ -149,7 +149,7 @@ impl<K, Vi, Vo, E, GB, PB> Blobstore
 where
     K: Send + 'static,
     Vi: Send + 'static,
-    Vo: Send + 'static,
+    Vo: AsRef<[u8]> + Send + 'static,
     E: error::Error + Send + 'static,
     GB: Future<Item = Option<Vo>, Error = E> + Send + 'static,
     PB: Future<Item = (), Error = E> + Send + 'static,
