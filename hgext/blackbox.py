@@ -192,6 +192,13 @@ def reposetup(ui, repo):
 
     if util.safehasattr(ui, 'setrepo'):
         ui.setrepo(repo)
+
+        # Set lastui even if ui.log is not called. This gives blackbox a
+        # fallback place to log.
+        global lastui
+        if lastui is None:
+            lastui = ui
+
     repo._wlockfreeprefix.add('blackbox.log')
 
 @command('^blackbox',

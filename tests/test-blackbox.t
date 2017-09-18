@@ -15,6 +15,7 @@ command, exit codes, and duration
   $ echo a > a
   $ hg add a
   $ hg blackbox --config blackbox.dirty=True
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> init blackboxtest exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox
@@ -22,6 +23,7 @@ command, exit codes, and duration
 alias expansion is logged
   $ hg confuse
   $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> init blackboxtest exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox
@@ -174,6 +176,7 @@ log rotation
   $ hg init blackboxtest3
   $ cd blackboxtest3
   $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> init blackboxtest3 exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
   $ mv .hg/blackbox.log .hg/blackbox.log-
   $ mkdir .hg/blackbox.log
@@ -284,3 +287,41 @@ when using chg, blackbox.log should get rotated correctly
   $ cd ..
 
 #endif
+
+blackbox should work if repo.ui.log is not called (issue5518)
+
+  $ cat > $TESTTMP/raise.py << EOF
+  > from __future__ import absolute_import
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('raise')
+  > def raisecmd(*args):
+  >     raise RuntimeError('raise')
+  > EOF
+
+  $ cat >> $HGRCPATH << EOF
+  > [blackbox]
+  > track = commandexception
+  > [extensions]
+  > raise=$TESTTMP/raise.py
+  > EOF
+
+  $ hg init $TESTTMP/blackbox-exception-only
+  $ cd $TESTTMP/blackbox-exception-only
+
+#if chg
+ (chg exits 255 because it fails to receive an exit code)
+  $ hg raise 2>/dev/null
+  [255]
+#else
+ (hg exits 1 because Python default exit code for uncaught exception is 1)
+  $ hg raise 2>/dev/null
+  [1]
+#endif
+
+  $ head -1 .hg/blackbox.log
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> ** Unknown exception encountered with possibly-broken third-party extension mock
+  $ tail -2 .hg/blackbox.log
+  RuntimeError: raise
+  
