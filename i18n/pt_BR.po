@@ -32,17 +32,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@mercurial-scm.org>\n"
-"POT-Creation-Date: 2017-05-30 16:52-0300\n"
-"PO-Revision-Date: 2017-05-31 20:38-0300\n"
 "Last-Translator: Wagner Bruna <wbruna@softwareexpress.com.br>\n"
 "Language-Team: Brazilian Portuguese <>\n"
+"POT-Creation-Date: 2017-07-31 12:15-0300\n"
+"PO-Revision-Date: 2017-07-31 12:13-0300\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 "Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Lokalize 1.5\n"
+"X-Generator: Lokalize 2.0\n"
 
 msgid "VALUE"
 msgstr "VALOR"
@@ -503,6 +503,49 @@ msgstr "acl: o acesso do usuário \"%s\" a \"%s\" foi negado (revisão \"%s\")"
 #, python-format
 msgid "acl: user \"%s\" not allowed on \"%s\" (changeset \"%s\")"
 msgstr "acl: o acesso do usuário \"%s\" a \"%s\" não foi permitido (revisão \"%s\")"
+
+msgid "provide the amend command (EXPERIMENTAL)"
+msgstr "fornece o comando amend (EXPERIMENTAL)"
+
+msgid ""
+"This extension provides an ``amend`` command that is similar to\n"
+"``commit --amend`` but does not prompt an editor.\n"
+msgstr ""
+"Esta extensão fornece um comando ``amend``, similar ao comando\n"
+"``commit --amend`` mas não abre um editor.\n"
+
+msgid "mark new/missing files as added/removed before committing"
+msgstr ""
+"marca arquivos novos/ausentes como adicionados/removidos antes da "
+"consolidação"
+
+msgid "invoke editor on commit messages"
+msgstr "chama um editor para mensagens de consolidação"
+
+msgid "use interactive mode"
+msgstr "use o modo interativo"
+
+msgid "[OPTION]... [FILE]..."
+msgstr "[OPÇÃO]... [ARQUIVO]..."
+
+msgid ""
+"amend the working copy parent with all or specified outstanding changes"
+msgstr "emenda a cópia de trabalho com as mudanças pendentes pedidas"
+
+msgid ""
+"    Similar to :hg:`commit --amend`, but reuse the commit message without\n"
+"    invoking editor, unless ``--edit`` was set."
+msgstr ""
+"    Similar a :hg:`commit --amend`, mas reusa a mensagem de\n"
+"    consolidação sem invocar um editor (a não ser que ``--edit``\n"
+"    seja definida)."
+
+msgid ""
+"    See :hg:`help commit` for more details.\n"
+"    "
+msgstr ""
+"    Veja :hg:`help commit` para mais detalhes.\n"
+"    "
 
 msgid "check for unrecorded moves at commit time (EXPERIMENTAL)"
 msgstr ""
@@ -1799,7 +1842,7 @@ msgid ""
 "Manifests can contain multiple entries. Assuming metadata is defined, clients\n"
 "will filter entries from the manifest that they don't support. The remaining\n"
 "entries are optionally sorted by client preferences\n"
-"(``experimental.clonebundleprefers`` config option). The client then attempts\n"
+"(``ui.clonebundleprefers`` config option). The client then attempts\n"
 "to fetch the bundle at the first URL in the remaining list."
 msgstr ""
 
@@ -1829,26 +1872,22 @@ msgid ""
 "Mercurial server when the bundle hosting service fails.\n"
 msgstr ""
 
-msgid "enable Mercurial color mode (DEPRECATED)"
-msgstr "habilita o modo de coloração do Mercurial (OBSOLETO)"
+msgid "adds a new flag extras to commit (ADVANCED)"
+msgstr "adiciona uma nova opção \"extras\" ao comando commit (AVANÇADO)"
 
-msgid ""
-"This extension enables Mercurial color mode. The feature is now directly\n"
-"available in Mercurial core. You can access it using::"
-msgstr ""
-"Esta extensão habilita o modo de coloração do Mercurial. Essa\n"
-"funcionalidade foi integrada à funcionalidade básica do Mercurial.\n"
-"Você pode acessá-la usando::"
+msgid "KEY=VALUE"
+msgstr "CHAVE=VALOR"
 
-msgid ""
-"  [ui]\n"
-"  color = auto"
-msgstr ""
-"  [ui]\n"
-"  color = auto"
+msgid "set a changeset's extra values"
+msgstr "define os valores extras de uma revisão"
 
-msgid "See :hg:`help color` for details.\n"
-msgstr "Veja :hg:`help color` para mais detalhes.\n"
+#, python-format
+msgid "unable to parse '%s', should follow KEY=VALUE format"
+msgstr "incapaz de decodificar '%s', deveria usar o formato CHAVE=VALOR"
+
+#, python-format
+msgid "key '%s' is used internally, can't be set manually"
+msgstr "a chave '%s' é usada internamente, não pode ser definida manualmente"
 
 msgid "import revisions from foreign VCS repositories into Mercurial"
 msgstr "importa revisões de repositórios de outros sistemas para o Mercurial"
@@ -2166,13 +2205,13 @@ msgstr "      nome_ramo_original nome_novo_ramo"
 msgid ""
 "    where \"original_branch_name\" is the name of the branch in the\n"
 "    source repository, and \"new_branch_name\" is the name of the branch\n"
-"    is the destination repository. No whitespace is allowed in the\n"
-"    branch names. This can be used to (for instance) move code in one\n"
+"    is the destination repository. No whitespace is allowed in the new\n"
+"    branch name. This can be used to (for instance) move code in one\n"
 "    repository from \"default\" to a named branch."
 msgstr ""
 "    onde \"nome_ramo_original\" é o nome do ramo no repositório de\n"
 "    origem, e \"nome_novo_ramo\" é o nome do ramo no repositório de\n"
-"    destino. Espaços em branco não são suportados nos nomes de ramo.\n"
+"    destino. Espaços em branco não são suportados no novo nome de ramo.\n"
 "    Isto pode ser usado para por exemplo mover código em um\n"
 "    repositório de \"default\" para um ramo nomeado."
 
@@ -2272,6 +2311,22 @@ msgstr ""
 "        que devam ser considerados como uma única revisão. Se arquivos\n"
 "        muito grandes forem armazenados como parte de uma revisão, o\n"
 "        padrão pode não ser suficiente. O valor padrão é 60."
+
+msgid ""
+"    :convert.cvsps.logencoding: Specify encoding name to be used for\n"
+"        transcoding CVS log messages. Multiple encoding names can be\n"
+"        specified as a list (see :hg:`help config.Syntax`), but only\n"
+"        the first acceptable encoding in the list is used per CVS log\n"
+"        entries. This transcoding is executed before cvslog hook below."
+msgstr ""
+"    :convert.cvsps.logencoding: Especifica o nome da codificação\n"
+"        usada para converter mensagens de log do CVS.\n"
+"        Múltiplos nomes de codificação podem ser especificados como\n"
+"        uma lista (veja a sintaxe em :hg:`help config.Syntax`), mas\n"
+"        apenas a primeira codificação aceitável na lista será usada\n"
+"        por entrada do log do CVS.\n"
+"        Esta trans-codificação é executada antes do gancho\n"
+"        cvslog abaixo."
 
 msgid ""
 "    :convert.cvsps.mergeto: Specify a regular expression to which\n"
@@ -3036,6 +3091,15 @@ msgstr "escrevendo cache do log do CVS %s\n"
 #, python-format
 msgid "%d log entries\n"
 msgstr "%d entradas de log\n"
+
+msgid "check convert.cvsps.logencoding configuration"
+msgstr "verifique a configuração convert.cvsps.logencoding"
+
+#, python-format
+msgid "no encoding can transcode CVS log message for %s of %s"
+msgstr ""
+"nenhuma codificação pode trans-codificar a mensagem de log do CVS log "
+"message para %s de %s"
 
 msgid "creating changesets\n"
 msgstr "criando revisões\n"
@@ -3977,9 +4041,6 @@ msgstr "pull, update e merge em um comando (OBSOLETO)"
 msgid "a specific revision you would like to pull"
 msgstr "uma revisão específica que você gostaria de trazer"
 
-msgid "invoke editor on commit messages"
-msgstr "chama um editor para mensagens de consolidação"
-
 msgid "edit commit message (DEPRECATED)"
 msgstr "editar mensagem de consolidação (OBSOLETO)"
 
@@ -4220,10 +4281,6 @@ msgid ""
 "disabled.\n"
 msgstr ""
 "A extensão fsmonitor é incompatível com a extensão %s e foi desabilitada.\n"
-
-#, python-format
-msgid "type '%s' has no property '%s'"
-msgstr "o tipo '%s' não tem a propriedade '%s'"
 
 msgid "warning: unable to write out fsmonitor state\n"
 msgstr "aviso: incapaz de escrever o estado da fsmonitor\n"
@@ -5386,10 +5443,6 @@ msgstr "regras faltando para a revisão %s"
 #, python-format
 msgid "use \"drop %s\" to discard, see also: 'hg help -e histedit.config'"
 msgstr "use \"drop %s\" para descartar, veja também: 'hg help -e histedit.config'"
-
-#, python-format
-msgid "histedit: moving bookmarks %s from %s to %s\n"
-msgstr "histedit: movendo marcadores %s de %s para %s\n"
 
 #, python-format
 msgid "histedit in progress, can't strip %s"
@@ -8772,6 +8825,9 @@ msgstr "envia mudanças não encontradas no repositório alvo"
 msgid "send changes not in target as a binary bundle"
 msgstr "envia mudanças que não estão no alvo como um bundle binário"
 
+msgid "send changes only reachable by given bookmark"
+msgstr "envia revisões alcançáveis apenas pelo marcador dado"
+
 msgid "name of the bundle attachment file"
 msgstr "nome do arquivo bundle anexado"
 
@@ -8850,6 +8906,13 @@ msgstr ""
 "    Você pode incluir um patch tanto como texto no corpo da mensagem\n"
 "    como um anexo comum ou embutido combinando as opções -a/--attach\n"
 "    ou -i/--inline com a opção --body."
+
+msgid ""
+"    With -B/--bookmark changesets reachable by the given bookmark are\n"
+"    selected."
+msgstr ""
+"    Com -B/--bookmark, são selecionadas as revisões alcançáveis\n"
+"    pelo marcador pedido."
 
 msgid ""
 "    With -o/--outgoing, emails will be generated for patches not found\n"
@@ -8940,6 +9003,12 @@ msgstr ""
 "                                # presentes em DEST"
 
 msgid ""
+"      hg email -B feature       # send all ancestors of feature bookmark"
+msgstr ""
+"      hg email -B feature       # envia todos os ancestrais do\n"
+"                                # marcador \"feature\""
+
+msgid ""
 "      hg email -b               # send bundle of all patches not in default\n"
 "      hg email -b DEST          # send bundle of all patches not in DEST\n"
 "      hg email -b -r 3000       # bundle of all ancestors of 3000 not in default\n"
@@ -8976,18 +9045,25 @@ msgstr ""
 "    seu hgrc. Veja a seção [email] em hgrc(5) para mais detalhes.\n"
 "    "
 
-msgid "specify at least one changeset with -r or -o"
-msgstr "especifique ao menos uma revisão com -r ou -o"
+msgid "specify at least one changeset with -B, -r or -o"
+msgstr "especifique ao menos uma revisão com -B, -r ou -o"
 
 msgid "--outgoing mode always on with --bundle; do not re-specify --outgoing"
 msgstr ""
 "modo é sempre --outgoing com --bundle; não especifique --outgoing novamente"
+
+msgid "-r and -B are mutually exclusive"
+msgstr "opções -r e -B são mutuamente exclusivas"
 
 msgid "too many destinations"
 msgstr "muitos destinos"
 
 msgid "use only one form to specify the revision"
 msgstr "use apenas uma forma de especificar a revisão"
+
+#, python-format
+msgid "bookmark '%s' not found"
+msgstr "marcador '%s' não encontrado"
 
 #, python-format
 msgid "unable to access public repo: %s\n"
@@ -9198,6 +9274,10 @@ msgstr "reabrindo cabeça de ramo fechada %s\n"
 
 msgid "cannot collapse multiple named branches"
 msgstr "não é possível colapsar múltiplos ramos nomeados"
+
+#, python-format
+msgid "already rebased %s\n"
+msgstr "revisão %s já rebaseada\n"
 
 #, python-format
 msgid "rebasing %s\n"
@@ -9472,6 +9552,28 @@ msgstr ""
 "      [commands]\n"
 "      rebase.requiredest = True"
 
+msgid ""
+"    By default, rebase will close the transaction after each commit. For\n"
+"    performance purposes, you can configure rebase to use a single transaction\n"
+"    across the entire rebase. WARNING: This setting introduces a significant\n"
+"    risk of losing the work you've done in a rebase if the rebase aborts\n"
+"    unexpectedly::"
+msgstr ""
+"    Por padrão, o comando rebase fechará a transação após cada\n"
+"    consolidação.\n"
+"    Por questões de desempenho, você pode configurar o comando\n"
+"    para usar uma única transação ao longo de toda a operação.\n"
+"    CUIDADO: essa configuração introduz um risco significativo\n"
+"    de perda de trabalho se a operação rebase abortar\n"
+"    inesperadamente::"
+
+msgid ""
+"      [rebase]\n"
+"      singletransaction = True"
+msgstr ""
+"      [rebase]\n"
+"      singletransaction = True"
+
 msgid "    Return Values:"
 msgstr "    Valores Retornados:"
 
@@ -9584,7 +9686,7 @@ msgstr ".hg/last-message.txt faltando para o rebase"
 msgid "warning: can't clean up public changesets %s\n"
 msgstr "aviso: não é possível limpar as revisões públicas %s\n"
 
-msgid "warning: new changesets detected on target branch, can't strip\n"
+msgid "warning: new changesets detected on destination branch, can't strip\n"
 msgstr ""
 "aviso: novas revisões detectadas no ramo de destino, não é possível fazer "
 "strip\n"
@@ -9600,10 +9702,6 @@ msgstr "nenhuma revisão correspondente"
 
 msgid "source is ancestor of destination"
 msgstr "origem é ancestral do destino"
-
-msgid "warning: new changesets detected on source branch, not stripping\n"
-msgstr ""
-"aviso: novas revisões detectadas no ramo de origem, strip não realizado\n"
 
 msgid "rebase destination required by configuration"
 msgstr "destino do rebase exigido pela configuração"
@@ -9745,6 +9843,262 @@ msgstr "extensão 'mq' não carregada"
 
 msgid "interactively select changes to refresh"
 msgstr "seleciona interativamente alterações para atualização do patch"
+
+msgid "generate release notes from commit messages (EXPERIMENTAL)"
+msgstr ""
+"gera notas de liberação a partir de mensagens de consolidação (EXPERIMENTAL)"
+
+msgid ""
+"It is common to maintain files detailing changes in a project between\n"
+"releases. Maintaining these files can be difficult and time consuming.\n"
+"The :hg:`releasenotes` command provided by this extension makes the\n"
+"process simpler by automating it.\n"
+msgstr ""
+"É comum manter arquivos detalhando mudanças em um projeto\n"
+"realizadas entre versões liberadas.\n"
+"Manter tais arquivos pode ser difícil e consumir muito tempo.\n"
+"O comando :hg:`releasenotes` fornecido por esta extensão\n"
+"automatiza esse processo.\n"
+
+msgid "New Features"
+msgstr "Novas Funcionalidades"
+
+msgid "Backwards Compatibility Changes"
+msgstr "Alterações de Compatibilidade com Versões Anteriores"
+
+msgid "Bug Fixes"
+msgstr "Correções de Defeitos"
+
+msgid "Performance Improvements"
+msgstr "Melhorias de Desempenho"
+
+msgid "API Changes"
+msgstr "Mudanças de API"
+
+msgid "Other Changes"
+msgstr "Outras Mudanças"
+
+#, python-format
+msgid "%s already exists in %s section; ignoring\n"
+msgstr "%s já existe na seção %s; ignorando\n"
+
+#, python-format
+msgid ".hgreleasenotes file '%s' not found"
+msgstr "arquivo '%s' no .hgreleasenotes não encontrado"
+
+#, python-format
+msgid "release notes directive %s lacks content"
+msgstr "diretiva %s de notas de liberação não tem conteúdo"
+
+#, python-format
+msgid "unexpected block in release notes directive %s"
+msgstr "bloco inesperado na diretiva de notas de liberação %s"
+
+#, python-format
+msgid "could not find content for release note %s"
+msgstr "não foi possível localizar conteúdo para nota de liberação %s"
+
+msgid "indented bullet lists not supported"
+msgstr "listas indentadas não são suportadas"
+
+#, python-format
+msgid "unexpected block type in release notes: %s"
+msgstr "tipo de bloco inesperado nas notas de liberação: %s"
+
+#, python-format
+msgid "unknown release notes section: %s"
+msgstr "seção de notas de liberação desconhecida: %s"
+
+#, python-format
+msgid "unsupported section type for %s"
+msgstr "tipo de seção não suportado para %s"
+
+msgid "revisions to process for release notes"
+msgstr "revisões a serem processadas para notas de liberação"
+
+msgid "[-r REV] FILE"
+msgstr "[-r REV] ARQUIVO"
+
+msgid "parse release notes from commit messages into an output file"
+msgstr ""
+"decodifica notas de liberação das mensagens de consolidação para um arquivo "
+"de saída"
+
+msgid ""
+"    Given an output file and set of revisions, this command will parse commit\n"
+"    messages for release notes then add them to the output file."
+msgstr ""
+"    Dado um arquivo de entrada e um conjunto de revisões,\n"
+"    este comando decodificará mensagens de consolidação para\n"
+"    notas de liberação e adicionará essas notas no arquivo de saída."
+
+msgid ""
+"    Release notes are defined in commit messages as ReStructuredText\n"
+"    directives. These have the form::"
+msgstr ""
+"    Notas de liberação são definidas em mensagens de consolidação\n"
+"    usando diretivas ReStructuredText . Estas têm o formato::"
+
+#. do not translate: .. directive::
+msgid "       .. directive:: title"
+msgstr "       .. directive:: title"
+
+msgid "          content"
+msgstr "          content"
+
+msgid ""
+"    Each ``directive`` maps to an output section in a generated release notes\n"
+"    file, which itself is ReStructuredText. For example, the ``.. feature::``\n"
+"    directive would map to a ``New Features`` section."
+msgstr ""
+"    Cada ``directive`` mapeia para uma seção de saída no\n"
+"    arquivo de notas de liberação, que também usa o formato\n"
+"    ReStructuredText. Por exemplo, a diretiva ``.. feature::``\n"
+"    mapearia para uma seção ``New Features``."
+
+msgid ""
+"    Release note directives can be either short-form or long-form. In short-\n"
+"    form, ``title`` is omitted and the release note is rendered as a bullet\n"
+"    list. In long form, a sub-section with the title ``title`` is added to the\n"
+"    section."
+msgstr ""
+"    As diretivas de notas de liberação podem ter formato curto\n"
+"    ou longo.\n"
+"    No formato curto, ``title`` é omitido e a nota é renderizada\n"
+"    como uma lista de pontos (\"bullet list\").\n"
+"    No formato longo, a sub-seção com o título ``title`` será\n"
+"    adicionada à seção."
+
+msgid ""
+"    The ``FILE`` argument controls the output file to write gathered release\n"
+"    notes to. The format of the file is::"
+msgstr ""
+"    O argumento ``ARQUIVO`` controla o arquivo de saída onde\n"
+"    serão gravadas as notas de liberação coletadas.\n"
+"    O formato do arquivo é::"
+
+msgid ""
+"       Section 1\n"
+"       ========="
+msgstr ""
+"       Seção 1\n"
+"       ======="
+
+msgid "       ..."
+msgstr "       ..."
+
+msgid ""
+"       Section 2\n"
+"       ========="
+msgstr ""
+"       Secão 2\n"
+"       ======="
+
+msgid "    Only sections with defined release notes are emitted."
+msgstr "    São emitidas apenas seções com notas de liberação definidas."
+
+msgid ""
+"    If a section only has short-form notes, it will consist of bullet list::"
+msgstr ""
+"    Se uma seção só tiver notas em formato curto, ela consistirá de uma "
+"lista de pontos::"
+
+msgid ""
+"       Section\n"
+"       ======="
+msgstr ""
+"       Seção\n"
+"       ====="
+
+msgid ""
+"       * Release note 1\n"
+"       * Release note 2"
+msgstr ""
+"       * Nota 1\n"
+"       * Nota 2"
+
+msgid "    If a section has long-form notes, sub-sections will be emitted::"
+msgstr ""
+"    Se uma seção contiver notas com formato longo, serão emitidas sub-"
+"seções::"
+
+msgid ""
+"       Note 1 Title\n"
+"       ------------"
+msgstr ""
+"       Título da Nota 1\n"
+"       ----------------"
+
+msgid "       Description of the first long-form note."
+msgstr "       Descrição da primeira nota de formato longo."
+
+msgid ""
+"       Note 2 Title\n"
+"       ------------"
+msgstr ""
+"       Título da Nota 2\n"
+"       ----------------"
+
+msgid "       Description of the second long-form note."
+msgstr "       Descrição da segunda nota de formato longo."
+
+msgid ""
+"    If the ``FILE`` argument points to an existing file, that file will be\n"
+"    parsed for release notes having the format that would be generated by this\n"
+"    command. The notes from the processed commit messages will be *merged*\n"
+"    into this parsed set."
+msgstr ""
+"    Se o argumento ``ARQUIVO`` apontar para um arquivo existente,\n"
+"    tal arquivo será decodificado para obter notas de liberação\n"
+"    de acordo com o formato que seria gerado por este comando.\n"
+"    As notas das mensagens de consolidação processadas serão\n"
+"    *mescladas* neste conjunto."
+
+msgid "    During release notes merging:"
+msgstr "    Durante a mesclagem de notas de liberação:"
+
+msgid ""
+"    * Duplicate items are automatically ignored\n"
+"    * Items that are different are automatically ignored if the similarity is\n"
+"      greater than a threshold."
+msgstr ""
+"    * Itens duplicados serão automaticamente ignorados\n"
+"    * Itens diferentes serão automaticamente ignorados se a similaridade\n"
+"      ultrapassar um determinado limiar."
+
+msgid ""
+"    This means that the release notes file can be updated independently from\n"
+"    this command and changes should not be lost when running this command on\n"
+"    that file. A particular use case for this is to tweak the wording of a\n"
+"    release note after it has been added to the release notes file.\n"
+"    "
+msgstr ""
+"    Isto quer dizer que o arquivo de notas de liberação pode ser\n"
+"    alterado de forma independente deste comando, e as mudanças\n"
+"    não devem ser perdidas ao executar este comando no arquivo.\n"
+"    Um caso de uso em particular para esta funcionalidade é\n"
+"    ajustar o texto de uma nota de liberação após esta ser\n"
+"    adicionada ao arquivo de notas.\n"
+"    "
+
+msgid "parse release notes and print resulting data structure"
+msgstr ""
+"decodifica notas de liberação e imprime a estrutura de dados resultante"
+
+#, python-format
+msgid "section: %s\n"
+msgstr "seção: %s\n"
+
+#, python-format
+msgid "  subsection: %s\n"
+msgstr "  sub-seção: %s\n"
+
+#, python-format
+msgid "    paragraph: %s\n"
+msgstr "    parágrafo: %s\n"
+
+msgid "  bullet point:\n"
+msgstr "  ponto: %s\n"
 
 msgid "recreates hardlinks between repository clones"
 msgstr "recria hardlinks entre clones de repositórios"
@@ -10124,10 +10478,6 @@ msgid "shelved change names can not start with '.'"
 msgstr "nomes de mudanças engavetadas não podem começar com '.'"
 
 #, python-format
-msgid "too many shelved changes named '%s'"
-msgstr "excesso de mudanças engavetadas de nome '%s'"
-
-#, python-format
 msgid "nothing changed (%d missing files, see 'hg status')\n"
 msgstr "nada mudou (%d arquivos faltando, veja 'hg status')\n"
 
@@ -10461,10 +10811,41 @@ msgstr ""
 msgid ""
 "This extension provides the :hg:`show` command, which provides a central\n"
 "command for displaying commonly-accessed repository data and views of that\n"
-"data.\n"
+"data."
 msgstr ""
 "Esta extensão fornece o comando :hg:`show`, que fornece uma exibição\n"
-"centralizada dos dados do repositório acessados com mais frequência.\n"
+"centralizada dos dados do repositório acessados com mais frequência\n"
+"e diferentes visualizações de tais dados."
+
+msgid "The following config options can influence operation."
+msgstr "As seguintes opções de configuração influenciam a operação."
+
+msgid ""
+"``commands``\n"
+"------------"
+msgstr ""
+"``commands``\n"
+"------------"
+
+msgid ""
+"``show.aliasprefix``\n"
+"   List of strings that will register aliases for views. e.g. ``s`` will\n"
+"   effectively set config options ``alias.s<view> = show <view>`` for all\n"
+"   views. i.e. `hg swork` would execute `hg show work`."
+msgstr ""
+"``show.aliasprefix``\n"
+"   Lista de strings que registrarão apelidos para visualizações.\n"
+"   Por exemplo, ``s`` efetivamente definirá as opções de configuração\n"
+"   ``alias.s<visualização> = show <visualização>`` para todas as\n"
+"   visualizações.\n"
+"   Ou seja, `hg swork` executaria `hg show work`."
+
+msgid ""
+"   Aliases that would conflict with existing registrations will not be\n"
+"   performed.\n"
+msgstr ""
+"   Apelidos que conflitem com registros existentes não\n"
+"   são adicionados.\n"
 
 msgid "show various repository information"
 msgstr "mostra diversas informações do repositório"
@@ -10499,6 +10880,9 @@ msgstr "    Lista de visualizações disponíveis:"
 
 msgid "    bookmarks   bookmarks and their associated changeset"
 msgstr "    bookmarks   marcadores e revisões associadas"
+
+msgid "    stack       current line of work"
+msgstr "    stack       linha de trabalho atual"
 
 msgid ""
 "    work        changesets that aren't finished\n"
@@ -10535,11 +10919,245 @@ msgstr "execute \"hg show\" para ver as visualizações disponíveis"
 msgid "(no bookmarks set)\n"
 msgstr "(nenhum marcador definido)\n"
 
+msgid "stack view only available when there is a working directory"
+msgstr ""
+"a visualização \"stack\" só está disponível se houver um diretório de "
+"trabalho"
+
+msgid "(empty stack; working directory parent is a published changeset)\n"
+msgstr "(\"stack\" vazia; o pai do diretório de trabalho é uma revisão pública)\n"
+
+#, python-format
+msgid "%d commits ahead"
+msgstr "%d revisões à frente"
+
+msgid "(stack head)\n"
+msgstr ""
+
+msgid "(multiple children)\n"
+msgstr "(múltiplas filhas)\n"
+
+msgid "(stack base)"
+msgstr ""
+
 msgid "commitage requires a string"
 msgstr "commitage requer uma string"
 
 msgid "headage requires a string"
 msgstr "headage requer uma string"
+
+msgid "allow sparse checkouts of the working directory (EXPERIMENTAL)"
+msgstr ""
+
+msgid ""
+"(This extension is not yet protected by backwards compatibility\n"
+"guarantees. Any aspect may break in future releases until this\n"
+"notice is removed.)"
+msgstr ""
+
+msgid ""
+"This extension allows the working directory to only consist of a\n"
+"subset of files for the revision. This allows specific files or\n"
+"directories to be explicitly included or excluded. Many repository\n"
+"operations have performance proportional to the number of files in\n"
+"the working directory. So only realizing a subset of files in the\n"
+"working directory can improve performance."
+msgstr ""
+
+msgid ""
+"Sparse Config Files\n"
+"-------------------"
+msgstr ""
+
+msgid ""
+"The set of files that are part of a sparse checkout are defined by\n"
+"a sparse config file. The file defines 3 things: includes (files to\n"
+"include in the sparse checkout), excludes (files to exclude from the\n"
+"sparse checkout), and profiles (links to other config files)."
+msgstr ""
+
+msgid ""
+"The file format is newline delimited. Empty lines and lines beginning\n"
+"with ``#`` are ignored."
+msgstr ""
+
+msgid ""
+"Lines beginning with ``%include `` denote another sparse config file\n"
+"to include. e.g. ``%include tests.sparse``. The filename is relative\n"
+"to the repository root."
+msgstr ""
+
+msgid ""
+"The special lines ``[include]`` and ``[exclude]`` denote the section\n"
+"for includes and excludes that follow, respectively. It is illegal to\n"
+"have ``[include]`` after ``[exclude]``."
+msgstr ""
+
+msgid ""
+"Non-special lines resemble file patterns to be added to either includes\n"
+"or excludes. The syntax of these lines is documented by :hg:`help patterns`.\n"
+"Patterns are interpreted as ``glob:`` by default and match against the\n"
+"root of the repository."
+msgstr ""
+
+msgid ""
+"Exclusion patterns take precedence over inclusion patterns. So even\n"
+"if a file is explicitly included, an ``[exclude]`` entry can remove it."
+msgstr ""
+
+msgid ""
+"For example, say you have a repository with 3 directories, ``frontend/``,\n"
+"``backend/``, and ``tools/``. ``frontend/`` and ``backend/`` correspond\n"
+"to different projects and it is uncommon for someone working on one\n"
+"to need the files for the other. But ``tools/`` contains files shared\n"
+"between both projects. Your sparse config files may resemble::"
+msgstr ""
+
+msgid ""
+"  # frontend.sparse\n"
+"  frontend/**\n"
+"  tools/**"
+msgstr ""
+
+msgid ""
+"  # backend.sparse\n"
+"  backend/**\n"
+"  tools/**"
+msgstr ""
+
+msgid ""
+"Say the backend grows in size. Or there's a directory with thousands\n"
+"of files you wish to exclude. You can modify the profile to exclude\n"
+"certain files::"
+msgstr ""
+
+msgid ""
+"  [include]\n"
+"  backend/**\n"
+"  tools/**"
+msgstr ""
+
+msgid ""
+"  [exclude]\n"
+"  tools/tests/**\n"
+msgstr ""
+
+#, python-format
+msgid "type '%s' has no property '%s'"
+msgstr "o tipo '%s' não tem a propriedade '%s'"
+
+msgid "too many flags specified."
+msgstr "opções demais especificadas."
+
+msgid ""
+"include file with `hg debugsparse --include <pattern>` or use `hg add -s "
+"<file>` to include file directory while adding"
+msgstr ""
+
+#, python-format
+msgid "cannot add '%s' - it is outside the sparse checkout"
+msgstr ""
+
+msgid "include files in the sparse checkout"
+msgstr ""
+
+msgid "exclude files in the sparse checkout"
+msgstr ""
+
+msgid "delete an include/exclude rule"
+msgstr ""
+
+msgid "allow changing rules even with pending changes"
+msgstr ""
+
+msgid "enables the specified profile"
+msgstr ""
+
+msgid "disables the specified profile"
+msgstr ""
+
+msgid "imports rules from a file"
+msgstr ""
+
+msgid "clears local include/exclude rules"
+msgstr ""
+
+msgid "updates the working after sparseness changes"
+msgstr ""
+
+msgid "makes the repo full again"
+msgstr ""
+
+msgid "[--OPTION] PATTERN..."
+msgstr "[--OPÇÃO] PADRÃO..."
+
+msgid "make the current checkout sparse, or edit the existing checkout"
+msgstr ""
+
+msgid ""
+"    The sparse command is used to make the current checkout sparse.\n"
+"    This means files that don't meet the sparse condition will not be\n"
+"    written to disk, or show up in any working copy operations. It does\n"
+"    not affect files in history in any way."
+msgstr ""
+
+msgid "    Passing no arguments prints the currently applied sparse rules."
+msgstr ""
+
+msgid ""
+"    --include and --exclude are used to add and remove files from the sparse\n"
+"    checkout. The effects of adding an include or exclude rule are applied\n"
+"    immediately. If applying the new rule would cause a file with pending\n"
+"    changes to be added or removed, the command will fail. Pass --force to\n"
+"    force a rule change even with pending changes (the changes on disk will\n"
+"    be preserved)."
+msgstr ""
+
+msgid ""
+"    --delete removes an existing include/exclude rule. The effects are\n"
+"    immediate."
+msgstr ""
+
+msgid ""
+"    --refresh refreshes the files on disk based on the sparse rules. This is\n"
+"    only necessary if .hg/sparse was changed by hand."
+msgstr ""
+
+msgid ""
+"    --enable-profile and --disable-profile accept a path to a .hgsparse file.\n"
+"    This allows defining sparse checkouts and tracking them inside the\n"
+"    repository. This is useful for defining commonly used sparse checkouts for\n"
+"    many people to use. As the profile definition changes over time, the sparse\n"
+"    checkout will automatically be updated appropriately, depending on which\n"
+"    changeset is checked out. Changes to .hgsparse are not applied until they\n"
+"    have been committed."
+msgstr ""
+
+msgid ""
+"    --import-rules accepts a path to a file containing rules in the .hgsparse\n"
+"    format, allowing you to add --include, --exclude and --enable-profile rules\n"
+"    in bulk. Like the --include, --exclude and --enable-profile switches, the\n"
+"    changes are applied immediately."
+msgstr ""
+
+msgid ""
+"    --clear-rules removes all local include and exclude rules, while leaving\n"
+"    any enabled profiles in place."
+msgstr ""
+
+msgid ""
+"    Returns 0 if editing the sparse checkout succeeds.\n"
+"    "
+msgstr ""
+
+msgid "too many flags specified"
+msgstr "opções demais especificadas"
+
+msgid "Temporarily Included Files (for merge/rebase):\n"
+msgstr "Arquivos Temporariamente Incluídos (para merge/rebase):\n"
+
+msgid "repo is not sparse\n"
+msgstr ""
 
 msgid "strip changesets and their descendants from history"
 msgstr "remove do histórico revisões e seus descendentes"
@@ -10648,10 +11266,6 @@ msgstr ""
 "    revisões na fase pública. Mas se revisões removidas por strip\n"
 "    tiverem sido enviadas para um repositório remoto, um comando pull\n"
 "    subsequente poderá trazê-las de volta."
-
-#, python-format
-msgid "bookmark '%s' not found"
-msgstr "marcador '%s' não encontrado"
 
 msgid "empty revision set"
 msgstr "conjunto vazio de revisões"
@@ -11211,6 +11825,25 @@ msgid "no active bookmark"
 msgstr "nenhum marcador ativo"
 
 #, python-format
+msgid "moving bookmark '%s' forward from %s\n"
+msgstr "movendo marcador '%s' para frente a partir de %s\n"
+
+#, python-format
+msgid "bookmark '%s' already exists (use -f to force)"
+msgstr "o marcador '%s' já existe (use -f para forçar)"
+
+msgid "a bookmark cannot have the name of an existing branch"
+msgstr "um marcador não pode ter o mesmo nome de um ramo existente"
+
+#, python-format
+msgid ""
+"bookmark %s matches a changeset hash\n"
+"(did you leave a -r out of an 'hg bookmark' command?)\n"
+msgstr ""
+"o marcador %s coincide com um identificador de revisão\n"
+"(você omitiu um -r em um comando 'hg bookmark'?)\n"
+
+#, python-format
 msgid "updating to active bookmark %s\n"
 msgstr "atualizando para o marcador ativo %s\n"
 
@@ -11264,6 +11897,16 @@ msgstr "nenhum marcador modificado encontrado\n"
 #. i18n: "deleted" refers to a bookmark
 msgid "deleted"
 msgstr "apagado"
+
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "nomes de marcadores não podem conter apenas espaços em branco"
+
+#, python-format
+msgid "bookmark '%s' does not exist"
+msgstr "o marcador '%s' não existe"
+
+msgid "no bookmarks set\n"
+msgstr "nenhum marcador definido\n"
 
 msgid "not a Mercurial bundle"
 msgstr "não é um arquivo de bundle do Mercurial"
@@ -11324,6 +11967,9 @@ msgstr "remoto:       %s\n"
 msgid "push failed:"
 msgstr "o push falhou:"
 
+msgid "bad phase-heads bundle part"
+msgstr ""
+
 #, python-format
 msgid "%i new obsolescence markers\n"
 msgstr "%i novas marcações de obsolescência\n"
@@ -11365,9 +12011,6 @@ msgstr "adicionando revisões\n"
 
 msgid "chunks"
 msgstr "trechos"
-
-msgid "received changelog group is empty"
-msgstr "grupo de changelogs recebido é vazio"
 
 msgid "adding manifests\n"
 msgstr "adicionando manifestos\n"
@@ -11446,6 +12089,110 @@ msgstr "resposta inválida"
 #, python-format
 msgid "unexpected command: %s"
 msgstr "comando inesperado: %s"
+
+msgid "do not perform actions, just print output"
+msgstr "não realiza ações, apenas imprime a saída"
+
+msgid "specify ssh command to use"
+msgstr "especifica comando ssh a ser usado"
+
+msgid "specify hg command to run on the remote side"
+msgstr "especifica comando hg para executar do lado remoto"
+
+msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgstr ""
+"não verifica o certificado do servidor (ignorando a opção de configuração "
+"web.cacerts)"
+
+msgid "PATTERN"
+msgstr "PADRÃO"
+
+msgid "include names matching the given patterns"
+msgstr "inclui nomes que casem com os padrões fornecidos"
+
+msgid "exclude names matching the given patterns"
+msgstr "exclui nomes que casem com os padrões fornecidos"
+
+msgid "read commit message from file"
+msgstr "lê de um arquivo a mensagem de consolidação"
+
+msgid "record the specified date as commit date"
+msgstr "grava a data especificada como data da consolidação"
+
+msgid "record the specified user as committer"
+msgstr "grava o usuário pedido como autor da consolidação"
+
+msgid "display with template (EXPERIMENTAL)"
+msgstr "exibe usando modelo (EXPERIMENTAL)"
+
+msgid "STYLE"
+msgstr "ESTILO"
+
+msgid "display using template map file (DEPRECATED)"
+msgstr "exibe usando arquivo de mapeamento de modelo (OBSOLETO)"
+
+msgid "display with template"
+msgstr "exibe usando modelo"
+
+msgid "do not show merges"
+msgstr "não mostra mesclagens"
+
+msgid "show the revision DAG"
+msgstr "mostra o grafo de revisões"
+
+msgid "treat all files as text"
+msgstr "trata todos os arquivos como texto"
+
+msgid "generate binary diffs in git mode (default)"
+msgstr "gera diffs binários em modo git (padrão)"
+
+msgid "omit dates from diff headers"
+msgstr "omite datas dos cabeçalhos de diff"
+
+msgid "ignore white space when comparing lines"
+msgstr "ignora espaços em branco ao comparar linhas"
+
+msgid "ignore changes in the amount of white space"
+msgstr "ignora mudanças na quantidade de espaços em branco"
+
+msgid "ignore changes whose lines are all blank"
+msgstr "ignora mudanças cujas linhas sejam todas brancas"
+
+msgid "omit a/ and b/ prefixes from filenames"
+msgstr "omite prefixos a/ e b/ dos nomes dos arquivos"
+
+msgid "show which function each change is in"
+msgstr "mostra em qual função está cada mudança"
+
+msgid "produce a diff that undoes the changes"
+msgstr "produz um diff que desfaz as mudanças"
+
+msgid "number of lines of context to show"
+msgstr "número de linhas de contexto a serem mostradas"
+
+msgid "DIR"
+msgstr "DIR"
+
+msgid "produce diffs relative to subdirectory"
+msgstr "produz diffs relativos ao subdiretório"
+
+msgid "SIMILARITY"
+msgstr "SIMILARIDADE"
+
+msgid "guess renamed files by similarity (0<=s<=100)"
+msgstr "infere arquivos renomeados por similaridade (0<=s<=100)"
+
+msgid "recurse into subrepositories"
+msgstr "trabalha em sub-repositórios recursivamente"
+
+msgid "open changelog"
+msgstr "abre o changelog"
+
+msgid "open manifest"
+msgstr "abre o manifesto"
+
+msgid "open directory manifest"
+msgstr "abre o manifesto do diretório"
 
 msgid "running non-interactively"
 msgstr "executando de forma não interativa"
@@ -11755,14 +12502,6 @@ msgstr "emendando revisão %s\n"
 msgid "copying changeset %s to %s\n"
 msgstr "copiando revisão %s para %s\n"
 
-#, python-format
-msgid "stripping intermediate changeset %s\n"
-msgstr "removendo revisão intermediária %s\n"
-
-#, python-format
-msgid "stripping amended changeset %s\n"
-msgstr "removendo revisão emendada %s\n"
-
 msgid "Leave message empty to abort commit."
 msgstr "Deixe a mensagem vazia para abortar a consolidação."
 
@@ -11892,9 +12631,6 @@ msgid "repository root directory or name of overlay bundle file"
 msgstr ""
 "diretório raiz do repositório ou nome de arquivo de bundle para sobreposição"
 
-msgid "DIR"
-msgstr "DIR"
-
 msgid "change working directory"
 msgstr "muda o diretório de trabalho"
 
@@ -11908,6 +12644,9 @@ msgstr "suprime saída"
 
 msgid "enable additional output"
 msgstr "habilita saída adicional"
+
+msgid "find the ancestor revision of two revisions in a given index"
+msgstr "encontra a revisão ancestral de duas revisões no índice dado"
 
 #. i18n: 'always', 'auto', 'never', and 'debug' are keywords
 #. and should not be translated
@@ -11952,6 +12691,9 @@ msgstr "exibe profile de execução de comando"
 msgid "output version information and exit"
 msgstr "exibe informação de versão e sai"
 
+msgid "apply a stream clone bundle file"
+msgstr "aplica um arquivo bundle de clone por stream"
+
 msgid "display help and exit"
 msgstr "exibe ajuda e sai"
 
@@ -11963,109 +12705,71 @@ msgstr ""
 "quando paginar (booleana, ou \"always\" (sempre), \"never\" (nunca) ou "
 "\"auto\" (automaticamente))"
 
-msgid "do not perform actions, just print output"
-msgstr "não realiza ações, apenas imprime a saída"
-
-msgid "specify ssh command to use"
-msgstr "especifica comando ssh a ser usado"
-
-msgid "specify hg command to run on the remote side"
-msgstr "especifica comando hg para executar do lado remoto"
-
-msgid "do not verify server certificate (ignoring web.cacerts config)"
+msgid "builds a repo with a given DAG from scratch in the current empty repo"
 msgstr ""
-"não verifica o certificado do servidor (ignorando a opção de configuração "
-"web.cacerts)"
+"constrói um repositório do zero com um DAG dado em um repositório vazio "
+"existente"
 
-msgid "PATTERN"
-msgstr "PADRÃO"
+msgid ""
+"    The description of the DAG is read from stdin if not given on the\n"
+"    command line."
+msgstr ""
+"    Se não for passada na linha de comando, a descrição do DAG é lida\n"
+"    da entrada padrão."
 
-msgid "include names matching the given patterns"
-msgstr "inclui nomes que casem com os padrões fornecidos"
+msgid "    Elements:"
+msgstr "    Elementos:"
 
-msgid "exclude names matching the given patterns"
-msgstr "exclui nomes que casem com os padrões fornecidos"
+msgid ""
+"     - \"+n\" is a linear run of n nodes based on the current default parent\n"
+"     - \".\" is a single node based on the current default parent\n"
+"     - \"$\" resets the default parent to null (implied at the start);\n"
+"           otherwise the default parent is always the last node created\n"
+"     - \"<p\" sets the default parent to the backref p\n"
+"     - \"*p\" is a fork at parent p, which is a backref\n"
+"     - \"*p1/p2\" is a merge of parents p1 and p2, which are backrefs\n"
+"     - \"/p2\" is a merge of the preceding node and p2\n"
+"     - \":tag\" defines a local tag for the preceding node\n"
+"     - \"@branch\" sets the named branch for subsequent nodes\n"
+"     - \"#...\\n\" is a comment up to the end of the line"
+msgstr ""
+"     - \"+n\" é uma sequência linear de n nós baseada no pai default atual\n"
+"     - \".\" é um único nó baseado no pai default atual\n"
+"     - \"$\" redefine o pai default para null (valor usado no início);\n"
+"           de outra maneira o pai default é sempre o último nó criado\n"
+"     - \"<p\" define o pai default para a backref p\n"
+"     - \"*p\" é uma bifurcação no pai p, que é uma backref\n"
+"     - \"*p1/p2\" é uma mesclagem dos pais p1 e p2, que são backrefs\n"
+"     - \"/p2\" é uma mesclagem do nó anterior e p2\n"
+"     - \":tag\" define uma etiqueta local para o nó anterior\n"
+"     - \"@branch\" define o nome de ramo para nós subsequentes\n"
+"     - \"#...\\n\" é um comentário até o fim da linha"
 
-msgid "read commit message from file"
-msgstr "lê de um arquivo a mensagem de consolidação"
+msgid "    Whitespace between the above elements is ignored."
+msgstr "    Espaços em branco entre os elementos acima são ignorados."
 
-msgid "record the specified date as commit date"
-msgstr "grava a data especificada como data da consolidação"
+msgid "    A backref is either"
+msgstr "    Uma backref pode ser"
 
-msgid "record the specified user as committer"
-msgstr "grava o usuário pedido como autor da consolidação"
+msgid ""
+"     - a number n, which references the node curr-n, where curr is the current\n"
+"       node, or\n"
+"     - the name of a local tag you placed earlier using \":tag\", or\n"
+"     - empty to denote the default parent."
+msgstr ""
+"     - um número n, que referencia o nó atual-n, ou\n"
+"     - o nome de uma tag local criada anteriormente com \":tag\", ou\n"
+"     - vazio, denotando o pai default."
 
-msgid "display with template (EXPERIMENTAL)"
-msgstr "exibe usando modelo (EXPERIMENTAL)"
-
-msgid "STYLE"
-msgstr "ESTILO"
-
-msgid "display using template map file (DEPRECATED)"
-msgstr "exibe usando arquivo de mapeamento de modelo (OBSOLETO)"
-
-msgid "display with template"
-msgstr "exibe usando modelo"
-
-msgid "do not show merges"
-msgstr "não mostra mesclagens"
-
-msgid "show the revision DAG"
-msgstr "mostra o grafo de revisões"
-
-msgid "treat all files as text"
-msgstr "trata todos os arquivos como texto"
-
-msgid "generate binary diffs in git mode (default)"
-msgstr "gera diffs binários em modo git (padrão)"
-
-msgid "omit dates from diff headers"
-msgstr "omite datas dos cabeçalhos de diff"
-
-msgid "ignore white space when comparing lines"
-msgstr "ignora espaços em branco ao comparar linhas"
-
-msgid "ignore changes in the amount of white space"
-msgstr "ignora mudanças na quantidade de espaços em branco"
-
-msgid "ignore changes whose lines are all blank"
-msgstr "ignora mudanças cujas linhas sejam todas brancas"
-
-msgid "omit a/ and b/ prefixes from filenames"
-msgstr "omite prefixos a/ e b/ dos nomes dos arquivos"
-
-msgid "show which function each change is in"
-msgstr "mostra em qual função está cada mudança"
-
-msgid "produce a diff that undoes the changes"
-msgstr "produz um diff que desfaz as mudanças"
-
-msgid "number of lines of context to show"
-msgstr "número de linhas de contexto a serem mostradas"
-
-msgid "produce diffs relative to subdirectory"
-msgstr "produz diffs relativos ao subdiretório"
-
-msgid "SIMILARITY"
-msgstr "SIMILARIDADE"
-
-msgid "guess renamed files by similarity (0<=s<=100)"
-msgstr "infere arquivos renomeados por similaridade (0<=s<=100)"
-
-msgid "recurse into subrepositories"
-msgstr "trabalha em sub-repositórios recursivamente"
-
-msgid "open changelog"
-msgstr "abre o changelog"
-
-msgid "open manifest"
-msgstr "abre o manifesto"
-
-msgid "open directory manifest"
-msgstr "abre o manifesto do diretório"
-
-msgid "[OPTION]... [FILE]..."
-msgstr "[OPÇÃO]... [ARQUIVO]..."
+msgid ""
+"    All string valued-elements are either strictly alphanumeric, or must\n"
+"    be enclosed in double quotes (\"...\"), with \"\\\" as escape character.\n"
+"    "
+msgstr ""
+"    Todos os elementos com valores string devem ser ou estritamente\n"
+"    alfanuméricos, ou devem estar entre aspas duplas (\"...\"), usando\n"
+"    \"\\\" como caractere de escape.\n"
+"    "
 
 msgid "add the specified files on the next commit"
 msgstr "adiciona os arquivos especificados na próxima consolidação"
@@ -12300,6 +13004,9 @@ msgstr "lista a revisão"
 msgid "show line number at the first appearance"
 msgstr "exibe números de linha na primeira ocorrência"
 
+msgid "revision to not display (EXPERIMENTAL)"
+msgstr "revisão a ser excluída da exibição (EXPERIMENTAL)"
+
 msgid "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 msgstr "[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE..."
 
@@ -12344,9 +13051,18 @@ msgstr "exigido ao menos um nome de arquivo ou padrão"
 msgid "at least one of -n/-c is required for -l"
 msgstr "ao menos uma das opções -n/-c é exigida para -l"
 
+msgid "lists the contents of a bundle"
+msgstr "lista o conteúdo de um bundle"
+
+msgid "validate the correctness of the current dirstate"
+msgstr "valida a exatidão do dirstate atual"
+
 #, python-format
 msgid "%s: binary file\n"
 msgstr "%s: arquivo binário\n"
+
+msgid "show available color, effects or style"
+msgstr "mostra cores, efeitos ou estilos disponíveis"
 
 msgid "do not pass files through decoders"
 msgstr "não passar arquivos por decodificadores"
@@ -12430,6 +13146,37 @@ msgstr ""
 "    adicionado. Use -p/--prefix para especificar uma string de\n"
 "    formatação para o prefixo. O padrão é o nome base do pacote,\n"
 "    com sufixos removidos.\n"
+"    "
+
+msgid "create a stream clone bundle file"
+msgstr "cria um arquivo de bundle para clone por stream"
+
+msgid ""
+"    Stream bundles are special bundles that are essentially archives of\n"
+"    revlog files. They are commonly used for cloning very quickly.\n"
+"    "
+msgstr ""
+"    Stream bundles são bundles especiais, formados essencialmente\n"
+"    pelos arquivos revlog empacotados. Eles são comumente usados\n"
+"    para acelerar a clonagem.    "
+
+msgid "format the changelog or an index DAG as a concise textual description"
+msgstr ""
+"formata o changelog ou um índice DAG como uma representação textual concisa"
+
+msgid ""
+"    If you pass a revlog index, the revlog's DAG is emitted. If you list\n"
+"    revision numbers, they get labeled in the output as rN."
+msgstr ""
+"    Se você passar um índice de revlog, o DAG do revlog será emitido.\n"
+"    Se você listar números de revisão, eles serão rotulados na saída\n"
+"    como rN."
+
+msgid ""
+"    Otherwise, the changelog DAG of the current repo is emitted.\n"
+"    "
+msgstr ""
+"    Caso contrário, imprime o DAG do changelog do repositório atual.\n"
 "    "
 
 msgid "no working directory: please specify a revision"
@@ -12554,6 +13301,64 @@ msgstr ""
 "    ou se houverem conflitos não resolvidos.\n"
 "    "
 
+msgid "dump the contents of a data file revision"
+msgstr "exibe o conteúdo de uma revisão de dados de arquivo"
+
+msgid "parse and display a date"
+msgstr "decodifica e exibe uma data"
+
+msgid "dump information about delta chains in a revlog"
+msgstr "extrai informações sobre cadeias de delta em um revlog"
+
+msgid "    Output can be templatized. Available template keywords are:"
+msgstr ""
+"    A saída pode ser customizada com modelos. As palavras chave disponíveis "
+"são:"
+
+msgid ""
+"    :``rev``:       revision number\n"
+"    :``chainid``:   delta chain identifier (numbered by unique base)\n"
+"    :``chainlen``:  delta chain length to this revision\n"
+"    :``prevrev``:   previous revision in delta chain\n"
+"    :``deltatype``: role of delta / how it was computed\n"
+"    :``compsize``:  compressed size of revision\n"
+"    :``uncompsize``: uncompressed size of revision\n"
+"    :``chainsize``: total size of compressed revisions in chain\n"
+"    :``chainratio``: total chain size divided by uncompressed revision size\n"
+"                    (new delta chains typically start at ratio 2.00)\n"
+"    :``lindist``:   linear distance from base revision in delta chain to end\n"
+"                    of this revision\n"
+"    :``extradist``: total size of revisions not part of this delta chain from\n"
+"                    base of delta chain to end of this revision; a measurement\n"
+"                    of how much extra data we need to read/seek across to read\n"
+"                    the delta chain for this revision\n"
+"    :``extraratio``: extradist divided by chainsize; another representation of\n"
+"                    how much unrelated data is needed to load this delta chain\n"
+"    "
+msgstr ""
+"    :``rev``:       número da revisão\n"
+"    :``chainid``:   identificador de cadeia de deltas (numerado por base única)\n"
+"    :``chainlen``:  comprimento da cadeia de deltas para esta revisão\n"
+"    :``prevrev``:   revisão anterior na cadeia de deltas\n"
+"    :``deltatype``: tipo de delta / como foi computado\n"
+"    :``compsize``:  tamanho comprimido da revisão\n"
+"    :``uncompsize``: tamanho não comprimido da revisão\n"
+"    :``chainsize``: tamanho total das revisões comprimidas na cadeia\n"
+"    :``chainratio``: tamanho total da cadeia dividido pelo tamanho não\n"
+"                    comprimido da revisão\n"
+"                    (novas cadeias de deltas tipicamente começam em 2.00)\n"
+"    :``lindist``:   distância linear da revisão base na cadeia de deltas\n"
+"                    até o final desta revisão\n"
+"    :``extradist``: tamanho total de revisões que não fazem parte desta\n"
+"                    cadeia de deltas da base da cadeia de deltas até o\n"
+"                    fim desta revisão; uma medida de quantos dados\n"
+"                    extras em leitura ou posicionamento são necessários\n"
+"                    para ler a cadeia de deltas para esta revisão\n"
+"    :``extraratio``: extradist dividido por chainsize; outra representação\n"
+"                    de quantos dados não relacionados são necessários para\n"
+"                    carregar esta cadeia de deltas\n"
+"    "
+
 msgid "cannot use --commit with --no-commit"
 msgstr "não é possível usar --commit com --no-commit"
 
@@ -12592,6 +13397,9 @@ msgstr "a revisão %s anula a revisão %s\n"
 #, python-format
 msgid "merging with changeset %s\n"
 msgstr "mesclando com revisão %s\n"
+
+msgid "show the contents of the current dirstate"
+msgstr "mostra o conteúdo do dirstate atual"
 
 msgid "reset bisect state"
 msgstr "reinicia o estado da bisseção"
@@ -12779,11 +13587,27 @@ msgstr ""
 "      Veja :hg:`help revisions.bisect` para mais informações sobre o\n"
 "      predicado `bisect()`."
 
+msgid "runs the changeset discovery protocol in isolation"
+msgstr "executa o protocolo discovery isoladamente"
+
+msgid "show information about active extensions"
+msgstr "mostra informações sobre extensões ativas"
+
 msgid "(use of 'hg bisect <cmd>' is deprecated)\n"
 msgstr "(o uso 'hg bisect <cmd>' é obsoleto)\n"
 
 msgid "incompatible arguments"
 msgstr "argumentos incompatíveis"
+
+#, python-format
+msgid "%s and %s are incompatible"
+msgstr "%s e %s são incompatíveis"
+
+msgid "parse and apply a fileset specification"
+msgstr "interpreta e aplica uma especificação de fileset"
+
+msgid "show information detected about current filesystem"
+msgstr "mostra informações detectadas sobre o sistema de arquivos atual"
 
 msgid "current bisect revision is unknown - start a new bisect to fix"
 msgstr ""
@@ -12792,6 +13616,18 @@ msgstr ""
 
 msgid "current bisect revision is a merge"
 msgstr "a revisão bissecionada atual é uma mesclagem"
+
+msgid "retrieves a bundle from a repo"
+msgstr "obtém um bundle de um repositório"
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Saves the bundle to the\n"
+"    given file.\n"
+"    "
+msgstr ""
+"    Todo ID deve ser uma string hexadecimal completa.\n"
+"    Grava o bundle no arquivo pedido.\n"
+"    "
 
 #, python-format
 msgid "failed to execute %s"
@@ -12804,6 +13640,25 @@ msgstr "%s morto"
 #, python-format
 msgid "changeset %d:%s: %s\n"
 msgstr "revisão %d:%s: %s\n"
+
+msgid ""
+"display the combined ignore pattern and information about ignored files"
+msgstr ""
+"exibe o padrão combinado de arquivos ignorados e informações sobre arquivos "
+"ignorados"
+
+msgid "    With no argument display the combined ignore pattern."
+msgstr "    Sem parâmetros, exibe o padrão combinado de arquivos ignorados."
+
+msgid ""
+"    Given space separated file names, shows if the given file is ignored and\n"
+"    if so, show the ignore rule (file and line number) that matched it.\n"
+"    "
+msgstr ""
+"    Dados nomes de arquivo separados por espaços, mostra se o\n"
+"    arquivo pedido é ignorado, e se for, mostra a regra de\n"
+"    .hgignore correspondente (arquivo e número da linha).\n"
+"    "
 
 #, python-format
 msgid "Extending search to changeset %d:%s\n"
@@ -12836,6 +13691,9 @@ msgstr "torna um marcador inativo"
 
 msgid "hg bookmarks [OPTIONS]... [NAME]..."
 msgstr "hg bookmarks [OPÇÕES]... [NOME]..."
+
+msgid "dump the contents of an index file"
+msgstr "extrai o conteúdo de um arquivo de índice"
 
 msgid "create a new bookmark or list existing bookmarks"
 msgstr "cria um novo marcador ou lista marcadores existentes"
@@ -12921,25 +13779,14 @@ msgstr ""
 "          hg book -f @\n"
 "    "
 
-msgid "bookmark names cannot consist entirely of whitespace"
-msgstr "nomes de marcadores não podem conter apenas espaços em branco"
-
-#, python-format
-msgid "moving bookmark '%s' forward from %s\n"
-msgstr "movendo marcador '%s' para frente a partir de %s\n"
-
-#, python-format
-msgid "bookmark '%s' already exists (use -f to force)"
-msgstr "o marcador '%s' já existe (use -f para forçar)"
-
-msgid "a bookmark cannot have the name of an existing branch"
-msgstr "um marcador não pode ter o mesmo nome de um ramo existente"
-
 msgid "--delete and --rename are incompatible"
 msgstr "--delete e --rename são incompatíveis"
 
 msgid "--rev is incompatible with --delete"
 msgstr "--rev é incompatível com --delete"
+
+msgid "dump an index DAG as a graphviz dot file"
+msgstr "extrai os dados de um índice DAG como um arquivo .dot do graphviz"
 
 msgid "--rev is incompatible with --rename"
 msgstr "--rev é incompatível com --rename"
@@ -12947,18 +13794,14 @@ msgstr "--rev é incompatível com --rename"
 msgid "bookmark name required"
 msgstr "requerido nome do marcador"
 
-#, python-format
-msgid "bookmark '%s' does not exist"
-msgstr "o marcador '%s' não existe"
-
 msgid "new bookmark name required"
 msgstr "requerido nome do novo marcador"
 
 msgid "only one new bookmark name allowed"
 msgstr "apenas um novo nome de marcador é permitido"
 
-msgid "no bookmarks set\n"
-msgstr "nenhum marcador definido\n"
+msgid "test Mercurial installation"
+msgstr "testa a instalação do Mercurial"
 
 msgid "no active bookmark\n"
 msgstr "nenhum marcador ativo\n"
@@ -13159,8 +14002,65 @@ msgstr ""
 "    Devolve 0 indicando sucesso, 1 se não foram encontradas mudanças.\n"
 "    "
 
+msgid "test whether node ids are known to a repo"
+msgstr "testa se os ids dos nós são conhecidos em um repositório"
+
+msgid ""
+"    Every ID must be a full-length hex node id string. Returns a list of 0s\n"
+"    and 1s indicating unknown/known.\n"
+"    "
+msgstr ""
+"    Todo ID deve ser uma string hexadecimal completa.\n"
+"    Devolve uma lista de 0s e 1s indicando respectivamente\n"
+"    desconhecidos e conhecidos.\n"
+"    "
+
+msgid "backwards compatibility with old bash completion scripts (DEPRECATED)"
+msgstr ""
+"compatibilidade retroativa com antigos scripts bash de completação "
+"(OBSOLETO)"
+
 msgid "no commits to bundle"
 msgstr "nenhuma revisão a ser incluída no bundle"
+
+msgid "show or modify state of locks"
+msgstr "mostra ou modifica o estado dos locks"
+
+msgid ""
+"    By default, this command will show which locks are held. This\n"
+"    includes the user and process holding the lock, the amount of time\n"
+"    the lock has been held, and the machine name where the process is\n"
+"    running if it's not local."
+msgstr ""
+"    Por padrão, este comando mostra quais locks estão bloqueados.\n"
+"    Isso inclui o usuário e processo donos do lock, há quanto tempo\n"
+"    o lock está bloqueado, e o nome da máquina onde o processo\n"
+"    está rodando, se não for a máquina local."
+
+msgid ""
+"    Locks protect the integrity of Mercurial's data, so should be\n"
+"    treated with care. System crashes or other interruptions may cause\n"
+"    locks to not be properly released, though Mercurial will usually\n"
+"    detect and remove such stale locks automatically."
+msgstr ""
+"    Locks protegem a integridade dos dados do Mercurial, então\n"
+"    devem ser usados com cuidado. Quedas de sistema ou outras\n"
+"    interrupções podem fazer com que locks não sejam liberados\n"
+"    adequadamente, apesar de o Mercurial tipicamente detectar e\n"
+"    liberar esses locks inválidos automaticamente."
+
+msgid ""
+"    However, detecting stale locks may not always be possible (for\n"
+"    instance, on a shared filesystem). Removing locks may also be\n"
+"    blocked by filesystem permissions."
+msgstr ""
+"    No entanto, pode não ser possível detectar locks inválidos (por\n"
+"    exemplo, em um sistema de arquivos compartilhado). A remoção de\n"
+"    locks também pode ser bloqueada por permissões do sistema de\n"
+"    arquivos."
+
+msgid "    Returns 0 if no locks are held."
+msgstr "    Devolve 0 se se nenhum lock estiver bloqueado."
 
 msgid "see 'hg help bundlespec' for supported values for --type"
 msgstr "veja 'hg help bundlespec' para valores suportados em --type"
@@ -13183,6 +14083,16 @@ msgstr "o repositório não suporta a versão de bundle %s"
 
 msgid "--base is incompatible with specifying a destination"
 msgstr "--base é incompatível com uma especificação de destino"
+
+msgid "print merge state"
+msgstr "imprime o estado da mesclagem"
+
+msgid ""
+"    Use --verbose to print out information about whether v1 or v2 merge state\n"
+"    was chosen."
+msgstr ""
+"    Use --verbose para imprimir informações a respeito de como foi\n"
+"    feita a escolha entre os estados de mesclagem v1 e v2.    "
 
 msgid "print output to file with formatted name"
 msgstr "imprime a saída para o arquivo com o nome formatado"
@@ -13463,13 +14373,18 @@ msgstr "          hg clone https://www.mercurial-scm.org/repo/hg/#stable"
 msgid "    See :hg:`help urls` for details on specifying URLs."
 msgstr "    Veja :hg:`help urls` para detalhes sobre a especificação de URLs."
 
+msgid "complete \"names\" - tags, open branch names, bookmark names"
+msgstr ""
+"completa \"nomes\" - etiquetas, nomes de ramos abertos, nomes de marcadores"
+
+msgid "create arbitrary obsolete marker"
+msgstr "cria uma marcação de obsolescência arbitrária"
+
+msgid "    With no arguments, displays the list of obsolescence markers."
+msgstr "    Sem parâmetros, mostra a lista de marcações de obsolescência."
+
 msgid "cannot specify both --noupdate and --updaterev"
 msgstr "não se pode especificar ao mesmo tempo ---noupdate e --updaterev"
-
-msgid "mark new/missing files as added/removed before committing"
-msgstr ""
-"marca arquivos novos/ausentes como adicionados/removidos antes da "
-"consolidação"
 
 msgid "mark a branch head as closed"
 msgstr "marca uma cabeça de ramo como fechada"
@@ -13479,9 +14394,6 @@ msgstr "emenda o pai do diretório de trabalho"
 
 msgid "use the secret phase for committing"
 msgstr "consolida a revisão na fase \"secret\""
-
-msgid "use interactive mode"
-msgstr "use o modo interativo"
 
 msgid "commit the specified files or all outstanding changes"
 msgstr "consolida os arquivos pedidos ou todas as mudanças por gravar"
@@ -13588,6 +14500,25 @@ msgstr ""
 "          hg commit --amend --date now\n"
 "    "
 
+msgid "complete part or all of a tracked path"
+msgstr "completa todo ou uma parte de um caminho rastreado"
+
+msgid ""
+"    This command supports shells that offer path name completion. It\n"
+"    currently completes only files already known to the dirstate."
+msgstr ""
+"    Este comando suporta shells que ofereçam completação de\n"
+"    nomes de caminhos. Atualmente, apenas arquivos já presentes\n"
+"    no dirstate serão completados."
+
+msgid ""
+"    Completion extends only to the next path segment unless\n"
+"    --full is specified, in which case entire paths are used."
+msgstr ""
+"    A completação por padrão é feita apenas para o próximo segmento\n"
+"    do caminho. Se --full for especificado, são usados caminhos\n"
+"    completos."
+
 msgid "cannot amend with --subrepos"
 msgstr "amend não suporta --subrepos"
 
@@ -13605,6 +14536,100 @@ msgstr "não é possível emendar durante uma mesclagem"
 
 msgid "cannot amend changeset with children"
 msgstr "não é possível emendar revisões com filhas"
+
+msgid "examine which merge tool is chosen for specified file"
+msgstr ""
+"examina qual utilitário de mesclagem será escolhido para o arquivo "
+"especificado"
+
+msgid ""
+"    As described in :hg:`help merge-tools`, Mercurial examines\n"
+"    configurations below in this order to decide which merge tool is\n"
+"    chosen for specified file."
+msgstr ""
+"    Como descrito em :hg:`help merge-tools`, o Mercurial examina\n"
+"    as configurações abaixo em ordem para decidir qual ferramenta\n"
+"    de mesclagem será escolhida para o arquivo especificado."
+
+msgid ""
+"    1. ``--tool`` option\n"
+"    2. ``HGMERGE`` environment variable\n"
+"    3. configurations in ``merge-patterns`` section\n"
+"    4. configuration of ``ui.merge``\n"
+"    5. configurations in ``merge-tools`` section\n"
+"    6. ``hgmerge`` tool (for historical reason only)\n"
+"    7. default tool for fallback (``:merge`` or ``:prompt``)"
+msgstr ""
+"    1. opção ``--tool``\n"
+"    2. variável de ambiente ``HGMERGE``\n"
+"    3. configurações na seção ``merge-patterns``\n"
+"    4. configuração ``ui.merge``\n"
+"    5. configurações na seção ``merge-tools``\n"
+"    6. ferramenta ``hgmerge`` (apenas por razões históricas)\n"
+"    7. ferramenta padrão para fallback (``:merge`` ou ``:prompt``)"
+
+msgid "    This command writes out examination result in the style below::"
+msgstr "    Este comando imprime o resultado dessa análise no estilo abaixo::"
+
+msgid "        FILE = MERGETOOL"
+msgstr "        ARQUIVO = FERRAMENTA"
+
+msgid ""
+"    By default, all files known in the first parent context of the\n"
+"    working directory are examined. Use file patterns and/or -I/-X\n"
+"    options to limit target files. -r/--rev is also useful to examine\n"
+"    files in another context without actual updating to it."
+msgstr ""
+"    Por padrão, todos os arquivos conhecidos no contexto do\n"
+"    primeiro pai do diretório de trabalho serão examinados.\n"
+"    Use padrões de arquivo e/ou opções -I/-X para limitar\n"
+"    os arquivos desejados.\n"
+"    -r/--rev pode ser usada para examinar arquivos em outro\n"
+"    contexto sem a necessidade de atualizar para a revisão."
+
+msgid ""
+"    With --debug, this command shows warning messages while matching\n"
+"    against ``merge-patterns`` and so on, too. It is recommended to\n"
+"    use this option with explicit file patterns and/or -I/-X options,\n"
+"    because this option increases amount of output per file according\n"
+"    to configurations in hgrc."
+msgstr ""
+"    Com --debug, este comando também exibe mensagens de aviso\n"
+"    ao avaliar cada configuração.\n"
+"    É recomendado usar esta opção ao passar padrões de arquivo\n"
+"    e/ou opções -I/-X, pois esta opção aumenta a quantidade\n"
+"    de informação gerada por arquivo de acordo com configurações\n"
+"    no arquivo hgrc."
+
+msgid ""
+"    With -v/--verbose, this command shows configurations below at\n"
+"    first (only if specified)."
+msgstr ""
+"    Com -v/--verbose, este comando mostra primeiro as configurações\n"
+"    abaixo, se especificadas."
+
+msgid ""
+"    - ``--tool`` option\n"
+"    - ``HGMERGE`` environment variable\n"
+"    - configuration of ``ui.merge``"
+msgstr ""
+"    - opção ``--tool``\n"
+"    - variável de ambiente ``HGMERGE``\n"
+"    - configuração ``ui.merge``"
+
+msgid ""
+"    If merge tool is chosen before matching against\n"
+"    ``merge-patterns``, this command can't show any helpful\n"
+"    information, even with --debug. In such case, information above is\n"
+"    useful to know why a merge tool is chosen.\n"
+"    "
+msgstr ""
+"    Se uma ferramenta de mesclagem for escolhida antes da\n"
+"    avaliação de ``merge-patterns``, este comando não\n"
+"    consegue exibir informações úteis, mesmo com --debug.\n"
+"    Nesse caso, a informação acima é útil para entender por\n"
+"    quê uma ferramenta de mesclagem foi escolhida.\n"
+"    "
 
 msgid "show untrusted configuration options"
 msgstr "mostra opções de configuração não confiáveis"
@@ -13667,6 +14692,22 @@ msgstr ""
 msgid "    Returns 0 on success, 1 if NAME does not exist."
 msgstr "    Devolve 0 para indicar sucesso, 1 se o NOME não existir."
 
+msgid "access the pushkey key/value protocol"
+msgstr "acessa o protocolo pushkey de pares chave/valor"
+
+msgid "    With two args, list the keys in the given namespace."
+msgstr "    Com dois argumentos, lista as chaves no espaço de nomes dado."
+
+msgid ""
+"    With five args, set a key to new if it currently is set to old.\n"
+"    Reports success or failure.\n"
+"    "
+msgstr ""
+"    Com cinco argumentos, redefine uma chave para o novo valor se\n"
+"    estiver no momento definida para o valor antigo.\n"
+"    Informa sobre sucesso ou falha.\n"
+"    "
+
 msgid "can't use --local and --global together"
 msgstr "não se pode usar --local e --global ao mesmo tempo"
 
@@ -13676,8 +14717,52 @@ msgstr "não se pode usar --local fora de um repositório"
 msgid "edit failed"
 msgstr "falha ao editar"
 
+msgid "rebuild the dirstate as it would look like for the given revision"
+msgstr "reconstrói o dirstate como ele pareceria para a revisão dada"
+
+msgid "    If no revision is specified the first current parent will be used."
+msgstr ""
+"    Se nenhuma revisão for especificada, será usado o primeiro pai do "
+"diretório de trabalho."
+
+msgid ""
+"    The dirstate will be set to the files of the given revision.\n"
+"    The actual working directory content or existing dirstate\n"
+"    information such as adds or removes is not considered."
+msgstr ""
+"    O dirstate será definido para os arquivos da revisão pedida.\n"
+"    O conteúdo real do diretório de trabalho e informações existentes\n"
+"    no dirstate (como adições e remoções) não são considerados."
+
+msgid ""
+"    ``minimal`` will only rebuild the dirstate status for files that claim to be\n"
+"    tracked but are not in the parent manifest, or that exist in the parent\n"
+"    manifest but are not in the dirstate. It will not change adds, removes, or\n"
+"    modified files that are in the working copy parent."
+msgstr ""
+"    ``minimal`` só reconstruirá o status do dirstate para arquivos\n"
+"    rastreados que não estejam no manifesto do pai, ou que estejam\n"
+"    no manifesto do pai mas não no dirstate. Arquivos adicionados,\n"
+"    removidos ou modificados presentes no pai da cópia de trabalho\n"
+"    não serão modificados."
+
+msgid ""
+"    One use of this command is to make the next :hg:`status` invocation\n"
+"    check the actual file content.\n"
+"    "
+msgstr ""
+"    Um uso para este comando é fazer com que a próxima execução\n"
+"    de :hg:`status` verifique o conteúdo real dos arquivos.\n"
+"    "
+
 msgid "only one config item permitted"
 msgstr "apenas um item de configuração permitido"
+
+msgid "rebuild the fncache file"
+msgstr "reconstrói o arquivo fncache"
+
+msgid "dump rename information"
+msgstr "exibe informações de renomeação"
 
 msgid "record a copy that has already occurred"
 msgstr "grava uma cópia que já ocorreu"
@@ -13722,6 +14807,24 @@ msgid ""
 msgstr ""
 "    Devolve 0 para indicar sucesso, 1 se erros forem encontrados.\n"
 "    "
+
+msgid "show data and statistics about a revlog"
+msgstr "mostra dados e estatísticas sobre um revlog"
+
+msgid "[COMMAND]"
+msgstr "[COMANDO]"
+
+msgid "list all available commands and options"
+msgstr "exibe todas as opções e comandos disponíveis"
+
+msgid "show the command options"
+msgstr "exibe opções dos comandos"
+
+msgid "[-o] CMD"
+msgstr "[-o] CMD"
+
+msgid "returns the completion list associated with the given command"
+msgstr "devolve a lista de complementos associada ao comando dado"
 
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr "[OPÇÃO]... ([-c REV] | [-r REV1 [-r REV2]]) [ARQUIVO]..."
@@ -14029,6 +15132,34 @@ msgstr ""
 msgid "    Returns 0 if a match is found, 1 otherwise."
 msgstr "    Devolve 0 se um resultado for encontrado, 1 caso contrário."
 
+msgid "parse and apply a revision specification"
+msgstr "interpreta e aplica uma especificação de revisões"
+
+msgid ""
+"    Use -p/--show-stage option to print the parsed tree at the given stages.\n"
+"    Use -p all to print tree at every stage."
+msgstr ""
+"    Use -p/--show-stage para imprimir a árvore de parsing nos estágios pedidos.\n"
+"    Use -p all para imprimir a árvore em todos os estágios."
+
+msgid ""
+"    Use --no-show-revs option with -s or -p to print only the set\n"
+"    representation or the parsed tree respectively."
+msgstr ""
+"    Use a opção --no-show-revs com -s ou -p para imprimir apenas\n"
+"    a representação de conjunto ou a árvore de decodificação,\n"
+"    respectivamente."
+
+msgid ""
+"    Use --verify-optimized to compare the optimized result with the unoptimized\n"
+"    one. Returns 1 if the optimized result differs.\n"
+"    "
+msgstr ""
+"    Use --verify-optimized para comparar o resultado otimizado com o\n"
+"    resultado sem otimização. Retorna 1 se o resultado otimizado for\n"
+"    diferente.\n"
+"    "
+
 msgid "forget the specified files on the next commit"
 msgstr "esquece os arquivos especificados na próxima consolidação"
 
@@ -14084,6 +15215,20 @@ msgstr "força o enxerto"
 
 msgid "record the current date as commit date"
 msgstr "grava a data atual como data da consolidação"
+
+msgid "manually set the parents of the current working directory"
+msgstr "muda manualmente os pais do diretório de trabalho atual"
+
+msgid ""
+"    This is useful for writing repository conversion tools, but should\n"
+"    be used with care. For example, neither the working directory nor the\n"
+"    dirstate is updated, so file status may be incorrect after running this\n"
+"    command."
+msgstr ""
+"    Isto é útil para escrever utilitários de conversão de repositórios,\n"
+"    mas deve ser usado com cuidado. Por exemplo, nem o diretório de\n"
+"    trabalho nem o dirstate são atualizados, de modo que o status dos\n"
+"    arquivos pode ficar incorreto após a execução deste comando."
 
 msgid "record the current user as committer"
 msgstr "grava o usuário atual como autor da consolidação"
@@ -14198,6 +15343,37 @@ msgstr ""
 "    Devolve 0 para indicar sucesso.\n"
 "    "
 
+msgid "test a secure connection to a server"
+msgstr "testa uma conexão segura com um servidor"
+
+msgid ""
+"    This builds the certificate chain for the server on Windows, installing the\n"
+"    missing intermediates and trusted root via Windows Update if necessary.  It\n"
+"    does nothing on other platforms."
+msgstr ""
+"    Em Windows, este comando constrói a cadeia de certificados para\n"
+"    o servidor, instalando os certificados intermediários e raízes\n"
+"    confiáveis faltantes através do Windows Update, se necessário.\n"
+"    Ele não tem efeito em outras plataformas."
+
+msgid ""
+"    If SOURCE is omitted, the 'default' path will be used.  If a URL is given,\n"
+"    that server is used. See :hg:`help urls` for more information."
+msgstr ""
+"    Se ORIGEM for omitida, o caminho 'default' será usado.\n"
+"    Se uma URL for passada, tal servidor será usado.\n"
+"    Veja :hg:`help urls` para mais informações."
+
+msgid ""
+"    If the update succeeds, retry the original operation.  Otherwise, the cause\n"
+"    of the SSL error is likely another issue.\n"
+"    "
+msgstr ""
+"    Se a atualização tiver sucesso, tente novamente a\n"
+"    operação original.\n"
+"    Caso contrário, o erro SSL foi provavelmente causado\n"
+"    por outro motivo."
+
 msgid ""
 "warning: inconsistent use of --rev might give unexpected revision "
 "ordering!\n"
@@ -14207,6 +15383,76 @@ msgstr ""
 
 msgid "can't specify --continue and revisions"
 msgstr "não é possível especificar --continue e revisões"
+
+msgid "show set of successors for revision"
+msgstr "mostra conjunto de sucessores da revisão"
+
+msgid ""
+"    A successors set of changeset A is a consistent group of revisions that\n"
+"    succeed A. It contains non-obsolete changesets only unless closests\n"
+"    successors set is set."
+msgstr ""
+"    Um conjunto de sucessores de uma revisão A é um grupo consistente de\n"
+"    revisões que sucedem A. Pode conter apenas revisões não obsoletas,\n"
+"    a não ser que o parâmetro closests esteja definido."
+
+msgid ""
+"    In most cases a changeset A has a single successors set containing a single\n"
+"    successor (changeset A replaced by A')."
+msgstr ""
+"    Na maior parte dos casos uma revisão A possui um único conjunto\n"
+"    de sucessores contendo um único sucessor (revisão A substituída por A')."
+
+msgid ""
+"    A changeset that is made obsolete with no successors are called \"pruned\".\n"
+"    Such changesets have no successors sets at all."
+msgstr ""
+"    Uma revisão sem sucessores tornada obsoleta é chamada \"podada\".\n"
+"    Tais revisões não possuem nenhum conjunto de sucessores."
+
+msgid ""
+"    A changeset that has been \"split\" will have a successors set containing\n"
+"    more than one successor."
+msgstr ""
+"    Uma revisão que tenha sido \"dividida\" terá um conjunto de\n"
+"    sucessores contendo mais de um sucessor."
+
+msgid ""
+"    A changeset that has been rewritten in multiple different ways is called\n"
+"    \"divergent\". Such changesets have multiple successor sets (each of which\n"
+"    may also be split, i.e. have multiple successors)."
+msgstr ""
+"    Uma revisão que tenha sido reescrita de múltiplas formas diferentes\n"
+"    é chamada \"divergente\". Tais revisões possuem múltiplos conjuntos\n"
+"    de sucessores (cada um dos quais pode também ser dividido, isto é,\n"
+"    ter múltiplos sucessores)."
+
+msgid "    Results are displayed as follows::"
+msgstr "    Os resultados são mostrados da seguinte maneira::"
+
+msgid ""
+"        <rev1>\n"
+"            <successors-1A>\n"
+"        <rev2>\n"
+"            <successors-2A>\n"
+"            <successors-2B1> <successors-2B2> <successors-2B3>"
+msgstr ""
+"        <rev1>\n"
+"            <sucessores-1A>\n"
+"        <rev2>\n"
+"            <sucessores-2A>\n"
+"            <sucessores-2B1> <sucessores-2B2> <sucessores-2B3>"
+
+msgid ""
+"    Here rev2 has two possible (i.e. divergent) successors sets. The first\n"
+"    holds one element, whereas the second holds three (i.e. the changeset has\n"
+"    been split).\n"
+"    "
+msgstr ""
+"    Aqui, rev2 possui dois (ou seja, divergentes) possíveis conjuntos\n"
+"    de sucessores. O primeiro possui um elemento, e o segundo possui\n"
+"    três (a revisão foi dividida).\n"
+"    "
 
 msgid "graft"
 msgstr "força o enxerto"
@@ -14218,6 +15464,25 @@ msgstr "omitindo revisão de mesclagem %s que não pode ser enxertada\n"
 #, python-format
 msgid "skipping ancestor revision %d:%s\n"
 msgstr "omitindo revisão ancestral %d:%s\n"
+
+msgid "parse and apply a template"
+msgstr "decodifica e aplica um modelo"
+
+msgid ""
+"    If -r/--rev is given, the template is processed as a log template and\n"
+"    applied to the given changesets. Otherwise, it is processed as a generic\n"
+"    template."
+msgstr ""
+"    Se -r/--rev for fornecida, o modelo será processado como um modelo\n"
+"    de log e aplicado às revisões pedidas.\n"
+"    Caso contrário, será processado como um modelo genérico."
+
+msgid ""
+"    Use --verbose to print the parsed tree.\n"
+"    "
+msgstr ""
+"    Use --verbose para imprimir a árvore decodificada.\n"
+"    "
 
 #, python-format
 msgid "skipping revision %d:%s (already grafted to %d:%s)\n"
@@ -14242,6 +15507,59 @@ msgstr "omitindo revisão %d:%s já enxertada (foi enxertada de %d:%s)\n"
 #, python-format
 msgid "grafting %s\n"
 msgstr "enxertando %s\n"
+
+msgid "warm all known caches in the repository"
+msgstr "aquece todos os caches conhecidos no repositório"
+
+msgid "upgrade a repository to use different features"
+msgstr "melhora um repositório para usar diferentes funcionalidades"
+
+msgid ""
+"    If no arguments are specified, the repository is evaluated for upgrade\n"
+"    and a list of problems and potential optimizations is printed."
+msgstr ""
+"    Se nenhum argumento for especificado, o repositório será\n"
+"    avaliado para atualização de funcionalidades, e será exibida\n"
+"    uma lista de problemas e otimizações em potencial."
+
+msgid ""
+"    With ``--run``, a repository upgrade is performed. Behavior of the upgrade\n"
+"    can be influenced via additional arguments. More details will be provided\n"
+"    by the command output when run without ``--run``."
+msgstr ""
+"    Com ``--run``, o repositório será melhorado para usar novas\n"
+"    funcionalidades.\n"
+"    O comportamento dessa atualização pode ser influenciado com\n"
+"    parâmetros adicionais.\n"
+"    Sem a opção ``--run``, o comando fornece mais detalhes sobre\n"
+"    essa operação."
+
+msgid ""
+"    During the upgrade, the repository will be locked and no writes will be\n"
+"    allowed."
+msgstr ""
+"    Durante a atualização, o repositório será travado, e nenhuma\n"
+"    escrita será permitida."
+
+msgid ""
+"    At the end of the upgrade, the repository may not be readable while new\n"
+"    repository data is swapped in. This window will be as long as it takes to\n"
+"    rename some directories inside the ``.hg`` directory. On most machines, this\n"
+"    should complete almost instantaneously and the chances of a consumer being\n"
+"    unable to access the repository should be low.\n"
+"    "
+msgstr ""
+"    Ao término da atualização, o repositório pode não estar\n"
+"    disponível para leitura, enquanto é feita a troca para os\n"
+"    novos dados de repositório.\n"
+"    Esta janela corresponde à renomeação de alguns diretórios\n"
+"    dentro do diretório ``.hg``.\n"
+"    Na maior parte das máquinas, isto deve completar quase\n"
+"    instantaneamente, minimizando a chance de um usuário ser\n"
+"    afetado pela mudança."
+
+msgid "show how files match on given patterns"
+msgstr "mostra como os arquivos casam com os padrões pedidos"
 
 #, python-format
 msgid "use 'hg resolve' and 'hg graft --continue%s'"
@@ -16345,6 +17663,9 @@ msgstr "mostra apenas arquivos desconhecidos (não rastreados)"
 msgid "show only ignored files"
 msgstr "mostra apenas arquivos ignorados"
 
+msgid "show the terse output (EXPERIMENTAL)"
+msgstr "exibe saída abreviada (EXPERIMENTAL)"
+
 msgid "show source of copied files"
 msgstr "mostra a origem de arquivos copiados"
 
@@ -16428,6 +17749,31 @@ msgstr ""
 "        = origem do arquivo anterior (com --copies)"
 
 msgid ""
+"      The -t/--terse option abbreviates the output by showing directory name\n"
+"      if all the files in it share the same status. The option expects a value\n"
+"      which can be a string formed by using 'm', 'a', 'r', 'd', 'u', 'i', 'c'\n"
+"      where, 'm' stands for 'modified', 'a' for 'added', 'r' for 'removed',\n"
+"      'd' for 'deleted', 'u' for 'unknown', 'i' for 'ignored' and 'c' for clean."
+msgstr ""
+"      A opção -t/--terse abrevia a saída mostrando o nome do\n"
+"      diretório se todos os arquivos dentro dele tiverem o\n"
+"      mesmo estado.\n"
+"      A opção recebe um valor que pode ser uma string formada\n"
+"      pelo uso de 'm', 'a', 'r', 'd', 'u', 'i', 'c',\n"
+"      onde 'm' indica 'modificado', 'a' 'adicionado',\n"
+"      'r' 'removido', 'd' 'apagado', 'u' 'desconhecido',\n"
+"      'i' 'ignorado' e 'c' 'limpo'."
+
+msgid ""
+"      It terses the output of only those status which are passed. The ignored\n"
+"      files are not considered while tersing until 'i' is there in --terse value\n"
+"      or the --ignored option is used."
+msgstr ""
+"      A saída será abreviada apenas para os status que forem passados.\n"
+"      Os arquivos ignorados não serão considerados a não ser que 'i'\n"
+"      seja passado em --terse ou a opção --ignored seja usada."
+
+msgid ""
 "      - show changes in the working directory relative to a\n"
 "        changeset::"
 msgstr ""
@@ -16461,6 +17807,9 @@ msgstr ""
 
 msgid "          hg status -an0"
 msgstr "          hg status -an0"
+
+msgid "cannot use --terse with --rev"
+msgstr "não é possível usar --terse com --rev"
 
 msgid "check for push and pull"
 msgstr "verifica push e pull"
@@ -16806,6 +18155,12 @@ msgstr ""
 "    em arquivos não resolvidos.\n"
 "    "
 
+msgid "packed bundles cannot be applied with \"hg unbundle\""
+msgstr "packed bundles não podem ser aplicados com \"hg unbundle\""
+
+msgid "use \"hg debugapplystreamclonebundle\""
+msgstr "use \"hg debugapplystreamclonebundle\""
+
 #, python-format
 msgid "%s: unknown bundle feature, %s"
 msgstr "%s: característica de bundle %s desconhecida"
@@ -16813,12 +18168,6 @@ msgstr "%s: característica de bundle %s desconhecida"
 msgid "see https://mercurial-scm.org/wiki/BundleFeature for more information"
 msgstr ""
 "veja https://mercurial-scm.org/wiki/BundleFeature para mais informações"
-
-msgid "packed bundles cannot be applied with \"hg unbundle\""
-msgstr "packed bundles não podem ser aplicados com \"hg unbundle\""
-
-msgid "use \"hg debugapplystreamclonebundle\""
-msgstr "use \"hg debugapplystreamclonebundle\""
 
 msgid "discard uncommitted changes (no backup)"
 msgstr "descarta mudanças não consolidadas (sem backup)"
@@ -17353,6 +18702,9 @@ msgstr "não é um arquivo bundle2"
 msgid "show all details"
 msgstr "mostra todos os detalhes"
 
+msgid "show only the named part type"
+msgstr "mostra apenas o tipo de parte nomeado"
+
 msgid "print the bundlespec of the bundle"
 msgstr "imprime o bundlespec de um bundle"
 
@@ -17384,14 +18736,8 @@ msgstr "cores disponíveis:\n"
 msgid "available style:\n"
 msgstr "estilo disponível:\n"
 
-msgid "[COMMAND]"
-msgstr "[COMANDO]"
-
-msgid "show the command options"
-msgstr "exibe opções dos comandos"
-
-msgid "[-o] CMD"
-msgstr "[-o] CMD"
+msgid "(warning: stream clone bundle will contain secret revisions)\n"
+msgstr "(aviso: o bundle de clone por stream conterá revisões secretas)\n"
 
 #, python-format
 msgid "bundle requirements: %s\n"
@@ -17485,9 +18831,6 @@ msgstr "REPO ARQUIVO [-H|-C ID]..."
 
 msgid "unknown bundle type specified with --type"
 msgstr "tipo de bundle especificado por --type desconhecido"
-
-msgid "no ignore patterns found"
-msgstr "nenhum padrão de arquivos ignorados encontrado"
 
 #, python-format
 msgid "%s is ignored\n"
@@ -17665,6 +19008,9 @@ msgstr "grava informações dos pais para o precursor"
 msgid "display markers relevant to REV"
 msgstr "mostra marcações relevantes para REV"
 
+msgid "restrict display to markers only relevant to REV"
+msgstr "mostra apenas marcações relevantes para REV"
+
 msgid "display index of the marker"
 msgstr "exibe índice da marcação"
 
@@ -17702,6 +19048,15 @@ msgstr "mostra apenas arquivos normais"
 msgid "FILESPEC..."
 msgstr "PADRÃOARQ..."
 
+msgid "check for files in this revision"
+msgstr "checa por arquivos nesta revisão"
+
+msgid "emulate merging change and delete"
+msgstr "emula mudança da mesclagem e apaga"
+
+msgid "[PATTERN]..."
+msgstr "[PADRÃO]..."
+
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr "REPOSITÓRIO NAMESPACE [CHAVE ANTIGO NOVO]"
 
@@ -17734,9 +19089,6 @@ msgstr ""
 msgid "revision to debug"
 msgstr "revisão a ser depurada"
 
-msgid "[-r REV] FILE"
-msgstr "[-r REV] ARQUIVO"
-
 #, python-format
 msgid "%s renamed from %s:%s\n"
 msgstr "%s renomeado de %s:%s\n"
@@ -17750,6 +19102,12 @@ msgstr "imprime diretamente dados do índice"
 
 msgid "print parsed tree after optimizing (DEPRECATED)"
 msgstr "imprime a árvore de parsing após a otimização (OBSOLETO)"
+
+msgid "print list of result revisions (default)"
+msgstr "imprime uma lista das revisões resultantes (padrão)"
+
+msgid "print internal representation of result set"
+msgstr "imprime uma representação interna do conjunto de resultados"
 
 msgid "print parsed tree at the given stage"
 msgstr "imprime a árvore de parsing no estágio pedido"
@@ -17773,20 +19131,46 @@ msgstr "nome de estágio inválido: %s"
 msgid "REV1 [REV2]"
 msgstr "REV1 [REV2]"
 
+msgid "certificate chain building is only possible on Windows"
+msgstr "a construção da cadeia de certificados só é possível em Windows"
+
+msgid "there is no Mercurial repository here, and no server specified"
+msgstr ""
+"não há um repositório do Mercurial aqui, e um servidor não foi especificado"
+
+msgid "only https and ssh connections are supported"
+msgstr "apenas conexões https e ssh são suportadas"
+
+#, python-format
+msgid "checking the certificate chain for %s\n"
+msgstr "checando a cadeia de certificados para %s\n"
+
+msgid "certificate chain is incomplete, updating... "
+msgstr "a cadeia de certificados está incompleta, atualizando... "
+
+msgid "failed.\n"
+msgstr "falhou.\n"
+
+msgid "done.\n"
+msgstr "feito.\n"
+
+msgid "full certificate chain is available\n"
+msgstr "a cadeia de certificados completa está disponível\n"
+
 msgid "revision to check"
 msgstr "revisão para verificar"
 
 msgid "[-r REV] [REV]"
 msgstr "[-r REV] [REV]"
 
+msgid "return closest successors sets only"
+msgstr "devolve apenas os conjuntos de sucessores mais próximos"
+
 msgid "[REV]"
 msgstr "[REV]"
 
 msgid "apply template on changesets"
 msgstr "aplica o modelo nas revisões"
-
-msgid "KEY=VALUE"
-msgstr "CHAVE=VALOR"
 
 msgid "define template keyword"
 msgstr "define uma palavra chave do modelo"
@@ -17924,6 +19308,10 @@ msgid "(committing will reopen branch \"%s\")\n"
 msgstr "(um commit reabrirá o ramo \"%s\")\n"
 
 #, python-format
+msgid "updated to \"%s: %s\"\n"
+msgstr "atualizando para \"%s: %s\"\n"
+
+#, python-format
 msgid "%i other heads for branch \"%s\"\n"
 msgstr "%i outras cabeças no ramo \"%s\"\n"
 
@@ -17946,12 +19334,12 @@ msgid "setting %r to other parent only allowed in merges"
 msgstr "definir %r para outro pai é permitido apenas em mesclagens"
 
 #, python-format
-msgid "can't close already inactivated backup: dirstate%s"
-msgstr "não é possível fechar um backup já desativado: dirstate%s"
+msgid "can't close already inactivated backup: %s"
+msgstr "não é possível fechar um backup já desativado: %s"
 
 #, python-format
-msgid "can't release already inactivated backup: dirstate%s"
-msgstr "não é possível liberar um backup já desativado: dirstate%s"
+msgid "can't release already inactivated backup: %s"
+msgstr "não é possível liberar um backup já desativado: %s"
 
 #, python-format
 msgid "push creates new remote branches: %s!"
@@ -18034,6 +19422,17 @@ msgstr "hg: erro de análise da entrada: %s\n"
 #, python-format
 msgid "(%s)\n"
 msgstr "(%s)\n"
+
+#, python-format
+msgid "** ProgrammingError: %s\n"
+msgstr "** ProgrammingError: %s\n"
+
+#, python-format
+msgid "** (%s)\n"
+msgstr "** (%s)\n"
+
+msgid "killed!\n"
+msgstr "morto!\n"
 
 msgid "interrupted!\n"
 msgstr "interrompido!\n"
@@ -18403,12 +19802,20 @@ msgstr ""
 "desabilitando)\n"
 
 #, python-format
+msgid "*** failed to set up extension %s: %s\n"
+msgstr "*** falha ao preparar a extensão %s: %s\n"
+
+#, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
 msgstr "*** falha ao importar a extensão %s de %s: %s\n"
 
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
 msgstr "*** falha ao importar a extensão %s: %s\n"
+
+#, python-format
+msgid "*** (%s)\n"
+msgstr "*** (%s)\n"
 
 msgid "(no help text available)"
 msgstr "(texto de ajuda não disponível)"
@@ -18420,31 +19827,6 @@ msgstr "aviso: erro ao localizar comandos em %s\n"
 #, python-format
 msgid "invalid value %r for option %s, expected int"
 msgstr "valor %r inválido para a opção %s, int esperado"
-
-#, python-format
-msgid "couldn't find merge tool %s\n"
-msgstr "não foi possível encontrar ferramenta de mesclagem %s\n"
-
-#, python-format
-msgid "tool %s can't handle symlinks\n"
-msgstr "a ferramenta %s não pode tratar links simbólicos\n"
-
-#, python-format
-msgid "tool %s can't handle binary\n"
-msgstr "a ferramenta %s não pode tratar binários\n"
-
-#, python-format
-msgid "tool %s requires a GUI\n"
-msgstr "a ferramenta %s requer uma interface gráfica (GUI)\n"
-
-msgid ""
-"``:prompt``\n"
-"Asks the user which of the local `p1()` or the other `p2()` version to\n"
-"    keep as the merged version."
-msgstr ""
-"``:prompt``\n"
-"Pergunta ao usuário se a versão local `p1()` ou a outra `p2()` deve\n"
-"    ser usada como resultado da mesclagem."
 
 #, python-format
 msgid ""
@@ -18463,12 +19845,45 @@ msgstr ""
 "use (c) a versão alterada, (d) deixe apagada ou (u) deixe não resolvida?$$ (&C) alterada $$ (&D) deixe apagada $$ (&U) deixe não resolvida"
 
 #, python-format
+msgid "%s (for pattern %s)"
+msgstr "%s (para o padrão %s)"
+
+#, python-format
+msgid "couldn't find merge tool %s\n"
+msgstr "não foi possível encontrar ferramenta de mesclagem %s\n"
+
+#, python-format
+msgid "tool %s can't handle symlinks\n"
+msgstr "a ferramenta %s não pode tratar links simbólicos\n"
+
+#, python-format
+msgid "tool %s can't handle binary\n"
+msgstr "a ferramenta %s não pode tratar binários\n"
+
+#, python-format
+msgid "tool %s requires a GUI\n"
+msgstr "a ferramenta %s requer uma interface gráfica (GUI)\n"
+
+#, python-format
+msgid "no tool found to merge %s\n"
+msgstr "nenhuma ferramenta encontrada para mesclar %s\n"
+
 msgid ""
-"no tool found to merge %(fd)s\n"
-"keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved?$$ &Local $$ &Other $$ &Unresolved"
+"``:prompt``\n"
+"Asks the user which of the local `p1()` or the other `p2()` version to\n"
+"    keep as the merged version."
 msgstr ""
-"nenhuma ferramenta encontrada para mesclar %(fd)s\n"
-"manter o arquivo (l)ocal%(l)s, usar o (o)utro%(o)s ou (u) deixar não resolvido? ?$$ &Local $$ &Outro $$ (&U) não resolvido"
+"``:prompt``\n"
+"Pergunta ao usuário se a versão local `p1()` ou a outra `p2()` deve\n"
+"    ser usada como resultado da mesclagem."
+
+#, python-format
+msgid ""
+"keep (l)ocal%(l)s, take (o)ther%(o)s, or leave (u)nresolved for %(fd)s?$$ "
+"&Local $$ &Other $$ &Unresolved"
+msgstr ""
+"manter o arquivo (l)ocal%(l)s, usar o (o)utro%(o)s ou (u) deixar não resolvido para %(fd)s\n"
+"? ?$$ &Local $$ &Outro $$ (&U) não resolvido"
 
 msgid ""
 "``:local``\n"
@@ -18606,6 +20021,21 @@ msgstr ""
 "    se chamar ``a.txt``, estes arquivos serão chamados respectivamente\n"
 "    ``a.txt.local``, ``a.txt.other`` e ``a.txt.base`` e serão colocados\n"
 "    no mesmo diretório de ``a.txt``."
+
+msgid ""
+"    This implies permerge. Therefore, files aren't dumped, if premerge\n"
+"    runs successfully. Use :forcedump to forcibly write files out."
+msgstr ""
+"    Isto implica premerge. Portanto, se o premerge executar com\n"
+"    sucesso, os arquivos não serão escritos. Use :forcedump para\n"
+"    forçar a escrita dos arquivos."
+
+msgid ""
+"``:forcedump``\n"
+"Creates three versions of the files as same as :dump, but omits premerge."
+msgstr ""
+"``:forcedump``\n"
+"Cria três versões dos arquivos como em :dump, mas omite o premerge."
 
 #, python-format
 msgid "warning: %s cannot merge change/delete conflict for %s\n"
@@ -19549,14 +20979,16 @@ msgid ""
 "  The default pager on Windows does not support color, so enabling the pager\n"
 "  will effectively disable color.  See :hg:`help config.ui.paginate` to disable\n"
 "  the pager.  Alternately, MSYS and Cygwin shells provide `less` as a pager,\n"
-"  which can be configured to support ANSI color mode."
+"  which can be configured to support ANSI color mode.  Windows 10 natively\n"
+"  supports ANSI color mode."
 msgstr ""
 "  O paginador padrão do Windows não suporta coloração, de modo\n"
 "  que habilitar o paginador efetivamente desabilitará a coloração.\n"
 "  Veja :hg:`help config.ui.paginate` para desabilitar o paginador.\n"
 "  Alternativamente, os shells do MSYS e Cygwin fornecem o comando\n"
 "  `less` como paginador, que pode ser configurado para suportar\n"
-"  modo de coloração ANSI."
+"  modo de coloração ANSI.\n"
+"  O Windows 10 suporta modo de coloração ANSI nativamente."
 
 msgid ""
 "Mode\n"
@@ -20719,14 +22151,15 @@ msgid ""
 "``mode``\n"
 "    String: control the method used to output color. One of ``auto``, ``ansi``,\n"
 "    ``win32``, ``terminfo`` or ``debug``. In auto mode, Mercurial will\n"
-"    use ANSI mode by default (or win32 mode on Windows) if it detects a\n"
+"    use ANSI mode by default (or win32 mode prior to Windows 10) if it detects a\n"
 "    terminal. Any invalid value will disable color."
 msgstr ""
 "``mode``\n"
 "    String: controla o método usado para gerar cores.\n"
 "    Um dentre ``auto``, ``ansi``, ``win32``, ``terminfo`` ou ``debug``.\n"
 "    Em modo auto, o Mercurial usará por padrão modo ANSI, ou win32\n"
-"    em Windows, se detectar um terminal.\n"
+"    em versões do Windows anteriores ao Windows 10,\n"
+"    se detectar um terminal.\n"
 "    Qualquer valor inválido desabilitará a coloração."
 
 msgid ""
@@ -20760,13 +22193,6 @@ msgid ""
 msgstr ""
 "    Em alguns sistemas (por exemplo MSYS no Windows), o terminal pode\n"
 "    suportar um modo de coloração diferente do programa paginador."
-
-msgid ""
-"``commands``\n"
-"------------"
-msgstr ""
-"``commands``\n"
-"------------"
 
 msgid ""
 "``status.relative``\n"
@@ -21660,10 +23086,10 @@ msgstr ""
 msgid ""
 "Most hooks are run with environment variables set that give useful\n"
 "additional information. For each hook below, the environment variables\n"
-"it is passed are listed with names of the form ``$HG_foo``. The\n"
+"it is passed are listed with names in the form ``$HG_foo``. The\n"
 "``$HG_HOOKTYPE`` and ``$HG_HOOKNAME`` variables are set for all hooks.\n"
-"their respectively contains the type of hook which triggered the run and\n"
-"the full name of the hooks in the config. In the example about this will\n"
+"They contain the type of hook which triggered the run and the full name\n"
+"of the hook in the config, respectively. In the example above, this will\n"
 "be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``."
 msgstr ""
 "Vários ganchos são executados com variáveis de ambiente que fornecem\n"
@@ -21678,9 +23104,9 @@ msgstr ""
 
 msgid ""
 "``changegroup``\n"
-"  Run after a changegroup has been added via push, pull or unbundle.  ID of the\n"
-"  first new changeset is in ``$HG_NODE`` and last in ``$HG_NODE_LAST``. URL\n"
-"  from which changes came is in ``$HG_URL``."
+"  Run after a changegroup has been added via push, pull or unbundle.  The ID of\n"
+"  the first new changeset is in ``$HG_NODE`` and last is in ``$HG_NODE_LAST``.\n"
+"  The URL from which changes came is in ``$HG_URL``."
 msgstr ""
 "``changegroup``\n"
 "  Executado após um changegroup ser adicionado em operações push, pull\n"
@@ -21691,7 +23117,7 @@ msgstr ""
 
 msgid ""
 "``commit``\n"
-"  Run after a changeset has been created in the local repository. ID\n"
+"  Run after a changeset has been created in the local repository. The ID\n"
 "  of the newly created changeset is in ``$HG_NODE``. Parent changeset\n"
 "  IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``."
 msgstr ""
@@ -21704,7 +23130,7 @@ msgid ""
 "``incoming``\n"
 "  Run after a changeset has been pulled, pushed, or unbundled into\n"
 "  the local repository. The ID of the newly arrived changeset is in\n"
-"  ``$HG_NODE``. URL that was source of changes came is in ``$HG_URL``."
+"  ``$HG_NODE``. The URL that was source of the changes is in ``$HG_URL``."
 msgstr ""
 "``incoming``\n"
 "  Executado após uma revisão ser trazida para o repositório local em\n"
@@ -21714,14 +23140,14 @@ msgstr ""
 
 msgid ""
 "``outgoing``\n"
-"  Run after sending changes from local repository to another. ID of\n"
-"  first changeset sent is in ``$HG_NODE``. Source of operation is in\n"
-"  ``$HG_SOURCE``; Also see :hg:`help config.hooks.preoutgoing` hook."
+"  Run after sending changes from the local repository to another. The ID of\n"
+"  first changeset sent is in ``$HG_NODE``. The source of operation is in\n"
+"  ``$HG_SOURCE``. Also see :hg:`help config.hooks.preoutgoing`."
 msgstr ""
 "``outgoing``\n"
 "  Executado após o envio de mudanças do repositório local para algum outro.\n"
 "  O ID da primeira revisão enviada é passado em ``$HG_NODE``.\n"
-"  A origem da operação é passada em ``$HG_SOURCE``; veja também\n"
+"  A origem da operação é passada em ``$HG_SOURCE``. Veja também\n"
 "  hg:`help config.hooks.preoutgoing`."
 
 msgid ""
@@ -21790,58 +23216,58 @@ msgstr ""
 msgid ""
 "``prechangegroup``\n"
 "  Run before a changegroup is added via push, pull or unbundle. Exit\n"
-"  status 0 allows the changegroup to proceed. Non-zero status will\n"
-"  cause the push, pull or unbundle to fail. URL from which changes\n"
+"  status 0 allows the changegroup to proceed. A non-zero status will\n"
+"  cause the push, pull or unbundle to fail. The URL from which changes\n"
 "  will come is in ``$HG_URL``."
 msgstr ""
 "``prechangegroup``\n"
 "  Executado antes de um changegroup ser adicionado em operações\n"
 "  push, pull ou unbundle. O status de saída 0 permite que o\n"
-"  changegroup seja processado. Status diferentes de zero farão com\n"
+"  changegroup seja processado. Um status diferente de zero fará com\n"
 "  que a operação push, pull ou unbundle falhe.\n"
 "  A URL de origem das mudanças é passada em ``$HG_URL``."
 
 msgid ""
 "``precommit``\n"
 "  Run before starting a local commit. Exit status 0 allows the\n"
-"  commit to proceed. Non-zero status will cause the commit to fail.\n"
+"  commit to proceed. A non-zero status will cause the commit to fail.\n"
 "  Parent changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``."
 msgstr ""
 "``precommit``\n"
 "  Executado antes de iniciar um commit local. O status de saída 0\n"
-"  permite que o commit seja realizado. Status diferentes de zero\n"
-"  fazem com que o commit falhe.\n"
+"  permite que o commit seja realizado. Um status diferente de zero\n"
+"  fará com que o commit falhe.\n"
 "  Os IDs das revisões pais são passados em ``$HG_PARENT1`` e ``$HG_PARENT2``."
 
 msgid ""
 "``prelistkeys``\n"
 "  Run before listing pushkeys (like bookmarks) in the\n"
-"  repository. Non-zero status will cause failure. The key namespace is\n"
+"  repository. A non-zero status will cause failure. The key namespace is\n"
 "  in ``$HG_NAMESPACE``."
 msgstr ""
 "``prelistkeys``\n"
 "  Executado antes de listar pushkeys (como marcadores) do repositório.\n"
-"  Status de saída diferente de zero causará uma falha.\n"
+"  Um status de saída diferente de zero causará uma falha.\n"
 "  O espaço de nomes de chave é passado em ``$HG_NAMESPACE``."
 
 msgid ""
 "``preoutgoing``\n"
 "  Run before collecting changes to send from the local repository to\n"
-"  another. Non-zero status will cause failure. This lets you prevent\n"
-"  pull over HTTP or SSH. Also prevents against local pull, push\n"
-"  (outbound) or bundle commands, but not effective, since you can\n"
-"  just copy files instead then. Source of operation is in\n"
-"  ``$HG_SOURCE``. If \"serve\", operation is happening on behalf of remote\n"
-"  SSH or HTTP repository. If \"push\", \"pull\" or \"bundle\", operation\n"
-"  is happening on behalf of repository on same system."
+"  another. A non-zero status will cause failure. This lets you prevent\n"
+"  pull over HTTP or SSH. It can also prevent propagating commits (via\n"
+"  local pull, push (outbound) or bundle commands), but not completely,\n"
+"  since you can just copy files instead. The source of operation is in\n"
+"  ``$HG_SOURCE``. If \"serve\", the operation is happening on behalf of a remote\n"
+"  SSH or HTTP repository. If \"push\", \"pull\" or \"bundle\", the operation\n"
+"  is happening on behalf of a repository on same system."
 msgstr ""
 "``preoutgoing``\n"
 "  Executado antes da coleta de mudanças a serem enviadas do\n"
-"  repositório local para algum outro. Status de saída diferentes\n"
-"  de zero causarão uma falha. Desta forma, você pode impedir\n"
+"  repositório local para algum outro. Um status de saída diferente\n"
+"  de zero causará uma falha. Desta forma, você pode impedir\n"
 "  operações pull por HTTP ou SSH. Também previne comandos pull, push\n"
 "  (de saída) ou bundle locais, embora esta prevenção não seja\n"
-"  efetiva, já que os arquivos locais ainda poderão ser copiados.\n"
+"  completa, já que os arquivos locais ainda poderão ser copiados.\n"
 "  A operação de origem é passada em ``$HG_SOURCE``. Se esta tiver\n"
 "  o valor \"serve\", a operação ocorre através de SSH ou HTTP\n"
 "  envolvendo um repositório remoto. Se tiver os valores \"push\",\n"
@@ -21851,14 +23277,14 @@ msgstr ""
 msgid ""
 "``prepushkey``\n"
 "  Run before a pushkey (like a bookmark) is added to the\n"
-"  repository. Non-zero status will cause the key to be rejected. The\n"
+"  repository. A non-zero status will cause the key to be rejected. The\n"
 "  key namespace is in ``$HG_NAMESPACE``, the key is in ``$HG_KEY``,\n"
 "  the old value (if any) is in ``$HG_OLD``, and the new value is in\n"
 "  ``$HG_NEW``."
 msgstr ""
 "``prepushkey``\n"
 "  Executado antes de uma pushkey (como um marcador) ser adicionada ao\n"
-"  repositório. Status de saída diferentes de zero farão com que a\n"
+"  repositório. Um status de saída diferente de zero fará com que a\n"
 "  chave seja rejeitada. O espaço de nomes de chave é passado em\n"
 "  ``$HG_NAMESPACE``, a chave é passada em ``$HG_KEY``, o valor antigo\n"
 "  (se houver) é passado em ``$HG_OLD``, e o novo valor é passado em\n"
@@ -21867,14 +23293,14 @@ msgstr ""
 msgid ""
 "``pretag``\n"
 "  Run before creating a tag. Exit status 0 allows the tag to be\n"
-"  created. Non-zero status will cause the tag to fail. ID of\n"
-"  changeset to tag is in ``$HG_NODE``. Name of tag is in ``$HG_TAG``. Tag is\n"
-"  local if ``$HG_LOCAL=1``, in repository if ``$HG_LOCAL=0``."
+"  created. A non-zero status will cause the tag to fail. The ID of the\n"
+"  changeset to tag is in ``$HG_NODE``. The name of tag is in ``$HG_TAG``. The\n"
+"  tag is local if ``$HG_LOCAL=1``, or in the repository if ``$HG_LOCAL=0``."
 msgstr ""
 "``pretag``\n"
 "  Executado antes da criação de uma etiqueta. O status de saída 0\n"
-"  permite que a etiqueta seja criada. Status de saída diferentes de 0\n"
-"  causarão uma falha do comando. O ID da revisão a ser etiquetada é\n"
+"  permite que a etiqueta seja criada. Um status de saída diferente de 0\n"
+"  causará uma falha do comando. O ID da revisão a ser etiquetada é\n"
 "  passado em ``$HG_NODE``. O nome da etiqueta é passado em ``$HG_TAG``.\n"
 "  Uma etiqueta local é indicada por ``$HG_LOCAL=1``; uma global, por\n"
 "  ``$HG_LOCAL=0``."
@@ -21882,13 +23308,13 @@ msgstr ""
 msgid ""
 "``pretxnopen``\n"
 "  Run before any new repository transaction is open. The reason for the\n"
-"  transaction will be in ``$HG_TXNNAME`` and a unique identifier for the\n"
+"  transaction will be in ``$HG_TXNNAME``, and a unique identifier for the\n"
 "  transaction will be in ``HG_TXNID``. A non-zero status will prevent the\n"
 "  transaction from being opened."
 msgstr ""
 "``pretxnopen``\n"
 "  Executado antes da abertura de qualquer transação no repositório.\n"
-"  A razão da transação será passada em ``$HG_TXNNAME`` e um\n"
+"  A razão da transação será passada em ``$HG_TXNNAME``, e um\n"
 "  identificador único para a transação será passado em ``HG_TXNID``.\n"
 "  Um status de saída diferente de zero impedirá a abertura da\n"
 "  transação."
@@ -21897,14 +23323,15 @@ msgid ""
 "``pretxnclose``\n"
 "  Run right before the transaction is actually finalized. Any repository change\n"
 "  will be visible to the hook program. This lets you validate the transaction\n"
-"  content or change it. Exit status 0 allows the commit to proceed. Non-zero\n"
+"  content or change it. Exit status 0 allows the commit to proceed. A non-zero\n"
 "  status will cause the transaction to be rolled back. The reason for the\n"
-"  transaction opening will be in ``$HG_TXNNAME`` and a unique identifier for\n"
+"  transaction opening will be in ``$HG_TXNNAME``, and a unique identifier for\n"
 "  the transaction will be in ``HG_TXNID``. The rest of the available data will\n"
-"  vary according the transaction type. New changesets will add ``$HG_NODE`` (id\n"
-"  of the first added changeset), ``$HG_NODE_LAST`` (id of the last added\n"
-"  changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables, bookmarks and phases\n"
-"  changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``, etc."
+"  vary according the transaction type. New changesets will add ``$HG_NODE``\n"
+"  (the ID of the first added changeset), ``$HG_NODE_LAST`` (the ID of the last\n"
+"  added changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables.  Bookmark and\n"
+"  phase changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``\n"
+"  respectively, etc."
 msgstr ""
 "``pretxnclose``\n"
 "  Executado imediatamente antes de a transação ser finalizada.\n"
@@ -21917,15 +23344,15 @@ msgstr ""
 "  Outros dados estarão disponíveis dependendo do tipo da transação.\n"
 "  Novas revisões adicionarão ``$HG_NODE`` (id da primeira revisão\n"
 "  adicionada), ``$HG_NODE_LAST`` (id da última revisão adicionada),\n"
-"  ``$HG_URL`` e ``$HG_SOURCE``, mudanças de marcadores\n"
+"  ``$HG_URL`` e ``$HG_SOURCE``. Mudanças de marcadores\n"
 "  e fases definirão ``HG_BOOKMARK_MOVED`` e ``HG_PHASES_MOVED`` como\n"
-"  ``1``, etc."
+"  ``1`` respectivamente, etc."
 
 msgid ""
 "``txnclose``\n"
 "  Run after any repository transaction has been committed. At this\n"
 "  point, the transaction can no longer be rolled back. The hook will run\n"
-"  after the lock is released. See :hg:`help config.hooks.pretxnclose` docs for\n"
+"  after the lock is released. See :hg:`help config.hooks.pretxnclose` for\n"
 "  details about available variables."
 msgstr ""
 "``txnclose``\n"
@@ -21938,7 +23365,7 @@ msgstr ""
 msgid ""
 "``txnabort``\n"
 "  Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`\n"
-"  docs for details about available variables."
+"  for details about available variables."
 msgstr ""
 "``txnabort``\n"
 "  Executado quando uma transação for abortada.\n"
@@ -21948,12 +23375,12 @@ msgstr ""
 msgid ""
 "``pretxnchangegroup``\n"
 "  Run after a changegroup has been added via push, pull or unbundle, but before\n"
-"  the transaction has been committed. Changegroup is visible to hook program.\n"
-"  This lets you validate incoming changes before accepting them. Passed the ID\n"
-"  of the first new changeset in ``$HG_NODE`` and last in ``$HG_NODE_LAST``.\n"
-"  Exit status 0 allows the transaction to commit. Non-zero status will cause\n"
-"  the transaction to be rolled back and the push, pull or unbundle will fail.\n"
-"  URL that was source of changes is in ``$HG_URL``."
+"  the transaction has been committed. The changegroup is visible to the hook\n"
+"  program. This allows validation of incoming changes before accepting them.\n"
+"  The ID of the first new changeset is in ``$HG_NODE`` and last is in\n"
+"  ``$HG_NODE_LAST``. Exit status 0 allows the transaction to commit. A non-zero\n"
+"  status will cause the transaction to be rolled back, and the push, pull or\n"
+"  unbundle will fail. The URL that was the source of changes is in ``$HG_URL``."
 msgstr ""
 "``pretxnchangegroup``\n"
 "  Executado após um changegroup ser adicionado em uma operação\n"
@@ -21962,41 +23389,41 @@ msgstr ""
 "  Isto permite que as novas mudanças sejam validadas antes de serem\n"
 "  aceitas. O ID da primeira nova revisão é passado em ``$HG_NODE``\n"
 "  e o da última em ``$HG_NODE_LAST``.\n"
-"  O status de saída 0 permite que a transação seja completada. Status\n"
-"  de saída diferentes de 0 farão com que a transação seja desfeita,\n"
+"  O status de saída 0 permite que a transação seja completada. Um status\n"
+"  de saída diferente de 0 fará com que a transação seja desfeita,\n"
 "  e a operação push, pull ou unbundle falhará.\n"
 "  A URL de origem das revisões é passada em ``$HG_URL``."
 
 msgid ""
 "``pretxncommit``\n"
-"  Run after a changeset has been created but the transaction not yet\n"
-"  committed. Changeset is visible to hook program. This lets you\n"
-"  validate commit message and changes. Exit status 0 allows the\n"
-"  commit to proceed. Non-zero status will cause the transaction to\n"
-"  be rolled back. ID of changeset is in ``$HG_NODE``. Parent changeset\n"
-"  IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``."
+"  Run after a changeset has been created, but before the transaction is\n"
+"  committed. The changeset is visible to the hook program. This allows\n"
+"  validation of the commit message and changes. Exit status 0 allows the\n"
+"  commit to proceed. A non-zero status will cause the transaction to\n"
+"  be rolled back. The ID of the new changeset is in ``$HG_NODE``. The parent\n"
+"  changeset IDs are in ``$HG_PARENT1`` and ``$HG_PARENT2``."
 msgstr ""
 "``pretxncommit``\n"
 "  Executado após uma revisão ser criada mas antes da transação ser\n"
 "  completada. A revisão é visível para o programa do gancho.\n"
 "  Isto permite que as novas mudanças e a mensagem de consolidação\n"
 "  sejam validadas.\n"
-"  O status de saída 0 permite que a transação seja completada. Status\n"
-"  de saída diferentes de 0 farão com que a transação seja desfeita.\n"
+"  O status de saída 0 permite que a transação seja completada. Um status\n"
+"  de saída diferente de 0 fará com que a transação seja desfeita.\n"
 "  O ID da revisão é passado em ``$HG_NODE``.\n"
 "  Os IDs das revisões pais são passados em ``$HG_PARENT1`` e ``$HG_PARENT2``."
 
 msgid ""
 "``preupdate``\n"
 "  Run before updating the working directory. Exit status 0 allows\n"
-"  the update to proceed. Non-zero status will prevent the update.\n"
-"  Changeset ID of first new parent is in ``$HG_PARENT1``. If merge, ID\n"
-"  of second new parent is in ``$HG_PARENT2``."
+"  the update to proceed. A non-zero status will prevent the update.\n"
+"  The changeset ID of first new parent is in ``$HG_PARENT1``. If updating to a\n"
+"  merge, the ID of second new parent is in ``$HG_PARENT2``."
 msgstr ""
 "``preupdate``\n"
 "  Executado antes de uma atualização do diretório de trabalho.\n"
-"  O status de saída 0 permitirá a atualização. Status de saída\n"
-"  diferentes de 0 impedirão a atualização.\n"
+"  O status de saída 0 permitirá a atualização. Um status de saída\n"
+"  diferente de 0 impedirá a atualização.\n"
 "  O ID de revisão do novo primeiro pai é passado em ``$HG_PARENT1``.\n"
 "  No caso de uma mesclagem, o ID do novo segundo pai será passado\n"
 "  em ``$HG_PARENT2``."
@@ -22027,9 +23454,9 @@ msgstr ""
 
 msgid ""
 "``tag``\n"
-"  Run after a tag is created. ID of tagged changeset is in ``$HG_NODE``.\n"
-"  Name of tag is in ``$HG_TAG``. Tag is local if ``$HG_LOCAL=1``, in\n"
-"  repository if ``$HG_LOCAL=0``."
+"  Run after a tag is created. The ID of the tagged changeset is in ``$HG_NODE``.\n"
+"  The name of tag is in ``$HG_TAG``. The tag is local if ``$HG_LOCAL=1``, or in\n"
+"  the repository if ``$HG_LOCAL=0``."
 msgstr ""
 "``tag``\n"
 "  Executado após a criação de uma etiqueta. O ID da revisão etiquetada é\n"
@@ -22039,22 +23466,23 @@ msgstr ""
 
 msgid ""
 "``update``\n"
-"  Run after updating the working directory. Changeset ID of first\n"
-"  new parent is in ``$HG_PARENT1``. If merge, ID of second new parent is\n"
-"  in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the\n"
-"  update failed (e.g. because conflicts not resolved), ``$HG_ERROR=1``."
+"  Run after updating the working directory. The changeset ID of first\n"
+"  new parent is in ``$HG_PARENT1``. If updating to a merge, the ID of second new\n"
+"  parent is in ``$HG_PARENT2``. If the update succeeded, ``$HG_ERROR=0``. If the\n"
+"  update failed (e.g. because conflicts were not resolved), ``$HG_ERROR=1``."
 msgstr ""
 "``update``\n"
 "  Executado após uma atualização do diretório de trabalho.\n"
 "  O ID de revisão do novo primeiro pai é passado em ``$HG_PARENT1``.\n"
-"  No caso de uma mesclagem, o ID do novo segundo pai será passado\n"
-"  em ``$HG_PARENT2``. Se a atualização tiver sucesso, ``$HG_ERROR=0``.\n"
+"  No caso de atualização para uma mesclagem, o ID do novo segundo\n"
+"  pai será passado em ``$HG_PARENT2``.\n"
+"  Se a atualização tiver sucesso, ``$HG_ERROR=0``.\n"
 "  Se a atualização falhar (por exemplo, por apresentar conflitos não\n"
 "  resolvidos), ``$HG_ERROR=1``."
 
 msgid ""
 "   It is generally better to use standard hooks rather than the\n"
-"   generic pre- and post- command hooks as they are guaranteed to be\n"
+"   generic pre- and post- command hooks, as they are guaranteed to be\n"
 "   called in the appropriate contexts for influencing transactions.\n"
 "   Also, hooks like \"commit\" will be called in all contexts that\n"
 "   generate a commit (e.g. tag) and not just the commit command."
@@ -22278,13 +23706,16 @@ msgid ""
 "``fingerprints``\n"
 "    A list of hashes of the DER encoded peer/remote certificate. Values have\n"
 "    the form ``algorithm``:``fingerprint``. e.g.\n"
-"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``."
+"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``.\n"
+"    In addition, colons (``:``) can appear in the fingerprint part."
 msgstr ""
 "``fingerprints``\n"
 "    Uma lista de hashes (\"impressões digitais\") do certificado remoto\n"
 "    codificado em formato DER.\n"
 "    Os valores são da forma ``algoritmo``:``impressãodigital``, como em\n"
-"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``."
+"    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``.\n"
+"    Adicionalmente, dois pontos (``:``) podem aparecer na parte da\n"
+"    impressão digital."
 
 msgid ""
 "    The following algorithms/prefixes are supported: ``sha1``, ``sha256``,\n"
@@ -22385,11 +23816,13 @@ msgid ""
 "    [hostsecurity]\n"
 "    hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\n"
 "    hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    hg3.example.com:fingerprints = sha256:9a:b0:dc:e2:75:ad:8a:b7:84:58:e5:1f:07:32:f1:87:e6:bd:24:22:af:b7:ce:8e:9c:b4:10:cf:b9:f4:0e:d2\n"
 "    foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem"
 msgstr ""
 "    [hostsecurity]\n"
 "    hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2\n"
 "    hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    hg3.example.com:fingerprints = sha256:9a:b0:dc:e2:75:ad:8a:b7:84:58:e5:1f:07:32:f1:87:e6:bd:24:22:af:b7:ce:8e:9c:b4:10:cf:b9:f4:0e:d2\n"
 "    foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem"
 
 msgid ""
@@ -23253,6 +24686,45 @@ msgstr ""
 "    (padrão: 5)"
 
 msgid ""
+"``showmin``\n"
+"    Minimum fraction of samples an entry must have for it to be displayed.\n"
+"    Can be specified as a float between ``0.0`` and ``1.0`` or can have a\n"
+"    ``%`` afterwards to allow values up to ``100``. e.g. ``5%``."
+msgstr ""
+"``showmin``\n"
+"    Fração mínima de amostras presentes em uma entrada para que\n"
+"    ela seja exibida.\n"
+"    Pode ser especificado como um número de ponto flutuante\n"
+"    entre ``0.0`` and ``1.0``, ou ser seguido de ``%`` para\n"
+"    permitir valores até ``100``. Por exemplo, ``5%``."
+
+msgid "    Only used by the ``stat`` profiler."
+msgstr "    Usada apenas pelo profiler ``stat``."
+
+msgid ""
+"    For the ``hotpath`` format, default is ``0.05``.\n"
+"    For the ``chrome`` format, default is ``0.005``."
+msgstr ""
+"    Para o formato ``hotpath``, o padrão é ``0.05``.\n"
+"    Para o formato ``chrome``, o padrão é ``0.005``."
+
+msgid "    The option is unused on other formats."
+msgstr "    A opção não é usada pelos outros formatos."
+
+msgid ""
+"``showmax``\n"
+"    Maximum fraction of samples an entry can have before it is ignored in\n"
+"    display. Values format is the same as ``showmin``."
+msgstr ""
+"``showmax``\n"
+"    Fração máxima de amostras presentes em uma entrada para\n"
+"    que ela possa ser exibida.\n"
+"    O formato dos valores é o mesmo que em ``showmin``."
+
+msgid "    For the ``chrome`` format, default is ``0.999``."
+msgstr "    Para o formato ``chrome``, o padrão é ``0.999``."
+
+msgid ""
 "``progress``\n"
 "------------"
 msgstr ""
@@ -23453,6 +24925,15 @@ msgstr ""
 "    (padrão: True)"
 
 msgid ""
+"``uncompressedallowsecret``\n"
+"    Whether to allow stream clones when the repository contains secret\n"
+"    changesets. (default: False)"
+msgstr ""
+"``uncompressedallowsecret``\n"
+"    Determina se são permitidos clones por stream se o repositório\n"
+"    contiver revisões secretas. (padrão: False)"
+
+msgid ""
 "``preferuncompressed``\n"
 "    When set, clients will try to use the uncompressed streaming\n"
 "    protocol. (default: False)"
@@ -23461,6 +24942,46 @@ msgstr ""
 "    Se definido, clientes preferirão o protocolo de streaming\n"
 "    não comprimido.\n"
 "    (padrão: False)"
+
+msgid ""
+"``disablefullbundle``\n"
+"    When set, servers will refuse attempts to do pull-based clones.\n"
+"    If this option is set, ``preferuncompressed`` and/or clone bundles\n"
+"    are highly recommended. Partial clones will still be allowed.\n"
+"    (default: False)"
+msgstr ""
+"``disablefullbundle``\n"
+"    Se definida, servidores recusarão tentativas de realizar\n"
+"    clones baseados em pull.\n"
+"    Se esta opção for definida, é altamente recomendado definir\n"
+"    também ``preferuncompressed`` e/ou clones por bundle.\n"
+"    Clones parciais ainda serão permitidos.\n"
+"    (padrão: False)"
+
+msgid ""
+"``concurrent-push-mode``\n"
+"    Level of allowed race condition between two pushing clients."
+msgstr ""
+"``concurrent-push-mode``\n"
+"    Nível permitido de race condition entre operações push de dois clientes."
+
+msgid ""
+"    - 'strict': push is abort if another client touched the repository\n"
+"      while the push was preparing. (default)\n"
+"    - 'check-related': push is only aborted if it affects head that got also\n"
+"      affected while the push was preparing."
+msgstr ""
+"    - 'strict': o push é abortado se um outro cliente tocar no repositório\n"
+"      enquanto o push é preparado. (padrão)\n"
+"    - 'check-related': o push é abortado apenas se afetar uma cabeça\n"
+"      que também tiver sido afetada na preparação do push."
+
+msgid ""
+"    This requires compatible client (version 4.3 and later). Old client will\n"
+"    use 'strict'."
+msgstr ""
+"    Isto exige um cliente compatível (versão 4.3 ou posterior).\n"
+"    Clientes antigos usarão 'strict'."
 
 msgid ""
 "``validate``\n"
@@ -24364,6 +25885,26 @@ msgstr ""
 "    traceback seja impresso em todas as exceções, mesmo que sejam\n"
 "    reconhecidas pelo Mercurial (como IOError ou MemoryError).\n"
 "    (padrão: False)"
+
+msgid "``tweakdefaults``"
+msgstr "``tweakdefaults``"
+
+msgid ""
+"    By default Mercurial's behavior changes very little from release\n"
+"    to release, but over time the recommended config settings\n"
+"    shift. Enable this config to opt in to get automatic tweaks to\n"
+"    Mercurial's behavior over time. This config setting will have no\n"
+"    effet if ``HGPLAIN` is set or ``HGPLAINEXCEPT`` is set and does\n"
+"    not include ``tweakdefaults``. (default: False)"
+msgstr ""
+"    Por padrão, o comportamento do Mercurial muda muito pouco\n"
+"    de versão para versão, mas ao longo do tempo as configurações\n"
+"    recomendadas mudam.\n"
+"    Habilite esta configuração para solicitar ajustes automáticos\n"
+"    do comportamento do Mercurial ao longo do tempo.\n"
+"    Esta opção de configuração não terá efeito caso ``HGPLAIN`\n"
+"    esteja definida ou ``HGPLAINEXCEPT`` esteja definida e não\n"
+"    inclua ``tweakdefaults``. (padrão: False)"
 
 msgid ""
 "``username``\n"
@@ -28542,10 +30083,12 @@ msgstr ""
 
 msgid ""
 "``x~n``\n"
-"  The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``."
+"  The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``.\n"
+"  For n < 0, the nth unambiguous descendent of x."
 msgstr ""
 "``x~n``\n"
-"  O n-ésimo primeiro ancestral de x; ``x~0`` é x; ``x~3`` é ``x^^^``."
+"  O n-ésimo primeiro ancestral de x; ``x~0`` é x; ``x~3`` é ``x^^^``.\n"
+"  Para n < 0, o n-ésimo descendente não ambíguo de x."
 
 msgid ""
 "``x ## y``\n"
@@ -29778,6 +31321,44 @@ msgstr "define um modelo, ``nodedate``, que pode ser chamado assim::"
 msgid "  $ hg log -r . -Tnodedate"
 msgstr "  $ hg log -r . -Tnodedate"
 
+msgid ""
+"A template defined in ``templates`` section can also be referenced from\n"
+"another template::"
+msgstr ""
+"Um modelo definido na seção ``templates`` também pode ser referido em\n"
+"outro modelo::"
+
+msgid "  $ hg log -r . -T \"{rev} {nodedate}\""
+msgstr "  $ hg log -r . -T \"{rev} {nodedate}\""
+
+msgid ""
+"but be aware that the keywords cannot be overridden by templates. For example,\n"
+"a template defined as ``templates.rev`` cannot be referenced as ``{rev}``."
+msgstr ""
+"mas palavras chave não podem ser redefinidas por modelos.\n"
+"Por exemplo, um modelo definido como ``templates.rev``\n"
+"não pode ser referenciado com ``{rev}``."
+
+msgid ""
+"A template defined in ``templates`` section may have sub templates which\n"
+"are inserted before/after/between items::"
+msgstr ""
+"Um modelo definido na seção ``templates`` pode ter sub modelos que são\n"
+"inseridos antes, depois ou entre itens::"
+
+msgid ""
+"  [templates]\n"
+"  myjson = ' {dict(rev, node|short)|json}'\n"
+"  myjson:docheader = '\\{\\n'\n"
+"  myjson:docfooter = '\\n}\\n'\n"
+"  myjson:separator = ',\\n'"
+msgstr ""
+"  [templates]\n"
+"  myjson = ' {dict(rev, node|short)|json}'\n"
+"  myjson:docheader = '\\{\\n'\n"
+"  myjson:docfooter = '\\n}\\n'\n"
+"  myjson:separator = ',\\n'"
+
 msgid "Some sample command line templates:"
 msgstr "Alguns exemplos de modelos de linha de comando:"
 
@@ -30858,11 +32439,12 @@ msgstr "repositório %s já existe"
 msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ".hg/sharedpath aponta para diretório %s inexistente"
 
-#, python-format
-msgid "obsolete feature not enabled but %i markers found!\n"
+msgid ""
+"repository is using sparse feature but sparse is not enabled; enable the "
+"\"sparse\" extensions to access"
 msgstr ""
-"a funcionalidade obsolete não está habilitada, mas foram encontradas %i "
-"marcações!\n"
+"o repositório usa a funcionalidade \"sparse\" mas ela não está habilitada;\n"
+"habilite a extensão \"sparse\" para acessar"
 
 #, python-format
 msgid "warning: ignoring unknown working parent %s!\n"
@@ -30884,16 +32466,16 @@ msgid "no rollback information available\n"
 msgstr "nenhuma informação de desfazimento disponível\n"
 
 #, python-format
-msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
+msgid "repository tip rolled back to revision %d (undo %s: %s)\n"
 msgstr ""
-"executando rollback da tip do repositório para a revisão %s (desfazimento de"
-" %s: %s)\n"
+"executado rollback da tip do repositório para a revisão %d (desfazimento de "
+"%s: %s)\n"
 
 #, python-format
-msgid "repository tip rolled back to revision %s (undo %s)\n"
+msgid "repository tip rolled back to revision %d (undo %s)\n"
 msgstr ""
-"executando rollback da tip do repositório para a revisão %s (desfazimento de"
-" %s)\n"
+"executado rollback da tip do repositório para a revisão %d (desfazimento de "
+"%s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "desfazendo transação desconhecida\n"
@@ -31063,9 +32645,6 @@ msgstr "nenhum nó"
 msgid "cannot ask for manifest directory '%s' in a flat manifest"
 msgstr ""
 "não é possível pedir pelo diretório do manifesto '%s' em um manifesto plano"
-
-msgid "fileset expression with no context"
-msgstr "expressão fileset sem contexto"
 
 #, python-format
 msgid "unable to read file list (%s)"
@@ -31298,6 +32877,13 @@ msgstr "etiqueta:     %s\n"
 msgid "no such name: %s"
 msgstr "não existe tal nome: %s"
 
+msgid ""
+"'createmarkers' obsolete option must be enabled if other obsolete options "
+"are enabled"
+msgstr ""
+"a opção obsoleta 'createmarkers' deve ser habilitada se outras opções "
+"obsoletas forem habilitadas"
+
 #, python-format
 msgid ""
 "parsing obsolete marker: metadata is too short, %d bytes expected, got %d"
@@ -31326,6 +32912,12 @@ msgstr ""
 "repositório"
 
 #, python-format
+msgid "obsolete feature not enabled but %i markers found!\n"
+msgstr ""
+"a funcionalidade obsolete não está habilitada, mas foram encontradas %i "
+"marcações!\n"
+
+#, python-format
 msgid "unknown key: %r"
 msgstr "chave desconhecida: %r"
 
@@ -31340,13 +32932,6 @@ msgstr "não é possível tornar obsoleta a revisão pública: %s"
 #, python-format
 msgid "changeset %s cannot obsolete itself"
 msgstr "a revisão %s não pode tornar a si mesma obsoleta"
-
-msgid ""
-"'createmarkers' obsolete option must be enabled if other obsolete options "
-"are enabled"
-msgstr ""
-"a opção obsoleta 'createmarkers' deve ser habilitada se outras opções "
-"obsoletas forem habilitadas"
 
 #, python-format
 msgid "unexpected token: %s"
@@ -31780,6 +33365,11 @@ msgstr ""
 "(corrija o problema, e então recupere as revisões com \"hg unbundle "
 "'%s'\")\n"
 
+#, python-format
+msgid "warning: orphaned descendants detected, not stripping %s\n"
+msgstr ""
+"aviso: foram detectados descendentes órfãos, strip de %s não realizado\n"
+
 msgid "(not rebuilding fncache because repository does not support fncache)\n"
 msgstr "(fncache não reparado porque o repositório não suporta fncache)\n"
 
@@ -31805,8 +33395,8 @@ msgstr "flag '%#x' não definida em REVIDX_FLAGS_ORDER."
 msgid "cannot register multiple processors on flag '%#x'."
 msgstr "não é possível registrar múltiplos processadores para a flag '%#x'."
 
-msgid "index entry flags need RevlogNG"
-msgstr "flags de entrada de índice exigem RevlogNG"
+msgid "index entry flags need revlog version 1"
+msgstr "flags de entrada de índice exigem revlog versão 1"
 
 #, python-format
 msgid "revlog chunk cache size %r is not greater than 0"
@@ -31817,16 +33407,12 @@ msgid "revlog chunk cache size %r is not a power of 2"
 msgstr "tamanho do cache %r de trecho do revlog não é potência de 2"
 
 #, python-format
-msgid "index %s unknown flags %#04x for format v0"
-msgstr "índice %s marcadores desconhecidos %#04x para o formato v0"
+msgid "unknown flags (%#04x) in version %d revlog %s"
+msgstr "flags desconhecidas (%#04x) na versão %d revlog %s"
 
 #, python-format
-msgid "index %s unknown flags %#04x for revlogng"
-msgstr "índice %s marcadores desconhecidos %#04x para o revlogng"
-
-#, python-format
-msgid "index %s unknown format %d"
-msgstr "índice %s formato desconhecido %d"
+msgid "unknown version (%d) in revlog %s"
+msgstr "versão desconhecida (%d) no revlog %s"
 
 #, python-format
 msgid "index %s is corrupted"
@@ -31892,6 +33478,15 @@ msgstr "revlog de origem tem revisões filtradas"
 msgid "destination revlog has filtered revisions"
 msgstr "revlog de destino tem revisões filtradas"
 
+msgid "can't use a relation in this context"
+msgstr "não se pode usar uma relação nesse contexto"
+
+msgid "relation subscript must be an integer"
+msgstr "o índice de relação deve ser um inteiro"
+
+msgid "can't use a subscript in this context"
+msgstr "não se pode usar um índice nesse contexto"
+
 msgid "see hg help \"revsets.x or y\""
 msgstr "veja hg help \"revsets.x or y\""
 
@@ -31934,11 +33529,34 @@ msgstr ""
 "    O maior ancestral comum de uma única revisão é a própria revisão."
 
 msgid ""
-"``ancestors(set)``\n"
-"    Changesets that are ancestors of a changeset in set."
+"``ancestors(set[, depth])``\n"
+"    Changesets that are ancestors of changesets in set, including the\n"
+"    given changesets themselves."
 msgstr ""
-"``ancestors(conjunto)``\n"
-"    Revisões ancestrais de revisões no conjunto."
+"``ancestors(conjunto[, profundidade])``\n"
+"    Revisões ancestrais de revisões no conjunto, incluindo as\n"
+"    próprias revisões pedidas."
+
+msgid ""
+"    If depth is specified, the result only includes changesets up to\n"
+"    the specified generation."
+msgstr ""
+"    Se a profundidade for especificada, o resultado incluirá apenas\n"
+"    revisões até a geração especificada."
+
+#. i18n: "ancestors" is a keyword
+msgid "ancestors takes at least 1 argument"
+msgstr "ancestors recebe pelo menos um argumento"
+
+#. i18n: "ancestors" is a keyword
+msgid "ancestors expects an integer depth"
+msgstr "ancestors espera uma profundidade inteira"
+
+msgid "negative depth"
+msgstr "profundidade negativa"
+
+msgid "revision in set has more than one child"
+msgstr "uma revisão no conjunto possui mais de uma filha"
 
 msgid "~ expects a number"
 msgstr "~ espera um número"
@@ -32139,11 +33757,21 @@ msgid "desc requires a string"
 msgstr "desc requer uma string"
 
 msgid ""
-"``descendants(set)``\n"
-"    Changesets which are descendants of changesets in set."
+"``descendants(set[, depth])``\n"
+"    Changesets which are descendants of changesets in set, including the\n"
+"    given changesets themselves."
 msgstr ""
-"``descendants(conjunto)``\n"
-"    Todas as revisões descendentes de revisões do conjunto."
+"``descendants(conjunto[, profundidade])``\n"
+"    Todas as revisões descendentes de revisões do conjunto, incluindo\n"
+"    as próprias revisões pedidas."
+
+#. i18n: "descendants" is a keyword
+msgid "descendants takes at least 1 argument"
+msgstr "descendants recebe pelo menos um argumento"
+
+#. i18n: "descendants" is a keyword
+msgid "descendants expects an integer depth"
+msgstr "descendants espera uma profundidade inteira"
 
 msgid ""
 "``destination([set])``\n"
@@ -32435,6 +34063,9 @@ msgstr "limit exige de um a três argumentos"
 #. i18n: "limit" is a keyword
 msgid "limit expects a number"
 msgstr "limit espera um número"
+
+msgid "negative number to select"
+msgstr "número negativo a ser selecionado"
 
 msgid "negative offset"
 msgstr "deslocamento negativo"
@@ -32892,6 +34523,14 @@ msgid "subrepo requires a pattern"
 msgstr "subrepo requer um padrão"
 
 msgid ""
+"``successors(set)``\n"
+"    All successors for set, including the given set themselves"
+msgstr ""
+"``successors(conjunto)``\n"
+"    Todos os sucessores do conjunto, incluindo as próprias revisões\n"
+"    pedidas."
+
+msgid ""
 "``tag([name])``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
@@ -32935,10 +34574,10 @@ msgstr ""
 "    maiúsculas e minúsculas."
 
 msgid ""
-"``wdir``\n"
+"``wdir()``\n"
 "    Working directory. (EXPERIMENTAL)"
 msgstr ""
-"``wdir``\n"
+"``wdir()``\n"
 "    Diretório de trabalho. (EXPERIMENTAL)"
 
 #. i18n: "wdir" is a keyword
@@ -33013,8 +34652,9 @@ msgstr " string vazia\n"
 msgid "abort: file censored %s!\n"
 msgstr "abortado: arquivo censurado %s!\n"
 
-msgid "killed!\n"
-msgstr "morto!\n"
+msgid "abort: working directory revision cannot be specified\n"
+msgstr ""
+"abortado: a revisão do diretório de trabalho não pode ser especificada\n"
 
 msgid "(did you forget to compile extensions?)\n"
 msgstr "(você esqueceu de compilar extensões?)\n"
@@ -33082,6 +34722,17 @@ msgid ""
 msgstr ""
 "veja https://mercurial-scm.org/wiki/MissingRequirement para mais informações"
 
+msgid "empty simplekeyvalue file"
+msgstr "arquivo simplekeyvalue vazio"
+
+#, python-format
+msgid "%r can't be used as a key"
+msgstr "%r não pode ser usado como chave"
+
+#, python-format
+msgid "obsoleted %i changesets\n"
+msgstr "%i revisões tornadas obsoletas\n"
+
 msgid "child process failed to start"
 msgstr "processo filho falhou ao iniciar"
 
@@ -33127,6 +34778,74 @@ msgstr "%s parece um arquivo binário."
 msgid "can only specify three labels."
 msgstr "só pode especificar três rótulos."
 
+msgid "sparse config cannot have includes after excludes"
+msgstr ""
+
+#, python-format
+msgid "sparse config entry outside of section: %s"
+msgstr ""
+
+msgid "add an [include] or [exclude] line to declare the entry type"
+msgstr ""
+
+#, python-format
+msgid "warning: sparse profile cannot use paths starting with /, ignoring %s\n"
+msgstr ""
+
+msgid "cannot parse sparse patterns from working directory"
+msgstr ""
+
+msgid "dropping temporarily included sparse files"
+msgstr ""
+
+#, python-format
+msgid "cleaned up %d temporarily added file(s) from the sparse checkout\n"
+msgstr ""
+
+#, python-format
+msgid "temporarily included %d file(s) in the sparse checkout for merging\n"
+msgstr ""
+
+#, python-format
+msgid "pending changes to '%s'\n"
+msgstr "mudanças pendentes para '%s'\n"
+
+msgid "could not update sparseness due to pending changes"
+msgstr ""
+
+msgid ""
+"cannot change sparseness due to pending changes (delete the files or use "
+"--force to bring them back dirty)"
+msgstr ""
+
+#, python-format
+msgid "warning: paths cannot start with /, ignoring: %s\n"
+msgstr "aviso: caminhos não podem ser absolutos, ignorando: %s\n"
+
+#, python-format
+msgid "Profiles changed: %d\n"
+msgstr "Perfis modificados: %d\n"
+
+#, python-format
+msgid "Include rules changed: %d\n"
+msgstr "Regras de inclusão modificadas: %d\n"
+
+#, python-format
+msgid "Exclude rules changed: %d\n"
+msgstr "Regras de exclusão modificadas: %d\n"
+
+#, python-format
+msgid "Files added: %d\n"
+msgstr "Arquivos adicionados: %d\n"
+
+#, python-format
+msgid "Files dropped: %d\n"
+msgstr "Arquivos removidos: %d\n"
+
+#, python-format
+msgid "Files conflicting: %d\n"
+msgstr "Arquivos conflitantes: %d\n"
+
 #, python-format
 msgid "couldn't parse location %s"
 msgstr "não foi possível processar localização %s"
@@ -33160,19 +34879,6 @@ msgstr "capath não suportado"
 
 msgid "cadata not supported"
 msgstr "cadata não suportado"
-
-msgid ""
-"setting ciphers in [hostsecurity] is not supported by this version of Python"
-msgstr ""
-"a definição de cifras em [hostsecurity] não é suportada nesta versão do "
-"Python"
-
-msgid ""
-"remove the config option or run Mercurial with a modern Python version "
-"(preferred)"
-msgstr ""
-"remova a opção de configuração ou (preferencialmente) execute o Mercurial "
-"com uma versão moderna do Python"
 
 #, python-format
 msgid "unsupported protocol from hostsecurity.%s: %s"
@@ -33227,6 +34933,16 @@ msgstr "isto não deveria acontecer"
 
 msgid "serverhostname argument is required"
 msgstr "o argumento serverhostname é requerido"
+
+#, python-format
+msgid "certificate file (%s) does not exist; cannot connect to %s"
+msgstr ""
+"o arquivo de certificado (%s) não existe; não é possível conectar com %s"
+
+msgid "restore missing file or fix references in Mercurial config"
+msgstr ""
+"restaure o arquivo faltante ou corrija a referência na configuração do "
+"Mercurial"
 
 #, python-format
 msgid "could not set ciphers: %s"
@@ -33307,8 +35023,19 @@ msgstr ""
 "(veja https://mercurial-scm.org/wiki/SecureConnections para mais "
 "informações)\n"
 
+msgid ""
+"(the full certificate chain may not be available locally; see \"hg help "
+"debugssl\")\n"
+msgstr ""
+"(a cadeia completa do certificado pode não estar disponível localmente; veja"
+" \"hg help debugssl\")\n"
+
 msgid "ssl connection failed"
 msgstr "a conexão ssl falhou"
+
+#, python-format
+msgid "referenced certificate file (%s) does not exist"
+msgstr "o arquivo de certificado referido (%s) não existe"
 
 msgid "TLS 1.1 not supported by this Python"
 msgstr "TLS 1.1 não é suportado por esta versão do Python"
@@ -33386,15 +35113,14 @@ msgstr ""
 #, python-format
 msgid ""
 "(SHA-1 fingerprint for %s found in legacy [hostfingerprints] section; if you"
-" trust this fingerprint, set the following config value in [hostsecurity] "
-"and remove the old one from [hostfingerprints] to upgrade to a more secure "
-"SHA-256 fingerprint: %s:fingerprints=%s)\n"
+" trust this fingerprint, remove the old SHA-1 fingerprint from "
+"[hostfingerprints] and add the following entry to the new [hostsecurity] "
+"section: %s:fingerprints=%s)\n"
 msgstr ""
 "(uma impressão digital SHA-1 para %s foi encontrada na seção legada "
-"[hostfingerprints]; se você confia nessa impressão, defina o seguinte valor "
-"em [hostsecurity] e remova o valor antigo de [hostfingerprints] para "
-"atualizar para uma impressão digital SHA-256 mais segura: "
-"%s:fingerprints=%s)\n"
+"[hostfingerprints]; se você confia nessa impressão, remova a antiga "
+"impressão SHA-1 da seção [hostfingerprints] e adicione o seguinte valor à "
+"nova seção [hostsecurity]: %s:fingerprints=%s)\n"
 
 #, python-format
 msgid "certificate for %s has unexpected fingerprint %s"
@@ -33448,6 +35174,22 @@ msgstr "não é possível criar novo repositório http estático"
 msgid "invalid entry in fncache, line %d"
 msgstr "entrada inválida na fncache, linha %d"
 
+msgid "warning: stream clone requested but server has them disabled\n"
+msgstr "aviso: clone por stream requisitado, mas desabilitado no servidor\n"
+
+#, python-format
+msgid "warning: stream clone requested but client is missing requirements: %s\n"
+msgstr ""
+"aviso: clone por stream requisitado, mas o cliente não tem os requisitos: "
+"%s\n"
+
+msgid ""
+"(see https://www.mercurial-scm.org/wiki/MissingRequirement for more "
+"information)\n"
+msgstr ""
+"(veja https://mercurial-scm.org/wiki/MissingRequirement para mais "
+"informações)\n"
+
 msgid "unexpected response from remote server:"
 msgstr "resposta inesperada do servidor remoto:"
 
@@ -33500,8 +35242,8 @@ msgid "unable to apply stream clone: unsupported format: %s"
 msgstr "incapaz de aplicar clone por stream: formato não suportado: %s"
 
 #, python-format
-msgid "(in subrepo %s)"
-msgstr "(no sub-repositório %s)"
+msgid "(in subrepository \"%s\")"
+msgstr "(no sub-repositório \"%s\")"
 
 #, python-format
 msgid "warning: subrepo spec file '%s' not found\n"
@@ -33521,7 +35263,7 @@ msgstr ""
 msgid "bad subrepository pattern in %s: %s"
 msgstr "padrão ruim de sub-repositório em %s: %s"
 
-msgid "missing ] in subrepo source"
+msgid "missing ] in subrepository source"
 msgstr "faltando ] na origem do sub-repositório"
 
 #, python-format
@@ -33598,8 +35340,8 @@ msgid "warning: changes are committed in %s phase from subrepository %s\n"
 msgstr "aviso: mudanças consolidadas na fase \"%s\" do sub-repositório %s\n"
 
 #, python-format
-msgid "uncommitted changes in subrepository '%s'"
-msgstr "mudanças não consolidadas no sub-repositório '%s'"
+msgid "uncommitted changes in subrepository \"%s\""
+msgstr "mudanças não consolidadas no sub-repositório \"%s\""
 
 msgid "addremove is not supported"
 msgstr "addremove não é suportado"
@@ -33633,8 +35375,8 @@ msgid "pulling subrepo %s from %s\n"
 msgstr "trazendo sub-repositório %s de %s\n"
 
 #, python-format
-msgid "revision %s in subrepo %s is hidden\n"
-msgstr "a revisão %s no sub-repositório %s é oculta\n"
+msgid "revision %s in subrepository \"%s\" is hidden\n"
+msgstr "a revisão %s no sub-repositório \"%s\" é oculta\n"
 
 #, python-format
 msgid "no changes made to subrepo %s since last push to %s\n"
@@ -33706,12 +35448,12 @@ msgid "git %s error %d in %s"
 msgstr "git %s erro %d em %s"
 
 #, python-format
-msgid "revision %s does not exist in subrepo %s\n"
-msgstr "a revisão %s não existe no sub-repositório %s\n"
+msgid "revision %s does not exist in subrepository \"%s\"\n"
+msgstr "a revisão %s não existe no sub-repositório \"%s\"\n"
 
 #, python-format
-msgid "checking out detached HEAD in subrepo %s\n"
-msgstr "obtendo detached HEAD no sub-repositório %s\n"
+msgid "checking out detached HEAD in subrepository \"%s\"\n"
+msgstr "obtendo detached HEAD no sub-repositório \"%s\"\n"
 
 msgid "check out a git branch if you intend to make changes\n"
 msgstr "obtenha um ramo do git se você pretender fazer mudanças\n"
@@ -33721,19 +35463,19 @@ msgid "subrepo %s is missing"
 msgstr "o sub-repositório %s está faltando"
 
 #, python-format
-msgid "unrelated git branch checked out in subrepo %s\n"
-msgstr "ramo do git não relacionado obtido no sub-repositório %s\n"
+msgid "unrelated git branch checked out in subrepository \"%s\"\n"
+msgstr "ramo do git não relacionado obtido no sub-repositório \"%s\"\n"
 
 #, python-format
-msgid "pushing branch %s of subrepo %s\n"
-msgstr "enviando o ramo %s do sub-repositório %s\n"
+msgid "pushing branch %s of subrepository \"%s\"\n"
+msgstr "enviando o ramo %s do sub-repositório \"%s\"\n"
 
 #, python-format
 msgid ""
-"no branch checked out in subrepo %s\n"
+"no branch checked out in subrepository \"%s\"\n"
 "cannot push revision %s\n"
 msgstr ""
-"nenhum ramo obtido no sub-repositório %s\n"
+"nenhum ramo obtido no sub-repositório \"%s\"\n"
 "não é possível fazer push da revisão %s\n"
 
 #, python-format
@@ -34152,6 +35894,29 @@ msgstr ""
 
 msgid ":obsolete: String. Whether the changeset is obsolete."
 msgstr ":obsolete: String. Se a revisão for obsoleta."
+
+msgid ""
+":peerpaths: A dictionary of repository locations defined in the [paths] section\n"
+"    of your configuration file. (EXPERIMENTAL)"
+msgstr ""
+":peerpaths: Um dicionário de localizações de repositórios definido\n"
+"    na seção [paths] de seu arquivo de configuração. (EXPERIMENTAL)"
+
+msgid ":predecessors: Returns the list if the closest visible successors"
+msgstr ":predecessors: Retorna a lista dos sucessores visíveis mais próximos"
+
+msgid ""
+":successorssets: Returns a string of sets of successors for a changectx"
+msgstr ""
+":successorssets: Retorna uma string de conjuntos de sucessores para a "
+"revisão"
+
+msgid ""
+"    Format used is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and\n"
+"    ctx2 while also diverged into ctx3"
+msgstr ""
+"    O formato usado é: [rev1, rev2], [rev3] se a revisão foi\n"
+"    dividida em rev1 e rev2 e divergiu em rev3"
 
 msgid ""
 ":p1rev: Integer. The repository-local revision number of the changeset's\n"
@@ -35589,8 +37354,75 @@ msgstr ""
 msgid "usable compression engines: %s"
 msgstr "motores de compressão usáveis: %s"
 
+msgid "server has pull-based clones disabled"
+msgstr "o servidor desabilitou clones baseados em pull"
+
+msgid "remove --pull if specified or upgrade Mercurial"
+msgstr "remova --pull se especificada, ou atualize o Mercurial"
+
 msgid "number of cpus must be an integer"
 msgstr "o número de cpus deve ser um inteiro"
+
+#~ msgid "enable Mercurial color mode (DEPRECATED)"
+#~ msgstr "habilita o modo de coloração do Mercurial (OBSOLETO)"
+
+#~ msgid ""
+#~ "This extension enables Mercurial color mode. The feature is now directly\n"
+#~ "available in Mercurial core. You can access it using::"
+#~ msgstr ""
+#~ "Esta extensão habilita o modo de coloração do Mercurial. Essa\n"
+#~ "funcionalidade foi integrada à funcionalidade básica do Mercurial.\n"
+#~ "Você pode acessá-la usando::"
+
+#~ msgid ""
+#~ "  [ui]\n"
+#~ "  color = auto"
+#~ msgstr ""
+#~ "  [ui]\n"
+#~ "  color = auto"
+
+#~ msgid "histedit: moving bookmarks %s from %s to %s\n"
+#~ msgstr "histedit: movendo marcadores %s de %s para %s\n"
+
+#~ msgid "too many shelved changes named '%s'"
+#~ msgstr "excesso de mudanças engavetadas de nome '%s'"
+
+#~ msgid "received changelog group is empty"
+#~ msgstr "grupo de changelogs recebido é vazio"
+
+#~ msgid "stripping intermediate changeset %s\n"
+#~ msgstr "removendo revisão intermediária %s\n"
+
+#~ msgid "stripping amended changeset %s\n"
+#~ msgstr "removendo revisão emendada %s\n"
+
+#~ msgid "no ignore patterns found"
+#~ msgstr "nenhum padrão de arquivos ignorados encontrado"
+
+#~ msgid "fileset expression with no context"
+#~ msgstr "expressão fileset sem contexto"
+
+#~ msgid "index %s unknown flags %#04x for format v0"
+#~ msgstr "índice %s marcadores desconhecidos %#04x para o formato v0"
+
+#~ msgid "index %s unknown format %d"
+#~ msgstr "índice %s formato desconhecido %d"
+
+#~ msgid ""
+#~ "setting ciphers in [hostsecurity] is not supported by this version of Python"
+#~ msgstr ""
+#~ "a definição de cifras em [hostsecurity] não é suportada nesta versão do "
+#~ "Python"
+
+#~ msgid ""
+#~ "remove the config option or run Mercurial with a modern Python version "
+#~ "(preferred)"
+#~ msgstr ""
+#~ "remova a opção de configuração ou (preferencialmente) execute o Mercurial "
+#~ "com uma versão moderna do Python"
+
+#~ msgid "uncommitted changes in subrepository '%s'"
+#~ msgstr "mudanças não consolidadas no sub-repositório '%s'"
 
 #~ msgid ""
 #~ "Effects\n"
@@ -35657,9 +37489,6 @@ msgstr "o número de cpus deve ser um inteiro"
 #~ msgstr ""
 #~ "Se ``pagermode`` não estiver definido, a configuração ``mode`` será usada.\n"
 
-#~ msgid "show available color, effects or style"
-#~ msgstr "mostra cores, efeitos ou estilos disponíveis"
-
 #~ msgid ""
 #~ "You can also enable the pager only for certain commands using\n"
 #~ "pager.attend. Below is the default list of commands to be paged::"
@@ -35704,295 +37533,6 @@ msgstr "o número de cpus deve ser um inteiro"
 #~ "    none (nenhum), bzip2 e gzip (por padrão, bundles são comprimidos\n"
 #~ "    usando bzip2). Os formatos disponíveis são: v1, v2 (o padrão é\n"
 #~ "    o mais adequado)."
-
-#~ msgid "test Mercurial installation"
-#~ msgstr "testa a instalação do Mercurial"
-
-#~ msgid "test whether node ids are known to a repo"
-#~ msgstr "testa se os ids dos nós são conhecidos em um repositório"
-
-#~ msgid ""
-#~ "    Every ID must be a full-length hex node id string. Returns a list of 0s\n"
-#~ "    and 1s indicating unknown/known.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Todo ID deve ser uma string hexadecimal completa.\n"
-#~ "    Devolve uma lista de 0s e 1s indicando respectivamente\n"
-#~ "    desconhecidos e conhecidos.\n"
-#~ "    "
-
-#~ msgid "backwards compatibility with old bash completion scripts (DEPRECATED)"
-#~ msgstr ""
-#~ "compatibilidade retroativa com antigos scripts bash de completação "
-#~ "(OBSOLETO)"
-
-#~ msgid "print merge state"
-#~ msgstr "imprime o estado da mesclagem"
-
-#~ msgid ""
-#~ "    Use --verbose to print out information about whether v1 or v2 merge state\n"
-#~ "    was chosen."
-#~ msgstr ""
-#~ "    Use --verbose para imprimir informações a respeito de como foi\n"
-#~ "    feita a escolha entre os estados de mesclagem v1 e v2.    "
-
-#~ msgid "complete \"names\" - tags, open branch names, bookmark names"
-#~ msgstr ""
-#~ "completa \"nomes\" - etiquetas, nomes de ramos abertos, nomes de marcadores"
-
-#~ msgid "show or modify state of locks"
-#~ msgstr "mostra ou modifica o estado dos locks"
-
-#~ msgid ""
-#~ "    By default, this command will show which locks are held. This\n"
-#~ "    includes the user and process holding the lock, the amount of time\n"
-#~ "    the lock has been held, and the machine name where the process is\n"
-#~ "    running if it's not local."
-#~ msgstr ""
-#~ "    Por padrão, este comando mostra quais locks estão bloqueados.\n"
-#~ "    Isso inclui o usuário e processo donos do lock, há quanto tempo\n"
-#~ "    o lock está bloqueado, e o nome da máquina onde o processo\n"
-#~ "    está rodando, se não for a máquina local."
-
-#~ msgid ""
-#~ "    Locks protect the integrity of Mercurial's data, so should be\n"
-#~ "    treated with care. System crashes or other interruptions may cause\n"
-#~ "    locks to not be properly released, though Mercurial will usually\n"
-#~ "    detect and remove such stale locks automatically."
-#~ msgstr ""
-#~ "    Locks protegem a integridade dos dados do Mercurial, então\n"
-#~ "    devem ser usados com cuidado. Quedas de sistema ou outras\n"
-#~ "    interrupções podem fazer com que locks não sejam liberados\n"
-#~ "    adequadamente, apesar de o Mercurial tipicamente detectar e\n"
-#~ "    liberar esses locks inválidos automaticamente."
-
-#~ msgid ""
-#~ "    However, detecting stale locks may not always be possible (for\n"
-#~ "    instance, on a shared filesystem). Removing locks may also be\n"
-#~ "    blocked by filesystem permissions."
-#~ msgstr ""
-#~ "    No entanto, pode não ser possível detectar locks inválidos (por\n"
-#~ "    exemplo, em um sistema de arquivos compartilhado). A remoção de\n"
-#~ "    locks também pode ser bloqueada por permissões do sistema de\n"
-#~ "    arquivos."
-
-#~ msgid "    Returns 0 if no locks are held."
-#~ msgstr "    Devolve 0 se se nenhum lock estiver bloqueado."
-
-#~ msgid "create arbitrary obsolete marker"
-#~ msgstr "cria uma marcação de obsolescência arbitrária"
-
-#~ msgid "    With no arguments, displays the list of obsolescence markers."
-#~ msgstr "    Sem parâmetros, mostra a lista de marcações de obsolescência."
-
-#~ msgid "complete part or all of a tracked path"
-#~ msgstr "completa todo ou uma parte de um caminho rastreado"
-
-#~ msgid ""
-#~ "    This command supports shells that offer path name completion. It\n"
-#~ "    currently completes only files already known to the dirstate."
-#~ msgstr ""
-#~ "    Este comando suporta shells que ofereçam completação de\n"
-#~ "    nomes de caminhos. Atualmente, apenas arquivos já presentes\n"
-#~ "    no dirstate serão completados."
-
-#~ msgid ""
-#~ "    Completion extends only to the next path segment unless\n"
-#~ "    --full is specified, in which case entire paths are used."
-#~ msgstr ""
-#~ "    A completação por padrão é feita apenas para o próximo segmento\n"
-#~ "    do caminho. Se --full for especificado, são usados caminhos\n"
-#~ "    completos."
-
-#~ msgid "access the pushkey key/value protocol"
-#~ msgstr "acessa o protocolo pushkey de pares chave/valor"
-
-#~ msgid "    With two args, list the keys in the given namespace."
-#~ msgstr "    Com dois argumentos, lista as chaves no espaço de nomes dado."
-
-#~ msgid ""
-#~ "    With five args, set a key to new if it currently is set to old.\n"
-#~ "    Reports success or failure.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Com cinco argumentos, redefine uma chave para o novo valor se\n"
-#~ "    estiver no momento definida para o valor antigo.\n"
-#~ "    Informa sobre sucesso ou falha.\n"
-#~ "    "
-
-#~ msgid "rebuild the dirstate as it would look like for the given revision"
-#~ msgstr "reconstrói o dirstate como ele pareceria para a revisão dada"
-
-#~ msgid "    If no revision is specified the first current parent will be used."
-#~ msgstr ""
-#~ "    Se nenhuma revisão for especificada, será usado o primeiro pai do "
-#~ "diretório de trabalho."
-
-#~ msgid ""
-#~ "    The dirstate will be set to the files of the given revision.\n"
-#~ "    The actual working directory content or existing dirstate\n"
-#~ "    information such as adds or removes is not considered."
-#~ msgstr ""
-#~ "    O dirstate será definido para os arquivos da revisão pedida.\n"
-#~ "    O conteúdo real do diretório de trabalho e informações existentes\n"
-#~ "    no dirstate (como adições e remoções) não são considerados."
-
-#~ msgid ""
-#~ "    ``minimal`` will only rebuild the dirstate status for files that claim to be\n"
-#~ "    tracked but are not in the parent manifest, or that exist in the parent\n"
-#~ "    manifest but are not in the dirstate. It will not change adds, removes, or\n"
-#~ "    modified files that are in the working copy parent."
-#~ msgstr ""
-#~ "    ``minimal`` só reconstruirá o status do dirstate para arquivos\n"
-#~ "    rastreados que não estejam no manifesto do pai, ou que estejam\n"
-#~ "    no manifesto do pai mas não no dirstate. Arquivos adicionados,\n"
-#~ "    removidos ou modificados presentes no pai da cópia de trabalho\n"
-#~ "    não serão modificados."
-
-#~ msgid ""
-#~ "    One use of this command is to make the next :hg:`status` invocation\n"
-#~ "    check the actual file content.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Um uso para este comando é fazer com que a próxima execução\n"
-#~ "    de :hg:`status` verifique o conteúdo real dos arquivos.\n"
-#~ "    "
-
-#~ msgid "rebuild the fncache file"
-#~ msgstr "reconstrói o arquivo fncache"
-
-#~ msgid "dump rename information"
-#~ msgstr "exibe informações de renomeação"
-
-#~ msgid "show data and statistics about a revlog"
-#~ msgstr "mostra dados e estatísticas sobre um revlog"
-
-#~ msgid "parse and apply a revision specification"
-#~ msgstr "interpreta e aplica uma especificação de revisões"
-
-#~ msgid ""
-#~ "    Use -p/--show-stage option to print the parsed tree at the given stages.\n"
-#~ "    Use -p all to print tree at every stage."
-#~ msgstr ""
-#~ "    Use -p/--show-stage para imprimir a árvore de parsing nos estágios pedidos.\n"
-#~ "    Use -p all para imprimir a árvore em todos os estágios."
-
-#~ msgid ""
-#~ "    Use --verify-optimized to compare the optimized result with the unoptimized\n"
-#~ "    one. Returns 1 if the optimized result differs.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Use --verify-optimized para comparar o resultado otimizado com o\n"
-#~ "    resultado sem otimização. Retorna 1 se o resultado otimizado for\n"
-#~ "    diferente.\n"
-#~ "    "
-
-#~ msgid "manually set the parents of the current working directory"
-#~ msgstr "muda manualmente os pais do diretório de trabalho atual"
-
-#~ msgid ""
-#~ "    This is useful for writing repository conversion tools, but should\n"
-#~ "    be used with care. For example, neither the working directory nor the\n"
-#~ "    dirstate is updated, so file status may be incorrect after running this\n"
-#~ "    command."
-#~ msgstr ""
-#~ "    Isto é útil para escrever utilitários de conversão de repositórios,\n"
-#~ "    mas deve ser usado com cuidado. Por exemplo, nem o diretório de\n"
-#~ "    trabalho nem o dirstate são atualizados, de modo que o status dos\n"
-#~ "    arquivos pode ficar incorreto após a execução deste comando."
-
-#~ msgid "show the contents of the current dirstate"
-#~ msgstr "mostra o conteúdo do dirstate atual"
-
-#~ msgid "show set of successors for revision"
-#~ msgstr "mostra conjunto de sucessores da revisão"
-
-#~ msgid ""
-#~ "    A successors set of changeset A is a consistent group of revisions that\n"
-#~ "    succeed A. It contains non-obsolete changesets only."
-#~ msgstr ""
-#~ "    Um conjunto de sucessores de uma revisão A é um grupo consistente de\n"
-#~ "    revisões que sucedem A. Pode conter apenas revisões não obsoletas."
-
-#~ msgid ""
-#~ "    In most cases a changeset A has a single successors set containing a single\n"
-#~ "    successor (changeset A replaced by A')."
-#~ msgstr ""
-#~ "    Na maior parte dos casos uma revisão A possui um único conjunto\n"
-#~ "    de sucessores contendo um único sucessor (revisão A substituída por A')."
-
-#~ msgid ""
-#~ "    A changeset that is made obsolete with no successors are called \"pruned\".\n"
-#~ "    Such changesets have no successors sets at all."
-#~ msgstr ""
-#~ "    Uma revisão sem sucessores tornada obsoleta é chamada \"podada\".\n"
-#~ "    Tais revisões não possuem nenhum conjunto de sucessores."
-
-#~ msgid ""
-#~ "    A changeset that has been \"split\" will have a successors set containing\n"
-#~ "    more than one successor."
-#~ msgstr ""
-#~ "    Uma revisão que tenha sido \"dividida\" terá um conjunto de\n"
-#~ "    sucessores contendo mais de um sucessor."
-
-#~ msgid ""
-#~ "    A changeset that has been rewritten in multiple different ways is called\n"
-#~ "    \"divergent\". Such changesets have multiple successor sets (each of which\n"
-#~ "    may also be split, i.e. have multiple successors)."
-#~ msgstr ""
-#~ "    Uma revisão que tenha sido reescrita de múltiplas formas diferentes\n"
-#~ "    é chamada \"divergente\". Tais revisões possuem múltiplos conjuntos\n"
-#~ "    de sucessores (cada um dos quais pode também ser dividido, isto é,\n"
-#~ "    ter múltiplos sucessores)."
-
-#~ msgid "    Results are displayed as follows::"
-#~ msgstr "    Os resultados são mostrados da seguinte maneira::"
-
-#~ msgid ""
-#~ "        <rev1>\n"
-#~ "            <successors-1A>\n"
-#~ "        <rev2>\n"
-#~ "            <successors-2A>\n"
-#~ "            <successors-2B1> <successors-2B2> <successors-2B3>"
-#~ msgstr ""
-#~ "        <rev1>\n"
-#~ "            <sucessores-1A>\n"
-#~ "        <rev2>\n"
-#~ "            <sucessores-2A>\n"
-#~ "            <sucessores-2B1> <sucessores-2B2> <sucessores-2B3>"
-
-#~ msgid ""
-#~ "    Here rev2 has two possible (i.e. divergent) successors sets. The first\n"
-#~ "    holds one element, whereas the second holds three (i.e. the changeset has\n"
-#~ "    been split).\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Aqui, rev2 possui dois (ou seja, divergentes) possíveis conjuntos\n"
-#~ "    de sucessores. O primeiro possui um elemento, e o segundo possui\n"
-#~ "    três (a revisão foi dividida).\n"
-#~ "    "
-
-#~ msgid "parse and apply a template"
-#~ msgstr "decodifica e aplica um modelo"
-
-#~ msgid ""
-#~ "    If -r/--rev is given, the template is processed as a log template and\n"
-#~ "    applied to the given changesets. Otherwise, it is processed as a generic\n"
-#~ "    template."
-#~ msgstr ""
-#~ "    Se -r/--rev for fornecida, o modelo será processado como um modelo\n"
-#~ "    de log e aplicado às revisões pedidas.\n"
-#~ "    Caso contrário, será processado como um modelo genérico."
-
-#~ msgid ""
-#~ "    Use --verbose to print the parsed tree.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Use --verbose para imprimir a árvore decodificada.\n"
-#~ "    "
-
-#~ msgid "show how files match on given patterns"
-#~ msgstr "mostra como os arquivos casam com os padrões pedidos"
 
 #~ msgid ""
 #~ "      The following rules apply when the working directory contains\n"
@@ -36114,228 +37654,6 @@ msgstr "o número de cpus deve ser um inteiro"
 #~ "  idletimeout = 3600 # segundos após os quais um servidor\n"
 #~ "                     # sem atividade fechará\n"
 #~ "  skiphash = False   # omite checagens de mudanças ou ambiente\n"
-
-#~ msgid "find the ancestor revision of two revisions in a given index"
-#~ msgstr "encontra a revisão ancestral de duas revisões no índice dado"
-
-#~ msgid "builds a repo with a given DAG from scratch in the current empty repo"
-#~ msgstr ""
-#~ "constrói um repositório do zero com um DAG dado em um repositório vazio "
-#~ "existente"
-
-#~ msgid ""
-#~ "    The description of the DAG is read from stdin if not given on the\n"
-#~ "    command line."
-#~ msgstr ""
-#~ "    Se não for passada na linha de comando, a descrição do DAG é lida\n"
-#~ "    da entrada padrão."
-
-#~ msgid "    Elements:"
-#~ msgstr "    Elementos:"
-
-#~ msgid ""
-#~ "     - \"+n\" is a linear run of n nodes based on the current default parent\n"
-#~ "     - \".\" is a single node based on the current default parent\n"
-#~ "     - \"$\" resets the default parent to null (implied at the start);\n"
-#~ "           otherwise the default parent is always the last node created\n"
-#~ "     - \"<p\" sets the default parent to the backref p\n"
-#~ "     - \"*p\" is a fork at parent p, which is a backref\n"
-#~ "     - \"*p1/p2\" is a merge of parents p1 and p2, which are backrefs\n"
-#~ "     - \"/p2\" is a merge of the preceding node and p2\n"
-#~ "     - \":tag\" defines a local tag for the preceding node\n"
-#~ "     - \"@branch\" sets the named branch for subsequent nodes\n"
-#~ "     - \"#...\\n\" is a comment up to the end of the line"
-#~ msgstr ""
-#~ "     - \"+n\" é uma sequência linear de n nós baseada no pai default atual\n"
-#~ "     - \".\" é um único nó baseado no pai default atual\n"
-#~ "     - \"$\" redefine o pai default para null (valor usado no início);\n"
-#~ "           de outra maneira o pai default é sempre o último nó criado\n"
-#~ "     - \"<p\" define o pai default para a backref p\n"
-#~ "     - \"*p\" é uma bifurcação no pai p, que é uma backref\n"
-#~ "     - \"*p1/p2\" é uma mesclagem dos pais p1 e p2, que são backrefs\n"
-#~ "     - \"/p2\" é uma mesclagem do nó anterior e p2\n"
-#~ "     - \":tag\" define uma etiqueta local para o nó anterior\n"
-#~ "     - \"@branch\" define o nome de ramo para nós subsequentes\n"
-#~ "     - \"#...\\n\" é um comentário até o fim da linha"
-
-#~ msgid "    Whitespace between the above elements is ignored."
-#~ msgstr "    Espaços em branco entre os elementos acima são ignorados."
-
-#~ msgid "    A backref is either"
-#~ msgstr "    Uma backref pode ser"
-
-#~ msgid ""
-#~ "     - a number n, which references the node curr-n, where curr is the current\n"
-#~ "       node, or\n"
-#~ "     - the name of a local tag you placed earlier using \":tag\", or\n"
-#~ "     - empty to denote the default parent."
-#~ msgstr ""
-#~ "     - um número n, que referencia o nó atual-n, ou\n"
-#~ "     - o nome de uma tag local criada anteriormente com \":tag\", ou\n"
-#~ "     - vazio, denotando o pai default."
-
-#~ msgid ""
-#~ "    All string valued-elements are either strictly alphanumeric, or must\n"
-#~ "    be enclosed in double quotes (\"...\"), with \"\\\" as escape character.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Todos os elementos com valores string devem ser ou estritamente\n"
-#~ "    alfanuméricos, ou devem estar entre aspas duplas (\"...\"), usando\n"
-#~ "    \"\\\" como caractere de escape.\n"
-#~ "    "
-
-#~ msgid "lists the contents of a bundle"
-#~ msgstr "lista o conteúdo de um bundle"
-
-#~ msgid "create a stream clone bundle file"
-#~ msgstr "cria um arquivo de bundle para clone por stream"
-
-#~ msgid ""
-#~ "    Stream bundles are special bundles that are essentially archives of\n"
-#~ "    revlog files. They are commonly used for cloning very quickly.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Stream bundles são bundles especiais, formados essencialmente\n"
-#~ "    pelos arquivos revlog empacotados. Eles são comumente usados\n"
-#~ "    para acelerar a clonagem.    "
-
-#~ msgid "apply a stream clone bundle file"
-#~ msgstr "aplica um arquivo bundle de clone por stream"
-
-#~ msgid "validate the correctness of the current dirstate"
-#~ msgstr "valida a exatidão do dirstate atual"
-
-#~ msgid "list all available commands and options"
-#~ msgstr "exibe todas as opções e comandos disponíveis"
-
-#~ msgid "returns the completion list associated with the given command"
-#~ msgstr "devolve a lista de complementos associada ao comando dado"
-
-#~ msgid "format the changelog or an index DAG as a concise textual description"
-#~ msgstr ""
-#~ "formata o changelog ou um índice DAG como uma representação textual concisa"
-
-#~ msgid ""
-#~ "    If you pass a revlog index, the revlog's DAG is emitted. If you list\n"
-#~ "    revision numbers, they get labeled in the output as rN."
-#~ msgstr ""
-#~ "    Se você passar um índice de revlog, o DAG do revlog será emitido.\n"
-#~ "    Se você listar números de revisão, eles serão rotulados na saída\n"
-#~ "    como rN."
-
-#~ msgid ""
-#~ "    Otherwise, the changelog DAG of the current repo is emitted.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Caso contrário, imprime o DAG do changelog do repositório atual.\n"
-#~ "    "
-
-#~ msgid "dump the contents of a data file revision"
-#~ msgstr "exibe o conteúdo de uma revisão de dados de arquivo"
-
-#~ msgid "parse and display a date"
-#~ msgstr "decodifica e exibe uma data"
-
-#~ msgid "runs the changeset discovery protocol in isolation"
-#~ msgstr "executa o protocolo discovery isoladamente"
-
-#~ msgid "show information about active extensions"
-#~ msgstr "mostra informações sobre extensões ativas"
-
-#~ msgid "parse and apply a fileset specification"
-#~ msgstr "interpreta e aplica uma especificação de fileset"
-
-#~ msgid "show information detected about current filesystem"
-#~ msgstr "mostra informações detectadas sobre o sistema de arquivos atual"
-
-#~ msgid "retrieves a bundle from a repo"
-#~ msgstr "obtém um bundle de um repositório"
-
-#~ msgid ""
-#~ "    Every ID must be a full-length hex node id string. Saves the bundle to the\n"
-#~ "    given file.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Todo ID deve ser uma string hexadecimal completa.\n"
-#~ "    Grava o bundle no arquivo pedido.\n"
-#~ "    "
-
-#~ msgid ""
-#~ "display the combined ignore pattern and information about ignored files"
-#~ msgstr ""
-#~ "exibe o padrão combinado de arquivos ignorados e informações sobre arquivos "
-#~ "ignorados"
-
-#~ msgid "    With no argument display the combined ignore pattern."
-#~ msgstr "    Sem parâmetros, exibe o padrão combinado de arquivos ignorados."
-
-#~ msgid ""
-#~ "    Given space separated file names, shows if the given file is ignored and\n"
-#~ "    if so, show the ignore rule (file and line number) that matched it.\n"
-#~ "    "
-#~ msgstr ""
-#~ "    Dados nomes de arquivo separados por espaços, mostra se o\n"
-#~ "    arquivo pedido é ignorado, e se for, mostra a regra de\n"
-#~ "    .hgignore correspondente (arquivo e número da linha).\n"
-#~ "    "
-
-#~ msgid "dump the contents of an index file"
-#~ msgstr "extrai o conteúdo de um arquivo de índice"
-
-#~ msgid "dump an index DAG as a graphviz dot file"
-#~ msgstr "extrai os dados de um índice DAG como um arquivo .dot do graphviz"
-
-#~ msgid "dump information about delta chains in a revlog"
-#~ msgstr "extrai informações sobre cadeias de delta em um revlog"
-
-#~ msgid "    Output can be templatized. Available template keywords are:"
-#~ msgstr ""
-#~ "    A saída pode ser customizada com modelos. As palavras chave disponíveis "
-#~ "são:"
-
-#~ msgid ""
-#~ "    :``rev``:       revision number\n"
-#~ "    :``chainid``:   delta chain identifier (numbered by unique base)\n"
-#~ "    :``chainlen``:  delta chain length to this revision\n"
-#~ "    :``prevrev``:   previous revision in delta chain\n"
-#~ "    :``deltatype``: role of delta / how it was computed\n"
-#~ "    :``compsize``:  compressed size of revision\n"
-#~ "    :``uncompsize``: uncompressed size of revision\n"
-#~ "    :``chainsize``: total size of compressed revisions in chain\n"
-#~ "    :``chainratio``: total chain size divided by uncompressed revision size\n"
-#~ "                    (new delta chains typically start at ratio 2.00)\n"
-#~ "    :``lindist``:   linear distance from base revision in delta chain to end\n"
-#~ "                    of this revision\n"
-#~ "    :``extradist``: total size of revisions not part of this delta chain from\n"
-#~ "                    base of delta chain to end of this revision; a measurement\n"
-#~ "                    of how much extra data we need to read/seek across to read\n"
-#~ "                    the delta chain for this revision\n"
-#~ "    :``extraratio``: extradist divided by chainsize; another representation of\n"
-#~ "                    how much unrelated data is needed to load this delta chain\n"
-#~ "    "
-#~ msgstr ""
-#~ "    :``rev``:       número da revisão\n"
-#~ "    :``chainid``:   identificador de cadeia de deltas (numerado por base única)\n"
-#~ "    :``chainlen``:  comprimento da cadeia de deltas para esta revisão\n"
-#~ "    :``prevrev``:   revisão anterior na cadeia de deltas\n"
-#~ "    :``deltatype``: tipo de delta / como foi computado\n"
-#~ "    :``compsize``:  tamanho comprimido da revisão\n"
-#~ "    :``uncompsize``: tamanho não comprimido da revisão\n"
-#~ "    :``chainsize``: tamanho total das revisões comprimidas na cadeia\n"
-#~ "    :``chainratio``: tamanho total da cadeia dividido pelo tamanho não\n"
-#~ "                    comprimido da revisão\n"
-#~ "                    (novas cadeias de deltas tipicamente começam em 2.00)\n"
-#~ "    :``lindist``:   distância linear da revisão base na cadeia de deltas\n"
-#~ "                    até o final desta revisão\n"
-#~ "    :``extradist``: tamanho total de revisões que não fazem parte desta\n"
-#~ "                    cadeia de deltas da base da cadeia de deltas até o\n"
-#~ "                    fim desta revisão; uma medida de quantos dados\n"
-#~ "                    extras em leitura ou posicionamento são necessários\n"
-#~ "                    para ler a cadeia de deltas para esta revisão\n"
-#~ "    :``extraratio``: extradist dividido por chainsize; outra representação\n"
-#~ "                    de quantos dados não relacionados são necessários para\n"
-#~ "                    carregar esta cadeia de deltas\n"
-#~ "    "
 
 #~ msgid "Specifying Single Revisions"
 #~ msgstr "Especificação de Revisões Únicas"
@@ -36483,9 +37801,6 @@ msgstr "o número de cpus deve ser um inteiro"
 
 #~ msgid "see the \"path\" section in \"hg help config\""
 #~ msgstr "veja a seção \"path\" em \"hg help config\""
-
-#~ msgid "representation of revlog data"
-#~ msgstr "representação de dados de revlog"
 
 #~ msgid "revision storage mechanism"
 #~ msgstr "mecanismo de armazenamento de revisões"
@@ -37216,9 +38531,6 @@ msgstr "o número de cpus deve ser um inteiro"
 
 #~ msgid "use \"histedit --abort\" to clear broken state"
 #~ msgstr "use \"histedit --abort\" para limpar o estado quebrado"
-
-#~ msgid "uncommitted changes in subrepository %s"
-#~ msgstr "mudanças não consolidadas no sub-repositório %s"
 
 #~ msgid "uncommitted changes in subrepo %s"
 #~ msgstr "mudanças não consolidadas no sub-repositório %s"
