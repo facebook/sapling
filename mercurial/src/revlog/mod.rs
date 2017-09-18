@@ -107,7 +107,7 @@ impl Revlog {
         };
 
         let mut data = data;
-        if hdr.features.contains(parser::INLINE) {
+        if hdr.features.contains(parser::Features::INLINE) {
             data = None
         }
 
@@ -279,14 +279,14 @@ impl RevlogInner {
 
     fn entry_size(&self, ent: Option<&Entry>) -> usize {
         let mut sz = self.fixed_entry_size();
-        if self.header.features.contains(parser::INLINE) {
+        if self.header.features.contains(parser::Features::INLINE) {
             sz += ent.expect("inline needs ent").compressed_len as usize;
         }
         sz
     }
 
     fn offset_for_idx(&self, idx: RevIdx) -> Option<usize> {
-        if self.header.features.contains(parser::INLINE) {
+        if self.header.features.contains(parser::Features::INLINE) {
             self.idxoff.get(&idx).cloned()
         } else {
             Some(idx * self.entry_size(None) as usize)
@@ -295,10 +295,10 @@ impl RevlogInner {
 
     fn have_data(&self) -> bool {
         // inline implies no data
-        assert!(!self.header.features.contains(parser::INLINE) || self.data.is_none());
+        assert!(!self.header.features.contains(parser::Features::INLINE) || self.data.is_none());
 
         // have data if inline or data is non-None
-        self.header.features.contains(parser::INLINE) || self.data.is_some()
+        self.header.features.contains(parser::Features::INLINE) || self.data.is_some()
     }
 
     /// Return an `Entry` entry from the `RevIdx`.
@@ -345,7 +345,7 @@ impl RevlogInner {
 
         let entry = self.get_entry(idx)?;
 
-        let (chunkdata, start) = if self.header.features.contains(parser::INLINE) {
+        let (chunkdata, start) = if self.header.features.contains(parser::Features::INLINE) {
             let off = self.offset_for_idx(idx).expect("not cached?");
             let start = off + self.fixed_entry_size();
 
@@ -412,7 +412,7 @@ impl RevlogInner {
     }
 
     fn is_general_delta(&self) -> bool {
-        self.header.features.contains(parser::GENERAL_DELTA)
+        self.header.features.contains(parser::Features::GENERAL_DELTA)
     }
 
     fn construct_simple(&self, tgtidx: RevIdx) -> Result<Vec<u8>> {

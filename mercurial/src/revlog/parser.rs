@@ -275,7 +275,7 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
 
 #[cfg(test)]
 mod test {
-    use super::{header, Features, Header, Version, GENERAL_DELTA, INLINE};
+    use super::{header, Features, Header, Version};
     use nom::IResult;
 
     #[test]
@@ -307,7 +307,7 @@ mod test {
             IResult::Done(&b""[..],
             Header {
                 version: Version::RevlogNG,
-                features: INLINE,
+                features: Features::INLINE,
         }))
     }
 
@@ -318,7 +318,7 @@ mod test {
             IResult::Done(&b""[..],
             Header {
                 version: Version::RevlogNG,
-                features: GENERAL_DELTA,
+                features: Features::GENERAL_DELTA,
         }))
     }
 
@@ -329,7 +329,7 @@ mod test {
             IResult::Done(&b""[..],
             Header {
                 version: Version::RevlogNG,
-                features: INLINE | GENERAL_DELTA,
+                features: Features::INLINE | Features::GENERAL_DELTA,
         }))
     }
 }
