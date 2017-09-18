@@ -2,6 +2,7 @@
 # Please keep these in alphabetical order.
 closure_block_indent_threshold = 1
 condense_wildcard_suffixes = true
+error_on_line_overflow = false
 error_on_line_overflow_comments = false
 # Too many derives can cause line length limits to be exceeded. rustfmt-nightly
 # 0.2.5 doesn't appear to pay attention to this.
