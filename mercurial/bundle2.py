@@ -470,12 +470,12 @@ def _gethandler(op, part):
         if handler is None:
             status = 'unsupported-type'
             raise error.BundleUnknownFeatureError(parttype=part.type)
-        indebug(op.ui, 'found a handler for part %r' % part.type)
+        indebug(op.ui, 'found a handler for part %s' % part.type)
         unknownparams = part.mandatorykeys - handler.params
         if unknownparams:
             unknownparams = list(unknownparams)
             unknownparams.sort()
-            status = 'unsupported-params (%s)' % unknownparams
+            status = 'unsupported-params (%s)' % ', '.join(unknownparams)
             raise error.BundleUnknownFeatureError(parttype=part.type,
                                                   params=unknownparams)
         status = 'supported'
@@ -616,7 +616,7 @@ class bundle20(object):
         if not name:
             raise ValueError('empty parameter name')
         if name[0] not in pycompat.bytestr(string.ascii_letters):
-            raise ValueError('non letter first character: %r' % name)
+            raise ValueError('non letter first character: %s' % name)
         self._params.append((name, value))
 
     def addpart(self, part):
@@ -792,14 +792,14 @@ class unbundle20(unpackermixin):
               ignored or failing.
         """
         if not name:
-            raise ValueError('empty parameter name')
-        if name[0] not in pycompat.bytestr(string.ascii_letters):
-            raise ValueError('non letter first character: %r' % name)
+            raise ValueError(r'empty parameter name')
+        if name[0:1] not in pycompat.bytestr(string.ascii_letters):
+            raise ValueError(r'non letter first character: %s' % name)
         try:
             handler = b2streamparamsmap[name.lower()]
         except KeyError:
-            if name[0].islower():
-                indebug(self.ui, "ignoring unknown parameter %r" % name)
+            if name[0:1].islower():
+                indebug(self.ui, "ignoring unknown parameter %s" % name)
             else:
                 raise error.BundleUnknownFeatureError(params=(name,))
         else:
