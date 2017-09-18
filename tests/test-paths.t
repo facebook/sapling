@@ -88,29 +88,29 @@ log template:
 
  (behaves as a {name: path-string} dict by default)
 
-  $ hg log -rnull -T '{peerpaths}\n'
+  $ hg log -rnull -T '{peerurls}\n'
   dupe=$TESTTMP/b#tip expand=$TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{join(peerpaths, "\n")}\n'
+  $ hg log -rnull -T '{join(peerurls, "\n")}\n'
   dupe=$TESTTMP/b#tip (glob)
   expand=$TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{peerpaths % "{name}: {url}\n"}'
+  $ hg log -rnull -T '{peerurls % "{name}: {url}\n"}'
   dupe: $TESTTMP/b#tip (glob)
   expand: $TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{get(peerpaths, "dupe")}\n'
+  $ hg log -rnull -T '{get(peerurls, "dupe")}\n'
   $TESTTMP/b#tip (glob)
 
  (sub options can be populated by map/dot operation)
 
   $ hg log -rnull \
-  > -T '{get(peerpaths, "dupe") % "url: {url}\npushurl: {pushurl}\n"}'
+  > -T '{get(peerurls, "dupe") % "url: {url}\npushurl: {pushurl}\n"}'
   url: $TESTTMP/b#tip (glob)
   pushurl: https://example.com/dupe
-  $ hg log -rnull -T '{peerpaths.dupe.pushurl}\n'
+  $ hg log -rnull -T '{peerurls.dupe.pushurl}\n'
   https://example.com/dupe
 
  (in JSON, it's a dict of urls)
 
-  $ hg log -rnull -T '{peerpaths|json}\n' | sed 's|\\\\|/|g'
+  $ hg log -rnull -T '{peerurls|json}\n' | sed 's|\\\\|/|g'
   {"dupe": "$TESTTMP/b#tip", "expand": "$TESTTMP/a/$SOMETHING/bar"}
 
 password should be masked in plain output, but not in machine-readable/template
@@ -126,7 +126,7 @@ output:
     "url": "http://foo:insecure@example.com/"
    }
   ]
-  $ hg log -rnull -T '{get(peerpaths, "insecure")}\n'
+  $ hg log -rnull -T '{get(peerurls, "insecure")}\n'
   http://foo:insecure@example.com/
 
 zeroconf wraps ui.configitems(), which shouldn't crash at least:
