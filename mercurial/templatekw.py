@@ -658,19 +658,14 @@ def showpeerpaths(repo, **args):
     """A dictionary of repository locations defined in the [paths] section
     of your configuration file. (EXPERIMENTAL)"""
     # see commands.paths() for naming of dictionary keys
-    paths = util.sortdict()
-    for k, p in sorted(repo.ui.paths.iteritems()):
-        d = util.sortdict()
-        d['url'] = p.rawloc
+    paths = repo.ui.paths
+    urls = util.sortdict((k, p.rawloc) for k, p in sorted(paths.iteritems()))
+    def makemap(k):
+        p = paths[k]
+        d = {'name': k, 'url': p.rawloc}
         d.update((o, v) for o, v in sorted(p.suboptions.iteritems()))
-        def f(d):
-            yield d['url']
-        paths[k] = hybriddict(d, gen=f(d))
-
-    # no hybriddict() since d['path'] can't be formatted as a string. perhaps
-    # hybriddict() should call templatefilters.stringify(d[value]).
-    return _hybrid(None, paths, lambda k: {'name': k, 'path': paths[k]},
-                   lambda k: '%s=%s' % (k, paths[k]['url']))
+        return d
+    return _hybrid(None, urls, makemap, lambda k: '%s=%s' % (k, urls[k]))
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):
