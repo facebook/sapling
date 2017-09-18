@@ -1019,7 +1019,8 @@ class bundlepart(object):
                 msg.append(')')
             if not self.data:
                 msg.append(' empty payload')
-            elif util.safehasattr(self.data, 'next'):
+            elif (util.safehasattr(self.data, 'next')
+                  or util.safehasattr(self.data, '__next__')):
                 msg.append(' streamed payload')
             else:
                 msg.append(' %i bytes payload' % len(self.data))
