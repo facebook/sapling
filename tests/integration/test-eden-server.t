@@ -28,7 +28,7 @@
   * INFO head 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
 
 Temporary hack because blobimport doesn't import bookmarks yet
-  $ mkdir $TESTTMP/blobrepo/bookmarks
+  $ mkdir $TESTTMP/blobrepo/books
   $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo
 
 Temporary hack to make sure server is ready

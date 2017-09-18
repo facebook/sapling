@@ -314,7 +314,7 @@ fn main() {
     let blobrepo_folder = Path::new(blobrepo_folder);
 
     let heads_path = blobrepo_folder.join("heads");
-    let bookmarks_path = blobrepo_folder.join("bookmarks");
+    let bookmarks_path = blobrepo_folder.join("books");
     let blobstore_path = blobrepo_folder.join("blobs");
 
     let heads = fileheads::FileHeads::<NodeHash>::open(heads_path.clone())
