@@ -58,7 +58,7 @@ class shallowcg1packer(changegroup.cg1packer):
                             units=units)
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                          mfs, fnodes):
+                          mfs, fnodes, source):
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
@@ -81,6 +81,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 fastpathlinkrev,
                 mfs,
                 fnodes,
+                source,
             )
             for chunk in chunks:
                 yield chunk
