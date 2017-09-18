@@ -663,9 +663,9 @@ def showpeerpaths(repo, **args):
         d = util.sortdict()
         d['url'] = p.rawloc
         d.update((o, v) for o, v in sorted(p.suboptions.iteritems()))
-        def f():
+        def f(d):
             yield d['url']
-        paths[k] = hybriddict(d, gen=f())
+        paths[k] = hybriddict(d, gen=f(d))
 
     # no hybriddict() since d['path'] can't be formatted as a string. perhaps
     # hybriddict() should call templatefilters.stringify(d[value]).

@@ -94,10 +94,10 @@ log template:
   dupe=$TESTTMP/b#tip (glob)
   expand=$TESTTMP/a/$SOMETHING/bar (glob)
   $ hg log -rnull -T '{peerpaths % "{name}: {path}\n"}'
-  dupe: $TESTTMP/a/$SOMETHING/bar (glob)
+  dupe: $TESTTMP/b#tip (glob)
   expand: $TESTTMP/a/$SOMETHING/bar (glob)
   $ hg log -rnull -T '{get(peerpaths, "dupe")}\n'
-  $TESTTMP/a/$SOMETHING/bar (glob)
+  $TESTTMP/b#tip (glob)
 
  (but a path is actually a dict of url and sub-options)
 
