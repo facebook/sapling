@@ -1,6 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
+  > drawdag=$TESTDIR/drawdag.py
   > 
   > [phases]
   > publish=False
@@ -210,3 +211,35 @@ as --rev arguments (issue3950)
   rebasing 6:f677a2907404 "bisect2"
   rebasing 7:325c16001345 "bisect3" (tip bisect)
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/345c90f326a4-b4840586-rebase.hg (glob)
+
+Bookmark and working parent get moved even if --keep is set (issue5682)
+
+  $ hg init $TESTTMP/book-keep
+  $ cd $TESTTMP/book-keep
+  $ hg debugdrawdag <<'EOS'
+  > B C
+  > |/
+  > A
+  > EOS
+  $ eval `hg tags -T 'hg bookmark -ir {node} {tag};\n' | grep -v tip`
+  $ rm .hg/localtags
+  $ hg up -q B
+  $ hg tglog
+  o  2: 'C' bookmarks: C
+  |
+  | @  1: 'B' bookmarks: B
+  |/
+  o  0: 'A' bookmarks: A
+  
+  $ hg rebase -r B -d C --keep
+  rebasing 1:112478962961 "B" (B)
+  $ hg tglog
+  @  3: 'B' bookmarks: B
+  |
+  o  2: 'C' bookmarks: C
+  |
+  | o  1: 'B' bookmarks:
+  |/
+  o  0: 'A' bookmarks: A
+  
+

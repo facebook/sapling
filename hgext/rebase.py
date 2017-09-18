@@ -508,12 +508,12 @@ class rebaseruntime(object):
             ui.note(_("update back to initial working directory parent\n"))
             hg.updaterepo(repo, newwd, False)
 
+        collapsedas = None
         if not self.keepf:
-            collapsedas = None
             if self.collapsef:
                 collapsedas = newnode
-            clearrebased(ui, repo, self.dest, self.state, self.skipped,
-                         collapsedas)
+        clearrebased(ui, repo, self.dest, self.state, self.skipped,
+                     collapsedas, self.keepf)
 
         clearstatus(repo)
         clearcollapsemsg(repo)
@@ -1354,32 +1354,30 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
             state[r] = revprecursor
     return originalwd, dest.rev(), state
 
-def clearrebased(ui, repo, dest, state, skipped, collapsedas=None):
+def clearrebased(ui, repo, dest, state, skipped, collapsedas=None, keepf=False):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
-    `collapsedas` node."""
+    `collapsedas` node.
+
+    If `keepf` is not True, the rebase has --keep set and no nodes should be
+    removed (but bookmarks still need to be moved).
+    """
     tonode = repo.changelog.node
-    # Move bookmark of skipped nodes to destination. This cannot be handled
-    # by scmutil.cleanupnodes since it will treat rev as removed (no successor)
-    # and move bookmark backwards.
-    bmchanges = [(name, tonode(max(adjustdest(repo, rev, dest, state))))
-                 for rev in skipped
-                 for name in repo.nodebookmarks(tonode(rev))]
-    if bmchanges:
-        with repo.transaction('rebase') as tr:
-            repo._bookmarks.applychanges(repo, tr, bmchanges)
-    mapping = {}
+    replacements = {}
+    moves = {}
     for rev, newrev in sorted(state.items()):
         if newrev >= 0 and newrev != rev:
-            if rev in skipped:
-                succs = ()
-            elif collapsedas is not None:
-                succs = (collapsedas,)
-            else:
-                succs = (tonode(newrev),)
-            mapping[tonode(rev)] = succs
-    scmutil.cleanupnodes(repo, mapping, 'rebase')
+            oldnode = tonode(rev)
+            newnode = collapsedas or tonode(newrev)
+            moves[oldnode] = newnode
+            if not keepf:
+                if rev in skipped:
+                    succs = ()
+                else:
+                    succs = (newnode,)
+                replacements[oldnode] = succs
+    scmutil.cleanupnodes(repo, replacements, 'rebase', moves)
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'

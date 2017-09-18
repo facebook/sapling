@@ -576,23 +576,34 @@ class _containsnode(object):
     def __contains__(self, node):
         return self._revcontains(self._torev(node))
 
-def cleanupnodes(repo, replacements, operation):
+def cleanupnodes(repo, replacements, operation, moves=None):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
     (we might also want to move working directory parent in the future)
 
+    By default, bookmark moves are calculated automatically from 'replacements',
+    but 'moves' can be used to override that. Also, 'moves' may include
+    additional bookmark moves that should not have associated obsmarkers.
+
     replacements is {oldnode: [newnode]} or a iterable of nodes if they do not
     have replacements. operation is a string, like "rebase".
     """
+    if not replacements and not moves:
+        return
+
+    # translate mapping's other forms
     if not util.safehasattr(replacements, 'items'):
         replacements = {n: () for n in replacements}
 
     # Calculate bookmark movements
-    moves = {}
+    if moves is None:
+        moves = {}
     # Unfiltered repo is needed since nodes in replacements might be hidden.
     unfi = repo.unfiltered()
     for oldnode, newnodes in replacements.items():
+        if oldnode in moves:
+            continue
         if len(newnodes) > 1:
             # usually a split, take the one with biggest rev number
             newnode = next(unfi.set('max(%ln)', newnodes)).node()
@@ -646,10 +657,13 @@ def cleanupnodes(repo, replacements, operation):
             rels = [(unfi[n], tuple(unfi[m] for m in s))
                     for n, s in sorted(replacements.items(), key=sortfunc)
                     if s or not isobs(n)]
-            obsolete.createmarkers(repo, rels, operation=operation)
+            if rels:
+                obsolete.createmarkers(repo, rels, operation=operation)
         else:
             from . import repair # avoid import cycle
-            repair.delayedstrip(repo.ui, repo, list(replacements), operation)
+            tostrip = list(replacements)
+            if tostrip:
+                repair.delayedstrip(repo.ui, repo, tostrip, operation)
 
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if opts is None:

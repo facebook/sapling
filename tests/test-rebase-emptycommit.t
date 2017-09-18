@@ -47,7 +47,7 @@
   |/
   o  0 A
   
-With --keep, bookmark should not move
+With --keep, bookmark should move
 
   $ hg rebase -r 3+4 -d E --keep
   rebasing 3:e7b3f00ed42e "D" (BOOK-D)
@@ -55,15 +55,15 @@ With --keep, bookmark should not move
   rebasing 4:69a34c08022a "E" (BOOK-E)
   note: rebase of 4:69a34c08022a created no changes to commit
   $ hg log -G -T '{rev} {desc} {bookmarks}'
-  o  7 E
+  o  7 E BOOK-D BOOK-E
   |
   o  6 D
   |
   | o  5 F BOOK-F
   | |
-  | o  4 E BOOK-E
+  | o  4 E
   | |
-  | o  3 D BOOK-D
+  | o  3 D
   | |
   | o  2 C BOOK-C
   | |
@@ -71,6 +71,11 @@ With --keep, bookmark should not move
   |/
   o  0 A
   
+Move D and E back for the next test
+
+  $ hg bookmark BOOK-D -fqir 3
+  $ hg bookmark BOOK-E -fqir 4
+
 Bookmark is usually an indication of a head. For changes that are introduced by
 an ancestor of bookmark B, after moving B to B-NEW, the changes are ideally
 still introduced by an ancestor of changeset on B-NEW. In the below case,
