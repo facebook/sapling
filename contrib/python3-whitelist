@@ -56,6 +56,5 @@ test-run-tests.py
 test-status-terse.t
 test-terse-status.t
 test-unified-test.t
-test-update-dest.t
 test-update-reverse.t
 test-xdg.t
