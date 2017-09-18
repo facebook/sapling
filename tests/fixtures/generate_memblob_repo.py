@@ -53,13 +53,13 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
 use memheads::MemHeads;
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, MemBlobState};
 use ascii::AsciiString;
 use blobstore::Blobstore;
 use heads::Heads;
 use futures::future::Future;
 
-pub fn getrepo() -> BlobRepo<MemHeads<NodeHash>, MemBookmarks<NodeHash>, Memblob> {
+pub fn getrepo() -> BlobRepo<MemBlobState> {
     let bookmarks: MemBookmarks<NodeHash> = MemBookmarks::new();
     let heads: MemHeads<NodeHash> = MemHeads::new();
     let blobs = Memblob::new();
@@ -83,6 +83,6 @@ pub fn getrepo() -> BlobRepo<MemHeads<NodeHash>, MemBookmarks<NodeHash>, Memblob
                     format(key, blobdata)
                 )
         rs.writelines("""
-    BlobRepo::new(heads, bookmarks, blobs)
+    BlobRepo::new(MemBlobState::new(heads, bookmarks, blobs))
 }
 """)

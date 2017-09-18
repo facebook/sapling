@@ -13,52 +13,40 @@ use futures::future::Future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use blobstore::Blobstore;
-use bookmarks::{Bookmarks, BoxedBookmarks};
+use bookmarks::BoxedBookmarks;
 use heads::Heads;
 use mercurial_types::{repo, Changeset, Manifest, NodeHash, Repo};
 
 use BlobChangeset;
 use BlobManifest;
+use BlobState;
 use errors::*;
 use file::fetch_file_blob_from_blobstore;
 
-pub struct BlobRepo<Head, Book, Blob> {
-    inner: Arc<BlobRepoInner<Head, Book, Blob>>,
+pub struct BlobRepo<State> {
+    inner: Arc<State>,
 }
 
-struct BlobRepoInner<Head, Book, Blob> {
-    bookmarks: Arc<Book>,
-    heads: Head,
-    blobstore: Blob,
-}
-
-impl<Head, Book, Blob> BlobRepo<Head, Book, Blob> {
-    pub fn new(heads: Head, bookmarks: Book, blobstore: Blob) -> Self {
+impl<State> BlobRepo<State> {
+    pub fn new(state: State) -> Self {
         Self {
-            inner: Arc::new(BlobRepoInner {
-                heads,
-                bookmarks: Arc::new(bookmarks),
-                blobstore,
-            }),
+            inner: Arc::new(state),
         }
     }
 }
 
-impl<Head, Book, Blob> BlobRepo<Head, Book, Blob>
+impl<State> BlobRepo<State>
 where
-    Blob: Blobstore<Key = String> + Clone + Sync,
+    State: BlobState,
 {
     pub fn get_file_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
-        fetch_file_blob_from_blobstore(self.inner.blobstore.clone(), *key)
+        fetch_file_blob_from_blobstore(self.inner.blobstore().clone(), *key)
     }
 }
 
-impl<Head, Book, Blob> Repo for BlobRepo<Head, Book, Blob>
+impl<State> Repo for BlobRepo<State>
 where
-    Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks<Value = NodeHash> + Sync,
-    Blob: Blobstore<Key = String> + Clone + Sync,
+    State: BlobState,
 {
     type Error = Error;
 
@@ -67,25 +55,25 @@ where
             repo: BlobRepo {
                 inner: self.inner.clone(),
             },
-            heads: self.inner.heads.heads().map_err(heads_err).boxify(),
+            heads: self.inner.heads().heads().map_err(heads_err).boxify(),
             state: BCState::Idle,
             seen: HashSet::new(),
         }.boxify()
     }
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.inner.heads.heads().map_err(heads_err).boxify()
+        self.inner.heads().heads().map_err(heads_err).boxify()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
-        BlobChangeset::load(&self.inner.blobstore, nodeid)
+        BlobChangeset::load(self.inner.blobstore(), nodeid)
             .map(|cs| cs.is_some())
             .boxify()
     }
 
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
         let nodeid = *nodeid;
-        BlobChangeset::load(&self.inner.blobstore, &nodeid)
+        BlobChangeset::load(self.inner.blobstore(), &nodeid)
             .and_then(move |cs| {
                 cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into())
             })
@@ -98,7 +86,7 @@ where
         nodeid: &NodeHash,
     ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         let nodeid = *nodeid;
-        BlobManifest::load(&self.inner.blobstore, &nodeid)
+        BlobManifest::load(self.inner.blobstore(), &nodeid)
             .and_then(move |mf| {
                 mf.ok_or(ErrorKind::ManifestMissing(nodeid).into())
             })
@@ -107,13 +95,13 @@ where
     }
 
     fn get_bookmarks(&self) -> Result<repo::BoxedBookmarks<Self::Error>> {
-        let res = self.inner.bookmarks.clone();
+        let res = self.inner.bookmarks().clone();
 
         Ok(BoxedBookmarks::new_cvt(res, bookmarks_err))
     }
 }
 
-impl<Head, Book, Blob> Clone for BlobRepo<Head, Book, Blob> {
+impl<State> Clone for BlobRepo<State> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -121,13 +109,11 @@ impl<Head, Book, Blob> Clone for BlobRepo<Head, Book, Blob> {
     }
 }
 
-pub struct BlobChangesetStream<Head, Book, Blob>
+pub struct BlobChangesetStream<State>
 where
-    Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks + Sync,
-    Blob: Blobstore<Key = String> + Clone + Sync,
+    State: BlobState,
 {
-    repo: BlobRepo<Head, Book, Blob>,
+    repo: BlobRepo<State>,
     seen: HashSet<NodeHash>,
     heads: BoxStream<NodeHash, Error>,
     state: BCState,
@@ -138,11 +124,9 @@ enum BCState {
     WaitCS(NodeHash, BoxFuture<Box<Changeset>, Error>),
 }
 
-impl<Head, Book, Blob> Stream for BlobChangesetStream<Head, Book, Blob>
+impl<State> Stream for BlobChangesetStream<State>
 where
-    Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks<Value = NodeHash> + Sync,
-    Blob: Blobstore<Key = String> + Clone + Sync,
+    State: BlobState,
 {
     type Item = NodeHash;
     type Error = Error;

@@ -5,10 +5,30 @@
 // GNU General Public License version 2 or any later version.
 
 use std::error;
+use std::fmt;
 
 use error_chain::ChainedError;
 
 use mercurial_types::{BlobHash, NodeHash};
+
+#[derive(Debug)]
+pub enum StateOpenError {
+    Heads,
+    Bookmarks,
+    Blobstore,
+}
+
+impl fmt::Display for StateOpenError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use StateOpenError::*;
+
+        match *self {
+            Heads => write!(f, "heads"),
+            Bookmarks => write!(f, "bookmarks"),
+            Blobstore => write!(f, "blob store"),
+        }
+    }
+}
 
 #[recursion_limit = "1024"]
 error_chain! {
@@ -21,6 +41,10 @@ error_chain! {
         }
         Bookmarks {
             description("Bookmarks error")
+        }
+        StateOpen(kind: StateOpenError) {
+            description("Error while opening state")
+            display("Error while opening state for {}", kind)
         }
         ChangesetMissing(nodeid: NodeHash) {
             description("Missing Changeset")

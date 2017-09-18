@@ -30,18 +30,11 @@ extern crate maplit;
 
 extern crate async_compression;
 extern crate blobrepo;
-extern crate blobstore;
-extern crate bookmarks;
-extern crate fileblob;
-extern crate filebookmarks;
-extern crate fileheads;
 extern crate futures_ext;
-extern crate heads;
 extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
-extern crate rocksblob;
 extern crate sshrelay;
 
 use std::io;

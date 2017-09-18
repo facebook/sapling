@@ -10,10 +10,6 @@ use bytes::Bytes;
 error_chain! {
     links {
         Blobrepo(::blobrepo::Error, ::blobrepo::ErrorKind);
-        Filebookmarks(::filebookmarks::Error, ::filebookmarks::ErrorKind);
-        Fileheads(::fileheads::Error, ::fileheads::ErrorKind);
-        Fileblob(::fileblob::Error, ::fileblob::ErrorKind);
-        Rocksblob(::rocksblob::Error, ::rocksblob::ErrorKind);
         HgProto(::hgproto::Error, ::hgproto::ErrorKind);
         Mercurial(::mercurial::Error, ::mercurial::ErrorKind);
     }

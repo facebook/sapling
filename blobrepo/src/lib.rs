@@ -22,14 +22,22 @@ extern crate heapsize_derive;
 
 extern crate blobstore;
 extern crate bookmarks;
+extern crate fileblob;
+extern crate filebookmarks;
+extern crate fileheads;
 extern crate futures_ext;
 extern crate heads;
+extern crate memblob;
+extern crate membookmarks;
+extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
+extern crate rocksblob;
 
 mod repo;
 mod changeset;
 mod manifest;
+mod state;
 mod file;
 mod errors;
 mod utils;
@@ -39,6 +47,8 @@ pub use errors::*;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
+pub use state::{BlobState, FilesBlobState, MemBlobState, RocksBlobState};
 //
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
+
 pub use utils::RawNodeBlob;

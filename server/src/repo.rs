@@ -21,18 +21,13 @@ use futures_ext::StreamExt;
 use slog::Logger;
 
 use async_compression::CompressorType;
-use bookmarks::Bookmarks;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_types::{percent_encode, BoxRepo, Changeset, NodeHash, Parents, Repo, NULL_HASH};
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
 
-use blobrepo::BlobRepo;
-use fileblob::Fileblob;
-use filebookmarks::FileBookmarks;
-use fileheads::FileHeads;
-use rocksblob::Rocksblob;
+use blobrepo::{BlobRepo, FilesBlobState, RocksBlobState};
 
 use errors::Result;
 
@@ -59,22 +54,11 @@ impl RepoType {
             }
 
             BlobFiles(ref path) => {
-                let heads = FileHeads::open(path.with_extension("heads"))?;
-                let bookmarks: FileBookmarks<NodeHash> =
-                    FileBookmarks::open(path.with_extension("books"))?;
-                let blobs: Fileblob<String, Vec<u8>> =
-                    Fileblob::open(path.with_extension("blobs"))?;
-
-                BoxRepo::new_with_cvterr(BlobRepo::new(heads, bookmarks, blobs), repo_chain)
+                BoxRepo::new_with_cvterr(BlobRepo::new(FilesBlobState::new(&path)?), repo_chain)
             }
 
             BlobRocks(ref path) => {
-                let heads = FileHeads::open(path.with_extension("heads"))?;
-                let bookmarks: FileBookmarks<NodeHash> =
-                    FileBookmarks::open(path.with_extension("books"))?;
-                let blobs = Rocksblob::open(path.with_extension("rocks"))?;
-
-                BoxRepo::new_with_cvterr(BlobRepo::new(heads, bookmarks, blobs), repo_chain)
+                BoxRepo::new_with_cvterr(BlobRepo::new(RocksBlobState::new(&path)?), repo_chain)
             }
         };
 

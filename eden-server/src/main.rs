@@ -19,16 +19,10 @@
 
 extern crate ascii;
 extern crate blobrepo;
-extern crate blobstore;
-extern crate bookmarks;
 extern crate clap;
 #[macro_use]
 extern crate error_chain;
-extern crate fileheads;
-extern crate fileblob;
-extern crate filebookmarks;
 extern crate futures;
-extern crate heads;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
@@ -48,12 +42,9 @@ use std::sync::Arc;
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
-use blobrepo::BlobRepo;
-use blobstore::Blobstore;
-use bookmarks::Bookmarks;
+use blobrepo::{BlobRepo, BlobState, FilesBlobState};
 use clap::App;
 use futures::{Future, Stream};
-use heads::Heads;
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
@@ -65,7 +56,7 @@ use errors::*;
 
 const EXIT_CODE: i32 = 1;
 
-type NameToRepo<Head, Book, Blob> = HashMap<String, Arc<BlobRepo<Head, Book, Blob>>>;
+type NameToRepo<State> = HashMap<String, Arc<BlobRepo<State>>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
 
 struct Route(Regex, UrlParseFunc);
@@ -154,18 +145,16 @@ impl TreeMetadata {
     }
 }
 
-struct EdenServer<Head, Book, Blob> {
-    name_to_repo: NameToRepo<Head, Book, Blob>,
+struct EdenServer<State> {
+    name_to_repo: NameToRepo<State>,
 }
 
-impl<Head, Book, Blob> EdenServer<Head, Book, Blob>
+impl<State> EdenServer<State>
 where
-    EdenServer<Head, Book, Blob>: Service,
-    Blob: blobstore::Blobstore<Key = String> + Clone + Sync,
-    Book: Bookmarks<Value = NodeHash> + Sync,
-    Head: Heads<Key = NodeHash> + Sync,
+    EdenServer<State>: Service,
+    State: BlobState,
 {
-    fn new(name_to_repo: NameToRepo<Head, Book, Blob>) -> EdenServer<Head, Book, Blob> {
+    fn new(name_to_repo: NameToRepo<State>) -> EdenServer<State> {
         EdenServer { name_to_repo }
     }
 
@@ -231,11 +220,9 @@ where
     }
 }
 
-impl<Head, Book, Blob> Service for EdenServer<Head, Book, Blob>
+impl<State> Service for EdenServer<State>
 where
-    Head: Heads<Key = NodeHash> + Sync,
-    Book: Bookmarks<Value = NodeHash> + Sync,
-    Blob: Blobstore<Key = String> + Clone + Sync,
+    State: BlobState,
 {
     type Request = Request;
     type Response = Response;
@@ -312,18 +299,9 @@ fn main() {
         .to_string();
 
     let blobrepo_folder = Path::new(blobrepo_folder);
-
-    let heads_path = blobrepo_folder.join("heads");
-    let bookmarks_path = blobrepo_folder.join("books");
-    let blobstore_path = blobrepo_folder.join("blobs");
-
-    let heads = fileheads::FileHeads::<NodeHash>::open(heads_path.clone())
-        .expect("couldn't open heads store");
-    let bookmarks = filebookmarks::FileBookmarks::<NodeHash>::open(bookmarks_path.clone())
-        .expect("counldn't open bookmarks store");
-    let blobstore = fileblob::Fileblob::<String, Vec<u8>>::open(blobstore_path.clone())
-        .expect("couldn't open blob store");
-    let repo = blobrepo::BlobRepo::new(heads, bookmarks, blobstore);
+    let repo = blobrepo::BlobRepo::new(
+        FilesBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
+    );
 
     let mut map = HashMap::new();
     map.insert(reponame, Arc::new(repo));
