@@ -39,3 +39,6 @@ pub use errors::*;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
+//
+// TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
+pub use utils::RawNodeBlob;

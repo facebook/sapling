@@ -4,8 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use ascii::{AsciiStr, AsciiString};
+
 use super::NodeHash;
 use hash::Sha1;
+
+use errors::*;
 
 /// Representation of a blob of data.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -27,6 +31,36 @@ pub enum Blob<T> {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub struct BlobHash(Sha1);
+
+impl BlobHash {
+    #[inline]
+    pub fn new(sha1: Sha1) -> BlobHash {
+        BlobHash(sha1)
+    }
+
+    /// Construct a `BlobHash` from an array of 20 bytes containing a SHA-1 (i.e. *not* a hash of
+    /// the bytes).
+    #[inline]
+    pub fn from_bytes(bytes: &[u8]) -> Result<BlobHash> {
+        Sha1::from_bytes(bytes).map(BlobHash)
+    }
+
+    /// Construct a `BlobHash` from a hex-encoded `AsciiStr`.
+    #[inline]
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<BlobHash> {
+        Sha1::from_ascii_str(s).map(BlobHash)
+    }
+
+    #[inline]
+    pub fn sha1(&self) -> &Sha1 {
+        &self.0
+    }
+
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
+}
 
 /// Compute the hash of a byte slice, resulting in a `BlobHash`
 impl<'a> From<&'a [u8]> for BlobHash {

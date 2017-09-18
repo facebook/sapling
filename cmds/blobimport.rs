@@ -60,19 +60,12 @@ use rocksblob::Rocksblob;
 use fileheads::FileHeads;
 use heads::Heads;
 
-use blobrepo::BlobChangeset;
+use blobrepo::{BlobChangeset, RawNodeBlob};
 
 use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{hash, Blob, Changeset, NodeHash, Parents, Type};
+use mercurial_types::{hash, Blob, BlobHash, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
-
-#[derive(Debug, Copy, Clone)]
-#[derive(Serialize, Deserialize)]
-pub struct NodeBlob {
-    parents: Parents,
-    blob: hash::Sha1,
-}
 
 #[derive(Debug, Eq, PartialEq)]
 enum BlobstoreType {
@@ -128,13 +121,14 @@ where
         .into_future();
     bytes
         .and_then(move |bytes| {
-            let nodeblob = NodeBlob {
+            let nodeblob = RawNodeBlob {
                 parents: parents,
-                blob: hash::Sha1::from(bytes.as_ref()),
+                blob: BlobHash::from(bytes.as_ref()),
             };
-            // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create blobs.
+            // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
+            // blobs.
             let nodekey = format!("node-{}.bincode", entry_hash);
-            let blobkey = format!("sha1-{}", nodeblob.blob);
+            let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
             let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
                 .expect("bincode serialize failed");
 

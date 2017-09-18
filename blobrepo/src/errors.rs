@@ -8,7 +8,7 @@ use std::error;
 
 use error_chain::ChainedError;
 
-use mercurial_types::{hash, NodeHash};
+use mercurial_types::{BlobHash, NodeHash};
 
 #[recursion_limit = "1024"]
 error_chain! {
@@ -34,9 +34,9 @@ error_chain! {
             description("Missing Node")
             display("Node id {} is missing", nodeid)
         }
-        ContentMissing(nodeid: NodeHash, sha1: hash::Sha1) {
+        ContentMissing(nodeid: NodeHash, blob_hash: BlobHash) {
             description("Missing Content")
-            display("Content missing nodeid {} sha1 {}", nodeid, sha1)
+            display("Content missing nodeid {} (blob hash {})", nodeid, blob_hash.sha1())
         }
     }
 
