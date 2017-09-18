@@ -42,7 +42,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node),
                                hex(totalhash[:4]), suffix)
 
-    cgversion = changegroup.safeversion(repo)
+    cgversion = changegroup.localversion(repo)
     comp = None
     if cgversion != '01':
         bundletype = "HG20"
