@@ -7,9 +7,8 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use futures::{Future, IntoFuture, Stream};
-use futures::future::BoxFuture;
-use futures::stream::{self, BoxStream};
+use futures::{IntoFuture, stream};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Blob, Entry, Manifest, Path, Type};
 use mercurial_types::blobnode::Parents;
@@ -69,7 +68,7 @@ where
         unimplemented!();
     }
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
-        stream::iter(self.entries.clone().into_iter().map(|e| Ok(e.boxed()))).boxed()
+        stream::iter_ok(self.entries.clone().into_iter().map(|e| e.boxed())).boxify()
     }
 }
 
@@ -116,7 +115,7 @@ where
         unimplemented!();
     }
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        Ok((self.content_factory)()).into_future().boxed()
+        Ok((self.content_factory)()).into_future().boxify()
     }
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
         unimplemented!();
