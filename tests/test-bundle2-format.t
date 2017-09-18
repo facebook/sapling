@@ -22,6 +22,7 @@ Create an extension to test bundle2 API
   > from mercurial import changegroup
   > from mercurial import error
   > from mercurial import obsolete
+  > from mercurial import pycompat
   > from mercurial import registrar
   > 
   > 
@@ -36,58 +37,58 @@ Create an extension to test bundle2 API
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > 
-  > ELEPHANTSSONG = """Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
+  > ELEPHANTSSONG = b"""Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
   > Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
   > Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko."""
   > assert len(ELEPHANTSSONG) == 178 # future test say 178 bytes, trust it.
   > 
-  > @bundle2.parthandler('test:song')
+  > @bundle2.parthandler(b'test:song')
   > def songhandler(op, part):
   >     """handle a "test:song" bundle2 part, printing the lyrics on stdin"""
-  >     op.ui.write('The choir starts singing:\n')
+  >     op.ui.write(b'The choir starts singing:\n')
   >     verses = 0
-  >     for line in part.read().split('\n'):
-  >         op.ui.write('    %s\n' % line)
+  >     for line in part.read().split(b'\n'):
+  >         op.ui.write(b'    %s\n' % line)
   >         verses += 1
-  >     op.records.add('song', {'verses': verses})
+  >     op.records.add(b'song', {b'verses': verses})
   > 
-  > @bundle2.parthandler('test:ping')
+  > @bundle2.parthandler(b'test:ping')
   > def pinghandler(op, part):
-  >     op.ui.write('received ping request (id %i)\n' % part.id)
-  >     if op.reply is not None and 'ping-pong' in op.reply.capabilities:
-  >         op.ui.write_err('replying to ping request (id %i)\n' % part.id)
-  >         op.reply.newpart('test:pong', [('in-reply-to', str(part.id))],
+  >     op.ui.write(b'received ping request (id %i)\n' % part.id)
+  >     if op.reply is not None and b'ping-pong' in op.reply.capabilities:
+  >         op.ui.write_err(b'replying to ping request (id %i)\n' % part.id)
+  >         op.reply.newpart(b'test:pong', [(b'in-reply-to', b'%d' % part.id)],
   >                          mandatory=False)
   > 
-  > @bundle2.parthandler('test:debugreply')
+  > @bundle2.parthandler(b'test:debugreply')
   > def debugreply(op, part):
   >     """print data about the capacity of the bundle reply"""
   >     if op.reply is None:
-  >         op.ui.write('debugreply: no reply\n')
+  >         op.ui.write(b'debugreply: no reply\n')
   >     else:
-  >         op.ui.write('debugreply: capabilities:\n')
+  >         op.ui.write(b'debugreply: capabilities:\n')
   >         for cap in sorted(op.reply.capabilities):
-  >             op.ui.write('debugreply:     %r\n' % cap)
+  >             op.ui.write(b'debugreply:     %r\n' % cap)
   >             for val in op.reply.capabilities[cap]:
-  >                 op.ui.write('debugreply:         %r\n' % val)
+  >                 op.ui.write(b'debugreply:         %r\n' % val)
   > 
   > @command(b'bundle2',
-  >          [('', 'param', [], 'stream level parameter'),
-  >           ('', 'unknown', False, 'include an unknown mandatory part in the bundle'),
-  >           ('', 'unknownparams', False, 'include an unknown part parameters in the bundle'),
-  >           ('', 'parts', False, 'include some arbitrary parts to the bundle'),
-  >           ('', 'reply', False, 'produce a reply bundle'),
-  >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
-  >           ('', 'genraise', False, 'includes a part that raise an exception during generation'),
-  >           ('', 'timeout', False, 'emulate a timeout during bundle generation'),
-  >           ('r', 'rev', [], 'includes those changeset in the bundle'),
-  >           ('', 'compress', '', 'compress the stream'),],
-  >          '[OUTPUTFILE]')
+  >          [(b'', b'param', [], b'stream level parameter'),
+  >           (b'', b'unknown', False, b'include an unknown mandatory part in the bundle'),
+  >           (b'', b'unknownparams', False, b'include an unknown part parameters in the bundle'),
+  >           (b'', b'parts', False, b'include some arbitrary parts to the bundle'),
+  >           (b'', b'reply', False, b'produce a reply bundle'),
+  >           (b'', b'pushrace', False, b'includes a check:head part with unknown nodes'),
+  >           (b'', b'genraise', False, b'includes a part that raise an exception during generation'),
+  >           (b'', b'timeout', False, b'emulate a timeout during bundle generation'),
+  >           (b'r', b'rev', [], b'includes those changeset in the bundle'),
+  >           (b'', b'compress', b'', b'compress the stream'),],
+  >          b'[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
   >     """write a bundle2 container on standard output"""
   >     bundler = bundle2.bundle20(ui)
   >     for p in opts['param']:
-  >         p = p.split('=', 1)
+  >         p = p.split(b'=', 1)
   >         try:
   >             bundler.addparam(*p)
   >         except ValueError as exc:
@@ -97,13 +98,13 @@ Create an extension to test bundle2 API
   >         bundler.setcompression(opts['compress'])
   > 
   >     if opts['reply']:
-  >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
-  >         bundler.newpart('replycaps', data=capsstring)
+  >         capsstring = b'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
+  >         bundler.newpart(b'replycaps', data=capsstring)
   > 
   >     if opts['pushrace']:
   >         # also serve to test the assignement of data outside of init
-  >         part = bundler.newpart('check:heads')
-  >         part.data = '01234567890123456789'
+  >         part = bundler.newpart(b'check:heads')
+  >         part.data = b'01234567890123456789'
   > 
   >     revs = opts['rev']
   >     if 'rev' in opts:
@@ -114,46 +115,46 @@ Create an extension to test bundle2 API
   >             headmissing = [c.node() for c in repo.set('heads(%ld)', revs)]
   >             headcommon  = [c.node() for c in repo.set('parents(%ld) - %ld', revs, revs)]
   >             outgoing = discovery.outgoing(repo, headcommon, headmissing)
-  >             cg = changegroup.makechangegroup(repo, outgoing, '01',
-  >                                              'test:bundle2')
-  >             bundler.newpart('changegroup', data=cg.getchunks(),
+  >             cg = changegroup.makechangegroup(repo, outgoing, b'01',
+  >                                              b'test:bundle2')
+  >             bundler.newpart(b'changegroup', data=cg.getchunks(),
   >                             mandatory=False)
   > 
   >     if opts['parts']:
-  >        bundler.newpart('test:empty', mandatory=False)
+  >        bundler.newpart(b'test:empty', mandatory=False)
   >        # add a second one to make sure we handle multiple parts
-  >        bundler.newpart('test:empty', mandatory=False)
-  >        bundler.newpart('test:song', data=ELEPHANTSSONG, mandatory=False)
-  >        bundler.newpart('test:debugreply', mandatory=False)
-  >        mathpart = bundler.newpart('test:math')
-  >        mathpart.addparam('pi', '3.14')
-  >        mathpart.addparam('e', '2.72')
-  >        mathpart.addparam('cooking', 'raw', mandatory=False)
-  >        mathpart.data = '42'
+  >        bundler.newpart(b'test:empty', mandatory=False)
+  >        bundler.newpart(b'test:song', data=ELEPHANTSSONG, mandatory=False)
+  >        bundler.newpart(b'test:debugreply', mandatory=False)
+  >        mathpart = bundler.newpart(b'test:math')
+  >        mathpart.addparam(b'pi', b'3.14')
+  >        mathpart.addparam(b'e', b'2.72')
+  >        mathpart.addparam(b'cooking', b'raw', mandatory=False)
+  >        mathpart.data = b'42'
   >        mathpart.mandatory = False
   >        # advisory known part with unknown mandatory param
-  >        bundler.newpart('test:song', [('randomparam','')], mandatory=False)
+  >        bundler.newpart(b'test:song', [(b'randomparam', b'')], mandatory=False)
   >     if opts['unknown']:
-  >        bundler.newpart('test:unknown', data='some random content')
+  >        bundler.newpart(b'test:unknown', data=b'some random content')
   >     if opts['unknownparams']:
-  >        bundler.newpart('test:song', [('randomparams', '')])
+  >        bundler.newpart(b'test:song', [(b'randomparams', b'')])
   >     if opts['parts']:
-  >        bundler.newpart('test:ping', mandatory=False)
+  >        bundler.newpart(b'test:ping', mandatory=False)
   >     if opts['genraise']:
   >        def genraise():
-  >            yield 'first line\n'
+  >            yield b'first line\n'
   >            raise RuntimeError('Someone set up us the bomb!')
-  >        bundler.newpart('output', data=genraise(), mandatory=False)
+  >        bundler.newpart(b'output', data=genraise(), mandatory=False)
   > 
   >     if path is None:
-  >        file = sys.stdout
+  >        file = pycompat.stdout
   >     else:
   >         file = open(path, 'wb')
   > 
   >     if opts['timeout']:
-  >         bundler.newpart('test:song', data=ELEPHANTSSONG, mandatory=False)
+  >         bundler.newpart(b'test:song', data=ELEPHANTSSONG, mandatory=False)
   >         for idx, junk in enumerate(bundler.getchunks()):
-  >             ui.write('%d chunk\n' % idx)
+  >             ui.write(b'%d chunk\n' % idx)
   >             if idx > 4:
   >                 # This throws a GeneratorExit inside the generator, which
   >                 # can cause problems if the exception-recovery code is
@@ -161,7 +162,7 @@ Create an extension to test bundle2 API
   >                 # occur while we're in the middle of a part.
   >                 break
   >         gc.collect()
-  >         ui.write('fake timeout complete.\n')
+  >         ui.write(b'fake timeout complete.\n')
   >         return
   >     try:
   >         for chunk in bundler.getchunks():
@@ -171,15 +172,15 @@ Create an extension to test bundle2 API
   >     finally:
   >         file.flush()
   > 
-  > @command(b'unbundle2', [], '')
+  > @command(b'unbundle2', [], b'')
   > def cmdunbundle2(ui, repo, replypath=None):
   >     """process a bundle2 stream from stdin on the current repo"""
   >     try:
   >         tr = None
   >         lock = repo.lock()
-  >         tr = repo.transaction('processbundle')
+  >         tr = repo.transaction(b'processbundle')
   >         try:
-  >             unbundler = bundle2.getunbundler(ui, sys.stdin)
+  >             unbundler = bundle2.getunbundler(ui, pycompat.stdin)
   >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
   >             tr.close()
   >         except error.BundleValueError as exc:
@@ -190,40 +191,40 @@ Create an extension to test bundle2 API
   >         if tr is not None:
   >             tr.release()
   >         lock.release()
-  >         remains = sys.stdin.read()
-  >         ui.write('%i unread bytes\n' % len(remains))
-  >     if op.records['song']:
-  >         totalverses = sum(r['verses'] for r in op.records['song'])
-  >         ui.write('%i total verses sung\n' % totalverses)
-  >     for rec in op.records['changegroup']:
-  >         ui.write('addchangegroup return: %i\n' % rec['return'])
+  >         remains = pycompat.stdin.read()
+  >         ui.write(b'%i unread bytes\n' % len(remains))
+  >     if op.records[b'song']:
+  >         totalverses = sum(r[b'verses'] for r in op.records[b'song'])
+  >         ui.write(b'%i total verses sung\n' % totalverses)
+  >     for rec in op.records[b'changegroup']:
+  >         ui.write(b'addchangegroup return: %i\n' % rec[b'return'])
   >     if op.reply is not None and replypath is not None:
   >         with open(replypath, 'wb') as file:
   >             for chunk in op.reply.getchunks():
   >                 file.write(chunk)
   > 
-  > @command(b'statbundle2', [], '')
+  > @command(b'statbundle2', [], b'')
   > def cmdstatbundle2(ui, repo):
   >     """print statistic on the bundle2 container read from stdin"""
-  >     unbundler = bundle2.getunbundler(ui, sys.stdin)
+  >     unbundler = bundle2.getunbundler(ui, pycompat.stdin)
   >     try:
   >         params = unbundler.params
   >     except error.BundleValueError as exc:
-  >        raise error.Abort('unknown parameters: %s' % exc)
-  >     ui.write('options count: %i\n' % len(params))
+  >        raise error.Abort(b'unknown parameters: %s' % exc)
+  >     ui.write(b'options count: %i\n' % len(params))
   >     for key in sorted(params):
-  >         ui.write('- %s\n' % key)
+  >         ui.write(b'- %s\n' % key)
   >         value = params[key]
   >         if value is not None:
-  >             ui.write('    %s\n' % value)
+  >             ui.write(b'    %s\n' % value)
   >     count = 0
   >     for p in unbundler.iterparts():
   >         count += 1
-  >         ui.write('  :%s:\n' % p.type)
-  >         ui.write('    mandatory: %i\n' % len(p.mandatoryparams))
-  >         ui.write('    advisory: %i\n' % len(p.advisoryparams))
-  >         ui.write('    payload: %i bytes\n' % len(p.read()))
-  >     ui.write('parts count:   %i\n' % count)
+  >         ui.write(b'  :%s:\n' % p.type)
+  >         ui.write(b'    mandatory: %i\n' % len(p.mandatoryparams))
+  >         ui.write(b'    advisory: %i\n' % len(p.advisoryparams))
+  >         ui.write(b'    payload: %i bytes\n' % len(p.read()))
+  >     ui.write(b'parts count:   %i\n' % count)
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
