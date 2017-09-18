@@ -303,6 +303,8 @@ def getparser():
         help="skip tests listed in the specified blacklist file")
     parser.add_option("--whitelist", action="append",
         help="always run tests listed in the specified whitelist file")
+    parser.add_option("--test-list", action="append",
+                      help="read tests to run from the specified file")
     parser.add_option("--changed", type="string",
         help="run tests that are changed in parent rev or working directory")
     parser.add_option("-C", "--annotate", action="store_true",
@@ -2279,6 +2281,10 @@ class TestRunner(object):
             # positional arguments are paths to test files to run, so
             # we make sure they're all bytestrings
             args = [_bytespath(a) for a in args]
+            if options.test_list is not None:
+                for listfile in options.test_list:
+                    with open(listfile, 'rb') as f:
+                        args.extend(t for t in f.read().splitlines() if t)
             self.options = options
 
             self._checktools()

@@ -981,6 +981,19 @@ Whitelist trumps blacklist
   python hash seed: * (glob)
   [1]
 
+Ensure that --test-list causes only the tests listed in that file to
+be executed.
+  $ echo test-success.t >> onlytest
+  $ rt --test-list=onlytest
+  .
+  # Ran 1 tests, 0 skipped, 0 failed.
+  $ echo test-bogus.t >> anothertest
+  $ rt --test-list=onlytest --test-list=anothertest
+  s.
+  Skipped test-bogus.t: Doesn't exist
+  # Ran 1 tests, 1 skipped, 0 failed.
+  $ rm onlytest anothertest
+
 test for --json
 ==================
 
