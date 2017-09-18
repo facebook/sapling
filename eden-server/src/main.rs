@@ -164,7 +164,6 @@ where
     Blob: blobstore::Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]> + Send,
     Book: Bookmarks<Value = NodeHash> + Sync,
-    Book::Error: std::error::Error,
     Head: Heads<Key = NodeHash> + Sync,
 {
     fn new(name_to_repo: NameToRepo<Head, Book, Blob>) -> EdenServer<Head, Book, Blob> {
@@ -237,7 +236,6 @@ impl<Head, Book, Blob> Service for EdenServer<Head, Book, Blob>
 where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
-    Book::Error: std::error::Error,
     Blob: Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]> + Send,
 {

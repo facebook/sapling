@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashSet;
-use std::error;
 use std::mem;
 use std::sync::Arc;
 
@@ -60,7 +59,6 @@ impl<Head, Book, Blob> Repo for BlobRepo<Head, Book, Blob>
 where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
-    Book::Error: error::Error,
     Blob: Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]> + Send,
 {
@@ -147,7 +145,6 @@ impl<Head, Book, Blob> Stream for BlobChangesetStream<Head, Book, Blob>
 where
     Head: Heads<Key = NodeHash> + Sync,
     Book: Bookmarks<Value = NodeHash> + Sync,
-    Book::Error: error::Error,
     Blob: Blobstore<Key = String> + Clone + Sync,
     Blob::ValueOut: AsRef<[u8]>,
 {

@@ -9,6 +9,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -41,7 +42,7 @@ impl Default for Version {
 /// of names to commit identifiers. Consistency is maintained using versioning.
 pub trait Bookmarks: Send + 'static {
     type Value: Send + 'static;
-    type Error: Send + 'static;
+    type Error: error::Error + Send + 'static;
 
     // Return type for getting a bookmark value. Must be a future that resolves to
     // a tuple of the current value and current version of the bookmark.
@@ -65,7 +66,7 @@ where
 impl<B, E> BoxedBookmarks<B, E>
 where
     B: Bookmarks,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     pub fn new(
         inner: B,
@@ -107,7 +108,7 @@ impl<B, E> Bookmarks for BoxedBookmarks<B, E>
 where
     B: Bookmarks + Send + 'static,
     B::Value: Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
 {
     type Error = E;
     type Value = B::Value;
@@ -127,7 +128,7 @@ where
 impl<V, E, G, K> Bookmarks for Box<Bookmarks<Value = V, Error = E, Get = G, Keys = K>>
 where
     V: Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
     G: Future<Item = Option<(V, Version)>, Error = E> + Send + 'static,
     K: Stream<Item = Vec<u8>, Error = E> + Send + 'static,
 {
@@ -149,7 +150,7 @@ where
 impl<V, E, G, K> Bookmarks for Arc<Bookmarks<Value = V, Error = E, Get = G, Keys = K> + Sync>
 where
     V: Send + 'static,
-    E: Send + 'static,
+    E: error::Error + Send + 'static,
     G: Future<Item = Option<(V, Version)>, Error = E> + Send + 'static,
     K: Stream<Item = Vec<u8>, Error = E> + Send + 'static,
 {
