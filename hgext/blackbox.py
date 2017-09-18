@@ -75,24 +75,6 @@ lastui = None
 
 def wrapui(ui):
     class blackboxui(ui.__class__):
-        def __init__(self, src=None):
-            super(blackboxui, self).__init__(src)
-            if src is None:
-                self._partialinit()
-            else:
-                self._bbinlog = False
-                self._bbrepo = getattr(src, '_bbrepo', None)
-
-        def _partialinit(self):
-            if self._bbvfs:
-                return
-            self._bbinlog = False
-            self._bbrepo = None
-
-        def copy(self):
-            self._partialinit()
-            return self.__class__(self)
-
         @property
         def _bbvfs(self):
             repo = getattr(self, '_bbrepo', None)
@@ -140,7 +122,6 @@ def wrapui(ui):
         def log(self, event, *msg, **opts):
             global lastui
             super(blackboxui, self).log(event, *msg, **opts)
-            self._partialinit()
 
             if not '*' in self.track and not event in self.track:
                 return
@@ -155,9 +136,10 @@ def wrapui(ui):
 
             if not ui:
                 return
-            if not lastui or ui._bbrepo:
+            repo = getattr(ui, '_bbrepo', None)
+            if not lastui or repo:
                 lastui = ui
-            if ui._bbinlog:
+            if getattr(ui, '_bbinlog', False):
                 # recursion and failure guard
                 return
             try:
@@ -169,8 +151,8 @@ def wrapui(ui):
                 formattedmsg = msg[0] % msg[1:]
                 rev = '(unknown)'
                 changed = ''
-                if ui._bbrepo:
-                    ctx = ui._bbrepo[None]
+                if repo:
+                    ctx = repo[None]
                     parents = ctx.parents()
                     rev = ('+'.join([hex(p.node()) for p in parents]))
                     if (ui.configbool('blackbox', 'dirty') and
@@ -196,7 +178,6 @@ def wrapui(ui):
                 pass
 
         def setrepo(self, repo):
-            self._bbinlog = False
             self._bbrepo = repo
 
     ui.__class__ = blackboxui
