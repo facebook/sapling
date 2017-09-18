@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 /// Mononoke endpoint for Eden.
 ///
@@ -23,6 +21,7 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate futures_ext;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
@@ -45,6 +44,7 @@ use std::os::unix::ffi::OsStringExt;
 use blobrepo::{BlobRepo, BlobState, FilesBlobState};
 use clap::App;
 use futures::{Future, Stream};
+use futures_ext::{FutureExt, StreamExt};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
@@ -114,7 +114,8 @@ lazy_static! {
     static ref ROUTES: Vec<Route> = {
         vec![
             // Workaround for https://github.com/rust-lang/rust/issues/20178
-            (r"^/(\w+)/cs/(\w+)/roottreemanifestid$", parse_root_treemanifest_id_url as UrlParseFunc),
+            (r"^/(\w+)/cs/(\w+)/roottreemanifestid$",
+            parse_root_treemanifest_id_url as UrlParseFunc),
             (r"^/(\w+)/treenode/(\w+)/$", parse_tree_content_url as UrlParseFunc),
             (r"^/(\w+)/blob/(\w+)/$", parse_blob_content_url as UrlParseFunc),
         ].into_iter().map(|(re, func)| Route(Regex::new(re).expect("bad regex"), func)).collect()
@@ -166,13 +167,13 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::future::err("unknown repo".into()).boxed();
+                return futures::future::err("unknown repo".into()).boxify();
             }
         };
         repo.get_changeset_by_nodeid(&hash)
             .map(|cs| cs.manifestid().to_string().into_bytes())
             .map_err(Error::from)
-            .boxed()
+            .boxify()
     }
 
     fn get_tree_content(
@@ -183,7 +184,7 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::stream::once(Err("unknown repo".into())).boxed();
+                return futures::stream::once(Err("unknown repo".into())).boxify();
             }
         };
 
@@ -197,7 +198,7 @@ where
             })
             .flatten_stream()
             .map_err(Error::from)
-            .boxed()
+            .boxify()
 
     }
 
@@ -209,14 +210,14 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::future::err("unknown repo".into()).boxed();
+                return futures::future::err("unknown repo".into()).boxify();
             }
         };
 
         repo.get_file_blob(hash)
             .map_err(Error::from)
             .and_then(|content| futures::future::ok(content))
-            .boxed()
+            .boxify()
     }
 }
 
@@ -227,7 +228,7 @@ where
     type Request = Request;
     type Response = Response;
     type Error = hyper::Error;
-    type Future = futures::future::BoxFuture<Self::Response, Self::Error>;
+    type Future = futures_ext::BoxFuture<Self::Response, Self::Error>;
 
     fn call(&self, req: Request) -> Self::Future {
         let mut resp = Response::new();
@@ -236,7 +237,7 @@ where
             Err(err) => {
                 resp.set_body(err.to_string());
                 resp.set_status(StatusCode::NotFound);
-                return futures::future::ok(resp).boxed();
+                return futures::future::ok(resp).boxify();
             }
         };
 
@@ -258,7 +259,7 @@ where
                         let x: serde_json::Value = entries.into();
                         x.to_string().into_bytes()
                     })
-                    .boxed()
+                    .boxify()
             },
             ParsedUrl::BlobContent(reponame, hash) => self.get_blob_content(reponame, &hash),
         };
@@ -275,7 +276,7 @@ where
                 };
                 futures::future::ok(resp)
             })
-            .boxed()
+            .boxify()
     }
 }
 
