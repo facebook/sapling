@@ -1521,10 +1521,10 @@ class ui(object):
 
         if total:
             pct = 100.0 * pos / total
-            self.debug('%s:%s %s/%s%s (%4.2f%%)\n'
+            self.debug('%s:%s %d/%d%s (%4.2f%%)\n'
                      % (topic, item, pos, total, unit, pct))
         else:
-            self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
+            self.debug('%s:%s %d%s\n' % (topic, item, pos, unit))
 
     def log(self, service, *msg, **opts):
         '''hook for logging facility extensions
