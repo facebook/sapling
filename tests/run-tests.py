@@ -2104,7 +2104,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     opts = ''
                     withhg = self._runner.options.with_hg
                     if withhg:
-                        opts += ' --with-hg=%s ' % shellquote(withhg)
+                        opts += ' --with-hg=%s ' % shellquote(_strpath(withhg))
                     rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
                                            test)
                     sub = subprocess.Popen(bisectcmd + ['--command', rtc],
