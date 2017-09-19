@@ -1295,12 +1295,12 @@ class EntryRevlog(revlog.revlog):
             ifh.write(data1)
             self.checkinlinesize(transaction, ifh)
 
-def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
+def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
     """Copy paste of revlog.addgroup, but we ensure that the revisions are
     added in linkrev order.
     """
     if not util.safehasattr(transaction, "repo"):
-        return orig(self, bundle, linkmapper, transaction,
+        return orig(self, deltas, linkmapper, transaction,
                     addrevisioncb=addrevisioncb)
 
     # track the base of the current delta log
@@ -1330,21 +1330,24 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
         reorder = False
 
         # Read all of the data from the stream
-        chain = None
-        while True:
-            chunkdata = bundle.deltachunk(chain)
-            if not chunkdata:
-                break
+        for data in deltas:
+            node, p1, p2, linknode, deltabase, delta, flags = data
 
-            node = chunkdata['node']
-            cs = chunkdata['cs']
-            link = linkmapper(cs)
+            link = linkmapper(linknode)
             if link < lastlinkrev:
                 reorder = True
             lastlinkrev = link
+            chunkdata = {
+                'node': node,
+                'p1': p1,
+                'p2': p2,
+                'cs': linknode,
+                'deltabase': deltabase,
+                'delta': delta,
+                'flags': flags,
+            }
             chunkdatas.append((link, chunkdata))
             chunkmap[node] = chunkdata
-            chain = node
 
         # If we noticed a incoming rev was not in linkrev order
         # we reorder all the revs appropriately.
