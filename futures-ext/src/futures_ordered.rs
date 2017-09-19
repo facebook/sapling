@@ -152,7 +152,7 @@ mod test {
 
     impl<T> Future for DelayedFuture<T> {
         type Item = ();
-        type Error = (); // this could be ! once that's stabilized
+        type Error = !;
 
         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
             self.count -= 1;

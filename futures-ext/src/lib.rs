@@ -7,6 +7,7 @@
 #![deny(warnings)]
 // TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
+#![feature(never_type)]
 
 #[cfg(test)]
 #[macro_use]
