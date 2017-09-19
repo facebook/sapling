@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+from .i18n import _
 from . import (
     configitems,
     error,
@@ -131,13 +132,35 @@ class command(_funcregistrarbase):
     command line arguments. If True, arguments will be examined for potential
     repository locations. See ``findrepo()``. If a repository is found, it
     will be used.
+
+    There are three constants in the class which tells what type of the command
+    that is. That information will be helpful at various places. It will be also
+    be used to decide what level of access the command has on hidden commits.
+    The constants are:
+
+    unrecoverablewrite is for those write commands which can't be recovered like
+    push.
+    recoverablewrite is for write commands which can be recovered like commit.
+    readonly is for commands which are read only.
     """
 
+    unrecoverablewrite = "unrecoverable"
+    recoverablewrite = "recoverable"
+    readonly = "readonly"
+
     def _doregister(self, func, name, options=(), synopsis=None,
-                    norepo=False, optionalrepo=False, inferrepo=False):
+                    norepo=False, optionalrepo=False, inferrepo=False,
+                    cmdtype=unrecoverablewrite):
+
+        possiblecmdtypes = set([self.unrecoverablewrite, self.recoverablewrite,
+                                self.readonly])
+        if cmdtype not in possiblecmdtypes:
+            raise error.ProgrammingError(_("unknown cmdtype value '%s' for "
+                                            "'%s' command") % (cmdtype, name))
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
+        func.cmdtype = cmdtype
         if synopsis:
             self._table[name] = func, list(options), synopsis
         else:
