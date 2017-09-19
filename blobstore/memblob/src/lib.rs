@@ -4,9 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+#![feature(never_type)]
+
 extern crate blobstore;
-#[macro_use]
-extern crate error_chain;
 extern crate futures;
 
 use std::collections::HashMap;
@@ -15,9 +16,6 @@ use std::sync::{Arc, Mutex};
 use futures::future::{FutureResult, IntoFuture};
 
 use blobstore::Blobstore;
-
-mod errors;
-pub use errors::*;
 
 /// In-memory "blob store"
 ///
@@ -37,7 +35,7 @@ impl Blobstore for Memblob {
     type Key = String;
     type ValueIn = Vec<u8>;
     type ValueOut = Self::ValueIn;
-    type Error = Error;
+    type Error = !;
     type PutBlob = FutureResult<(), Self::Error>;
     type GetBlob = FutureResult<Option<Self::ValueOut>, Self::Error>;
 
@@ -67,10 +65,8 @@ mod test {
         let res = mb.put("hello".into(), vec![1, 2, 3, 4, 5]);
         assert!(res.wait().is_ok());
 
-        match mb.get(&"hello".into()).wait() {
-            Ok(v) => assert_eq!(v, Some(vec![1, 2, 3, 4, 5])),
-            Err(err) => panic!("Unexpected error {:?}", err),
-        }
+        let Ok(v) = mb.get(&"hello".into()).wait();
+        assert_eq!(v, Some(vec![1, 2, 3, 4, 5]));
     }
 
     #[test]
@@ -80,7 +76,6 @@ mod test {
         match mb.get(&"hello".into()).wait() {
             Ok(None) => (),
             Ok(v) => panic!("Unexpected success {:?}", v),
-            Err(err) => panic!("Unexpected error {:?}", err),
         }
     }
 }
