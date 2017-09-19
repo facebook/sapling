@@ -7,9 +7,8 @@
 #![deny(warnings)]
 // TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
+#![feature(never_type)]
 
-#[macro_use]
-extern crate error_chain;
 extern crate futures;
 extern crate heads;
 
@@ -21,12 +20,6 @@ use futures::stream::{iter, BoxStream, Stream};
 use std::collections::HashSet;
 
 use heads::Heads;
-
-mod errors {
-    // Create Error, ErrorKind, ResultExt, and Result types.
-    error_chain!{}
-}
-use errors::*;
 
 /// Generic, in-memory heads store backed by a HashSet, intended to be used in tests.
 pub struct MemHeads<T: Hash + Eq + Clone> {
@@ -44,7 +37,7 @@ impl<T: Hash + Eq + Clone + Send> MemHeads<T> {
 
 impl<T: Hash + Eq + Clone + Send + 'static> Heads for MemHeads<T> {
     type Key = T;
-    type Error = Error;
+    type Error = !;
 
     type Unit = FutureResult<(), Self::Error>;
     type Bool = FutureResult<bool, Self::Error>;
