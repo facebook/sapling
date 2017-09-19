@@ -14,7 +14,6 @@
 /// ```
 /// /REPO/cs/HASH/roottreemanifestid - returns root tree manifest node for the HASH
 /// ```
-
 extern crate ascii;
 extern crate blobrepo;
 extern crate clap;
@@ -27,19 +26,19 @@ extern crate hyper;
 extern crate lazy_static;
 extern crate mercurial_types;
 extern crate regex;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 extern crate serde_json;
 
 use std::collections::HashMap;
 use std::error;
+use std::ffi::OsString;
+use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
-use std::ffi::OsString;
-use std::os::unix::ffi::OsStringExt;
 
 use blobrepo::{BlobRepo, BlobState, FilesBlobState};
 use clap::App;
@@ -67,7 +66,6 @@ where
     <T as FromStr>::Err: ToString,
     errors::Error: std::convert::From<<T as std::str::FromStr>::Err>,
 {
-
     let s = caps.get(index)
         .expect("incorrect url parsing regex")
         .as_str();
@@ -127,8 +125,7 @@ lazy_static! {
 struct TreeMetadata {
     hash: NodeHash,
     path: PathBuf,
-    #[serde(rename = "type")]
-    ty: mercurial_types::Type,
+    #[serde(rename = "type")] ty: mercurial_types::Type,
     size: Option<usize>,
 }
 
@@ -190,16 +187,13 @@ where
 
         repo.get_manifest_by_nodeid(&hash)
             .map(|manifest| {
-                manifest
-                    .list()
-                    .and_then(|entry| {
-                        entry.get_size().map(|size| TreeMetadata::new(size, entry))
-                    })
+                manifest.list().and_then(|entry| {
+                    entry.get_size().map(|size| TreeMetadata::new(size, entry))
+                })
             })
             .flatten_stream()
             .map_err(Error::from)
             .boxify()
-
     }
 
     fn get_blob_content(
@@ -245,22 +239,20 @@ where
             ParsedUrl::RootTreeManifestId(reponame, hash) => {
                 self.get_root_tree_manifest_id(reponame, &hash)
             }
-            ParsedUrl::TreeContent(reponame, hash) => {
-                self.get_tree_content(reponame, &hash)
-                    .map(|metadata| {
-                            let err_msg = format!(
-                                "failed to get metadata for {}",
-                                metadata.path.to_string_lossy()
-                            );
-                            serde_json::to_value(&metadata).unwrap_or(err_msg.into())
-                        })
-                    .collect()
-                    .map(|entries| {
-                        let x: serde_json::Value = entries.into();
-                        x.to_string().into_bytes()
-                    })
-                    .boxify()
-            },
+            ParsedUrl::TreeContent(reponame, hash) => self.get_tree_content(reponame, &hash)
+                .map(|metadata| {
+                    let err_msg = format!(
+                        "failed to get metadata for {}",
+                        metadata.path.to_string_lossy()
+                    );
+                    serde_json::to_value(&metadata).unwrap_or(err_msg.into())
+                })
+                .collect()
+                .map(|entries| {
+                    let x: serde_json::Value = entries.into();
+                    x.to_string().into_bytes()
+                })
+                .boxify(),
             ParsedUrl::BlobContent(reponame, hash) => self.get_blob_content(reponame, &hash),
         };
         result_future
@@ -310,12 +302,10 @@ fn main() {
     let func = move || Ok(EdenServer::new(map.clone()));
     if let Ok(parsed_addr) = addr {
         match Http::new().bind(&parsed_addr, func) {
-            Ok(server) => {
-                if let Err(error) = server.run() {
-                    println!("Error while running service: {}", error);
-                    std::process::exit(EXIT_CODE);
-                }
-            }
+            Ok(server) => if let Err(error) = server.run() {
+                println!("Error while running service: {}", error);
+                std::process::exit(EXIT_CODE);
+            },
             Err(error) => {
                 println!("Failed to run server: {}", error);
                 std::process::exit(EXIT_CODE);
