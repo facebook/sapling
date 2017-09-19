@@ -333,12 +333,12 @@ def evalboolean(context, mapping, arg):
     # empty dict/list should be False as they are expected to be ''
     return bool(stringify(thing))
 
-def evalinteger(context, mapping, arg, err):
+def evalinteger(context, mapping, arg, err=None):
     v = evalfuncarg(context, mapping, arg)
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise error.ParseError(err)
+        raise error.ParseError(err or _('not an integer'))
 
 def evalstring(context, mapping, arg):
     return stringify(evalrawexp(context, mapping, arg))
@@ -352,6 +352,20 @@ def evalstringliteral(context, mapping, arg):
     else:
         thing = func(context, mapping, data)
     return stringify(thing)
+
+_evalfuncbytype = {
+    bool: evalboolean,
+    bytes: evalstring,
+    int: evalinteger,
+}
+
+def evalastype(context, mapping, arg, typ):
+    """Evaluate given argument and coerce its type"""
+    try:
+        f = _evalfuncbytype[typ]
+    except KeyError:
+        raise error.ProgrammingError('invalid type specified: %r' % typ)
+    return f(context, mapping, arg)
 
 def runinteger(context, mapping, data):
     return int(data)
@@ -782,8 +796,9 @@ def ifcontains(context, mapping, args):
         # i18n: "ifcontains" is a keyword
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
-    needle = evalstring(context, mapping, args[0])
     haystack = evalfuncarg(context, mapping, args[1])
+    needle = evalastype(context, mapping, args[0],
+                        getattr(haystack, 'keytype', None) or bytes)
 
     if needle in haystack:
         yield evalrawexp(context, mapping, args[2])

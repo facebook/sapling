@@ -37,12 +37,13 @@ class _hybrid(object):
     - "{files|json}"
     """
 
-    def __init__(self, gen, values, makemap, joinfmt):
+    def __init__(self, gen, values, makemap, joinfmt, keytype=None):
         if gen is not None:
             self.gen = gen  # generator or function returning generator
         self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
+        self.keytype = keytype  # hint for 'x in y' where type(x) is unresolved
     def gen(self):
         """Default generator to stringify this as {join(self, ' ')}"""
         for i, x in enumerate(self._values):
@@ -788,15 +789,14 @@ def showparents(**args):
     repo = args['repo']
     ctx = args['ctx']
     pctxs = scmutil.meaningfulparents(repo, ctx)
-    # ifcontains() needs a list of str
-    prevs = ["%d" % p.rev() for p in pctxs]
+    prevs = [p.rev() for p in pctxs]
     parents = [[('rev', p.rev()),
                 ('node', p.hex()),
                 ('phase', p.phasestr())]
                for p in pctxs]
     f = _showlist('parent', parents, args)
-    return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
-                   lambda x: scmutil.formatchangeid(repo[int(x)]))
+    return _hybrid(f, prevs, lambda x: {'ctx': repo[x], 'revcache': {}},
+                   lambda x: scmutil.formatchangeid(repo[x]), keytype=int)
 
 @templatekeyword('phase')
 def showphase(repo, ctx, templ, **args):
@@ -818,12 +818,10 @@ def showrevslist(name, revs, **args):
     be evaluated"""
     args = pycompat.byteskwargs(args)
     repo = args['ctx'].repo()
-    # ifcontains() needs a list of str
-    revs = ["%d" % r for r in revs]
-    f = _showlist(name, revs, args)
+    f = _showlist(name, ['%d' % r for r in revs], args)
     return _hybrid(f, revs,
-                   lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},
-                   pycompat.identity)
+                   lambda x: {name: x, 'ctx': repo[x], 'revcache': {}},
+                   pycompat.identity, keytype=int)
 
 @templatekeyword('subrepos')
 def showsubrepos(**args):

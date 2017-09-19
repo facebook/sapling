@@ -3147,6 +3147,13 @@ Test manifest/get() can be join()-ed as before, though it's silly:
   $ hg log -R latesttag -r tip -T '{join(get(extras, "branch"), "")}\n'
   default
 
+Test min/max of integers
+
+  $ hg log -R latesttag -l1 -T '{min(revset("9:10"))}\n'
+  9
+  $ hg log -R latesttag -l1 -T '{max(revset("9:10"))}\n'
+  10
+
 Test dot operator precedence:
 
   $ hg debugtemplate -R latesttag -r0 -v '{manifest.node|short}\n'
