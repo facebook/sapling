@@ -7,10 +7,9 @@
 #![deny(warnings)]
 // TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
+#![feature(never_type)]
 
 extern crate bookmarks;
-#[macro_use]
-extern crate error_chain;
 extern crate futures;
 
 use std::collections::HashMap;
@@ -22,12 +21,6 @@ use futures::future::{FutureResult, ok};
 use futures::stream::{BoxStream, Stream, iter};
 
 use bookmarks::{Bookmarks, BookmarksMut, Version};
-
-mod errors {
-    // Create Error, ErrorKind, ResultExt, and Result types.
-    error_chain!{}
-}
-use errors::*;
 
 static VERSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -51,7 +44,7 @@ where
     V: Clone + Send + 'static,
 {
     type Value = V;
-    type Error = Error;
+    type Error = !;
 
     type Get = FutureResult<Option<(Self::Value, Version)>, Self::Error>;
     type Keys = BoxStream<Vec<u8>, Self::Error>;
