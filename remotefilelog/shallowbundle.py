@@ -224,6 +224,30 @@ if util.safehasattr(changegroup, 'cg2packer'):
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
                                 units=units)
 
+if util.safehasattr(changegroup, 'cg3packer'):
+    @shallowutil.interposeclass(changegroup, 'cg3packer')
+    class shallowcg3packer(changegroup.cg3packer):
+        def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
+                              mfs, fnodes, source):
+            chunks = super(shallowcg3packer, self).generatemanifests(
+                commonrevs,
+                clrevorder,
+                fastpathlinkrev,
+                mfs,
+                fnodes,
+                source,
+            )
+            for chunk in chunks:
+                yield chunk
+
+            sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
+                                                True)
+            # If we're not sending flat manifests, then the subclass
+            # generatemanifests call did not add the appropriate closing chunk
+            # for a changegroup3.
+            if not sendflat:
+                yield self._manifestsdone()
+
 # Unused except in older versions of Mercurial
 def getchangegroup(orig, repo, source, outgoing, bundlecaps=None, version='01'):
     def origmakechangegroup(repo, outgoing, version, source):

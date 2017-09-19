@@ -670,9 +670,12 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
-        chain = None
-        for chunkdata in iter(lambda: self.deltachunk(chain), {}):
-            chain = chunkdata['node']
+        for delta in self.deltaiter():
+            pass
+        # Handle sub-tree manifests
+        for chunkdata in iter(self.filelogheader, {}):
+            for delta in self.deltaiter():
+                pass
         return
     return orig(self, repo, *args, **kwargs)
 

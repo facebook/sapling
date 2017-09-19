@@ -262,10 +262,13 @@ def onetimeclientsetup(ui):
         # Mercurial >= 3.3
         packermap01 = packermap['01']
         packermap02 = packermap['02']
+        packermap03 = packermap['03']
         packermap['01'] = (shallowbundle.shallowcg1packer,
                                        packermap01[1])
         packermap['02'] = (shallowbundle.shallowcg2packer,
                                        packermap02[1])
+        packermap['03'] = (shallowbundle.shallowcg3packer,
+                                       packermap03[1])
     if util.safehasattr(changegroup, '_addchangegroupfiles'):
         fn = '_addchangegroupfiles' # hg >= 3.6
     else:

@@ -269,7 +269,7 @@ Test peer-to-peer push/pull of tree only commits
 
 # Test pulling from a treeonly peer
   $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup)"
-  bundle2-input-part: total payload size 823
+  bundle2-input-part: total payload size 827
   bundle2-input-part: total payload size 171
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
@@ -363,7 +363,7 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files (+1 heads)
+  added 1 changesets with 1 changes to 1 files (+1 heads)
 
   $ cd ../master
 - Verify the received tree was written down as a flat
