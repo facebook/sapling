@@ -1265,7 +1265,7 @@ class TTest(Test):
         if ret != 0:
             return False, stdout
 
-        if 'slow' in reqs:
+        if b'slow' in reqs:
             self._timeout = self._slowtimeout
         return True, None
 
