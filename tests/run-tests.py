@@ -659,10 +659,10 @@ class Test(unittest.TestCase):
 
     def __init__(self, path, outputdir, tmpdir, keeptmpdir=False,
                  debug=False,
-                 timeout=defaults['timeout'],
-                 startport=defaults['port'], extraconfigopts=None,
+                 timeout=None,
+                 startport=None, extraconfigopts=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
-                 slowtimeout=defaults['slowtimeout'], usechg=False,
+                 slowtimeout=None, usechg=False,
                  useipv6=False):
         """Create a test from parameters.
 
@@ -694,6 +694,12 @@ class Test(unittest.TestCase):
 
         shell is the shell to execute tests in.
         """
+        if timeout is None:
+            timeout = defaults['timeout']
+        if startport is None:
+            startport = defaults['port']
+        if slowtimeout is None:
+            slowtimeout = defaults['slowtimeout']
         self.path = path
         self.bname = os.path.basename(path)
         self.name = _strpath(self.bname)
