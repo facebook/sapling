@@ -2194,7 +2194,8 @@ class TextTestRunner(unittest.TextTestRunner):
             # the skip message as a text node instead.
             t = doc.createElement('testcase')
             t.setAttribute('name', tc.name)
-            message = cdatasafe(message).decode('utf-8', 'replace')
+            binmessage = message.encode('utf-8')
+            message = cdatasafe(binmessage).decode('utf-8', 'replace')
             cd = doc.createCDATASection(message)
             skipelem = doc.createElement('skipped')
             skipelem.appendChild(cd)
