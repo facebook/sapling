@@ -44,6 +44,11 @@ class TreeInode : public InodeBase {
  public:
   enum : int { WRONG_TYPE_ERRNO = ENOTDIR };
 
+  enum class Recurse {
+    SHALLOW,
+    DEEP,
+  };
+
   /**
    * Represents a directory entry.
    *
@@ -287,6 +292,7 @@ class TreeInode : public InodeBase {
   ~TreeInode() override;
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  folly::Future<folly::Unit> prefetch() override;
   void updateOverlayHeader() const override;
   fusell::Dispatcher::Attr getAttrLocked(const Dir* contents);
 
@@ -501,7 +507,8 @@ class TreeInode : public InodeBase {
    * Returns a Future that completes once all materialized inodes have been
    * loaded.
    */
-  folly::Future<folly::Unit> loadMaterializedChildren();
+  folly::Future<folly::Unit> loadMaterializedChildren(
+      Recurse recurse = Recurse::DEEP);
 
   /*
    * Update a tree entry as part of a checkout operation.

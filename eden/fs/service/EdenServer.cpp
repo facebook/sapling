@@ -354,7 +354,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               addToMountPoints(edenMount);
 
               // Start up the fuse workers.
-              return edenMount->startFuse(getMainEventBase(), FLAGS_debug);
+              return edenMount->startFuse(
+                  getMainEventBase(), threadPool_, FLAGS_debug);
             })
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture

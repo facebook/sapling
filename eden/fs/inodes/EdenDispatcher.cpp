@@ -91,6 +91,8 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
       .then([](const InodePtr& inode) {
         return inode->getattr().then([inode](fusell::Dispatcher::Attr attr) {
           inode->incFuseRefcount();
+          // Preserve inode's life for the duration of the prefetch.
+          inode->prefetch().ensure([inode] {});
           return computeEntryParam(inode->getNodeId(), attr);
         });
       });

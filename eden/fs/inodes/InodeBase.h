@@ -117,6 +117,15 @@ class InodeBase {
   virtual folly::Future<folly::Unit> access(int mask);
 
   /**
+   * Called when this Inode is retrieved so it has a chance to prefetch and
+   * cache any related objects.  prefetch() is called synchronously from
+   * EdenDispatcher::lookup, so the inode is responsible for scheduling work in
+   * the background as appropriate.  Note that the inode lifetime is guaranteed
+   * to be maintained until the resulting future is completed.
+   */
+  virtual folly::Future<folly::Unit> prefetch() = 0;
+
+  /**
    * If the file is materialized, we update the in-memory timestamps of
    * materialized file's header. This is called while unloading an inode of
    * materialized file during unmount.

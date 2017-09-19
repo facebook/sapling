@@ -330,7 +330,7 @@ class InodeMap {
    *   inode, or false if this child is already being loaded.
    */
   bool shouldLoadChild(
-      TreeInode* parent,
+      const TreeInode* parent,
       PathComponentPiece name,
       fuse_ino_t childInode,
       folly::Promise<InodePtr> promise);
@@ -362,7 +362,7 @@ class InodeMap {
    * @return Returns the newly allocated child inode number.
    */
   fuse_ino_t newChildLoadStarted(
-      TreeInode* parent,
+      const TreeInode* parent,
       PathComponentPiece name,
       folly::Promise<InodePtr> promise);
 

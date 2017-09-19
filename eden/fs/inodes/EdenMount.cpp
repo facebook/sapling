@@ -508,13 +508,15 @@ folly::Future<folly::File> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
+    std::shared_ptr<folly::Executor> threadPool,
     bool debug) {
-  return folly::makeFutureWith([this, eventBase, debug] {
+  return folly::makeFutureWith([this, eventBase, threadPool, debug] {
     if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
       throw std::runtime_error("mount point has already been started");
     }
 
     eventBase_ = eventBase;
+    threadPool_ = threadPool;
 
     auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
     channel_ = std::make_unique<fusell::FuseChannel>(

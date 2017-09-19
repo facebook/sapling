@@ -71,6 +71,7 @@ cpp_library(
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
+        "@/folly/io/async:async",
         "@/thrift/lib/cpp2/protocol:protocol",
         "@/wangle:wangle",
     ],

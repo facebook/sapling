@@ -13,6 +13,7 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/io/async/EventBase.h>
 #include <openssl/sha.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileHandle.h"
@@ -699,6 +700,15 @@ void FileInode::storeSha1(
 InodeBase::InodeTimestamps FileInode::getTimestamps() const {
   auto state = state_.rlock();
   return state->timeStamps;
+}
+
+folly::Future<folly::Unit> FileInode::prefetch() {
+  // Careful to only hold the lock while fetching a copy of the hash.
+  return folly::via(getMount()->getThreadPool().get()).then([this] {
+    if (auto hash = state_.rlock()->hash) {
+      getObjectStore()->getBlobMetadata(*hash);
+    }
+  });
 }
 
 void FileInode::updateOverlayHeader() const {

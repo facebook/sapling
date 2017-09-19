@@ -13,6 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/io/async/EventBase.h>
 #include <vector>
 
 #include "eden/fs/fuse/FuseChannel.h"
@@ -2542,7 +2543,8 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   return future;
 }
 
-folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
+folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
+    Recurse recurse) {
   std::vector<IncompleteInodeLoad> pendingLoads;
   std::vector<Future<InodePtr>> inodeFutures;
 
@@ -2584,7 +2586,10 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren() {
   // children directories when each child inode becomes ready.
   std::vector<Future<folly::Unit>> results;
   for (auto& future : inodeFutures) {
-    results.emplace_back(future.then(recursivelyLoadMaterializedChildren));
+    results.emplace_back(
+        recurse == Recurse::DEEP
+            ? future.then(recursivelyLoadMaterializedChildren)
+            : future.unit());
   }
 
   return folly::collectAll(results).unit();
@@ -2839,6 +2844,12 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
 InodeBase::InodeTimestamps TreeInode::getTimestamps() const {
   auto contents = contents_.rlock();
   return contents->timeStamps;
+}
+
+folly::Future<folly::Unit> TreeInode::prefetch() {
+  return folly::via(getMount()->getThreadPool().get()).then([this] {
+    return loadMaterializedChildren(Recurse::SHALLOW);
+  });
 }
 
 void TreeInode::updateOverlayHeader() const {

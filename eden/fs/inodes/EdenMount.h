@@ -194,6 +194,20 @@ class EdenMount {
     return config_.get();
   }
 
+  /**
+   * Returns the EventBase for this mount.
+   */
+  folly::EventBase* getEventBase() const {
+    return eventBase_;
+  }
+
+  /**
+   * Returns the server's thread pool.
+   */
+  const std::shared_ptr<folly::Executor>& getThreadPool() const {
+    return threadPool_;
+  }
+
   /** Get the TreeInode for the root of the mount. */
   TreeInodePtr getRootInode() const;
 
@@ -339,6 +353,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
       folly::EventBase* eventBase,
+      std::shared_ptr<folly::Executor> threadPool,
       bool debug);
 
   /**
@@ -611,6 +626,11 @@ class EdenMount {
    * promises when transitioning to FUSE_DONE.
    */
   folly::EventBase* eventBase_{nullptr};
+
+  /**
+   * The server's thread pool passed into startFuse().
+   */
+  std::shared_ptr<folly::Executor> threadPool_;
 };
 
 /**

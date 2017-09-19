@@ -614,12 +614,12 @@ void InodeMap::unloadInode(
 }
 
 bool InodeMap::shouldLoadChild(
-    TreeInode* parent,
+    const TreeInode* parent,
     PathComponentPiece name,
     fuse_ino_t childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-  CHECK(childInode < data->nextInodeNumber_);
+  CHECK_LT(childInode, data->nextInodeNumber_);
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
@@ -651,7 +651,7 @@ bool InodeMap::shouldLoadChild(
 }
 
 fuse_ino_t InodeMap::newChildLoadStarted(
-    TreeInode* parent,
+    const TreeInode* parent,
     PathComponentPiece name,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();

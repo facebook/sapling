@@ -69,6 +69,8 @@ class FileInode : public InodeBase {
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
 
+  folly::Future<folly::Unit> prefetch() override;
+
   /**
    * Updates inmemory timestamps in FileInode and TreeInode to the overlay file.
    */
