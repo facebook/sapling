@@ -136,9 +136,13 @@ def parse_where(client, depotname):
             util.shellquote(client),
             util.shellquote(depotname))
     try:
-        with retries(num=3, sleeps=0.3):
+        stdout = ''
+        @retry(num=3, sleeps=0.3)
+        def helper():
+            global stdout
             stdout = util.popen(cmd, mode='rb')
             return marshal.load(stdout)
+        return helper()
     except Exception:
         raise P4Exception(stdout)
 
@@ -151,19 +155,25 @@ def get_file(path, rev=None, clnum=None):
         r = '@%d' % clnum
 
     cmd = 'p4 print -q %s%s' % (util.shellquote(path), r)
-    with retries(num=5, sleeps=0.3):
+    @retry(num=5, sleeps=0.3)
+    def helper():
         stdout = util.popen(cmd, mode='rb')
         content = stdout.read()
         return content
+    return helper()
 
 def parse_cl(clnum):
     """Returns a description of a change given by the clnum. CLnum can be an
     original CL before renaming"""
     cmd = 'p4 -ztag -G describe -O %d' % clnum
     try:
-        with retries(num=3, sleeps=0.3):
+        stdout = ''
+        @retry(num=3, sleeps=0.3)
+        def helper():
+            global stdout
             stdout = util.popen(cmd, mode='rb')
             return marshal.load(stdout)
+        return helper()
     except Exception:
         raise P4Exception(stdout)
 
@@ -180,9 +190,15 @@ def parse_usermap():
 def parse_client(client):
     cmd = 'p4 -G client -o %s' % util.shellquote(client)
     try:
-        with retries(num=3, sleeps=0.3):
+        stdout = ''
+        clientspec = []
+        @retry(num=3, sleeps=0.3)
+        def helper():
+            global stdout
+            global clientspec
             stdout = util.popen(cmd, mode='rb')
             clientspec = marshal.load(stdout)
+        helper()
     except Exception:
         raise P4Exception(stdout)
 
@@ -192,20 +208,23 @@ def parse_client(client):
             sview, cview = clientspec[client].split()
             # XXX: use a regex for this
             cview = cview.lstrip('/')  # remove leading // from the local path
-            cview = cview[cview.find("/") + 1:] # remove the clientname part
+            cview = cview[cview.find("/") + 1:]  # remove the clientname part
             views[sview] = cview
     return views
 
 def exists_client(client):
     cmd = 'p4 -G clients -e %s' % util.shellquote(client)
     try:
-        with retries(num=3, sleeps=0.3):
+        stdout = ''
+        @retry(num=3, sleeps=0.3)
+        def helper():
             stdout = util.popen(cmd, mode='rb')
             for each in loaditer(stdout):
                 client_name = each.get('client', None)
                 if client_name is not None and client_name == client:
                     return True
             return False
+        return helper()
     except Exception:
         raise P4Exception(stdout)
 
