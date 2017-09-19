@@ -22,6 +22,7 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 
 from mercurial import (
+    cmdutil,
     commands,
     context,
     copies,
@@ -148,6 +149,8 @@ def uncommit(ui, repo, *pats, **opts):
     with repo.wlock(), repo.lock():
         wctx = repo[None]
 
+        if not pats:
+            cmdutil.bailifchanged(repo)
         if wctx.parents()[0].node() == node.nullid:
             raise error.Abort(_("cannot uncommit null changeset"))
         if len(wctx.parents()) > 1:

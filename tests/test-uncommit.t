@@ -149,6 +149,9 @@ Uncommit with dirty state
   foo
   $ hg status
   M files
+  $ hg uncommit
+  abort: uncommitted changes
+  [255]
   $ hg uncommit files
   $ cat files
   abcde
@@ -337,7 +340,7 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
   (branch merge, don't forget to commit)
 
   $ hg uncommit
-  abort: cannot uncommit while merging
+  abort: outstanding uncommitted merge
   [255]
 
   $ hg status
