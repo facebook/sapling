@@ -149,7 +149,8 @@ def uncommit(ui, repo, *pats, **opts):
     with repo.wlock(), repo.lock():
         wctx = repo[None]
 
-        if not pats:
+        if not pats and not repo.ui.configbool('experimental',
+                                                'uncommitondirtywdir', False):
             cmdutil.bailifchanged(repo)
         if wctx.parents()[0].node() == node.nullid:
             raise error.Abort(_("cannot uncommit null changeset"))
