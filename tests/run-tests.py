@@ -1853,7 +1853,7 @@ class TestSuite(unittest.TestSuite):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
-            if not (self._whitelist and test.name in self._whitelist):
+            if not (self._whitelist and test.bname in self._whitelist):
                 if self._blacklist and test.bname in self._blacklist:
                     result.addSkip(test, 'blacklisted')
                     continue
