@@ -289,8 +289,8 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         if not repo.shallowmatch(f):
             fl = repo.file(f)
-            deltas = source.deltaiter(revmap)
-            fl.addgroup(deltas, trp)
+            deltas = source.deltaiter()
+            fl.addgroup(deltas, revmap, trp)
             continue
 
         chain = None
