@@ -13,6 +13,20 @@ from mercurial import (
     util,
 )
 
+def retry(num=3, sleeps=.3):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            for _try in range(1, num + 1):
+                try:
+                    function(*args, **kwargs)
+                    return
+                except Exception:
+                    if _try == num:
+                        raise
+                time.sleep(sleeps)
+        return wrapper
+    return decorator
+
 def decodefilename(f):
     """Perforce saves and returns files that have special characters encoded:
 
