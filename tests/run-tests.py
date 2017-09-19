@@ -2113,9 +2113,9 @@ class TextTestRunner(unittest.TextTestRunner):
                     data = sub.stdout.read()
                     sub.wait()
                     m = re.search(
-                        (r'\nThe first (?P<goodbad>bad|good) revision '
-                         r'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
-                         r'summary: +(?P<summary>[^\n]+)\n'),
+                        (br'\nThe first (?P<goodbad>bad|good) revision '
+                         br'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
+                         br'summary: +(?P<summary>[^\n]+)\n'),
                         data, (re.MULTILINE | re.DOTALL))
                     if m is None:
                         self.stream.writeln(
