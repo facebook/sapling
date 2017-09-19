@@ -103,6 +103,7 @@ Note: old client behave as a publishing server with draft only content
 from __future__ import absolute_import
 
 import errno
+import struct
 
 from .i18n import _
 from .node import (
@@ -118,6 +119,8 @@ from . import (
     txnutil,
     util,
 )
+
+_fphasesentry = struct.Struct('>i20s')
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
@@ -153,6 +156,18 @@ def _readroots(repo, phasedefaults=None):
                 roots = f(repo, roots)
         dirty = True
     return roots, dirty
+
+def binaryencode(phasemapping):
+    """encode a 'phase -> nodes' mapping into a binary stream
+
+    Since phases are integer the mapping is actually a python list:
+    [[PUBLIC_HEADS], [DRAFTS_HEADS], [SECRET_HEADS]]
+    """
+    binarydata = []
+    for phase, nodes in enumerate(phasemapping):
+        for head in nodes:
+            binarydata.append(_fphasesentry.pack(phase, head))
+    return ''.join(binarydata)
 
 def _trackphasechange(data, rev, old, new):
     """add a phase move the <data> dictionnary

@@ -179,8 +179,6 @@ _fpartid = '>I'
 _fpayloadsize = '>i'
 _fpartparamcount = '>BB'
 
-_fphasesentry = struct.Struct('>i20s')
-
 preferedchunksize = 4096
 
 _parttypeforbidden = re.compile('[^a-zA-Z0-9_:-]')
@@ -1480,11 +1478,8 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts):
 
     if opts.get('phases', False):
         headsbyphase = phases.subsetphaseheads(repo, outgoing.missing)
-        phasedata = []
-        for phase in phases.allphases:
-            for head in headsbyphase[phase]:
-                phasedata.append(_fphasesentry.pack(phase, head))
-        bundler.newpart('phase-heads', data=''.join(phasedata))
+        phasedata = phases.binaryencode(headsbyphase)
+        bundler.newpart('phase-heads', data=phasedata)
 
 def addparttagsfnodescache(repo, bundler, outgoing):
     # we include the tags fnode cache for the bundle changeset
@@ -1843,14 +1838,14 @@ def handlepushkey(op, inpart):
 
 def _readphaseheads(inpart):
     headsbyphase = [[] for i in phases.allphases]
-    entrysize = _fphasesentry.size
+    entrysize = phases._fphasesentry.size
     while True:
         entry = inpart.read(entrysize)
         if len(entry) < entrysize:
             if entry:
                 raise error.Abort(_('bad phase-heads bundle part'))
             break
-        phase, node = _fphasesentry.unpack(entry)
+        phase, node = phases._fphasesentry.unpack(entry)
         headsbyphase[phase].append(node)
     return headsbyphase
 
