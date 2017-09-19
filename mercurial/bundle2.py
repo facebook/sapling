@@ -1836,23 +1836,10 @@ def handlepushkey(op, inpart):
                 kwargs[key] = inpart.params[key]
         raise error.PushkeyFailed(partid=str(inpart.id), **kwargs)
 
-def _readphaseheads(inpart):
-    headsbyphase = [[] for i in phases.allphases]
-    entrysize = phases._fphasesentry.size
-    while True:
-        entry = inpart.read(entrysize)
-        if len(entry) < entrysize:
-            if entry:
-                raise error.Abort(_('bad phase-heads bundle part'))
-            break
-        phase, node = phases._fphasesentry.unpack(entry)
-        headsbyphase[phase].append(node)
-    return headsbyphase
-
 @parthandler('phase-heads')
 def handlephases(op, inpart):
     """apply phases from bundle part to repo"""
-    headsbyphase = _readphaseheads(inpart)
+    headsbyphase = phases.binarydecode(inpart)
     phases.updatephases(op.repo.unfiltered(), op.gettransaction(), headsbyphase)
     op.records.add('phase-heads', {})
 

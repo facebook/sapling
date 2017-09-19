@@ -310,7 +310,7 @@ def _debugobsmarkers(ui, part, indent=0, **opts):
 def _debugphaseheads(ui, data, indent=0):
     """display version and markers contained in 'data'"""
     indent_string = ' ' * indent
-    headsbyphase = bundle2._readphaseheads(data)
+    headsbyphase = phases.binarydecode(data)
     for phase in phases.allphases:
         for head in headsbyphase[phase]:
             ui.write(indent_string)

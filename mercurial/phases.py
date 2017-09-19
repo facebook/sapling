@@ -169,6 +169,22 @@ def binaryencode(phasemapping):
             binarydata.append(_fphasesentry.pack(phase, head))
     return ''.join(binarydata)
 
+def binarydecode(stream):
+    """decode a binary stream into a 'phase -> nodes' mapping
+
+    Since phases are integer the mapping is actually a python list."""
+    headsbyphase = [[] for i in allphases]
+    entrysize = _fphasesentry.size
+    while True:
+        entry = stream.read(entrysize)
+        if len(entry) < entrysize:
+            if entry:
+                raise error.Abort(_('bad phase-heads stream'))
+            break
+        phase, node = _fphasesentry.unpack(entry)
+        headsbyphase[phase].append(node)
+    return headsbyphase
+
 def _trackphasechange(data, rev, old, new):
     """add a phase move the <data> dictionnary
 
