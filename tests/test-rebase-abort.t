@@ -266,7 +266,7 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   
 
   $ hg rebase -d master -r foo
-  rebasing 3:6c0f977a22d8 "C" (tip foo)
+  rebasing 3:6c0f977a22d8 "C" (foo tip)
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -306,7 +306,7 @@ user has somehow managed to update to a different revision (issue4009)
   created new head
 
   $ hg rebase -d @ -b foo --tool=internal:fail
-  rebasing 2:070cf4580bb5 "b2" (tip foo)
+  rebasing 2:070cf4580bb5 "b2" (foo tip)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

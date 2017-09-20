@@ -37,7 +37,7 @@ bookmark list
 rebase
 
   $ hg rebase -s two -d one
-  rebasing 3:2ae46b1d99a7 "3" (tip two)
+  rebasing 3:2ae46b1d99a7 "3" (two tip)
   saved backup bundle to $TESTTMP/.hg/strip-backup/2ae46b1d99a7-e6b057bc-rebase.hg (glob)
 
   $ hg log
@@ -77,7 +77,7 @@ aborted rebase should restore active bookmark.
   created new head
   $ hg bookmark three
   $ hg rebase -s three -d two
-  rebasing 4:dd7c838e8362 "4" (tip three)
+  rebasing 4:dd7c838e8362 "4" (three tip)
   merging d
   warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -92,7 +92,7 @@ aborted rebase should restore active bookmark.
 after aborted rebase, restoring a bookmark that has been removed should not fail
 
   $ hg rebase -s three -d two
-  rebasing 4:dd7c838e8362 "4" (tip three)
+  rebasing 4:dd7c838e8362 "4" (three tip)
   merging d
   warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)

@@ -125,7 +125,11 @@ def _ctxdesc(ctx):
     desc = '%d:%s "%s"' % (ctx.rev(), ctx,
                            ctx.description().split('\n', 1)[0])
     repo = ctx.repo()
-    names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+    names = []
+    for nsname, ns in repo.names.iteritems():
+        if nsname == 'branches':
+            continue
+        names.extend(ns.names(repo, ctx.node()))
     if names:
         desc += ' (%s)' % ' '.join(names)
     return desc
