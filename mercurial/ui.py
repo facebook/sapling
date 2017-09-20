@@ -1481,7 +1481,7 @@ class ui(object):
 
     def _progclear(self):
         """clear progress bar output if any. use it before any output"""
-        if '_progbar' not in vars(self): # nothing loaded yet
+        if not haveprogbar(): # nothing loaded yet
             return
         if self._progbar is not None and self._progbar.printed:
             self._progbar.clear()
@@ -1785,3 +1785,6 @@ def getprogbar(ui):
         # this is how the extension used to work but feel free to rework it.
         _progresssingleton = progress.progbar(ui)
     return _progresssingleton
+
+def haveprogbar():
+    return _progresssingleton is not None
