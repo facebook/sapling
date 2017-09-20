@@ -38,6 +38,30 @@ publish=False
 EOF
 }
 
+hgcloneshallowlfs() {
+  local name
+  local dest
+  local lfsdir
+  orig=$1
+  shift
+  dest=$1
+  shift
+  lfsdir=$1
+  shift
+  hg clone --shallow --config "extensions.lfs=" --config "lfs.url=$lfsdir" --config remotefilelog.reponame=master $orig $dest $@
+  cat >> $dest/.hg/hgrc <<EOF
+[extensions]
+lfs=
+[lfs]
+url=$lfsdir
+[remotefilelog]
+reponame=master
+datapackversion=1
+[phases]
+publish=False
+EOF
+}
+
 hginit() {
   local name
   name=$1

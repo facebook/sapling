@@ -124,6 +124,7 @@ def uisetup(ui):
             pass
         if lfsmod:
             lfsmod.wrapfilelog(remotefilelog.remotefilelog)
+            fileserverclient._lfsmod = lfsmod
     extensions.afterloaded('lfs', _lfsloaded)
 
     # debugdata needs remotefilelog.len to work

@@ -12,6 +12,7 @@ import hashlib
 from mercurial import (
     error,
     filelog,
+    node,
     revlog,
     util,
 )
@@ -179,6 +180,10 @@ def vfsinit(orig, self, othervfs):
 def _canskipupload(repo):
     # if remotestore is a null store, upload is a no-op and can be skipped
     return isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)
+
+def candownload(repo):
+    # if remotestore is a null store, downloads will lead to nothing
+    return not isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)
 
 def uploadblobsfromrevs(repo, revs):
     '''upload lfs blobs introduced by revs

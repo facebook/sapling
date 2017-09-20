@@ -15,8 +15,8 @@ from mercurial.node import hex, bin, nullid
 from mercurial import (
     error,
     httppeer,
+    revlog,
     sshpeer,
-    util,
     util,
     wireproto,
 )
@@ -37,6 +37,7 @@ fetches = 0
 fetched = 0
 fetchmisses = 0
 
+_lfsmod = None
 _downloading = _('downloading')
 
 def getcachekey(reponame, file, id):
@@ -586,6 +587,27 @@ class fileserverclient(object):
                 raise error.Abort(_("unable to download %d files") %
                                   len(missingids))
             fetchcost += time.time() - start
+            self._lfsprefetch(fileids)
+
+    def _lfsprefetch(self, fileids):
+        if not _lfsmod or not hasattr(self.repo.svfs, 'lfslocalblobstore'):
+            return
+        if not _lfsmod.wrapper.candownload(self.repo):
+            return
+        pointers = []
+        store = self.repo.svfs.lfslocalblobstore
+        for file, id in fileids:
+            nodehash = bin(id)
+            rlog = self.repo.file(file)
+            if rlog.flags(nodehash) & revlog.REVIDX_EXTSTORED:
+                text = rlog.revision(nodehash, raw=True)
+                p = _lfsmod.pointer.deserialize(text)
+                oid = p.oid()
+                if not store.has(oid):
+                    pointers.append(p)
+        if len(pointers) > 0:
+            self.repo.svfs.lfsremoteblobstore.readbatch(pointers, store)
+            assert all(store.has(p.oid()) for p in pointers)
 
     def logstacktrace(self):
         import traceback
