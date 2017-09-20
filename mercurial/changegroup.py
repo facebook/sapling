@@ -245,8 +245,8 @@ class cg1unpacker(object):
         # no new manifest will be created and the manifest group will
         # be empty during the pull
         self.manifestheader()
-        deltas = self.deltaiter(revmap)
-        repo.manifestlog._revlog.addgroup(deltas, trp)
+        deltas = self.deltaiter()
+        repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
         repo.ui.progress(_('manifests'), None)
         self.callback = None
 
@@ -308,8 +308,8 @@ class cg1unpacker(object):
                 efiles.update(cl.readfiles(node))
 
             self.changelogheader()
-            deltas = self.deltaiter(csmap)
-            cgnodes = cl.addgroup(deltas, trp, addrevisioncb=onchangelog)
+            deltas = self.deltaiter()
+            cgnodes = cl.addgroup(deltas, csmap, trp, addrevisioncb=onchangelog)
             efiles = len(efiles)
 
             if not cgnodes:
@@ -430,7 +430,7 @@ class cg1unpacker(object):
             ret = deltaheads + 1
         return ret
 
-    def deltaiter(self, linkmapper):
+    def deltaiter(self):
         """
         returns an iterator of the deltas in this changegroup
 
@@ -446,10 +446,9 @@ class cg1unpacker(object):
             delta = chunkdata['delta']
             flags = chunkdata['flags']
 
-            link = linkmapper(cs)
             chain = node
 
-            yield (node, p1, p2, link, deltabase, delta, flags)
+            yield (node, p1, p2, cs, deltabase, delta, flags)
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.
@@ -491,8 +490,8 @@ class cg3unpacker(cg2unpacker):
             d = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % d)
             dirlog = repo.manifestlog._revlog.dirlog(d)
-            deltas = self.deltaiter(revmap)
-            if not dirlog.addgroup(deltas, trp):
+            deltas = self.deltaiter()
+            if not dirlog.addgroup(deltas, revmap, trp):
                 raise error.Abort(_("received dir revlog group is empty"))
 
 class headerlessfixup(object):
@@ -983,8 +982,8 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
         fl = repo.file(f)
         o = len(fl)
         try:
-            deltas = source.deltaiter(revmap)
-            if not fl.addgroup(deltas, trp):
+            deltas = source.deltaiter()
+            if not fl.addgroup(deltas, revmap, trp):
                 raise error.Abort(_("received file revlog group is empty"))
         except error.CensoredBaseError as e:
             raise error.Abort(_("received delta base is censored: %s") % e)

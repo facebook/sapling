@@ -1910,7 +1910,7 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, deltas, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
         """
         add a delta group
 
@@ -1944,7 +1944,8 @@ class revlog(object):
         try:
             # loop through our set of deltas
             for data in deltas:
-                node, p1, p2, link, deltabase, delta, flags = data
+                node, p1, p2, linknode, deltabase, delta, flags = data
+                link = linkmapper(linknode)
                 flags = flags or REVIDX_DEFAULT_FLAGS
 
                 nodes.append(node)
