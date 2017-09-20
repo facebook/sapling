@@ -263,18 +263,11 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
 
         def showchunks(named):
             ui.write("\n%s%s\n" % (indent_string, named))
-            chain = None
-            for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
-                node = chunkdata['node']
-                p1 = chunkdata['p1']
-                p2 = chunkdata['p2']
-                cs = chunkdata['cs']
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
+            for deltadata in gen.deltaiter():
+                node, p1, p2, cs, deltabase, delta, flags = deltadata
                 ui.write("%s%s %s %s %s %s %s\n" %
                          (indent_string, hex(node), hex(p1), hex(p2),
                           hex(cs), hex(deltabase), len(delta)))
-                chain = node
 
         chunkdata = gen.changelogheader()
         showchunks("changelog")
@@ -287,11 +280,9 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
         if isinstance(gen, bundle2.unbundle20):
             raise error.Abort(_('use debugbundle2 for this file'))
         chunkdata = gen.changelogheader()
-        chain = None
-        for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
-            node = chunkdata['node']
+        for deltadata in gen.deltaiter():
+            node, p1, p2, cs, deltabase, delta, flags = deltadata
             ui.write("%s%s\n" % (indent_string, hex(node)))
-            chain = node
 
 def _debugobsmarkers(ui, part, indent=0, **opts):
     """display version and markers contained in 'data'"""
