@@ -96,3 +96,9 @@ waitbgbackup() {
   sleep 1
   hg debugwaitbackup
 }
+
+mkcommitautobackup() {
+    echo $1 > $1
+    hg add $1
+    hg ci -m $1 --config infinitepushbackup.autobackup=True
+}

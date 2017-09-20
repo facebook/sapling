@@ -4,6 +4,11 @@
 # GNU General Public License version 2 or any later version.
 """
     [infinitepushbackup]
+    # Whether to enable automatic backups. If this option is True then a backup
+    # process will be started after every mercurial command that modifies the
+    # repo, for example, commit, amend, histedit, rebase etc.
+    autobackup = False
+
     # path to the directory where pushback logs should be stored
     logdir = path/to/dir
 
@@ -53,9 +58,12 @@ from mercurial import (
     changegroup,
     commands,
     discovery,
+    dispatch,
     encoding,
     error,
+    extensions,
     hg,
+    localrepo,
     lock as lockmod,
     phases,
     registrar,
@@ -98,6 +106,13 @@ restoreoptions = [
 
 _backuplockname = 'infinitepushbackup.lock'
 
+def extsetup(ui):
+    if ui.configbool('infinitepushbackup', 'autobackup', False):
+        extensions.wrapfunction(dispatch, 'runcommand',
+                                _autobackupruncommandwrapper)
+        extensions.wrapfunction(localrepo.localrepository, 'transaction',
+                                _transaction)
+
 @command('pushbackup',
          [('', 'background', None, 'run backup in background')])
 def backup(ui, repo, dest=None, **opts):
@@ -112,48 +127,7 @@ def backup(ui, repo, dest=None, **opts):
     """
 
     if opts.get('background'):
-        background_cmd = ['hg', 'pushbackup']
-        if dest:
-            background_cmd.append(dest)
-        logfile = None
-        logdir = ui.config('infinitepushbackup', 'logdir')
-        if logdir:
-            # make newly created files and dirs non-writable
-            oldumask = os.umask(0o022)
-            try:
-                try:
-                    username = util.shortuser(ui.username())
-                except Exception:
-                    username = 'unknown'
-
-                if not _checkcommonlogdir(logdir):
-                    raise WrongPermissionsException(logdir)
-
-                userlogdir = os.path.join(logdir, username)
-                util.makedirs(userlogdir)
-
-                if not _checkuserlogdir(userlogdir):
-                    raise WrongPermissionsException(userlogdir)
-
-                reporoot = repo.origroot
-                reponame = os.path.basename(reporoot)
-                _removeoldlogfiles(userlogdir, reponame)
-                logfile = _getlogfilename(logdir, username, reponame)
-            except (OSError, IOError) as e:
-                ui.debug('infinitepush backup log is disabled: %s\n' % e)
-            except WrongPermissionsException as e:
-                ui.debug(('%s directory has incorrect permission, ' +
-                         'infinitepush backup logging will be disabled\n') %
-                         e.logdir)
-            finally:
-                os.umask(oldumask)
-
-        if not logfile:
-            logfile = os.devnull
-
-        with open(logfile, 'a') as f:
-            subprocess.Popen(background_cmd, shell=False, stdout=f,
-                             stderr=subprocess.STDOUT)
+        _dobackgroundbackup(ui, repo, dest)
         return 0
 
     try:
@@ -355,6 +329,34 @@ def smartlogsummary(ui, repo):
         ui.warn(_('Run `hg pushbackup` to perform a backup.  If this fails,\n'
                   'please report to the Source Control @ FB group.\n'))
 
+def _autobackupruncommandwrapper(orig, lui, repo, cmd, fullargs, *args):
+    '''
+    If this wrapper is enabled then auto backup is started after every command
+    that modifies a repository.
+    Since we don't want to start auto backup after read-only commands,
+    then this wrapper checks if this command opened at least one transaction.
+    If yes then background backup will be started.
+    '''
+
+    # For chg, do not wrap the "serve" runcommand call
+    if 'CHGINTERNALMARK' in os.environ:
+        return orig(lui, repo, cmd, fullargs, *args)
+
+    try:
+        return orig(lui, repo, cmd, fullargs, *args)
+    finally:
+        if getattr(repo, 'txnwasopened', False):
+            _dobackgroundbackup(lui, repo)
+
+def _transaction(orig, self, *args, **kwargs):
+    ''' Wrapper that records if a transaction was opened.
+
+    If a transaction was opened then we want to start background backup process.
+    This hook records the fact that transaction was opened.
+    '''
+    self.txnwasopened = True
+    return orig(self, *args, **kwargs)
+
 def _backupheads(ui, repo):
     """Returns the set of heads that should be backed up in this repo."""
     maxheadstobackup = ui.configint('infinitepushbackup',
@@ -454,6 +456,50 @@ def _dobackup(ui, repo, dest, **opts):
         ui.status(_('finished in %f seconds\n') % (time.time() - start))
         unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
+
+def _dobackgroundbackup(ui, repo, dest=None):
+    background_cmd = ['hg', 'pushbackup']
+    if dest:
+        background_cmd.append(dest)
+    logfile = None
+    logdir = ui.config('infinitepushbackup', 'logdir')
+    if logdir:
+        # make newly created files and dirs non-writable
+        oldumask = os.umask(0o022)
+        try:
+            try:
+                username = util.shortuser(ui.username())
+            except Exception:
+                username = 'unknown'
+
+            if not _checkcommonlogdir(logdir):
+                raise WrongPermissionsException(logdir)
+
+            userlogdir = os.path.join(logdir, username)
+            util.makedirs(userlogdir)
+
+            if not _checkuserlogdir(userlogdir):
+                raise WrongPermissionsException(userlogdir)
+
+            reporoot = repo.origroot
+            reponame = os.path.basename(reporoot)
+            _removeoldlogfiles(userlogdir, reponame)
+            logfile = _getlogfilename(logdir, username, reponame)
+        except (OSError, IOError) as e:
+            ui.debug('infinitepush backup log is disabled: %s\n' % e)
+        except WrongPermissionsException as e:
+            ui.debug(('%s directory has incorrect permission, ' +
+                     'infinitepush backup logging will be disabled\n') %
+                     e.logdir)
+        finally:
+            os.umask(oldumask)
+
+    if not logfile:
+        logfile = os.devnull
+
+    with open(logfile, 'a') as f:
+        subprocess.Popen(background_cmd, shell=False, stdout=f,
+                         stderr=subprocess.STDOUT)
 
 def _dobackupcheck(bkpstate, ui, repo, dest, **opts):
     remotehexnodes = sorted(

@@ -324,6 +324,7 @@ def clientextsetup(ui):
         smartlogmod = extensions.find('smartlog')
         wrapcommand(smartlogmod.cmdtable, 'smartlog', _smartlog)
     extensions.afterloaded('smartlog', wrapsmartlog)
+    backupcommands.extsetup(ui)
 
 def _smartlog(orig, ui, repo, **opts):
     res = orig(ui, repo, **opts)

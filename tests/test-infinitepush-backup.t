@@ -1,4 +1,9 @@
 
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > drawdag=$RUNTESTDIR/drawdag.py
+  > EOF
+
   $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
@@ -138,8 +143,7 @@ Backup in background
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/667453c0787e7830fdfb86db0f8c29aa7af2a1ea 667453c0787e7830fdfb86db0f8c29aa7af2a1ea (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc (re)
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/f79c5017def3b9af9928edbb52cc620c74b4b291 f79c5017def3b9af9928edbb52cc620c74b4b291 (re)
-  $ mkcommit newcommit
-  $ hg pushbackup --background
+  $ mkcommitautobackup newcommit
   $ waitbgbackup
   $ scratchbookmarks
   infinitepush/backups/test/[0-9a-zA-Z.-]+\$TESTTMP/client/heads/3a30e220fe42e969e34bbe8001b951a20f31f2e8 3a30e220fe42e969e34bbe8001b951a20f31f2e8 (re)
@@ -515,3 +519,82 @@ Test backupinfo file generation.
   $ cat .hg/infinitepushlatestbackupinfo
   backuprevision=(\d+) (re)
   backuptime=(\d+) (re)
+
+Run command that creates multiple transactions. Make sure that just one backup is started
+  $ cd ..
+  $ rm -rf client
+  $ hg clone ssh://user@dummy/repo client -q
+  $ cd client
+  $ setup
+  $ hg debugdrawdag <<'EOS'
+  > C
+  > |
+  > B D
+  > |/
+  > A
+  > EOS
+  $ hg log -r ':' -G -T '{desc} {node}'
+  o  C 26805aba1e600a82e93661149f2313866a221a7b
+  |
+  | o  D b18e25de2cf5fc4699a029ed635882849e53ef73
+  | |
+  o |  B 112478962961147124edd43549aedd1a335e44bf
+  |/
+  o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  
+  @  initial 630839011471e17f808b92ab084bedfaca33b110
+  
+
+Create logs directory and set correct permissions
+  $ mkdir $TESTTMP/logs
+  $ chmod 0755 $TESTTMP/logs
+  $ chmod +t $TESTTMP/logs
+
+  $ hg pushbackup --config infinitepushbackup.logdir=$TESTTMP/logs
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 4 commits:
+  remote:     426bada5c675  A
+  remote:     112478962961  B
+  remote:     b18e25de2cf5  D
+  remote:     26805aba1e60  C
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg isbackedup -r ':'
+  630839011471e17f808b92ab084bedfaca33b110 not backed up
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 backed up
+  112478962961147124edd43549aedd1a335e44bf backed up
+  b18e25de2cf5fc4699a029ed635882849e53ef73 backed up
+  26805aba1e600a82e93661149f2313866a221a7b backed up
+  $ hg rebase -s B -d D --config infinitepushbackup.autobackup=True --config infinitepushbackup.logdir=$TESTTMP/logs
+  rebasing 2:112478962961 "B" (B)
+  rebasing 4:26805aba1e60 "C" (C tip)
+  $ waitbgbackup
+  $ hg log -r ':' -G -T '{desc} {node}'
+  o  C ffeec75ec60331057b875fc5356c57c3ff204500
+  |
+  o  B 1ef11233b74dfa8b57e8285fd6f546096af8f4c2
+  |
+  | x  C 26805aba1e600a82e93661149f2313866a221a7b
+  | |
+  o |  D b18e25de2cf5fc4699a029ed635882849e53ef73
+  | |
+  | x  B 112478962961147124edd43549aedd1a335e44bf
+  |/
+  o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  
+  @  initial 630839011471e17f808b92ab084bedfaca33b110
+  
+  $ hg isbackedup -r 'ffeec75ec + 1ef11233b7'
+  ffeec75ec60331057b875fc5356c57c3ff204500 backed up
+  1ef11233b74dfa8b57e8285fd6f546096af8f4c2 backed up
+
+Check the logs, make sure just one process was started
+  $ cat $TESTTMP/logs/test/*
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 4 commits:
+  remote:     426bada5c675  A
+  remote:     b18e25de2cf5  D
+  remote:     1ef11233b74d  B
+  remote:     ffeec75ec603  C
+  finished in \d+\.(\d+)? seconds (re)
