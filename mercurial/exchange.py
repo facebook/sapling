@@ -806,8 +806,25 @@ def _pushb2phases(pushop, bundler):
     if 'phases' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
-    if 'pushkey' in b2caps:
+    ui = pushop.repo.ui
+
+    legacyphase = 'phases' in ui.configlist('devel', 'legacy.exchange')
+    haspushkey = 'pushkey' in b2caps
+    hasphaseheads = 'heads' in b2caps.get('phases', ())
+
+    if hasphaseheads and not legacyphase:
+        _pushb2phaseheads(pushop, bundler)
+    elif haspushkey:
         _pushb2phasespushkey(pushop, bundler)
+
+def _pushb2phaseheads(pushop, bundler):
+    """push phase information through a bundle2 - binary part"""
+    pushop.stepsdone.add('phases')
+    if pushop.outdatedphases:
+        updates = [[] for p in phases.allphases]
+        updates[0].extend(h.node() for h in pushop.outdatedphases)
+        phasedata = phases.binaryencode(updates)
+        bundler.newpart('phase-heads', data=phasedata)
 
 def _pushb2phasespushkey(pushop, bundler):
     """push phase information through a bundle2 - pushkey part"""

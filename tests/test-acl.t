@@ -97,7 +97,7 @@ Extension disabled for lack of a hook
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -117,17 +117,15 @@ Extension disabled for lack of a hook
   adding quux/file.py revisions
   added 3 changesets with 3 changes to 3 files
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -162,7 +160,7 @@ Extension disabled for lack of acl.sources
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -184,17 +182,15 @@ Extension disabled for lack of acl.sources
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -230,7 +226,7 @@ No [acl.allow]/[acl.deny]
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -262,17 +258,15 @@ No [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -308,7 +302,7 @@ Empty [acl.allow]
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -336,6 +330,7 @@ Empty [acl.allow]
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -375,7 +370,7 @@ fred is allowed inside foo/
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -407,6 +402,7 @@ fred is allowed inside foo/
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -447,7 +443,7 @@ Empty [acl.deny]
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -475,6 +471,7 @@ Empty [acl.deny]
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -516,7 +513,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -548,6 +545,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" not allowed on "quux/file.py" (changeset "911600dab2ae")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -590,7 +588,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -620,6 +618,7 @@ fred is allowed inside foo/, but not foo/Bar/
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -661,7 +660,7 @@ fred is allowed inside foo/, but not foo/Bar/
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -689,6 +688,7 @@ fred is allowed inside foo/, but not foo/Bar/
   acl: branch access granted: "ef1ea85a6374" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "barney" not allowed on "foo/file.txt" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -734,7 +734,7 @@ barney is allowed everywhere
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -766,17 +766,15 @@ barney is allowed everywhere
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -819,7 +817,7 @@ wilma can change files with a .txt extension
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -851,6 +849,7 @@ wilma can change files with a .txt extension
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "wilma" not allowed on "quux/file.py" (changeset "911600dab2ae")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -899,7 +898,7 @@ file specified by acl.config does not exist
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -922,6 +921,7 @@ file specified by acl.config does not exist
   acl: checking access for user "barney"
   error: pretxnchangegroup.acl hook raised an exception: [Errno *] * (glob)
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -974,7 +974,7 @@ betty is allowed inside foo/ by a acl.config file
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1006,6 +1006,7 @@ betty is allowed inside foo/ by a acl.config file
   acl: branch access granted: "911600dab2ae" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "betty" not allowed on "quux/file.py" (changeset "911600dab2ae")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1060,7 +1061,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1092,17 +1093,15 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -1148,7 +1147,7 @@ fred is always allowed
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1180,17 +1179,15 @@ fred is always allowed
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -1232,7 +1229,7 @@ no one is allowed inside foo/Bar/
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1262,6 +1259,7 @@ no one is allowed inside foo/Bar/
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1310,7 +1308,7 @@ OS-level groups
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1343,17 +1341,15 @@ OS-level groups
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   bundle2-input-part: total payload size 1553
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 2 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 1 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
@@ -1395,7 +1391,7 @@ OS-level groups
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1427,6 +1423,7 @@ OS-level groups
   acl: branch access granted: "f9cafe1212c8" on branch "default"
   error: pretxnchangegroup.acl hook failed: acl: user "fred" denied on "foo/Bar/file.txt" (changeset "f9cafe1212c8")
   bundle2-input-part: total payload size 1553
+  bundle2-input-part: total payload size 24
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
@@ -1509,13 +1506,12 @@ No branch acls specified
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1551,21 +1547,15 @@ No branch acls specified
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2068
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
@@ -1600,13 +1590,12 @@ Branch acl deny test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1641,7 +1630,8 @@ Branch acl deny test
   acl: path access granted: "911600dab2ae"
   error: pretxnchangegroup.acl hook failed: acl: user "astro" denied on branch "foobar" (changeset "e8fc755d4d82")
   bundle2-input-part: total payload size 2068
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
   abort: acl: user "astro" denied on branch "foobar" (changeset "e8fc755d4d82")
@@ -1677,13 +1667,12 @@ Branch acl empty allow test
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1712,7 +1701,8 @@ Branch acl empty allow test
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 2068
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
   abort: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
@@ -1750,13 +1740,12 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1785,7 +1774,8 @@ Branch acl allow other
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 2068
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
   abort: acl: user "astro" not allowed on branch "default" (changeset "ef1ea85a6374")
@@ -1817,13 +1807,12 @@ Branch acl allow other
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1859,21 +1848,15 @@ Branch acl allow other
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2068
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
@@ -1913,13 +1896,12 @@ push foobar into the remote
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -1955,21 +1937,15 @@ push foobar into the remote
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2068
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
@@ -2008,13 +1984,12 @@ Branch acl conflicting deny
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -2043,7 +2018,8 @@ Branch acl conflicting deny
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 2068
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
   abort: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
@@ -2080,13 +2056,12 @@ User 'astro' must not be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -2122,21 +2097,15 @@ User 'astro' must not be denied
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   bundle2-input-part: total payload size 2068
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:911600dab2ae7a9baff75958b84fe606851ce955"
-  bundle2-input-part: "pushkey" (params: 4 mandatory) supported
-  pushing key for "phases:e8fc755d4d8217ee5b0c2bb41558c40d43b92c01"
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   updating the branch cache
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 1 parts total
   bundle2-output-part: "reply:changegroup" (advisory) (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
-  bundle2-output-part: "reply:pushkey" (params: 0 advisory) empty payload
   bundle2-input-bundle: no-transaction
   bundle2-input-part: "reply:changegroup" (advisory) (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 0 parts total
   listing keys for "phases"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
@@ -2169,13 +2138,12 @@ Non-astro users must be denied
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
-  bundle2-output-bundle: "HG20", 6 parts total
+  bundle2-output-bundle: "HG20", 5 parts total
   bundle2-output-part: "replycaps" 168 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
+  bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
   bundle2-input-part: total payload size 168
@@ -2204,7 +2172,8 @@ Non-astro users must be denied
   acl: acl.deny not enabled
   error: pretxnchangegroup.acl hook failed: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")
   bundle2-input-part: total payload size 2068
-  bundle2-input-bundle: 5 parts total
+  bundle2-input-part: total payload size 48
+  bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
   abort: acl: user "george" denied on branch "default" (changeset "ef1ea85a6374")

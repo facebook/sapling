@@ -252,9 +252,6 @@ push
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
   remote: 1 new obsolescence markers
   remote: pre-close-tip:eea13746799a public book_eea1
-  remote: pushkey: lock state after "phases"
-  remote: lock:  free
-  remote: wlock: free
   remote: pushkey: lock state after "bookmarks"
   remote: lock:  free
   remote: wlock: free
@@ -392,9 +389,6 @@ push over http
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   remote: pre-close-tip:32af7686d403 public book_32af
-  remote: pushkey: lock state after "phases"
-  remote: lock:  free
-  remote: wlock: free
   remote: pushkey: lock state after "bookmarks"
   remote: lock:  free
   remote: wlock: free
