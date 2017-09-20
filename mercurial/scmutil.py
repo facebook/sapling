@@ -576,30 +576,30 @@ class _containsnode(object):
     def __contains__(self, node):
         return self._revcontains(self._torev(node))
 
-def cleanupnodes(repo, mapping, operation):
+def cleanupnodes(repo, replacements, operation):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
     (we might also want to move working directory parent in the future)
 
-    mapping is {oldnode: [newnode]} or a iterable of nodes if they do not have
-    replacements. operation is a string, like "rebase".
+    replacements is {oldnode: [newnode]} or a iterable of nodes if they do not
+    have replacements. operation is a string, like "rebase".
     """
-    if not util.safehasattr(mapping, 'items'):
-        mapping = {n: () for n in mapping}
+    if not util.safehasattr(replacements, 'items'):
+        replacements = {n: () for n in replacements}
 
     # Calculate bookmark movements
     moves = {}
-    # Unfiltered repo is needed since nodes in mapping might be hidden.
+    # Unfiltered repo is needed since nodes in replacements might be hidden.
     unfi = repo.unfiltered()
-    for oldnode, newnodes in mapping.items():
+    for oldnode, newnodes in replacements.items():
         if len(newnodes) > 1:
             # usually a split, take the one with biggest rev number
             newnode = next(unfi.set('max(%ln)', newnodes)).node()
         elif len(newnodes) == 0:
             # move bookmark backwards
             roots = list(unfi.set('max((::%n) - %ln)', oldnode,
-                                  list(mapping)))
+                                  list(replacements)))
             if roots:
                 newnode = roots[0].node()
             else:
@@ -612,7 +612,7 @@ def cleanupnodes(repo, mapping, operation):
         # Move bookmarks
         bmarks = repo._bookmarks
         bmarkchanges = []
-        allnewnodes = [n for ns in mapping.values() for n in ns]
+        allnewnodes = [n for ns in replacements.values() for n in ns]
         for oldnode, newnode in moves.items():
             oldbmarks = repo.nodebookmarks(oldnode)
             if not oldbmarks:
@@ -644,12 +644,12 @@ def cleanupnodes(repo, mapping, operation):
             torev = unfi.changelog.rev
             sortfunc = lambda ns: torev(ns[0])
             rels = [(unfi[n], tuple(unfi[m] for m in s))
-                    for n, s in sorted(mapping.items(), key=sortfunc)
+                    for n, s in sorted(replacements.items(), key=sortfunc)
                     if s or not isobs(n)]
             obsolete.createmarkers(repo, rels, operation=operation)
         else:
             from . import repair # avoid import cycle
-            repair.delayedstrip(repo.ui, repo, list(mapping), operation)
+            repair.delayedstrip(repo.ui, repo, list(replacements), operation)
 
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if opts is None:
