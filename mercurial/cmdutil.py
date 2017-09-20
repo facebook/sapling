@@ -536,7 +536,7 @@ def tersestatus(root, statlist, status, ignorefn, ignore):
 
         rs = []
         newls = []
-        for par, files in pardict.iteritems():
+        for par, files in sorted(pardict.iteritems()):
             lenpar = numfiles(par)
             if lenpar == len(files):
                 newls.append(par)
