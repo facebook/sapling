@@ -40,6 +40,7 @@ Do a backup and try to restore. Make sure it doesn't fail
   $ hg log -r . -T '{node}\n'
   edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff
   $ hg prune .
+  advice: `hg hide` commnand provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 000000000000
   1 changesets pruned

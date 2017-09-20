@@ -689,6 +689,7 @@ Check local undo with facebook style strip
   > fbamend = $TESTDIR/../hgext3rd/fbamend/
   > EOF
   $ hg strip 3ee6
+  advice: `hg hide` commnand provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 75f63379f12b
   1 changesets pruned

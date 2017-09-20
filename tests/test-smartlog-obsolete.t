@@ -189,6 +189,7 @@ Hidden changesets are not considered as successors
   o  0 1ea73414a91b
   
   $ hg prune 2 -q
+  advice: `hg hide` commnand provides a better UI for hiding commits
   $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
   x  1 66f7d451a68b
   |

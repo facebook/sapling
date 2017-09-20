@@ -423,6 +423,7 @@ Scratch pull of pruned commits
   > evolution=createmarkers
   > EOF
   $ hg prune -r scratch/mybranch
+  advice: `hg hide` commnand provides a better UI for hiding commits
   1 changesets pruned
   $ hg log -r 'reverse(::scratch/mybranch)' -T '{desc}\n'
   scratchcommitwithpushrebase
@@ -451,6 +452,7 @@ Prune it again and pull it via commit hash
   $ hg log -r scratch/mybranch -T '{node}\n'
   8872775dd97a750e1533dc1fbbca665644b32547
   $ hg prune -r scratch/mybranch
+  advice: `hg hide` commnand provides a better UI for hiding commits
   1 changesets pruned
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
