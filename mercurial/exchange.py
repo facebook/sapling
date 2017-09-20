@@ -806,8 +806,11 @@ def _pushb2phases(pushop, bundler):
     if 'phases' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
-    if not 'pushkey' in b2caps:
-        return
+    if 'pushkey' in b2caps:
+        _pushb2phasespushkey(pushop, bundler)
+
+def _pushb2phasespushkey(pushop, bundler):
+    """push phase information through a bundle2 - pushkey part"""
     pushop.stepsdone.add('phases')
     part2node = []
 
