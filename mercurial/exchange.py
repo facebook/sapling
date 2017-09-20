@@ -1313,8 +1313,7 @@ def _pulldiscoverychangegroup(pullop):
     common, fetch, rheads = tmp
     nm = pullop.repo.unfiltered().changelog.nodemap
     if fetch and rheads:
-        # If a remote heads in filtered locally, lets drop it from the unknown
-        # remote heads and put in back in common.
+        # If a remote heads is filtered locally, put in back in common.
         #
         # This is a hackish solution to catch most of "common but locally
         # hidden situation".  We do not performs discovery on unfiltered
@@ -1324,16 +1323,12 @@ def _pulldiscoverychangegroup(pullop):
         # If a set of such "common but filtered" changeset exist on the server
         # but are not including a remote heads, we'll not be able to detect it,
         scommon = set(common)
-        filteredrheads = []
         for n in rheads:
             if n in nm:
                 if n not in scommon:
                     common.append(n)
-            else:
-                filteredrheads.append(n)
-        if not filteredrheads:
+        if set(rheads).issubset(set(common)):
             fetch = []
-        rheads = filteredrheads
     pullop.common = common
     pullop.fetch = fetch
     pullop.rheads = rheads
