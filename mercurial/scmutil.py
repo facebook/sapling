@@ -588,29 +588,36 @@ def cleanupnodes(repo, mapping, operation):
     if not util.safehasattr(mapping, 'items'):
         mapping = {n: () for n in mapping}
 
+    # Calculate bookmark movements
+    moves = {}
+    # Unfiltered repo is needed since nodes in mapping might be hidden.
+    unfi = repo.unfiltered()
+    for oldnode, newnodes in mapping.items():
+        if len(newnodes) > 1:
+            # usually a split, take the one with biggest rev number
+            newnode = next(unfi.set('max(%ln)', newnodes)).node()
+        elif len(newnodes) == 0:
+            # move bookmark backwards
+            roots = list(unfi.set('max((::%n) - %ln)', oldnode,
+                                  list(mapping)))
+            if roots:
+                newnode = roots[0].node()
+            else:
+                newnode = nullid
+        else:
+            newnode = newnodes[0]
+        moves[oldnode] = newnode
+
     with repo.transaction('cleanup') as tr:
         # Move bookmarks
         bmarks = repo._bookmarks
         bmarkchanges = []
         allnewnodes = [n for ns in mapping.values() for n in ns]
-        for oldnode, newnodes in mapping.items():
+        for oldnode, newnode in moves.items():
             oldbmarks = repo.nodebookmarks(oldnode)
             if not oldbmarks:
                 continue
             from . import bookmarks # avoid import cycle
-            if len(newnodes) > 1:
-                # usually a split, take the one with biggest rev number
-                newnode = next(repo.set('max(%ln)', newnodes)).node()
-            elif len(newnodes) == 0:
-                # move bookmark backwards
-                roots = list(repo.set('max((::%n) - %ln)', oldnode,
-                                      list(mapping)))
-                if roots:
-                    newnode = roots[0].node()
-                else:
-                    newnode = nullid
-            else:
-                newnode = newnodes[0]
             repo.ui.debug('moving bookmarks %r from %s to %s\n' %
                           (oldbmarks, hex(oldnode), hex(newnode)))
             # Delete divergent bookmarks being parents of related newnodes
@@ -633,8 +640,6 @@ def cleanupnodes(repo, mapping, operation):
             # Also sort the node in topology order, that might be useful for
             # some obsstore logic.
             # NOTE: the filtering and sorting might belong to createmarkers.
-            # Unfiltered repo is needed since nodes in mapping might be hidden.
-            unfi = repo.unfiltered()
             isobs = unfi.obsstore.successors.__contains__
             torev = unfi.changelog.rev
             sortfunc = lambda ns: torev(ns[0])
