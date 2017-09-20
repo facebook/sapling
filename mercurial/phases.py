@@ -558,11 +558,18 @@ def subsetphaseheads(repo, subset):
         headsbyphase[phase] = [cl.node(r) for r in repo.revs(revset, subset)]
     return headsbyphase
 
-def updatephases(repo, tr, headsbyphase):
+def updatephases(repo, trgetter, headsbyphase):
     """Updates the repo with the given phase heads"""
     # Now advance phase boundaries of all but secret phase
+    #
+    # run the update (and fetch transaction) only if there are actually things
+    # to update. This avoid creating empty transaction during no-op operation.
+
     for phase in allphases[:-1]:
-        advanceboundary(repo, tr, phase, headsbyphase[phase])
+        revset = '%%ln - %s()' % phasenames[phase]
+        heads = [c.node() for c in repo.set(revset, headsbyphase[phase])]
+        if heads:
+            advanceboundary(repo, trgetter(), phase, heads)
 
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict
