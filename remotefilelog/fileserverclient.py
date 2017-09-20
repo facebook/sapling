@@ -404,8 +404,6 @@ class fileserverclient(object):
         finally:
             os.umask(oldumask)
 
-        return
-
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]
         if not line:
