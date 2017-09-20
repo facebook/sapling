@@ -55,17 +55,9 @@ class bundlerevlog(revlog.revlog):
         self.bundle = bundle
         n = len(self)
         self.repotiprev = n - 1
-        chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
-        getchunk = lambda: bundle.deltachunk(chain)
-        for chunkdata in iter(getchunk, {}):
-            node = chunkdata['node']
-            p1 = chunkdata['p1']
-            p2 = chunkdata['p2']
-            cs = chunkdata['cs']
-            deltabase = chunkdata['deltabase']
-            delta = chunkdata['delta']
-            flags = chunkdata['flags']
+        for deltadata in bundle.deltaiter():
+            node, p1, p2, cs, deltabase, delta, flags = deltadata
 
             size = len(delta)
             start = bundle.tell() - size
@@ -73,7 +65,6 @@ class bundlerevlog(revlog.revlog):
             link = linkmapper(cs)
             if node in self.nodemap:
                 # this can happen if two branches make the same change
-                chain = node
                 self.bundlerevs.add(self.nodemap[node])
                 continue
 
@@ -93,7 +84,6 @@ class bundlerevlog(revlog.revlog):
             self.index.insert(-1, e)
             self.nodemap[node] = n
             self.bundlerevs.add(n)
-            chain = node
             n += 1
 
     def _chunk(self, rev):
