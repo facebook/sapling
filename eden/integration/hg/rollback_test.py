@@ -17,20 +17,27 @@ class RollbackTest:
         repo.write_file('first', '')
         self._commit1 = repo.commit('first commit')
 
-    def test_amend_with_editor_failure_should_trigger_rollback(self):
+    def test_commit_with_precommit_failure_should_trigger_rollback(self):
         original_commits = self.repo.log()
 
         self.repo.write_file('first', 'THIS IS CHANGED')
         self.assert_status({'first': 'M'})
 
         with self.assertRaises(hgrepo.HgError) as context:
-            self.hg('amend', '--edit', '--config', 'ui.editor=/bin/false')
-        expected_msg = 'transaction abort!\n  rollback completed\n'
-        self.assertIn(expected_msg, str(context.exception))
+            self.hg(
+                'commit', '-m', 'Precommit hook should fail, causing rollback.',
+                '--config', 'hooks.pretxncommit=false'
+            )
+        expected_msg = (
+            b'transaction abort!\nrollback completed\n'
+            b'abort: pretxncommit hook exited with status 1\n'
+        )
+        self.assertIn(expected_msg, context.exception.stderr)
 
         self.assertEqual(
             original_commits,
             self.repo.log(),
-            msg='Failed editor should abort the change and '
+            msg='Failed precommit hook should abort the change and '
             'leave Hg in the original state.'
         )
+        self.assert_status({'first': 'M'})
