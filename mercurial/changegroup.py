@@ -188,8 +188,7 @@ class cg1unpacker(object):
         header = struct.unpack(self.deltaheader, headerdata)
         delta = readexactly(self._stream, l - self.deltaheadersize)
         node, p1, p2, deltabase, cs, flags = self._deltaheader(header, prevnode)
-        return {'node': node, 'p1': p1, 'p2': p2, 'cs': cs,
-                'deltabase': deltabase, 'delta': delta, 'flags': flags}
+        return (node, p1, p2, cs, deltabase, delta, flags)
 
     def getchunks(self):
         """returns all the chunks contains in the bundle
@@ -438,17 +437,9 @@ class cg1unpacker(object):
         """
         chain = None
         for chunkdata in iter(lambda: self.deltachunk(chain), {}):
-            node = chunkdata['node']
-            p1 = chunkdata['p1']
-            p2 = chunkdata['p2']
-            cs = chunkdata['cs']
-            deltabase = chunkdata['deltabase']
-            delta = chunkdata['delta']
-            flags = chunkdata['flags']
-
-            chain = node
-
-            yield (node, p1, p2, cs, deltabase, delta, flags)
+            # Chunkdata: (node, p1, p2, cs, deltabase, delta, flags)
+            yield chunkdata
+            chain = chunkdata[0]
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.
