@@ -132,9 +132,14 @@ def metaedit(ui, repo, *revs, **opts):
                         replacemap[c.node()] = newid
                 for c in allctx:
                     _rewritesingle(c, commitopts)
-                for c in newunstablectx:
-                    _rewritesingle(c,
-                                   {'date': commitopts.get('date') or None})
+
+                if _histediting(repo):
+                    ui.note(_('during histedit, the descendants of '
+                              'the edited commit weren\'t auto-rebased\n'))
+                else:
+                    for c in newunstablectx:
+                        _rewritesingle(c,
+                                       {'date': commitopts.get('date') or None})
 
                 if p1.node() in replacemap:
                     repo.setparents(replacemap[p1.node()])
@@ -178,3 +183,6 @@ def metaedit(ui, repo, *revs, **opts):
             hg.update(repo, newp1)
     finally:
         lockmod.release(lock, wlock)
+
+def _histediting(repo):
+    return repo.vfs.exists('histedit-state')

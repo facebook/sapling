@@ -248,3 +248,61 @@ metaedit more than one commit at once without --fold
   |
   o  0:1ea73414a91b@default(draft) r0
   
+
+make the top commit non-empty
+  $ echo xx > xx
+  $ hg add xx
+  $ hg amend
+  $ glog -r 'all()'
+  @  10:90ef4d40a825@default(draft) metaedit
+  |
+  o  8:a1c80e4c2636@default(draft) metaedit
+  |
+  o  5:1aed0f31debd@default(draft) metaedit
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  
+
+test histedit compat
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py" >> $HGRCPATH
+  $ echo "histedit=" >> $HGRCPATH
+
+  $ hg export -r .
+  # HG changeset patch
+  # User debugbuilddag
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 90ef4d40a82572a220d8329eefb1d96a1fac3597
+  # Parent  a1c80e4c26360f913ae3bdc5c70d6f29d465bfb0
+  metaedit
+  
+  diff --git a/xx b/xx
+  new file mode 100644
+  --- /dev/null
+  +++ b/xx
+  @@ -0,0 +1,1 @@
+  +xx
+  $ hg histedit ".^^" --commands - <<EOF
+  > pick 1aed0f31debd
+  > x hg metaedit -m "histedit test"
+  > x hg commit --amend -m 'message from exec'
+  > pick a1c80e4c2636
+  > pick 90ef4d40a825
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  a1c80e4c2636: skipping changeset (no changes)
+
+  $ glog -r 'all()'
+  @  13:942d79297adf@default(draft) metaedit
+  |
+  o  12:b5e5d076151f@default(draft) message from exec
+  |
+  o  1:66f7d451a68b@default(draft) r1
+  |
+  o  0:1ea73414a91b@default(draft) r0
+  
