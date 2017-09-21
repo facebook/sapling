@@ -27,7 +27,7 @@ use nodehashkey::Key;
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf)]
-pub struct Generation(usize);
+pub struct Generation(u64);
 
 /// Cache of generation numbers
 ///
