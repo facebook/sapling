@@ -675,3 +675,33 @@ Only the ".hgdirsync" at the top of the repo is effective
   mirrored changes in 'dir1/c' to 'dir7/c'
 
   $ cd ../..
+
+Rule order matters. Only the first one gets executed.
+
+  $ hg init $TESTTMP/repo-order1
+  $ cd $TESTTMP/repo-order1
+  $ cat >> .hgdirsync <<'EOF'
+  > a.dir1 = a/
+  > a.dir2 = b/
+  > c.dir1 = a/c/
+  > c.dir2 = c/
+  > EOF
+  $ mkdir -p a/c
+  $ echo 1 > a/c/1
+  $ hg commit -m 'order test' -A a
+  adding a/c/1
+  mirrored adding 'a/c/1' to 'b/c/1'
+
+  $ hg init $TESTTMP/repo-order2
+  $ cd $TESTTMP/repo-order2
+  $ cat >> .hgdirsync <<'EOF'
+  > c.dir1 = a/c/
+  > c.dir2 = c/
+  > a.dir1 = a/
+  > a.dir2 = b/
+  > EOF
+  $ mkdir -p a/c
+  $ echo 1 > a/c/1
+  $ hg commit -m 'order test' -A a
+  adding a/c/1
+  mirrored adding 'a/c/1' to 'c/1'

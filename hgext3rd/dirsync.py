@@ -5,13 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 """
-dirsync is an extension for keeping directories in a repo synchronized.
+keep directories in a repo synchronized (DEPRECATED)
 
-Configure it by adding the following config options to your .hg/hgrc.
+Configure it by adding the following config options to your .hg/hgrc or
+.hgdirsync in the root of the repo::
 
-[dirsync]
-projectX.dir1 = path/to/dir1
-projectX.dir2 = path/dir2
+    [dirsync]
+    projectX.dir1 = path/to/dir1
+    projectX.dir2 = path/dir2
 
 The configs are of the form "group.name = path-to-dir". Every config entry with
 the same `group` will be mirrored amongst each other. The `name` is just used to
@@ -20,19 +21,18 @@ from the repo root. It must be a directory, but it doesn't matter if you specify
 the trailing '/' or not.
 
 Multiple mirror groups can be specified at once, and you can mirror between an
-arbitrary number of directories. Ex:
+arbitrary number of directories::
 
-[dirsync]
-projectX.dir1 = path/to/dir1
-projectX.dir2 = path/dir2
-projectY.dir1 = otherpath/dir1
-projectY.dir2 = foo/bar
-projectY.dir3 = foo/goo/hoo
+    [dirsync]
+    projectX.dir1 = path/to/dir1
+    projectX.dir2 = path/dir2
+    projectY.dir1 = otherpath/dir1
+    projectY.dir2 = foo/bar
+    projectY.dir3 = foo/goo/hoo
 """
 
 from __future__ import absolute_import
 
-from collections import defaultdict
 import errno
 from mercurial import (
     cmdutil,
@@ -81,7 +81,7 @@ def getconfigs(repo):
     if content:
         ui._tcfg.parse(filename, '[dirsync]\n%s' % content, ['dirsync'])
 
-    maps = defaultdict(list)
+    maps = util.sortdict()
     for key, value in ui.configitems('dirsync'):
         if '.' not in key:
             continue
@@ -89,6 +89,8 @@ def getconfigs(repo):
         # Normalize paths to have / at the end. For easy concatenation later.
         if value[-1] != '/':
             value = value + '/'
+        if name not in maps:
+            maps[name] = []
         maps[name].append(value)
     return maps
 
