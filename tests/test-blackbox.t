@@ -293,6 +293,13 @@ when using chg, blackbox.log should get rotated correctly
 
   $ cd ..
 
+With chg, blackbox should not create the log file if the repo is gone
+
+  $ hg init repo1
+  $ hg --config extensions.a=! -R repo1 log
+  $ rm -rf $TESTTMP/repo1
+  $ hg --config extensions.a=! init repo1
+
 #endif
 
 blackbox should work if repo.ui.log is not called (issue5518)

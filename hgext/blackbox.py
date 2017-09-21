@@ -77,9 +77,13 @@ def wrapui(ui):
     class blackboxui(ui.__class__):
         @property
         def _bbvfs(self):
+            vfs = None
             repo = getattr(self, '_bbrepo', None)
             if repo:
-                return repo.vfs
+                vfs = repo.vfs
+                if not vfs.isdir('.'):
+                    vfs = None
+            return vfs
 
         @util.propertycache
         def track(self):
@@ -136,6 +140,10 @@ def wrapui(ui):
 
             if not ui:
                 return
+            vfs = ui._bbvfs
+            if not vfs:
+                return
+
             repo = getattr(ui, '_bbrepo', None)
             if not lastui or repo:
                 lastui = ui
