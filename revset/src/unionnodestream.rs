@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use error_chain::ChainedError;
 use futures::Async;
 use futures::Poll;
 use futures::future::Future;
@@ -18,17 +19,12 @@ use std::mem::replace;
 use std::sync::Arc;
 
 use NodeStream;
-use RevsetError;
+use errors::*;
 
-type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = RevsetError> + 'static>;
+type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static>;
 
 pub struct UnionNodeStream {
-    inputs: Vec<
-        (
-            InputStream,
-            Poll<Option<(NodeHash, Generation)>, RevsetError>,
-        ),
-    >,
+    inputs: Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
     current_generation: Option<Generation>,
     accumulator: HashSet<NodeHash>,
     drain: Option<IntoIter<NodeHash>>,
@@ -46,7 +42,8 @@ where
         repo_generation
             .get(&repo, node_hash)
             .map(move |gen_id| (node_hash, gen_id))
-            .map_err(|_| RevsetError::GenerationFetchFailed)
+            .map_err(|err|
+                ChainedError::with_chain(err, ErrorKind::GenerationFetchFailed))
     });
     Box::new(stream)
 }
@@ -104,11 +101,10 @@ impl UnionNodeStream {
         if self.all_inputs_ready() {
             self.current_generation = self.inputs
                 .iter()
-                .filter_map(|&(_, ref state)| {
-                    match state.clone().unwrap_or(Async::NotReady) {
-                        Async::Ready(Some((_, gen_id))) => Some(gen_id),
-                        _ => panic!("All states ready, yet some not ready!"),
-                    }
+                .filter_map(|&(_, ref state)| match state {
+                    &Ok(Async::Ready(Some((_, gen_id)))) => Some(gen_id),
+                    &Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
+                    _ => None,
                 })
                 .max();
         }
@@ -133,7 +129,7 @@ impl UnionNodeStream {
 
 impl Stream for UnionNodeStream {
     type Item = NodeHash;
-    type Error = RevsetError;
+    type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and
         // the standard futures::executor expects you to only return NotReady if blocked on I/O.
@@ -151,10 +147,13 @@ impl Stream for UnionNodeStream {
 
             // Return any errors
             {
-                if let Some(&(_, Err(ref e))) =
-                    self.inputs.iter().find(|&&(_, ref state)| state.is_err())
-                {
-                    return Err(e.clone());
+                if self.inputs.iter().any(|&(_, ref state)| state.is_err()) {
+                    let inputs = replace(&mut self.inputs, Vec::new());
+                    let (_, err) = inputs
+                        .into_iter()
+                        .find(|&(_, ref state)| state.is_err())
+                        .unwrap();
+                    return Err(err.unwrap_err());
                 }
             }
 
@@ -184,9 +183,10 @@ impl Stream for UnionNodeStream {
 
 #[cfg(test)]
 mod test {
-    use super::UnionNodeStream;
-    use super::super::{NodeStream, SingleNodeHash};
+    use super::*;
+    use {NodeStream, SingleNodeHash};
     use assert_node_sequence;
+    use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
     use std::sync::Arc;
@@ -209,6 +209,31 @@ mod test {
         ));
 
         assert_node_sequence(vec![head_hash.clone()], nodestream);
+    }
+    #[test]
+    fn union_error_node() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
+            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
+        ];
+        let mut nodestream = spawn(Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation,
+            inputs.into_iter(),
+        )));
+
+        assert!(
+            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
+                hash == nodehash
+            } else {
+                false
+            },
+            "No error for bad node"
+        );
     }
     #[test]
     fn union_three_nodes() {

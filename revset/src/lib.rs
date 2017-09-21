@@ -5,6 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate asyncmemo;
+#[macro_use]
+extern crate error_chain;
 extern crate futures;
 extern crate mercurial_types;
 extern crate repoinfo;
@@ -18,13 +20,9 @@ pub use unionnodestream::UnionNodeStream;
 mod singlenodehash;
 pub use singlenodehash::SingleNodeHash;
 
-#[derive(Clone, Debug)]
-pub enum RevsetError {
-    NoSuchNode(NodeHash),
-    GenerationFetchFailed,
-}
+pub mod errors;
 
-pub type NodeStream = Stream<Item = NodeHash, Error = RevsetError> + 'static;
+pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + 'static;
 
 #[cfg(test)]
 extern crate ascii;

@@ -4,16 +4,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use error_chain::ChainedError;
 use futures::Poll;
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
 use std::boxed::Box;
 
-use RevsetError;
+use errors::*;
 
 pub struct SingleNodeHash {
-    node: Box<Stream<Item = NodeHash, Error = RevsetError>>,
+    node: Box<Stream<Item = NodeHash, Error = Error>>,
 }
 
 impl SingleNodeHash {
@@ -22,11 +23,13 @@ impl SingleNodeHash {
         R: Repo,
     {
         let future = repo.changeset_exists(&nodehash);
-        let future = future.map_err(move |_| RevsetError::NoSuchNode(nodehash));
+        let future = future.map_err(move |err| {
+            ChainedError::with_chain(err, ErrorKind::NoSuchNode(nodehash))
+        });
         let future = future.and_then(move |exists| if exists {
             Ok(nodehash)
         } else {
-            Err(RevsetError::NoSuchNode(nodehash))
+            Err(ErrorKind::NoSuchNode(nodehash).into())
         });
         SingleNodeHash {
             node: Box::new(future.into_stream()),
@@ -36,7 +39,7 @@ impl SingleNodeHash {
 
 impl Stream for SingleNodeHash {
     type Item = NodeHash;
-    type Error = RevsetError;
+    type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         self.node.poll()
     }
@@ -44,7 +47,7 @@ impl Stream for SingleNodeHash {
 
 #[cfg(test)]
 mod test {
-    use super::{RevsetError, SingleNodeHash};
+    use super::*;
     use assert_node_sequence;
     use futures::executor::spawn;
     use linear;
@@ -73,7 +76,7 @@ mod test {
         let mut nodestream = spawn(SingleNodeHash::new(nodehash, &repo));
 
         assert!(
-            if let Some(Err(RevsetError::NoSuchNode(hash))) = nodestream.wait_stream() {
+            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
                 hash == nodehash
             } else {
                 false
