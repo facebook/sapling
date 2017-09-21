@@ -1,3 +1,5 @@
+#testcases files rocksdb
+
   $ . $TESTDIR/library.sh
   $ hg init repo
   $ cd repo
@@ -22,14 +24,25 @@
   
   $ cd ..
   $ mkdir $TESTTMP/blobrepo
+#if files
   $ blobimport --blobstore files repo $TESTTMP/blobrepo
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   * INFO head 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+#else
+  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo
+  * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
+  * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  * INFO head 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+#endif
 
 Temporary hack because blobimport doesn't import bookmarks yet
   $ mkdir $TESTTMP/blobrepo/books
-  $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo
+#if files
+  $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo --repotype files
+#else
+  $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo --repotype rocksdb
+#endif
 
 Temporary hack to make sure server is ready
   $ sleep 1

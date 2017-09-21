@@ -40,7 +40,7 @@ use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
 
-use blobrepo::{BlobRepo, BlobState, FilesBlobState};
+use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState};
 use clap::App;
 use futures::{Future, Stream};
 use futures_ext::{FutureExt, StreamExt};
@@ -52,8 +52,6 @@ use regex::{Captures, Regex};
 mod errors;
 
 use errors::*;
-
-const EXIT_CODE: i32 = 1;
 
 type NameToRepo<State> = HashMap<String, Arc<BlobRepo<State>>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
@@ -272,6 +270,20 @@ where
     }
 }
 
+fn start_server<State>(addr: &str, reponame: String, state: State)
+where
+    State: BlobState,
+{
+    let addr = addr.parse().expect("Failed to parse address");
+    let mut map = HashMap::new();
+    let repo = BlobRepo::new(state);
+    map.insert(reponame, Arc::new(repo));
+
+    let func = move || Ok(EdenServer::new(map.clone()));
+    let server = Http::new().bind(&addr, func).expect("Failed to run server");
+    server.run().expect("Error while running service");
+}
+
 fn main() {
     let matches = App::new("Mononoke server for Eden")
         .version("0.1")
@@ -281,8 +293,17 @@ fn main() {
              --blobrepo-folder=[FOLDER] 'folder with blobrepo data'
              --reponame=[REPONAME] 'Name of the repository'",
         )
+        .arg(
+            clap::Arg::with_name("repotype")
+                .long("repotype")
+                .short("T")
+                .takes_value(true)
+                .possible_values(&["files", "rocksdb"])
+                .required(true)
+                .help("repo type"),
+        )
         .get_matches();
-    let addr = matches.value_of("addr").unwrap_or("127.0.0.1:3000").parse();
+    let addr = matches.value_of("addr").unwrap_or("127.0.0.1:3000");
     let blobrepo_folder = matches
         .value_of("blobrepo-folder")
         .expect("Please specify a path to the blobrepo");
@@ -292,28 +313,18 @@ fn main() {
         .to_string();
 
     let blobrepo_folder = Path::new(blobrepo_folder);
-    let repo = blobrepo::BlobRepo::new(
-        FilesBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
-    );
-
-    let mut map = HashMap::new();
-    map.insert(reponame, Arc::new(repo));
-
-    let func = move || Ok(EdenServer::new(map.clone()));
-    if let Ok(parsed_addr) = addr {
-        match Http::new().bind(&parsed_addr, func) {
-            Ok(server) => if let Err(error) = server.run() {
-                println!("Error while running service: {}", error);
-                std::process::exit(EXIT_CODE);
-            },
-            Err(error) => {
-                println!("Failed to run server: {}", error);
-                std::process::exit(EXIT_CODE);
-            }
-        }
-    } else {
-        println!("Failed to parse address");
-        std::process::exit(EXIT_CODE);
+    match matches.value_of("repotype").expect("required argument 'repotype' is not provided") {
+        "files" => start_server(
+            addr,
+            reponame,
+            FilesBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
+        ),
+        "rocksdb" => start_server(
+            addr,
+            reponame,
+            RocksBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
+        ),
+        bad => panic!("unknown blobrepo type {:?}", bad),
     };
 }
 

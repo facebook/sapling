@@ -106,13 +106,13 @@ impl_blob_state! {
 
 impl RocksBlobState {
     pub fn new(path: &Path) -> Result<Self> {
-        let heads = FileHeads::open(path.with_extension("heads"))
+        let heads = FileHeads::open(path.join("heads"))
             .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = Arc::new(
-            FileBookmarks::open(path.with_extension("books"))
+            FileBookmarks::open(path.join("books"))
                 .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
         );
-        let blobstore = Rocksblob::open(path.with_extension("rocks"))
+        let blobstore = Rocksblob::open(path.join("blobs"))
             .chain_err(|| ErrorKind::StateOpen(StateOpenError::Blobstore))?;
 
         Ok(RocksBlobState {
