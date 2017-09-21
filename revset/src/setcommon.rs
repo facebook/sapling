@@ -1,0 +1,61 @@
+// Copyright (c) 2017-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use error_chain::ChainedError;
+use futures::future::Future;
+use futures::stream::Stream;
+use mercurial_types::{NodeHash, Repo};
+use repoinfo::{Generation, RepoGenCache};
+use std::boxed::Box;
+use std::sync::Arc;
+
+use NodeStream;
+use errors::*;
+
+use futures::{Async, Poll};
+
+pub type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static>;
+
+pub fn add_generations<R>(
+    stream: Box<NodeStream>,
+    repo_generation: RepoGenCache<R>,
+    repo: Arc<R>,
+) -> InputStream
+where
+    R: Repo,
+{
+    let stream = stream.and_then(move |node_hash| {
+        repo_generation
+            .get(&repo, node_hash)
+            .map(move |gen_id| (node_hash, gen_id))
+            .map_err(|err| {
+                ChainedError::with_chain(err, ErrorKind::GenerationFetchFailed)
+            })
+    });
+    Box::new(stream)
+}
+
+pub fn all_inputs_ready(
+    inputs: &Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
+) -> bool {
+    inputs
+        .iter()
+        .map(|&(_, ref state)| match state {
+            &Err(_) => false,
+            &Ok(ref p) => p.is_ready(),
+        })
+        .all(|ready| ready)
+}
+
+pub fn poll_all_inputs(
+    inputs: &mut Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
+) {
+    for &mut (ref mut input, ref mut state) in inputs.iter_mut() {
+        if let Ok(Async::NotReady) = *state {
+            *state = input.poll();
+        }
+    }
+}

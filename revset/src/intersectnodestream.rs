@@ -4,14 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
-use std::collections::HashSet;
-use std::collections::hash_set::IntoIter;
+use std::collections::HashMap;
+use std::collections::hash_map::IntoIter;
 use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
@@ -20,14 +21,14 @@ use NodeStream;
 use errors::*;
 use setcommon::*;
 
-pub struct UnionNodeStream {
+pub struct IntersectNodeStream {
     inputs: Vec<(InputStream, Poll<Option<(NodeHash, Generation)>, Error>)>,
     current_generation: Option<Generation>,
-    accumulator: HashSet<NodeHash>,
-    drain: Option<IntoIter<NodeHash>>,
+    accumulator: HashMap<NodeHash, usize>,
+    drain: Option<IntoIter<NodeHash, usize>>,
 }
 
-impl UnionNodeStream {
+impl IntersectNodeStream {
     pub fn new<I, R>(repo: &Arc<R>, repo_generation: RepoGenCache<R>, inputs: I) -> Self
     where
         I: IntoIterator<Item = Box<NodeStream>>,
@@ -41,21 +42,12 @@ impl UnionNodeStream {
                 )
             }
         });
-        UnionNodeStream {
+        IntersectNodeStream {
             inputs: hash_and_gen.collect(),
             current_generation: None,
-            accumulator: HashSet::new(),
+            accumulator: HashMap::new(),
             drain: None,
         }
-    }
-
-    fn gc_finished_inputs(&mut self) {
-        self.inputs
-            .retain(|&(_, ref state)| if let Ok(Async::Ready(None)) = *state {
-                false
-            } else {
-                true
-            });
     }
 
     fn update_current_generation(&mut self) {
@@ -67,7 +59,7 @@ impl UnionNodeStream {
                     &Ok(Async::NotReady) => panic!("All states ready, yet some not ready!"),
                     _ => None,
                 })
-                .max();
+                .min();
         }
     }
 
@@ -77,7 +69,10 @@ impl UnionNodeStream {
             if let Ok(Async::Ready(Some((hash, gen_id)))) = *state {
                 if Some(gen_id) == self.current_generation {
                     found_hashes = true;
-                    self.accumulator.insert(hash);
+                    *self.accumulator.entry(hash).or_insert(0) += 1;
+                }
+                // Inputs of higher generation than the current one get consumed and dropped
+                if Some(gen_id) >= self.current_generation {
                     *state = Ok(Async::NotReady);
                 }
             }
@@ -86,9 +81,23 @@ impl UnionNodeStream {
             self.current_generation = None;
         }
     }
+
+    fn any_input_finished(&self) -> bool {
+        if self.inputs.is_empty() {
+            true
+        } else {
+            self.inputs
+                .iter()
+                .map(|&(_, ref state)| match state {
+                    &Ok(Async::Ready(None)) => true,
+                    _ => false,
+                })
+                .any(|done| done)
+        }
+    }
 }
 
-impl Stream for UnionNodeStream {
+impl Stream for IntersectNodeStream {
     type Item = NodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -99,11 +108,16 @@ impl Stream for UnionNodeStream {
             poll_all_inputs(&mut self.inputs);
 
             // Empty the drain if any - return all items for this generation
-            let next_in_drain = self.drain.as_mut().and_then(|drain| drain.next());
-            if next_in_drain.is_some() {
-                return Ok(Async::Ready(next_in_drain));
-            } else {
-                self.drain = None;
+            while self.drain.is_some() {
+                let next_in_drain = self.drain.as_mut().and_then(|drain| drain.next());
+                if next_in_drain.is_some() {
+                    let (hash, count) = next_in_drain.expect("is_some() said this was safe");
+                    if count == self.inputs.len() {
+                        return Ok(Async::Ready(Some(hash)));
+                    }
+                } else {
+                    self.drain = None;
+                }
             }
 
             // Return any errors
@@ -118,8 +132,6 @@ impl Stream for UnionNodeStream {
                 }
             }
 
-            self.gc_finished_inputs();
-
             // If any input is not ready (we polled above), wait for them all to be ready
             if !all_inputs_ready(&self.inputs) {
                 return Ok(Async::NotReady);
@@ -129,13 +141,13 @@ impl Stream for UnionNodeStream {
                 None => if self.accumulator.is_empty() {
                     self.update_current_generation();
                 } else {
-                    let full_accumulator = replace(&mut self.accumulator, HashSet::new());
+                    let full_accumulator = replace(&mut self.accumulator, HashMap::new());
                     self.drain = Some(full_accumulator.into_iter());
                 },
                 Some(_) => self.accumulate_nodes(),
             }
             // If we cannot ever output another node, we're done.
-            if self.inputs.is_empty() && self.drain.is_none() && self.accumulator.is_empty() {
+            if self.drain.is_none() && self.accumulator.is_empty() && self.any_input_finished() {
                 return Ok(Async::Ready(None));
             }
         }
@@ -145,7 +157,7 @@ impl Stream for UnionNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
-    use {NodeStream, SingleNodeHash};
+    use {NodeStream, SingleNodeHash, UnionNodeStream};
     use assert_node_sequence;
     use futures::executor::spawn;
     use linear;
@@ -154,7 +166,7 @@ mod test {
     use string_to_nodehash;
 
     #[test]
-    fn union_identical_node() {
+    fn intersect_identical_node() {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
@@ -163,7 +175,7 @@ mod test {
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
         ];
-        let nodestream = Box::new(UnionNodeStream::new(
+        let nodestream = Box::new(IntersectNodeStream::new(
             &repo,
             repo_generation,
             inputs.into_iter(),
@@ -171,33 +183,9 @@ mod test {
 
         assert_node_sequence(vec![head_hash.clone()], nodestream);
     }
-    #[test]
-    fn union_error_node() {
-        let repo = Arc::new(linear::getrepo());
-        let repo_generation = RepoGenCache::new(10);
 
-        let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
-        let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
-            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
-        ];
-        let mut nodestream = spawn(Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation,
-            inputs.into_iter(),
-        )));
-
-        assert!(
-            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
-                hash == nodehash
-            } else {
-                false
-            },
-            "No error for bad node"
-        );
-    }
     #[test]
-    fn union_three_nodes() {
+    fn intersect_three_different_nodes() {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
@@ -216,41 +204,96 @@ mod test {
                 &repo,
             )),
         ];
-        let nodestream = Box::new(UnionNodeStream::new(
+        let nodestream = Box::new(IntersectNodeStream::new(
             &repo,
             repo_generation,
             inputs.into_iter(),
         ));
 
-        // But, once I hit the asserts, I expect them in generation order.
+        assert_node_sequence(vec![], nodestream);
+    }
+
+    #[test]
+    fn intersect_three_identical_nodes() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                &repo,
+            )),
+        ];
+        let nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation,
+            inputs.into_iter(),
+        ));
+
         assert_node_sequence(
             vec![
-                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ],
             nodestream,
         );
     }
+
     #[test]
-    fn union_nothing() {
+    fn intersect_nesting() {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let inputs: Vec<Box<NodeStream>> = vec![];
-        let nodestream = Box::new(UnionNodeStream::new(
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+                &repo,
+            )),
+        ];
+
+        let nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let inputs: Vec<Box<NodeStream>> = vec![
+            nodestream,
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+                &repo,
+            )),
+        ];
+        let nodestream = Box::new(IntersectNodeStream::new(
             &repo,
             repo_generation,
             inputs.into_iter(),
         ));
-        assert_node_sequence(vec![], nodestream);
+
+        assert_node_sequence(
+            vec![
+                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+            ],
+            nodestream,
+        );
     }
+
     #[test]
-    fn union_nesting() {
+    fn intersection_of_unions() {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        // Note that these are *not* in generation order deliberately.
         let inputs: Vec<Box<NodeStream>> = vec![
             Box::new(SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -268,14 +311,31 @@ mod test {
             inputs.into_iter(),
         ));
 
+        // This set has a different node sequence, so that we can demonstrate that we skip nodes
+        // when they're not going to contribute.
         let inputs: Vec<Box<NodeStream>> = vec![
-            nodestream,
             Box::new(SingleNodeHash::new(
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 &repo,
             )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                &repo,
+            )),
         ];
-        let nodestream = Box::new(UnionNodeStream::new(
+
+        let nodestream2 = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let inputs: Vec<Box<NodeStream>> = vec![nodestream, nodestream2];
+        let nodestream = Box::new(IntersectNodeStream::new(
             &repo,
             repo_generation,
             inputs.into_iter(),
@@ -284,10 +344,51 @@ mod test {
         assert_node_sequence(
             vec![
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ],
             nodestream,
         );
+
     }
+
+    #[test]
+    fn intersect_error_node() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
+            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
+        ];
+        let mut nodestream = spawn(Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation,
+            inputs.into_iter(),
+        )));
+
+        assert!(
+            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
+                hash == nodehash
+            } else {
+                false
+            },
+            "No error for bad node"
+        );
+    }
+
+    #[test]
+    fn intersect_nothing() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let inputs: Vec<Box<NodeStream>> = vec![];
+        let nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation,
+            inputs.into_iter(),
+        ));
+        assert_node_sequence(vec![], nodestream);
+    }
+
 }

@@ -14,6 +14,11 @@ extern crate repoinfo;
 use futures::stream::Stream;
 use mercurial_types::NodeHash;
 
+mod setcommon;
+
+mod intersectnodestream;
+pub use intersectnodestream::IntersectNodeStream;
+
 mod unionnodestream;
 pub use unionnodestream::UnionNodeStream;
 
