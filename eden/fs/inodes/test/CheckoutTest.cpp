@@ -419,7 +419,7 @@ void testModifyConflict(
   ASSERT_EQ(1, results.size());
 
   EXPECT_EQ(path, results[0].path);
-  EXPECT_EQ(ConflictType::MODIFIED, results[0].type);
+  EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, results[0].type);
 
   auto postInode = testMount.getFileInode(path);
   if (force) {
@@ -493,7 +493,8 @@ TEST(Checkout, modifyThenRevert) {
   // The checkout should report a/test.txt as a conflict
   EXPECT_THAT(
       checkoutResult.get(),
-      UnorderedElementsAre(makeConflict(ConflictType::MODIFIED, "a/test.txt")));
+      UnorderedElementsAre(
+          makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
   // The checkout operation updates files by replacing them, so
   // there should be a new inode at this location now, with the original

@@ -138,7 +138,7 @@ enum ConflictType {
    * This may be contents modifications, or a file type change (directory to
    * file or vice-versa), or permissions changes.
    */
-  MODIFIED = 5,
+  MODIFIED_MODIFIED = 5,
   /**
    * A directory was supposed to be removed or replaced with a file,
    * but it contains untracked files preventing us from updating it.

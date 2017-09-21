@@ -2200,7 +2200,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
   } else if (entry->getHash() != oldScmEntry->getHash()) {
-    conflictType = ConflictType::MODIFIED;
+    conflictType = ConflictType::MODIFIED_MODIFIED;
   }
   if (conflictType != ConflictType::ERROR) {
     // If this is are a directory we unfortunately have to load the directory

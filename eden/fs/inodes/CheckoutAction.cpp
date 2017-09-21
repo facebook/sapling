@@ -306,7 +306,7 @@ bool CheckoutAction::hasConflict() {
     auto treeInode = inode_.asTreePtrOrNull();
     if (!treeInode) {
       // This was a directory, but has been replaced with a file on disk
-      ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
       return true;
     }
 
@@ -321,14 +321,14 @@ bool CheckoutAction::hasConflict() {
     auto fileInode = inode_.asFilePtrOrNull();
     if (!fileInode) {
       // This was a file, but has been replaced with a directory on disk
-      ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
       return true;
     }
 
     // Check that the file contents are the same as the old source control entry
     if (!fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getMode())) {
       // The file contents or mode bits are different
-      ctx_->addConflict(ConflictType::MODIFIED, inode_.get());
+      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
       return true;
     }
 
