@@ -12,7 +12,6 @@ import hashlib
 from mercurial import (
     error,
     filelog,
-    node,
     revlog,
     util,
 )

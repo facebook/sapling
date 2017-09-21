@@ -590,7 +590,8 @@ class fileserverclient(object):
             self._lfsprefetch(fileids)
 
     def _lfsprefetch(self, fileids):
-        if not _lfsmod or not hasattr(self.repo.svfs, 'lfslocalblobstore'):
+        if not _lfsmod or not util.safehasattr(
+                self.repo.svfs, 'lfslocalblobstore'):
             return
         if not _lfsmod.wrapper.candownload(self.repo):
             return
