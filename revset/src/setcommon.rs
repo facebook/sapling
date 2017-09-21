@@ -59,3 +59,22 @@ pub fn poll_all_inputs(
         }
     }
 }
+#[cfg(test)]
+pub struct NotReadyEmptyStream {
+    pub poll_count: usize,
+}
+
+#[cfg(test)]
+impl Stream for NotReadyEmptyStream {
+    type Item = NodeHash;
+    type Error = Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if self.poll_count == 0 {
+            Ok(Async::Ready(None))
+        } else {
+            self.poll_count -= 1;
+            Ok(Async::NotReady)
+        }
+    }
+}

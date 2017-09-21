@@ -162,6 +162,7 @@ mod test {
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
+    use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
     use string_to_nodehash;
 
@@ -389,6 +390,37 @@ mod test {
             inputs.into_iter(),
         ));
         assert_node_sequence(vec![], nodestream);
+    }
+
+    #[test]
+    fn slow_ready_intersect_nothing() {
+        // Tests that we handle an input staying at NotReady for a while without panicing
+        let repeats = 10;
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(NotReadyEmptyStream {
+                poll_count: repeats,
+            }),
+        ];
+        let mut nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation,
+            inputs.into_iter(),
+        ));
+
+        // Keep polling until we should be done.
+        for _ in 0..repeats + 1 {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                Ok(Async::NotReady) => (),
+                x => panic!("Unexpected poll result {:?}", x),
+            }
+        }
+        panic!(
+            "Intersect of something that's not ready {} times failed to complete",
+            repeats
+        );
     }
 
 }
