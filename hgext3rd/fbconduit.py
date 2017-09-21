@@ -24,6 +24,7 @@ conduit_path = None
 conduit_protocol = None
 connection = None
 
+DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
 
 class ConduitError(Exception):
@@ -59,16 +60,16 @@ def conduit_config(ui, host=None, path=None, protocol=None):
 
     return True
 
-def call_conduit(method, **kwargs):
+def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
     global connection, conduit_host, conduit_path, conduit_protocol
 
     # start connection
     # TODO: move to python-requests
     if connection is None:
         if conduit_protocol == 'https':
-            connection = httplib.HTTPSConnection(conduit_host)
+            connection = httplib.HTTPSConnection(conduit_host, timeout=timeout)
         elif conduit_protocol == 'http':
-            connection = httplib.HTTPConnection(conduit_host)
+            connection = httplib.HTTPConnection(conduit_host, timeout=timeout)
 
     # send request
     path = conduit_path + method
