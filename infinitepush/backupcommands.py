@@ -296,20 +296,40 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """Changesets that have not yet been backed up by infinitepush"""
     bkpstate = _readlocalbackupstate(repo.ui, repo)
-    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
-    expectedbkpheads = _backupheads(repo.ui, repo)
-    return subset & repo.revs('draft() and ::%ls - ::%ls',
-                              expectedbkpheads, visiblebkpheads)
+    bkpheads = set(bkpstate.heads)
+    candidates = set(_backupheads(repo.ui, repo))
+    notbackeduprevs = set()
+    # Find all revisions that are ancestors of the expected backup heads,
+    # stopping when we reach either a public commit or a known backup head.
+    while candidates:
+        candidate = candidates.pop()
+        if candidate not in bkpheads:
+            ctx = repo[candidate]
+            rev = ctx.rev()
+            if rev not in notbackeduprevs and ctx.phase() != phases.public:
+                # This rev may not have been backed up.  Record it, and add its
+                # parents as candidates.
+                notbackeduprevs.add(rev)
+                candidates.update([p.hex() for p in ctx.parents()])
+    if notbackeduprevs:
+        # Some revisions in this set may actually have been backed up by
+        # virtue of being an ancestor of a different backup head.  Find these
+        # and remove them from the set.
+        candidates = bkpheads
+        while candidates:
+            candidate = candidates.pop()
+            if candidate in repo:
+                ctx = repo[candidate]
+                if ctx.phase() != phases.public:
+                    notbackeduprevs.discard(ctx.rev())
+                    candidates.update([p.hex() for p in ctx.parents()])
+    return subset & notbackeduprevs
 
 def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
         return
 
-    bkpstate = _readlocalbackupstate(ui, repo)
-    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
-    expectedbkpheads = _backupheads(ui, repo)
-    unbackeduprevs = repo.revs('draft() and ::%ls - ::%ls',
-                               expectedbkpheads, visiblebkpheads)
+    unbackeduprevs = repo.revs('notbackedup()')
 
     # Count the number of changesets that haven't been backed up for 10 minutes.
     # If there is only one, also print out its hash.
