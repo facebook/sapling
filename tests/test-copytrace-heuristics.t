@@ -665,3 +665,50 @@ in other merge parent. File moved on rebase.
   dummy
   $ rm -rf server
   $ rm -rf repo
+
+Testing the sourcecommitlimit config
+
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg ci -Aqm "added a"
+  $ echo "more things" >> a
+  $ hg ci -qm "added more things to a"
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo b > b
+  $ hg ci -Aqm "added b"
+  $ mkdir foo
+  $ hg mv a foo/bar
+  $ hg ci -m "Moved a to foo/bar"
+  $ hg log -G -T 'changeset {node}\n desc {desc}, phase: {phase}\n'
+  @  changeset b4b0f7880e500b5c364a5f07b4a2b167de7a6fb0
+  |   desc Moved a to foo/bar, phase: draft
+  o  changeset 5f6d8a4bf34ab274ccc9f631c2536964b8a3666d
+  |   desc added b, phase: draft
+  | o  changeset 8b6e13696c38e8445a759516474640c2f8dddef6
+  |/    desc added more things to a, phase: draft
+  o  changeset 9092f1db7931481f93b37d5c9fbcfc341bcd7318
+      desc added a, phase: draft
+
+When the sourcecommitlimit is small and we have more drafts, we use heuristics only
+
+  $ hg rebase -s 8b6e13696 -d . --config experimental.copytrace.sourcecommitlimit=0
+  rebasing 1:8b6e13696c38 "added more things to a"
+  other [source] changed a which local [dest] deleted
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+But when we have "sourcecommitlimit > (no. of drafts from base to c1)", we do
+fullcopytracing
+
+  $ hg rebase --abort
+  rebase aborted
+  $ hg rebase -s 8b6e13696 -d .
+  rebasing 1:8b6e13696c38 "added more things to a"
+  merging foo/bar and a to foo/bar
+  saved backup bundle to $TESTTMP/repo/repo/repo/.hg/strip-backup/8b6e13696c38-fc14ac83-rebase.hg (glob)
+  $ cd ..
+  $ rm -rf repo

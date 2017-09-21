@@ -176,6 +176,9 @@ coreconfigitem('experimental', 'clientcompressionengines',
 coreconfigitem('experimental', 'copytrace',
     default='on',
 )
+coreconfigitem('experimental', 'copytrace.sourcecommitlimit',
+    default=100,
+)
 coreconfigitem('experimental', 'crecordtest',
     default=None,
 )

@@ -371,22 +371,27 @@ def mergecopies(repo, c1, c2, base):
         # Do full copytracing if only drafts are involved as that will be fast
         # enough and will also cover the copies which can be missed by
         # heuristics
-        if _isfullcopytraceable(c1, base):
+        if _isfullcopytraceable(repo, c1, base):
             return _fullcopytracing(repo, c1, c2, base)
         return _heuristicscopytracing(repo, c1, c2, base)
     else:
         return _fullcopytracing(repo, c1, c2, base)
 
-def _isfullcopytraceable(c1, base):
+def _isfullcopytraceable(repo, c1, base):
     """ Checks that if base, source and destination are all draft branches, if
     yes let's use the full copytrace algorithm for increased capabilities since
     it will be fast enough.
     """
+    if c1.rev() is None:
+        c1 = c1.p1()
 
     nonpublicphases = set([phases.draft, phases.secret])
 
     if (c1.phase() in nonpublicphases) and (base.phase() in nonpublicphases):
-        return True
+        sourcecommitlimit = repo.ui.configint('experimental',
+                                              'copytrace.sourcecommitlimit')
+        commits = len(repo.revs('%d::%d', base.rev(), c1.rev()))
+        return commits < sourcecommitlimit
     return False
 
 def _fullcopytracing(repo, c1, c2, base):
