@@ -26,6 +26,7 @@ import errno
 import gc
 import hashlib
 import imp
+import mmap
 import os
 import platform as pyplatform
 import re as remod
@@ -406,6 +407,17 @@ class bufferedinputpipe(object):
         else:
             self._lenbuf += len(data)
             self._buffer.append(data)
+
+def mmapread(fp):
+    try:
+        fd = getattr(fp, 'fileno', lambda: fp)()
+        return mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
+    except ValueError:
+        # Empty files cannot be mmapped, but mmapread should still work.  Check
+        # if the file is empty, and if so, return an empty buffer.
+        if os.fstat(fd).st_size == 0:
+            return ''
+        raise
 
 def popen2(cmd, env=None, newlines=False):
     # Setting bufsize to -1 lets the system decide the buffer size.
