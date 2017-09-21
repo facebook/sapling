@@ -73,6 +73,40 @@ configitem('blackbox', 'logsource',
 
 lastui = None
 
+def _openlogfile(ui, vfs):
+    def rotate(oldpath, newpath):
+        try:
+            vfs.unlink(newpath)
+        except OSError as err:
+            if err.errno != errno.ENOENT:
+                ui.debug("warning: cannot remove '%s': %s\n" %
+                         (newpath, err.strerror))
+        try:
+            if newpath:
+                vfs.rename(oldpath, newpath)
+        except OSError as err:
+            if err.errno != errno.ENOENT:
+                ui.debug("warning: cannot rename '%s' to '%s': %s\n" %
+                         (newpath, oldpath, err.strerror))
+
+    maxsize = ui.configbytes('blackbox', 'maxsize')
+    name = 'blackbox.log'
+    if maxsize > 0:
+        try:
+            st = vfs.stat(name)
+        except OSError:
+            pass
+        else:
+            if st.st_size >= maxsize:
+                path = vfs.join(name)
+                maxfiles = ui.configint('blackbox', 'maxfiles', 7)
+                for i in xrange(maxfiles - 1, 1, -1):
+                    rotate(oldpath='%s.%d' % (path, i - 1),
+                           newpath='%s.%d' % (path, i))
+                rotate(oldpath=path,
+                       newpath=maxfiles > 0 and path + '.1')
+    return vfs(name, 'a')
+
 def wrapui(ui):
     class blackboxui(ui.__class__):
         @property
@@ -88,40 +122,6 @@ def wrapui(ui):
         @util.propertycache
         def track(self):
             return self.configlist('blackbox', 'track', ['*'])
-
-        def _openlogfile(self):
-            def rotate(oldpath, newpath):
-                try:
-                    self._bbvfs.unlink(newpath)
-                except OSError as err:
-                    if err.errno != errno.ENOENT:
-                        self.debug("warning: cannot remove '%s': %s\n" %
-                                   (newpath, err.strerror))
-                try:
-                    if newpath:
-                        self._bbvfs.rename(oldpath, newpath)
-                except OSError as err:
-                    if err.errno != errno.ENOENT:
-                        self.debug("warning: cannot rename '%s' to '%s': %s\n" %
-                                   (newpath, oldpath, err.strerror))
-
-            maxsize = self.configbytes('blackbox', 'maxsize')
-            name = 'blackbox.log'
-            if maxsize > 0:
-                try:
-                    st = self._bbvfs.stat(name)
-                except OSError:
-                    pass
-                else:
-                    if st.st_size >= maxsize:
-                        path = self._bbvfs.join(name)
-                        maxfiles = self.configint('blackbox', 'maxfiles', 7)
-                        for i in xrange(maxfiles - 1, 1, -1):
-                            rotate(oldpath='%s.%d' % (path, i - 1),
-                                   newpath='%s.%d' % (path, i))
-                        rotate(oldpath=path,
-                               newpath=maxfiles > 0 and path + '.1')
-            return self._bbvfs(name, 'a')
 
         def log(self, event, *msg, **opts):
             global lastui
@@ -172,7 +172,7 @@ def wrapui(ui):
             try:
                 fmt = '%s %s @%s%s (%s)%s> %s'
                 args = (date, user, rev, changed, pid, src, formattedmsg)
-                with ui._openlogfile() as fp:
+                with _openlogfile(ui, vfs) as fp:
                     fp.write(fmt % args)
             except (IOError, OSError) as err:
                 self.debug('warning: cannot write to blackbox.log: %s\n' %
