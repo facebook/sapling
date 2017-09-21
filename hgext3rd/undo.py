@@ -21,6 +21,7 @@ from mercurial import (
     hg,
     localrepo,
     lock as lockmod,
+    merge,
     obsolete,
     obsutil,
     phases,
@@ -59,42 +60,66 @@ def extsetup(ui):
 # Wrappers
 
 def _runcommandwrapper(orig, lui, repo, cmd, fullargs, *args):
-    # For chg, do not wrap the "serve" runcommand call
+    # For chg, do not wrap the "serve" runcommand call. Otherwise everything
+    # will be logged as side effects of a long "hg serve" command, no
+    # individual commands will be logged.
     if 'CHGINTERNALMARK' in os.environ:
         return orig(lui, repo, cmd, fullargs, *args)
 
-    # This wrapper executes whenever a command is run.
-    # Some commands (eg hg sl) don't actually modify anything
-    # ie can't be undone, but the command doesn't know this.
+    # For non-repo command, it's unnecessary to go through the undo logic
+    if repo is None:
+        return orig(lui, repo, cmd, fullargs, *args)
+
     command = [cmd] + fullargs
 
-    # Check wether undolog is consistent
-    # ie check wether the undo ext was
-    # off before this command
-    if '_undologactive' not in os.environ:
-        changes = safelog(repo, [""])
-        if changes:
-            _recordnewgap(repo)
+    # Whether something (transaction, or update) has triggered the writing of
+    # the *before* state to undolog or not. Possible values:
+    #  - []: not triggered, should trigger if write operation happens
+    #  - [True]: already triggered by this process, should also log end state
+    #  - [False]: already triggered by a parent process, should skip logging
+    triggered = []
 
-    # prevent nested calls
-    if '_undologactive' not in os.environ:
-        os.environ['_undologactive'] = "active"
-        rootlog = True
-    else:
-        rootlog = False
+    # '_undologactive' is set by a parent hg process with before state written
+    # to undolog. In this case, the current process should not write undolog.
+    if '_undologactive' in os.environ:
+        triggered.append(False)
 
-    try:
-        result = orig(lui, repo, cmd, fullargs, *args)
-    finally:
-        if repo is not None:
-            # mercurial is bad with caches
-            # eg update to hidden commit will leave false cache
+    def log(orig, *args, **kwargs):
+        # trigger a log of the initial state of a repo before a command tries
+        # to modify that state.
+        if not triggered:
+            triggered.append(True)
+            os.environ['_undologactive'] = "active"
+
+            # Check wether undolog is consistent
+            # ie check wether the undo ext was
+            # off before this command
+            changes = safelog(repo, [""])
+            if changes:
+                _recordnewgap(repo)
+
+        return orig(*args, **kwargs)
+
+    # Only write undo log if we know a command is going to do some writes. This
+    # saves time calculating visible heads if the command is read-only (ex.
+    # status).
+    #
+    # To detect a write command, wrap all possible entries:
+    #  - transaction.__init__
+    #  - merge.update
+    w = extensions.wrappedfunction
+    with w(merge, 'update', log), w(transaction.transaction, '__init__', log):
+        try:
+            result = orig(lui, repo, cmd, fullargs, *args)
+        finally:
+            # record changes to repo
+            if triggered and triggered[0]:
+                # invalidatevolatilesets should really be done in Mercurial's
+                # transaction handling code. We workaround it here before that
+                # upstream change.
                 repo.invalidatevolatilesets()
-
-        # record changes to repo
-        if rootlog:
-            safelog(repo, command)
-            del os.environ['_undologactive']
+                safelog(repo, command)
+                del os.environ['_undologactive']
 
     return result
 

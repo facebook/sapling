@@ -210,10 +210,29 @@ Test 'olddraft([NUM])' revset
   $ hg log -G -r 'olddraft(1) and public()' -T compact
 
 Test undolog lock
-  $ hg log --config hooks.duringundologlock="sleep 1" > /dev/null &
-  $ sleep 0.1
-  $ hg st --time
-  time: real [1-9]*\..* (re)
+  $ cat > $TESTTMP/noopupdate.py <<EOF
+  > from __future__ import absolute_import
+  > from mercurial import registrar, merge, encoding
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > def uisetup(ui):
+  >     merge.update = lambda *args, **kwargs: None
+  > @command('noopupdate')
+  > def noopupdate(ui, repo):
+  >     """do nothing, but triggers an undolog write"""
+  >     merge.update(repo, repo['.'], False, False)
+  > EOF
+  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py --config hooks.duringundologlock="sleep 2" > /dev/null &
+ give "hg noop" some time to reach the code obtaining the undolog lock
+  $ sleep 0.2
+
+ "hg status" does not trigger undolog writing
+  $ hg status --time
+  time: real 0* (glob)
+
+ "hg noopupdate" trigger undolog writing and it needs to wait
+  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py  --time
+  time: real [1-9]\..* (re)
 
 hg undo command tests
   $ hg undo
@@ -431,12 +450,8 @@ checking split/divergence.
 
 File corruption handling
   $ echo 111corruptedrevlog > .hg/undolog/index.i
-#if chg
-(note: chg has issues with the below test)
-#else
-  $ hg st --debug
+  $ hg noopupdate --config extensions.noopupdate=$TESTTMP/noopupdate.py --debug
   caught revlog error. undolog/index.i was probably corrupted
-#endif
   $ hg debugundohistory -l
   0:  -- gap in log -- 
 
