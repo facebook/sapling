@@ -51,7 +51,7 @@
 # =========================================================================
 #
 
-_find_most_relevant_remotebookmark()
+_find_most_relevant()
 {
     # We don't want to output all remote bookmarks because there can be many
     # of them. This function finds the most relevant remote bookmark using this
@@ -72,7 +72,7 @@ _find_most_relevant_remotebookmark()
 _scm_prompt()
 {
   local dir git hg fmt
-  # Defeault to be compatable with __git_ps1. In particular:
+  # Default to be compatable with __git_ps1. In particular:
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
   # - provide parens so it's differentiated from other crap in their prompt
@@ -82,13 +82,13 @@ _scm_prompt()
   dir=$PWD
   while : ; do
     if test -d "$dir/.git" ; then
-      git=$dir
+      git="$dir"
       break
     elif test -d "$dir/.hg" ; then
-      hg=$dir
+      hg="$dir"
       break
     fi
-    test "$dir" = / && break
+    test "$dir" = "/" && break
     # portable "realpath" equivalent
     dir=$(cd -P "$dir/.." && command echo "$PWD")
   done
@@ -144,9 +144,9 @@ _scm_prompt()
         command cut -f 3 -d ' ')"
 
       if [[ -n "$allremotemarks" ]]; then
-          local remotemark="$(_find_most_relevant_remotebookmark "$allremotemarks")"
+          local remotemark="$(_find_most_relevant "$allremotemarks")"
           if [[ -n "$remotemark" ]]; then
-            br="$br|$remotemark..."
+            br="$br|${remotemark}..."
           fi
       fi
     fi
