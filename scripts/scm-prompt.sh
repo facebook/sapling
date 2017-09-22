@@ -69,9 +69,125 @@ _find_most_relevant()
     command echo "$(command sort -r <<< "$1" | command head -n 1)"
 }
 
+_hg_prompt() {
+  local hg br extra
+  hg="$1"
+
+  if [[ -f "$hg/bisect.state" ]]; then
+    extra="|BISECT"
+  elif [[ -f "$hg/histedit-state" ]]; then
+    extra="|HISTEDIT"
+  elif [[ -f "$hg/graftstate" ]]; then
+    extra="|GRAFT"
+  elif [[ -f "$hg/unshelverebasestate" ]]; then
+    extra="|UNSHELVE"
+  elif [[ -f "$hg/rebasestate" ]]; then
+    extra="|REBASE"
+  elif [[ -d "$hg/merge" ]]; then
+    extra="|MERGE"
+  elif [[ -L "$hg/store/lock" ]]; then
+    extra="|STORE-LOCKED"
+  elif [[ -L "$hg/wlock" ]]; then
+    extra="|WDIR-LOCKED"
+  fi
+  local dirstate=$( \
+    (test -f "$hg/dirstate" && \
+    command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
+    (test -f "$hg/../.eden/client/SNAPSHOT" && \
+    command hexdump -s 8 -vn 20 -e '1/1 "%02x"' \
+      "$hg/../.eden/client/SNAPSHOT") || \
+    command echo "empty")
+  local active="$hg/bookmarks.current"
+  if  [[ -f "$active" ]]; then
+    br=$(command cat "$active")
+    # check to see if active bookmark needs update (eg, moved after pull)
+    local marks="$hg/bookmarks"
+    if [[ -f "$hg/sharedpath"  && -f "$hg/shared" ]] &&
+        command grep -q '^bookmarks$' "$hg/shared"; then
+      marks="$(command cat $hg/sharedpath)/bookmarks"
+    fi
+    if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
+      local markstate=$(command grep " $br$" "$marks" | \
+        command cut -f 1 -d ' ')
+      if [[ $markstate != "$dirstate" ]]; then
+        extra="|UPDATE_NEEDED"
+      fi
+    fi
+  else
+    br=$(command echo "$dirstate" | command cut -c 1-7)
+  fi
+  local remote="$hg/remotenames"
+  if [[ -f "$remote" ]]; then
+    local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
+      command cut -f 3 -d ' ')"
+
+    if [[ -n "$allremotemarks" ]]; then
+        local remotemark="$(_find_most_relevant "$allremotemarks")"
+        if [[ -n "$remotemark" ]]; then
+          br="$br|$remotemark"
+          if [[ "$remotemark" != "$allremotemarks" ]]; then
+            # if there is more than one, let the user know with an elipsis
+            br="${br}..."
+          fi
+        fi
+    fi
+  fi
+  local branch
+  if [[ -f "$hg/branch" ]]; then
+    branch=$(command cat "$hg/branch")
+    if [[ $branch != "default" ]]; then
+      br="$br|$branch"
+    fi
+  fi
+  br="$br$extra"
+  printf "%s" "$br"
+}
+
+_git_prompt() {
+  local git br
+  git="$1"
+  if test -f "$git/HEAD" ; then
+    read br < "$git/HEAD"
+    case $br in
+      ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
+      *) br=$(command echo "$br" | command cut -c 1-7) ;;
+    esac
+    if [[ -f "$git/rebase-merge/interactive" ]]; then
+      b="$(command cat "$git/rebase-merge/head-name")"
+      b=${b#refs/heads/}
+      br="$br|REBASE-i|$b"
+    elif [[ -d "$git/rebase-merge" ]]; then
+      b="$(command cat "$git/rebase-merge/head-name")"
+      b=${b#refs/heads/}
+      br="$br|REBASE-m|$b"
+    else
+      if [[ -d "$git/rebase-apply" ]]; then
+        if [[ -f "$git/rebase-apply/rebasing" ]]; then
+          b="$(command cat "$git/rebase-apply/head-name")"
+          b=${b#refs/heads/}
+          br="$br|REBASE|$b"
+        elif [[ -f "$git/rebase-apply/applying" ]]; then
+          br="$br|AM"
+        else
+          br="$br|AM/REBASE"
+        fi
+      elif [[ -f "$git/CHERRY_PICK_HEAD" ]]; then
+        br="$br|CHERRY-PICKING"
+      elif [[ -f "$git/REVERT_HEAD" ]]; then
+        br="$br|REVERTING"
+      elif [[ -f "$git/MERGE_HEAD" ]]; then
+        br="$br|MERGE"
+      elif [[ -f "$git/BISECT_LOG" ]]; then
+        br="$br|BISECT"
+      fi
+    fi
+  fi
+  printf "%s" "$br"
+}
+
 _scm_prompt()
 {
-  local dir git hg fmt
+  local dir fmt br
   # Default to be compatable with __git_ps1. In particular:
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
@@ -82,10 +198,10 @@ _scm_prompt()
   dir=$PWD
   while : ; do
     if test -d "$dir/.git" ; then
-      git="$dir/.git"
+      br=$(_git_prompt "$dir/.git")
       break
     elif test -d "$dir/.hg" ; then
-      hg="$dir/.hg"
+      br=$(_hg_prompt "$dir/.hg")
       break
     fi
     test "$dir" = "/" && break
@@ -93,114 +209,6 @@ _scm_prompt()
     dir=$(cd -P "$dir/.." && command echo "$PWD")
   done
 
-  local br
-  if test -n "$hg" ; then
-    local extra
-    if [[ -f "$hg/bisect.state" ]]; then
-      extra="|BISECT"
-    elif [[ -f "$hg/histedit-state" ]]; then
-      extra="|HISTEDIT"
-    elif [[ -f "$hg/graftstate" ]]; then
-      extra="|GRAFT"
-    elif [[ -f "$hg/unshelverebasestate" ]]; then
-      extra="|UNSHELVE"
-    elif [[ -f "$hg/rebasestate" ]]; then
-      extra="|REBASE"
-    elif [[ -d "$hg/merge" ]]; then
-      extra="|MERGE"
-    elif [[ -L "$hg/store/lock" ]]; then
-      extra="|STORE-LOCKED"
-    elif [[ -L "$hg/wlock" ]]; then
-      extra="|WDIR-LOCKED"
-    fi
-    local dirstate=$( \
-      (test -f "$hg/dirstate" && \
-      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
-      (test -f "$hg/../.eden/client/SNAPSHOT" && \
-      command hexdump -s 8 -vn 20 -e '1/1 "%02x"' \
-        "$hg/../.eden/client/SNAPSHOT") || \
-      command echo "empty")
-    local active="$hg/bookmarks.current"
-    if  [[ -f "$active" ]]; then
-      br=$(command cat "$active")
-      # check to see if active bookmark needs update (eg, moved after pull)
-      local marks="$hg/bookmarks"
-      if [[ -f "$hg/sharedpath"  && -f "$hg/shared" ]] &&
-          command grep -q '^bookmarks$' "$hg/shared"; then
-        marks="$(command cat $hg/sharedpath)/bookmarks"
-      fi
-      if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
-        local markstate=$(command grep " $br$" "$marks" | \
-          command cut -f 1 -d ' ')
-        if [[ $markstate != "$dirstate" ]]; then
-          extra="|UPDATE_NEEDED"
-        fi
-      fi
-    else
-      br=$(command echo "$dirstate" | command cut -c 1-7)
-    fi
-    local remote="$hg/remotenames"
-    if [[ -f "$remote" ]]; then
-      local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
-        command cut -f 3 -d ' ')"
-
-      if [[ -n "$allremotemarks" ]]; then
-          local remotemark="$(_find_most_relevant "$allremotemarks")"
-          if [[ -n "$remotemark" ]]; then
-            br="$br|$remotemark"
-            if [[ "$remotemark" != "$allremotemarks" ]]; then
-              # if there is more than one, let the user know with an elipsis
-              br="${br}..."
-            fi
-          fi
-      fi
-    fi
-    local branch
-    if [[ -f "$hg/branch" ]]; then
-      branch=$(command cat "$hg/branch")
-      if [[ $branch != "default" ]]; then
-        br="$br|$branch"
-      fi
-    fi
-    br="$br$extra"
-  elif test -n "$git" ; then
-    if test -f "$git/HEAD" ; then
-      read br < "$git/HEAD"
-      case $br in
-        ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
-        *) br=$(command echo "$br" | command cut -c 1-7) ;;
-      esac
-      if [[ -f "$git/rebase-merge/interactive" ]]; then
-        b="$(command cat "$git/rebase-merge/head-name")"
-        b=${b#refs/heads/}
-        br="$br|REBASE-i|$b"
-      elif [[ -d "$git/rebase-merge" ]]; then
-        b="$(command cat "$git/rebase-merge/head-name")"
-        b=${b#refs/heads/}
-        br="$br|REBASE-m|$b"
-      else
-        if [[ -d "$git/rebase-apply" ]]; then
-          if [[ -f "$git/rebase-apply/rebasing" ]]; then
-            b="$(command cat "$git/rebase-apply/head-name")"
-            b=${b#refs/heads/}
-            br="$br|REBASE|$b"
-          elif [[ -f "$git/rebase-apply/applying" ]]; then
-            br="$br|AM"
-          else
-            br="$br|AM/REBASE"
-          fi
-        elif [[ -f "$git/CHERRY_PICK_HEAD" ]]; then
-          br="$br|CHERRY-PICKING"
-        elif [[ -f "$git/REVERT_HEAD" ]]; then
-          br="$br|REVERTING"
-        elif [[ -f "$git/MERGE_HEAD" ]]; then
-          br="$br|MERGE"
-        elif [[ -f "$git/BISECT_LOG" ]]; then
-          br="$br|BISECT"
-        fi
-      fi
-    fi
-  fi
 
   if [[ -n "$br" ]]; then
     printf "$fmt" "$br"
