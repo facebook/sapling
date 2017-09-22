@@ -377,7 +377,9 @@ class remotefilectx(context.filectx):
         # like self.ancestors, but append to "fetch" and skip visiting parents
         # of nodes in "prefetchskip".
         fetch = []
+        seen = set()
         queue = collections.deque((introctx,))
+        seen.add(introctx.node())
         while queue:
             current = queue.pop()
             if current.filenode() != self.filenode():
@@ -386,7 +388,10 @@ class remotefilectx(context.filectx):
                 fetch.append((current.path(), hex(current.filenode())))
             if prefetchskip and current in prefetchskip:
                 continue
-            map(queue.append, current.parents())
+            for parent in current.parents():
+                if parent.node() not in seen:
+                    seen.add(parent.node())
+                    queue.append(parent)
 
         self._repo.ui.debug('remotefilelog: prefetching %d files '
                             'for annotate\n' % len(fetch))
