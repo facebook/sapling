@@ -147,7 +147,11 @@ _scm_prompt()
       if [[ -n "$allremotemarks" ]]; then
           local remotemark="$(_find_most_relevant "$allremotemarks")"
           if [[ -n "$remotemark" ]]; then
-            br="$br|${remotemark}..."
+            br="$br|$remotemark"
+            if [[ "$remotemark" != "$allremotemarks" ]]; then
+              # if there is more than one, let the user know with an elipsis
+              br="${br}..."
+            fi
           fi
       fi
     fi

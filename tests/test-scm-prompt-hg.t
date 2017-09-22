@@ -156,7 +156,7 @@ Test remotenames
   4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba
   $ echo 4b6cc7d5194bd5dbf63970015ec75f8fd1de6dba bookmarks remote/@ > .hg/remotenames
   $ cmd
-  (4b6cc7d|remote/@...)
+  (4b6cc7d|remote/@)
 
 Test shared bookmarks
   $ cmd cd ..
@@ -190,7 +190,7 @@ Test branches
   $ cmd hg branch blah
   marked working directory as branch blah
   (branches are permanent and global, did you want a bookmark?)
-  (4b6cc7d|remote/@...|blah)
+  (4b6cc7d|remote/@|blah)
   $ cmd hg commit -m blah
   (a742469|blah)
   $ cmd hg up -q default
