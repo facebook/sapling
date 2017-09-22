@@ -100,7 +100,7 @@ import tempfile
 import time
 
 from .bundleparts import (
-    getscratchbranchpart,
+    getscratchbranchparts,
     scratchbookmarksparttype,
     scratchbranchparttype,
 )
@@ -897,15 +897,16 @@ def partgen(pushop, bundler):
 
     nonforwardmove = pushop.force or pushop.ui.configbool(experimental,
                                                           confignonforwardmove)
-    scratchpart = getscratchbranchpart(pushop.repo,
-                                       pushop.remote,
-                                       pushop.outgoing,
-                                       nonforwardmove,
-                                       pushop.ui,
-                                       bookmark,
-                                       create)
+    scratchparts = getscratchbranchparts(pushop.repo,
+                                         pushop.remote,
+                                         pushop.outgoing,
+                                         nonforwardmove,
+                                         pushop.ui,
+                                         bookmark,
+                                         create)
 
-    bundler.addpart(scratchpart)
+    for scratchpart in scratchparts:
+        bundler.addpart(scratchpart)
 
     def handlereply(op):
         # server either succeeds or aborts; no code to read

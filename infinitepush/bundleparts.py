@@ -19,7 +19,7 @@ from mercurial.i18n import _
 scratchbranchparttype = 'b2x:infinitepush'
 scratchbookmarksparttype = 'b2x:infinitepushscratchbookmarks'
 
-def getscratchbranchpart(repo, peer, outgoing, confignonforwardmove,
+def getscratchbranchparts(repo, peer, outgoing, confignonforwardmove,
                          ui, bookmark, create):
     if not outgoing.missing:
         raise error.Abort(_('no commits to push'))
@@ -56,12 +56,23 @@ def getscratchbranchpart(repo, peer, outgoing, confignonforwardmove,
     if not isremotebooksenabled(ui):
         params['pushbackbookmarks'] = '1'
 
+    parts = []
+
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
-    return bundle2.bundlepart(
+    parts.append(bundle2.bundlepart(
         scratchbranchparttype.upper(),
         advisoryparams=params.iteritems(),
-        data=cg)
+        data=cg))
+
+    try:
+        treemod = extensions.find('treemanifest')
+        parts.append(treemod.createtreepackpart(repo, outgoing,
+                                                treemod.TREEGROUP_PARTTYPE2))
+    except KeyError:
+        pass
+
+    return parts
 
 def getscratchbookmarkspart(peer, bookmarks):
     if scratchbookmarksparttype not in bundle2.bundle2caps(peer):
