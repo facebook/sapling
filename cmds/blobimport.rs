@@ -28,6 +28,7 @@ extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
 
+extern crate rocksdb;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -358,7 +359,13 @@ where
     Ok(())
 }
 
-fn run<In, Out>(input: In, output: Out, blobtype: BlobstoreType, logger: &Logger) -> Result<()>
+fn run<In, Out>(
+    input: In,
+    output: Out,
+    blobtype: BlobstoreType,
+    logger: &Logger,
+    postpone_compaction: bool,
+) -> Result<()>
 where
     In: AsRef<Path>,
     Out: AsRef<Path>,
@@ -367,7 +374,7 @@ where
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
     let repo = open_repo(&input)?;
-    let blobstore = open_blobstore(&output, blobtype, &core.remote())?;
+    let blobstore = open_blobstore(&output, blobtype, &core.remote(), postpone_compaction)?;
     let headstore = open_headstore(&output, &cpupool)?;
 
     convert(repo, blobstore, headstore, core, cpupool, logger)
@@ -398,6 +405,7 @@ fn open_blobstore<P: AsRef<Path>>(
     output: P,
     ty: BlobstoreType,
     remote: &Remote,
+    postpone_compaction: bool,
 ) -> Result<BBlobstore> {
     let mut output = PathBuf::from(output.as_ref());
     output.push("blobs");
@@ -407,10 +415,15 @@ fn open_blobstore<P: AsRef<Path>>(
             .map_err(Error::from)
             .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
             .arced(),
-        BlobstoreType::Rocksdb => Rocksblob::create(output)
-            .map_err(Error::from)
-            .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
-            .arced(),
+        BlobstoreType::Rocksdb => {
+            let options = rocksdb::Options::new()
+                .create_if_missing(true)
+                .disable_auto_compaction(postpone_compaction);
+            Rocksblob::open_with_options(output, options)
+                .map_err(Error::from)
+                .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
+                .arced()
+        }
         BlobstoreType::Manifold => {
             let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic("mononoke", remote);
             mb.arced()
@@ -439,6 +452,12 @@ fn main() {
                 .required(true)
                 .help("blobstore type"),
         )
+        .arg(
+            Arg::with_name("postpone-compaction")
+                .long("postpone-compaction")
+                .help("disable rocksdb auto compaction for the time of blobimporting and run
+                       it afterwards. This option is used only for rocksdb blobstore."),
+        )
         .args_from_usage("<INPUT>                 'input revlog repo'")
         .args_from_usage("<OUTPUT>                'output blobstore RepoCtx'")
         .get_matches();
@@ -465,7 +484,9 @@ fn main() {
         bad => panic!("unexpected blobstore type {}", bad),
     };
 
-    if let Err(ref e) = run(input, output, blobtype, &root_log) {
+    let postpone_compaction = matches.is_present("postpone-compaction");
+
+    if let Err(ref e) = run(input, output, blobtype, &root_log, postpone_compaction) {
         error!(root_log, "Failed: {}", e);
 
         for e in e.iter().skip(1) {
@@ -473,5 +494,14 @@ fn main() {
         }
 
         std::process::exit(1);
+    }
+
+    if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
+        let options = rocksdb::Options::new().create_if_missing(false);
+        let rocksdb = rocksdb::Db::open(Path::new(output).join("blobs"), options)
+            .expect("can't open rocksdb");
+        info!(root_log, "compaction started");
+        rocksdb.compact_range(&[], &[]);
+        info!(root_log, "compaction finished");
     }
 }
