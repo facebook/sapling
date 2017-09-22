@@ -85,7 +85,7 @@ _scm_prompt()
       git="$dir"
       break
     elif test -d "$dir/.hg" ; then
-      hg="$dir"
+      hg="$dir/.hg"
       break
     fi
     test "$dir" = "/" && break
@@ -96,37 +96,38 @@ _scm_prompt()
   local br
   if test -n "$hg" ; then
     local extra
-    if [[ -f "$hg/.hg/bisect.state" ]]; then
+    if [[ -f "$hg/bisect.state" ]]; then
       extra="|BISECT"
-    elif [[ -f "$hg/.hg/histedit-state" ]]; then
+    elif [[ -f "$hg/histedit-state" ]]; then
       extra="|HISTEDIT"
-    elif [[ -f "$hg/.hg/graftstate" ]]; then
+    elif [[ -f "$hg/graftstate" ]]; then
       extra="|GRAFT"
-    elif [[ -f "$hg/.hg/unshelverebasestate" ]]; then
+    elif [[ -f "$hg/unshelverebasestate" ]]; then
       extra="|UNSHELVE"
-    elif [[ -f "$hg/.hg/rebasestate" ]]; then
+    elif [[ -f "$hg/rebasestate" ]]; then
       extra="|REBASE"
-    elif [[ -d "$hg/.hg/merge" ]]; then
+    elif [[ -d "$hg/merge" ]]; then
       extra="|MERGE"
-    elif [[ -L "$hg/.hg/store/lock" ]]; then
+    elif [[ -L "$hg/store/lock" ]]; then
       extra="|STORE-LOCKED"
-    elif [[ -L "$hg/.hg/wlock" ]]; then
+    elif [[ -L "$hg/wlock" ]]; then
       extra="|WDIR-LOCKED"
     fi
     local dirstate=$( \
-      (test -f "$hg/.hg/dirstate" && \
-      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate") || \
-      (test -f "$hg/.eden/client/SNAPSHOT" && \
-      command hexdump -s 8 -vn 20 -e '1/1 "%02x"' "$hg/.eden/client/SNAPSHOT") || \
+      (test -f "$hg/dirstate" && \
+      command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
+      (test -f "$hg/../.eden/client/SNAPSHOT" && \
+      command hexdump -s 8 -vn 20 -e '1/1 "%02x"' \
+        "$hg/../.eden/client/SNAPSHOT") || \
       command echo "empty")
-    local active="$hg/.hg/bookmarks.current"
+    local active="$hg/bookmarks.current"
     if  [[ -f "$active" ]]; then
       br=$(command cat "$active")
       # check to see if active bookmark needs update (eg, moved after pull)
-      local marks="$hg/.hg/bookmarks"
-      if [[ -f "$hg/.hg/sharedpath"  && -f "$hg/.hg/shared" ]] &&
-          command grep -q '^bookmarks$' "$hg/.hg/shared"; then
-        marks="$(command cat $hg/.hg/sharedpath)/bookmarks"
+      local marks="$hg/bookmarks"
+      if [[ -f "$hg/sharedpath"  && -f "$hg/shared" ]] &&
+          command grep -q '^bookmarks$' "$hg/shared"; then
+        marks="$(command cat $hg/sharedpath)/bookmarks"
       fi
       if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
         local markstate=$(command grep " $br$" "$marks" | \
@@ -138,7 +139,7 @@ _scm_prompt()
     else
       br=$(command echo "$dirstate" | command cut -c 1-7)
     fi
-    local remote="$hg/.hg/remotenames"
+    local remote="$hg/remotenames"
     if [[ -f "$remote" ]]; then
       local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
         command cut -f 3 -d ' ')"
@@ -151,8 +152,8 @@ _scm_prompt()
       fi
     fi
     local branch
-    if [[ -f "$hg/.hg/branch" ]]; then
-      branch=$(command cat "$hg/.hg/branch")
+    if [[ -f "$hg/branch" ]]; then
+      branch=$(command cat "$hg/branch")
       if [[ $branch != "default" ]]; then
         br="$br|$branch"
       fi
