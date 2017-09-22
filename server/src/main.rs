@@ -35,6 +35,7 @@ extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+extern crate services;
 extern crate sshrelay;
 
 use std::io;
@@ -253,6 +254,13 @@ fn main() {
                 .help("repo type"),
         )
         .args_from_usage("<REPODIR>...            'paths to repo dirs'")
+        .arg(
+            Arg::with_name("thrift_port")
+                .long("thrift_port")
+                .short("P")
+                .takes_value(true)
+                .help("if provided then thrift server will start on this port"),
+        )
         .get_matches();
 
     let level = if matches.is_present("debug") {
@@ -268,6 +276,15 @@ fn main() {
     let root_log = slog::Logger::root(drain, o![]);
 
     info!(root_log, "Starting up");
+
+    let thrift_server = matches.value_of("thrift_port").map(|port| {
+        let port = port.parse().expect("Failed to parse thrift_port as number");
+        services::init_service_framework(
+            "mononoke_server",
+            port,
+            0, // Disables separate status http server
+        )
+    });
 
     let repos = matches.values_of("REPODIR").unwrap().map(
         |p| match matches.value_of("repotype").unwrap() {
@@ -286,5 +303,9 @@ fn main() {
         }
 
         std::process::exit(1);
+    }
+
+    if let Some(handle) = thrift_server {
+        handle.join().unwrap().unwrap();
     }
 }
