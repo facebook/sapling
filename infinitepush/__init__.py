@@ -459,6 +459,16 @@ def _rebundle(bundlerepo, bundleroots, unknownhead):
     cgpart = bundle2.bundlepart('changegroup', data=cgstream)
     cgpart.addparam('version', version)
     parts.append(cgpart)
+
+    try:
+        treemod = extensions.find('treemanifest')
+    except KeyError:
+        pass
+    else:
+        treepart = treemod.createtreepackpart(bundlerepo, outgoing,
+                                              treemod.TREEGROUP_PARTTYPE2)
+        parts.append(treepart)
+
     return parts
 
 def _getbundleroots(oldrepo, bundlerepo, bundlerevs):
