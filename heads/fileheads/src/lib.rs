@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 extern crate heads;
 
@@ -14,6 +12,7 @@ extern crate heads;
 extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate futures_ext;
 #[cfg(test)]
 extern crate mercurial_types;
 #[cfg(test)]
@@ -29,9 +28,10 @@ use std::string::ToString;
 use std::sync::Arc;
 
 use futures::Async;
-use futures::future::{poll_fn, BoxFuture, Future, IntoFuture};
-use futures::stream::{self, BoxStream, Stream};
+use futures::future::{poll_fn, Future, IntoFuture};
+use futures::stream::{self, Stream};
 use futures_cpupool::CpuPool;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use heads::Heads;
 
@@ -117,7 +117,7 @@ where
                 });
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 
     fn remove(&self, key: &Self::Key) -> Self::Unit {
@@ -137,7 +137,7 @@ where
                 });
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 
     fn is_head(&self, key: &Self::Key) -> Self::Bool {
@@ -148,7 +148,7 @@ where
                 let future = poll_fn(move || Ok(Async::Ready(path.exists())));
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 
     fn heads(&self) -> Self::Heads {
@@ -170,8 +170,8 @@ where
                 })
         });
         match names {
-            Ok(v) => stream::iter(v).boxed(),
-            Err(e) => stream::once(Err(e.into())).boxed(),
+            Ok(v) => stream::iter_ok(v).and_then(|v| v).boxify(),
+            Err(e) => stream::once(Err(e.into())).boxify(),
         }
     }
 }
