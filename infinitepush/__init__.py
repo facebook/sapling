@@ -953,6 +953,13 @@ def processparts(orig, repo, op, unbundler):
 
     handleallparts = repo.ui.configbool('infinitepush', 'storeallparts')
 
+    partforwardingwhitelist = []
+    try:
+        treemfmod = extensions.find('treemanifest')
+        partforwardingwhitelist.append(treemfmod.TREEGROUP_PARTTYPE2)
+    except KeyError:
+        pass
+
     bundler = bundle2.bundle20(repo.ui)
     cgparams = None
     scratchbookpart = None
@@ -981,7 +988,7 @@ def processparts(orig, repo, op, unbundler):
                 # Save this for later processing. Details below.
                 scratchbookpart = part
             else:
-                if handleallparts:
+                if handleallparts or part.type in partforwardingwhitelist:
                     # Ideally we would not process any parts, and instead just
                     # forward them to the bundle for storage, but since this
                     # differs from previous behavior, we need to put it behind a
