@@ -880,33 +880,6 @@ def partgen(pushop, bundler):
 bundle2.capabilities[scratchbranchparttype] = ()
 bundle2.capabilities[scratchbookmarksparttype] = ()
 
-def _makebundlefile(ui, part, cgversion):
-    """constructs a temporary bundle file
-    """
-
-    fp = None
-    fd, bundlefile = tempfile.mkstemp()
-    try:  # guards bundlefile
-        try:  # guards fp
-            fp = os.fdopen(fd, 'wb')
-            bundler = bundle2.bundle20(ui)
-            cgpart = bundle2.bundlepart('changegroup', data=part.read())
-            cgpart.addparam('version', cgversion)
-            bundler.addpart(cgpart)
-            buf = util.chunkbuffer(bundler.getchunks())
-            fp.write(buf.read())
-        finally:
-            fp.close()
-    except Exception:
-        try:
-            os.unlink(bundlefile)
-        except Exception:
-            # we would rather see the original exception
-            pass
-        raise
-
-    return bundlefile
-
 def _getrevs(bundle, oldnode, force, bookmark):
     'extracts and validates the revs to be imported'
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
@@ -963,26 +936,16 @@ def _getorcreateinfinitepushlogger(op):
         logger = logger[0]
     return logger
 
-@bundle2.parthandler(scratchbranchparttype,
-                     ('bookmark', 'bookprevnode' 'create', 'force',
-                      'pushbackbookmarks', 'cgversion'))
-def bundle2scratchbranch(op, part):
-    '''unbundle a bundle2 part containing a changegroup to store'''
-
+def storebundle(op, params, bundlefile):
     log = _getorcreateinfinitepushlogger(op)
     parthandlerstart = time.time()
     log(scratchbranchparttype, eventtype='start')
-    params = part.params
     index = op.repo.bundlestore.index
     store = op.repo.bundlestore.store
     op.records.add(scratchbranchparttype + '_skippushkey', True)
 
-    bundlefile = None
     bundle = None
-
-    try:  # guards bundlefile
-        cgversion = params.get('cgversion', '01')
-        bundlefile = _makebundlefile(op.repo.ui, part, cgversion)
+    try:  # guards bundle
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
         bundle = repository(op.repo.ui, bundlepath)
 
@@ -1066,14 +1029,36 @@ def bundle2scratchbranch(op, part):
             errormsg=str(e))
         raise
     finally:
+        if bundle:
+            bundle.close()
+
+@bundle2.parthandler(scratchbranchparttype,
+                     ('bookmark', 'bookprevnode' 'create', 'force',
+                      'pushbackbookmarks', 'cgversion'))
+def bundle2scratchbranch(op, part):
+    '''unbundle a bundle2 part containing a changegroup to store'''
+
+    bundler = bundle2.bundle20(op.repo.ui)
+    cgversion = part.params.get('cgversion', '01')
+    cgpart = bundle2.bundlepart('changegroup', data=part.read())
+    cgpart.addparam('version', cgversion)
+    bundler.addpart(cgpart)
+    buf = util.chunkbuffer(bundler.getchunks())
+
+    fd, bundlefile = tempfile.mkstemp()
+    try:
         try:
-            if bundlefile:
-                os.unlink(bundlefile)
+            fp = os.fdopen(fd, 'wb')
+            fp.write(buf.read())
+        finally:
+            fp.close()
+        storebundle(op, part.params, bundlefile)
+    finally:
+        try:
+            os.unlink(bundlefile)
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
-        if bundle:
-            bundle.close()
 
     return 1
 
