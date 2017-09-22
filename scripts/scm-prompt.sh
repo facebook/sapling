@@ -51,8 +51,7 @@
 # =========================================================================
 #
 
-_find_most_relevant()
-{
+_find_most_relevant() {
     # We don't want to output all remote bookmarks because there can be many
     # of them. This function finds the most relevant remote bookmark using this
     # algorithm:
@@ -60,13 +59,13 @@ _find_most_relevant()
     # 2. Sort remote bookmarks and output the first in reverse sorted order (
     # it's a heuristic that tries to find the newest bookmark. It will work well
     # with bookmarks like 'release20160926' and 'release20161010').
-    relevantbook=$(command grep -m1 -E -o "^[^/]+/(master|@)$" <<< "$1")
+    relevantbook="$(command grep -m1 -E -o "^[^/]+/(master|@)$" <<< "$1")"
     if [[ -n $relevantbook ]]; then
-        command echo $relevantbook
+        builtin echo $relevantbook
         return 0
     fi
 
-    command echo "$(command sort -r <<< "$1" | command head -n 1)"
+    builtin echo "$(command sort -r <<< "$1" | command head -n 1)"
 }
 
 _hg_prompt() {
@@ -90,16 +89,16 @@ _hg_prompt() {
   elif [[ -L "$hg/wlock" ]]; then
     extra="|WDIR-LOCKED"
   fi
-  local dirstate=$( \
-    (test -f "$hg/dirstate" && \
+  local dirstate="$( \
+    ( [[ -f "$hg/dirstate" ]] && \
     command hexdump -vn 20 -e '1/1 "%02x"' "$hg/dirstate") || \
-    (test -f "$hg/../.eden/client/SNAPSHOT" && \
+    ( [[ -f "$hg/../.eden/client/SNAPSHOT" ]] && \
     command hexdump -s 8 -vn 20 -e '1/1 "%02x"' \
       "$hg/../.eden/client/SNAPSHOT") || \
-    command echo "empty")
+    builtin echo "empty")"
   local active="$hg/bookmarks.current"
   if  [[ -f "$active" ]]; then
-    br=$(command cat "$active")
+    br="$(command cat "$active")"
     # check to see if active bookmark needs update (eg, moved after pull)
     local marks="$hg/bookmarks"
     if [[ -f "$hg/sharedpath"  && -f "$hg/shared" ]] &&
@@ -107,14 +106,14 @@ _hg_prompt() {
       marks="$(command cat $hg/sharedpath)/bookmarks"
     fi
     if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
-      local markstate=$(command grep " $br$" "$marks" | \
-        command cut -f 1 -d ' ')
+      local markstate="$(command grep " $br$" "$marks" | \
+        command cut -f 1 -d ' ')"
       if [[ $markstate != "$dirstate" ]]; then
         extra="|UPDATE_NEEDED"
       fi
     fi
   else
-    br=$(command echo "$dirstate" | command cut -c 1-7)
+    br="$(builtin echo "$dirstate" | command cut -c 1-7)"
   fi
   local remote="$hg/remotenames"
   if [[ -f "$remote" ]]; then
@@ -134,8 +133,8 @@ _hg_prompt() {
   fi
   local branch
   if [[ -f "$hg/branch" ]]; then
-    branch=$(command cat "$hg/branch")
-    if [[ $branch != "default" ]]; then
+    branch="$(command cat "$hg/branch")"
+    if [[ "$branch" != "default" ]]; then
       br="$br|$branch"
     fi
   fi
@@ -146,25 +145,25 @@ _hg_prompt() {
 _git_prompt() {
   local git br
   git="$1"
-  if test -f "$git/HEAD" ; then
+  if [[ -f "$git/HEAD" ]]; then
     read br < "$git/HEAD"
     case $br in
       ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
-      *) br=$(command echo "$br" | command cut -c 1-7) ;;
+      *) br="$(builtin echo "$br" | command cut -c 1-7)" ;;
     esac
     if [[ -f "$git/rebase-merge/interactive" ]]; then
       b="$(command cat "$git/rebase-merge/head-name")"
-      b=${b#refs/heads/}
+      b="${b#refs/heads/}"
       br="$br|REBASE-i|$b"
     elif [[ -d "$git/rebase-merge" ]]; then
       b="$(command cat "$git/rebase-merge/head-name")"
-      b=${b#refs/heads/}
+      b="${b#refs/heads/}"
       br="$br|REBASE-m|$b"
     else
       if [[ -d "$git/rebase-apply" ]]; then
         if [[ -f "$git/rebase-apply/rebasing" ]]; then
           b="$(command cat "$git/rebase-apply/head-name")"
-          b=${b#refs/heads/}
+          b="${b#refs/heads/}"
           br="$br|REBASE|$b"
         elif [[ -f "$git/rebase-apply/applying" ]]; then
           br="$br|AM"
@@ -185,33 +184,31 @@ _git_prompt() {
   printf "%s" "$br"
 }
 
-_scm_prompt()
-{
+_scm_prompt() {
   local dir fmt br
   # Default to be compatable with __git_ps1. In particular:
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
   # - provide parens so it's differentiated from other crap in their prompt
-  fmt=${1:-' (%s)'}
+  fmt="${1:-' (%s)'}"
 
   # find out if we're in a git or hg repo by looking for the control dir
-  dir=$PWD
+  dir="$PWD"
   while : ; do
-    if test -d "$dir/.git" ; then
-      br=$(_git_prompt "$dir/.git")
+    if [[ -d "$dir/.git" ]]; then
+      br="$(_git_prompt "$dir/.git")"
       break
-    elif test -d "$dir/.hg" ; then
-      br=$(_hg_prompt "$dir/.hg")
+    elif [[ -d "$dir/.hg" ]]; then
+      br="$(_hg_prompt "$dir/.hg")"
       break
     fi
-    test "$dir" = "/" && break
+    [[ "$dir" = "/" ]] && break
     # portable "realpath" equivalent
-    dir=$(cd -P "$dir/.." && command echo "$PWD")
+    dir="$(builtin cd -P "$dir/.." && builtin echo "$PWD")"
   done
 
-
   if [[ -n "$br" ]]; then
-    printf "$fmt" "$br"
+    builtin printf "$fmt" "$br"
   fi
 }
 
