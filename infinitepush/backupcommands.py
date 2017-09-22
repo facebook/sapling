@@ -446,6 +446,7 @@ def _dobackup(ui, repo, dest, **opts):
     wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     try:
         bundler = _createbundler(ui, repo, other)
+        bundler.addparam("infinitepush", "True")
         backup = False
         if outgoing and outgoing.missing:
             backup = True
