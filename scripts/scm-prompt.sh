@@ -108,6 +108,10 @@ _scm_prompt()
       extra="|REBASE"
     elif [[ -d "$hg/.hg/merge" ]]; then
       extra="|MERGE"
+    elif [[ -L "$hg/.hg/store/lock" ]]; then
+      extra="|STORE-LOCKED"
+    elif [[ -L "$hg/.hg/wlock" ]]; then
+      extra="|WDIR-LOCKED"
     fi
     local dirstate=$( \
       (test -f "$hg/.hg/dirstate" && \

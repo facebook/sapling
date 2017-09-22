@@ -231,6 +231,16 @@ Test formatting options
   $ _scm_prompt ':%s:'
   :97af35b: (no-eol)
 
+Test locked repo states (generally due to concurrency so tests are kinda fake)
+  $ cmd ln -s "${HOSTNAME}:12345" .hg/wlock
+  (97af35b|WDIR-LOCKED)
+  $ cmd ln -s "${HOSTNAME}:12345" .hg/store/lock
+  (97af35b|STORE-LOCKED)
+  $ cmd rm .hg/wlock
+  (97af35b|STORE-LOCKED)
+  $ cmd rm .hg/store/lock
+  (97af35b)
+
 Test many remotenames
   $ hg log -r . -T '{node}\n'
   97af35b3648c0098cbd8114ae1b1bafab997ac20
