@@ -46,7 +46,10 @@
 #
 # Notes to developers:
 #
-#  * Aliases can screw up the default commands; use "command" to prevent this
+#  * Aliases can screw up the default commands. To prevent this issue, use
+#    the 'builtin' prefix for built-in shell commands (eg, 'cd' and 'echo')
+#    and use the 'command' prefix for external commands that you do not want
+#    to invoke aliases for (eg, 'grep', 'cut').
 #
 # =========================================================================
 #
@@ -139,7 +142,7 @@ _hg_prompt() {
     fi
   fi
   br="$br$extra"
-  printf "%s" "$br"
+  builtin printf "%s" "$br"
 }
 
 _git_prompt() {
@@ -181,7 +184,7 @@ _git_prompt() {
       fi
     fi
   fi
-  printf "%s" "$br"
+  builtin printf "%s" "$br"
 }
 
 _scm_prompt() {
