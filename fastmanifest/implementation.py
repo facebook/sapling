@@ -163,7 +163,7 @@ class hybridmanifest(object):
                     # Eat the buffer so we don't print a remote: warning
                     self.__treemanifest = False
                     return None
-                except:
+                except Exception:
                     # Other errors should be printed
                     output = self.ui.popbuffer()
                     if output:
