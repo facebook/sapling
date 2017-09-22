@@ -64,6 +64,7 @@ Bookmark pins nodes even after removed
 Check blackbox logs
 
   $ hg blackbox -l 10000
+  *> init exited 0 after * seconds (glob)
   *> debugdrawdag (glob)
   *> pinnednodes: ['debugdrawdag'] newpin=[] newunpin=['112478962961'] before=[] after=[] (glob)
   *> debugdrawdag exited 0 after * (glob)
