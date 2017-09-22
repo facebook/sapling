@@ -10,7 +10,13 @@ import os
 import time
 import heapq
 
-from mercurial import manifest, mdiff, revlog, util
+from mercurial import (
+    error,
+    manifest,
+    mdiff,
+    revlog,
+    util,
+)
 import cachemanager
 import cfastmanifest
 from metrics import metricscollector
@@ -140,15 +146,29 @@ class hybridmanifest(object):
                 self.__treemanifest = cstore.treemanifest(store)
             else:
                 store = self.manifestlog.datastore
+                self.ui.pushbuffer()
                 try:
                     store.get('', self.node)
                     self.__treemanifest = cstore.treemanifest(store,
                                                               self.node)
-                except KeyError:
+                    # The buffer is only to eat certain errors, so show
+                    # non-error messages.
+                    output = self.ui.popbuffer()
+                    if output:
+                        self.ui.status(output)
+                except (KeyError, error.Abort):
                     # Record that it doesn't exist, so we don't keep checking
                     # the store.
+                    self.ui.popbuffer()
+                    # Eat the buffer so we don't print a remote: warning
                     self.__treemanifest = False
                     return None
+                except:
+                    # Other errors should be printed
+                    output = self.ui.popbuffer()
+                    if output:
+                        self.ui.status(output)
+                    raise
 
         return self.__treemanifest
 

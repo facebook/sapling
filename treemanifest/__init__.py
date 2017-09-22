@@ -1024,6 +1024,16 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         raise error.Abort(_('pull failed on remote'), hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
+    finally:
+        # Manually destruct the peer, so we can collect any error output
+        remote.ui.pushbuffer()
+        remote._cleanup()
+
+        # Redirect cleanup output to the repo.ui so callers can buffer it if
+        # desired.
+        output = remote.ui.popbuffer()
+        if output:
+            repo.ui.status(output)
 
 def _registerbundle2parts():
     @bundle2.parthandler(TREEGROUP_PARTTYPE2, ('version', 'cache', 'category'))
