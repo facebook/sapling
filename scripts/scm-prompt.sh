@@ -82,7 +82,7 @@ _scm_prompt()
   dir=$PWD
   while : ; do
     if test -d "$dir/.git" ; then
-      git="$dir"
+      git="$dir/.git"
       break
     elif test -d "$dir/.hg" ; then
       hg="$dir/.hg"
@@ -160,38 +160,38 @@ _scm_prompt()
     fi
     br="$br$extra"
   elif test -n "$git" ; then
-    if test -f "$git/.git/HEAD" ; then
-      read br < "$git/.git/HEAD"
+    if test -f "$git/HEAD" ; then
+      read br < "$git/HEAD"
       case $br in
         ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
         *) br=$(command echo "$br" | command cut -c 1-7) ;;
       esac
-      if [[ -f "$git/.git/rebase-merge/interactive" ]]; then
-        b="$(command cat "$git/.git/rebase-merge/head-name")"
+      if [[ -f "$git/rebase-merge/interactive" ]]; then
+        b="$(command cat "$git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-i|$b"
-      elif [[ -d "$git/.git/rebase-merge" ]]; then
-        b="$(command cat "$git/.git/rebase-merge/head-name")"
+      elif [[ -d "$git/rebase-merge" ]]; then
+        b="$(command cat "$git/rebase-merge/head-name")"
         b=${b#refs/heads/}
         br="$br|REBASE-m|$b"
       else
-        if [[ -d "$git/.git/rebase-apply" ]]; then
-          if [[ -f "$git/.git/rebase-apply/rebasing" ]]; then
-            b="$(command cat "$git/.git/rebase-apply/head-name")"
+        if [[ -d "$git/rebase-apply" ]]; then
+          if [[ -f "$git/rebase-apply/rebasing" ]]; then
+            b="$(command cat "$git/rebase-apply/head-name")"
             b=${b#refs/heads/}
             br="$br|REBASE|$b"
-          elif [[ -f "$git/.git/rebase-apply/applying" ]]; then
+          elif [[ -f "$git/rebase-apply/applying" ]]; then
             br="$br|AM"
           else
             br="$br|AM/REBASE"
           fi
-        elif [[ -f "$git/.git/CHERRY_PICK_HEAD" ]]; then
+        elif [[ -f "$git/CHERRY_PICK_HEAD" ]]; then
           br="$br|CHERRY-PICKING"
-        elif [[ -f "$git/.git/REVERT_HEAD" ]]; then
+        elif [[ -f "$git/REVERT_HEAD" ]]; then
           br="$br|REVERTING"
-        elif [[ -f "$git/.git/MERGE_HEAD" ]]; then
+        elif [[ -f "$git/MERGE_HEAD" ]]; then
           br="$br|MERGE"
-        elif [[ -f "$git/.git/BISECT_LOG" ]]; then
+        elif [[ -f "$git/BISECT_LOG" ]]; then
           br="$br|BISECT"
         fi
       fi
