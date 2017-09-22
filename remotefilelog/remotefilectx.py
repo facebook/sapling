@@ -8,9 +8,31 @@
 import collections
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import context, util, error, ancestor, phases
+from mercurial import context, util, error, ancestor, phases, extensions
 
 propertycache = util.propertycache
+conduit = None
+FASTLOG_TIMEOUT_IN_SECS = 0.5
+
+def createconduit(ui):
+    try:
+        conduit = extensions.find("fbconduit")
+    except KeyError:
+        try:
+            from hgext3rd import fbconduit as conduit
+        except ImportError:
+            ui.log('fastloglinkrevfixup',
+                   _('unable to find fbconduit extension\n'))
+            return False
+    if not util.safehasattr(conduit, 'conduit_config'):
+        ui.log('fastloglinkrevfixup',
+               _('incompatible conduit module; disabling fastlog\n'))
+        return False
+    if not conduit.conduit_config(ui):
+        ui.log('fastloglinkrevfixup',
+               _('no conduit host specified in config; disabling fastlog\n'))
+        return False
+    return conduit
 
 class remotefilectx(context.filectx):
     def __init__(self, repo, path, changeid=None, fileid=None,
@@ -25,6 +47,17 @@ class remotefilectx(context.filectx):
 
     def size(self):
         return self._filelog.size(self._filenode)
+
+    @propertycache
+    def _conduit(self):
+        global conduit
+        if conduit is None:
+            conduit = createconduit(self._repo.ui)
+        # If createconduit fails, conduit will be set to False. We use this to
+        # avoid calling createconduit multiple times
+        if conduit is False:
+            return None
+        return conduit
 
     @propertycache
     def _changeid(self):
@@ -156,6 +189,16 @@ class remotefilectx(context.filectx):
 
         return results
 
+    def _nodefromancrev(self, ancrev, cl, mfl, path, fnode):
+        """returns the node for <path> in <ancrev> if content matches <fnode>"""
+        ancctx = cl.read(ancrev) # This avoids object creation.
+        manifestnode, files = ancctx[0], ancctx[3]
+        # If the file was touched in this ancestor, and the content is similar
+        # to the one we are searching for.
+        if path in files and fnode == mfl[manifestnode].readfast().get(path):
+            return cl.node(ancrev)
+        return None
+
     def _adjustlinknode(self, path, filelog, fnode, srcrev, inclusive=False):
         """return the first ancestor of <srcrev> introducing <fnode>
 
@@ -202,13 +245,9 @@ class remotefilectx(context.filectx):
         iteranc = cl.ancestors(revs, inclusive=inclusive)
         for ancrev in iteranc:
             # First, check locally-available history.
-            ancctx = cl.read(ancrev) # This avoids object creation.
-            manifestnode, files = ancctx[0], ancctx[3]
-            if path in files:
-                # The file was touched in this ancestor, so check if the
-                # content is similar to the one we are searching for.
-                if fnode == mfl[manifestnode].readfast().get(path):
-                    return cl.node(ancrev)
+            lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
+            if lnode is not None:
+                return lnode
 
             # This next part is super non-obvious, so big comment block time!
             #
@@ -251,6 +290,16 @@ class remotefilectx(context.filectx):
             # the slow path is used too much. One promising possibility is using
             # obsolescence markers to find a more-likely-correct linkrev.
             if not seenpublic and pc.phase(repo, ancrev) == phases.public:
+                # If the commit is public and fastlog is enabled for this repo
+                # then we will can try to fetch the right linknode via fastlog
+                # since fastlog already has the right linkrev for all public
+                # commits
+                if repo.ui.configbool('fastlog', 'enabled'):
+                    lnode = self._linknodeviafastlog(repo, path, ancrev, fnode,
+                                                     cl, mfl)
+                    if lnode:
+                        repo.ui.log('fastloglinkrevfixup', _('success\n'))
+                        return lnode
                 seenpublic = True
                 try:
                     repo.fileservice.prefetch([(path, hex(fnode))], force=True)
@@ -271,6 +320,36 @@ class remotefilectx(context.filectx):
                     repo.ui.warn(_(errormsg) % (path, hex(linknode), e))
 
         return linknode
+
+    def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl):
+        reponame = repo.ui.config('fbconduit', 'reponame')
+        if self._conduit is None:
+            return None
+        try:
+            srchex = repo[srcrev].hex()
+            results = self._conduit.call_conduit(
+                'scmquery.log_v2',
+                timeout=FASTLOG_TIMEOUT_IN_SECS,
+                repo=reponame,
+                scm_type='hg',
+                rev=srchex,
+                file_paths=[path],
+                skip=0,
+            )
+            if results is None:
+                repo.ui.log('fastloglinkrevfixup',
+                            _('fastlog returned 0 results\n'))
+                return None
+            for anc in results:
+                ancrev = repo[str(anc['hash'])].rev()
+                lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
+                if lnode is not None:
+                    return lnode
+            return None
+        except Exception as e:
+            repo.ui.log('fastloglinkrevfixup',
+                        _('call to fastlog failed (%s)\n') % e)
+            return None
 
     def _verifylinknode(self, revs, linknode):
         """

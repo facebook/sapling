@@ -194,3 +194,124 @@
   d4a3ed9310e5 => aee31534993a  000000000000  32e6611f6149  
   aee31534993a => 1406e7411862  000000000000  0632994590a8  
   1406e7411862 => 000000000000  000000000000  b292c1e3311f  
+
+Test the same scenario as above but with fastlog enabled
+
+  $ cd ..
+  $ clearcache
+
+  $ rm -rf master
+  $ rm -rf shallow
+  $ hginit master
+  $ cd master
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > server=True
+  > serverexpiration=-1
+  > EOF
+  $ echo x > x
+  $ hg commit -qAm x
+  $ echo x >> x
+  $ hg commit -Aqm xx
+  $ cd ..
+
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd shallow
+  $ echo x >> x
+  $ hg commit -Aqm xx2
+  $ cd ../master
+  $ echo y >> y
+  $ hg commit -Aqm yy2
+  $ echo x >> x
+  $ hg commit -Aqm xx2-fake-rebased
+  $ echo y >> y
+  $ hg commit -Aqm yy3
+  $ cd ../shallow
+  $ hg pull -q
+  $ hg update tip -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  $ echo x > x
+  $ hg commit -qAm xx3
+
+Verfiy correct linkrev despite fastlog failures
+
+Case 1: fastlog service calls fails or times out
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fbconduit=$TESTTMP/bad_conduit.py
+  > [fastlog]
+  > enabled=True
+  > EOF
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > def call_conduit(*args, **kwargs):
+  >   raise Exception('error')
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+Case 2: fastlog returns empty results
+
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > def call_conduit(*args, **kwargs):
+  >   return []
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ rm $TESTTMP/bad_conduit.pyc
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+
+Case 3: fastlog returns a bad hash
+
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > def call_conduit(*args, **kwargs):
+  >   return [{'hash': '123456'}]
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ rm $TESTTMP/bad_conduit.pyc
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+
+Fastlog succeeds and returns the correct results
+
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > def call_conduit(*args, **kwargs):
+  >   return [{'hash': '32e6611f6149e85f58def77ee0c22549bb6953a2'}]
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ rm $TESTTMP/bad_conduit.pyc
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n'
+  a5957b6bf0bd xx3 draft x
+  32e6611f6149 xx2-fake-rebased public x
+  0632994590a8 xx public x
+  b292c1e3311f x public x
+
+Fastlog should never get called on draft commits
+
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > import sys
+  > def call_conduit(*args, **kwargs):
+  >   if kwargs['rev'].startswith('a5957b6bf0bd'):
+  >     sys.exit(80)
+  >   return [{'hash': '32e6611f6149e85f58def77ee0c22549bb6953a2'}]
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ rm $TESTTMP/bad_conduit.pyc
+  $ hg log -f x > /dev/null
