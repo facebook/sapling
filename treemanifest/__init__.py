@@ -316,9 +316,10 @@ class treeonlymanifestlog(object):
 
         return treemanifestctx(self, dir, node)
 
-    def addmemtree(self, node, tree):
+    def addmemtree(self, node, tree, p1, p2):
         ctx = treemanifestctx(self, '', node)
         ctx._data = tree
+        ctx.parents = (p1, p2)
         self._memtrees[('', node)] = ctx
 
     def clearcaches(self):
@@ -480,7 +481,7 @@ class memtreemanifestctx(object):
                 node = nnode
 
         if node is not None:
-            self._manifestlog.addmemtree(node, newtree)
+            self._manifestlog.addmemtree(node, newtree, p1, p2)
         return node
 
 def serverreposetup(repo):
