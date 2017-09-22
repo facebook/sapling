@@ -12,6 +12,11 @@ use vfs::errors as vfs_errors;
 
 error_chain! {
     errors {
+        /// The given bookmark does not exist in the repo
+        BookmarkNotFound(msg: String) {
+            description("the provided bookmark was not found in the repo")
+            display("{}", msg)
+        }
         /// The structure of metaconfig repo is invalid
         InvalidFileStructure(msg: String) {
             description("the structure of files in vfs is invalid")

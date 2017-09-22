@@ -35,12 +35,14 @@ extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+extern crate metaconfig;
 extern crate services;
 extern crate sshrelay;
 
 use std::io;
 use std::panic;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 
@@ -48,16 +50,17 @@ use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
 
-use clap::{App, Arg};
+use clap::{App, Arg, ArgGroup};
 
 use slog::{Drain, Level, LevelFilter, Logger};
 use slog_kvfilter::KVFilter;
 
 use bytes::Bytes;
-use errors::ResultExt;
 use futures_ext::{encode, StreamLayeredExt};
 use hgproto::HgService;
 use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
+use metaconfig::RepoConfigs;
+use metaconfig::repoconfig::RepoType;
 
 mod errors;
 mod repo;
@@ -66,21 +69,7 @@ mod listener;
 use errors::*;
 
 use listener::{ssh_server_mux, Stdio};
-
-use repo::RepoType;
-
-fn init_repo(parent_logger: &Logger, repotype: &RepoType) -> Result<(PathBuf, repo::HgRepo)> {
-    let repopath = repotype.path();
-
-    let mut sock = repopath.join(".hg");
-
-    let repo = repo::HgRepo::new(parent_logger, repotype)
-        .chain_err(|| format!("Failed to initialize repo {:?}", repopath))?;
-
-    sock.push("mononoke.sock");
-
-    Ok((sock, repo))
-}
+use repo::OpenableRepoType;
 
 struct SenderBytesWrite {
     chan: Wait<mpsc::Sender<Bytes>>,
@@ -190,9 +179,9 @@ where
     let threads = repos
         .into_iter()
         .map(|repotype| {
-            init_repo(root_log, &repotype).and_then(move |(sockname, repo)| {
-                let repopath = repotype.path().to_owned();
-                let listen_log = root_log.new(o!("repo" => format!("{}", repopath.display())));
+            repo::init_repo(root_log, &repotype).and_then(move |(sockname, repo)| {
+                let repopath = repo.path().clone();
+                let listen_log = root_log.new(o!("repo" => repopath.clone()));
                 info!(listen_log, "Listening for connections");
 
                 // start a thread for each repo to own the reactor and start listening for
@@ -208,7 +197,7 @@ where
                             crit!(
                                 listen_log,
                                 "Listener thread {} paniced: {:?}",
-                                repopath.display(),
+                                repopath,
                                 err
                             );
                             Ok(())
@@ -245,21 +234,38 @@ fn main() {
         .about("serve repos")
         .args_from_usage("[debug] -d, --debug     'print debug level output'")
         .arg(
-            Arg::with_name("repotype")
-                .long("repotype")
-                .short("T")
-                .takes_value(true)
-                .possible_values(&["revlog", "blob:files", "blob:rocks"])
-                .required(true)
-                .help("repo type"),
-        )
-        .args_from_usage("<REPODIR>...            'paths to repo dirs'")
-        .arg(
             Arg::with_name("thrift_port")
                 .long("thrift_port")
-                .short("P")
+                .short("p")
                 .takes_value(true)
                 .help("if provided then thrift server will start on this port"),
+        )
+        .arg(
+            Arg::with_name("crpath")
+                .long("configrepo_path")
+                .short("P")
+                .takes_value(true)
+                .required(true)
+                .help("path to the config repo"),
+        )
+        .arg(
+            Arg::with_name("crbookmark")
+                .long("configrepo_bookmark")
+                .short("B")
+                .takes_value(true)
+                .help("config repo bookmark"),
+        )
+        .arg(
+            Arg::with_name("crhash")
+                .long("configrepo_commithash")
+                .short("C")
+                .takes_value(true)
+                .help("config repo commit hash"),
+        )
+        .group(
+            ArgGroup::default()
+                .args(&["crbookmark", "crhash"])
+                .required(true),
         )
         .get_matches();
 
@@ -286,16 +292,35 @@ fn main() {
         )
     });
 
-    let repos = matches.values_of("REPODIR").unwrap().map(
-        |p| match matches.value_of("repotype").unwrap() {
-            "revlog" => RepoType::Revlog(p.into()),
-            "blob:files" => RepoType::BlobFiles(p.into()),
-            "blob:rocks" => RepoType::BlobRocks(p.into()),
-            bad => panic!("unexpected repotype {}", bad),
-        },
+    let config_repo = RepoType::Revlog(matches.value_of("crpath").unwrap().into())
+        .open()
+        .unwrap();
+
+    let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
+        config_repo
+            .get_bookmarks()
+            .expect("Failed to get bookmarks for config repo")
+            .get(&bookmark)
+            .wait()
+            .expect("Error while looking up bookmark for config repo")
+            .expect("Bookmark for config repo not found")
+            .0
+    } else {
+        mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())
+            .expect("Commit for config repo not found")
+    };
+
+    info!(
+        root_log,
+        "Config repository will be read from commit: {}",
+        node_hash
     );
 
-    if let Err(ref e) = run(repos, &root_log) {
+    let config = RepoConfigs::read_config_repo(config_repo, node_hash)
+        .wait()
+        .unwrap();
+
+    if let Err(ref e) = run(config.repos.into_iter().map(|(_, c)| c.repotype), &root_log) {
         error!(root_log, "Failed: {}", e);
 
         for e in e.iter().skip(1) {

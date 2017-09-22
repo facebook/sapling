@@ -24,24 +24,36 @@ use async_compression::CompressorType;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_types::{percent_encode, BoxRepo, Changeset, NodeHash, Parents, Repo, NULL_HASH};
+use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
 
 use blobrepo::{BlobRepo, FilesBlobState, RocksBlobState};
 
-use errors::Result;
+use errors::*;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RepoType {
-    Revlog(PathBuf),
-    BlobFiles(PathBuf),
-    BlobRocks(PathBuf),
-    // BlobManifold...
+pub fn init_repo(parent_logger: &Logger, repotype: &RepoType) -> Result<(PathBuf, HgRepo)> {
+    let repopath = repotype.path();
+
+    let mut sock = repopath.join(".hg");
+
+    let repo = HgRepo::new(parent_logger, repotype)
+        .chain_err(|| format!("Failed to initialize repo {:?}", repopath))?;
+
+    sock.push("mononoke.sock");
+
+    Ok((sock, repo))
 }
 
-impl RepoType {
-    pub fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>> {
-        use self::RepoType::*;
+
+pub trait OpenableRepoType {
+    fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>>;
+    fn path(&self) -> &Path;
+}
+
+impl OpenableRepoType for RepoType {
+    fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>> {
+        use metaconfig::repoconfig::RepoType::*;
         use hgproto::{Error, ErrorKind};
 
         fn repo_chain<E: error::Error + Send + 'static>(err: E) -> Error {
@@ -65,8 +77,8 @@ impl RepoType {
         Ok(ret)
     }
 
-    pub fn path(&self) -> &Path {
-        use self::RepoType::*;
+    fn path(&self) -> &Path {
+        use metaconfig::repoconfig::RepoType::*;
 
         match *self {
             Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
@@ -119,6 +131,10 @@ impl HgRepo {
             hgrepo: Arc::new(repo.open()?),
             _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
         })
+    }
+
+    pub fn path(&self) -> &String {
+        &self.path
     }
 }
 

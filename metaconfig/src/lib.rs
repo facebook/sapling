@@ -8,10 +8,12 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate mercurial;
 extern crate mercurial_types;
 extern crate serde;
 #[macro_use]
@@ -20,7 +22,7 @@ extern crate toml;
 extern crate vfs;
 
 pub mod errors;
-mod repoconfig;
+pub mod repoconfig;
 
 pub use repoconfig::RepoConfigs;
 
