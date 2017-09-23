@@ -29,6 +29,7 @@ from mercurial import (
     error,
     node,
     obsolete,
+    obsutil,
     pycompat,
     registrar,
     scmutil,
@@ -194,3 +195,124 @@ def uncommit(ui, repo, *pats, **opts):
             with repo.dirstate.parentchange():
                 repo.dirstate.setparents(newid, node.nullid)
                 _uncommitdirstate(repo, old, match)
+
+def predecessormarkers(ctx):
+    """yields the obsolete markers marking the given changeset as a successor"""
+    for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
+        yield obsutil.marker(ctx.repo(), data)
+
+def _unamenddirstate(repo, predctx, curctx):
+    """"""
+
+    s = repo.status(predctx, curctx)
+    ds = repo.dirstate
+    copies = dict(ds.copies())
+    for f in s.modified:
+        if ds[f] == 'r':
+            # modified + removed -> removed
+            continue
+        ds.normallookup(f)
+
+    for f in s.added:
+        if ds[f] == 'r':
+            # added + removed -> unknown
+            ds.drop(f)
+        elif ds[f] != 'a':
+            ds.add(f)
+
+    for f in s.removed:
+        if ds[f] == 'a':
+            # removed + added -> normal
+            ds.normallookup(f)
+        elif ds[f] != 'r':
+            ds.remove(f)
+
+    # Merge old parent and old working dir copies
+    oldcopies = {}
+    for f in (s.modified + s.added):
+        src = curctx[f].renamed()
+        if src:
+            oldcopies[f] = src[0]
+    oldcopies.update(copies)
+    copies = dict((dst, oldcopies.get(src, src))
+                  for dst, src in oldcopies.iteritems())
+    # Adjust the dirstate copies
+    for dst, src in copies.iteritems():
+        if (src not in predctx or dst in predctx or ds[dst] != 'a'):
+            src = None
+        ds.copy(src, dst)
+
+@command('^unamend', [])
+def unamend(ui, repo, **opts):
+    """
+    undo the most recent amend operation on a current changeset
+
+    This command will roll back to the previous version of a changeset,
+    leaving working directory in state in which it was before running
+    `hg amend` (e.g. files modified as part of an amend will be
+    marked as modified `hg status`)
+    """
+
+    unfi = repo.unfiltered()
+
+    # identify the commit from which to unamend
+    curctx = repo['.']
+
+    with repo.wlock(), repo.lock(), repo.transaction('unamend'):
+        if not curctx.mutable():
+            raise error.Abort(_('cannot unamend public changesets'))
+
+        # identify the commit to which to unamend
+        markers = list(predecessormarkers(curctx))
+        if len(markers) != 1:
+            e = _("changeset must have one predecessor, found %i predecessors")
+            raise error.Abort(e % len(markers))
+
+        prednode = markers[0].prednode()
+        predctx = unfi[prednode]
+
+        if curctx.children():
+            raise error.Abort(_("cannot unamend a changeset with children"))
+
+        # add an extra so that we get a new hash
+        # note: allowing unamend to undo an unamend is an intentional feature
+        extras = predctx.extra()
+        extras['unamend_source'] = curctx.node()
+
+        def filectxfn(repo, ctx_, path):
+            try:
+                return predctx.filectx(path)
+            except KeyError:
+                return None
+
+        # Make a new commit same as predctx
+        newctx = context.memctx(repo,
+                                parents=(predctx.p1(), predctx.p2()),
+                                text=predctx.description(),
+                                files=predctx.files(),
+                                filectxfn=filectxfn,
+                                user=predctx.user(),
+                                date=predctx.date(),
+                                extra=extras)
+        # phase handling
+        commitphase = curctx.phase()
+        overrides = {('phases', 'new-commit'): commitphase}
+        with repo.ui.configoverride(overrides, 'uncommit'):
+            newprednode = repo.commitctx(newctx)
+
+        newpredctx = repo[newprednode]
+
+        changedfiles = []
+        wctx = repo[None]
+        wm = wctx.manifest()
+        cm = newpredctx.manifest()
+        dirstate = repo.dirstate
+        diff = cm.diff(wm)
+        changedfiles.extend(diff.iterkeys())
+
+        with dirstate.parentchange():
+            dirstate.setparents(newprednode, node.nullid)
+            _unamenddirstate(repo, newpredctx, curctx)
+
+        mapping = {curctx.node(): (newprednode,)}
+        scmutil.cleanupnodes(repo, mapping, 'unamend')
