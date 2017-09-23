@@ -4,23 +4,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 #![feature(never_type)]
 
 extern crate bookmarks;
 extern crate futures;
+extern crate futures_ext;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::sync::Mutex;
-use std::sync::atomic::{ATOMIC_USIZE_INIT, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
-use futures::future::{FutureResult, ok};
-use futures::stream::{BoxStream, Stream, iter};
+use futures::future::{ok, FutureResult};
+use futures::stream::iter_ok;
 
 use bookmarks::{Bookmarks, BookmarksMut, Version};
+use futures_ext::{BoxStream, StreamExt};
 
 static VERSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
@@ -35,7 +34,9 @@ pub struct MemBookmarks<V: Clone> {
 
 impl<V: Clone> MemBookmarks<V> {
     pub fn new() -> Self {
-        MemBookmarks { bookmarks: Mutex::new(HashMap::new()) }
+        MemBookmarks {
+            bookmarks: Mutex::new(HashMap::new()),
+        }
     }
 }
 
@@ -62,7 +63,7 @@ where
     fn keys(&self) -> Self::Keys {
         let guard = self.bookmarks.lock().unwrap();
         let keys = guard.keys().map(|k| k.clone()).collect::<Vec<_>>();
-        iter(keys.into_iter().map(|k| Ok(k))).boxed()
+        iter_ok(keys.into_iter()).boxify()
     }
 }
 
