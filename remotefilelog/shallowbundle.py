@@ -58,7 +58,7 @@ class shallowcg1packer(changegroup.cg1packer):
                             units=units)
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                          mfs, fnodes, source):
+                          mfs, fnodes, *args, **kwargs):
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
@@ -69,6 +69,9 @@ class shallowcg1packer(changegroup.cg1packer):
         - `fnodes` is a mapping of { filepath -> { node -> clnode } }
                 If fastpathlinkrev is false, we are responsible for populating
                 fnodes.
+        - `args` and `kwargs` are extra arguments that will be passed to the
+                core generatemanifests method, whose length depends on the
+                version of core Hg.
         """
         sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
                                             True)
@@ -83,8 +86,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 fastpathlinkrev,
                 mfs,
                 fnodes,
-                source,
-            )
+                *args, **kwargs)
             for chunk in chunks:
                 yield chunk
         else:
@@ -230,15 +232,14 @@ if util.safehasattr(changegroup, 'cg3packer'):
     @shallowutil.interposeclass(changegroup, 'cg3packer')
     class shallowcg3packer(changegroup.cg3packer):
         def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                              mfs, fnodes, source):
+                              mfs, fnodes, *args, **kwargs):
             chunks = super(shallowcg3packer, self).generatemanifests(
                 commonrevs,
                 clrevorder,
                 fastpathlinkrev,
                 mfs,
                 fnodes,
-                source,
-            )
+                *args, **kwargs)
             for chunk in chunks:
                 yield chunk
 
