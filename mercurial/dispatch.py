@@ -528,17 +528,15 @@ def addaliases(ui, cmdtable):
     # may use extension commands. Aliases can also use other alias definitions,
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
-        source = ui.configsource('alias', alias)
-        aliasdef = cmdalias(alias, definition, cmdtable, source)
-
         try:
-            olddef = cmdtable[aliasdef.cmd][0]
-            if olddef.definition == aliasdef.definition:
+            if cmdtable[alias][0].definition == definition:
                 continue
         except (KeyError, AttributeError):
             # definition might not exist or it might not be a cmdalias
             pass
 
+        source = ui.configsource('alias', alias)
+        aliasdef = cmdalias(alias, definition, cmdtable, source)
         cmdtable[aliasdef.name] = (aliasdef, aliasdef.opts, aliasdef.help)
 
 def _parse(ui, args):
