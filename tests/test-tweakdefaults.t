@@ -1,3 +1,4 @@
+#testcases develwarn.true develwarn.false
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH << EOF
@@ -9,6 +10,13 @@
   > [experimental]
   > updatecheck=noconflict
   > EOF
+
+#if develwarn.false
+  $ cat >> $HGRCPATH << EOF
+  > [tweakdefaults]
+  > develwarn = False
+  > EOF
+#endif
 
 Setup repo
 
@@ -746,6 +754,7 @@ Test bookmark -D
   
 Test that developer warning is shown whenever ':' is used implicitly or explicitly
 
+#if develwarn.true
   $ hg log -G -T '{rev} {bookmarks}' -r '0:2'
   devel-warn: use of ':' is deprecated
    at: *tweakdefaults.py:* (_analyzewrap) (glob)
@@ -755,6 +764,17 @@ Test that developer warning is shown whenever ':' is used implicitly or explicit
   |
   o  0
   
+#else
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:2'
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+#endif
+
+#if develwarn.true
   $ hg log -G -T '{rev} {bookmarks}' -r ':2'
   devel-warn: use of ':' is deprecated
    at: *tweakdefaults.py:* (_analyzewrap) (glob)
@@ -764,6 +784,17 @@ Test that developer warning is shown whenever ':' is used implicitly or explicit
   |
   o  0
   
+#else
+  $ hg log -G -T '{rev} {bookmarks}' -r ':2'
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+#endif
+
+#if develwarn.true
   $ hg log -G -T '{rev} {bookmarks}' -r '0:'
   devel-warn: use of ':' is deprecated
    at: *tweakdefaults.py:* (_analyzewrap) (glob)
@@ -773,6 +804,16 @@ Test that developer warning is shown whenever ':' is used implicitly or explicit
   |
   o  0
   
+#else
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:'
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+#endif
+
 In this testcase warning should not be shown
   $ hg log -G -T '{rev} {bookmarks}' -r ':'
   o  2

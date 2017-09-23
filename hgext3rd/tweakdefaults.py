@@ -53,6 +53,13 @@ Config::
 
     # output new hashes when nodes get updated
     showupdated = False
+
+    # Show developers warning for using discouraged features.
+    #
+    # For example, 'x:y' in revsets shows revision numbers between x and y,
+    # both inclusive. Usually, this doesn't correspond to any meaningful
+    # interpretation of the repo and is therefore, discouraged.
+    develwarn = True
 """
 from __future__ import absolute_import
 
@@ -126,11 +133,12 @@ def extsetup(ui):
     options.append(
         ('d', 'dest', '', _('destination for rebase or update')))
 
-    # anonymous function to pass ui object to _analyzewrapper
-    def _analyzewrap(orig, x):
-        return _analyzewrapper(orig, x, ui)
+    if ui.configbool('tweakdefaults', 'develwarn', True):
+        # anonymous function to pass ui object to _analyzewrapper
+        def _analyzewrap(orig, x):
+            return _analyzewrapper(orig, x, ui)
 
-    wrapfunction(revsetlang, '_analyze', _analyzewrap)
+        wrapfunction(revsetlang, '_analyze', _analyzewrap)
     try:
         rebaseext = extensions.find('rebase')
         # tweakdefaults is already loaded before other extensions
