@@ -153,8 +153,8 @@ impl Decoder for ChunkDecoder {
 mod test {
     use std::io::Cursor;
 
-    use futures::{Sink, Stream, stream};
-    use quickcheck::{TestResult, quickcheck};
+    use futures::{stream, Sink, Stream};
+    use quickcheck::{quickcheck, TestResult};
     use tokio_core::reactor::Core;
     use tokio_io::codec::{FramedRead, FramedWrite};
 

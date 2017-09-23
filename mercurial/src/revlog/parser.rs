@@ -194,7 +194,7 @@ named!(pub delta<Delta>,
 );
 
 /// Parse 0 or more deltas
-named!(deltas<Vec<Delta> >, many0!(delta));
+named!(deltas<Vec<Delta>>, many0!(delta));
 
 // A chunk of data data that contains some Deltas; the caller defines the framing bytes
 // bounding the input.
@@ -215,8 +215,7 @@ fn remains(i: &[u8]) -> IResult<&[u8], &[u8]> {
     IResult::Done(&i[..0], i)
 }
 
-named!(remains_owned<Vec<u8> >,
-map!(remains, |x: &[u8]| x.into()));
+named!(remains_owned<Vec<u8>>, map!(remains, |x: &[u8]| x.into()));
 
 /// Parse some literal data, possibly compressed
 named!(pub literal<Vec<u8> >,
@@ -281,55 +280,75 @@ mod test {
     #[test]
     fn test_header_0() {
         let d = [0x00, 0x00, 0x00, 0x00];
-        assert_eq!(header(&d[..]),
-            IResult::Done(&b""[..],
-            Header {
-                version: Version::Revlog0,
-                features: Features::empty(),
-        }))
+        assert_eq!(
+            header(&d[..]),
+            IResult::Done(
+                &b""[..],
+                Header {
+                    version: Version::Revlog0,
+                    features: Features::empty(),
+                }
+            )
+        )
     }
 
     #[test]
     fn test_header_1() {
         let d = [0x00, 0x00, 0x00, 0x01];
-        assert_eq!(header(&d[..]),
-            IResult::Done(&b""[..],
-            Header {
-                version: Version::RevlogNG,
-                features: Features::empty(),
-        }))
+        assert_eq!(
+            header(&d[..]),
+            IResult::Done(
+                &b""[..],
+                Header {
+                    version: Version::RevlogNG,
+                    features: Features::empty(),
+                }
+            )
+        )
     }
 
     #[test]
     fn test_header_feat_1() {
         let d = [0x00, 0x01, 0x00, 0x01];
-        assert_eq!(header(&d[..]),
-            IResult::Done(&b""[..],
-            Header {
-                version: Version::RevlogNG,
-                features: Features::INLINE,
-        }))
+        assert_eq!(
+            header(&d[..]),
+            IResult::Done(
+                &b""[..],
+                Header {
+                    version: Version::RevlogNG,
+                    features: Features::INLINE,
+                }
+            )
+        )
     }
 
     #[test]
     fn test_header_feat_2() {
         let d = [0x00, 0x02, 0x00, 0x01];
-        assert_eq!(header(&d[..]),
-            IResult::Done(&b""[..],
-            Header {
-                version: Version::RevlogNG,
-                features: Features::GENERAL_DELTA,
-        }))
+        assert_eq!(
+            header(&d[..]),
+            IResult::Done(
+                &b""[..],
+                Header {
+                    version: Version::RevlogNG,
+                    features: Features::GENERAL_DELTA,
+                }
+            )
+        )
     }
 
     #[test]
     fn test_header_feat_3() {
         let d = [0x00, 0x03, 0x00, 0x01];
-        assert_eq!(header(&d[..]),
-            IResult::Done(&b""[..],
-            Header {
-                version: Version::RevlogNG,
-                features: Features::INLINE | Features::GENERAL_DELTA,
-        }))
+        assert_eq!(
+            header(&d[..]),
+            IResult::Done(
+                &b""[..],
+                Header {
+                    version: Version::RevlogNG,
+                    features: Features::INLINE | Features::GENERAL_DELTA,
+                }
+            )
+        )
     }
 }

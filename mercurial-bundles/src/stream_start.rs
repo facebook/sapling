@@ -79,20 +79,15 @@ fn decode_stream_params(
             .ok_or(ErrorKind::Bundle2Decode("bad stream level val".into()))?;
         let key_decoded = percent_encoding::percent_decode(key);
         let val_decoded = percent_encoding::percent_decode(val);
-        let key_str = key_decoded
-            .decode_utf8()
-            .chain_err(|| {
-                ErrorKind::Bundle2Decode("stream level key is invalid UTF-8".into())
-            })?;
-        let val_str = val_decoded
-            .decode_utf8()
-            .chain_err(|| {
-                ErrorKind::Bundle2Decode("stream level val is invalid UTF-8".into())
-            })?;
-        if is_mandatory_param(&key_str)
-            .chain_err(|| {
-                ErrorKind::Bundle2Decode(format!("stream key is invalid"))
-            })? {
+        let key_str = key_decoded.decode_utf8().chain_err(|| {
+            ErrorKind::Bundle2Decode("stream level key is invalid UTF-8".into())
+        })?;
+        let val_str = val_decoded.decode_utf8().chain_err(|| {
+            ErrorKind::Bundle2Decode("stream level val is invalid UTF-8".into())
+        })?;
+        if is_mandatory_param(&key_str).chain_err(|| {
+            ErrorKind::Bundle2Decode(format!("stream key is invalid"))
+        })? {
             m_stream_params.insert(key_str.to_lowercase(), val_str.into_owned());
         } else {
             a_stream_params.insert(key_str.to_lowercase(), val_str.into_owned());

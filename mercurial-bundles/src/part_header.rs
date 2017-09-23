@@ -145,16 +145,15 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     for cur in 0..nmparams {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize)
-            .chain_err(|| {
-                let err_msg = format!(
-                    "part '{}' (id {}): invalid param {}",
-                    header.part_type(),
-                    part_id,
-                    cur
-                );
-                ErrorKind::Bundle2Decode(err_msg)
-            })?;
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).chain_err(|| {
+            let err_msg = format!(
+                "part '{}' (id {}): invalid param {}",
+                header.part_type(),
+                part_id,
+                cur
+            );
+            ErrorKind::Bundle2Decode(err_msg)
+        })?;
         header
             .add_mparam(key, val)
             .chain_err(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
@@ -162,16 +161,15 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     for cur in nmparams..(nmparams + naparams) {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize)
-            .chain_err(|| {
-                let err_msg = format!(
-                    "part '{}' (id {}): invalid param {}",
-                    header.part_type(),
-                    part_id,
-                    cur
-                );
-                ErrorKind::Bundle2Decode(err_msg)
-            })?;
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).chain_err(|| {
+            let err_msg = format!(
+                "part '{}' (id {}): invalid param {}",
+                header.part_type(),
+                part_id,
+                cur
+            );
+            ErrorKind::Bundle2Decode(err_msg)
+        })?;
         header
             .add_aparam(key, val)
             .chain_err(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
@@ -330,10 +328,10 @@ impl PartHeaderBuilder {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::{TestResult, quickcheck};
+    use quickcheck::{quickcheck, TestResult};
 
-    use quickcheck_types::QCBytes;
     use super::*;
+    use quickcheck_types::QCBytes;
 
     const MAX_LEN: usize = ::std::u8::MAX as usize;
 

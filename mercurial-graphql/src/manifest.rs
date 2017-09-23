@@ -12,9 +12,9 @@ use juniper::{FieldResult, Value};
 
 use mercurial_types::{NodeHash, Path};
 
-use repo::RepoCtx;
-use node::GQLNodeId;
 use manifestobj::GQLManifestObj;
+use node::GQLNodeId;
+use repo::RepoCtx;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct GQLPath(Path);

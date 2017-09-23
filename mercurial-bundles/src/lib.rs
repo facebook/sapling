@@ -12,8 +12,8 @@ extern crate ascii;
 #[macro_use]
 #[cfg(test)]
 extern crate assert_matches;
-extern crate bytes;
 extern crate byteorder;
+extern crate bytes;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]

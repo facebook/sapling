@@ -8,11 +8,11 @@ use futures::Future;
 
 use juniper::FieldResult;
 
-use mercurial_types::{Changeset, NodeHash, changeset};
+use mercurial_types::{changeset, Changeset, NodeHash};
 
-use repo::RepoCtx;
 use manifest::{GQLManifest, GQLPath};
 use node::GQLNodeId;
+use repo::RepoCtx;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct GQLChangeset(GQLNodeId);

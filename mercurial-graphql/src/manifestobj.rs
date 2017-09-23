@@ -6,11 +6,11 @@
 
 use mercurial::manifest::Details;
 
-use repo::RepoCtx;
 use file::GQLFile;
-use symlink::GQLSymlink;
 use manifest::GQLPath;
 use node::GQLNodeId;
+use repo::RepoCtx;
+use symlink::GQLSymlink;
 
 pub trait ManifestObj {
     fn path(&self) -> &GQLPath;

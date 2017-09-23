@@ -52,7 +52,7 @@ impl Error {
     pub fn is_app_error(&self) -> bool {
         match self {
             &Error(ErrorKind::BundleUnknownPart(_), _) |
-            &Error(ErrorKind::BundleUnknownPartParams(_, _), _) => true,
+            &Error(ErrorKind::BundleUnknownPartParams(..), _) => true,
             _ => false,
         }
     }

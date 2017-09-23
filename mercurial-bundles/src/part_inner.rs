@@ -10,7 +10,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str;
 
-use futures::{Stream, future};
+use futures::{future, Stream};
 use slog;
 
 use ascii::AsciiStr;
@@ -52,7 +52,7 @@ type WrappedStream<T> = Map<
 pub trait InnerStream<T>
     : Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<T>>
 where
-    T: AsyncRead + 'static
+    T: AsyncRead + 'static,
 {
 }
 

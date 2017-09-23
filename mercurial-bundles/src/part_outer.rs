@@ -23,7 +23,7 @@ use errors::*;
 use part_header::{self, PartHeader};
 use part_inner::validate_header;
 use types::StreamHeader;
-use utils::{BytesExt, get_decompressor_type};
+use utils::{get_decompressor_type, BytesExt};
 
 pub fn outer_stream<R: AsyncRead>(
     stream_header: &StreamHeader,
@@ -66,13 +66,11 @@ impl OuterState {
             &OuterState::Payload {
                 ref part_type,
                 ref part_id,
-            } => {
-                OuterFrame::Payload {
-                    part_type: part_type.clone(),
-                    part_id: *part_id,
-                    payload: data.freeze(),
-                }
-            }
+            } => OuterFrame::Payload {
+                part_type: part_type.clone(),
+                part_id: *part_id,
+                payload: data.freeze(),
+            },
             &OuterState::DiscardPayload => OuterFrame::Discard,
             _ => panic!("payload_frame called for state without payloads"),
         }
@@ -80,12 +78,10 @@ impl OuterState {
 
     pub fn part_end_frame(self) -> OuterFrame {
         match self {
-            OuterState::Payload { part_type, part_id } => {
-                OuterFrame::PartEnd {
-                    part_type: part_type,
-                    part_id: part_id,
-                }
-            }
+            OuterState::Payload { part_type, part_id } => OuterFrame::PartEnd {
+                part_type: part_type,
+                part_id: part_id,
+            },
             OuterState::DiscardPayload => OuterFrame::Discard,
             _ => panic!("part_end_frame called for state without payloads"),
         }
@@ -175,22 +171,19 @@ impl OuterDecoder {
                 }
             }
 
-            cur_state @ OuterState::Payload { .. } |
-            cur_state @ OuterState::DiscardPayload => {
+            cur_state @ OuterState::Payload { .. } | cur_state @ OuterState::DiscardPayload => {
                 let (payload, next_state) = Self::decode_payload(buf, cur_state);
                 (payload.map_err(|e| e.into()), next_state)
             }
 
             OuterState::StreamEnd => (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd),
 
-            OuterState::Invalid => {
-                (
-                    Err(
-                        ErrorKind::Bundle2Decode("byte stream corrupt".into()).into(),
-                    ),
-                    OuterState::Invalid,
-                )
-            }
+            OuterState::Invalid => (
+                Err(
+                    ErrorKind::Bundle2Decode("byte stream corrupt".into()).into(),
+                ),
+                OuterState::Invalid,
+            ),
         }
     }
 

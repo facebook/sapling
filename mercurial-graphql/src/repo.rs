@@ -30,7 +30,9 @@ pub struct RepoCtx {
 
 impl RepoCtx {
     pub fn new(repo: RevlogRepo) -> Self {
-        RepoCtx { repo: Arc::new(Mutex::new(repo)) }
+        RepoCtx {
+            repo: Arc::new(Mutex::new(repo)),
+        }
     }
 
     pub fn repo<'a>(&'a self) -> MutexGuard<'a, RevlogRepo> {

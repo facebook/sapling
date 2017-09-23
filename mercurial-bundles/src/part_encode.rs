@@ -123,7 +123,9 @@ impl PartEncodeBuilder {
     }
 
     pub fn build(self, part_id: u32) -> PartEncode {
-        PartEncode { state: GenerationState::NotStarted(self.headerb.build(part_id), self.data) }
+        PartEncode {
+            state: GenerationState::NotStarted(self.headerb.build(part_id), self.data),
+        }
     }
 }
 

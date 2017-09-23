@@ -412,7 +412,9 @@ impl RevlogInner {
     }
 
     fn is_general_delta(&self) -> bool {
-        self.header.features.contains(parser::Features::GENERAL_DELTA)
+        self.header
+            .features
+            .contains(parser::Features::GENERAL_DELTA)
     }
 
     fn construct_simple(&self, tgtidx: RevIdx) -> Result<Vec<u8>> {

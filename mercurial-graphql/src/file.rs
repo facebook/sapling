@@ -11,10 +11,10 @@ use juniper::FieldResult;
 use mercurial::file::File;
 use mercurial_types::{NodeHash, Path};
 
-use repo::RepoCtx;
-use node::GQLNodeId;
 use manifest::GQLPath;
 use manifestobj::{GQLManifestObj, ManifestObj};
+use node::GQLNodeId;
+use repo::RepoCtx;
 
 pub struct GQLFile(GQLPath, GQLNodeId);
 

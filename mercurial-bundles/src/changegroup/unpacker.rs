@@ -119,37 +119,27 @@ impl Cg2Unpacker {
 
     fn decode_next(buf: &mut BytesMut, state: State) -> Result<(Option<Part>, State)> {
         match state {
-            State::Changeset => {
-                match Self::decode_chunk(buf)? {
-                    None => Ok((None, State::Changeset)),
-                    Some(CgChunk::Empty) => {
-                        Ok((
-                            Some(Part::SectionEnd(Section::Changeset)),
-                            State::Manifest,
-                        ))
-                    }
-                    Some(CgChunk::Delta(chunk)) => {
-                        Ok((
-                            Some(Part::CgChunk(Section::Changeset, chunk)),
-                            State::Changeset,
-                        ))
-                    }
+            State::Changeset => match Self::decode_chunk(buf)? {
+                None => Ok((None, State::Changeset)),
+                Some(CgChunk::Empty) => Ok((
+                    Some(Part::SectionEnd(Section::Changeset)),
+                    State::Manifest,
+                )),
+                Some(CgChunk::Delta(chunk)) => Ok((
+                    Some(Part::CgChunk(Section::Changeset, chunk)),
+                    State::Changeset,
+                )),
+            },
+            State::Manifest => match Self::decode_chunk(buf)? {
+                None => Ok((None, State::Manifest)),
+                Some(CgChunk::Empty) => {
+                    Ok((Some(Part::SectionEnd(Section::Manifest)), State::Filename))
                 }
-            }
-            State::Manifest => {
-                match Self::decode_chunk(buf)? {
-                    None => Ok((None, State::Manifest)),
-                    Some(CgChunk::Empty) => {
-                        Ok((Some(Part::SectionEnd(Section::Manifest)), State::Filename))
-                    }
-                    Some(CgChunk::Delta(chunk)) => {
-                        Ok((
-                            Some(Part::CgChunk(Section::Manifest, chunk)),
-                            State::Manifest,
-                        ))
-                    }
-                }
-            }
+                Some(CgChunk::Delta(chunk)) => Ok((
+                    Some(Part::CgChunk(Section::Manifest, chunk)),
+                    State::Manifest,
+                )),
+            },
             State::Filename => {
                 let filename = Self::decode_filename(buf)?;
                 match filename {
@@ -167,18 +157,14 @@ impl Cg2Unpacker {
     fn decode_filelog_chunk(buf: &mut BytesMut, f: Path) -> Result<(Option<Part>, State)> {
         match Self::decode_chunk(buf)? {
             None => Ok((None, State::Filelog(f))),
-            Some(CgChunk::Empty) => {
-                Ok((
-                    Some(Part::SectionEnd(Section::Filelog(f))),
-                    State::Filename,
-                ))
-            }
-            Some(CgChunk::Delta(chunk)) => {
-                Ok((
-                    Some(Part::CgChunk(Section::Filelog(f.clone()), chunk)),
-                    State::Filelog(f),
-                ))
-            }
+            Some(CgChunk::Empty) => Ok((
+                Some(Part::SectionEnd(Section::Filelog(f))),
+                State::Filename,
+            )),
+            Some(CgChunk::Delta(chunk)) => Ok((
+                Some(Part::CgChunk(Section::Filelog(f.clone()), chunk)),
+                State::Filelog(f),
+            )),
         }
     }
 

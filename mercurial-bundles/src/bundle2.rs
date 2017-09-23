@@ -17,8 +17,8 @@ use tokio_io::AsyncRead;
 
 use Bundle2Item;
 use errors::*;
-use part_inner::{BoxInnerStream, inner_stream};
-use part_outer::{OuterFrame, OuterStream, outer_stream};
+use part_inner::{inner_stream, BoxInnerStream};
+use part_outer::{outer_stream, OuterFrame, OuterStream};
 use stream_start::StartDecoder;
 
 #[derive(Debug)]
@@ -194,12 +194,10 @@ impl Bundle2StreamInner {
                 match stream.poll() {
                     Err(e) => (Err(e), CurrentStream::Inner(stream)),
                     Ok(Async::NotReady) => (Ok(Async::NotReady), CurrentStream::Inner(stream)),
-                    Ok(Async::Ready(Some(v))) => {
-                        (
-                            Ok(Async::Ready(Some(Bundle2Item::Inner(v)))),
-                            CurrentStream::Inner(stream),
-                        )
-                    }
+                    Ok(Async::Ready(Some(v))) => (
+                        Ok(Async::Ready(Some(Bundle2Item::Inner(v)))),
+                        CurrentStream::Inner(stream),
+                    ),
                     Ok(Async::Ready(None)) => {
                         // This part is now parsed -- go back to the outer stream.
                         let outer =
@@ -208,14 +206,12 @@ impl Bundle2StreamInner {
                     }
                 }
             }
-            CurrentStream::Invalid => {
-                (
-                    Err(
-                        ErrorKind::Bundle2Decode("corrupt byte stream".into()).into(),
-                    ),
-                    CurrentStream::Invalid,
-                )
-            }
+            CurrentStream::Invalid => (
+                Err(
+                    ErrorKind::Bundle2Decode("corrupt byte stream".into()).into(),
+                ),
+                CurrentStream::Invalid,
+            ),
             CurrentStream::End => (Ok(Async::Ready(None)), CurrentStream::End),
         }
     }

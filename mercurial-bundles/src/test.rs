@@ -16,20 +16,20 @@ use slog_term;
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
 
-use async_compression::membuf::MemBuf;
 use async_compression::{CompressorType, ZSTD_DEFAULT_LEVEL};
-use mercurial_types::{NULL_HASH, NodeHash, Path};
+use async_compression::membuf::MemBuf;
+use mercurial_types::{NodeHash, Path, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
-use rand;
 use quickcheck::{QuickCheck, StdGen};
+use rand;
 
 use Bundle2Item;
 use bundle2::Bundle2Stream;
 use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
 use errors::*;
-use part_header::PartHeaderBuilder;
 use part_encode::PartEncodeBuilder;
+use part_header::PartHeaderBuilder;
 use types::StreamHeader;
 use utils::get_compression_param;
 
@@ -82,7 +82,9 @@ fn test_parse_unknown_compression() {
 
 #[test]
 fn test_empty_bundle_roundtrip_zstd() {
-    empty_bundle_roundtrip(CompressorType::Zstd { level: ZSTD_DEFAULT_LEVEL });
+    empty_bundle_roundtrip(CompressorType::Zstd {
+        level: ZSTD_DEFAULT_LEVEL,
+    });
 }
 
 #[test]
@@ -130,7 +132,9 @@ fn empty_bundle_roundtrip(ct: CompressorType) {
 
 #[test]
 fn test_unknown_part_zstd() {
-    unknown_part(CompressorType::Zstd { level: ZSTD_DEFAULT_LEVEL });
+    unknown_part(CompressorType::Zstd {
+        level: ZSTD_DEFAULT_LEVEL,
+    });
 }
 
 #[test]
@@ -245,8 +249,10 @@ fn verify_cg2<R: AsyncRead>(core: &mut Core, stream: Bundle2Stream<R>) -> Bundle
     assert_eq!(frags[0].content.len(), 102);
 
     let (res, stream) = next_cg2_part(core, stream);
-    assert_matches!(res,
-                    changegroup::Part::SectionEnd(changegroup::Section::Changeset));
+    assert_matches!(
+        res,
+        changegroup::Part::SectionEnd(changegroup::Section::Changeset)
+    );
 
     // Verify basic properties of manifests.
     let (res, stream) = next_cg2_part(core, stream);
@@ -272,7 +278,10 @@ fn verify_cg2<R: AsyncRead>(core: &mut Core, stream: Bundle2Stream<R>) -> Bundle
     assert_eq!(chunk.linknode, changeset2_hash);
 
     let (res, stream) = next_cg2_part(core, stream);
-    assert_matches!(res, changegroup::Part::SectionEnd(changegroup::Section::Manifest));
+    assert_matches!(
+        res,
+        changegroup::Part::SectionEnd(changegroup::Section::Manifest)
+    );
 
     // Filelog section
     let (res, stream) = next_cg2_part(core, stream);

@@ -14,7 +14,7 @@ use std::vec::IntoIter;
 
 use bytes::Bytes;
 use futures::stream;
-use quickcheck::{Arbitrary, Gen, empty_shrinker};
+use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use mercurial_types::{Delta, NodeHash, Path};
 

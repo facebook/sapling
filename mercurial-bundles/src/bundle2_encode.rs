@@ -300,18 +300,16 @@ where
     fn poll_finish(compressor: Compressor<W>) -> (Poll<W, Error>, EncodeState<W>) {
         match compressor.try_finish() {
             Ok(inner) => (Ok(Async::Ready(inner)), EncodeState::Done),
-            Err((compressor, err)) => {
-                if err.kind() == io::ErrorKind::WouldBlock {
-                    (Ok(Async::NotReady), EncodeState::Finish(compressor))
-                } else {
-                    (
-                        Err(err).chain_err(|| {
-                            ErrorKind::Bundle2Encode("error while completing write".into())
-                        }),
-                        EncodeState::Invalid,
-                    )
-                }
-            }
+            Err((compressor, err)) => if err.kind() == io::ErrorKind::WouldBlock {
+                (Ok(Async::NotReady), EncodeState::Finish(compressor))
+            } else {
+                (
+                    Err(err).chain_err(|| {
+                        ErrorKind::Bundle2Encode("error while completing write".into())
+                    }),
+                    EncodeState::Invalid,
+                )
+            },
         }
     }
 }

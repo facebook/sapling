@@ -115,11 +115,9 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<DecompressorTy
         Some("GZ") => Ok(DecompressorType::Gzip),
         Some("ZS") => Ok(DecompressorType::Zstd),
         Some("UN") => Ok(DecompressorType::Uncompressed),
-        Some(s) => {
-            bail!(ErrorKind::Bundle2Decode(
-                format!("unknown compression '{}'", s)
-            ))
-        }
+        Some(s) => bail!(ErrorKind::Bundle2Decode(
+            format!("unknown compression '{}'", s)
+        )),
         None => Ok(DecompressorType::Uncompressed),
     }
 }
