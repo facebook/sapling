@@ -523,21 +523,52 @@ class cmdalias(object):
                 ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
                 raise
 
+class lazyaliasentry(object):
+    """like a typical command entry (func, opts, help), but is lazy"""
+
+    def __init__(self, name, definition, cmdtable, source):
+        self.name = name
+        self.definition = definition
+        self.cmdtable = cmdtable.copy()
+        self.source = source
+
+    @util.propertycache
+    def _aliasdef(self):
+        return cmdalias(self.name, self.definition, self.cmdtable, self.source)
+
+    def __getitem__(self, n):
+        aliasdef = self._aliasdef
+        if n == 0:
+            return aliasdef
+        elif n == 1:
+            return aliasdef.opts
+        elif n == 2:
+            return aliasdef.help
+        else:
+            raise IndexError
+
+    def __iter__(self):
+        for i in range(3):
+            yield self[i]
+
+    def __len__(self):
+        return 3
+
 def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they
     # may use extension commands. Aliases can also use other alias definitions,
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
         try:
-            if cmdtable[alias][0].definition == definition:
+            if cmdtable[alias].definition == definition:
                 continue
         except (KeyError, AttributeError):
             # definition might not exist or it might not be a cmdalias
             pass
 
         source = ui.configsource('alias', alias)
-        aliasdef = cmdalias(alias, definition, cmdtable, source)
-        cmdtable[aliasdef.name] = (aliasdef, aliasdef.opts, aliasdef.help)
+        entry = lazyaliasentry(alias, definition, cmdtable, source)
+        cmdtable[alias] = entry
 
 def _parse(ui, args):
     options = {}
