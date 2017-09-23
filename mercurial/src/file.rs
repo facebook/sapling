@@ -11,7 +11,7 @@ use errors::*;
 
 use itertools::Itertools;
 
-use mercurial_types::{BlobNode, NodeHash, Path};
+use mercurial_types::{BlobNode, MPath, NodeHash};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct File {
@@ -72,14 +72,14 @@ impl File {
         kv
     }
 
-    pub fn copied_from(&self) -> Result<Option<(Path, NodeHash)>> {
+    pub fn copied_from(&self) -> Result<Option<(MPath, NodeHash)>> {
         if !self.node.maybe_copied() {
             return Ok(None);
         }
 
         let meta = self.node.as_blob().as_slice().map(Self::parse_meta);
         let ret = meta.and_then(|meta| {
-            let path = meta.get(b"copy".as_ref()).cloned().map(Path::new);
+            let path = meta.get(b"copy".as_ref()).cloned().map(MPath::new);
             let nodeid = meta.get(b"copyrev".as_ref())
                 .and_then(|rev| str::from_utf8(rev).ok())
                 .and_then(|rev| rev.parse().ok());

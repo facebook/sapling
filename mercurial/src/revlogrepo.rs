@@ -19,7 +19,7 @@ use futures::stream::{self, BoxStream};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks, Version};
-use mercurial_types::{fsencode, BlobNode, Changeset, Manifest, NodeHash, Path, PathElement, Repo};
+use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash, Repo};
 use stockbookmarks::StockBookmarks;
 
 pub use changeset::RevlogChangeset;
@@ -113,8 +113,8 @@ pub struct RevlogRepo {
 
 #[derive(Debug)]
 struct RevlogInner {
-    filelogcache: HashMap<Path, Revlog>, // filelog cache
-    treelogcache: HashMap<Path, Revlog>,
+    filelogcache: HashMap<MPath, Revlog>, // filelog cache
+    treelogcache: HashMap<MPath, Revlog>,
 }
 
 impl PartialEq<Self> for RevlogRepo {
@@ -199,7 +199,7 @@ impl RevlogRepo {
     pub fn get_tree_manifest_blob_by_nodeid(
         &self,
         nodeid: &NodeHash,
-        path: &Path,
+        path: &MPath,
     ) -> FutureResult<BlobNode> {
         self.get_tree_revlog(path)
             .and_then(|tree_revlog| {
@@ -221,7 +221,7 @@ impl RevlogRepo {
         &self.requirements
     }
 
-    pub fn get_tree_revlog(&self, path: &Path) -> Result<Revlog> {
+    pub fn get_tree_revlog(&self, path: &MPath) -> Result<Revlog> {
         let mut inner = self.inner.lock().expect("poisoned lock");
 
         match inner.treelogcache.entry(path.clone()) {
@@ -236,13 +236,13 @@ impl RevlogRepo {
         }
     }
 
-    pub fn get_file_revlog(&self, path: &Path) -> Result<Revlog> {
+    pub fn get_file_revlog(&self, path: &MPath) -> Result<Revlog> {
         let mut inner = self.inner.lock().expect("poisoned lock");
 
         self.get_file_revlog_inner(&mut inner, path)
     }
 
-    fn get_file_revlog_inner(&self, inner: &mut RevlogInner, path: &Path) -> Result<Revlog> {
+    fn get_file_revlog_inner(&self, inner: &mut RevlogInner, path: &MPath) -> Result<Revlog> {
         match inner.filelogcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
@@ -255,37 +255,37 @@ impl RevlogRepo {
         }
     }
 
-    fn get_tree_log_idx_path(&self, path: &Path) -> PathBuf {
+    fn get_tree_log_idx_path(&self, path: &MPath) -> PathBuf {
         self.get_tree_log_path(path, "00manifest.i".as_bytes())
     }
 
-    fn get_tree_log_data_path(&self, path: &Path) -> PathBuf {
+    fn get_tree_log_data_path(&self, path: &MPath) -> PathBuf {
         self.get_tree_log_path(path, "00manifest.d".as_bytes())
     }
 
-    fn get_file_log_idx_path(&self, path: &Path) -> PathBuf {
+    fn get_file_log_idx_path(&self, path: &MPath) -> PathBuf {
         self.get_file_log_path(path, ".i")
     }
 
-    fn get_file_log_data_path(&self, path: &Path) -> PathBuf {
+    fn get_file_log_data_path(&self, path: &MPath) -> PathBuf {
         self.get_file_log_path(path, ".d")
     }
 
-    fn get_tree_log_path<E: AsRef<[u8]>>(&self, path: &Path, filename: E) -> PathBuf {
+    fn get_tree_log_path<E: AsRef<[u8]>>(&self, path: &MPath, filename: E) -> PathBuf {
         let filename = filename.as_ref();
         let dotencode = self.requirements.contains(&Required::Dotencode);
-        let mut elements: Vec<PathElement> = vec![PathElement::new(Vec::from("meta".as_bytes()))];
+        let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("meta".as_bytes()))];
         elements.extend(path.into_iter().cloned());
-        elements.push(PathElement::new(Vec::from(filename)));
+        elements.push(MPathElement::new(Vec::from(filename)));
         self.basepath
             .join("store")
             .join(fsencode(&elements, dotencode))
     }
 
-    fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &Path, extension: E) -> PathBuf {
+    fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &MPath, extension: E) -> PathBuf {
         let extension = extension.as_ref();
         let dotencode = self.requirements.contains(&Required::Dotencode);
-        let mut elements: Vec<PathElement> = vec![PathElement::new(Vec::from("data".as_bytes()))];
+        let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("data".as_bytes()))];
         elements.extend(path.into_iter().cloned());
         if let Some(last) = elements.last_mut() {
             last.extend(extension);

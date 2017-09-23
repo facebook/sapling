@@ -14,7 +14,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Blob, BlobNode, Changeset, NodeHash, Parents, Path, Time};
+use mercurial_types::{Blob, BlobNode, Changeset, MPath, NodeHash, Parents, Time};
 
 use errors::*;
 
@@ -121,7 +121,7 @@ impl Changeset for BlobChangeset {
         self.revlogcs.comments()
     }
 
-    fn files(&self) -> &[Path] {
+    fn files(&self) -> &[MPath] {
         self.revlogcs.files()
     }
 

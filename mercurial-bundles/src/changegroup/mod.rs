@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{Delta, NodeHash, Path};
+use mercurial_types::{Delta, MPath, NodeHash};
 
 pub mod packer;
 pub mod unpacker;
@@ -13,7 +13,7 @@ pub mod unpacker;
 pub enum Section {
     Changeset,
     Manifest,
-    Filelog(Path),
+    Filelog(MPath),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

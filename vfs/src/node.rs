@@ -13,7 +13,7 @@ use std::mem;
 use futures::{Async, Future, Poll, Stream};
 
 use mercurial_types::manifest::Content;
-use mercurial_types::path::PathElement;
+use mercurial_types::path::MPathElement;
 
 use errors::*;
 
@@ -37,11 +37,11 @@ where
     type TFile: VfsFile;
 
     /// Returns the content of the directory
-    fn read(&self) -> Vec<&PathElement>;
+    fn read(&self) -> Vec<&MPathElement>;
 
-    /// Steps one level through Vfs following a given PathElement and returns the corresponding
-    /// VfsNode. Returns None if no such PathElement exists in the directory
-    fn step(&self, path_element: &PathElement) -> Option<VfsNode<Self, Self::TFile>>;
+    /// Steps one level through Vfs following a given MPathElement and returns the corresponding
+    /// VfsNode. Returns None if no such MPathElement exists in the directory
+    fn step(&self, path_element: &MPathElement) -> Option<VfsNode<Self, Self::TFile>>;
 
     /// Wrap self into a VfsNode
     fn into_node(self) -> VfsNode<Self, Self::TFile> {
@@ -74,7 +74,7 @@ where
 /// Structure for walking the Vfs
 pub struct VfsWalker<TDir, TFile> {
     current_node: VfsNode<TDir, TFile>,
-    remainder: VecDeque<PathElement>,
+    remainder: VecDeque<MPathElement>,
     max_steps: usize,
     steps: usize,
 }
@@ -89,7 +89,7 @@ where
     /// was reached while resolving the path
     pub fn new<P>(current_node: VfsNode<TDir, TFile>, path: P) -> Self
     where
-        P: IntoIterator<Item = PathElement>,
+        P: IntoIterator<Item = MPathElement>,
     {
         Self::with_max_steps(current_node, path, MAX_STEPS)
     }
@@ -97,7 +97,7 @@ where
     /// Similar to `VfsWalker::new`, but you can provide the maximum number of steps for the walker
     pub fn with_max_steps<P>(current_node: VfsNode<TDir, TFile>, path: P, max_steps: usize) -> Self
     where
-        P: IntoIterator<Item = PathElement>,
+        P: IntoIterator<Item = MPathElement>,
     {
         VfsWalker {
             current_node,
@@ -148,7 +148,7 @@ where
                             let mut remainder = mem::replace(&mut self.remainder, VecDeque::new());
                             remainder.push_front(path_element);
                             bail!(ErrorKind::PathDoNotExists(
-                                "Encountered a non existing Path during a walk on Vfs".into(),
+                                "Encountered a non existing MPath during a walk on Vfs".into(),
                                 remainder
                             ));
                         }
@@ -173,22 +173,22 @@ mod tests {
     use boxfnonce::BoxFnOnce;
     use itertools::assert_equal;
 
-    use mercurial_types::Path;
+    use mercurial_types::MPath;
 
     #[derive(Clone, Debug, PartialEq, Eq)]
-    struct MockVfsDir(VecDeque<PathElement>, Option<MockVfsFile>);
+    struct MockVfsDir(VecDeque<MPathElement>, Option<MockVfsFile>);
 
     impl VfsDir for MockVfsDir {
         type TFile = MockVfsFile;
 
-        fn read(&self) -> Vec<&PathElement> {
+        fn read(&self) -> Vec<&MPathElement> {
             match self.0.front() {
                 Some(ref el) => vec![el],
                 None => vec![],
             }
         }
 
-        fn step(&self, path_element: &PathElement) -> Option<VfsNode<Self, Self::TFile>> {
+        fn step(&self, path_element: &MPathElement) -> Option<VfsNode<Self, Self::TFile>> {
             let mut path = self.0.clone();
             if path.front() == Some(path_element) {
                 path.pop_front();
@@ -225,17 +225,17 @@ mod tests {
         path: &'static str,
         file: Option<MockVfsFile>,
     ) -> VfsNode<MockVfsDir, MockVfsFile> {
-        let path = Path::new(path).unwrap().into_iter().collect();
+        let path = MPath::new(path).unwrap().into_iter().collect();
         (MockVfsDir(path, file)).into_node()
     }
 
     fn cmp_paths<'a, Els, P>(value: Els, expected: P)
     where
-        Els: IntoIterator<Item = &'a PathElement>,
+        Els: IntoIterator<Item = &'a MPathElement>,
         P: AsRef<[u8]>,
     {
         let value = value.into_iter();
-        let expected = Path::new(expected).unwrap();
+        let expected = MPath::new(expected).unwrap();
         assert_equal(value, (&expected).into_iter());
     }
 
@@ -269,7 +269,7 @@ mod tests {
 
     fn check_not_exists<TDir, TFile>(expected: &'static str) -> Checker<TDir, TFile> {
         BoxFnOnce::from(move |result: Result<VfsNode<TDir, TFile>>| {
-            let expected = Path::new(expected).unwrap().into_iter();
+            let expected = MPath::new(expected).unwrap().into_iter();
             match result {
                 Err(Error(ErrorKind::PathDoNotExists(_, r), _)) => assert_equal(r, expected),
                 Err(error) => panic!("unexpected error: {:?}", error),
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn test_walker_stream() {
         let node = make_node("a/b/c/d", None);
-        let result = VfsWalker::new(node, Path::new("a/b/c").unwrap())
+        let result = VfsWalker::new(node, MPath::new("a/b/c").unwrap())
             .map(|node| match node {
                 VfsNode::Dir(dir) => dir.read().into_iter().cloned().collect::<Vec<_>>(),
                 _ => panic!("expected dir"),
@@ -312,7 +312,7 @@ mod tests {
             ("d/e", MAX_STEPS, check_not_exists("d/e")),
         ] {
             checker.call(
-                VfsWalker::with_max_steps(node.clone(), Path::new(path).unwrap(), step_limit)
+                VfsWalker::with_max_steps(node.clone(), MPath::new(path).unwrap(), step_limit)
                     .walk()
                     .wait(),
             );
@@ -330,7 +330,7 @@ mod tests {
             ("a/b/c", 1, "b/c", check_not_exists("c")),
         ] {
             let mut walk_result =
-                VfsWalker::with_max_steps(node.clone(), Path::new(path).unwrap(), step_limit)
+                VfsWalker::with_max_steps(node.clone(), MPath::new(path).unwrap(), step_limit)
                     .wait()
                     .collect::<Vec<_>>()
                     .into_iter()
@@ -366,7 +366,7 @@ mod tests {
             ("a/b/c/d", 4, check_not_implemented),
         ] {
             checker.call(
-                VfsWalker::with_max_steps(node.clone(), Path::new(path).unwrap(), step_limit)
+                VfsWalker::with_max_steps(node.clone(), MPath::new(path).unwrap(), step_limit)
                     .walk()
                     .wait(),
             );

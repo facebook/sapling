@@ -4,13 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use path::{fsencode, MPath};
 use std::path::PathBuf;
-use path::{fsencode, Path};
 
 
 fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let mut elements = vec![];
-    let path = &Path::new(path).unwrap();
+    let path = &MPath::new(path).unwrap();
     elements.extend(path.into_iter().cloned());
 
     assert_eq!(fsencode(&elements, true), PathBuf::from(expected));
@@ -191,7 +191,8 @@ fn test_fsencode_from_core_hg() {
     let expected = "data/c.x/co.x/com.x/com0.x/co~6d1.x/co~6d2.x/co~6d3.x/co~6d4.x/co~6d5.x/co~6d6.x/co~6d7.x/co~6d8.x/co~6d9.x";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
-    let toencode = b"data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
+    let toencode =
+        b"data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
     let expected = "data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9";
     check_fsencode_with_dotencode(&toencode[..], expected);
 

@@ -11,7 +11,7 @@ use std::result;
 use std::str::{self, FromStr};
 
 use errors::*;
-use mercurial_types::{BlobNode, NodeHash, Parents, Path, NULL_HASH};
+use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
 use mercurial_types::changeset::{Changeset, Time};
 
 #[cfg(test)]
@@ -28,7 +28,7 @@ pub struct RevlogChangeset {
     user: Vec<u8>,
     time: Time,
     extra: Extra,
-    files: Vec<Path>,
+    files: Vec<MPath>,
     comments: Vec<u8>,
 }
 
@@ -233,7 +233,7 @@ impl RevlogChangeset {
                         dofiles = false;
                         continue;
                     }
-                    files.push(Path::new(line).chain_err(|| "invalid path in changelog")?)
+                    files.push(MPath::new(line).chain_err(|| "invalid path in changelog")?)
                 } else {
                     comments.push(line);
                 }
@@ -290,7 +290,7 @@ impl Changeset for RevlogChangeset {
         self.comments.as_ref()
     }
 
-    fn files(&self) -> &[Path] {
+    fn files(&self) -> &[MPath] {
         self.files.as_ref()
     }
 

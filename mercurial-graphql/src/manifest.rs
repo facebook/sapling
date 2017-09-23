@@ -10,30 +10,30 @@ use futures::Future;
 
 use juniper::{FieldResult, Value};
 
-use mercurial_types::{NodeHash, Path};
+use mercurial_types::{MPath, NodeHash};
 
 use manifestobj::GQLManifestObj;
 use node::GQLNodeId;
 use repo::RepoCtx;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct GQLPath(Path);
+pub struct GQLPath(MPath);
 
 impl GQLPath {
-    pub fn new(path: Path) -> GQLPath {
+    pub fn new(path: MPath) -> GQLPath {
         GQLPath(path)
     }
 }
 
-impl<'a> From<&'a Path> for GQLPath {
-    fn from(path: &'a Path) -> Self {
+impl<'a> From<&'a MPath> for GQLPath {
+    fn from(path: &'a MPath) -> Self {
         GQLPath::new(path.clone())
     }
 }
 
 impl Deref for GQLPath {
-    type Target = Path;
-    fn deref(&self) -> &Path {
+    type Target = MPath;
+    fn deref(&self) -> &MPath {
         &self.0
     }
 }
@@ -48,7 +48,7 @@ graphql_scalar!(GQLPath {
 
     from_input_value(v: &InputValue) -> Option<GQLPath> {
         v.as_string_value()
-            .map(|s| Path::new(s.as_bytes()))
+            .map(|s| MPath::new(s.as_bytes()))
             .and_then(Result::ok)
             .map(GQLPath::new)
     }

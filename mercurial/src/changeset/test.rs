@@ -9,7 +9,7 @@ use std::str;
 
 use quickcheck::{QuickCheck, TestResult};
 
-use mercurial_types::{Blob, BlobNode, NodeHash, Path};
+use mercurial_types::{Blob, BlobNode, MPath, NodeHash};
 
 use changeset::{escape, unescape, Extra, RevlogChangeset, Time};
 
@@ -40,7 +40,7 @@ fn test_parse() {
                     .into_iter()
                     .collect()
             ),
-            files: vec![Path::new(b"mercurial/util.py").unwrap()],
+            files: vec![MPath::new(b"mercurial/util.py").unwrap()],
             comments: r#"util: warn when adding paths ending with \
 
 Paths ending with \ will fail the verification introduced in 684a977c2ae0 when

@@ -13,7 +13,7 @@ use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::{self, Details};
-use mercurial_types::{Entry, Manifest, NodeHash, Path};
+use mercurial_types::{Entry, MPath, Manifest, NodeHash};
 
 use blobstore::Blobstore;
 
@@ -23,7 +23,7 @@ use utils::get_node;
 
 pub struct BlobManifest<B> {
     blobstore: B,
-    files: BTreeMap<Path, Details>,
+    files: BTreeMap<MPath, Details>,
 }
 
 impl<B> BlobManifest<B>
@@ -65,7 +65,7 @@ where
 
     fn lookup(
         &self,
-        path: &Path,
+        path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let res = self.files
             .get(path)

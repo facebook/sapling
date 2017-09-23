@@ -13,7 +13,7 @@ use byteorder::{BigEndian, ByteOrder};
 use bytes::{Bytes, BytesMut};
 
 use async_compression::{CompressorType, DecompressorType};
-use mercurial_types::{NodeHash, Path};
+use mercurial_types::{MPath, NodeHash};
 
 use errors::*;
 
@@ -40,7 +40,7 @@ pub trait BytesExt {
     fn drain_u32(&mut self) -> u32;
     fn drain_i32(&mut self) -> i32;
     fn drain_str(&mut self, len: usize) -> Result<String>;
-    fn drain_path(&mut self, len: usize) -> Result<Path>;
+    fn drain_path(&mut self, len: usize) -> Result<MPath>;
     fn drain_node(&mut self) -> NodeHash;
     fn peek_u32(&self) -> u32;
     fn peek_i32(&self) -> i32;
@@ -75,8 +75,8 @@ where
     }
 
     #[inline]
-    fn drain_path(&mut self, len: usize) -> Result<Path> {
-        Path::new(self.split_to(len)).chain_err(|| "invalid path")
+    fn drain_path(&mut self, len: usize) -> Result<MPath> {
+        MPath::new(self.split_to(len)).chain_err(|| "invalid path")
     }
 
     #[inline]

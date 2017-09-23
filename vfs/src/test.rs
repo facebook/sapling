@@ -10,8 +10,8 @@ use futures::Future;
 
 use itertools::assert_equal;
 
-use mercurial_types::Path;
-use mercurial_types::path::PathElement;
+use mercurial_types::MPath;
+use mercurial_types::path::MPathElement;
 
 use mercurial_types_mocks::manifest::MockManifest;
 
@@ -19,13 +19,13 @@ use {vfs_from_manifest, ManifestVfsDir};
 
 use errors::*;
 
-pub fn pel(path: &'static str) -> PathElement {
-    Path::new(path).unwrap().into_iter().next().unwrap()
+pub fn pel(path: &'static str) -> MPathElement {
+    MPath::new(path).unwrap().into_iter().next().unwrap()
 }
 
 pub fn cmp<'a, P, S>(paths: P, expected: S)
 where
-    P: IntoIterator<Item = &'a PathElement>,
+    P: IntoIterator<Item = &'a MPathElement>,
     S: IntoIterator<Item = &'static str>,
 {
     let mut paths: Vec<_> = paths.into_iter().cloned().collect();

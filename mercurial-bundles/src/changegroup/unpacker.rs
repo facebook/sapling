@@ -14,7 +14,7 @@ use bytes::BytesMut;
 use slog;
 use tokio_io::codec::Decoder;
 
-use mercurial_types::{Delta, Path};
+use mercurial_types::{Delta, MPath};
 use mercurial_types::delta::Fragment;
 
 use InnerPart;
@@ -154,7 +154,7 @@ impl Cg2Unpacker {
         }
     }
 
-    fn decode_filelog_chunk(buf: &mut BytesMut, f: Path) -> Result<(Option<Part>, State)> {
+    fn decode_filelog_chunk(buf: &mut BytesMut, f: MPath) -> Result<(Option<Part>, State)> {
         match Self::decode_chunk(buf)? {
             None => Ok((None, State::Filelog(f))),
             Some(CgChunk::Empty) => Ok((
@@ -259,7 +259,7 @@ impl Cg2Unpacker {
         Delta::new(frags).chain_err(|| ErrorKind::Cg2Decode("invalid delta".into()))
     }
 
-    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<Path>> {
+    fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<MPath>> {
         if buf.len() < 4 {
             return Ok(DecodeRes::None);
         }
@@ -299,7 +299,7 @@ enum State {
     Changeset,
     Manifest,
     Filename,
-    Filelog(Path),
+    Filelog(MPath),
     End,
     Invalid,
 }

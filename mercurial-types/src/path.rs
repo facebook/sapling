@@ -9,9 +9,9 @@ use std::cmp;
 use std::convert::From;
 use std::ffi::OsStr;
 use std::fmt::{self, Display};
-use std::os::unix::ffi::OsStrExt;
 use std::io::{self, Write};
 use std::iter::{once, Once};
+use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::slice::Iter;
 use std::str;
@@ -22,23 +22,23 @@ use quickcheck::{Arbitrary, Gen};
 use errors::*;
 
 lazy_static! {
-    pub static ref DOT: PathElement = PathElement(b".".to_vec());
-    pub static ref DOTDOT: PathElement = PathElement(b"..".to_vec());
+    pub static ref DOT: MPathElement = MPathElement(b".".to_vec());
+    pub static ref DOTDOT: MPathElement = MPathElement(b"..".to_vec());
 }
 
 const MAXSTOREPATHLEN: usize = 120;
 
-/// A path or filename within Mercurial (typically within manifests or changegroups).
+/// An element of a path or filename within Mercurial.
 ///
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
-pub struct PathElement(Vec<u8>);
+pub struct MPathElement(Vec<u8>);
 
-impl PathElement {
-    pub fn new(element: Vec<u8>) -> PathElement {
-        PathElement(element)
+impl MPathElement {
+    pub fn new(element: Vec<u8>) -> MPathElement {
+        MPathElement(element)
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -50,28 +50,31 @@ impl PathElement {
     }
 }
 
-impl From<PathElement> for Path {
-    fn from(element: PathElement) -> Self {
-        Path {
+impl From<MPathElement> for MPath {
+    fn from(element: MPathElement) -> Self {
+        MPath {
             elements: vec![element],
         }
     }
 }
 
+/// A path or filename within Mercurial (typically within manifests or changegroups).
+///
+/// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
-pub struct Path {
-    elements: Vec<PathElement>,
+pub struct MPath {
+    elements: Vec<MPathElement>,
 }
 
-impl Path {
-    pub fn new<P: AsRef<[u8]>>(p: P) -> Result<Path> {
+impl MPath {
+    pub fn new<P: AsRef<[u8]>>(p: P) -> Result<MPath> {
         let p = p.as_ref();
         Self::verify(p)?;
         let elements: Vec<_> = p.split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
-            .map(|e| PathElement(e.into()))
+            .map(|e| MPathElement(e.into()))
             .collect();
-        Ok(Path { elements })
+        Ok(MPath { elements })
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -81,10 +84,10 @@ impl Path {
         Ok(())
     }
 
-    pub fn join<'a, Elements: IntoIterator<Item = &'a PathElement>>(
+    pub fn join<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
         &self,
         another: Elements,
-    ) -> Path {
+    ) -> MPath {
         let mut newelements = self.elements.clone();
         newelements.extend(
             another
@@ -92,7 +95,7 @@ impl Path {
                 .filter(|elem| !elem.0.is_empty())
                 .cloned(),
         );
-        Path {
+        MPath {
             elements: newelements,
         }
     }
@@ -110,9 +113,9 @@ impl Path {
 
     fn fsencode_dir_impl<'a, Iter>(dotencode: bool, iter: Iter) -> PathBuf
     where
-        Iter: Iterator<Item = &'a PathElement>,
+        Iter: Iterator<Item = &'a MPathElement>,
     {
-        iter.map(|p| Path::fsencode_filter(direncode(&p.0), dotencode))
+        iter.map(|p| MPath::fsencode_filter(direncode(&p.0), dotencode))
             .collect()
     }
 
@@ -127,8 +130,8 @@ impl Path {
     }
 }
 
-impl IntoIterator for Path {
-    type Item = PathElement;
+impl IntoIterator for MPath {
+    type Item = MPathElement;
     type IntoIter = ::std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -138,20 +141,20 @@ impl IntoIterator for Path {
 
 /// Perform the mapping to a filesystem path used in a .hg directory
 /// Assumes that this path is a file.
-pub fn fsencode(elements: &Vec<PathElement>, dotencode: bool) -> PathBuf {
+pub fn fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let path = path.rev();
-    let mut ret: PathBuf = Path::fsencode_dir_impl(dotencode, path.clone());
+    let mut ret: PathBuf = MPath::fsencode_dir_impl(dotencode, path.clone());
 
     if let Some(basename) = file {
-        ret.push(Path::fsencode_filter(&basename.0, dotencode));
+        ret.push(MPath::fsencode_filter(&basename.0, dotencode));
         let os_str: &OsStr = ret.as_ref();
         if os_str.as_bytes().len() > MAXSTOREPATHLEN {
             hashencode(
                 path.map(|elem| elem.0.clone()).collect(),
                 &basename.0,
-                dotencode
+                dotencode,
             )
         } else {
             ret.clone()
@@ -159,29 +162,28 @@ pub fn fsencode(elements: &Vec<PathElement>, dotencode: bool) -> PathBuf {
     } else {
         PathBuf::new()
     }
-
 }
 
-impl<'a> IntoIterator for &'a Path {
-    type Item = &'a PathElement;
-    type IntoIter = Iter<'a, PathElement>;
+impl<'a> IntoIterator for &'a MPath {
+    type Item = &'a MPathElement;
+    type IntoIter = Iter<'a, MPathElement>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.iter()
     }
 }
 
-impl<'a> IntoIterator for &'a PathElement {
-    type Item = &'a PathElement;
-    type IntoIter = Once<&'a PathElement>;
+impl<'a> IntoIterator for &'a MPathElement {
+    type Item = &'a MPathElement;
+    type IntoIter = Once<&'a MPathElement>;
 
     fn into_iter(self) -> Self::IntoIter {
         once(self)
     }
 }
 
-impl<'a> From<&'a Path> for Vec<u8> {
-    fn from(path: &Path) -> Self {
+impl<'a> From<&'a MPath> for Vec<u8> {
+    fn from(path: &MPath) -> Self {
         path.to_vec()
     }
 }
@@ -190,7 +192,7 @@ lazy_static! {
     static ref COMPONENT_CHARS: Vec<u8> = (1..b'/').chain((b'/' + 1)..255).collect();
 }
 
-impl Arbitrary for PathElement {
+impl Arbitrary for MPathElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let size = cmp::max(g.size(), 1);
         let mut element = Vec::with_capacity(size);
@@ -198,16 +200,16 @@ impl Arbitrary for PathElement {
             let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
             element.push(*c);
         }
-        PathElement(element)
+        MPathElement(element)
     }
 }
 
-impl Arbitrary for Path {
+impl Arbitrary for MPath {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let size = g.size();
         // Up to sqrt(size) components, each with length from 1 to 2 *
         // sqrt(size) -- don't generate zero-length components. (This isn't
-        // verified by Path::verify() but is good to have as a real distribution
+        // verified by MPath::verify() but is good to have as a real distribution
         // of paths.)
         //
         // TODO: deal with or filter out '..' and friends.
@@ -227,7 +229,7 @@ impl Arbitrary for Path {
             );
         }
 
-        Path::new(path).unwrap()
+        MPath::new(path).unwrap()
     }
 
     // Skip over shrink for now because it's non-trivial to do.
@@ -343,7 +345,8 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
 ///
 /// ```
 fn get_extension(basename: &[u8]) -> &[u8] {
-    let idx = basename.iter()
+    let idx = basename
+        .iter()
         .enumerate()
         .rev()
         .find(|&(_, c)| *c == b'.')
@@ -364,9 +367,7 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 ///
 /// ```
 fn hashed_file(dirs: &Vec<Vec<u8>>, file: &[u8]) -> Sha1 {
-    let mut elements: Vec<_> = dirs.iter()
-        .map(|elem| direncode(&elem))
-        .collect();
+    let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(&elem)).collect();
     elements.push(Vec::from(file));
 
     Sha1::from(elements.join(&b'/').as_ref())
@@ -400,14 +401,12 @@ fn hashencode(dirs: Vec<Vec<u8>>, file: &[u8], dotencode: bool) -> PathBuf {
         let size = cmp::min(dirprefixlen, p.len());
         let dir = &p[..size];
         let dir = match dir.split_last() {
-            Some((last, prefix)) => {
-                if last == &b'.' || last == &b' ' {
-                    let mut vec = Vec::from(prefix);
-                    vec.push(b'_');
-                    vec
-                } else {
-                    Vec::from(dir)
-                }
+            Some((last, prefix)) => if last == &b'.' || last == &b' ' {
+                let mut vec = Vec::from(prefix);
+                vec.push(b'_');
+                vec
+            } else {
+                Vec::from(dir)
             },
             _ => Vec::from(dir),
         };
@@ -454,27 +453,27 @@ fn hashencode(dirs: Vec<Vec<u8>>, file: &[u8], dotencode: bool) -> PathBuf {
     PathBuf::from(String::from_utf8(res.concat()).expect("bad utf8"))
 }
 
-impl Display for Path {
+impl Display for MPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", String::from_utf8_lossy(&self.to_vec()))
     }
 }
 
 // Implement our own Debug so that strings are displayed properly
-impl fmt::Debug for PathElement {
+impl fmt::Debug for MPathElement {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(
             fmt,
-            "PathElement({:?} \"{}\")",
+            "MPathElement({:?} \"{}\")",
             self.0,
             String::from_utf8_lossy(&self.0)
         )
     }
 }
 
-impl fmt::Debug for Path {
+impl fmt::Debug for MPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Path({:?})", self.to_vec())
+        write!(fmt, "MPath({:?})", self.to_vec())
     }
 }
 
@@ -484,44 +483,44 @@ mod test {
 
     quickcheck! {
         /// Verify that instances generated by quickcheck are valid.
-        fn path_gen(p: Path) -> bool {
-            Path::verify(&p.to_vec()).is_ok()
+        fn path_gen(p: MPath) -> bool {
+            MPath::verify(&p.to_vec()).is_ok()
         }
 
-        fn elements_to_path(elements: Vec<PathElement>) -> bool {
+        fn elements_to_path(elements: Vec<MPathElement>) -> bool {
             let joined = elements.iter().map(|elem| elem.0.clone())
                 .collect::<Vec<Vec<u8>>>()
                 .join(&b'/');
             let expected_len = joined.len();
-            let path = Path::new(joined).unwrap();
+            let path = MPath::new(joined).unwrap();
             elements == path.elements && path.to_vec().len() == expected_len
         }
     }
 
     #[test]
     fn path_make() {
-        let path = Path::new(b"1234abc");
-        assert!(Path::new(b"1234abc").is_ok());
+        let path = MPath::new(b"1234abc");
+        assert!(MPath::new(b"1234abc").is_ok());
         assert_eq!(path.unwrap().to_vec().len(), 7);
     }
 
     #[test]
     fn bad_path() {
-        assert!(Path::new(b"\0").is_err());
+        assert!(MPath::new(b"\0").is_err());
     }
     #[test]
     fn bad_path2() {
-        assert!(Path::new(b"abc\0").is_err());
+        assert!(MPath::new(b"abc\0").is_err());
     }
     #[test]
     fn bad_path3() {
-        assert!(Path::new(b"ab\0cde").is_err());
+        assert!(MPath::new(b"ab\0cde").is_err());
     }
 
     #[test]
     fn path_cmp() {
-        let a = Path::new(b"a").unwrap();
-        let b = Path::new(b"b").unwrap();
+        let a = MPath::new(b"a").unwrap();
+        let b = MPath::new(b"b").unwrap();
 
         assert!(a < b);
         assert!(a == a);
@@ -532,7 +531,7 @@ mod test {
 
     fn check_fsencode(path: &[u8], expected: &str) {
         let mut elements = vec![];
-        let path = &Path::new(path).unwrap();
+        let path = &MPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
         assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
@@ -558,7 +557,10 @@ mod test {
         check_fsencode(b"foo.d/bar.d", "foo.d.hg/bar.d");
         check_fsencode(b"foo.d/bar.d/file", "foo.d.hg/bar.d.hg/file");
         check_fsencode(b"tests/legacy-encoding.hg", "tests/legacy-encoding.hg");
-        check_fsencode(b"tests/legacy-encoding.hg/file", "tests/legacy-encoding.hg.hg/file");
+        check_fsencode(
+            b"tests/legacy-encoding.hg/file",
+            "tests/legacy-encoding.hg.hg/file",
+        );
     }
 
     #[test]
@@ -596,9 +598,9 @@ mod test {
     }
 
     fn join_and_check(prefix: &str, suffix: &str, expected: &str) {
-        let prefix = Path::new(prefix).unwrap();
+        let prefix = MPath::new(prefix).unwrap();
         let mut elements = vec![];
-        let joined = &prefix.join(&Path::new(suffix).unwrap());
+        let joined = &prefix.join(&MPath::new(suffix).unwrap());
         elements.extend(joined.into_iter().cloned());
         assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
     }
@@ -610,27 +612,27 @@ mod test {
         join_and_check("", "suffix", "suffix");
 
         assert_eq!(
-            Path::new(b"asdf")
+            MPath::new(b"asdf")
                 .unwrap()
-                .join(&Path::new(b"").unwrap())
+                .join(&MPath::new(b"").unwrap())
                 .to_vec()
                 .len(),
             4
         );
 
         assert_eq!(
-            Path::new(b"")
+            MPath::new(b"")
                 .unwrap()
-                .join(&Path::new(b"").unwrap())
+                .join(&MPath::new(b"").unwrap())
                 .to_vec()
                 .len(),
             0
         );
 
         assert_eq!(
-            Path::new(b"asdf")
+            MPath::new(b"asdf")
                 .unwrap()
-                .join(&PathElement(b"bdc".iter().cloned().collect()))
+                .join(&MPathElement(b"bdc".iter().cloned().collect()))
                 .to_vec()
                 .len(),
             8
@@ -639,12 +641,12 @@ mod test {
 
     #[test]
     fn empty_paths() {
-        assert_eq!(Path::new(b"/").unwrap().to_vec().len(), 0);
-        assert_eq!(Path::new(b"////").unwrap().to_vec().len(), 0);
+        assert_eq!(MPath::new(b"/").unwrap().to_vec().len(), 0);
+        assert_eq!(MPath::new(b"////").unwrap().to_vec().len(), 0);
         assert_eq!(
-            Path::new(b"////")
+            MPath::new(b"////")
                 .unwrap()
-                .join(&Path::new(b"///").unwrap())
+                .join(&MPath::new(b"///").unwrap())
                 .to_vec()
                 .len(),
             0
@@ -652,17 +654,22 @@ mod test {
         let p = b"///";
         let elements: Vec<_> = p.split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
-            .map(|e| PathElement(e.into()))
+            .map(|e| MPathElement(e.into()))
             .collect();
         assert_eq!(
-            Path::new(b"////")
+            MPath::new(b"////")
                 .unwrap()
                 .join(elements.iter())
                 .to_vec()
                 .len(),
             0
         );
-        assert!(Path::new(b"////").unwrap().join(elements.iter()).is_empty());
+        assert!(
+            MPath::new(b"////")
+                .unwrap()
+                .join(elements.iter())
+                .is_empty()
+        );
     }
 
     #[test]
@@ -678,7 +685,10 @@ mod test {
     fn test_hashed_file() {
         let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
         let file = b"file.txt";
-        assert_eq!(hashed_file(&dirs, file), Sha1::from(&b"asdf/asdf/file.txt"[..]));
+        assert_eq!(
+            hashed_file(&dirs, file),
+            Sha1::from(&b"asdf/asdf/file.txt"[..])
+        );
     }
 
     #[test]

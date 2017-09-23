@@ -14,7 +14,7 @@ use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use node::Node;
 use nodehash::NodeHash;
-use path::Path;
+use path::MPath;
 use repo::Repo;
 
 pub trait Changeset: Send + 'static {
@@ -22,7 +22,7 @@ pub trait Changeset: Send + 'static {
     fn user(&self) -> &[u8];
     fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>>;
     fn comments(&self) -> &[u8];
-    fn files(&self) -> &[Path];
+    fn files(&self) -> &[MPath];
     fn time(&self) -> &Time;
     fn parents(&self) -> &Parents;
 
@@ -51,7 +51,7 @@ impl Changeset for Box<Changeset> {
         (**self).comments()
     }
 
-    fn files(&self) -> &[Path] {
+    fn files(&self) -> &[MPath] {
         (**self).files()
     }
 

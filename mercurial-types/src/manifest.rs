@@ -15,7 +15,7 @@ use blob::Blob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::NodeHash;
-use path::Path;
+use path::MPath;
 
 /// Interface for a manifest
 pub trait Manifest: Send + 'static {
@@ -23,7 +23,7 @@ pub trait Manifest: Send + 'static {
 
     fn lookup(
         &self,
-        path: &Path,
+        path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error>;
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error>;
 
@@ -86,7 +86,7 @@ where
 
     fn lookup(
         &self,
-        path: &Path,
+        path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let cvterr = self.cvterr;
 
@@ -116,7 +116,7 @@ where
 
     fn lookup(
         &self,
-        path: &Path,
+        path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         (**self).lookup(path)
     }
@@ -137,7 +137,7 @@ pub enum Type {
 pub enum Content<E> {
     File(Blob<Vec<u8>>),       // TODO stream
     Executable(Blob<Vec<u8>>), // TODO stream
-    Symlink(Path),
+    Symlink(MPath),
     Tree(Box<Manifest<Error = E> + Sync>),
 }
 
@@ -167,7 +167,7 @@ pub trait Entry: Send + 'static {
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error>;
     fn get_hash(&self) -> &NodeHash;
-    fn get_path(&self) -> &Path;
+    fn get_path(&self) -> &MPath;
 
     fn boxed(self) -> Box<Entry<Error = Self::Error> + Sync>
     where
@@ -253,7 +253,7 @@ where
         self.entry.get_hash()
     }
 
-    fn get_path(&self) -> &Path {
+    fn get_path(&self) -> &MPath {
         self.entry.get_path()
     }
 }
@@ -288,7 +288,7 @@ where
         (**self).get_hash()
     }
 
-    fn get_path(&self) -> &Path {
+    fn get_path(&self) -> &MPath {
         (**self).get_path()
     }
 }

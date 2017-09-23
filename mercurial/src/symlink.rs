@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{BlobNode, Path};
+use mercurial_types::{BlobNode, MPath};
 
 use errors::*;
 use file::File;
@@ -17,8 +17,8 @@ impl Symlink {
         Symlink(File::new(node))
     }
 
-    pub fn path(&self) -> Result<Option<Path>> {
-        if let Some(path) = self.0.content().map(|s| Path::new(s)) {
+    pub fn path(&self) -> Result<Option<MPath>> {
+        if let Some(path) = self.0.content().map(|s| MPath::new(s)) {
             Ok(Some(path.chain_err(|| "invalid symlink target")?))
         } else {
             Ok(None)

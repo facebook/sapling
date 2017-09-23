@@ -16,7 +16,7 @@ use bytes::Bytes;
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
-use mercurial_types::{Delta, NodeHash, Path};
+use mercurial_types::{Delta, MPath, NodeHash};
 
 use changegroup;
 use errors::*;
@@ -108,7 +108,7 @@ impl Arbitrary for Cg2PartSequence {
         let mut filelogs = Vec::with_capacity(nfilelogs);
 
         for _ in 0..nfilelogs {
-            let path = Path::arbitrary(g);
+            let path = MPath::arbitrary(g);
             let section_end = Part::SectionEnd(Section::Filelog(path.clone()));
             filelogs.push((gen_parts(Section::Filelog(path), g), section_end));
         }

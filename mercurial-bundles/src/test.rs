@@ -18,7 +18,7 @@ use tokio_io::AsyncRead;
 
 use async_compression::{CompressorType, ZSTD_DEFAULT_LEVEL};
 use async_compression::membuf::MemBuf;
-use mercurial_types::{NodeHash, Path, NULL_HASH};
+use mercurial_types::{MPath, NodeHash, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
 use rand;
@@ -325,8 +325,8 @@ fn verify_cg2<R: AsyncRead>(core: &mut Core, stream: Bundle2Stream<R>) -> Bundle
     stream
 }
 
-fn path(bytes: &[u8]) -> Path {
-    Path::new(bytes).unwrap()
+fn path(bytes: &[u8]) -> MPath {
+    MPath::new(bytes).unwrap()
 }
 
 fn parse_stream_start<R: AsyncRead>(

@@ -16,7 +16,7 @@ use ascii::AsciiString;
 use futures::executor::spawn;
 use mercurial_types::manifest::{Content, Type};
 use mercurial_types::nodehash::NodeHash;
-use mercurial_types::path::Path;
+use mercurial_types::path::MPath;
 use mercurial_types::repo::Repo;
 
 #[test]
@@ -83,7 +83,7 @@ fn check_head_has_file() {
         .wait_future()
         .expect("Can't get manifest");
 
-    let files_future = manifest.lookup(&Path::new(b"files").expect("Can't get file 'files'"));
+    let files_future = manifest.lookup(&MPath::new(b"files").expect("Can't get file 'files'"));
     let files = spawn(files_future)
         .wait_future()
         .expect("Can't fetch file")

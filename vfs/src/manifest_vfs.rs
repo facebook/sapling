@@ -13,7 +13,7 @@ use error_chain::ChainedError;
 
 use mercurial_types::{Entry, Manifest};
 use mercurial_types::manifest::Content;
-use mercurial_types::path::{PathElement, DOT, DOTDOT};
+use mercurial_types::path::{MPathElement, DOT, DOTDOT};
 
 use node::{VfsDir, VfsFile, VfsNode};
 use tree::{TNodeId, Tree, TreeValue, ROOT_ID};
@@ -60,7 +60,7 @@ where
 
 struct ManifestVfsRoot<E: Send + 'static + ::std::error::Error> {
     entries: Vec<Box<Entry<Error = E> + Sync>>,
-    path_tree: Tree<PathElement, TEntryId>,
+    path_tree: Tree<MPathElement, TEntryId>,
 }
 
 impl<E: Send + 'static + ::std::error::Error> ManifestVfsRoot<E> {
@@ -111,7 +111,7 @@ impl<E: Send + 'static + ::std::error::Error> Clone for ManifestVfsDir<E> {
 impl<E: Send + 'static + ::std::error::Error> VfsDir for ManifestVfsDir<E> {
     type TFile = ManifestVfsFile<E>;
 
-    fn read(&self) -> Vec<&PathElement> {
+    fn read(&self) -> Vec<&MPathElement> {
         self.root
             .path_tree
             .get_value(self.nodeid)
@@ -122,7 +122,7 @@ impl<E: Send + 'static + ::std::error::Error> VfsDir for ManifestVfsDir<E> {
             .collect()
     }
 
-    fn step(&self, path: &PathElement) -> Option<VfsNode<Self, Self::TFile>> {
+    fn step(&self, path: &MPathElement) -> Option<VfsNode<Self, Self::TFile>> {
         if path == &*DOT {
             return Some(VfsNode::Dir(self.clone()));
         }
@@ -188,7 +188,7 @@ mod test {
     use super::*;
     use test::*;
 
-    use mercurial_types::Path;
+    use mercurial_types::MPath;
     use node::VfsWalker;
 
     fn unwrap_dir<TDir: VfsDir>(node: VfsNode<TDir, TDir::TFile>) -> TDir {
@@ -250,7 +250,7 @@ mod test {
     fn test_walk() {
         let vfs = VfsNode::Dir(example_vfs());
         let dir_c_d = unwrap_dir(
-            VfsWalker::new(vfs.clone(), Path::new("c/d").unwrap())
+            VfsWalker::new(vfs.clone(), MPath::new("c/d").unwrap())
                 .walk()
                 .wait()
                 .unwrap(),
@@ -259,14 +259,14 @@ mod test {
         cmp(dir_c_d.read(), vec!["da", "e"]);
 
         unwrap_file(
-            VfsWalker::new(vfs.clone(), Path::new("c/d/da").unwrap())
+            VfsWalker::new(vfs.clone(), MPath::new("c/d/da").unwrap())
                 .walk()
                 .wait()
                 .unwrap(),
         );
 
         assert!(
-            VfsWalker::new(vfs.clone(), Path::new("z").unwrap())
+            VfsWalker::new(vfs.clone(), MPath::new("z").unwrap())
                 .walk()
                 .wait()
                 .is_err()

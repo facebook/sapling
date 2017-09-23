@@ -9,7 +9,7 @@
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
-use mercurial_types::{Blob, NodeHash, Parents, Path};
+use mercurial_types::{Blob, MPath, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use blobstore::Blobstore;
@@ -22,7 +22,7 @@ use utils::{get_node, RawNodeBlob};
 
 pub struct BlobEntry<B> {
     blobstore: B,
-    path: Path, // XXX full path? Parent reference?
+    path: MPath, // XXX full path? Parent reference?
     nodeid: NodeHash,
     ty: Type,
 }
@@ -56,7 +56,7 @@ impl<B> BlobEntry<B>
 where
     B: Blobstore<Key = String> + Sync + Clone,
 {
-    pub fn new(blobstore: B, path: Path, nodeid: NodeHash, ty: Type) -> Self {
+    pub fn new(blobstore: B, path: MPath, nodeid: NodeHash, ty: Type) -> Self {
         Self {
             blobstore,
             path,
@@ -123,7 +123,7 @@ where
                     let res = match ty {
                         Type::File => Content::File(Blob::from(blob)),
                         Type::Executable => Content::Executable(Blob::from(blob)),
-                        Type::Symlink => Content::Symlink(Path::new(blob)?),
+                        Type::Symlink => Content::Symlink(MPath::new(blob)?),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
 
@@ -147,7 +147,7 @@ where
         &self.nodeid
     }
 
-    fn get_path(&self) -> &Path {
+    fn get_path(&self) -> &MPath {
         &self.path
     }
 }

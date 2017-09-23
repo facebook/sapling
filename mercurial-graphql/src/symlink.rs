@@ -9,7 +9,7 @@ use std::str;
 use juniper::FieldResult;
 
 use mercurial::symlink::Symlink;
-use mercurial_types::{NodeHash, Path};
+use mercurial_types::{MPath, NodeHash};
 
 use manifest::GQLPath;
 use manifestobj::{GQLManifestObj, ManifestObj};
@@ -19,7 +19,7 @@ use repo::RepoCtx;
 pub struct GQLSymlink(GQLPath, GQLNodeId);
 
 impl GQLSymlink {
-    pub fn new(path: &Path, id: &NodeHash) -> Self {
+    pub fn new(path: &MPath, id: &NodeHash) -> Self {
         GQLSymlink(GQLPath::from(path), GQLNodeId::from(id))
     }
 }

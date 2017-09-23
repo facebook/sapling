@@ -14,7 +14,7 @@ use futures::future::{BoxFuture, Future, IntoFuture};
 use futures::stream::{BoxStream, Stream};
 
 use errors::*;
-use mercurial_types::{Blob, BlobNode, NodeHash, Parents, Path};
+use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use RevlogRepo;
@@ -30,7 +30,7 @@ pub struct Details {
 pub struct RevlogManifest {
     // This is None for testing only -- the public API ensures `repo` always exists.
     repo: Option<RevlogRepo>,
-    files: BTreeMap<Path, Details>,
+    files: BTreeMap<MPath, Details>,
 }
 
 // Each manifest revision contains a list of the file revisions in each changeset, in the form:
@@ -40,7 +40,7 @@ pub struct RevlogManifest {
 // Source: mercurial/parsers.c:parse_manifest()
 //
 // NB: filenames are sequences of non-zero bytes, not strings
-fn parse_impl(data: &[u8], prefix: Option<&Path>) -> Result<BTreeMap<Path, Details>> {
+fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Details>> {
     let mut files = BTreeMap::new();
 
     for line in data.split(|b| *b == b'\n') {
@@ -61,9 +61,9 @@ fn parse_impl(data: &[u8], prefix: Option<&Path>) -> Result<BTreeMap<Path, Detai
         };
 
         let path = if let Some(prefix) = prefix {
-            prefix.join(&Path::new(name).chain_err(|| "invalid path in manifest")?)
+            prefix.join(&MPath::new(name).chain_err(|| "invalid path in manifest")?)
         } else {
-            Path::new(name).chain_err(|| "invalid path in manifest")?
+            MPath::new(name).chain_err(|| "invalid path in manifest")?
         };
         let details = Details::parse(rest)?;
 
@@ -74,11 +74,11 @@ fn parse_impl(data: &[u8], prefix: Option<&Path>) -> Result<BTreeMap<Path, Detai
     Ok(files)
 }
 
-pub fn parse(data: &[u8]) -> Result<BTreeMap<Path, Details>> {
+pub fn parse(data: &[u8]) -> Result<BTreeMap<MPath, Details>> {
     parse_impl(data, None)
 }
 
-pub fn parse_with_prefix(data: &[u8], prefix: &Path) -> Result<BTreeMap<Path, Details>> {
+pub fn parse_with_prefix(data: &[u8], prefix: &MPath) -> Result<BTreeMap<MPath, Details>> {
     parse_impl(data, Some(prefix))
 }
 
@@ -98,7 +98,7 @@ impl RevlogManifest {
     fn parse_with_prefix(
         repo: Option<RevlogRepo>,
         data: &[u8],
-        prefix: &Path,
+        prefix: &MPath,
     ) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
         parse_with_prefix(data, prefix).map(|files| RevlogManifest { repo, files })
@@ -114,11 +114,11 @@ impl RevlogManifest {
         Ok(())
     }
 
-    pub fn lookup(&self, path: &Path) -> Option<&Details> {
+    pub fn lookup(&self, path: &MPath) -> Option<&Details> {
         self.files.get(path)
     }
 
-    pub fn manifest(&self) -> Vec<(&Path, &Details)> {
+    pub fn manifest(&self) -> Vec<(&MPath, &Details)> {
         self.files.iter().collect()
     }
 }
@@ -195,11 +195,11 @@ where
 
 pub struct RevlogEntry {
     repo: RevlogRepo,
-    path: Path,
+    path: MPath,
     details: Details,
 }
 
-pub struct RevlogListStream(vec::IntoIter<(Path, Details)>, RevlogRepo);
+pub struct RevlogListStream(vec::IntoIter<(MPath, Details)>, RevlogRepo);
 
 impl Stream for RevlogListStream {
     type Item = RevlogEntry;
@@ -222,7 +222,7 @@ impl Manifest for RevlogManifest {
 
     fn lookup(
         &self,
-        path: &Path,
+        path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let repo = self.repo.as_ref().expect("missing repo").clone();
         let res = RevlogManifest::lookup(self, path).map(|details| {
@@ -308,7 +308,7 @@ impl Entry for RevlogEntry {
                 Type::Executable => Ok(Content::Executable(data)),
                 Type::Symlink => {
                     let data = data.as_slice().ok_or("missing blob data")?;
-                    Ok(Content::Symlink(Path::new(data)?))
+                    Ok(Content::Symlink(MPath::new(data)?))
                 }
                 Type::Tree => {
                     let data = data.as_slice().ok_or("missing blob data")?;
@@ -348,7 +348,7 @@ impl Entry for RevlogEntry {
         self.details.nodeid()
     }
 
-    fn get_path(&self) -> &Path {
+    fn get_path(&self) -> &MPath {
         &self.path
     }
 }
@@ -409,7 +409,7 @@ mod test {
             Ok(m) => {
                 let expect = vec![
                     (
-                        Path::new(b"hello123").unwrap(),
+                        MPath::new(b"hello123").unwrap(),
                         Details {
                             nodeid: "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
                             flag: Type::Symlink,

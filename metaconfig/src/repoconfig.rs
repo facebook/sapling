@@ -17,9 +17,9 @@ use futures::{future, Future, IntoFuture};
 use error_chain::ChainedError;
 
 use mercurial::file::File;
-use mercurial_types::{BlobNode, Manifest, NodeHash, Path, Repo};
+use mercurial_types::{BlobNode, MPath, Manifest, NodeHash, Repo};
 use mercurial_types::manifest::Content;
-use mercurial_types::path::PathElement;
+use mercurial_types::path::MPathElement;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
 
@@ -88,7 +88,7 @@ impl RepoConfigs {
         Box::new(
             vfs_from_manifest(manifest)
                 .and_then(|vfs| {
-                    VfsWalker::new(vfs.into_node(), Path::new(b"repos").unwrap()).walk()
+                    VfsWalker::new(vfs.into_node(), MPath::new(b"repos").unwrap()).walk()
                 })
                 .from_err()
                 .and_then(|repos_node| match repos_node {
@@ -115,7 +115,7 @@ impl RepoConfigs {
 
     fn read_repo<E>(
         dir: VfsNode<ManifestVfsDir<E>, ManifestVfsFile<E>>,
-        path: PathElement,
+        path: MPathElement,
     ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send>
     where
         E: Send + 'static + ::std::error::Error,

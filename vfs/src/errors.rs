@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 
-use mercurial_types::path::PathElement;
+use mercurial_types::path::MPathElement;
 
 error_chain! {
     errors {
@@ -19,7 +19,7 @@ error_chain! {
             display("{}", msg)
         }
         /// Tried to walk on a path that does not exists. Returns the remainder of walk.
-        PathDoNotExists(msg: String, remainder: VecDeque<PathElement>) {
+        PathDoNotExists(msg: String, remainder: VecDeque<MPathElement>) {
             description("the provided path does not exist in Vfs")
             display("{}", msg)
         }
@@ -31,7 +31,7 @@ error_chain! {
         }
         /// Reached maximum number of steps on the walk. Most commonly this happens when a symlink
         /// that leads into an infinite loop when resolved. Returns the remainder of walk.
-        MaximumStepReached(msg: String, remainder: VecDeque<PathElement>) {
+        MaximumStepReached(msg: String, remainder: VecDeque<MPathElement>) {
             description("maximum number of steps during a walk on Vfs was reached")
             display("{}", msg)
         }

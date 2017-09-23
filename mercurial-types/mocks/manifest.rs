@@ -7,10 +7,10 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use futures::{IntoFuture, stream};
+use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Blob, Entry, Manifest, Path, Type};
+use mercurial_types::{Blob, Entry, MPath, Manifest, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::NodeHash;
@@ -27,8 +27,8 @@ pub struct MockManifest<E> {
 }
 
 impl<E> MockManifest<E> {
-    fn p(p: &'static str) -> Path {
-        Path::new(p).expect(&format!("invalid path {}", p))
+    fn p(p: &'static str) -> MPath {
+        MPath::new(p).expect(&format!("invalid path {}", p))
     }
 
     pub fn new(paths: Vec<&'static str>) -> Self {
@@ -63,7 +63,7 @@ where
 
     fn lookup(
         &self,
-        _path: &Path,
+        _path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         unimplemented!();
     }
@@ -73,7 +73,7 @@ where
 }
 
 struct MockEntry<E> {
-    path: Path,
+    path: MPath,
     content_factory: ContentFactory<E>,
     phantom: PhantomData<E>,
 }
@@ -91,7 +91,7 @@ impl<E> Clone for MockEntry<E> {
 }
 
 impl<E> MockEntry<E> {
-    fn new(path: Path, content_factory: ContentFactory<E>) -> Self {
+    fn new(path: MPath, content_factory: ContentFactory<E>) -> Self {
         MockEntry {
             path,
             content_factory,
@@ -123,7 +123,7 @@ where
     fn get_hash(&self) -> &NodeHash {
         unimplemented!();
     }
-    fn get_path(&self) -> &Path {
+    fn get_path(&self) -> &MPath {
         &self.path
     }
 }
