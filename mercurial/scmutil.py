@@ -19,6 +19,7 @@ from .i18n import _
 from .node import (
     hex,
     nullid,
+    short,
     wdirid,
     wdirrev,
 )
@@ -404,6 +405,20 @@ def intrev(ctx):
     if rev is None:
         return wdirrev
     return rev
+
+def formatchangeid(ctx):
+    """Format changectx as '{rev}:{node|formatnode}', which is the default
+    template provided by cmdutil.changeset_templater"""
+    repo = ctx.repo()
+    return formatrevnode(repo.ui, intrev(ctx), binnode(ctx))
+
+def formatrevnode(ui, rev, node):
+    """Format given revision and node depending on the current verbosity"""
+    if ui.debugflag:
+        hexfunc = hex
+    else:
+        hexfunc = short
+    return '%d:%s' % (rev, hexfunc(node))
 
 def revsingle(repo, revspec, default='.', localalias=None):
     if not revspec and revspec != 0:

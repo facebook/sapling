@@ -11,7 +11,6 @@ from .i18n import _
 from .node import (
     hex,
     nullid,
-    short,
 )
 
 from . import (
@@ -162,16 +161,6 @@ def _showlist(name, values, mapping, plural=None, separator=' '):
     endname = 'end_' + plural
     if endname in templ:
         yield templ(endname, **strmapping)
-
-def _formatrevnode(ctx):
-    """Format changeset as '{rev}:{node|formatnode}', which is the default
-    template provided by cmdutil.changeset_templater"""
-    repo = ctx.repo()
-    if repo.ui.debugflag:
-        hexfunc = hex
-    else:
-        hexfunc = short
-    return '%d:%s' % (scmutil.intrev(ctx), hexfunc(scmutil.binnode(ctx)))
 
 def getfiles(repo, ctx, revcache):
     if 'files' not in revcache:
@@ -640,7 +629,7 @@ def showpredecessors(repo, ctx, **args):
 
     return _hybrid(None, predecessors,
                    lambda x: {'ctx': repo[x], 'revcache': {}},
-                   lambda d: _formatrevnode(d['ctx']))
+                   lambda d: scmutil.formatchangeid(d['ctx']))
 
 @templatekeyword("successorssets")
 def showsuccessorssets(repo, ctx, **args):
@@ -658,7 +647,7 @@ def showsuccessorssets(repo, ctx, **args):
     data = []
     for ss in ssets:
         h = _hybrid(None, ss, lambda x: {'ctx': repo[x], 'revcache': {}},
-                    lambda d: _formatrevnode(d['ctx']))
+                    lambda d: scmutil.formatchangeid(d['ctx']))
         data.append(h)
 
     # Format the successorssets
@@ -698,7 +687,7 @@ def showsuccsandmarkers(repo, ctx, **args):
         successors = [hex(n) for n in successors]
         successors = _hybrid(None, successors,
                              lambda x: {'ctx': repo[x], 'revcache': {}},
-                             lambda d: _formatrevnode(d['ctx']))
+                             lambda d: scmutil.formatchangeid(d['ctx']))
 
         # Format markers
         finalmarkers = []
@@ -759,7 +748,7 @@ def showparents(**args):
                for p in pctxs]
     f = _showlist('parent', parents, args)
     return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
-                   lambda d: _formatrevnode(d['ctx']))
+                   lambda d: scmutil.formatchangeid(d['ctx']))
 
 @templatekeyword('phase')
 def showphase(repo, ctx, templ, **args):

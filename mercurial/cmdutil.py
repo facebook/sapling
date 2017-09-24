@@ -1623,22 +1623,16 @@ class changeset_printer(object):
         '''show a single changeset or file revision'''
         changenode = ctx.node()
         rev = ctx.rev()
-        if self.ui.debugflag:
-            hexfunc = hex
-        else:
-            hexfunc = short
-        # as of now, wctx.node() and wctx.rev() return None, but we want to
-        # show the same values as {node} and {rev} templatekw
-        revnode = (scmutil.intrev(ctx), hexfunc(scmutil.binnode(ctx)))
 
         if self.ui.quiet:
-            self.ui.write("%d:%s\n" % revnode, label='log.node')
+            self.ui.write("%s\n" % scmutil.formatchangeid(ctx),
+                          label='log.node')
             return
 
         date = util.datestr(ctx.date())
 
         # i18n: column positioning for "hg log"
-        self.ui.write(_("changeset:   %d:%s\n") % revnode,
+        self.ui.write(_("changeset:   %s\n") % scmutil.formatchangeid(ctx),
                       label=_changesetlabels(ctx))
 
         # branches are shown first before any other names due to backwards
@@ -1667,16 +1661,15 @@ class changeset_printer(object):
         for pctx in scmutil.meaningfulparents(self.repo, ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
             # i18n: column positioning for "hg log"
-            self.ui.write(_("parent:      %d:%s\n")
-                          % (pctx.rev(), hexfunc(pctx.node())),
+            self.ui.write(_("parent:      %s\n") % scmutil.formatchangeid(pctx),
                           label=label)
 
         if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()
+            mrev = self.repo.manifestlog._revlog.rev(mnode)
             # i18n: column positioning for "hg log"
-            self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifestlog._revlog.rev(mnode),
-                           hex(mnode)),
+            self.ui.write(_("manifest:    %s\n")
+                          % scmutil.formatrevnode(self.ui, mrev, mnode),
                           label='ui.debug log.manifest')
         # i18n: column positioning for "hg log"
         self.ui.write(_("user:        %s\n") % ctx.user(),
