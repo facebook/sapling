@@ -768,10 +768,7 @@ def join(context, mapping, args):
     # TODO: perhaps this should be evalfuncarg(), but it can't because hgweb
     # abuses generator as a keyword that returns a list of dicts.
     joinset = evalrawexp(context, mapping, args[0])
-    if util.safehasattr(joinset, 'itermaps'):
-        jf = joinset.joinfmt
-        joinset = [jf(x) for x in joinset.itermaps()]
-
+    joinfmt = getattr(joinset, 'joinfmt', pycompat.identity)
     joiner = " "
     if len(args) > 1:
         joiner = evalstring(context, mapping, args[1])
@@ -782,7 +779,7 @@ def join(context, mapping, args):
             first = False
         else:
             yield joiner
-        yield x
+        yield joinfmt(x)
 
 @templatefunc('label(label, expr)')
 def label(context, mapping, args):

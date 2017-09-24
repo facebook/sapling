@@ -48,10 +48,10 @@ class _hybrid(object):
         return self._defaultgen()
     def _defaultgen(self):
         """Generator to stringify this as {join(self, ' ')}"""
-        for i, d in enumerate(self.itermaps()):
+        for i, x in enumerate(self._values):
             if i > 0:
                 yield ' '
-            yield self.joinfmt(d)
+            yield self.joinfmt(x)
     def itermaps(self):
         makemap = self._makemap
         for x in self._values:
@@ -73,11 +73,11 @@ class _hybrid(object):
 def hybriddict(data, key='key', value='value', fmt='%s=%s', gen=None):
     """Wrap data to support both dict-like and string-like operations"""
     return _hybrid(gen, data, lambda k: {key: k, value: data[k]},
-                   lambda d: fmt % (d[key], d[value]))
+                   lambda k: fmt % (k, data[k]))
 
 def hybridlist(data, name, fmt='%s', gen=None):
     """Wrap data to support both list-like and string-like operations"""
-    return _hybrid(gen, data, lambda x: {name: x}, lambda d: fmt % d[name])
+    return _hybrid(gen, data, lambda x: {name: x}, lambda x: fmt % x)
 
 def unwraphybrid(thing):
     """Return an object which can be stringified possibly by using a legacy
@@ -315,7 +315,7 @@ def showbookmarks(**args):
     active = repo._activebookmark
     makemap = lambda v: {'bookmark': v, 'active': active, 'current': active}
     f = _showlist('bookmark', bookmarks, args)
-    return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
+    return _hybrid(f, bookmarks, makemap, pycompat.identity)
 
 @templatekeyword('children')
 def showchildren(**args):
@@ -384,7 +384,7 @@ def showextras(**args):
     c = [makemap(k) for k in extras]
     f = _showlist('extra', c, args, plural='extras')
     return _hybrid(f, extras, makemap,
-                   lambda x: '%s=%s' % (x['key'], util.escapestr(x['value'])))
+                   lambda k: '%s=%s' % (k, util.escapestr(extras[k])))
 
 @templatekeyword('file_adds')
 def showfileadds(**args):
@@ -510,7 +510,7 @@ def showlatesttags(pattern, **args):
 
     tags = latesttags[2]
     f = _showlist('latesttag', tags, args, separator=':')
-    return _hybrid(f, tags, makemap, lambda x: x['latesttag'])
+    return _hybrid(f, tags, makemap, pycompat.identity)
 
 @templatekeyword('latesttagdistance')
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
@@ -584,7 +584,7 @@ def shownamespaces(**args):
             'colorname': colornames[ns],
         }
 
-    return _hybrid(f, namespaces, makemap, lambda x: x['namespace'])
+    return _hybrid(f, namespaces, makemap, pycompat.identity)
 
 @templatekeyword('node')
 def shownode(repo, ctx, templ, **args):
@@ -618,7 +618,7 @@ def showpeerpaths(repo, **args):
     # no hybriddict() since d['path'] can't be formatted as a string. perhaps
     # hybriddict() should call templatefilters.stringify(d[value]).
     return _hybrid(None, paths, lambda k: {'name': k, 'path': paths[k]},
-                   lambda d: '%s=%s' % (d['name'], d['path']['url']))
+                   lambda k: '%s=%s' % (k, paths[k]['url']))
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):
@@ -629,7 +629,7 @@ def showpredecessors(repo, ctx, **args):
 
     return _hybrid(None, predecessors,
                    lambda x: {'ctx': repo[x], 'revcache': {}},
-                   lambda d: scmutil.formatchangeid(d['ctx']))
+                   lambda x: scmutil.formatchangeid(repo[x]))
 
 @templatekeyword("successorssets")
 def showsuccessorssets(repo, ctx, **args):
@@ -647,7 +647,7 @@ def showsuccessorssets(repo, ctx, **args):
     data = []
     for ss in ssets:
         h = _hybrid(None, ss, lambda x: {'ctx': repo[x], 'revcache': {}},
-                    lambda d: scmutil.formatchangeid(d['ctx']))
+                    lambda x: scmutil.formatchangeid(repo[x]))
         data.append(h)
 
     # Format the successorssets
@@ -661,7 +661,7 @@ def showsuccessorssets(repo, ctx, **args):
         yield "; ".join(render(d) for d in data)
 
     return _hybrid(gen(data), data, lambda x: {'successorset': x},
-                   lambda d: d["successorset"])
+                   pycompat.identity)
 
 @templatekeyword("succsandmarkers")
 def showsuccsandmarkers(repo, ctx, **args):
@@ -687,7 +687,7 @@ def showsuccsandmarkers(repo, ctx, **args):
         successors = [hex(n) for n in successors]
         successors = _hybrid(None, successors,
                              lambda x: {'ctx': repo[x], 'revcache': {}},
-                             lambda d: scmutil.formatchangeid(d['ctx']))
+                             lambda x: scmutil.formatchangeid(repo[x]))
 
         # Format markers
         finalmarkers = []
@@ -703,7 +703,7 @@ def showsuccsandmarkers(repo, ctx, **args):
         data.append({'successors': successors, 'markers': finalmarkers})
 
     f = _showlist('succsandmarkers', data, args)
-    return _hybrid(f, data, lambda x: x, lambda d: d)
+    return _hybrid(f, data, lambda x: x, pycompat.identity)
 
 @templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
@@ -748,7 +748,7 @@ def showparents(**args):
                for p in pctxs]
     f = _showlist('parent', parents, args)
     return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}},
-                   lambda d: scmutil.formatchangeid(d['ctx']))
+                   lambda x: scmutil.formatchangeid(repo[int(x)]))
 
 @templatekeyword('phase')
 def showphase(repo, ctx, templ, **args):
@@ -775,7 +775,7 @@ def showrevslist(name, revs, **args):
     f = _showlist(name, revs, args)
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}},
-                   lambda d: d[name])
+                   pycompat.identity)
 
 @templatekeyword('subrepos')
 def showsubrepos(**args):
