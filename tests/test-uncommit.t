@@ -354,6 +354,10 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
   abort: outstanding uncommitted merge
   [255]
 
+  $ hg uncommit --config experimental.uncommitondirtywdir=True
+  abort: cannot uncommit while merging
+  [255]
+
   $ hg status
   M a
   $ hg commit -m 'merge a and b'
