@@ -263,7 +263,6 @@ listkeys hook
   pulling from ../a
   listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
-  listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   adding remote bookmark bar
   $ cd ../a
 

@@ -207,6 +207,7 @@ def encodebatchcmds(req):
 gboptsmap = {'heads':  'nodes',
              'common': 'nodes',
              'obsmarkers': 'boolean',
+             'phases': 'boolean',
              'bundlecaps': 'scsv',
              'listkeys': 'csv',
              'cg': 'boolean',

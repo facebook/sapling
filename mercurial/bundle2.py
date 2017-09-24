@@ -1395,6 +1395,7 @@ capabilities = {'HG20': (),
                 'digests': tuple(sorted(util.DIGESTS.keys())),
                 'remote-changegroup': ('http', 'https'),
                 'hgtagsfnodes': (),
+                'phases': ('heads',),
                }
 
 def getrepocaps(repo, allowpushback=False):
@@ -1413,6 +1414,8 @@ def getrepocaps(repo, allowpushback=False):
     cpmode = repo.ui.config('server', 'concurrent-push-mode')
     if cpmode == 'check-related':
         caps['checkheads'] = ('related',)
+    if 'phases' in repo.ui.configlist('devel', 'legacy.exchange'):
+        caps.pop('phases')
     return caps
 
 def bundle2caps(remote):

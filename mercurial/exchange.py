@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import errno
 import hashlib
 
@@ -1349,12 +1350,20 @@ def _pullbundle2(pullop):
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
+
+    ui = pullop.repo.ui
+    legacyphase = 'phases' in ui.configlist('devel', 'legacy.exchange')
+    if (not legacyphase and 'heads' in pullop.remotebundle2caps.get('phases')):
+        kwargs['phases'] = True
+        pullop.stepsdone.add('phases')
+
     if 'listkeys' in pullop.remotebundle2caps:
-        kwargs['listkeys'] = ['phases']
+        if 'phases' not in pullop.stepsdone:
+            kwargs['listkeys'] = ['phases']
         if pullop.remotebookmarks is None:
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
-            kwargs['listkeys'].append('bookmarks')
+            kwargs.setdefault('listkeys', []).append('bookmarks')
 
     # If this is a full pull / clone and the server supports the clone bundles
     # feature, tell the server whether we attempted a clone bundle. The
@@ -1662,6 +1671,53 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
         markers = repo.obsstore.relevantmarkers(subset)
         markers = sorted(markers)
         bundle2.buildobsmarkerspart(bundler, markers)
+
+@getbundle2partsgenerator('phases')
+def _getbundlephasespart(bundler, repo, source, bundlecaps=None,
+                            b2caps=None, heads=None, **kwargs):
+    """add phase heads part to the requested bundle"""
+    if kwargs.get('phases', False):
+        if not 'heads' in b2caps.get('phases'):
+            raise ValueError(_('no common phases exchange method'))
+        if heads is None:
+            heads = repo.heads()
+
+        headsbyphase = collections.defaultdict(set)
+        if repo.publishing():
+            headsbyphase[phases.public] = heads
+        else:
+            # find the appropriate heads to move
+
+            phase = repo._phasecache.phase
+            node = repo.changelog.node
+            rev = repo.changelog.rev
+            for h in heads:
+                headsbyphase[phase(repo, rev(h))].add(h)
+            seenphases = list(headsbyphase.keys())
+
+            # We do not handle anything but public and draft phase for now)
+            if seenphases:
+                assert max(seenphases) <= phases.draft
+
+            # if client is pulling non-public changesets, we need to find
+            # intermediate public heads.
+            draftheads = headsbyphase.get(phases.draft, set())
+            if draftheads:
+                publicheads = headsbyphase.get(phases.public, set())
+
+                revset = 'heads(only(%ln, %ln) and public())'
+                extraheads = repo.revs(revset, draftheads, publicheads)
+                for r in extraheads:
+                    headsbyphase[phases.public].add(node(r))
+
+        # transform data in a format used by the encoding function
+        phasemapping = []
+        for phase in phases.allphases:
+            phasemapping.append(sorted(headsbyphase[phase]))
+
+        # generate the actual part
+        phasedata = phases.binaryencode(phasemapping)
+        bundler.newpart('phase-heads', data=phasedata)
 
 @getbundle2partsgenerator('hgtagsfnodes')
 def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,

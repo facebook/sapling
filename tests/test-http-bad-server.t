@@ -11,6 +11,8 @@ version so behavior is deterministic.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fakeversion = `pwd`/fakeversion.py
+  > [devel]
+  > legacy.exchange = phases
   > EOF
 
   $ hg init server0
