@@ -90,6 +90,7 @@ import socket
 import sys
 import threading
 
+from .i18n import _
 from . import (
     util,
 )
@@ -231,6 +232,10 @@ class KeepAliveHandler(object):
                 self._cm.add(host, h, 0)
                 self._start_transaction(h, req)
                 r = h.getresponse()
+        # The string form of BadStatusLine is the status line. Add some context
+        # to make the error message slightly more useful.
+        except httplib.BadStatusLine as err:
+            raise urlerr.urlerror(_('bad HTTP status line: %s') % err.line)
         except (socket.error, httplib.HTTPException) as err:
             raise urlerr.urlerror(err)
 
