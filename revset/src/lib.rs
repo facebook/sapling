@@ -25,6 +25,9 @@ pub use unionnodestream::UnionNodeStream;
 mod singlenodehash;
 pub use singlenodehash::SingleNodeHash;
 
+mod setdifferencenodestream;
+pub use setdifferencenodestream::SetDifferenceNodeStream;
+
 pub mod errors;
 
 pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + 'static;
