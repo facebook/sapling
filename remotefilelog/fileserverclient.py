@@ -598,10 +598,10 @@ class fileserverclient(object):
         pointers = []
         store = self.repo.svfs.lfslocalblobstore
         for file, id in fileids:
-            nodehash = bin(id)
+            node = bin(id)
             rlog = self.repo.file(file)
-            if rlog.flags(nodehash) & revlog.REVIDX_EXTSTORED:
-                text = rlog.revision(nodehash, raw=True)
+            if rlog.flags(node) & revlog.REVIDX_EXTSTORED:
+                text = rlog.revision(node, raw=True)
                 p = _lfsmod.pointer.deserialize(text)
                 oid = p.oid()
                 if not store.has(oid):
