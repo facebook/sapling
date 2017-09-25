@@ -18,8 +18,7 @@ def retry(num=3, sleeps=.3):
         def wrapper(*args, **kwargs):
             for _try in range(1, num + 1):
                 try:
-                    function(*args, **kwargs)
-                    return
+                    return function(*args, **kwargs)
                 except Exception:
                     if _try == num:
                         raise
