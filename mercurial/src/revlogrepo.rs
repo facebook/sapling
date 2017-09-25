@@ -11,7 +11,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use futures::{Async, Future, IntoFuture, Poll, Stream};
 use futures::future::{self, BoxFuture};
@@ -108,7 +108,7 @@ pub struct RevlogRepo {
     requirements: HashSet<Required>, // requirements
     changelog: Revlog,               // changes
     manifest: Revlog,                // manifest
-    inner: Arc<Mutex<RevlogInner>>,  // Inner parts
+    inner: Arc<RwLock<RevlogInner>>,  // Inner parts
 }
 
 #[derive(Debug)]
@@ -150,7 +150,7 @@ impl RevlogRepo {
             requirements: req,
             changelog: changelog,
             manifest: manifest,
-            inner: Arc::new(Mutex::new(RevlogInner {
+            inner: Arc::new(RwLock::new(RevlogInner {
                 filelogcache: HashMap::new(),
                 treelogcache: HashMap::new(),
             })),
@@ -222,7 +222,14 @@ impl RevlogRepo {
     }
 
     pub fn get_tree_revlog(&self, path: &MPath) -> Result<Revlog> {
-        let mut inner = self.inner.lock().expect("poisoned lock");
+        {
+            let inner = self.inner.read().expect("poisoned lock");
+            let res = inner.treelogcache.get(path);
+            if res.is_some() {
+                return Ok(res.unwrap().clone());
+            }
+        }
+        let mut inner = self.inner.write().expect("poisoned lock");
 
         match inner.treelogcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
@@ -237,7 +244,14 @@ impl RevlogRepo {
     }
 
     pub fn get_file_revlog(&self, path: &MPath) -> Result<Revlog> {
-        let mut inner = self.inner.lock().expect("poisoned lock");
+        {
+            let inner = self.inner.read().expect("poisoned lock");
+            let res = inner.filelogcache.get(path);
+            if res.is_some() {
+                return Ok(res.unwrap().clone());
+            }
+        }
+        let mut inner = self.inner.write().expect("poisoned lock");
 
         self.get_file_revlog_inner(&mut inner, path)
     }
