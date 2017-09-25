@@ -11,6 +11,10 @@ cp -r contrib/debian debian
 
 version=$(hg log -r . -T'{latesttag}+{latesttagdistance}-{node|short}')
 
+# Remove "hg_" from start of $version so it starts with a digit, which makes it
+# a valid version string.
+version=${version/#hg_/}
+
 control=debian/control
 changelog=debian/changelog
 # This looks like sed -i, but sed -i behaves just differently enough
