@@ -137,11 +137,6 @@ class dirstate(object):
         return self._map
 
     @propertycache
-    def _copymap(self):
-        self._read()
-        return self._copymap
-
-    @propertycache
     def _identity(self):
         self._read()
         return self._identity
@@ -378,13 +373,13 @@ class dirstate(object):
 
                 # Discard 'm' markers when moving away from a merge state
                 if s[0] == 'm':
-                    source = self._copymap.get(f)
+                    source = self._map.copymap.get(f)
                     if source:
                         copies[f] = source
                     self.normallookup(f)
                 # Also fix up otherparent markers
                 elif s[0] == 'n' and s[2] == -2:
-                    source = self._copymap.get(f)
+                    source = self._map.copymap.get(f)
                     if source:
                         copies[f] = source
                     self.add(f)
@@ -418,7 +413,6 @@ class dirstate(object):
     def _read(self):
         self._map = dirstatemap()
 
-        self._copymap = {}
         # ignore HG_PENDING because identity is used only for writing
         self._identity = util.filestat.frompath(
             self._opener.join(self._filename))
@@ -461,7 +455,7 @@ class dirstate(object):
         #
         # (we cannot decorate the function directly since it is in a C module)
         parse_dirstate = util.nogc(parsers.parse_dirstate)
-        p = parse_dirstate(self._map._map, self._copymap, st)
+        p = parse_dirstate(self._map._map, self._map.copymap, st)
         if not self._dirtypl:
             self._pl = p
 
@@ -472,7 +466,7 @@ class dirstate(object):
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it.'''
 
-        for a in ("_map", "_copymap", "_identity",
+        for a in ("_map", "_identity",
                   "_filefoldmap", "_dirfoldmap", "_branch",
                   "_pl", "_dirs", "_ignore", "_nonnormalset",
                   "_otherparentset"):
@@ -490,17 +484,17 @@ class dirstate(object):
             return
         self._dirty = True
         if source is not None:
-            self._copymap[dest] = source
+            self._map.copymap[dest] = source
             self._updatedfiles.add(source)
             self._updatedfiles.add(dest)
-        elif self._copymap.pop(dest, None):
+        elif self._map.copymap.pop(dest, None):
             self._updatedfiles.add(dest)
 
     def copied(self, file):
-        return self._copymap.get(file, None)
+        return self._map.copymap.get(file, None)
 
     def copies(self):
-        return self._copymap
+        return self._map.copymap
 
     def _droppath(self, f):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
@@ -543,7 +537,7 @@ class dirstate(object):
         mtime = s.st_mtime
         self._addpath(f, 'n', s.st_mode,
                       s.st_size & _rangemask, mtime & _rangemask)
-        self._copymap.pop(f, None)
+        self._map.copymap.pop(f, None)
         if f in self._nonnormalset:
             self._nonnormalset.remove(f)
         if mtime > self._lastnormaltime:
@@ -561,7 +555,7 @@ class dirstate(object):
             entry = self._map.get(f)
             if entry is not None:
                 if entry[0] == 'r' and entry[2] in (-1, -2):
-                    source = self._copymap.get(f)
+                    source = self._map.copymap.get(f)
                     if entry[2] == -1:
                         self.merge(f)
                     elif entry[2] == -2:
@@ -572,7 +566,7 @@ class dirstate(object):
                 if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
                     return
         self._addpath(f, 'n', 0, -1, -1)
-        self._copymap.pop(f, None)
+        self._map.copymap.pop(f, None)
         if f in self._nonnormalset:
             self._nonnormalset.remove(f)
 
@@ -587,12 +581,12 @@ class dirstate(object):
         else:
             # add-like
             self._addpath(f, 'n', 0, -2, -1)
-        self._copymap.pop(f, None)
+        self._map.copymap.pop(f, None)
 
     def add(self, f):
         '''Mark a file added.'''
         self._addpath(f, 'a', 0, -1, -1)
-        self._copymap.pop(f, None)
+        self._map.copymap.pop(f, None)
 
     def remove(self, f):
         '''Mark a file removed.'''
@@ -611,7 +605,7 @@ class dirstate(object):
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self._nonnormalset.add(f)
         if size == 0:
-            self._copymap.pop(f, None)
+            self._map.copymap.pop(f, None)
 
     def merge(self, f):
         '''Mark a file merged.'''
@@ -627,7 +621,7 @@ class dirstate(object):
             del self._map[f]
             if f in self._nonnormalset:
                 self._nonnormalset.remove(f)
-            self._copymap.pop(f, None)
+            self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
         if exists is None:
@@ -709,7 +703,6 @@ class dirstate(object):
         self._otherparentset = set()
         if "_dirs" in self.__dict__:
             delattr(self, "_dirs")
-        self._copymap = {}
         self._pl = [nullid, nullid]
         self._lastnormaltime = 0
         self._updatedfiles.clear()
@@ -813,8 +806,8 @@ class dirstate(object):
                     now = end # trust our estimate that the end is near now
                     break
 
-        st.write(parsers.pack_dirstate(self._map._map, self._copymap, self._pl,
-                                       now))
+        st.write(parsers.pack_dirstate(self._map._map, self._map.copymap,
+                                       self._pl, now))
         self._nonnormalset, self._otherparentset = self._map.nonnormalentries()
         st.close()
         self._lastnormaltime = 0
@@ -1188,7 +1181,7 @@ class dirstate(object):
         mexact = match.exact
         dirignore = self._dirignore
         checkexec = self._checkexec
-        copymap = self._copymap
+        copymap = self._map.copymap
         lastnormaltime = self._lastnormaltime
 
         # We need to do full walks when either
@@ -1317,6 +1310,7 @@ class dirstate(object):
 class dirstatemap(object):
     def __init__(self):
         self._map = {}
+        self.copymap = {}
 
     def iteritems(self):
         return self._map.iteritems()
