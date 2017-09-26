@@ -81,9 +81,14 @@ class Client(object):
         url = self._url + method
         try:
             response = urlgrabber.urlopen(url, headers=headers, data=req_data)
-            response = json.load(response)
         except URLGrabError as ex:
             raise Client(ex.errno, str(ex))
+
+        try:
+            response = json.load(response)
+        except ValueError:
+            # Can't decode the data, not valid JSON (html error page perhaps?)
+            raise ClientError(-1, 'did not receive a valid JSON response')
 
         if response['error_code'] is not None:
             raise ClientError(response['error_code'], response['error_info'])
