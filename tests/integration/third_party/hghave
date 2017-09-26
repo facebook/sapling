@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+"""Test the running system for features availability. Exit with zero
+if all features are there, non-zero otherwise. If a feature name is
+prefixed with "no-", the absence of feature is tested.
+"""
+
+from __future__ import absolute_import, print_function
+
+import hghave
+import optparse
+import os
+import sys
+
+checks = hghave.checks
+
+def list_features():
+    for name, feature in sorted(checks.items()):
+        desc = feature[1]
+        print(name + ':', desc)
+
+def test_features():
+    failed = 0
+    for name, feature in checks.items():
+        check, _ = feature
+        try:
+            check()
+        except Exception as e:
+            print("feature %s failed:  %s" % (name, e))
+            failed += 1
+    return failed
+
+parser = optparse.OptionParser("%prog [options] [features]")
+parser.add_option("--test-features", action="store_true",
+                  help="test available features")
+parser.add_option("--list-features", action="store_true",
+                  help="list available features")
+
+def _loadaddon():
+    if 'TESTDIR' in os.environ:
+        # loading from '.' isn't needed, because `hghave` should be
+        # running at TESTTMP in this case
+        path = os.environ['TESTDIR']
+    else:
+        path = '.'
+
+    if not os.path.exists(os.path.join(path, 'hghaveaddon.py')):
+        return
+
+    sys.path.insert(0, path)
+    try:
+        import hghaveaddon
+        assert hghaveaddon  # silence pyflakes
+    except BaseException as inst:
+        sys.stderr.write('failed to import hghaveaddon.py from %r: %s\n'
+                         % (path, inst))
+        sys.exit(2)
+    sys.path.pop(0)
+
+if __name__ == '__main__':
+    options, args = parser.parse_args()
+    _loadaddon()
+    if options.list_features:
+        list_features()
+        sys.exit(0)
+
+    if options.test_features:
+        sys.exit(test_features())
+
+    hghave.require(args)
