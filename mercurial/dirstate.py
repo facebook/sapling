@@ -186,19 +186,7 @@ class dirstate(object):
 
     @propertycache
     def _pl(self):
-        try:
-            fp = self._map._opendirstatefile()
-            st = fp.read(40)
-            fp.close()
-            l = len(st)
-            if l == 40:
-                return st[:20], st[20:40]
-            elif l > 0 and l < 40:
-                raise error.Abort(_('working directory state appears damaged!'))
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-        return [nullid, nullid]
+        return self._map.parents()
 
     @propertycache
     def _dirs(self):
@@ -1381,3 +1369,17 @@ class dirstatemap(object):
         self._pendingmode = mode
         return fp
 
+    def parents(self):
+        try:
+            fp = self._opendirstatefile()
+            st = fp.read(40)
+            fp.close()
+            l = len(st)
+            if l == 40:
+                return st[:20], st[20:40]
+            elif l > 0 and l < 40:
+                raise error.Abort(_('working directory state appears damaged!'))
+        except IOError as err:
+            if err.errno != errno.ENOENT:
+                raise
+        return [nullid, nullid]
