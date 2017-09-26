@@ -71,7 +71,6 @@ class dirstate(object):
         # UNC path pointing to root share (issue4557)
         self._rootdir = pathutil.normasprefix(root)
         self._dirty = False
-        self._dirtypl = False
         self._lastnormaltime = 0
         self._ui = ui
         self._filecache = {}
@@ -184,7 +183,7 @@ class dirstate(object):
                 raise
             return "default"
 
-    @propertycache
+    @property
     def _pl(self):
         return self._map.parents()
 
@@ -343,11 +342,11 @@ class dirstate(object):
             raise ValueError("cannot set dirstate parent without "
                              "calling dirstate.beginparentchange")
 
-        self._dirty = self._dirtypl = True
+        self._dirty = True
         oldp2 = self._pl[1]
         if self._origpl is None:
             self._origpl = self._pl
-        self._pl = p1, p2
+        self._map.setparents(p1, p2)
         copies = {}
         if oldp2 != nullid and p2 == nullid:
             candidatefiles = self._nonnormalset.union(self._otherparentset)
@@ -432,8 +431,8 @@ class dirstate(object):
         # (we cannot decorate the function directly since it is in a C module)
         parse_dirstate = util.nogc(parsers.parse_dirstate)
         p = parse_dirstate(self._map._map, self._map.copymap, st)
-        if not self._dirtypl:
-            self._pl = p
+        if not self._map._dirtyparents:
+            self._map.setparents(*p)
 
     def invalidate(self):
         '''Causes the next access to reread the dirstate.
@@ -444,7 +443,7 @@ class dirstate(object):
 
         for a in ("_map", "_identity",
                   "_filefoldmap", "_dirfoldmap", "_branch",
-                  "_pl", "_dirs", "_ignore", "_nonnormalset",
+                  "_dirs", "_ignore", "_nonnormalset",
                   "_otherparentset"):
             if a in self.__dict__:
                 delattr(self, a)
@@ -679,7 +678,7 @@ class dirstate(object):
         self._otherparentset = set()
         if "_dirs" in self.__dict__:
             delattr(self, "_dirs")
-        self._pl = [nullid, nullid]
+        self._map.setparents(nullid, nullid)
         self._lastnormaltime = 0
         self._updatedfiles.clear()
         self._dirty = True
@@ -694,7 +693,7 @@ class dirstate(object):
 
         if self._origpl is None:
             self._origpl = self._pl
-        self._pl = (parent, nullid)
+        self._map.setparents(parent, nullid)
         for f in changedfiles:
             if f in allfiles:
                 self.normallookup(f)
@@ -787,7 +786,7 @@ class dirstate(object):
         self._nonnormalset, self._otherparentset = self._map.nonnormalentries()
         st.close()
         self._lastnormaltime = 0
-        self._dirty = self._dirtypl = False
+        self._dirty = self._map._dirtyparents = False
 
     def _dirignore(self, f):
         if f == '.':
@@ -1292,6 +1291,8 @@ class dirstatemap(object):
 
         self._map = {}
         self.copymap = {}
+        self._parents = None
+        self._dirtyparents = False
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
@@ -1370,16 +1371,28 @@ class dirstatemap(object):
         return fp
 
     def parents(self):
-        try:
-            fp = self._opendirstatefile()
-            st = fp.read(40)
-            fp.close()
+        if not self._parents:
+            try:
+                fp = self._opendirstatefile()
+                st = fp.read(40)
+                fp.close()
+            except IOError as err:
+                if err.errno != errno.ENOENT:
+                    raise
+                # File doesn't exist, so the current state is empty
+                st = ''
+
             l = len(st)
             if l == 40:
-                return st[:20], st[20:40]
-            elif l > 0 and l < 40:
-                raise error.Abort(_('working directory state appears damaged!'))
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-        return [nullid, nullid]
+                self._parents = st[:20], st[20:40]
+            elif l == 0:
+                self._parents = [nullid, nullid]
+            else:
+                raise error.Abort(_('working directory state appears '
+                                    'damaged!'))
+
+        return self._parents
+
+    def setparents(self, p1, p2):
+        self._parents = (p1, p2)
+        self._dirtyparents = True
