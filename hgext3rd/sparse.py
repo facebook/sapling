@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg, pathutil, registrar
+from mercurial import localrepo, error, hg, pathutil, registrar, patch
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -342,6 +342,9 @@ def _setupdirstate(ui):
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 
 def _setupdiff(ui):
+    entry = commands.table['^diff']
+    entry[1].append(('s', 'sparse', None,
+                     'only show changes in files in the sparse config'))
     # wrap workingfilectx's data function to return the data for files
     # outside the sparse checkout by fetching from the working copy parent.
     def workingfilectxdata(orig, self):
@@ -352,6 +355,27 @@ def _setupdiff(ui):
             basectx = self._changectx._parents[0]
             return basectx[self._path].data()
     extensions.wrapfunction(context.workingfilectx, 'data', workingfilectxdata)
+
+    # wrap trydiff to filter diffs if '--sparse' is set
+    def trydiff(orig, repo, revs, ctx1, ctx2, modified, added, removed,
+                copy, getfilectx, opts, losedatafn, prefix, relroot):
+        sparsematch = repo.sparsematch()
+        modified = filter(sparsematch, modified)
+        added = filter(sparsematch, added)
+        removed = filter(sparsematch, removed)
+        copy = dict((d, s) for d, s in copy.items() if sparsematch(s))
+        return orig(repo, revs, ctx1, ctx2, modified, added, removed,
+                    copy, getfilectx, opts, losedatafn, prefix, relroot)
+    def diff(orig, ui, repo, *pats, **opts):
+        issparse = bool(opts.get('sparse'))
+        if issparse:
+            extensions.wrapfunction(patch, 'trydiff', trydiff)
+        try:
+            orig(ui, repo, *pats, **opts)
+        finally:
+            if issparse:
+                extensions.unwrapfunction(patch, 'trydiff', trydiff)
+    extensions.wrapcommand(commands.table, 'diff', diff)
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
