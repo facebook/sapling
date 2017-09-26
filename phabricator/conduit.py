@@ -5,7 +5,6 @@
 # conduit client.
 
 import hashlib
-from mercurial.util import httplib
 
 import contextlib
 import json
@@ -13,10 +12,12 @@ import os
 import time
 from mercurial import util
 import arcconfig
+import urlgrabber
+from urlgrabber.grabber import URLGrabError
 
 urlreq = util.urlreq
 
-DEFAULT_HOST = 'https://phabricator.intern.facebook.com/api/'
+DEFAULT_URL = 'https://phabricator.intern.facebook.com/api/'
 DEFAULT_TIMEOUT = 60
 mocked_responses = None
 
@@ -26,19 +27,19 @@ class ClientError(Exception):
         self.code = code
 
 class Client(object):
-    def __init__(self, host=None, user=None, cert=None, act_as=None):
-        self._host = host or DEFAULT_HOST
+    def __init__(self, url=None, user=None, cert=None, act_as=None):
+        self._url = url or DEFAULT_URL
         self._user = user
         self._cert = cert
         self._actas = act_as or self._user
         self._connection = None
 
     def apply_arcconfig(self, config):
-        self._host = config.get('conduit_uri', DEFAULT_HOST)
-        if self._host == 'https://phabricator.fb.com/api/':
-            self._host = 'https://phabricator.intern.facebook.com/api/'
+        self._url = config.get('conduit_uri', DEFAULT_URL)
+        if self._url == 'https://phabricator.fb.com/api/':
+            self._url = 'https://phabricator.intern.facebook.com/api/'
         try:
-            hostconfig = config['hosts'][self._host]
+            hostconfig = config['hosts'][self._url]
             self._user = hostconfig['user']
             self._cert = hostconfig['cert']
         except KeyError:
@@ -50,7 +51,7 @@ class Client(object):
                 raise arcconfig.ArcConfigError(
                     'arcrc is missing user '
                     'credentials for host %s.  use '
-                    '"arc install-certificate" to fix.' % self._host)
+                    '"arc install-certificate" to fix.' % self._url)
         self._actas = self._user
         self._connection = None
 
@@ -69,28 +70,21 @@ class Client(object):
                 'output': 'json',
             }
         )
-        urlparts = urlreq.urlparse(self._host)
-        # TODO: move to python-requests
-        if self._connection is None:
-            if urlparts.scheme == 'http':
-                self._connection = httplib.HTTPConnection(
-                    urlparts.netloc, timeout=timeout)
-            elif urlparts.scheme == 'https':
-                self._connection = httplib.HTTPSConnection(
-                    urlparts.netloc, timeout=timeout)
-            else:
-                raise ClientError(
-                    None, 'Unknown host scheme: %s', urlparts.scheme)
+        # Uses urlgrabber, http://urlgrabber.baseurl.org/, as a convenient
+        # high-level access tool because it is readily available on FB
+        # infastructure and fast (based on pycurl) requests could be used if
+        # packaged for both corp and prod environments.
+        headers = (
+            ('Connection', 'Keep-Alive'),
+            ('Content-Type', 'application/x-www-form-urlencoded'),
+        )
+        url = self._url + method
+        try:
+            response = urlgrabber.urlopen(url, headers=headers, data=req_data)
+            response = json.load(response)
+        except URLGrabError as ex:
+            raise Client(ex.errno, str(ex))
 
-        headers = {
-            'Connection': 'Keep-Alive',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
-        # self._connection.set_debuglevel(1)
-        self._connection.request('POST', (urlparts.path + method), req_data,
-                                 headers)
-
-        response = json.load(self._connection.getresponse())
         if response['error_code'] is not None:
             raise ClientError(response['error_code'], response['error_info'])
         return response['result']
