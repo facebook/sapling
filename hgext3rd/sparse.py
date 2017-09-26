@@ -31,6 +31,7 @@ def extsetup(ui):
     _setuplog(ui)
     _setupadd(ui)
     _setupdirstate(ui)
+    _setupdiff(ui)
     # if fsmonitor is enabled, tell it to use our hash function
     try:
         fsmonitor = extensions.find('fsmonitor')
@@ -339,6 +340,18 @@ def _setupdirstate(ui):
                                           hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
+
+def _setupdiff(ui):
+    # wrap workingfilectx's data function to return the data for files
+    # outside the sparse checkout by fetching from the working copy parent.
+    def workingfilectxdata(orig, self):
+        sparsematch = self.repo().sparsematch()
+        if sparsematch(self._path):
+            return orig(self)
+        else:
+            basectx = self._changectx._parents[0]
+            return basectx[self._path].data()
+    extensions.wrapfunction(context.workingfilectx, 'data', workingfilectxdata)
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
