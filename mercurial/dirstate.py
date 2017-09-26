@@ -54,20 +54,6 @@ def _getfsnow(vfs):
         os.close(tmpfd)
         vfs.unlink(tmpname)
 
-def nonnormalentries(dmap):
-    '''Compute the nonnormal dirstate entries from the dmap'''
-    try:
-        return parsers.nonnormalotherparententries(dmap._map)
-    except AttributeError:
-        nonnorm = set()
-        otherparent = set()
-        for fname, e in dmap.iteritems():
-            if e[0] != 'n' or e[3] == -1:
-                nonnorm.add(fname)
-            if e[0] == 'n' and e[2] == -2:
-                otherparent.add(fname)
-        return nonnorm, otherparent
-
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate, sparsematchfn):
@@ -162,13 +148,13 @@ class dirstate(object):
 
     @propertycache
     def _nonnormalset(self):
-        nonnorm, otherparents = nonnormalentries(self._map)
+        nonnorm, otherparents = self._map.nonnormalentries()
         self._otherparentset = otherparents
         return nonnorm
 
     @propertycache
     def _otherparentset(self):
-        nonnorm, otherparents = nonnormalentries(self._map)
+        nonnorm, otherparents = self._map.nonnormalentries()
         self._nonnormalset = nonnorm
         return otherparents
 
@@ -843,7 +829,7 @@ class dirstate(object):
 
         st.write(parsers.pack_dirstate(self._map._map, self._copymap, self._pl,
                                        now))
-        self._nonnormalset, self._otherparentset = nonnormalentries(self._map)
+        self._nonnormalset, self._otherparentset = self._map.nonnormalentries()
         st.close()
         self._lastnormaltime = 0
         self._dirty = self._dirtypl = False
@@ -1369,3 +1355,18 @@ class dirstatemap(object):
 
     def keys(self):
         return self._map.keys()
+
+    def nonnormalentries(self):
+        '''Compute the nonnormal dirstate entries from the dmap'''
+        try:
+            return parsers.nonnormalotherparententries(self._map)
+        except AttributeError:
+            nonnorm = set()
+            otherparent = set()
+            for fname, e in self._map.iteritems():
+                if e[0] != 'n' or e[3] == -1:
+                    nonnorm.add(fname)
+                if e[0] == 'n' and e[2] == -2:
+                    otherparent.add(fname)
+            return nonnorm, otherparent
+
