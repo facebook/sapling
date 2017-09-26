@@ -47,7 +47,7 @@ Prevent adding new files in the root directory accidentally.
   CONTRIBUTORS
   COPYING
   Makefile
-  README
+  README.rst
   hg
   hgeditor
   hgweb.cgi
