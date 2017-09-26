@@ -50,9 +50,7 @@ def loadpinnednodes(repo):
         node = content[offset:offset + 20]
         if not node:
             break
-        # remove unnecessary (non-obsoleted) nodes since pinnedrevs should only
-        # affect obsoleted revs.
-        if node in nodemap and unfi[node].obsolete():
+        if node in nodemap:
             result.append(node)
         offset += 20
     return result
@@ -68,7 +66,7 @@ def shouldpinnodes(repo):
         except Exception:
             pass
         # bookmarks
-        result.update(repo._bookmarks.values())
+        result.update(repo.unfiltered()._bookmarks.values())
     return result
 
 @contextlib.contextmanager
@@ -123,8 +121,12 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     newunpin = getattr(repo.unfiltered(), '_tounpinnodes', set())
     # filter newpin by obsolte - ex. if newpin is on a non-obsoleted commit,
     # ignore it.
-    unfi = repo.unfiltered()
-    newpin = set(n for n in newpin if unfi[n].obsolete())
+    if newpin:
+        unfi = repo.unfiltered()
+        obsoleted = unfi.revs('obsolete()')
+        nodemap = unfi.changelog.nodemap
+        newpin = set(n for n in newpin
+                     if n in nodemap and nodemap[n] in obsoleted)
     # only do a write if something has changed
     if newpin or newunpin:
         savepinnednodes(repo, newpin, newunpin, fullargs)
