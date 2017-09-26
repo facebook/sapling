@@ -5,9 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(const_fn)]
 
 extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
 
+pub mod hash;
 pub mod manifest;
+pub mod nodehash;

@@ -40,6 +40,12 @@ impl Sha1 {
         }
     }
 
+    /// Construct a `Sha1` from an array of 20 bytes.
+    #[inline]
+    pub const fn from_byte_array(arr: [u8; 20]) -> Sha1 {
+        Sha1(arr)
+    }
+
     /// Construct a `Sha1` from a hex-encoded `AsciiStr`.
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<Sha1> {

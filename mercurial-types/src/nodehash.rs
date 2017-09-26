@@ -24,7 +24,7 @@ pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
 pub struct NodeHash(Sha1);
 
 impl NodeHash {
-    pub fn new(sha1: Sha1) -> NodeHash {
+    pub const fn new(sha1: Sha1) -> NodeHash {
         NodeHash(sha1)
     }
 
