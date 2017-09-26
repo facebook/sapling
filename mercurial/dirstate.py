@@ -82,9 +82,6 @@ class dirstate(object):
         self._origpl = None
         self._updatedfiles = set()
 
-        # for consistent view between _pl() and _read() invocations
-        self._pendingmode = None
-
     @contextlib.contextmanager
     def parentchange(self):
         '''Context manager for handling dirstate parents.
@@ -190,7 +187,7 @@ class dirstate(object):
     @propertycache
     def _pl(self):
         try:
-            fp = self._opendirstatefile()
+            fp = self._map._opendirstatefile()
             st = fp.read(40)
             fp.close()
             l = len(st)
@@ -401,23 +398,14 @@ class dirstate(object):
             f.discard()
             raise
 
-    def _opendirstatefile(self):
-        fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
-        if self._pendingmode is not None and self._pendingmode != mode:
-            fp.close()
-            raise error.Abort(_('working directory state may be '
-                                'changed parallelly'))
-        self._pendingmode = mode
-        return fp
-
     def _read(self):
-        self._map = dirstatemap()
+        self._map = dirstatemap(self._ui, self._opener, self._root)
 
         # ignore HG_PENDING because identity is used only for writing
         self._identity = util.filestat.frompath(
             self._opener.join(self._filename))
         try:
-            fp = self._opendirstatefile()
+            fp = self._map._opendirstatefile()
             try:
                 st = fp.read()
             finally:
@@ -698,7 +686,7 @@ class dirstate(object):
         return path
 
     def clear(self):
-        self._map = dirstatemap()
+        self._map = dirstatemap(self._ui, self._opener, self._root)
         self._nonnormalset = set()
         self._otherparentset = set()
         if "_dirs" in self.__dict__:
@@ -1308,9 +1296,17 @@ class dirstate(object):
         self._opener.unlink(backupname)
 
 class dirstatemap(object):
-    def __init__(self):
+    def __init__(self, ui, opener, root):
+        self._ui = ui
+        self._opener = opener
+        self._root = root
+        self._filename = 'dirstate'
+
         self._map = {}
         self.copymap = {}
+
+        # for consistent view between _pl() and _read() invocations
+        self._pendingmode = None
 
     def iteritems(self):
         return self._map.iteritems()
@@ -1375,3 +1371,13 @@ class dirstatemap(object):
         current dirstate.
         """
         return util.dirs(self._map, 'r')
+
+    def _opendirstatefile(self):
+        fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
+        if self._pendingmode is not None and self._pendingmode != mode:
+            fp.close()
+            raise error.Abort(_('working directory state may be '
+                                'changed parallelly'))
+        self._pendingmode = mode
+        return fp
+
