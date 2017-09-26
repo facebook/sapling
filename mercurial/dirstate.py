@@ -57,7 +57,7 @@ def _getfsnow(vfs):
 def nonnormalentries(dmap):
     '''Compute the nonnormal dirstate entries from the dmap'''
     try:
-        return parsers.nonnormalotherparententries(dmap)
+        return parsers.nonnormalotherparententries(dmap._map)
     except AttributeError:
         nonnorm = set()
         otherparent = set()
@@ -179,7 +179,7 @@ class dirstate(object):
         except AttributeError:
             pass
         else:
-            return makefilefoldmap(self._map, util.normcasespec,
+            return makefilefoldmap(self._map._map, util.normcasespec,
                                    util.normcasefallback)
 
         f = {}
@@ -238,7 +238,7 @@ class dirstate(object):
 
     @propertycache
     def _dirs(self):
-        return util.dirs(self._map, 'r')
+        return util.dirs(self._map._map, 'r')
 
     def dirs(self):
         return self._dirs
@@ -444,7 +444,8 @@ class dirstate(object):
         return fp
 
     def _read(self):
-        self._map = {}
+        self._map = dirstatemap()
+
         self._copymap = {}
         # ignore HG_PENDING because identity is used only for writing
         self._identity = util.filestat.frompath(
@@ -473,7 +474,7 @@ class dirstate(object):
             # This heuristic is imperfect in many ways, so in a future dirstate
             # format update it makes sense to just record the number of entries
             # on write.
-            self._map = parsers.dict_new_presized(len(st) / 71)
+            self._map._map = parsers.dict_new_presized(len(st) / 71)
 
         # Python's garbage collector triggers a GC each time a certain number
         # of container objects (the number being defined by
@@ -488,7 +489,7 @@ class dirstate(object):
         #
         # (we cannot decorate the function directly since it is in a C module)
         parse_dirstate = util.nogc(parsers.parse_dirstate)
-        p = parse_dirstate(self._map, self._copymap, st)
+        p = parse_dirstate(self._map._map, self._copymap, st)
         if not self._dirtypl:
             self._pl = p
 
@@ -731,7 +732,7 @@ class dirstate(object):
         return path
 
     def clear(self):
-        self._map = {}
+        self._map = dirstatemap()
         self._nonnormalset = set()
         self._otherparentset = set()
         if "_dirs" in self.__dict__:
@@ -840,7 +841,8 @@ class dirstate(object):
                     now = end # trust our estimate that the end is near now
                     break
 
-        st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
+        st.write(parsers.pack_dirstate(self._map._map, self._copymap, self._pl,
+                                       now))
         self._nonnormalset, self._otherparentset = nonnormalentries(self._map)
         st.close()
         self._lastnormaltime = 0
@@ -979,7 +981,7 @@ class dirstate(object):
                     results[nf] = None
                 else: # does it match a missing directory?
                     if alldirs is None:
-                        alldirs = util.dirs(dmap)
+                        alldirs = util.dirs(dmap._map)
                     if nf in alldirs:
                         if matchedir:
                             matchedir(nf)
@@ -1339,3 +1341,31 @@ class dirstate(object):
     def clearbackup(self, tr, backupname):
         '''Clear backup file'''
         self._opener.unlink(backupname)
+
+class dirstatemap(object):
+    def __init__(self):
+        self._map = {}
+
+    def iteritems(self):
+        return self._map.iteritems()
+
+    def __iter__(self):
+        return iter(self._map)
+
+    def get(self, key, default=None):
+        return self._map.get(key, default)
+
+    def __contains__(self, key):
+        return key in self._map
+
+    def __setitem__(self, key, value):
+        self._map[key] = value
+
+    def __getitem__(self, key):
+        return self._map[key]
+
+    def __delitem__(self, key):
+        del self._map[key]
+
+    def keys(self):
+        return self._map.keys()
