@@ -26,7 +26,10 @@ impl File {
         File { node: node }
     }
 
-    fn extract_meta(file: &[u8]) -> (&[u8], usize) {
+    pub fn extract_meta(file: &[u8]) -> (&[u8], usize) {
+        if file.len() < META_SZ {
+            return (&[], 0)
+        }
         if &file[..META_SZ] != META_MARKER {
             (&[], 0)
         } else {

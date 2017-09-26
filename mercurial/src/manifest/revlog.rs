@@ -14,6 +14,7 @@ use futures::future::{BoxFuture, Future, IntoFuture};
 use futures::stream::{BoxStream, Stream};
 
 use errors::*;
+use file;
 use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
@@ -304,9 +305,12 @@ impl Entry for RevlogEntry {
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| node.as_blob().clone())
             .and_then(|data| match self.get_type() {
-                Type::File => Ok(Content::File(data)),
-                Type::Executable => Ok(Content::Executable(data)),
+                // Mercurial file blob can have metadata, but tree manifest can't
+                // So strip metdata from everything except for Tree
+                Type::File => Ok(Content::File(strip_file_metadata(&data))),
+                Type::Executable => Ok(Content::Executable(strip_file_metadata(&data))),
                 Type::Symlink => {
+                    let data = strip_file_metadata(&data);
                     let data = data.as_slice().ok_or("missing blob data")?;
                     Ok(Content::Symlink(MPath::new(data)?))
                 }
@@ -350,6 +354,16 @@ impl Entry for RevlogEntry {
 
     fn get_path(&self) -> &MPath {
         &self.path
+    }
+}
+
+fn strip_file_metadata(blob: &Blob<Vec<u8>>) -> Blob<Vec<u8>> {
+    match blob {
+        &Blob::Dirty(ref bytes) => {
+            let (_, off) = file::File::extract_meta(bytes);
+            Blob::from(&bytes[off..])
+        },
+        _ => blob.clone(),
     }
 }
 

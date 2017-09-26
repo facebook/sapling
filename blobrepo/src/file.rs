@@ -9,6 +9,7 @@
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
+use mercurial::file;
 use mercurial_types::{Blob, MPath, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
@@ -45,10 +46,13 @@ where
                     .map_err(blobstore_err)
                     .and_then(move |blob| {
                         blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                            .map(|blob| {
+                                let (_, off) = file::File::extract_meta(blob.as_ref());
+                                Vec::from(&blob.as_ref()[off..])
+                            })
                     })
             }
         })
-        .and_then({ |blob| Ok(Vec::from(blob.as_ref())) })
         .boxify()
 }
 
@@ -120,6 +124,13 @@ where
                 move |blob| {
                     let blob = blob.as_ref();
 
+                    // Mercurial file blob can have metadata, but tree manifest can't
+                    let blob = if ty == Type::Tree {
+                        blob
+                    } else {
+                        let (_, off) = file::File::extract_meta(blob);
+                        &blob[off..]
+                    };
                     let res = match ty {
                         Type::File => Content::File(Blob::from(blob)),
                         Type::Executable => Content::Executable(Blob::from(blob)),

@@ -10,9 +10,16 @@
   $ echo 2 > c
   $ hg add b c
   $ hg ci -mb
+  $ hg cp c d
+  $ hg ci -mc
   $ hg log
-  changeset:   1:4dabaf45f54a
+  changeset:   2:533267b0e203
   tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+  changeset:   1:4dabaf45f54a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -28,12 +35,14 @@
   $ blobimport --blobstore files repo $TESTTMP/blobrepo
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  * INFO head 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
 #else
   $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  * INFO head 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
   * INFO compaction started (glob)
   * INFO compaction finished (glob)
 #endif
@@ -57,6 +66,14 @@ Curl and debugdata output should match
   8515d4bfda768e04af4c13a69a72e28c7effbea7
   $ hg debugdata -m 8515d4bfda768e04af4c13a69a72e28c7effbea7
   a\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
+  $ curl http://localhost:3000/repo/cs/533267b0e203537fa53d2aec834b062f0b2249cd/roottreemanifestid 2> /dev/null
+  47827ecc7f12d2ed0c387de75947e73cf1c53afe (no-eol)
+
+  $ hg debugdata -m 47827ecc7f12d2ed0c387de75947e73cf1c53afe
+  a\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
+  b\x00b8e02f6433738021a065f94175c7cd23db5f05be (esc)
+  c\x005d9299349fc01ddd25d0070d149b124d8f10411e (esc)
+  d\x00fc702583f9c961dea176fd367862c299b4a551f2 (esc)
 
   $ curl http://localhost:3000/repo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null
   [{"hash":"b80de5d138758541c5f05265ad144ab9fa86d1db","path":"a","size":0,"type":"File"}] (no-eol)
@@ -69,6 +86,10 @@ Empty file
   $ curl http://localhost:3000/repo/treenode/b47dc781a873595c796b01e2ed5829e3fed2c887/ 2> /dev/null
   [{"hash":"b80de5d138758541c5f05265ad144ab9fa86d1db","path":"a","size":0,"type":"File"},{"hash":"b8e02f6433738021a065f94175c7cd23db5f05be","path":"b","size":2,"type":"File"},{"hash":"5d9299349fc01ddd25d0070d149b124d8f10411e","path":"c","size":2,"type":"File"}] (no-eol)
   $ curl http://localhost:3000/repo/blob/5d9299349fc01ddd25d0070d149b124d8f10411e/ 2> /dev/null
+  2
+  $ curl http://localhost:3000/repo/treenode/47827ecc7f12d2ed0c387de75947e73cf1c53afe/ 2> /dev/null
+  [{"hash":"b80de5d138758541c5f05265ad144ab9fa86d1db","path":"a","size":0,"type":"File"},{"hash":"b8e02f6433738021a065f94175c7cd23db5f05be","path":"b","size":2,"type":"File"},{"hash":"5d9299349fc01ddd25d0070d149b124d8f10411e","path":"c","size":2,"type":"File"},{"hash":"fc702583f9c961dea176fd367862c299b4a551f2","path":"d","size":2,"type":"File"}] (no-eol)
+  $ curl http://localhost:3000/repo/blob/fc702583f9c961dea176fd367862c299b4a551f2/ 2> /dev/null
   2
 
 Send incorrect requests

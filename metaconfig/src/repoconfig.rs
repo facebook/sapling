@@ -16,8 +16,7 @@ use futures::{future, Future, IntoFuture};
 
 use error_chain::ChainedError;
 
-use mercurial::file::File;
-use mercurial_types::{BlobNode, MPath, Manifest, NodeHash, Repo};
+use mercurial_types::{MPath, Manifest, NodeHash, Repo};
 use mercurial_types::manifest::Content;
 use mercurial_types::path::MPathElement;
 use toml;
@@ -152,12 +151,11 @@ impl RepoConfigs {
                                 ),
                             })
                             .and_then(|blob| {
-                                let file = File::new(BlobNode::new(blob, None, None));
-                                let bytes = file.content().ok_or_else(|| {
+                                let bytes = blob.as_slice().ok_or(
                                     ErrorKind::InvalidFileStructure(
                                         "expected content of the blob".into(),
                                     )
-                                })?;
+                                )?;
                                 Ok((
                                     reponame,
                                     toml::from_slice::<RawRepoConfig>(bytes)
