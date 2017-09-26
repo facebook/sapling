@@ -40,8 +40,8 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   
   
   displaying [PATCH] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -79,8 +79,8 @@ email.to config setting. Same for --cc:
   
   
   displaying [PATCH] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -154,8 +154,8 @@ Test diff.git is respected
   
   
   displaying [PATCH] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -192,8 +192,8 @@ Test breaking format changes aren't
   
   
   displaying [PATCH] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -234,8 +234,8 @@ Test breaking format changes aren't
   
   
   displaying [PATCH 0 of 2] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
   Message-Id: <patchbomb.120@*> (glob)
@@ -247,8 +247,8 @@ Test breaking format changes aren't
   
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -279,8 +279,8 @@ Test breaking format changes aren't
   +a
   
   displaying [PATCH 2 of 2] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -375,8 +375,8 @@ test bundle and description:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   a multiline
@@ -420,8 +420,8 @@ with a specific bundle type
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   a multiline
@@ -453,8 +453,8 @@ no mime encoding for email --test:
   
   
   displaying [PATCH] utf-8 content ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 8bit
   Subject: [PATCH] utf-8 content
   X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
@@ -499,8 +499,8 @@ mime encoded mbox (base64):
 
   $ cat mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="utf-8"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="utf-8"
   Content-Transfer-Encoding: base64
   Subject: [PATCH] utf-8 content
   X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
@@ -561,8 +561,8 @@ no mime encoding for email --test:
   
   
   displaying [PATCH] long line ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH] long line
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -615,8 +615,8 @@ mime encoded mbox (quoted-printable):
   sending [PATCH] long line ...
   $ cat mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH] long line
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -677,8 +677,8 @@ iso-8859-1 mbox:
   sending [PATCH] isolatin 8-bit encoding ...
   $ cat mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="iso-8859-1"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="iso-8859-1"
   Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH] isolatin 8-bit encoding
   X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
@@ -725,8 +725,8 @@ test diffstat for single patch:
   are you sure you want to send (yn)? y
   
   displaying [PATCH] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -787,8 +787,8 @@ test diffstat for multiple patches:
   are you sure you want to send (yn)? y
   
   displaying [PATCH 0 of 2] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -804,8 +804,8 @@ test diffstat for multiple patches:
    2 files changed, 2 insertions(+), 0 deletions(-)
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -840,8 +840,8 @@ test diffstat for multiple patches:
   +a
   
   displaying [PATCH 2 of 2] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -897,8 +897,8 @@ test inline for single patch:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=t2.patch
   
@@ -940,8 +940,8 @@ test inline for single patch (quoted-printable):
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Content-Disposition: inline; filename=t2.patch
   
@@ -987,8 +987,8 @@ test inline for multiple patches:
   
   
   displaying [PATCH 0 of 3] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 3] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1017,8 +1017,8 @@ test inline for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=t2-1.patch
   
@@ -1055,8 +1055,8 @@ test inline for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=t2-2.patch
   
@@ -1093,8 +1093,8 @@ test inline for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Content-Disposition: inline; filename=t2-3.patch
   
@@ -1151,8 +1151,8 @@ test attach for single patch:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   Patch subject is complete summary.
@@ -1160,8 +1160,8 @@ test attach for single patch:
   
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: attachment; filename=t2.patch
   
@@ -1202,8 +1202,8 @@ test attach for single patch (quoted-printable):
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   Patch subject is complete summary.
@@ -1211,8 +1211,8 @@ test attach for single patch (quoted-printable):
   
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Content-Disposition: attachment; filename=t2.patch
   
@@ -1269,8 +1269,8 @@ test attach and body for single patch:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   # HG changeset patch
@@ -1288,8 +1288,8 @@ test attach and body for single patch:
   +c
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: attachment; filename=t2.patch
   
@@ -1319,8 +1319,8 @@ test attach for multiple patches:
   
   
   displaying [PATCH 0 of 3] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 3] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1349,8 +1349,8 @@ test attach for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   Patch subject is complete summary.
@@ -1358,8 +1358,8 @@ test attach for multiple patches:
   
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: attachment; filename=t2-1.patch
   
@@ -1396,8 +1396,8 @@ test attach for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   Patch subject is complete summary.
@@ -1405,8 +1405,8 @@ test attach for multiple patches:
   
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: attachment; filename=t2-2.patch
   
@@ -1443,8 +1443,8 @@ test attach for multiple patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   
   Patch subject is complete summary.
@@ -1452,8 +1452,8 @@ test attach for multiple patches:
   
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Content-Disposition: attachment; filename=t2-3.patch
   
@@ -1499,8 +1499,8 @@ test intro for single patch:
   
   
   displaying [PATCH 0 of 1] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 1] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1512,8 +1512,8 @@ test intro for single patch:
   
   
   displaying [PATCH 1 of 1] c ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 1] c
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1552,8 +1552,8 @@ test --desc without --intro for a single patch:
   
   
   displaying [PATCH 0 of 1] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 1] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1566,8 +1566,8 @@ test --desc without --intro for a single patch:
   foo
   
   displaying [PATCH 1 of 1] c ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 1] c
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1608,8 +1608,8 @@ test intro for multiple patches:
   
   
   displaying [PATCH 0 of 2] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1621,8 +1621,8 @@ test intro for multiple patches:
   
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -1653,8 +1653,8 @@ test intro for multiple patches:
   +a
   
   displaying [PATCH 2 of 2] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -1692,8 +1692,8 @@ test reply-to via config:
   
   
   displaying [PATCH] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1730,8 +1730,8 @@ test reply-to via command line:
   
   
   displaying [PATCH] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -1788,8 +1788,8 @@ test inline for single named patch:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=two.diff
   
@@ -1819,8 +1819,8 @@ test inline for multiple named/unnamed patches:
   
   
   displaying [PATCH 0 of 2] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -1849,8 +1849,8 @@ test inline for multiple named/unnamed patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=t2-1.patch
   
@@ -1887,8 +1887,8 @@ test inline for multiple named/unnamed patches:
   Cc: bar
   
   --===*= (glob)
-  Content-Type: text/x-patch; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/x-patch; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Content-Disposition: inline; filename=one.patch
   
@@ -1916,8 +1916,8 @@ test inreplyto:
   
   
   displaying [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b
   X-Mercurial-Node: 7aead2484924c445ad8ce2613df91f52f9e502ed
@@ -1959,8 +1959,8 @@ no intro message in non-interactive mode
   (optional) Subject: [PATCH 0 of 2] 
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -1991,8 +1991,8 @@ no intro message in non-interactive mode
   +a
   
   displaying [PATCH 2 of 2] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -2034,8 +2034,8 @@ no intro message in non-interactive mode
   
   
   displaying [PATCH 0 of 2] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -2049,8 +2049,8 @@ no intro message in non-interactive mode
   
   
   displaying [PATCH 1 of 2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2081,8 +2081,8 @@ no intro message in non-interactive mode
   +a
   
   displaying [PATCH 2 of 2] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -2122,8 +2122,8 @@ test single flag for single patch (and no warning when not mailing dirty rev):
   
   
   displaying [PATCH fooFlag] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH fooFlag] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -2163,8 +2163,8 @@ test single flag for multiple patches (and warning when mailing dirty rev):
   
   
   displaying [PATCH 0 of 2 fooFlag] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2 fooFlag] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -2176,8 +2176,8 @@ test single flag for multiple patches (and warning when mailing dirty rev):
   
   
   displaying [PATCH 1 of 2 fooFlag] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2 fooFlag] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2208,8 +2208,8 @@ test single flag for multiple patches (and warning when mailing dirty rev):
   +a
   
   displaying [PATCH 2 of 2 fooFlag] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2 fooFlag] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -2249,8 +2249,8 @@ test multiple flags for single patch:
   
   
   displaying [PATCH fooFlag barFlag] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH fooFlag barFlag] test
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -2289,8 +2289,8 @@ test multiple flags for multiple patches:
   
   
   displaying [PATCH 0 of 2 fooFlag barFlag] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2 fooFlag barFlag] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -2302,8 +2302,8 @@ test multiple flags for multiple patches:
   
   
   displaying [PATCH 1 of 2 fooFlag barFlag] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2 fooFlag barFlag] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2334,8 +2334,8 @@ test multiple flags for multiple patches:
   +a
   
   displaying [PATCH 2 of 2 fooFlag barFlag] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2 fooFlag barFlag] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -2376,8 +2376,8 @@ test multi-address parsing:
   sending [PATCH] test ...
   $ cat < tmp.mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2418,8 +2418,8 @@ test flag template:
   Cc: 
   
   displaying [PATCH 0 of 2 R1] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2 R1] test
   Message-Id: <patchbomb.60@*> (glob)
@@ -2431,8 +2431,8 @@ test flag template:
   foo
   
   displaying [PATCH 1 of 2 R0] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2 R0] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2462,8 +2462,8 @@ test flag template:
   +a
   
   displaying [PATCH 2 of 2 R1] b ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2 R1] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
@@ -2501,8 +2501,8 @@ test flag template plus --flag:
   Cc: 
   
   displaying [PATCH default V2] a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH default V2] a
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2543,8 +2543,8 @@ test multi-byte domain parsing:
 
   $ cat tmp.mbox
   From quux ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 8580ff50825a50c8f716709acdf8de0deddcd6ab
@@ -2621,8 +2621,8 @@ test outgoing:
   Cc: 
   
   displaying [PATCH 0 of 6] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 6] test
   Message-Id: <patchbomb.315532860@*> (glob)
@@ -2633,8 +2633,8 @@ test outgoing:
   
   
   displaying [PATCH 1 of 6] c ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 6] c
   X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
@@ -2664,8 +2664,8 @@ test outgoing:
   +c
   
   displaying [PATCH 2 of 6] utf-8 content ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 8bit
   Subject: [PATCH 2 of 6] utf-8 content
   X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
@@ -2702,8 +2702,8 @@ test outgoing:
   +h\xc3\xb6mma! (esc)
   
   displaying [PATCH 3 of 6] long line ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: quoted-printable
   Subject: [PATCH 3 of 6] long line
   X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
@@ -2749,8 +2749,8 @@ test outgoing:
   +bar
   
   displaying [PATCH 4 of 6] isolatin 8-bit encoding ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 8bit
   Subject: [PATCH 4 of 6] isolatin 8-bit encoding
   X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
@@ -2780,8 +2780,8 @@ test outgoing:
   +h\xf6mma! (esc)
   
   displaying [PATCH 5 of 6] Added tag zero, zero.foo for changeset 8580ff50825a ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 5 of 6] Added tag zero, zero.foo for changeset 8580ff50825a
   X-Mercurial-Node: 5d5ef15dfe5e7bd3a4ee154b5fff76c7945ec433
@@ -2812,8 +2812,8 @@ test outgoing:
   +8580ff50825a50c8f716709acdf8de0deddcd6ab zero.foo
   
   displaying [PATCH 6 of 6] d ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 6 of 6] d
   X-Mercurial-Node: 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
@@ -2857,8 +2857,8 @@ dest#branch URIs:
   
   
   displaying [PATCH] test ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
@@ -2992,8 +2992,8 @@ single rev
   warning: invalid patchbomb.intro value "mpmwearaclownnose"
   (should be one of always, never, auto)
   -f test foo
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] test
   X-Mercurial-Node: 3b6f1ec9dde933a40a115a7990f8b320477231af

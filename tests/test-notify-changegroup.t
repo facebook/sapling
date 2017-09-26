@@ -46,8 +46,8 @@ push
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)
@@ -97,8 +97,8 @@ unbundle with correct source
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)
@@ -174,8 +174,8 @@ push
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)

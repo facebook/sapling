@@ -188,8 +188,8 @@ pull (minimal config)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: changeset in $TESTTMP/b: b
@@ -241,8 +241,8 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
@@ -283,8 +283,8 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
@@ -328,8 +328,8 @@ test merge
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
@@ -351,8 +351,8 @@ test merge
   +++ b/a	Thu Jan 01 00:00:02 1970 +0000
   @@ -1,1 +1,2 @@ a
   +a
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
@@ -383,8 +383,8 @@ non-ascii content and truncation of multi-byte subject
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 8bit
   X-Test: foo
   Date: * (glob)
@@ -416,7 +416,7 @@ long lines
   > test = False
   > mbox = mbox
   > EOF
-  $ $PYTHON -c 'file("a/a", "ab").write("no" * 500 + "\n")'
+  $ $PYTHON -c 'file("a/a", "ab").write("no" * 500 + "\xd1\x84" + "\n")'
   $ hg --cwd a commit -A -m "long line"
   $ hg --traceback --cwd b pull ../a
   pulling from ../a
@@ -429,25 +429,25 @@ long lines
   (run 'hg update' to get a working copy)
   $ $PYTHON $TESTTMP/filter.py < b/mbox
   From test@test.com ... ... .. ..:..:.. .... (re)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="*" (glob)
   Content-Transfer-Encoding: quoted-printable
   X-Test: foo
   Date: * (glob)
   Subject: long line
   From: test@test.com
-  X-Hg-Notification: changeset e0be44cf638b
-  Message-Id: <hg.e0be44cf638b.*.*@*> (glob)
+  X-Hg-Notification: changeset a323cae54f6e
+  Message-Id: <hg.a323cae54f6e.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset e0be44cf638b in b
+  changeset a323cae54f6e in b
   description: long line
   diffstat:
    a |  1 + 1 files changed, 1 insertions(+), 0 deletions(-)
   
   diffs (8 lines):
   
-  diff -r 7ea05ad269dc -r e0be44cf638b a
+  diff -r 7ea05ad269dc -r a323cae54f6e a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,3 +1,4 @@ a a a
@@ -464,7 +464,7 @@ long lines
   ononononononononononononononononononononononononononononononononononononono=
   nononononononononononononononononononononononononononononononononononononon=
   ononononononononononononononononononononononononononononononononononononono=
-  nonononononononononononono
+  nonononononononononononono=D1=84
   
  revset selection: send to address that matches branch and repo
 
@@ -494,18 +494,18 @@ long lines
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
   Subject: test
   From: test@test.com
-  X-Hg-Notification: changeset fbbcbc516f2f
-  Message-Id: <hg.fbbcbc516f2f.*.*@*> (glob)
+  X-Hg-Notification: changeset b7cf10b2bdec
+  Message-Id: <hg.b7cf10b2bdec.*.*@*> (glob)
   To: baz@test.com, foo@bar, notify@example.com
   
-  changeset fbbcbc516f2f in b
+  changeset b7cf10b2bdec in b
   description: test
   (run 'hg update' to get a working copy)
 
@@ -523,18 +523,18 @@ from different branch
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   X-Test: foo
   Date: * (glob)
   Subject: test
   From: test@test.com
-  X-Hg-Notification: changeset 38b42fa092de
-  Message-Id: <hg.38b42fa092de.*.*@*> (glob)
+  X-Hg-Notification: changeset 5a07df312a79
+  Message-Id: <hg.5a07df312a79.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 38b42fa092de in b
+  changeset 5a07df312a79 in b
   description: test
   (run 'hg heads' to see heads)
 
@@ -545,18 +545,18 @@ default template:
   $ echo a >> a/a
   $ hg --cwd a commit -m 'default template'
   $ hg --cwd b pull ../a -q | $PYTHON $TESTTMP/filter.py
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: changeset in b: default template
   From: test@test.com
-  X-Hg-Notification: changeset 3548c9e294b6
-  Message-Id: <hg.3548c9e294b6.*.*@*> (glob)
+  X-Hg-Notification: changeset f5e8ec95bf59
+  Message-Id: <hg.f5e8ec95bf59.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 3548c9e294b6 in $TESTTMP/b (glob)
-  details: http://test/b?cmd=changeset;node=3548c9e294b6
+  changeset f5e8ec95bf59 in $TESTTMP/b (glob)
+  details: http://test/b?cmd=changeset;node=f5e8ec95bf59
   description: default template
 
 with style:
@@ -574,17 +574,17 @@ with style:
   $ echo a >> a/a
   $ hg --cwd a commit -m 'with style'
   $ hg --cwd b pull ../a -q | $PYTHON $TESTTMP/filter.py
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: with style
   From: test@test.com
-  X-Hg-Notification: changeset e917dbd961d3
-  Message-Id: <hg.e917dbd961d3.*.*@*> (glob)
+  X-Hg-Notification: changeset 9e2c3a8e9c43
+  Message-Id: <hg.9e2c3a8e9c43.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset e917dbd961d3
+  changeset 9e2c3a8e9c43
 
 with template (overrides style):
 
@@ -597,14 +597,14 @@ with template (overrides style):
   $ echo a >> a/a
   $ hg --cwd a commit -m 'with template'
   $ hg --cwd b pull ../a -q | $PYTHON $TESTTMP/filter.py
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
-  Subject: a09743fd3edd: with template
+  Subject: e2cbf5bf18a7: with template
   From: test@test.com
-  X-Hg-Notification: changeset a09743fd3edd
-  Message-Id: <hg.a09743fd3edd.*.*@*> (glob)
+  X-Hg-Notification: changeset e2cbf5bf18a7
+  Message-Id: <hg.e2cbf5bf18a7.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
   with template

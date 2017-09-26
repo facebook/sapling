@@ -260,8 +260,8 @@ Pull from bundle and trigger notify
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: changeset in...
@@ -283,8 +283,8 @@ Pull from bundle and trigger notify
   @@ -0,0 +1,1 @@
   +a
   \ No newline at end of file
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date:* (glob)
   Subject: changeset in...
