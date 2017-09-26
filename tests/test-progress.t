@@ -192,13 +192,15 @@ test delay time estimates
   > class mocktime(object):
   >     def __init__(self, increment):
   >         self.time = 0
-  >         self.increment = increment
+  >         self.increment = [int(s) for s in increment.split()]
+  >         self.pos = 0
   >     def __call__(self):
-  >         self.time += self.increment
+  >         self.time += self.increment[self.pos % len(self.increment)]
+  >         self.pos += 1
   >         return self.time
   > 
   > def uisetup(ui):
-  >     time.time = mocktime(int(os.environ.get('MOCKTIME', '11')))
+  >     time.time = mocktime(os.environ.get('MOCKTIME', '11'))
   > EOF
 
   $ cp $HGRCPATH.orig $HGRCPATH
@@ -244,6 +246,31 @@ test delay time estimates
   loop [=========>                                ] 1/4 1y18w\r (no-eol) (esc)
   loop [===================>                     ] 2/4 46w03d\r (no-eol) (esc)
   loop [=============================>           ] 3/4 23w02d\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+
+Non-linear progress:
+
+  $ MOCKTIME='20 20 20 20 20 20 20 20 20 20 500 500 500 500 500 20 20 20 20 20' hg -y loop 20
+  \r (no-eol) (esc)
+  loop [=>                                      ]  1/20 6m21s\r (no-eol) (esc)
+  loop [===>                                    ]  2/20 6m01s\r (no-eol) (esc)
+  loop [=====>                                  ]  3/20 5m41s\r (no-eol) (esc)
+  loop [=======>                                ]  4/20 5m21s\r (no-eol) (esc)
+  loop [=========>                              ]  5/20 5m01s\r (no-eol) (esc)
+  loop [===========>                            ]  6/20 4m41s\r (no-eol) (esc)
+  loop [=============>                          ]  7/20 4m21s\r (no-eol) (esc)
+  loop [===============>                        ]  8/20 4m01s\r (no-eol) (esc)
+  loop [================>                      ]  9/20 13m27s\r (no-eol) (esc)
+  loop [==================>                    ] 10/20 19m21s\r (no-eol) (esc)
+  loop [====================>                  ] 11/20 22m39s\r (no-eol) (esc)
+  loop [======================>                ] 12/20 24m01s\r (no-eol) (esc)
+  loop [========================>              ] 13/20 23m53s\r (no-eol) (esc)
+  loop [==========================>            ] 14/20 19m09s\r (no-eol) (esc)
+  loop [============================>          ] 15/20 15m01s\r (no-eol) (esc)
+  loop [==============================>        ] 16/20 11m21s\r (no-eol) (esc)
+  loop [=================================>      ] 17/20 8m04s\r (no-eol) (esc)
+  loop [===================================>    ] 18/20 5m07s\r (no-eol) (esc)
+  loop [=====================================>  ] 19/20 2m27s\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
 Time estimates should not fail when there's no end point:
