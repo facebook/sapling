@@ -210,7 +210,7 @@ class dirstate(object):
 
     @propertycache
     def _dirs(self):
-        return util.dirs(self._map._map, 'r')
+        return self._map.dirs()
 
     def dirs(self):
         return self._dirs
@@ -1375,3 +1375,9 @@ class dirstatemap(object):
                 f[normcase(name)] = name
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
+
+    def dirs(self):
+        """Returns a set-like object containing all the directories in the
+        current dirstate.
+        """
+        return util.dirs(self._map, 'r')
