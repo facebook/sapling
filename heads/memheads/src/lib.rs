@@ -39,16 +39,16 @@ impl<T: Hash + Eq + Clone + Send + 'static> Heads for MemHeads<T> {
     type Key = T;
     type Error = !;
 
-    type Unit = FutureResult<(), Self::Error>;
+    type Effect = FutureResult<(), Self::Error>;
     type Bool = FutureResult<bool, Self::Error>;
     type Heads = BoxStream<Self::Key, Self::Error>;
 
-    fn add(&self, head: &Self::Key) -> Self::Unit {
+    fn add(&self, head: &Self::Key) -> Self::Effect {
         self.heads.lock().unwrap().insert(head.clone());
         ok(())
     }
 
-    fn remove(&self, head: &Self::Key) -> Self::Unit {
+    fn remove(&self, head: &Self::Key) -> Self::Effect {
         self.heads.lock().unwrap().remove(head);
         ok(())
     }

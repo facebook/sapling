@@ -19,10 +19,10 @@ pub trait Heads: Send + 'static {
     // the entire duration of the traversal are guaranteed to appear at least once.
     type Heads: Stream<Item = Self::Key, Error = Self::Error> + Send + 'static;
     type Bool: Future<Item = bool, Error = Self::Error> + Send + 'static;
-    type Unit: Future<Item = (), Error = Self::Error> + Send + 'static;
+    type Effect: Future<Item = (), Error = Self::Error> + Send + 'static;
 
-    fn add(&self, &Self::Key) -> Self::Unit;
-    fn remove(&self, &Self::Key) -> Self::Unit;
+    fn add(&self, &Self::Key) -> Self::Effect;
+    fn remove(&self, &Self::Key) -> Self::Effect;
     fn is_head(&self, &Self::Key) -> Self::Bool;
     fn heads(&self) -> Self::Heads;
 }

@@ -102,11 +102,11 @@ where
     type Key = T;
     type Error = Error;
 
-    type Unit = BoxFuture<(), Self::Error>;
+    type Effect = BoxFuture<(), Self::Error>;
     type Bool = BoxFuture<bool, Self::Error>;
     type Heads = BoxStream<Self::Key, Self::Error>;
 
-    fn add(&self, key: &Self::Key) -> Self::Unit {
+    fn add(&self, key: &Self::Key) -> Self::Effect {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -120,7 +120,7 @@ where
             .boxify()
     }
 
-    fn remove(&self, key: &Self::Key) -> Self::Unit {
+    fn remove(&self, key: &Self::Key) -> Self::Effect {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
