@@ -2316,13 +2316,13 @@ def diff(repo, node1=None, node2=None, match=None, changes=None,
 
     copy, if not empty, should contain mappings {dst@y: src@x} of copy
     information.'''
-    for header, hunks in diffhunks(repo, node1=node1, node2=node2, match=match,
-                                   changes=changes, opts=opts,
-                                   losedatafn=losedatafn, prefix=prefix,
-                                   relroot=relroot, copy=copy):
+    for hdr, hunks in diffhunks(repo, node1=node1, node2=node2, match=match,
+                                changes=changes, opts=opts,
+                                losedatafn=losedatafn, prefix=prefix,
+                                relroot=relroot, copy=copy):
         text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
-        if header and (text or len(header) > 1):
-            yield '\n'.join(header) + '\n'
+        if hdr and (text or len(hdr) > 1):
+            yield '\n'.join(hdr) + '\n'
         if text:
             yield text
 
