@@ -160,21 +160,7 @@ class dirstate(object):
 
     @propertycache
     def _filefoldmap(self):
-        try:
-            makefilefoldmap = parsers.make_file_foldmap
-        except AttributeError:
-            pass
-        else:
-            return makefilefoldmap(self._map._map, util.normcasespec,
-                                   util.normcasefallback)
-
-        f = {}
-        normcase = util.normcase
-        for name, s in self._map.iteritems():
-            if s[0] != 'r':
-                f[normcase(name)] = name
-        f['.'] = '.' # prevents useless util.fspath() invocation
-        return f
+        return self._map.filefoldmap()
 
     @propertycache
     def _dirfoldmap(self):
@@ -1370,3 +1356,22 @@ class dirstatemap(object):
                     otherparent.add(fname)
             return nonnorm, otherparent
 
+    def filefoldmap(self):
+        """Returns a dictionary mapping normalized case paths to their
+        non-normalized versions.
+        """
+        try:
+            makefilefoldmap = parsers.make_file_foldmap
+        except AttributeError:
+            pass
+        else:
+            return makefilefoldmap(self._map, util.normcasespec,
+                                   util.normcasefallback)
+
+        f = {}
+        normcase = util.normcase
+        for name, s in self._map.iteritems():
+            if s[0] != 'r':
+                f[normcase(name)] = name
+        f['.'] = '.' # prevents useless util.fspath() invocation
+        return f
