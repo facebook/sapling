@@ -1334,8 +1334,8 @@ def checkwinfilename(path):
                 return _("filename contains '%s', which is reserved "
                          "on Windows") % c
             if ord(c) <= 31:
-                return _("filename contains %r, which is invalid "
-                         "on Windows") % c
+                return _("filename contains '%s', which is invalid "
+                         "on Windows") % escapestr(c)
         base = n.split('.')[0]
         if base and base.lower() in _winreservednames:
             return _("filename contains '%s', which is reserved "
