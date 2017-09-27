@@ -53,7 +53,7 @@ testmod('mercurial.dispatch')
 testmod('mercurial.encoding')
 testmod('mercurial.formatter')
 testmod('mercurial.hg')
-testmod('mercurial.hgweb.hgwebdir_mod', py3=False)  # py3: repr(bytes) ?
+testmod('mercurial.hgweb.hgwebdir_mod')
 testmod('mercurial.match')
 testmod('mercurial.mdiff')
 testmod('mercurial.minirst')

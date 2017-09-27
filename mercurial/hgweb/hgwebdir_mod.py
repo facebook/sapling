@@ -34,6 +34,7 @@ from .. import (
     error,
     hg,
     profiling,
+    pycompat,
     scmutil,
     templater,
     ui as uimod,
@@ -106,7 +107,7 @@ def geturlcgivars(baseurl, port):
     if not path.startswith('/'):
         path = '/' + path
 
-    return name, str(port), path
+    return name, pycompat.bytestr(port), path
 
 class hgwebdir(object):
     """HTTP server for multiple repositories.
@@ -293,7 +294,7 @@ class hgwebdir(object):
                         msg = encoding.strtolocal(inst.strerror)
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                     except error.RepoError as inst:
-                        raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
+                        raise ErrorResponse(HTTP_SERVER_ERROR, bytes(inst))
 
             # browse subdirectories
             subdir = virtual + '/'
