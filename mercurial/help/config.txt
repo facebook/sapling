@@ -1613,6 +1613,10 @@ have a definite end point.
     Minimum delay before showing a new topic. When set to less than 3 * refresh,
     that value will be used instead. (default: 1)
 
+``estimateinterval``
+    Maximum sampling interval in seconds for speed and estimated time
+    calculation. (default: 60)
+
 ``refresh``
     Time in seconds between refreshes of the progress bar. (default: 0.1)
 
