@@ -24,10 +24,7 @@ class py3docchecker(doctest.OutputChecker):
         return any(doctest.OutputChecker.check_output(self, w, g, optionflags)
                    for w, g in [(want, got), (want2, got2)])
 
-# TODO: migrate doctests to py3 and enable them on both versions
-def testmod(name, optionflags=0, testtarget=None, py2=True, py3=True):
-    if not (not ispy3 and py2 or ispy3 and py3):
-        return
+def testmod(name, optionflags=0, testtarget=None):
     __import__(name)
     mod = sys.modules[name]
     if testtarget is not None:
