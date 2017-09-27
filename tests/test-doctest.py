@@ -69,7 +69,7 @@ testmod('mercurial.templatefilters')
 testmod('mercurial.templater')
 testmod('mercurial.ui')
 testmod('mercurial.url')
-testmod('mercurial.util', py3=False)  # py3: multiple bytes/unicode issues
+testmod('mercurial.util')
 testmod('mercurial.util', testtarget='platform')
 testmod('hgext.convert.convcmd')
 testmod('hgext.convert.cvsps')

@@ -2056,12 +2056,12 @@ def parsedate(date, formats=None, bias=None):
     The date may be a "unixtime offset" string or in one of the specified
     formats. If the date already is a (unixtime, offset) tuple, it is returned.
 
-    >>> parsedate(b' today ') == parsedate(\
-                                  datetime.date.today().strftime('%b %d'))
+    >>> parsedate(b' today ') == parsedate(
+    ...     datetime.date.today().strftime('%b %d').encode('ascii'))
     True
-    >>> parsedate(b'yesterday ') == parsedate((datetime.date.today() -\
-                                               datetime.timedelta(days=1)\
-                                              ).strftime('%b %d'))
+    >>> parsedate(b'yesterday ') == parsedate(
+    ...     (datetime.date.today() - datetime.timedelta(days=1)
+    ...      ).strftime('%b %d').encode('ascii'))
     True
     >>> now, tz = makedate()
     >>> strnow, strtz = parsedate(b'now')
@@ -2083,10 +2083,12 @@ def parsedate(date, formats=None, bias=None):
     if date == 'now' or date == _('now'):
         return makedate()
     if date == 'today' or date == _('today'):
-        date = datetime.date.today().strftime('%b %d')
+        date = datetime.date.today().strftime(r'%b %d')
+        date = encoding.strtolocal(date)
     elif date == 'yesterday' or date == _('yesterday'):
         date = (datetime.date.today() -
-                datetime.timedelta(days=1)).strftime('%b %d')
+                datetime.timedelta(days=1)).strftime(r'%b %d')
+        date = encoding.strtolocal(date)
 
     try:
         when, offset = map(int, date.split(' '))
