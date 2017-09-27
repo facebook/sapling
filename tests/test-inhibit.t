@@ -88,11 +88,11 @@ Test revive works inside a transaction
   x  0 A 426bada5c675
   
   $ hg debugobsolete
-  112478962961147124edd43549aedd1a335e44bf b18e25de2cf5fc4699a029ed635882849e53ef73 4b61ff5c62e28cff36152201967390a6e7375604 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  4b61ff5c62e28cff36152201967390a6e7375604 ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 (Thu Jan 01 00:00:01 1970 +0000) {'user': 'test'}
-  ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 {b18e25de2cf5fc4699a029ed635882849e53ef73} (Thu Jan 01 00:00:02 1970 +0000) {'user': 'test'}
-  b18e25de2cf5fc4699a029ed635882849e53ef73 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:01 1970 +0000) {'user': 'test'}
-  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  112478962961147124edd43549aedd1a335e44bf b18e25de2cf5fc4699a029ed635882849e53ef73 4b61ff5c62e28cff36152201967390a6e7375604 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
+  4b61ff5c62e28cff36152201967390a6e7375604 ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  ad6717a6a58e34efe818b17b745fb04e0d17d49e 0 {b18e25de2cf5fc4699a029ed635882849e53ef73} (Thu Jan 01 00:00:02 1970 +0000) {'operation': 'prune', 'user': 'test'}
+  b18e25de2cf5fc4699a029ed635882849e53ef73 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:01 1970 +0000) {'operation': 'prune', 'user': 'test'}
+  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'prune', 'user': 'test'}
   $ hg revivetest 'obsolete()' --config extensions.revivetest=$TESTTMP/revivetest.py
   A is revived
   B is revived
