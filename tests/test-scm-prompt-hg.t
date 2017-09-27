@@ -55,7 +55,7 @@ Test basic repo behaviors
 
 Test rebase
   $ cmd hg rebase -d 775bfdd --config "extensions.rebase="
-  rebasing 2:4b6cc7d5194b "c3" (tip active)
+  rebasing 2:4b6cc7d5194b "c3" (active tip)
   merging b
   warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
