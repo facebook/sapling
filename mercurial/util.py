@@ -1340,7 +1340,7 @@ def checkwinfilename(path):
         if base and base.lower() in _winreservednames:
             return _("filename contains '%s', which is reserved "
                      "on Windows") % base
-        t = n[-1]
+        t = n[-1:]
         if t in '. ' and n not in '..':
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
