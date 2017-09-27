@@ -31,7 +31,7 @@ Backup empty repo
   finished in \d+\.(\d+)? seconds (re)
   $ mkcommit commit
   $ hg prune .
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 000000000000
   1 changesets pruned
@@ -88,7 +88,7 @@ Make first commit public (by doing push) and then backup new commit
 Create obsoleted commit
   $ mkcommit obsoletedcommit
   $ hg prune .
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 94a60f5ad8b2
   1 changesets pruned
@@ -192,7 +192,7 @@ Nothing changed, make sure no backup happens
 
 Obsolete a head, make sure backup happens
   $ hg prune .
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 773a3ba2e7c2
   1 changesets pruned
@@ -367,7 +367,7 @@ Make commit and immediately obsolete it, then create a bookmark.
 Make sure pushbackup works
   $ mkcommit toobsolete
   $ hg prune .
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 630839011471
   1 changesets pruned
@@ -446,7 +446,7 @@ Prune commit and then inhibit obsmarkers. Make sure isbackedup still works
   remote:     6c4f4b30ae4c  headtwo
   finished in \d+\.(\d+)? seconds (re)
   $ hg prune 6c4f4b30ae4c2dd928d551836c70c741ee836650
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 630839011471
   1 changesets pruned

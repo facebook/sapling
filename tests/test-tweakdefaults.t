@@ -563,7 +563,7 @@ Test that we do not show divergence warning if inhibit is enabled
 
 Test that we allow pure prune rebases
   $ hg strip 4
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 1e4be0697311
   1 changesets pruned
@@ -712,7 +712,7 @@ Test bookmark -D
   o  0
   
   $ hg bookmark -D feature1
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   bookmark 'feature1' deleted
   2 changesets pruned
   $ hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden

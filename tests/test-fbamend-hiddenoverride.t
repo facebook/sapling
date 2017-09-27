@@ -44,7 +44,7 @@ Changing working copy parent pins a node
 Strip/prune unpins a node
 
   $ hg prune 1 -q
-  advice: `hg hide` commnand provides a better UI for hiding commits
+  advice: 'hg hide' provides a better UI for hiding commits
   $ hg log -G -T '{rev} {desc}\n'
   o  2 C
   |
