@@ -35,3 +35,7 @@ Test format string
   $ hg init repo
   $ oldcmd cd repo
   g g empty g g
+
+Test main prompt with no format string
+  $ _scm_prompt
+   (empty) (no-eol)

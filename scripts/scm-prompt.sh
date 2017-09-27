@@ -193,7 +193,7 @@ _scm_prompt() {
   # - provide a space for the user so that they don't have to have
   #   random extra spaces in their prompt when not in a repo
   # - provide parens so it's differentiated from other crap in their prompt
-  fmt="${1:-' (%s)'}"
+  fmt="${1:- (%s)}"
 
   # find out if we're in a git or hg repo by looking for the control dir
   dir="$PWD"
