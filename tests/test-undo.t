@@ -617,7 +617,7 @@ and commits are not duplicated
   > rebase =
   > EOF
   $ hg rebase -s 8057 -d 75f6
-  rebasing 17:805791ba4bcd "newbranch" (tip newbook)
+  rebasing 17:805791ba4bcd "newbranch" (newbook tip)
   $ hg log -l 2
   changeset:   18:35324a911c0d
   bookmark:    newbook

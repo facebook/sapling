@@ -47,13 +47,13 @@ Test that hg pull --rebase aborts without --dest
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
-  rebasing 3:3de6bbccf693 "foo" (tip bm)
+  rebasing 3:3de6bbccf693 "foo" (bm tip)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/3de6bbccf693-0dce0663-rebase.hg (glob)
   $ hg pull --rebase --dest three
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
-  rebasing 3:54ac787ff1c5 "foo" (tip bm)
+  rebasing 3:54ac787ff1c5 "foo" (bm tip)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/54ac787ff1c5-4c2ca3a1-rebase.hg (glob)
 
 Test that hg pull --update aborts without --dest

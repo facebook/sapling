@@ -222,7 +222,7 @@
   $ clearcache
   $ find $CACHEDIR -type f | sort
   $ hg rebase -s temporary -d foo
-  rebasing 3:58147a5b5242 "b" (tip temporary)
+  rebasing 3:58147a5b5242 "b" (temporary tip)
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/58147a5b5242-c3678817-rebase.hg (glob)
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   $ sleep 1
