@@ -87,7 +87,7 @@ def mapbranch(branch, branchmap):
     # At some point we used "None" literal to denote the default branch,
     # attempt to use that for backward compatibility.
     if (not branch):
-        branch = branchmap.get(str(None), branch)
+        branch = branchmap.get('None', branch)
     return branch
 
 source_converters = [
