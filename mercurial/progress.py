@@ -215,19 +215,15 @@ class progbar(object):
         delta = pos - initialpos
         if delta > 0:
             elapsed = now - self.starttimes[topic]
-            # experimental config: progress.estimate
-            if elapsed > float(
-                self.ui.config('progress', 'estimate')):
-                seconds = (elapsed * (target - delta)) // delta + 1
-                return fmtremaining(seconds)
+            seconds = (elapsed * (target - delta)) // delta + 1
+            return fmtremaining(seconds)
         return ''
 
     def speed(self, topic, pos, unit, now):
         initialpos = self.startvals[topic]
         delta = pos - initialpos
         elapsed = now - self.starttimes[topic]
-        if elapsed > float(
-            self.ui.config('progress', 'estimate')):
+        if elapsed > 0:
             return _('%d %s/sec') % (delta / elapsed, unit)
         return ''
 

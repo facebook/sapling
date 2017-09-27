@@ -359,9 +359,6 @@ coreconfigitem('progress', 'delay',
 coreconfigitem('progress', 'disable',
     default=False,
 )
-coreconfigitem('progress', 'estimate',
-    default=2,
-)
 coreconfigitem('progress', 'refresh',
     default=0.1,
 )
