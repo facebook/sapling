@@ -40,6 +40,9 @@ Config::
     # change rebase exit from 1 to 0 if nothing is rebased
     nooprebase = True
 
+    # whether to show a warning on some deprecated usages
+    singlecolonwarn = False
+
     # educational messages
     bmnodesthint = ''
     bmnodestmsg = ''
@@ -49,17 +52,11 @@ Config::
     nodesthint = ''
     nodestmsg = ''
     rollbackhint = ''
+    singlecolonmsg = ''
     tagsmessage = ''
 
     # output new hashes when nodes get updated
     showupdated = False
-
-    # Show developers warning for using discouraged features.
-    #
-    # For example, 'x:y' in revsets shows revision numbers between x and y,
-    # both inclusive. Usually, this doesn't correspond to any meaningful
-    # interpretation of the repo and is therefore, discouraged.
-    develwarn = True
 """
 from __future__ import absolute_import
 
@@ -133,12 +130,12 @@ def extsetup(ui):
     options.append(
         ('d', 'dest', '', _('destination for rebase or update')))
 
-    if ui.configbool('tweakdefaults', 'develwarn', True):
-        # anonymous function to pass ui object to _analyzewrapper
-        def _analyzewrap(orig, x):
-            return _analyzewrapper(orig, x, ui)
+    # anonymous function to pass ui object to _analyzewrapper
+    def _analyzewrap(orig, x):
+        return _analyzewrapper(orig, x, ui)
 
-        wrapfunction(revsetlang, '_analyze', _analyzewrap)
+    wrapfunction(revsetlang, '_analyze', _analyzewrap)
+
     try:
         rebaseext = extensions.find('rebase')
         # tweakdefaults is already loaded before other extensions
@@ -695,16 +692,19 @@ def markermetadatawritingcommand(ui, origcmd, operationame):
     return cmd
 
 def _analyzewrapper(orig, x, ui):
-    """Wraps analyzer to detect the use of colons in the revisions
-    """
+    """Wraps analyzer to detect the use of colons in the revisions"""
     result = orig(x)
 
-    if isinstance(x, tuple) and \
+    enabled = ui.configbool('tweakdefaults', 'singlecolonwarn')
+
+    # The last condition is added so that warnings are not shown if
+    # hg log --follow is invoked w/o arguments
+    if enabled and isinstance(x, tuple) and \
             (x[0] in ('range', 'rangepre', 'rangepost')) and \
             x != ('rangepre', ('symbol', '.')):
-        # The last condition is added so that warnings are not shown if
-        # hg log --follow is invoked w/o arguments
-        ui.develwarn("use of ':' is deprecated\n")
+        msg = ui.config('tweakdefaults', 'singlecolonmsg',
+                        _("warning: use of ':' is deprecated"))
+        ui.warn('%s\n' % msg)
 
     return result
 

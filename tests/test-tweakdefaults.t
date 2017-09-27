@@ -744,55 +744,47 @@ Test bookmark -D
   |
   o  0
   
-Test that developer warning is shown whenever ':' is used implicitly or explicitly
+Test that warning is shown whenever ':' is used with singlecolonwarn set
 
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:2' --config tweakdefaults.singlecolonwarn=1
+  warning: use of ':' is deprecated
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
   $ hg log -G -T '{rev} {bookmarks}' -r '0:2'
-  devel-warn: use of ':' is deprecated
-   at: *tweakdefaults.py:* (_analyzewrap) (glob)
   o  2
   |
   o  1 master
   |
   o  0
   
-
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:2' --config tweakdefaults.develwarn=False
+  $ hg log -G -T '{rev} {bookmarks}' -r ':2' --config tweakdefaults.singlecolonwarn=1
+  warning: use of ':' is deprecated
   o  2
   |
   o  1 master
   |
   o  0
   
-
   $ hg log -G -T '{rev} {bookmarks}' -r ':2'
-  devel-warn: use of ':' is deprecated
-   at: *tweakdefaults.py:* (_analyzewrap) (glob)
   o  2
   |
   o  1 master
   |
   o  0
   
-
-  $ hg log -G -T '{rev} {bookmarks}' -r ':2' --config tweakdefaults.develwarn=False
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:' --config tweakdefaults.singlecolonwarn=1
+  warning: use of ':' is deprecated
   o  2
   |
   o  1 master
   |
   o  0
   
-
   $ hg log -G -T '{rev} {bookmarks}' -r '0:'
-  devel-warn: use of ':' is deprecated
-   at: *tweakdefaults.py:* (_analyzewrap) (glob)
-  o  2
-  |
-  o  1 master
-  |
-  o  0
-  
-
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:' --config tweakdefaults.develwarn=False
   o  2
   |
   o  1 master
@@ -801,7 +793,16 @@ Test that developer warning is shown whenever ':' is used implicitly or explicit
   
 
 In this testcase warning should not be shown
-  $ hg log -G -T '{rev} {bookmarks}' -r ':'
+  $ hg log -G -T '{rev} {bookmarks}' -r ':' --config tweakdefaults.singlecolonwarn=1
+  o  2
+  |
+  o  1 master
+  |
+  o  0
+  
+Check that the custom message can be used
+  $ hg log -G -T '{rev} {bookmarks}' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
+  hey stop that
   o  2
   |
   o  1 master
