@@ -1239,10 +1239,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         wlock = pullop.repo.wlock()
         lock = pullop.repo.lock()
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
-        streamclone.maybeperformlegacystreamclone(pullop)
         # This should ideally be in _pullbundle2(). However, it needs to run
         # before discovery to avoid extra work.
         _maybeapplyclonebundle(pullop)
+        streamclone.maybeperformlegacystreamclone(pullop)
         _pulldiscovery(pullop)
         if pullop.canusebundle2:
             _pullbundle2(pullop)
@@ -1864,7 +1864,9 @@ def _maybeapplyclonebundle(pullop):
                        'falling back to regular clone\n'))
         return
 
-    entries = filterclonebundleentries(repo, entries)
+    entries = filterclonebundleentries(
+        repo, entries, streamclonerequested=pullop.streamclonerequested)
+
     if not entries:
         # There is a thundering herd concern here. However, if a server
         # operator doesn't advertise bundles appropriate for its clients,
@@ -1933,7 +1935,7 @@ def parseclonebundlesmanifest(repo, s):
 
     return m
 
-def filterclonebundleentries(repo, entries):
+def filterclonebundleentries(repo, entries, streamclonerequested=False):
     """Remove incompatible clone bundle manifest entries.
 
     Accepts a list of entries parsed with ``parseclonebundlesmanifest``
@@ -1948,7 +1950,15 @@ def filterclonebundleentries(repo, entries):
         spec = entry.get('BUNDLESPEC')
         if spec:
             try:
-                parsebundlespec(repo, spec, strict=True)
+                comp, version, params = parsebundlespec(repo, spec, strict=True)
+
+                # If a stream clone was requested, filter out non-streamclone
+                # entries.
+                if streamclonerequested and (comp != 'UN' or version != 's1'):
+                    repo.ui.debug('filtering %s because not a stream clone\n' %
+                                  entry['URL'])
+                    continue
+
             except error.InvalidBundleSpecification as e:
                 repo.ui.debug(str(e) + '\n')
                 continue
@@ -1956,6 +1966,12 @@ def filterclonebundleentries(repo, entries):
                 repo.ui.debug('filtering %s because unsupported bundle '
                               'spec: %s\n' % (entry['URL'], str(e)))
                 continue
+        # If we don't have a spec and requested a stream clone, we don't know
+        # what the entry is so don't attempt to apply it.
+        elif streamclonerequested:
+            repo.ui.debug('filtering %s because cannot determine if a stream '
+                          'clone bundle\n' % entry['URL'])
+            continue
 
         if 'REQUIRESNI' in entry and not sslutil.hassni:
             repo.ui.debug('filtering %s because SNI not supported\n' %

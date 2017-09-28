@@ -441,6 +441,8 @@ A manifest with just a gzip bundle
   > EOF
 
   $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
   streaming all changes
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
@@ -454,6 +456,8 @@ A manifest with a stream clone but no BUNDLESPEC
   > EOF
 
   $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-no-bundlespec
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
   streaming all changes
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
@@ -468,9 +472,10 @@ A manifest with a gzip bundle and a stream clone
   > EOF
 
   $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed
-  streaming all changes
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
+  finished applying clone bundle
   searching for changes
   no changes found
 
@@ -482,9 +487,10 @@ A manifest with a gzip bundle and stream clone with supported requirements
   > EOF
 
   $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed-requirements
-  streaming all changes
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
+  finished applying clone bundle
   searching for changes
   no changes found
 
@@ -496,6 +502,8 @@ A manifest with a gzip bundle and a stream clone with unsupported requirements
   > EOF
 
   $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed-unsupported-requirements
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
   streaming all changes
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
