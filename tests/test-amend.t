@@ -180,8 +180,8 @@ With allowunstable, amend could work in the middle of a stack
 
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > EOF
 
   $ hg amend

@@ -3,8 +3,8 @@
   > drawdag=$TESTDIR/drawdag.py
   > bruterebase=$TESTDIR/bruterebase.py
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > EOF
   $ init() {
   >   N=`expr ${N:-0} + 1`

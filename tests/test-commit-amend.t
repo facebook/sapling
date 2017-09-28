@@ -519,8 +519,8 @@ Enable obsolete
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > EOF
 
 Amend with no files changes

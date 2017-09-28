@@ -2,8 +2,8 @@ Test uncommit - set up the config
 
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > [extensions]
   > uncommit =
   > drawdag=$TESTDIR/drawdag.py

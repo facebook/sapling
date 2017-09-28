@@ -8,8 +8,8 @@ Enable obsolete
   > [phases]
   > publish=False
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > [extensions]
   > histedit=
   > rebase=

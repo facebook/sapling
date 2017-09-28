@@ -8,8 +8,8 @@ Enable obsolete
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
   > [experimental]
-  > evolution=allowunstable
   > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > [phases]
   > publish=False
   > [extensions]
