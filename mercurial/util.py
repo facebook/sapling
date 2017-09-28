@@ -588,6 +588,24 @@ def cachefunc(func):
 
     return f
 
+class cow(object):
+    """helper class to make copy-on-write easier
+
+    Call preparewrite before doing any writes.
+    """
+
+    def preparewrite(self):
+        """call this before writes, return self or a copied new object"""
+        if getattr(self, '_copied', 0):
+            self._copied -= 1
+            return self.__class__(self)
+        return self
+
+    def copy(self):
+        """always do a cheap copy"""
+        self._copied = getattr(self, '_copied', 0) + 1
+        return self
+
 class sortdict(collections.OrderedDict):
     '''a simple sorted dictionary
 
@@ -612,6 +630,38 @@ class sortdict(collections.OrderedDict):
                 src = src.iteritems()
             for k, v in src:
                 self[k] = v
+
+class cowdict(cow, dict):
+    """copy-on-write dict
+
+    Be sure to call d = d.preparewrite() before writing to d.
+
+    >>> a = cowdict()
+    >>> a is a.preparewrite()
+    True
+    >>> b = a.copy()
+    >>> b is a
+    True
+    >>> c = b.copy()
+    >>> c is a
+    True
+    >>> a = a.preparewrite()
+    >>> b is a
+    False
+    >>> a is a.preparewrite()
+    True
+    >>> c = c.preparewrite()
+    >>> b is c
+    False
+    >>> b is b.preparewrite()
+    True
+    """
+
+class cowsortdict(cow, sortdict):
+    """copy-on-write sortdict
+
+    Be sure to call d = d.preparewrite() before writing to d.
+    """
 
 class transactional(object):
     """Base class for making a transactional type into a context manager."""
