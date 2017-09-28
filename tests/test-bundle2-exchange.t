@@ -15,8 +15,8 @@ enable obsolescence
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=exchange
   > evolution.createmarkers=True
+  > evolution.exchange=True
   > bundle2-output-capture=True
   > [ui]
   > ssh="$PYTHON" "$TESTDIR/dummyssh"

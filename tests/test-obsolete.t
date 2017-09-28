@@ -907,7 +907,7 @@ Checking _enable=False warning if obsolete marker exists
 reenable for later test
 
   $ echo '[experimental]' >> $HGRCPATH
-  $ echo "evolution=exchange" >> $HGRCPATH
+  $ echo "evolution.exchange=True" >> $HGRCPATH
   $ echo "evolution.createmarkers=True" >> $HGRCPATH
 
   $ rm hg.pid access.log errors.log

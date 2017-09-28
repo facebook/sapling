@@ -7,8 +7,8 @@ Create a repo, set the username to something more than 255 bytes, then run hg am
   > [extensions]
   > amend =
   > [experimental]
-  > stabilization=exchange
   > evolution.createmarkers=True
+  > evolution.exchange=True
   > EOF
   $ hg init tmpa
   $ cd tmpa

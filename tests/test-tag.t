@@ -415,7 +415,7 @@ issue5539: pruned tags do not appear in .hgtags
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=exchange
+  > evolution.exchange = True
   > evolution.createmarkers=True
   > EOF
   $ hg up e4d483960b9b --quiet
