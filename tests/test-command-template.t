@@ -3784,7 +3784,7 @@ Test shortest(node) with the repo having short hash collision:
   $ cd hashcollision
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > stabilization = createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ echo 0 > a
   $ hg ci -qAm 0

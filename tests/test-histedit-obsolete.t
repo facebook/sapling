@@ -8,7 +8,8 @@ Enable obsolete
   > [phases]
   > publish=False
   > [experimental]
-  > stabilization=createmarkers,allowunstable
+  > evolution=allowunstable
+  > evolution.createmarkers=True
   > [extensions]
   > histedit=
   > rebase=

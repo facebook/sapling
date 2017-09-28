@@ -6,7 +6,8 @@
   > [phases]
   > publish=False
   > [experimental]
-  > stabilization=createmarkers,exchange
+  > evolution=exchange
+  > evolution.createmarkers=True
   > EOF
 
   $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'

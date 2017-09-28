@@ -326,7 +326,7 @@ process.
   $ cd largefiles-repo-hg
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ hg debugobsolete `hg log -r tip -T "{node}"`
   obsoleted 1 changesets

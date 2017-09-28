@@ -76,7 +76,7 @@ Enable obsolete
   > [phases]
   > publish=False
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 check that we can update parent repo with missing (amended) subrepo revision

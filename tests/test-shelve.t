@@ -696,7 +696,7 @@ test bug 4073 we need to enable obsolete markers for it
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ hg shelve
   shelved as default

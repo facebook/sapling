@@ -9,7 +9,7 @@ Enable obsolete
   > [ui]
   > logtemplate = {rev}:{node|short} {desc}{if(obsfate, " [{join(obsfate, "; ")}]")}\n
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > [extensions]
   > drawdag=$TESTDIR/drawdag.py
   > [alias]

@@ -509,7 +509,7 @@ changelog and manifest would have invalid node:
 
   $ cat >> .hg/hgrc << EOF
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
   >>> import os

@@ -11,7 +11,7 @@
 #if obsstore-on
   $ cat << EOF >> $HGRCPATH
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 #endif
 
@@ -180,7 +180,8 @@ With allowunstable, amend could work in the middle of a stack
 
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
-  > stabilization=createmarkers, allowunstable
+  > evolution=allowunstable
+  > evolution.createmarkers=True
   > EOF
 
   $ hg amend

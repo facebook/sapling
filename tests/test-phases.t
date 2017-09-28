@@ -630,7 +630,7 @@ test hidden changeset are not cloned as public (issue3935)
 (enabling evolution)
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 (making a changeset hidden; H in that case)

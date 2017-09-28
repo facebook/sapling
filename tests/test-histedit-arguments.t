@@ -496,7 +496,8 @@ amend should not be blocked by the ongoing histedit.
 
   $ cat >>$HGRCPATH <<EOF
   > [experimental]
-  > stabilization=createmarkers,allowunstable
+  > evolution=allowunstable
+  > evolution.createmarkers=True
   > EOF
   $ hg commit --amend -m 'allow this fold'
   $ hg histedit --continue

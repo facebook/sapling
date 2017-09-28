@@ -519,7 +519,8 @@ Enable obsolete
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > stabilization=createmarkers,allowunstable
+  > evolution=allowunstable
+  > evolution.createmarkers=True
   > EOF
 
 Amend with no files changes

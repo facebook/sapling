@@ -39,7 +39,8 @@ Enabling it
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > stabilization=createmarkers,exchange
+  > evolution=exchange
+  > evolution.createmarkers=True
   > EOF
 
 Killing a single changeset without replacement
@@ -899,15 +900,15 @@ check that web.view config option:
 Checking _enable=False warning if obsolete marker exists
 
   $ echo '[experimental]' >> $HGRCPATH
-  $ echo "stabilization=" >> $HGRCPATH
+  $ echo "evolution=" >> $HGRCPATH
   $ hg log -r tip
-  obsolete feature not enabled but 68 markers found!
   68:c15e9edfca13 (draft) [tip ] add celestine
 
 reenable for later test
 
   $ echo '[experimental]' >> $HGRCPATH
-  $ echo "stabilization=createmarkers,exchange" >> $HGRCPATH
+  $ echo "evolution=exchange" >> $HGRCPATH
+  $ echo "evolution.createmarkers=True" >> $HGRCPATH
 
   $ rm hg.pid access.log errors.log
 #endif
@@ -1311,7 +1312,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ hg ci -m '2'
 
   $ echo bar > f2
-  $ hg commit --amend --config experimetnal.stabilization=createmarkers
+  $ hg commit --amend --config experimental.evolution.createmarkers=True
   $ hg log -G
   @  3:b0551702f918 (draft) [tip ] 2
   |

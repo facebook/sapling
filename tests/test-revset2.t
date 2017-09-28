@@ -1626,7 +1626,7 @@ Test obsstore related revsets
   $ cd repo1
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > stabilization = createmarkers
+  > evolution.createmarkers=True
   > EOF
 
   $ hg debugdrawdag <<'EOS'

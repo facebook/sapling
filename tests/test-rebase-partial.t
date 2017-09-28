@@ -7,7 +7,8 @@ destination (issue5422)
   > drawdag=$TESTDIR/drawdag.py
   > 
   > [experimental]
-  > stabilization=createmarkers,allowunstable
+  > evolution=allowunstable
+  > evolution.createmarkers=True
   > 
   > [alias]
   > tglog = log -G --template "{rev}: {desc}"

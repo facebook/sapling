@@ -1794,7 +1794,7 @@ Test short 'ff...' hash collision
   $ cd wdir-hashcollision
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > stabilization = createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ echo 0 > a
   $ hg ci -qAm 0

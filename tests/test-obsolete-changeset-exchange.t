@@ -3,7 +3,7 @@ test-obsolete.t)
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 Push does not corrupt remote

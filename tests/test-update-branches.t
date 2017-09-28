@@ -473,7 +473,7 @@ successors should be taken in account when checking head destination
   > [ui]
   > logtemplate={rev}:{node|short} {desc|firstline}
   > [experimental]
-  > stabilization=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 Test no-argument update to a successor of an obsoleted changeset
