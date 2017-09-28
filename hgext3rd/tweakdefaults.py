@@ -433,6 +433,11 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
     if inactive:
         extensions.unwrapfunction(hg, 'updatetotally', _wrapupdatetotally)
 
+    # If the command succeed a message for 'hg update .^' will appear
+    # suggesting to use hg prev
+    if node == '.^':
+        ui.status(_("(hint: use 'hg prev' to move to the parent changeset)\n"))
+
     return result
 
 def _wrapupdatetotally(orig, ui, repo, checkout, brev, *args, **kwargs):

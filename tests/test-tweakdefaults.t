@@ -79,6 +79,7 @@ Dirty update allowed to same rev, with no conflicts, and --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (hint: use 'hg prev' to move to the parent changeset)
   $ hg update --clean 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

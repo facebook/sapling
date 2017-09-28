@@ -20,6 +20,7 @@ Run test
   $ hg up ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark AB)
+  (hint: use 'hg prev' to move to the parent changeset)
   $ touch c
   $ hg commit -Aqm c
   $ hg bookmark C -t AB
