@@ -4,10 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
-
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
@@ -17,16 +13,18 @@ extern crate url;
 extern crate tempdir;
 
 extern crate blobstore;
+extern crate futures_ext;
 
-use std::path::{Path, PathBuf};
-use std::marker::PhantomData;
-use std::string::ToString;
-use std::fs::{File, create_dir_all};
+use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
+use std::marker::PhantomData;
+use std::path::{Path, PathBuf};
+use std::string::ToString;
 
-use futures::{Async, BoxFuture, Future};
+use futures::Async;
 use futures::future::poll_fn;
-use url::percent_encoding::{DEFAULT_ENCODE_SET, percent_encode};
+use futures_ext::{BoxFuture, FutureExt};
+use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 use blobstore::Blobstore;
 
@@ -115,7 +113,7 @@ where
                 }
             };
             Ok(Async::Ready(ret))
-        }).boxed()
+        }).boxify()
     }
 
     fn put(&self, key: Self::Key, val: Self::ValueIn) -> Self::PutBlob {
@@ -124,6 +122,6 @@ where
         poll_fn(move || {
             File::create(&p)?.write_all(val.as_ref())?;
             Ok(Async::Ready(()))
-        }).boxed()
+        }).boxify()
     }
 }
