@@ -78,8 +78,8 @@ def expush(orig, repo, remote, *args, **kwargs):
     return res
 
 def expushop(orig, pushop, repo, remote, force=False, revs=None,
-             newbranch=False, bookmarks=(), **kwargs):
-    orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
+             newbranch=False, bookmarks=(), pushvars=None, **kwargs):
+    orig(pushop, repo, remote, force, revs, newbranch, bookmarks, pushvars)
 
     for flag in ['to', 'delete', 'create', 'allowanon', 'nonforwardmove']:
         setattr(pushop, flag, kwargs.pop(flag, None))
@@ -1053,6 +1053,12 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if opts.get('branch'):
         msg = _('do not specify --to/-t and --branch/-b at the same time')
         raise error.Abort(msg)
+
+    # if we are not using the original push command implementation, make sure
+    # pushvars is included in opargs
+    pushvars = opts.get('pushvars')
+    if pushvars:
+        opargs['pushvars'] = pushvars
 
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
