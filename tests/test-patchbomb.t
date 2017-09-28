@@ -333,10 +333,10 @@ Test breaking format changes aren't
   sending [                                             ] 0/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  sending [==============>                              ] 1/3\r (no-eol) (esc)
+  sending [============>                            ] 1/3 01s\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  sending [=============================>               ] 2/3\r (no-eol) (esc)
+  sending [==========================>              ] 2/3 01s\r (no-eol) (esc)
                                                               \r (esc)
   sending [PATCH 0 of 2] test ...
   sending [PATCH 1 of 2] a ...
