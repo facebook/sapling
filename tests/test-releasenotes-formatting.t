@@ -420,3 +420,17 @@ Usage of --list flag
   fix: Bug Fixes
   perf: Performance Improvements
   api: API Changes
+
+  $ cd ..
+
+Raise error on simultaneous usage of flags
+
+  $ hg init relnotes-raise-error
+  $ cd relnotes-raise-error
+  $ hg releasenotes -r . -l
+  abort: cannot use both '--list' and '--rev'
+  [255]
+
+  $ hg releasenotes -l -c
+  abort: cannot use both '--list' and '--check'
+  [255]

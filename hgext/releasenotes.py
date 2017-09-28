@@ -552,7 +552,15 @@ def releasenotes(ui, repo, file_=None, **opts):
     release note after it has been added to the release notes file.
     """
     sections = releasenotessections(ui, repo)
-    if opts.get('list'):
+
+    listflag = opts.get('list')
+
+    if listflag and opts.get('rev'):
+        raise error.Abort(_('cannot use both \'--list\' and \'--rev\''))
+    if listflag and opts.get('check'):
+        raise error.Abort(_('cannot use both \'--list\' and \'--check\''))
+
+    if listflag:
         return _getadmonitionlist(ui, sections)
 
     rev = opts.get('rev')
