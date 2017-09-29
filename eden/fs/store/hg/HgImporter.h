@@ -12,6 +12,7 @@
 #include <folly/Range.h>
 #include <folly/Subprocess.h>
 
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -30,7 +31,6 @@ namespace eden {
 
 class Hash;
 class HgManifestImporter;
-class LocalStore;
 class StoreResult;
 class Tree;
 
@@ -207,7 +207,8 @@ class HgImporter {
    */
   static void readManifestEntry(
       HgManifestImporter& importer,
-      folly::io::Cursor& cursor);
+      folly::io::Cursor& cursor,
+      LocalStore::WriteBatch& writeBatch);
   /**
    * Read a response chunk header from the helper process
    *
@@ -259,7 +260,8 @@ class HgImporter {
   std::unique_ptr<Tree> importTreeImpl(
       const Hash& manifestNode,
       const Hash& edenTreeID,
-      RelativePathPiece path);
+      RelativePathPiece path,
+      LocalStore::WriteBatch& writeBatch);
 
   folly::Subprocess helper_;
   const AbsolutePath repoPath_;

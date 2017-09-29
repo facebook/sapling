@@ -114,10 +114,21 @@ class LocalStore {
    * Returns the key and the (not coalesced) serialized data.
    * This does not modify the contents of the store; it is the method
    * used by the putTree method to compute the data that it stores.
-   * This is useful when computing the overal set of data during a
+   * This is useful when computing the overall set of data during a
    * two phase import. */
-  std::pair<Hash, folly::IOBuf> serializeTree(const Tree* tree) const;
+  static std::pair<Hash, folly::IOBuf> serializeTree(const Tree* tree);
 
+  /**
+   * Test whether the key is stored.
+   */
+  bool hasKey(KeySpace keySpace, folly::ByteRange key) const;
+  bool hasKey(KeySpace keySpace, const Hash& id) const;
+
+  /**
+   * Store a Tree into the TreeFamily KeySpace.
+   *
+   * Returns the Hash that can be used to look up the tree later.
+   */
   Hash putTree(const Tree* tree);
 
   /**
@@ -134,65 +145,81 @@ class LocalStore {
   void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value);
   void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
 
-  /**
-   * Enables batch loading mode.
-   * This configures the store to optimize for a bulk load of data
-   * during manifest import.
-   * In bulk loading mode, put operations will be deferred until flush
-   * is called, or until a read operation is performed.
+  /*
+   * WriteBatch is a helper class that wraps RocksDB WriteBatch.
    *
-   * The bufferSize configures the maximum amount of data to accumulate
-   * (in encoded bytes) before flushing to storage.
+   * The purpose of this class is to let multiple callers manage independent
+   * write batches and flush them to the backing storage when its deemed
+   * appropriate.
+   *
+   * WriteBatch is not safe to mutate from multiple threads concurrently.
+   *
+   * Typical usage:
+   * auto writer = localStore->beginWrite();
+   * writer.put(KeySpace::Meta, Key, Value);
+   * writer.put(KeySpace::Blob, Key, BlobValue);
+   * writer.flush();
    */
-  void enableBatchMode(size_t bufferSize);
+  class WriteBatch {
+   public:
+    /**
+     * Store a Tree into the TreeFamily KeySpace.
+     *
+     * Returns the Hash that can be used to look up the tree later.
+     */
+    Hash putTree(const Tree* tree);
+
+    /**
+     * Store a Blob.
+     *
+     * Returns a BlobMetadata about the blob, which includes the SHA-1 hash of
+     * its contents.
+     */
+    BlobMetadata putBlob(const Hash& id, const Blob* blob);
+
+    /**
+     * Put arbitrary data in the store.
+     */
+    void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value);
+    void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
+
+    /**
+     * Flush any pending data to the store.
+     */
+    void flush();
+
+    // Forbidden copy construction/assignment; allow only moves
+    WriteBatch(const WriteBatch&) = delete;
+    WriteBatch(WriteBatch&&) = default;
+    WriteBatch& operator=(const WriteBatch&) = delete;
+    WriteBatch& operator=(WriteBatch&&) = default;
+    ~WriteBatch();
+
+   private:
+    friend class LocalStore;
+    // Use LocalStore::beginWrite() to create a write batch
+    WriteBatch(RocksHandles& dbHandles, size_t bufferSize);
+
+    void flushIfNeeded();
+
+    RocksHandles& dbHandles_;
+    rocksdb::WriteBatch writeBatch_;
+    size_t bufSize_;
+  };
 
   /**
-   * Disables batch loading mode.
-   * This will disable batch loading mode and flush any pending data.
-   * This may throw a RocksException if the flush fails.
+   * Construct a LocalStoreBatchWrite object with write batch of size bufSize.
+   * If bufSize is non-zero the batch will automatically flush each time
+   * the accumulated data exceeds bufSize.  Otherwise no implifict flushing
+   * will occur.
+   * Either way, the caller will typically want to finish up by calling
+   * writeBatch.flush() to complete the batch as there is no implicit flush on
+   * destruction either.
    */
-  void disableBatchMode();
-
-  /**
-   * Flushes any batched writes.
-   * Will throw RocksException if an error is encountered.
-   */
-  void flush();
-
-  /**
-   * Test whether the key is stored, or whether the key is pending storage
-   * as part of batch mode */
-  bool hasKey(KeySpace keySpace, folly::ByteRange key) const;
-  bool hasKey(KeySpace keySpace, const Hash& id) const;
+  WriteBatch beginWrite(size_t bufSize = 0);
 
  private:
-  /**
-   * In order to preserve read after write consistency, we must flush
-   * any pending writes prior to a read operation.  This is a const
-   * version of flush with some different logging to help detect
-   * and protect against this. */
-  void flushForRead() const;
-
-  /**
-   * Flushes the writeBatch if batch loading mode is not enabled, or
-   * if the writeBatchBufferSize_ is exceeded */
-  void flushIfNotBatch();
-
   RocksHandles dbHandles_;
-
-  struct PendingWrite {
-    /**
-     * We need to track this via a pointer to avoid pulling in the full
-     * rocksdb headers */
-    std::unique_ptr<rocksdb::WriteBatch> writeBatch;
-  };
-  mutable folly::Synchronized<PendingWrite> pending_;
-
-  /**
-   * Controls whether we are in batch mode or not.
-   * 0 means no, otherwise it holds the size of the buffer to use for batching.
-   */
-  size_t writeBatchBufferSize_{0};
 };
 }
 }

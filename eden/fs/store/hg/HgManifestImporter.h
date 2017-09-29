@@ -11,13 +11,13 @@
 
 #include <vector>
 
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
 class Hash;
-class LocalStore;
 class TreeEntry;
 
 /*
@@ -26,7 +26,9 @@ class TreeEntry;
  */
 class HgManifestImporter {
  public:
-  explicit HgManifestImporter(LocalStore* store);
+  explicit HgManifestImporter(
+      LocalStore* store,
+      LocalStore::WriteBatch& writeBatch);
   virtual ~HgManifestImporter();
 
   /**
@@ -60,6 +62,7 @@ class HgManifestImporter {
 
   LocalStore* store_{nullptr};
   std::vector<PartialTree> dirStack_;
+  LocalStore::WriteBatch& writeBatch_;
 };
 }
 } // facebook::eden

@@ -72,6 +72,11 @@ DEFINE_bool(
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
 
+DEFINE_int32(
+    hgManifestImportBufferSize,
+    256 * 1024 * 1024, // 256MB
+    "Buffer size for batching LocalStore writes during hg manifest imports");
+
 namespace {
 
 using namespace facebook::eden;
@@ -139,9 +144,12 @@ struct HgProxyHash {
    * Returns an eden blob hash that can be used to retrieve the data later
    * (using the HgProxyHash constructor defined above).
    */
-  static Hash store(LocalStore* store, RelativePathPiece path, Hash hgRevHash) {
+  static Hash store(
+      RelativePathPiece path,
+      Hash hgRevHash,
+      LocalStore::WriteBatch& writeBatch) {
     auto computedPair = prepareToStore(path, hgRevHash);
-    HgProxyHash::store(store, computedPair);
+    HgProxyHash::store(computedPair, writeBatch);
     return computedPair.first;
   }
 
@@ -172,9 +180,9 @@ struct HgProxyHash {
    * Stores the data computed by prepareToStore().
    */
   static void store(
-      LocalStore* store,
-      const std::pair<Hash, IOBuf>& computedPair) {
-    store->put(
+      const std::pair<Hash, IOBuf>& computedPair,
+      LocalStore::WriteBatch& writeBatch) {
+    writeBatch.put(
         KeySpace::HgProxyHashFamily,
         computedPair.first,
         // Note that this depends on prepareToStore() having called
@@ -479,16 +487,21 @@ std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
   }
 
   HgProxyHash pathInfo(store_, id);
-  return importTreeImpl(
+  auto writeBatch = store_->beginWrite();
+  auto tree = importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
       id,
-      pathInfo.path());
+      pathInfo.path(),
+      writeBatch);
+  writeBatch.flush();
+  return tree;
 }
 
 std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
-    RelativePathPiece path) {
+    RelativePathPiece path,
+    LocalStore::WriteBatch& writeBatch) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -497,8 +510,9 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   // handled specially in the code.
   if (path.empty() && manifestNode == kZeroHash) {
     auto tree = std::make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
-    auto serialized = store_->serializeTree(tree.get());
-    store_->put(KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+    auto serialized = LocalStore::serializeTree(tree.get());
+    writeBatch.put(
+        KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
     return tree;
   }
 
@@ -619,7 +633,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     }
 
     auto proxyHash = HgProxyHash::store(
-        store_, path + RelativePathPiece(entryName), entryHash);
+        path + RelativePathPiece(entryName), entryHash, writeBatch);
 
     entries.emplace_back(proxyHash, entryName, fileType, ownerPermissions);
 
@@ -627,8 +641,9 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   }
 
   auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
-  auto serialized = store_->serializeTree(tree.get());
-  store_->put(KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
+  auto serialized = LocalStore::serializeTree(tree.get());
+  writeBatch.put(
+      KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
   return tree;
 }
 
@@ -652,10 +667,12 @@ Hash HgImporter::importTreeManifest(StringPiece revName) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
   auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-  auto tree = importTreeImpl(manifestNode, proxyInfo.first, path);
+  auto writeBatch = store_->beginWrite();
+  auto tree = importTreeImpl(manifestNode, proxyInfo.first, path, writeBatch);
   // Only write the proxy hash value for this once we've imported
   // the root.
-  HgProxyHash::store(store_, proxyInfo);
+  HgProxyHash::store(proxyInfo, writeBatch);
+  writeBatch.flush();
 
   return tree->getHash();
 }
@@ -668,7 +685,8 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
 }
 
 Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
-  HgManifestImporter importer(store);
+  auto writeBatch = store->beginWrite(FLAGS_hgManifestImportBufferSize);
+  HgManifestImporter importer(store, writeBatch);
   size_t numPaths = 0;
 
   auto start = std::chrono::steady_clock::now();
@@ -690,7 +708,7 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
     // Now process the entries in the chunk
     Cursor cursor(&chunkData);
     while (!cursor.isAtEnd()) {
-      readManifestEntry(importer, cursor);
+      readManifestEntry(importer, cursor, writeBatch);
       ++numPaths;
     }
 
@@ -698,6 +716,9 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
       break;
     }
   }
+
+  writeBatch.flush();
+
   auto computeEnd = std::chrono::steady_clock::now();
   XLOG(DBG2) << "computed trees for " << numPaths << " manifest paths in "
              << durationStr(computeEnd - start);
@@ -752,7 +773,8 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
 
 void HgImporter::readManifestEntry(
     HgManifestImporter& importer,
-    folly::io::Cursor& cursor) {
+    folly::io::Cursor& cursor,
+    LocalStore::WriteBatch& writeBatch) {
   Hash::Storage hashBuf;
   cursor.pull(hashBuf.data(), hashBuf.size());
   Hash fileRevHash(hashBuf);
@@ -794,8 +816,7 @@ void HgImporter::readManifestEntry(
   RelativePathPiece path(pathStr);
 
   // Generate a blob hash from the mercurial (path, fileRev) information
-  auto blobHash =
-      HgProxyHash::store(importer.getLocalStore(), path, fileRevHash);
+  auto blobHash = HgProxyHash::store(path, fileRevHash, writeBatch);
 
   auto entry =
       TreeEntry(blobHash, path.basename().value(), fileType, ownerPermissions);

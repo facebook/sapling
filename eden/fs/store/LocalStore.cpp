@@ -160,7 +160,6 @@ LocalStore::~LocalStore() {
 
 StoreResult LocalStore::get(KeySpace keySpace, ByteRange key) const {
   string value;
-  flushForRead();
   auto status = dbHandles_.db.get()->Get(
       ReadOptions(),
       dbHandles_.columns[keySpace].get(),
@@ -228,62 +227,7 @@ Optional<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
   return metadata.value().sha1;
 }
 
-BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
-  const IOBuf& contents = blob->getContents();
-
-  BlobMetadata metadata{Hash::sha1(&contents),
-                        contents.computeChainDataLength()};
-  if (hasKey(KeySpace::BlobMetaDataFamily, id)) {
-    return metadata;
-  }
-
-  SerializedBlobMetadata metadataBytes(metadata);
-
-  auto hashSlice = _createSlice(id.getBytes());
-  SliceParts keyParts(&hashSlice, 1);
-
-  ByteRange bodyBytes;
-
-  // Add a git-style blob prefix
-  auto prefix = folly::to<string>("blob ", contents.computeChainDataLength());
-  prefix.push_back('\0');
-  std::vector<Slice> bodySlices;
-  bodySlices.emplace_back(prefix);
-
-  // Add all of the IOBuf chunks
-  Cursor cursor(&contents);
-  while (true) {
-    auto bytes = cursor.peekBytes();
-    if (bytes.empty()) {
-      break;
-    }
-    bodySlices.push_back(_createSlice(bytes));
-    cursor.skip(bytes.size());
-  }
-
-  SliceParts bodyParts(bodySlices.data(), bodySlices.size());
-
-  {
-    auto pending = pending_.wlock();
-    if (!pending->writeBatch) {
-      pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
-    }
-
-    pending->writeBatch->Put(
-        dbHandles_.columns[KeySpace::BlobFamily].get(), keyParts, bodyParts);
-    pending->writeBatch->Put(
-        dbHandles_.columns[KeySpace::BlobMetaDataFamily].get(),
-        hashSlice,
-        metadataBytes.slice());
-  }
-
-  flushIfNotBatch();
-
-  return metadata;
-}
-
-std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(
-    const Tree* tree) const {
+std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
   GitTreeSerializer serializer;
   for (auto& entry : tree->getTreeEntries()) {
     serializer.addEntry(std::move(entry));
@@ -295,114 +239,6 @@ std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(
     id = Hash::sha1(&treeBuf);
   }
   return std::make_pair(id, treeBuf);
-}
-
-Hash LocalStore::putTree(const Tree* tree) {
-  auto serialized = serializeTree(tree);
-  ByteRange treeData = serialized.second.coalesce();
-
-  auto& id = serialized.first;
-  put(KeySpace::TreeFamily, id.getBytes(), treeData);
-  return id;
-}
-
-void LocalStore::put(
-    KeySpace keySpace,
-    const Hash& id,
-    folly::ByteRange value) {
-  put(keySpace, id.getBytes(), value);
-}
-
-void LocalStore::put(
-    KeySpace keySpace,
-    folly::ByteRange key,
-    folly::ByteRange value) {
-  if (hasKey(keySpace, key)) {
-    // Don't try to overwrite an existing key
-    return;
-  }
-
-  {
-    auto pending = pending_.wlock();
-    if (!pending->writeBatch) {
-      pending->writeBatch = std::make_unique<WriteBatch>(writeBatchBufferSize_);
-    }
-
-    pending->writeBatch->Put(
-        dbHandles_.columns[keySpace].get(),
-        _createSlice(key),
-        _createSlice(value));
-  }
-
-  flushIfNotBatch();
-}
-
-void LocalStore::flushIfNotBatch() {
-  bool needFlush = writeBatchBufferSize_ == 0;
-
-  if (!needFlush) {
-    auto pending = pending_.wlock();
-    if (!pending->writeBatch) {
-      return;
-    }
-    needFlush = pending->writeBatch->GetDataSize() >= writeBatchBufferSize_;
-  }
-
-  if (needFlush) {
-    flush();
-  }
-}
-
-void LocalStore::enableBatchMode(size_t bufferSize) {
-  // FIXME: This code is not thread safe.  This doesn't lock around
-  // writeBatchBufferSize_, and this API assumes that only a single external
-  // caller tries to manage batch mode.
-  CHECK_EQ(writeBatchBufferSize_, 0) << "Must not already be in batch mode";
-  writeBatchBufferSize_ = bufferSize;
-}
-
-void LocalStore::disableBatchMode() {
-  CHECK_NE(writeBatchBufferSize_, 0) << "Should not already be in batch mode";
-  writeBatchBufferSize_ = 0;
-  flush();
-}
-
-void LocalStore::flush() {
-  auto pending = pending_.wlock();
-  if (!pending->writeBatch) {
-    return;
-  }
-
-  XLOG(DBG5) << "Flushing " << pending->writeBatch->Count()
-             << " entries with data size of "
-             << pending->writeBatch->GetDataSize();
-  auto status = dbHandles_.db->Write(WriteOptions(), pending->writeBatch.get());
-  XLOG(DBG5) << "... Flushed";
-  pending->writeBatch.reset();
-
-  if (!status.ok()) {
-    throw RocksException::build(
-        status, "error putting blob batch in local store");
-  }
-}
-
-void LocalStore::flushForRead() const {
-  auto pending = pending_.wlock();
-  if (!pending->writeBatch) {
-    return;
-  }
-
-  XLOG(DBG5) << "READ op: Flushing " << pending->writeBatch->Count()
-             << " entries with data size of "
-             << pending->writeBatch->GetDataSize();
-  auto status = dbHandles_.db->Write(WriteOptions(), pending->writeBatch.get());
-  XLOG(DBG5) << "... Flushed";
-  pending->writeBatch.reset();
-
-  if (!status.ok()) {
-    throw RocksException::build(
-        status, "error putting blob batch in local store");
-  }
 }
 
 bool LocalStore::hasKey(KeySpace keySpace, folly::ByteRange key) const {
@@ -432,5 +268,155 @@ bool LocalStore::hasKey(KeySpace keySpace, const Hash& id) const {
   return hasKey(keySpace, id.getBytes());
 }
 
+LocalStore::WriteBatch LocalStore::beginWrite(size_t bufSize) {
+  return LocalStore::WriteBatch(dbHandles_, bufSize);
 }
+
+LocalStore::WriteBatch::WriteBatch(RocksHandles& dbHandles, size_t bufSize)
+    : dbHandles_(dbHandles), writeBatch_(bufSize), bufSize_(bufSize) {}
+
+LocalStore::WriteBatch::~WriteBatch() {
+  if (writeBatch_.Count() > 0) {
+    XLOG(ERR) << "WriteBatch being destroyed with " << writeBatch_.Count()
+              << " items pending flush";
+  }
 }
+
+Hash LocalStore::putTree(const Tree* tree) {
+  auto serialized = LocalStore::serializeTree(tree);
+  ByteRange treeData = serialized.second.coalesce();
+
+  auto& id = serialized.first;
+  put(KeySpace::TreeFamily, id, treeData);
+  return id;
+}
+
+Hash LocalStore::WriteBatch::putTree(const Tree* tree) {
+  auto serialized = LocalStore::serializeTree(tree);
+  ByteRange treeData = serialized.second.coalesce();
+
+  auto& id = serialized.first;
+  put(KeySpace::TreeFamily, id.getBytes(), treeData);
+  return id;
+}
+
+BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
+  // Since blob serialization is moderately complex, just delegate
+  // the immediate putBlob to the method on the WriteBatch.
+  // Pre-allocate a buffer of approximately the right size; it
+  // needs to hold the blob content plus have room for a couple of
+  // hashes for the keys, plus some padding.
+  auto batch = beginWrite(blob->getContents().computeChainDataLength() + 64);
+  auto result = batch.putBlob(id, blob);
+  batch.flush();
+  return result;
+}
+
+BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
+  const IOBuf& contents = blob->getContents();
+
+  BlobMetadata metadata{Hash::sha1(&contents),
+                        contents.computeChainDataLength()};
+
+  SerializedBlobMetadata metadataBytes(metadata);
+
+  auto hashSlice = _createSlice(id.getBytes());
+  SliceParts keyParts(&hashSlice, 1);
+
+  ByteRange bodyBytes;
+
+  // Add a git-style blob prefix
+  auto prefix = folly::to<string>("blob ", contents.computeChainDataLength());
+  prefix.push_back('\0');
+  std::vector<Slice> bodySlices;
+  bodySlices.emplace_back(prefix);
+
+  // Add all of the IOBuf chunks
+  Cursor cursor(&contents);
+  while (true) {
+    auto bytes = cursor.peekBytes();
+    if (bytes.empty()) {
+      break;
+    }
+    bodySlices.push_back(_createSlice(bytes));
+    cursor.skip(bytes.size());
+  }
+
+  SliceParts bodyParts(bodySlices.data(), bodySlices.size());
+
+  writeBatch_.Put(
+      dbHandles_.columns[KeySpace::BlobFamily].get(), keyParts, bodyParts);
+
+  writeBatch_.Put(
+      dbHandles_.columns[KeySpace::BlobMetaDataFamily].get(),
+      hashSlice,
+      metadataBytes.slice());
+  flushIfNeeded();
+  return metadata;
+}
+
+void LocalStore::WriteBatch::flush() {
+  auto pending = writeBatch_.Count();
+  if (pending == 0) {
+    return;
+  }
+
+  XLOG(DBG5) << "Flushing " << pending << " entries with data size of "
+             << writeBatch_.GetDataSize();
+
+  auto status = dbHandles_.db->Write(WriteOptions(), &writeBatch_);
+  XLOG(DBG5) << "... Flushed";
+
+  if (!status.ok()) {
+    throw RocksException::build(
+        status, "error putting blob batch in local store");
+  }
+}
+
+void LocalStore::WriteBatch::flushIfNeeded() {
+  auto needFlush = bufSize_ > 0 && writeBatch_.GetDataSize() >= bufSize_;
+
+  if (needFlush) {
+    flush();
+  }
+}
+
+void LocalStore::put(
+    LocalStore::KeySpace keySpace,
+    const Hash& id,
+    folly::ByteRange value) {
+  put(keySpace, id.getBytes(), value);
+}
+
+void LocalStore::put(
+    LocalStore::KeySpace keySpace,
+    folly::ByteRange key,
+    folly::ByteRange value) {
+  dbHandles_.db->Put(
+      WriteOptions(),
+      dbHandles_.columns[keySpace].get(),
+      _createSlice(key),
+      _createSlice(value));
+}
+
+void LocalStore::WriteBatch::put(
+    LocalStore::KeySpace keySpace,
+    const Hash& id,
+    folly::ByteRange value) {
+  put(keySpace, id.getBytes(), value);
+}
+
+void LocalStore::WriteBatch::put(
+    LocalStore::KeySpace keySpace,
+    folly::ByteRange key,
+    folly::ByteRange value) {
+  writeBatch_.Put(
+      dbHandles_.columns[keySpace].get(),
+      _createSlice(key),
+      _createSlice(value));
+
+  flushIfNeeded();
+}
+
+} // namespace eden
+} // namespace facebook

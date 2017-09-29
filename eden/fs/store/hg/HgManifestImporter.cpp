@@ -24,11 +24,6 @@ using folly::io::Appender;
 using folly::IOBuf;
 using std::string;
 
-DEFINE_int32(
-    hgManifestImportBufferSize,
-    256 * 1024 * 1024, // 256MB
-    "Buffer size for batching LocalStore writes during hg manifest imports");
-
 namespace facebook {
 namespace eden {
 
@@ -58,7 +53,7 @@ class HgManifestImporter::PartialTree {
   /** Record this node against the store.
    * May only be called after compute() has been called (this method
    * will check and assert on this). */
-  Hash record(LocalStore* store);
+  Hash record(LocalStore* store, LocalStore::WriteBatch& batch);
 
   /** Compute the serialized version of this tree.
    * Records the id and data ready to be stored by a later call
@@ -125,7 +120,9 @@ Hash HgManifestImporter::PartialTree::compute(LocalStore* store) {
   return id_;
 }
 
-Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
+Hash HgManifestImporter::PartialTree::record(
+    LocalStore* store,
+    LocalStore::WriteBatch& batch) {
   DCHECK(computed_) << "Must have computed PartialTree prior to recording";
   // If the store already has data on this node, then we don't need to
   // recurse into any of our children; we're done!
@@ -137,10 +134,10 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
   // to store this node, so that failure to store one of these prevents
   // us from storing a parent for which we have no children computed.
   for (auto& it : trees_) {
-    it.record(store);
+    it.record(store, batch);
   }
 
-  store->put(LocalStore::KeySpace::TreeFamily, id_, treeData_.coalesce());
+  batch.put(LocalStore::KeySpace::TreeFamily, id_, treeData_.coalesce());
 
   XLOG(DBG6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
              << numPaths_ << " paths, " << trees_.size() << " trees)";
@@ -148,14 +145,17 @@ Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
   return id_;
 }
 
-HgManifestImporter::HgManifestImporter(LocalStore* store) : store_(store) {
+HgManifestImporter::HgManifestImporter(
+    LocalStore* store,
+    LocalStore::WriteBatch& writeBatch)
+    : store_(store), writeBatch_(writeBatch) {
   // Push the root directory onto the stack
   dirStack_.emplace_back(RelativePath(""));
-  store_->enableBatchMode(FLAGS_hgManifestImportBufferSize);
 }
 
 HgManifestImporter::~HgManifestImporter() {
-  store_->disableBatchMode();
+  // Explicitly place the destructor here, otherwise HgImporter.cpp
+  // fails to compile because PartialTree is internal to this file.
 }
 
 void HgManifestImporter::processEntry(
@@ -213,11 +213,11 @@ Hash HgManifestImporter::finish() {
   }
 
   auto rootHash = dirStack_.back().compute(store_);
-  dirStack_.back().record(store_);
+  dirStack_.back().record(store_, writeBatch_);
   dirStack_.pop_back();
   CHECK(dirStack_.empty());
 
-  store_->flush();
+  writeBatch_.flush();
 
   return rootHash;
 }
