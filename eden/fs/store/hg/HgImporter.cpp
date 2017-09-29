@@ -549,7 +549,25 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
                << manifestNode;
     sendFetchTreeRequest(path, manifestNode);
-    auto header = readChunkHeader();
+
+    ChunkHeader header;
+    try {
+      header = readChunkHeader();
+    } catch (const std::runtime_error& ex) {
+      if (StringPiece(ex.what()) == "pull failed on remote") {
+        // Most likely cause of an error here is this scenario:
+        // There is a local commit which does not have a tree manifest.
+        // Our request to _prefetchtrees here fails because the server
+        // cannot possibly have a tree for this local commit.
+        // Let's treat this as a MissingKeyError so that someone else
+        // further up the call stack will re-try this import using
+        // the flat manifest code path.
+        throw MissingKeyError(ex.what());
+      } else {
+        throw;
+      }
+    }
+
     if (header.dataLength != 0) {
       throw std::runtime_error(folly::to<string>(
           "got unexpected length ",
