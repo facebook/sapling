@@ -80,7 +80,7 @@ class IndexObject(BaseIndexObject):
         return i * indexsize
 
     def __delitem__(self, i):
-        if not isinstance(i, slice) or not i.stop == -1 or not i.step is None:
+        if not isinstance(i, slice) or not i.stop == -1 or i.step is not None:
             raise ValueError("deleting slices only supports a:-1 with step 1")
         i = self._fix_index(i.start)
         if i < self._lgt:
@@ -114,7 +114,7 @@ class InlinedIndexObject(BaseIndexObject):
         return count
 
     def __delitem__(self, i):
-        if not isinstance(i, slice) or not i.stop == -1 or not i.step is None:
+        if not isinstance(i, slice) or not i.stop == -1 or i.step is not None:
             raise ValueError("deleting slices only supports a:-1 with step 1")
         i = self._fix_index(i.start)
         if i < self._lgt:

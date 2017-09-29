@@ -393,7 +393,7 @@ class HTTPResponse(httplib.HTTPResponse):
     def read(self, amt=None):
         # the _rbuf test is only in this first if for speed.  It's not
         # logically necessary
-        if self._rbuf and not amt is None:
+        if self._rbuf and amt is not None:
             L = len(self._rbuf)
             if amt > L:
                 amt -= L
