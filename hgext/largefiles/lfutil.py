@@ -169,7 +169,8 @@ def openlfdirstate(ui, repo, create=True):
 def lfdirstatestatus(lfdirstate, repo):
     pctx = repo['.']
     match = matchmod.always(repo.root, repo.getcwd())
-    unsure, s = lfdirstate.status(match, [], False, False, False)
+    unsure, s = lfdirstate.status(match, subrepos=[], ignored=False,
+                                  clean=False, unknown=False)
     modified, clean = s.modified, s.clean
     for lfile in unsure:
         try:
@@ -551,8 +552,8 @@ def updatestandinsbymatch(repo, match):
         # large.
         lfdirstate = openlfdirstate(ui, repo)
         dirtymatch = matchmod.always(repo.root, repo.getcwd())
-        unsure, s = lfdirstate.status(dirtymatch, [], False, False,
-                                      False)
+        unsure, s = lfdirstate.status(dirtymatch, subrepos=[], ignored=False,
+                                      clean=False, unknown=False)
         modifiedfiles = unsure + s.modified + s.added + s.removed
         lfiles = listlfiles(repo)
         # this only loops through largefiles that exist (not

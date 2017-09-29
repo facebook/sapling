@@ -1756,12 +1756,11 @@ class workingctx(committablectx):
 
     def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
-        listignored, listclean, listunknown = ignored, clean, unknown
         subrepos = []
         if '.hgsub' in self:
             subrepos = sorted(self.substate)
-        cmp, s = self._repo.dirstate.status(match, subrepos, listignored,
-                                            listclean, listunknown)
+        cmp, s = self._repo.dirstate.status(match, subrepos, ignored=ignored,
+                                            clean=clean, unknown=unknown)
 
         # check for any possibly clean files
         fixup = []
@@ -1770,7 +1769,7 @@ class workingctx(committablectx):
             s.modified.extend(modified2)
             s.deleted.extend(deleted2)
 
-            if fixup and listclean:
+            if fixup and clean:
                 s.clean.extend(fixup)
 
         self._poststatusfixup(s, fixup)
