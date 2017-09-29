@@ -174,7 +174,7 @@ class progbar(object):
                 amt -= progwidth
                 bar = (' ' * int(progwidth - abs(amt)) + '<=>' +
                        ' ' * int(abs(amt)))
-            prog = ''.join(('[', bar , ']'))
+            prog = ''.join(('[', bar, ']'))
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)

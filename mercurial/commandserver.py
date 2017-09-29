@@ -272,8 +272,8 @@ class server(object):
 
         return cmd != ''
 
-    capabilities = {'runcommand'  : runcommand,
-                    'getencoding' : getencoding}
+    capabilities = {'runcommand': runcommand,
+                    'getencoding': getencoding}
 
     def serve(self):
         hellomsg = 'capabilities: ' + ' '.join(sorted(self.capabilities))

@@ -320,7 +320,7 @@ class hgwebdir(object):
             for typ, spec in hgweb_mod.archivespecs.iteritems():
                 if typ in allowed or ui.configbool("web", "allow" + typ,
                                                     untrusted=True):
-                    archives.append({"type" : typ, "extension": spec[2],
+                    archives.append({"type": typ, "extension": spec[2],
                                      "node": nodeid, "url": url})
             return archives
 

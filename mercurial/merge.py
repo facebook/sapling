@@ -419,7 +419,7 @@ class mergestate(object):
                            fca.path(), hex(fca.filenode()),
                            fco.path(), hex(fco.filenode()),
                            fcl.flags()]
-        self._stateextras[fd] = { 'ancestorlinknode' : hex(fca.node()) }
+        self._stateextras[fd] = {'ancestorlinknode': hex(fca.node())}
         self._dirty = True
 
     def __contains__(self, dfile):
@@ -864,7 +864,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 fla = ma.flags(f)
                 nol = 'l' not in fl1 + fl2 + fla
                 if n2 == a and fl2 == fla:
-                    actions[f] = ('k' , (), "remote unchanged")
+                    actions[f] = ('k', (), "remote unchanged")
                 elif n1 == a and fl1 == fla: # local unchanged - use remote
                     if n1 == n2: # optimization: keep local content
                         actions[f] = ('e', (fl2,), "update permissions")

@@ -151,7 +151,7 @@ class httppeer(wireproto.wirepeer):
         if urlopener:
             for h in urlopener.handlers:
                 h.close()
-                getattr(h, "close_all", lambda : None)()
+                getattr(h, "close_all", lambda: None)()
 
     # Begin of _basepeer interface.
 

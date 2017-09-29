@@ -243,10 +243,10 @@ def _runcatch(req):
         try:
             debugger = 'pdb'
             debugtrace = {
-                'pdb' : pdb.set_trace
+                'pdb': pdb.set_trace
             }
             debugmortem = {
-                'pdb' : pdb.post_mortem
+                'pdb': pdb.post_mortem
             }
 
             # read --config before doing anything else

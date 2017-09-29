@@ -87,4 +87,4 @@ def launch(application):
         if not headers_sent:
             write('')   # send headers now if body was empty
     finally:
-        getattr(content, 'close', lambda : None)()
+        getattr(content, 'close', lambda: None)()
