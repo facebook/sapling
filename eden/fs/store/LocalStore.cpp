@@ -371,6 +371,8 @@ void LocalStore::WriteBatch::flush() {
     throw RocksException::build(
         status, "error putting blob batch in local store");
   }
+
+  writeBatch_.Clear();
 }
 
 void LocalStore::WriteBatch::flushIfNeeded() {
