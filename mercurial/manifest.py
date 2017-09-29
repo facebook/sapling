@@ -442,6 +442,8 @@ class manifestdict(object):
         self._lm[key] = node, self.flags(key, '')
 
     def __contains__(self, key):
+        if key is None:
+            return False
         return key in self._lm
 
     def __delitem__(self, key):
