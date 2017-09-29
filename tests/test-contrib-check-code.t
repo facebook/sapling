@@ -285,11 +285,43 @@ web templates
   >           ''' "%-6d \n 123456 .:*+-= foobar")
   > EOF
 
+superfluous pass
+
+  $ cat > superfluous_pass.py <<EOF
+  > # correct examples
+  > if foo:
+  >     pass
+  > else:
+  >     # comment-only line means still need pass
+  >     pass
+  > def nothing():
+  >     pass
+  > class empty(object):
+  >     pass
+  > if whatever:
+  >     passvalue(value)
+  > # bad examples
+  > if foo:
+  >     "foo"
+  >     pass
+  > else: # trailing comment doesn't fool checker
+  >     wat()
+  >     pass
+  > def nothing():
+  >     "docstring means no pass"
+  >     pass
+  > class empty(object):
+  >     """multiline
+  >     docstring also
+  >     means no pass"""
+  >     pass
+  > EOF
+
 (Checking multiple invalid files at once examines whether caching
 translation table for repquote() works as expected or not. All files
 should break rules depending on result of repquote(), in this case)
 
-  $ "$check_code" stringjoin.py uigettext.py
+  $ "$check_code" stringjoin.py uigettext.py superfluous_pass.py
   stringjoin.py:1:
    > foo = (' foo'
    string join across lines with no space
@@ -317,4 +349,16 @@ should break rules depending on result of repquote(), in this case)
   uigettext.py:1:
    > ui.status("% 10s %05d % -3.2f %*s %%"
    missing _() in ui message (use () to hide false-positives)
+  superfluous_pass.py:14:
+   > if foo:
+   omit superfluous pass
+  superfluous_pass.py:17:
+   > else: # trailing comment doesn't fool checker
+   omit superfluous pass
+  superfluous_pass.py:20:
+   > def nothing():
+   omit superfluous pass
+  superfluous_pass.py:23:
+   > class empty(object):
+   omit superfluous pass
   [1]

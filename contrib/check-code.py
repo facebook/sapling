@@ -257,6 +257,16 @@ pypats = [
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
+    ((
+        # a line ending with a colon, potentially with trailing comments
+        r':([ \t]*#[^\n]*)?\n'
+        # one that is not a pass and not only a comment
+        r'(?P<indent>[ \t]+)[^#][^\n]+\n'
+        # more lines at the same indent level
+        r'((?P=indent)[^\n]+\n)*'
+        # a pass at the same indent level, which is bogus
+        r'(?P=indent)pass[ \t\n#]'
+      ), 'omit superfluous pass'),
     (r'.{81}', "line too long"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
