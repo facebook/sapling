@@ -15,7 +15,9 @@
 
 using folly::Future;
 using folly::makeFuture;
+using std::make_shared;
 using std::make_unique;
+using std::shared_ptr;
 using std::unique_ptr;
 using std::unordered_map;
 
@@ -53,32 +55,34 @@ void FakeObjectStore::setTreeForCommit(const Hash& commitID, Tree&& tree) {
   }
 }
 
-Future<std::unique_ptr<Tree>> FakeObjectStore::getTree(const Hash& id) const {
+Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
+    const Hash& id) const {
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
-    return makeFuture<unique_ptr<Tree>>(
+    return makeFuture<shared_ptr<const Tree>>(
         std::domain_error("tree " + id.toString() + " not found"));
   }
-  return makeFuture(make_unique<Tree>(iter->second));
+  return makeFuture(make_shared<Tree>(iter->second));
 }
 
-Future<std::unique_ptr<Blob>> FakeObjectStore::getBlob(const Hash& id) const {
+Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
+    const Hash& id) const {
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
-    return makeFuture<unique_ptr<Blob>>(
+    return makeFuture<shared_ptr<const Blob>>(
         std::domain_error("blob " + id.toString() + " not found"));
   }
-  return makeFuture(make_unique<Blob>(iter->second));
+  return makeFuture(make_shared<Blob>(iter->second));
 }
 
-Future<unique_ptr<Tree>> FakeObjectStore::getTreeForCommit(
+Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
     const Hash& commitID) const {
   auto iter = commits_.find(commitID);
   if (iter == commits_.end()) {
-    return makeFuture<unique_ptr<Tree>>(std::domain_error(
+    return makeFuture<shared_ptr<const Tree>>(std::domain_error(
         "tree data for commit " + commitID.toString() + " not found"));
   }
-  return makeFuture(make_unique<Tree>(iter->second));
+  return makeFuture(make_shared<Tree>(iter->second));
 }
 
 Hash FakeObjectStore::getSha1ForBlob(const Hash& id) const {

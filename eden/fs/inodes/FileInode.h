@@ -197,7 +197,7 @@ class FileInode : public InodeBase {
     /**
      * If backed by tree, the data from the tree, else nullptr.
      */
-    std::unique_ptr<Blob> blob;
+    std::shared_ptr<const Blob> blob;
 
     /**
      * If backed by an overlay file, whether the sha1 xattr is valid

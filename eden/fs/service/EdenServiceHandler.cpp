@@ -484,7 +484,7 @@ void EdenServiceHandler::debugGetScmTree(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
-  std::unique_ptr<Tree> tree;
+  std::shared_ptr<const Tree> tree;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
@@ -514,7 +514,7 @@ void EdenServiceHandler::debugGetScmBlob(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
-  std::unique_ptr<Blob> blob;
+  std::shared_ptr<const Blob> blob;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();

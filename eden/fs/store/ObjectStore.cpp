@@ -39,7 +39,7 @@ ObjectStore::ObjectStore(
 
 ObjectStore::~ObjectStore() {}
 
-Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
+Future<shared_ptr<const Tree>> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);
   if (tree) {
@@ -57,26 +57,26 @@ Future<unique_ptr<Tree>> ObjectStore::getTree(const Hash& id) const {
   // layer.  Therefore we currently don't bother de-duping loads at this layer.
 
   // Load the tree from the BackingStore.
-  return backingStore_->getTree(id).then([id](
-      std::unique_ptr<Tree> loadedTree) {
-    if (!loadedTree) {
-      // TODO: Perhaps we should do some short-term negative caching?
-      XLOG(DBG2) << "unable to find tree " << id;
-      throw std::domain_error(
-          folly::to<string>("tree ", id.toString(), " not found"));
-    }
+  return backingStore_->getTree(id).then(
+      [id](std::shared_ptr<const Tree> loadedTree) {
+        if (!loadedTree) {
+          // TODO: Perhaps we should do some short-term negative caching?
+          XLOG(DBG2) << "unable to find tree " << id;
+          throw std::domain_error(
+              folly::to<string>("tree ", id.toString(), " not found"));
+        }
 
-    // TODO: For now, the BackingStore objects actually end up already
-    // saving the Tree object in the LocalStore, so we don't do anything
-    // here.
-    //
-    // localStore_->putTree(loadedTree.get());
-    XLOG(DBG3) << "tree " << id << " retrieved from backing store";
-    return loadedTree;
-  });
+        // TODO: For now, the BackingStore objects actually end up already
+        // saving the Tree object in the LocalStore, so we don't do anything
+        // here.
+        //
+        // localStore_->putTree(loadedTree.get());
+        XLOG(DBG3) << "tree " << id << " retrieved from backing store";
+        return loadedTree;
+      });
 }
 
-Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
+Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {
     XLOG(DBG4) << "blob " << id << "  found in local store";
@@ -99,12 +99,12 @@ Future<unique_ptr<Blob>> ObjectStore::getBlob(const Hash& id) const {
       });
 }
 
-Future<unique_ptr<Tree>> ObjectStore::getTreeForCommit(
+Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
   return backingStore_->getTreeForCommit(commitID).then(
-      [commitID](std::unique_ptr<Tree> tree) {
+      [commitID](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ", commitID.toString()));

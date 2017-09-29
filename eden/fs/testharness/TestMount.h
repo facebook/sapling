@@ -213,7 +213,7 @@ class TestMount {
       const TreeInodePtr& treeInode);
 
   /** Convenience method for getting the Tree for the root of the mount. */
-  std::unique_ptr<Tree> getRootTree() const;
+  std::shared_ptr<const Tree> getRootTree() const;
 
   const std::shared_ptr<EdenMount>& getEdenMount() const {
     return edenMount_;

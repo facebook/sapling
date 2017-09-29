@@ -276,7 +276,7 @@ class TreeInode : public InodeBase {
       fuse_ino_t ino,
       TreeInodePtr parent,
       PathComponentPiece name,
-      std::unique_ptr<Tree>&& tree);
+      std::shared_ptr<const Tree>&& tree);
 
   /// Construct an inode that only has backing in the Overlay area
   TreeInode(
@@ -286,7 +286,7 @@ class TreeInode : public InodeBase {
       Dir&& dir);
 
   /// Constructors for the root TreeInode
-  TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree);
+  TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree);
   TreeInode(EdenMount* mount, Dir&& tree);
 
   ~TreeInode() override;
@@ -396,7 +396,7 @@ class TreeInode : public InodeBase {
   folly::Future<folly::Unit> diff(
       const DiffContext* context,
       RelativePathPiece currentPath,
-      std::unique_ptr<Tree> tree,
+      std::shared_ptr<const Tree> tree,
       const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
@@ -424,8 +424,8 @@ class TreeInode : public InodeBase {
    */
   folly::Future<folly::Unit> checkout(
       CheckoutContext* ctx,
-      std::unique_ptr<Tree> fromTree,
-      std::unique_ptr<Tree> toTree);
+      std::shared_ptr<const Tree> fromTree,
+      std::shared_ptr<const Tree> toTree);
 
   /**
    * Update this directory when a child entry is materialized.
@@ -538,8 +538,8 @@ class TreeInode : public InodeBase {
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,
-      std::unique_ptr<Tree> oldTree,
-      std::unique_ptr<Tree> newTree,
+      std::shared_ptr<const Tree> oldTree,
+      std::shared_ptr<const Tree> newTree,
       const folly::Optional<TreeEntry>& newScmEntry);
 
   /**
@@ -692,7 +692,7 @@ class TreeInode : public InodeBase {
       InodePtr gitignoreInode,
       const DiffContext* context,
       RelativePathPiece currentPath,
-      std::unique_ptr<Tree> tree,
+      std::shared_ptr<const Tree> tree,
       const GitIgnoreStack* parentIgnore,
       bool isIgnored);
 
@@ -708,7 +708,7 @@ class TreeInode : public InodeBase {
       folly::Synchronized<Dir>::LockedPtr contentsLock,
       const DiffContext* context,
       RelativePathPiece currentPath,
-      std::unique_ptr<Tree> tree,
+      std::shared_ptr<const Tree> tree,
       std::unique_ptr<GitIgnoreStack> ignore,
       bool isIgnored);
 

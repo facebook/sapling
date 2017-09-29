@@ -215,8 +215,8 @@ class EdenMount {
   fuse_ino_t getDotEdenInodeNumber() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
-  std::unique_ptr<Tree> getRootTree() const;
-  folly::Future<std::unique_ptr<Tree>> getRootTreeFuture() const;
+  std::shared_ptr<const Tree> getRootTree() const;
+  folly::Future<std::shared_ptr<const Tree>> getRootTreeFuture() const;
 
   /**
    * Look up the Inode object for the specified path.

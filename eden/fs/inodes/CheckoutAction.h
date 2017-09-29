@@ -105,10 +105,10 @@ class CheckoutAction {
       const TreeEntry* newScmEntry,
       folly::Future<InodePtr> inodeFuture);
 
-  void setOldTree(std::unique_ptr<Tree> tree);
-  void setOldBlob(std::unique_ptr<Blob> blob);
-  void setNewTree(std::unique_ptr<Tree> tree);
-  void setNewBlob(std::unique_ptr<Blob> blob);
+  void setOldTree(std::shared_ptr<const Tree> tree);
+  void setOldBlob(std::shared_ptr<const Blob> blob);
+  void setNewTree(std::shared_ptr<const Tree> tree);
+  void setNewBlob(std::shared_ptr<const Blob> blob);
   void setInode(InodePtr inode);
   void error(folly::StringPiece msg, const folly::exception_wrapper& ew);
 
@@ -164,10 +164,10 @@ class CheckoutAction {
    * loading the blob data itself.
    */
   InodePtr inode_;
-  std::unique_ptr<Tree> oldTree_;
-  std::unique_ptr<Blob> oldBlob_;
-  std::unique_ptr<Tree> newTree_;
-  std::unique_ptr<Blob> newBlob_;
+  std::shared_ptr<const Tree> oldTree_;
+  std::shared_ptr<const Blob> oldBlob_;
+  std::shared_ptr<const Tree> newTree_;
+  std::shared_ptr<const Blob> newBlob_;
 
   /**
    * The errors vector keeps track of any errors that occurred while trying to

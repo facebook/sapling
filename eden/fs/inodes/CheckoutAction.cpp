@@ -127,7 +127,8 @@ Future<Unit> CheckoutAction::run(
     if (oldScmEntry_.hasValue()) {
       if (oldScmEntry_.value().getType() == TreeEntryType::TREE) {
         store->getTree(oldScmEntry_.value().getHash())
-            .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> oldTree) {
+            .then([rc = LoadingRefcount(this)](
+                      std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -135,7 +136,8 @@ Future<Unit> CheckoutAction::run(
             });
       } else {
         store->getBlob(oldScmEntry_.value().getHash())
-            .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> oldBlob) {
+            .then([rc = LoadingRefcount(this)](
+                      std::shared_ptr<const Blob> oldBlob) {
               rc->setOldBlob(std::move(oldBlob));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -149,7 +151,8 @@ Future<Unit> CheckoutAction::run(
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.getType() == TreeEntryType::TREE) {
         store->getTree(newEntry.getHash())
-            .then([rc = LoadingRefcount(this)](std::unique_ptr<Tree> newTree) {
+            .then([rc = LoadingRefcount(this)](
+                      std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -157,7 +160,8 @@ Future<Unit> CheckoutAction::run(
             });
       } else {
         store->getBlob(newEntry.getHash())
-            .then([rc = LoadingRefcount(this)](std::unique_ptr<Blob> newBlob) {
+            .then([rc = LoadingRefcount(this)](
+                      std::shared_ptr<const Blob> newBlob) {
               rc->setNewBlob(std::move(newBlob));
             })
             .onError([rc = LoadingRefcount(this)](const exception_wrapper& ew) {
@@ -185,25 +189,25 @@ Future<Unit> CheckoutAction::run(
   return promise_.getFuture();
 }
 
-void CheckoutAction::setOldTree(std::unique_ptr<Tree> tree) {
+void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
   CHECK(!oldTree_);
   CHECK(!oldBlob_);
   oldTree_ = std::move(tree);
 }
 
-void CheckoutAction::setOldBlob(std::unique_ptr<Blob> blob) {
+void CheckoutAction::setOldBlob(std::shared_ptr<const Blob> blob) {
   CHECK(!oldTree_);
   CHECK(!oldBlob_);
   oldBlob_ = std::move(blob);
 }
 
-void CheckoutAction::setNewTree(std::unique_ptr<Tree> tree) {
+void CheckoutAction::setNewTree(std::shared_ptr<const Tree> tree) {
   CHECK(!newTree_);
   CHECK(!newBlob_);
   newTree_ = std::move(tree);
 }
 
-void CheckoutAction::setNewBlob(std::unique_ptr<Blob> blob) {
+void CheckoutAction::setNewBlob(std::shared_ptr<const Blob> blob) {
   CHECK(!newTree_);
   CHECK(!newBlob_);
   newBlob_ = std::move(blob);

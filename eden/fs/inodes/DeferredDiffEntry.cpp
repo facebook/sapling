@@ -25,6 +25,7 @@ using folly::makeFuture;
 using folly::Future;
 using folly::Unit;
 using std::make_unique;
+using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
 
@@ -120,12 +121,11 @@ folly::Future<folly::Unit> diffRemovedTree(
     RelativePath currentPath,
     const TreeEntry& entry) {
   DCHECK_EQ(TreeEntryType::TREE, entry.getType());
-  return context->store->getTree(entry.getHash()).then([
-    context,
-    currentPath = RelativePath{std::move(currentPath)}
-  ](unique_ptr<Tree> && tree) {
-    return diffRemovedTree(context, std::move(currentPath), tree.get());
-  });
+  return context->store->getTree(entry.getHash())
+      .then([context, currentPath = RelativePath{std::move(currentPath)}](
+                shared_ptr<const Tree>&& tree) {
+        return diffRemovedTree(context, std::move(currentPath), tree.get());
+      });
 }
 
 folly::Future<folly::Unit> diffRemovedTree(
@@ -260,13 +260,12 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     }
 
     // Possibly modified directory.  Load the Tree in question.
-    return context_->store->getTree(scmEntry_.getHash()).then([
-      this,
-      treeInode = std::move(treeInode)
-    ](unique_ptr<Tree> && tree) {
-      return treeInode->diff(
-          context_, getPath(), std::move(tree), ignore_, isIgnored_);
-    });
+    return context_->store->getTree(scmEntry_.getHash())
+        .then([this, treeInode = std::move(treeInode)](
+                  shared_ptr<const Tree>&& tree) {
+          return treeInode->diff(
+              context_, getPath(), std::move(tree), ignore_, isIgnored_);
+        });
   }
 
   folly::Future<folly::Unit> runForScmBlob() {
@@ -297,7 +296,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
   TreeEntry scmEntry_;
   folly::Optional<folly::Future<InodePtr>> inodeFuture_;
   InodePtr inode_;
-  unique_ptr<Tree> scmTree_;
+  shared_ptr<const Tree> scmTree_;
 };
 
 class ModifiedBlobDiffEntry : public DeferredDiffEntry {

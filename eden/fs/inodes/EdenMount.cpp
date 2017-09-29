@@ -38,15 +38,18 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 
-using std::make_unique;
-using std::unique_ptr;
-using std::vector;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
+using folly::Unit;
+using folly::makeFuture;
 using folly::setThreadName;
 using folly::to;
+using std::make_shared;
+using std::make_unique;
+using std::shared_ptr;
+using std::unique_ptr;
+using std::vector;
 
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
@@ -139,7 +142,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
         TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value())));
   }
   return objectStore_->getTreeForCommit(parentCommits.parent1())
-      .then([this](std::unique_ptr<Tree> tree) {
+      .then([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
 }
@@ -321,7 +324,8 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
-folly::Future<std::unique_ptr<Tree>> EdenMount::getRootTreeFuture() const {
+folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
+    const {
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
   return objectStore_->getTreeForCommit(commitHash);
 }
@@ -330,7 +334,7 @@ fuse_ino_t EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
 }
 
-std::unique_ptr<Tree> EdenMount::getRootTree() const {
+std::shared_ptr<const Tree> EdenMount::getRootTree() const {
   // TODO: We should convert callers of this API to use the Future-based
   // version.
   return getRootTreeFuture().get();
@@ -368,24 +372,18 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
 
   return folly::collect(fromTreeFuture, toTreeFuture)
-      .then([this,
-             ctx](std::tuple<unique_ptr<Tree>, unique_ptr<Tree>> treeResults) {
-        auto& fromTree = std::get<0>(treeResults);
-        auto& toTree = std::get<1>(treeResults);
+      .then(
+          [this, ctx](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
+                          treeResults) {
+            auto& fromTree = std::get<0>(treeResults);
+            auto& toTree = std::get<1>(treeResults);
 
-        // TODO: We should change the code to use shared_ptr<Tree>.
-        // The ObjectStore should always return shared_ptrs so it can cache
-        // them if we want to do so in the future.
-        auto toTreeCopy = make_unique<Tree>(*toTree);
-
-        ctx->start(this->acquireRenameLock());
-        return this->getRootInode()
-            ->checkout(ctx.get(), std::move(fromTree), std::move(toTree))
-            .then([toTreeCopy = std::move(toTreeCopy)]() mutable {
-              return std::move(toTreeCopy);
-            });
-      })
-      .then([this](std::unique_ptr<Tree> toTree) {
+            ctx->start(this->acquireRenameLock());
+            return this->getRootInode()
+                ->checkout(ctx.get(), fromTree, toTree)
+                .then([toTree]() mutable { return toTree; });
+          })
+      .then([this](std::shared_ptr<const Tree> toTree) {
         return dirstate_->onSnapshotChanged(toTree.get());
       })
       .then([this, ctx, oldParents, snapshotHash]() {
@@ -422,8 +420,8 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
 
   auto rootInode = getRootInode();
   return getRootTreeFuture()
-      .then([ ctxPtr, rootInode = std::move(rootInode) ](
-          std::unique_ptr<Tree> && rootTree) {
+      .then([ctxPtr, rootInode = std::move(rootInode)](
+                std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
             ctxPtr,
             RelativePathPiece{},
@@ -448,7 +446,7 @@ Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
   // directives into a tree-like data structure.
 
   return objectStore_->getTreeForCommit(parents.parent1())
-      .then([this](std::unique_ptr<Tree> rootTree) {
+      .then([this](std::shared_ptr<const Tree> rootTree) {
         return dirstate_->onSnapshotChanged(rootTree.get());
       })
       .then([

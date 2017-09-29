@@ -48,6 +48,7 @@ using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
 using std::make_unique;
+using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
 
@@ -121,7 +122,7 @@ TreeInode::TreeInode(
     fuse_ino_t ino,
     TreeInodePtr parent,
     PathComponentPiece name,
-    std::unique_ptr<Tree>&& tree)
+    std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           ino,
           parent,
@@ -139,7 +140,7 @@ TreeInode::TreeInode(
   DCHECK_NE(ino, FUSE_ROOT_ID);
 }
 
-TreeInode::TreeInode(EdenMount* mount, std::unique_ptr<Tree>&& tree)
+TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
           buildDirFromTree(tree.get(), mount->getLastCheckoutTime())) {}
@@ -472,15 +473,14 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   if (!entry->isMaterialized()) {
     return getStore()
         ->getTree(entry->getHash())
-        .then([
-          self = inodePtrFromThis(),
-          childName = PathComponent{name},
-          number
-        ](std::unique_ptr<Tree> tree)
-                  ->unique_ptr<InodeBase> {
-                    return make_unique<TreeInode>(
-                        number, self, childName, std::move(tree));
-                  });
+        .then(
+            [self = inodePtrFromThis(),
+             childName = PathComponent{name},
+             number](
+                std::shared_ptr<const Tree> tree) -> unique_ptr<InodeBase> {
+              return make_unique<TreeInode>(
+                  number, self, childName, std::move(tree));
+            });
   }
 
   // No corresponding TreeEntry, this exists only in the overlay.
@@ -1543,7 +1543,7 @@ const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
 Future<Unit> TreeInode::diff(
     const DiffContext* context,
     RelativePathPiece currentPath,
-    unique_ptr<Tree> tree,
+    shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   static const PathComponentPiece kIgnoreFilename{".gitignore"};
@@ -1653,7 +1653,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     InodePtr gitignoreInode,
     const DiffContext* context,
     RelativePathPiece currentPath,
-    unique_ptr<Tree> tree,
+    shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
   auto fileInode = gitignoreInode.asFileOrNull();
@@ -1717,7 +1717,7 @@ Future<Unit> TreeInode::computeDiff(
     folly::Synchronized<Dir>::LockedPtr contentsLock,
     const DiffContext* context,
     RelativePathPiece currentPath,
-    unique_ptr<Tree> tree,
+    shared_ptr<const Tree> tree,
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
   DCHECK(isIgnored || ignore != nullptr)
@@ -1997,8 +1997,8 @@ Future<Unit> TreeInode::computeDiff(
 
 Future<Unit> TreeInode::checkout(
     CheckoutContext* ctx,
-    std::unique_ptr<Tree> fromTree,
-    std::unique_ptr<Tree> toTree) {
+    std::shared_ptr<const Tree> fromTree,
+    std::shared_ptr<const Tree> toTree) {
   XLOG(DBG4) << "checkout: starting update of " << getLogPath() << ": "
              << (fromTree ? fromTree->getHash().toString() : "<none>")
              << " --> " << (toTree ? toTree->getHash().toString() : "<none>");
@@ -2246,8 +2246,8 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     CheckoutContext* ctx,
     PathComponentPiece name,
     InodePtr inode,
-    std::unique_ptr<Tree> oldTree,
-    std::unique_ptr<Tree> newTree,
+    std::shared_ptr<const Tree> oldTree,
+    std::shared_ptr<const Tree> newTree,
     const folly::Optional<TreeEntry>& newScmEntry) {
   CHECK(ctx->shouldApplyChanges());
 

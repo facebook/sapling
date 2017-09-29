@@ -43,11 +43,11 @@ class IObjectStore {
   /*
    * Object access APIs.
    */
-  virtual folly::Future<std::unique_ptr<Tree>> getTree(
+  virtual folly::Future<std::shared_ptr<const Tree>> getTree(
       const Hash& id) const = 0;
-  virtual folly::Future<std::unique_ptr<Blob>> getBlob(
+  virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id) const = 0;
-  virtual folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
+  virtual folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID) const = 0;
   virtual folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const = 0;
 };

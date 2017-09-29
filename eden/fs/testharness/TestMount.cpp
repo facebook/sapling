@@ -382,7 +382,7 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
   return folly::collect(childFutures).unit();
 }
 
-std::unique_ptr<Tree> TestMount::getRootTree() const {
+std::shared_ptr<const Tree> TestMount::getRootTree() const {
   return edenMount_->getRootTree();
 }
 
