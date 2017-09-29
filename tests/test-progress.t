@@ -185,27 +185,9 @@ test delay time estimates
 
 #if no-chg
 
-  $ cat > mocktime.py <<EOF
-  > import os
-  > import time
-  > 
-  > class mocktime(object):
-  >     def __init__(self, increment):
-  >         self.time = 0
-  >         self.increment = [int(s) for s in increment.split()]
-  >         self.pos = 0
-  >     def __call__(self):
-  >         self.time += self.increment[self.pos % len(self.increment)]
-  >         self.pos += 1
-  >         return self.time
-  > 
-  > def uisetup(ui):
-  >     time.time = mocktime(os.environ.get('MOCKTIME', '11'))
-  > EOF
-
   $ cp $HGRCPATH.orig $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mocktime=`pwd`/mocktime.py" >> $HGRCPATH
+  $ echo "mocktime=$TESTDIR/mocktime.py" >> $HGRCPATH
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
   $ echo "[progress]" >> $HGRCPATH
@@ -213,7 +195,7 @@ test delay time estimates
   $ echo "delay=25" >> $HGRCPATH
   $ echo "width=60" >> $HGRCPATH
 
-  $ hg -y loop 8
+  $ MOCKTIME=11 hg -y loop 8
   \r (no-eol) (esc)
   loop [=========>                                ] 2/8 1m07s\r (no-eol) (esc)
   loop [===============>                            ] 3/8 56s\r (no-eol) (esc)
@@ -274,7 +256,7 @@ Non-linear progress:
                                                               \r (no-eol) (esc)
 
 Time estimates should not fail when there's no end point:
-  $ hg -y loop -- -4
+  $ MOCKTIME=11 hg -y loop -- -4
   \r (no-eol) (esc)
   loop [ <=>                                              ] 2\r (no-eol) (esc)
   loop [  <=>                                             ] 3\r (no-eol) (esc)

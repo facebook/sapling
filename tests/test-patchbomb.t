@@ -323,7 +323,8 @@ Test breaking format changes aren't
   $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip \
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0 \
-  > --config progress.width=60
+  > --config progress.width=60 \
+  > --config extensions.mocktime=$TESTDIR/mocktime.py
   this patch series consists of 2 patches.
   
   
