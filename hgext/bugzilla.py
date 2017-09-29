@@ -412,11 +412,9 @@ class bzaccess(object):
 
     def filter_real_bug_ids(self, bugs):
         '''remove bug IDs that do not exist in Bugzilla from bugs.'''
-        pass
 
     def filter_cset_known_bug_ids(self, node, bugs):
         '''remove bug IDs where node occurs in comment text from bugs.'''
-        pass
 
     def updatebug(self, bugid, newstate, text, committer):
         '''update the specified bug. Add comment text and set new states.
@@ -424,7 +422,6 @@ class bzaccess(object):
         If possible add the comment as being from the committer of
         the changeset. Otherwise use the default Bugzilla user.
         '''
-        pass
 
     def notify(self, bugs, committer):
         '''Force sending of Bugzilla notification emails.
@@ -432,7 +429,6 @@ class bzaccess(object):
         Only required if the access method does not trigger notification
         emails automatically.
         '''
-        pass
 
 # Bugzilla via direct access to MySQL database.
 class bzmysql(bzaccess):
