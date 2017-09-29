@@ -75,7 +75,8 @@ def patches(a, bins):
     # copy all the patches into our segment so we can memmove from them
     pos = b2 + bl
     m.seek(pos)
-    for p in bins: m.write(p)
+    for p in bins:
+        m.write(p)
 
     for plen in plens:
         # if our list gets too long, execute it

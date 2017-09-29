@@ -127,7 +127,8 @@ class sshserver(wireproto.abstractserverproto):
                 r = impl()
                 if r is not None:
                     self.sendresponse(r)
-            else: self.sendresponse("")
+            else:
+                self.sendresponse("")
         return cmd != ''
 
     def _client(self):

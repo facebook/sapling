@@ -1605,8 +1605,10 @@ def mktempcopy(name, emptyok=False, createmode=None):
         ifp.close()
         ofp.close()
     except: # re-raises
-        try: os.unlink(temp)
-        except OSError: pass
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
         raise
     return temp
 

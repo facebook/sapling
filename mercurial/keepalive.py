@@ -135,7 +135,8 @@ class ConnectionManager(object):
                 del self._connmap[connection]
                 del self._readymap[connection]
                 self._hostmap[host].remove(connection)
-                if not self._hostmap[host]: del self._hostmap[host]
+                if not self._hostmap[host]:
+                    del self._hostmap[host]
         finally:
             self._lock.release()
 
@@ -621,7 +622,8 @@ def continuity(url):
         f = fo.readline()
         if f:
             foo = foo + f
-        else: break
+        else:
+            break
     fo.close()
     m = md5(foo)
     print(format % ('keepalive readline', m.hexdigest()))
