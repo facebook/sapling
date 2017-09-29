@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 extern crate bookmarks;
 
@@ -22,6 +20,8 @@ extern crate serde;
 #[cfg(test)]
 extern crate tempdir;
 
+extern crate futures_ext;
+
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, SeekFrom};
@@ -32,18 +32,19 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
-use bincode::{Infinite, deserialize, serialize};
+use bincode::{deserialize, serialize, Infinite};
 use futures::{Async, Poll};
-use futures::future::{BoxFuture, Future, IntoFuture, poll_fn};
-use futures::stream::{self, BoxStream, Stream};
+use futures::future::{poll_fn, Future, IntoFuture};
+use futures::stream::{self, Stream};
 use futures_cpupool::CpuPool;
 use nix::fcntl::{self, FlockArg};
 use nix::sys::stat;
-use percent_encoding::{DEFAULT_ENCODE_SET, percent_decode, percent_encode};
+use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use bookmarks::{Bookmarks, BookmarksMut, Version};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 mod errors {
     error_chain!{
@@ -134,7 +135,7 @@ where
                 let future = poll_fn(move || poll_get::<V>(&mutex));
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 
     fn keys(&self) -> Self::Keys {
@@ -159,8 +160,8 @@ where
                 })
         });
         match names {
-            Ok(v) => stream::iter(v).boxed(),
-            Err(e) => stream::once(Err(e.into())).boxed(),
+            Ok(v) => stream::iter_ok(v).and_then(|x| x).boxify(),
+            Err(e) => stream::once(Err(e.into())).boxify(),
         }
     }
 }
@@ -181,7 +182,7 @@ where
                 let future = poll_fn(move || poll_set(&mutex, &value, &version));
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 
     fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
@@ -193,7 +194,7 @@ where
                 let future = poll_fn(move || poll_delete(&mutex, &version));
                 pool.spawn(future)
             })
-            .boxed()
+            .boxify()
     }
 }
 
