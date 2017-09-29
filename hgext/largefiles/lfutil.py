@@ -155,7 +155,8 @@ def openlfdirstate(ui, repo, create=True):
     # largefiles operation in a new clone.
     if create and not vfs.exists(vfs.join(lfstoredir, 'dirstate')):
         matcher = getstandinmatcher(repo)
-        standins = repo.dirstate.walk(matcher, [], False, False)
+        standins = repo.dirstate.walk(matcher, subrepos=[], unknown=False,
+                                      ignored=False)
 
         if len(standins) > 0:
             vfs.makedirs(lfstoredir)
@@ -428,7 +429,8 @@ def getstandinsstate(repo):
     standins = []
     matcher = getstandinmatcher(repo)
     wctx = repo[None]
-    for standin in repo.dirstate.walk(matcher, [], False, False):
+    for standin in repo.dirstate.walk(matcher, subrepos=[], unknown=False,
+                                      ignored=False):
         lfile = splitstandin(standin)
         try:
             hash = readasstandin(wctx[standin])
@@ -573,7 +575,8 @@ def updatestandinsbymatch(repo, match):
     # Case 2: user calls commit with specified patterns: refresh
     # any matching big files.
     smatcher = composestandinmatcher(repo, match)
-    standins = repo.dirstate.walk(smatcher, [], False, False)
+    standins = repo.dirstate.walk(smatcher, subrepos=[], unknown=False,
+                                  ignored=False)
 
     # No matching big files: get out of the way and pass control to
     # the usual commit() method.

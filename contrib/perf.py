@@ -371,7 +371,8 @@ def clearfilecache(repo, attrname):
 def perfwalk(ui, repo, *pats, **opts):
     timer, fm = gettimer(ui, opts)
     m = scmutil.match(repo[None], pats, {})
-    timer(lambda: len(list(repo.dirstate.walk(m, [], True, False))))
+    timer(lambda: len(list(repo.dirstate.walk(m, subrepos=[], unknown=True,
+                                              ignored=False))))
     fm.end()
 
 @command('perfannotate', formatteropts)

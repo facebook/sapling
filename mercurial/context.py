@@ -1478,8 +1478,9 @@ class committablectx(basectx):
 
     def walk(self, match):
         '''Generates matching file names.'''
-        return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
-                                               True, False))
+        return sorted(self._repo.dirstate.walk(match,
+                                               subrepos=sorted(self.substate),
+                                               unknown=True, ignored=False))
 
     def matches(self, match):
         return sorted(self._repo.dirstate.matches(match))
