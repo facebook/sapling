@@ -618,13 +618,9 @@ def shownamespaces(**args):
     repo = ctx.repo()
 
     namespaces = util.sortdict()
-    colornames = {}
-    builtins = {}
 
     for k, ns in repo.names.iteritems():
         namespaces[k] = showlist('name', ns.names(repo, ctx.node()), args)
-        colornames[k] = ns.colorname
-        builtins[k] = ns.builtin
 
     f = _showlist('namespace', list(namespaces), args)
 
@@ -632,8 +628,8 @@ def shownamespaces(**args):
         return {
             'namespace': ns,
             'names': namespaces[ns],
-            'builtin': builtins[ns],
-            'colorname': colornames[ns],
+            'builtin': repo.names[ns].builtin,
+            'colorname': repo.names[ns].colorname,
         }
 
     return _hybrid(f, namespaces, makemap, pycompat.identity)
