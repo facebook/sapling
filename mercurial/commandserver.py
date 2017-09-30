@@ -184,7 +184,6 @@ class server(object):
 
     def cleanup(self):
         """release and restore resources taken during server session"""
-        pass
 
     def _read(self, size):
         if not size:
@@ -422,7 +421,6 @@ class unixservicehandler(object):
 
     def newconnection(self):
         """Called when main process notices new connection"""
-        pass
 
     def createcmdserver(self, repo, conn, fin, fout):
         """Create new command server instance; called in the process that
