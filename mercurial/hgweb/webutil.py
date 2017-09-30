@@ -170,9 +170,24 @@ class _siblings(object):
     def __len__(self):
         return len(self.siblings)
 
-def annotate(fctx, ui):
+def difffeatureopts(req, ui, section):
     diffopts = patch.difffeatureopts(ui, untrusted=True,
-                                     section='annotate', whitespace=True)
+                                     section=section, whitespace=True)
+
+    for k in ('ignorews', 'ignorewsamount', 'ignorewseol', 'ignoreblanklines'):
+        v = req.form.get(k, [None])[0]
+        if v is not None:
+            try:
+                v = bool(int(v))
+            except ValueError:
+                v = True
+
+            setattr(diffopts, k, v)
+
+    return diffopts
+
+def annotate(req, fctx, ui):
+    diffopts = difffeatureopts(req, ui, 'annotate')
     return fctx.annotate(follow=True, linenumber=True, diffopts=diffopts)
 
 def parents(ctx, hide=None):

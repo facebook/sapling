@@ -863,6 +863,12 @@ def annotate(web, req, tmpl):
 
     Show changeset information for each line in a file.
 
+    The ``ignorews``, ``ignorewsamount``, ``ignorewseol``, and
+    ``ignoreblanklines`` query string arguments have the same meaning as
+    their ``[annotate]`` config equivalents. A value of ``0`` sets the
+    whitespace option to false. All other values are true. If not defined,
+    the server default settings are used.
+
     The ``fileannotate`` template is rendered.
     """
     fctx = webutil.filectx(web.repo, req)
@@ -895,7 +901,7 @@ def annotate(web, req, tmpl):
                   or 'application/octet-stream')
             lines = [((fctx.filectx(fctx.filerev()), 1), '(binary:%s)' % mt)]
         else:
-            lines = webutil.annotate(fctx, web.repo.ui)
+            lines = webutil.annotate(req, fctx, web.repo.ui)
 
         previousrev = None
         blockparitygen = paritygen(1)
