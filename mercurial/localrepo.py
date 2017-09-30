@@ -2181,7 +2181,6 @@ class localrepository(object):
         to be performed before pushing, or call it if they override push
         command.
         """
-        pass
 
     @unfilteredpropertycache
     def prepushoutgoinghooks(self):
