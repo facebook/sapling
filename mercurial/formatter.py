@@ -167,7 +167,6 @@ class baseformatter(object):
             self.end()
     def _showitem(self):
         '''show a formatted item once all data is collected'''
-        pass
     def startitem(self):
         '''begin an item in the format list'''
         if self._item is not None:
@@ -206,7 +205,6 @@ class baseformatter(object):
         self._item.update(zip(fieldkeys, fielddata))
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
-        pass
     def isplain(self):
         '''check for plain formatter usage'''
         return False
