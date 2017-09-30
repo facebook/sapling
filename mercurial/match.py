@@ -250,7 +250,6 @@ class basematcher(object):
     def bad(self, f, msg):
         '''Callback from dirstate.walk for each explicit file that can't be
         found/accessed, with an error message.'''
-        pass
 
     # If an explicitdir is set, it will be called when an explicitly listed
     # directory is visited.
