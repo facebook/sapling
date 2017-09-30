@@ -600,7 +600,6 @@ class abstractsubrepo(object):
         walk recursively through the directory tree, finding all files
         matched by the match function
         '''
-        pass
 
     def forget(self, match, prefix):
         return ([], [])
