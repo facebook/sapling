@@ -618,9 +618,14 @@ def shownamespaces(**args):
     repo = ctx.repo()
 
     namespaces = util.sortdict()
+    def makensmapfn(ns):
+        # 'name' for iterating over namespaces, templatename for local reference
+        return lambda v: {'name': v, ns.templatename: v}
 
     for k, ns in repo.names.iteritems():
-        namespaces[k] = showlist('name', ns.names(repo, ctx.node()), args)
+        names = ns.names(repo, ctx.node())
+        f = _showlist('name', names, args)
+        namespaces[k] = _hybrid(f, names, makensmapfn(ns), pycompat.identity)
 
     f = _showlist('namespace', list(namespaces), args)
 

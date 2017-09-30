@@ -4130,6 +4130,9 @@ Test namespaces dict
   $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
   bar
   foo
+  $ hg log -r2 -T '{namespaces.bookmarks % "{bookmark}\n"}'
+  bar
+  foo
 
 Test stringify on sub expressions
 
