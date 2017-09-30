@@ -141,7 +141,7 @@ def _tracefile(fctx, am, limit=-1):
 def _dirstatecopies(d):
     ds = d._repo.dirstate
     c = ds.copies().copy()
-    for k in c.keys():
+    for k in list(c):
         if ds[k] not in 'anm':
             del c[k]
     return c
@@ -494,7 +494,7 @@ def _fullcopytracing(repo, c1, c2, base):
     renamedelete = {}
     renamedeleteset = set()
     divergeset = set()
-    for of, fl in diverge.items():
+    for of, fl in list(diverge.items()):
         if len(fl) == 1 or of in c1 or of in c2:
             del diverge[of] # not actually divergent, or not a rename
             if of not in c1 and of not in c2:

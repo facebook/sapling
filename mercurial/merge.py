@@ -1029,7 +1029,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
             # bids is a mapping from action method to list af actions
             # Consensus?
             if len(bids) == 1: # all bids are the same kind of method
-                m, l = bids.items()[0]
+                m, l = list(bids.items())[0]
                 if all(a == l[0] for a in l[1:]): # len(bids) is > 1
                     repo.ui.note(_(" %s: consensus for %s\n") % (f, m))
                     actions[f] = l[0]
@@ -1055,7 +1055,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
                 for _f, args, msg in l:
                     repo.ui.note('  %s -> %s\n' % (msg, m))
             # Pick random action. TODO: Instead, prompt user when resolving
-            m, l = bids.items()[0]
+            m, l = list(bids.items())[0]
             repo.ui.warn(_(' %s: ambiguous merge - picked %s action\n') %
                          (f, m))
             actions[f] = l[0]
