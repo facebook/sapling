@@ -1353,7 +1353,8 @@ def _pullbundle2(pullop):
 
     ui = pullop.repo.ui
     legacyphase = 'phases' in ui.configlist('devel', 'legacy.exchange')
-    if (not legacyphase and 'heads' in pullop.remotebundle2caps.get('phases')):
+    hasbinaryphase = 'heads' in pullop.remotebundle2caps.get('phases', ())
+    if (not legacyphase and hasbinaryphase):
         kwargs['phases'] = True
         pullop.stepsdone.add('phases')
 
