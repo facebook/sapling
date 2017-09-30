@@ -1417,7 +1417,6 @@ def _pullbundle2(pullop):
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
-    pass
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
