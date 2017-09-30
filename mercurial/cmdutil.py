@@ -1735,7 +1735,6 @@ class changeset_printer(object):
     def _exthook(self, ctx):
         '''empty method used by extension as a hook point
         '''
-        pass
 
     def showpatch(self, ctx, matchfn):
         if not matchfn:
@@ -3632,7 +3631,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
-    pass
 
 def _performrevert(repo, parents, ctx, actions, interactive=False,
                    tobackup=None):
