@@ -226,6 +226,13 @@ div.annotate-info {
 div.annotate-info a { color: #0000FF; }
 td.annotate:hover div.annotate-info { display: inline; }
 
+#diffopts-form {
+  font-size: smaller;
+  color: #424242;
+  padding-bottom: 10px;
+  display: none;
+}
+
 .source, .sourcefirst {
   font-family: monospace;
   white-space: pre;

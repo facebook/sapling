@@ -284,6 +284,25 @@ hgweb fileannotate, html
   </tr>
   </table>
   
+  
+  <form id="diffopts-form"
+  data-ignorews="0"
+  data-ignorewsamount="0"
+  data-ignorewseol="0"
+  data-ignoreblanklines="0">
+  <span>Ignore whitespace changes - </span>
+  <span>Everywhere:</span>
+  <input id="ignorews-checkbox" type="checkbox" />
+  <span>Within whitespace:</span>
+  <input id="ignorewsamount-checkbox" type="checkbox" />
+  <span>At end of lines:</span>
+  <input id="ignorewseol-checkbox" type="checkbox" />
+  </form>
+  
+  <script type="text/javascript">
+      renderDiffOptsForm();
+  </script>
+  
   <div class="overflow">
   <table class="bigtable">
   <thead>

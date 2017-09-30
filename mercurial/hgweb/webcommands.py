@@ -930,6 +930,9 @@ def annotate(web, req, tmpl):
                    "linenumber": "% 6d" % (lineno + 1),
                    "revdate": f.date()}
 
+    diffopts = webutil.difffeatureopts(req, web.repo.ui, 'annotate')
+    diffopts = {k: getattr(diffopts, k) for k in diffopts.defaults}
+
     return tmpl("fileannotate",
                 file=f,
                 annotate=annotate,
@@ -938,6 +941,7 @@ def annotate(web, req, tmpl):
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f),
                 ishead=int(ishead),
+                diffopts=diffopts,
                 **webutil.commonentry(web.repo, fctx))
 
 @webcommand('filelog')
