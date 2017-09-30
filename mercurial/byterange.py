@@ -44,7 +44,6 @@ unquote = urlreq.unquote
 
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
-    pass
 
 class HTTPRangeHandler(urlreq.basehandler):
     """Handler that enables HTTP Range headers.
