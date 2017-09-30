@@ -1,11 +1,20 @@
 FROM centos:centos6
-RUN yum install -y gcc
-RUN yum install -y python-devel python-docutils
-RUN yum install -y make
-RUN yum install -y rpm-build
-RUN yum install -y gettext
-RUN yum install -y tar
+RUN yum install -y \
+	gcc \
+	gettext \
+	make \
+	python-devel \
+	python-docutils \
+	rpm-build \
+	tar
+
 # For creating repo meta data
 RUN yum install -y createrepo
+
 # For python
-RUN yum install -y readline-devel openssl-devel ncurses-devel zlib-devel bzip2-devel
+RUN yum install -y \
+	bzip2-devel \
+	ncurses-devel \
+	openssl-devel \
+	readline-devel \
+	zlib-devel
