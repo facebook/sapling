@@ -61,7 +61,6 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
     @staticmethod
     def preparehttpserver(httpserver, ui):
         """Prepare .socket of new HTTPServer instance"""
-        pass
 
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
