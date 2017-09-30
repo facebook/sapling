@@ -102,7 +102,6 @@ class _funcregistrarbase(object):
     def _extrasetup(self, name, func):
         """Execute exra setup for registered function, if needed
         """
-        pass
 
 class command(_funcregistrarbase):
     """Decorator to register a command function to table
