@@ -2150,7 +2150,7 @@ def _dograft(ui, repo, *revs, **opts):
     skipped = set()
     # check for merges
     for rev in repo.revs('%ld and merge()', revs):
-        ui.warn(_('skipping ungraftable merge revision %s\n') % rev)
+        ui.warn(_('skipping ungraftable merge revision %d\n') % rev)
         skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
