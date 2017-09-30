@@ -542,7 +542,6 @@ class obsstore(object):
                     raise
                 # just build an empty _all list if no obsstore exists, which
                 # avoids further stat() syscalls
-                pass
         return bool(self._all)
 
     __bool__ = __nonzero__
