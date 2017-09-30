@@ -990,7 +990,8 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
     else: # only when merge.preferancestor=* - the default
         repo.ui.note(
             _("note: merging %s and %s using bids from ancestors %s\n") %
-            (wctx, mctx, _(' and ').join(str(anc) for anc in ancestors)))
+            (wctx, mctx, _(' and ').join(pycompat.bytestr(anc)
+                                            for anc in ancestors)))
 
         # Call for bids
         fbids = {} # mapping filename to bids (action method to list af actions)
