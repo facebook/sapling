@@ -1371,6 +1371,7 @@ class templater(object):
 
     def render(self, mapping):
         """Render the default unnamed template and return result as string"""
+        mapping = pycompat.strkwargs(mapping)
         return stringify(self('', **mapping))
 
     def __call__(self, t, **mapping):
