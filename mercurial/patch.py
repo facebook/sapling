@@ -442,7 +442,6 @@ class abstractbackend(object):
         which failed to apply and total the total number of hunks for this
         files.
         """
-        pass
 
     def exists(self, fname):
         raise NotImplementedError
