@@ -10,11 +10,18 @@ test revset support
   $ cat <<'EOF' >> .hg/hgrc
   > [extdata]
   > filedata = file:extdata.txt
+  > notes = notes.txt
   > shelldata = shell:cat extdata.txt | grep 2
   > EOF
   $ cat <<'EOF' > extdata.txt
-  > 2
+  > 2 another comment on 2
   > 3
+  > EOF
+  $ cat <<'EOF' > notes.txt
+  > f6ed this change is great!
+  > e834 this is buggy :(
+  > 0625 first post
+  > bogusnode gives no error
   > EOF
 
   $ hg log -qr "extdata(filedata)"
@@ -40,6 +47,31 @@ test bad extdata() revset source
   hg: parse error: extdata takes at least 1 string argument
   [255]
   $ hg log -qr "extdata(unknown)"
+  abort: unknown extdata source 'unknown'
+  [255]
+
+test template support:
+
+  $ hg log -r:3 -T "{node|short}{if(extdata('notes'), ' # {extdata('notes')}')}\n"
+  06254b906311 # first post
+  e8342c9a2ed1 # this is buggy :(
+  f6ed99a58333 # this change is great!
+  9de260b1e88e
+
+test template cache:
+
+  $ hg log -r:3 -T '{rev} "{extdata("notes")}" "{extdata("shelldata")}"\n'
+  0 "first post" ""
+  1 "this is buggy :(" ""
+  2 "this change is great!" "another comment on 2"
+  3 "" ""
+
+test bad extdata() template source
+
+  $ hg log -T "{extdata()}\n"
+  hg: parse error: extdata expects one argument
+  [255]
+  $ hg log -T "{extdata('unknown')}\n"
   abort: unknown extdata source 'unknown'
   [255]
 
