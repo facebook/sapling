@@ -18,7 +18,16 @@ the status call is to check for issue5130
 
 Basic clone
 
-  $ hg clone --uncompressed -U http://localhost:$HGPORT clone1
+  $ hg clone --stream -U http://localhost:$HGPORT clone1
+  streaming all changes
+  1027 files to transfer, 96.3 KB of data
+  transferred 96.3 KB in * seconds (*/sec) (glob)
+  searching for changes
+  no changes found
+
+--uncompressed is an alias to --stream
+
+  $ hg clone --uncompressed -U http://localhost:$HGPORT clone1-uncompressed
   streaming all changes
   1027 files to transfer, 96.3 KB of data
   transferred 96.3 KB in * seconds (*/sec) (glob)
@@ -27,7 +36,7 @@ Basic clone
 
 Clone with background file closing enabled
 
-  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --uncompressed -U http://localhost:$HGPORT clone-background | grep -v adding
+  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U http://localhost:$HGPORT clone-background | grep -v adding
   using http://localhost:$HGPORT/
   sending capabilities command
   sending branchmap command
@@ -52,7 +61,7 @@ Clone with background file closing enabled
 Cannot stream clone when there are secret changesets
 
   $ hg -R server phase --force --secret -r tip
-  $ hg clone --uncompressed -U http://localhost:$HGPORT secret-denied
+  $ hg clone --stream -U http://localhost:$HGPORT secret-denied
   warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
@@ -69,7 +78,7 @@ Streaming of secrets can be overridden by server config
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
-  $ hg clone --uncompressed -U http://localhost:$HGPORT secret-allowed
+  $ hg clone --stream -U http://localhost:$HGPORT secret-allowed
   streaming all changes
   1027 files to transfer, 96.3 KB of data
   transferred 96.3 KB in * seconds (*/sec) (glob)
@@ -101,7 +110,7 @@ Clone not allowed when full bundles disabled and can't serve secrets
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
-  $ hg clone --uncompressed http://localhost:$HGPORT secret-full-disabled
+  $ hg clone --stream http://localhost:$HGPORT secret-full-disabled
   warning: stream clone requested but server has them disabled
   requesting all changes
   remote: abort: server has pull-based clones disabled
@@ -113,7 +122,7 @@ Local stream clone with secrets involved
 (This is just a test over behavior: if you have access to the repo's files,
 there is no security so it isn't important to prevent a clone here.)
 
-  $ hg clone -U --uncompressed server local-secret
+  $ hg clone -U --stream server local-secret
   warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
@@ -151,7 +160,7 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
 clone while modifying the repo between stating file with write lock and
 actually serving file content
 
-  $ hg clone -q --uncompressed -U http://localhost:$HGPORT1 clone &
+  $ hg clone -q --stream -U http://localhost:$HGPORT1 clone &
   $ sleep 1
   $ echo >> repo/f1
   $ echo >> repo/f2

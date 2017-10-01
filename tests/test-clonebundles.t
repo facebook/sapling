@@ -432,7 +432,7 @@ Test where attribute is missing from some entries
   searching for changes
   no changes found
 
-Test interaction between clone bundles and --uncompressed
+Test interaction between clone bundles and --stream
 
 A manifest with just a gzip bundle
 
@@ -440,7 +440,7 @@ A manifest with just a gzip bundle
   > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
   > EOF
 
-  $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes
@@ -455,7 +455,7 @@ A manifest with a stream clone but no BUNDLESPEC
   > http://localhost:$HGPORT1/packed.hg
   > EOF
 
-  $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-no-bundlespec
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-no-bundlespec
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes
@@ -471,7 +471,7 @@ A manifest with a gzip bundle and a stream clone
   > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1
   > EOF
 
-  $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed
   applying clone bundle from http://localhost:$HGPORT1/packed.hg
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
@@ -486,7 +486,7 @@ A manifest with a gzip bundle and stream clone with supported requirements
   > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv1
   > EOF
 
-  $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed-requirements
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-requirements
   applying clone bundle from http://localhost:$HGPORT1/packed.hg
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
@@ -501,7 +501,7 @@ A manifest with a gzip bundle and a stream clone with unsupported requirements
   > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv42
   > EOF
 
-  $ hg clone -U --uncompressed http://localhost:$HGPORT uncompressed-gzip-packed-unsupported-requirements
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-unsupported-requirements
   no compatible clone bundles available on server; falling back to regular clone
   (you may want to report this to the server operator)
   streaming all changes

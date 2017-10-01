@@ -40,7 +40,7 @@ Test server address cannot be reused
 
 clone via stream
 
-  $ hg clone --uncompressed http://localhost:$HGPORT/ copy 2>&1
+  $ hg clone --stream http://localhost:$HGPORT/ copy 2>&1
   streaming all changes
   6 files to transfer, 606 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
@@ -57,7 +57,7 @@ clone via stream
 
 try to clone via stream, should use pull instead
 
-  $ hg clone --uncompressed http://localhost:$HGPORT1/ copy2
+  $ hg clone --stream http://localhost:$HGPORT1/ copy2
   warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
@@ -75,7 +75,7 @@ try to clone via stream but missing requirements, so should use pull instead
   >     localrepo.localrepository.supportedformats.remove('generaldelta')
   > EOF
 
-  $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --uncompressed http://localhost:$HGPORT/ copy3
+  $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --stream http://localhost:$HGPORT/ copy3
   warning: stream clone requested but client is missing requirements: generaldelta
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
@@ -378,7 +378,7 @@ disable pull-based clones
 
 ... but keep stream clones working
 
-  $ hg clone --uncompressed --noupdate http://localhost:$HGPORT1/ test-stream-clone
+  $ hg clone --stream --noupdate http://localhost:$HGPORT1/ test-stream-clone
   streaming all changes
   * files to transfer, * of data (glob)
   transferred * in * seconds (* KB/sec) (glob)

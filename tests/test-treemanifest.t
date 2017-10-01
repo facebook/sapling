@@ -756,7 +756,7 @@ Local clone with fncachestore
   8 files, 4 changesets, 18 total revisions
 
 Stream clone with basicstore
-  $ hg clone --config experimental.changegroup3=True --uncompressed -U \
+  $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT1 stream-clone-basicstore
   streaming all changes
   18 files to transfer, * of data (glob)
@@ -772,7 +772,7 @@ Stream clone with basicstore
   8 files, 4 changesets, 18 total revisions
 
 Stream clone with encodedstore
-  $ hg clone --config experimental.changegroup3=True --uncompressed -U \
+  $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT2 stream-clone-encodedstore
   streaming all changes
   18 files to transfer, * of data (glob)
@@ -788,7 +788,7 @@ Stream clone with encodedstore
   8 files, 4 changesets, 18 total revisions
 
 Stream clone with fncachestore
-  $ hg clone --config experimental.changegroup3=True --uncompressed -U \
+  $ hg clone --config experimental.changegroup3=True --stream -U \
   >   http://localhost:$HGPORT stream-clone-fncachestore
   streaming all changes
   18 files to transfer, * of data (glob)

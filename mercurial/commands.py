@@ -1294,7 +1294,10 @@ def cat(ui, repo, file1, *pats, **opts):
     ('r', 'rev', [], _('include the specified changeset'), _('REV')),
     ('b', 'branch', [], _('clone only the specified branch'), _('BRANCH')),
     ('', 'pull', None, _('use pull protocol to copy metadata')),
-    ('', 'uncompressed', None, _('use uncompressed transfer (fast over LAN)')),
+    ('', 'uncompressed', None,
+       _('an alias to --stream (DEPRECATED)')),
+    ('', 'stream', None,
+       _('clone with minimal data processing')),
     ] + remoteopts,
     _('[OPTION]... SOURCE [DEST]'),
     norepo=True)
@@ -1324,6 +1327,19 @@ def clone(ui, source, dest=None, **opts):
     resulting clone will contain only the specified changesets and
     their ancestors. These options (or 'clone src#rev dest') imply
     --pull, even for local source repositories.
+
+    In normal clone mode, the remote normalizes repository data into a common
+    exchange format and the receiving end translates this data into its local
+    storage format. --stream activates a different clone mode that essentially
+    copies repository files from the remote with minimal data processing. This
+    significantly reduces the CPU cost of a clone both remotely and locally.
+    However, it often increases the transferred data size by 30-40%. This can
+    result in substantially faster clones where I/O throughput is plentiful,
+    especially for larger repositories. A side-effect of --stream clones is
+    that storage settings and requirements on the remote are applied locally:
+    a modern client may inherit legacy or inefficient storage used by the
+    remote or a legacy Mercurial client may not be able to clone from a
+    modern Mercurial remote.
 
     .. note::
 
@@ -1376,10 +1392,9 @@ def clone(ui, source, dest=None, **opts):
 
           hg clone ssh://user@server//home/projects/alpha/
 
-      - do a high-speed clone over a LAN while checking out a
-        specified version::
+      - do a streaming clone while checking out a specified version::
 
-          hg clone --uncompressed http://server/repo -u 1.5
+          hg clone --stream http://server/repo -u 1.5
 
       - create a repository without changesets after a particular revision::
 
@@ -1399,7 +1414,7 @@ def clone(ui, source, dest=None, **opts):
 
     r = hg.clone(ui, opts, source, dest,
                  pull=opts.get('pull'),
-                 stream=opts.get('uncompressed'),
+                 stream=opts.get('stream') or opts.get('uncompressed'),
                  rev=opts.get('rev'),
                  update=opts.get('updaterev') or not opts.get('noupdate'),
                  branch=opts.get('branch'),

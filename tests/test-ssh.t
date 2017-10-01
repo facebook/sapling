@@ -52,7 +52,7 @@ non-existent absolute path
 
 clone remote via stream
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --uncompressed ssh://user@dummy/remote local-stream
+  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/remote local-stream
   streaming all changes
   4 files to transfer, 602 bytes of data
   transferred 602 bytes in * seconds (*) (glob)
@@ -74,7 +74,7 @@ clone remote via stream
 clone bookmarks via stream
 
   $ hg -R local-stream book mybook
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --uncompressed ssh://user@dummy/local-stream stream2
+  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/local-stream stream2
   streaming all changes
   4 files to transfer, 602 bytes of data
   transferred 602 bytes in * seconds (*) (glob)

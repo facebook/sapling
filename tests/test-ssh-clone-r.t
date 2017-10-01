@@ -17,7 +17,7 @@ creating 'remote' repo
 clone remote via stream
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
-  >    hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --uncompressed -r "$i" ssh://user@dummy/remote test-"$i"
+  >    hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream -r "$i" ssh://user@dummy/remote test-"$i"
   >    if cd test-"$i"; then
   >       hg verify
   >       cd ..

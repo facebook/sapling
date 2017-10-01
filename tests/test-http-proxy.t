@@ -14,7 +14,7 @@
 
 url for proxy, stream
 
-  $ http_proxy=http://localhost:$HGPORT1/ hg --config http_proxy.always=True clone --uncompressed http://localhost:$HGPORT/ b
+  $ http_proxy=http://localhost:$HGPORT1/ hg --config http_proxy.always=True clone --stream http://localhost:$HGPORT/ b
   streaming all changes
   3 files to transfer, 303 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
