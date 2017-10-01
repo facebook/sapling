@@ -1,6 +1,6 @@
   $ hg init repo
   $ cd repo
-  $ for n in 0 1 2 3; do
+  $ for n in 0 1 2 3 4 5 6 7 8 9 10 11; do
   >   echo $n > $n
   >   hg ci -qAm $n
   > done
@@ -22,6 +22,7 @@ test revset support
   > e834 this is buggy :(
   > 0625 first post
   > bogusnode gives no error
+  > a ambiguous node gives no error
   > EOF
 
   $ hg log -qr "extdata(filedata)"

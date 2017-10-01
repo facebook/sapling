@@ -1059,9 +1059,10 @@ def extdatasource(repo, source):
                 k, v = l.strip(), ""
 
             k = encoding.tolocal(k)
-            if k in repo:
-                # we ignore data for nodes that don't exist locally
+            try:
                 data[repo[k].rev()] = encoding.tolocal(v)
+            except (error.LookupError, error.RepoLookupError):
+                pass # we ignore data for nodes that don't exist locally
     finally:
         src.close()
 
