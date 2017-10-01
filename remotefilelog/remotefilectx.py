@@ -261,74 +261,23 @@ class remotefilectx(context.filectx):
             if lnode is not None:
                 return lnode
 
-            # This next part is super non-obvious, so big comment block time!
-            #
-            # It is possible to get extremely bad performance here when a fairly
-            # common set of circumstances occur when this extension is combined
-            # with a server-side commit rewriting extension like pushrebase.
-            #
-            # First, an engineer creates Commit A and pushes it to the server.
-            # While the server's data structure will have the correct linkrev
-            # for the files touched in Commit A, the client will have the
-            # linkrev of the local commit, which is "invalid" because it's not
-            # an ancestor of the main line of development.
-            #
-            # The client will never download the remotefilelog with the correct
-            # linkrev as long as nobody else touches that file, since the file
-            # data and history hasn't changed since Commit A.
-            #
-            # After a long time (or a short time in a heavily used repo), if the
-            # same engineer returns to change the same file, some commands --
-            # such as amends of commits with file moves, logs, diffs, etc  --
-            # can trigger this _adjustlinknode code. In those cases, finding
-            # the correct rev can become quite expensive, as the correct
-            # revision is far back in history and we need to walk back through
-            # history to find it.
-            #
-            # In order to improve this situation, we force a prefetch of the
-            # remotefilelog data blob for the file we were called on. We do this
-            # at most once, when we first see a public commit in the history we
-            # are traversing.
-            #
-            # Forcing the prefetch means we will download the remote blob even
-            # if we have the "correct" blob in the local store. Since the union
-            # store checks the remote store first, this means we are much more
-            # likely to get the correct linkrev at this point.
-            #
-            # In rare circumstances (such as the server having a suboptimal
-            # linkrev for our use case), we will fall back to the old slow path.
-            #
-            # We may want to add additional heuristics here in the future if
-            # the slow path is used too much. One promising possibility is using
-            # obsolescence markers to find a more-likely-correct linkrev.
+            # adjusting linknode can be super-slow. To mitigate the issue
+            # we use two heuristics: calling fastlog and forcing remotefilelog
+            # prefetch
             if not seenpublic and pc.phase(repo, ancrev) == phases.public:
                 # If the commit is public and fastlog is enabled for this repo
-                # then we will can try to fetch the right linknode via fastlog
-                # since fastlog already has the right linkrev for all public
-                # commits
+                # then we can try to fetch the right linknode via fastlog.
                 if repo.ui.configbool('fastlog', 'enabled'):
                     lnode = self._linknodeviafastlog(repo, path, ancrev, fnode,
                                                      cl, mfl, commonlogkwargs)
                     if lnode:
                         return lnode
+                # If fastlog is not enabled and/or failed, let's try
+                # prefetching
+                lnode = self._forceprefetch(repo, path, fnode, revs)
+                if lnode:
+                    return lnode
                 seenpublic = True
-                try:
-                    repo.fileservice.prefetch([(path, hex(fnode))], force=True)
-
-                    # Now that we've downloaded a new blob from the server,
-                    # we need to rebuild the ancestor map to recompute the
-                    # linknodes.
-                    self._ancestormap = None
-                    linknode = self.ancestormap()[fnode][2] # 2 is linknode
-                    if self._verifylinknode(revs, linknode):
-                        return linknode
-                except Exception as e:
-                    errormsg = ('warning: failed to prefetch filepath %s ' +
-                                'while adjusting linknode %s (%s)\n(this is ' +
-                                'generally benign but it may make ' +
-                                'this operation take longer to calculate ' +
-                                'things locally)')
-                    repo.ui.warn(_(errormsg) % (path, hex(linknode), e))
 
         return linknode
 
@@ -369,6 +318,67 @@ class remotefilectx(context.filectx):
             repo.ui.log('linkrevfixup', logmsg, elapsed=elapsed * 1000,
                         **commonlogkwargs)
 
+    def _forceprefetch(self, repo, path, fnode, revs):
+        # This next part is super non-obvious, so big comment block time!
+        #
+        # It is possible to get extremely bad performance here when a fairly
+        # common set of circumstances occur when this extension is combined
+        # with a server-side commit rewriting extension like pushrebase.
+        #
+        # First, an engineer creates Commit A and pushes it to the server.
+        # While the server's data structure will have the correct linkrev
+        # for the files touched in Commit A, the client will have the
+        # linkrev of the local commit, which is "invalid" because it's not
+        # an ancestor of the main line of development.
+        #
+        # The client will never download the remotefilelog with the correct
+        # linkrev as long as nobody else touches that file, since the file
+        # data and history hasn't changed since Commit A.
+        #
+        # After a long time (or a short time in a heavily used repo), if the
+        # same engineer returns to change the same file, some commands --
+        # such as amends of commits with file moves, logs, diffs, etc  --
+        # can trigger this _adjustlinknode code. In those cases, finding
+        # the correct rev can become quite expensive, as the correct
+        # revision is far back in history and we need to walk back through
+        # history to find it.
+        #
+        # In order to improve this situation, we force a prefetch of the
+        # remotefilelog data blob for the file we were called on. We do this
+        # at most once, when we first see a public commit in the history we
+        # are traversing.
+        #
+        # Forcing the prefetch means we will download the remote blob even
+        # if we have the "correct" blob in the local store. Since the union
+        # store checks the remote store first, this means we are much more
+        # likely to get the correct linkrev at this point.
+        #
+        # In rare circumstances (such as the server having a suboptimal
+        # linkrev for our use case), we will fall back to the old slow path.
+        #
+        # We may want to add additional heuristics here in the future if
+        # the slow path is used too much. One promising possibility is using
+        # obsolescence markers to find a more-likely-correct linkrev.
+
+        try:
+            repo.fileservice.prefetch([(path, hex(fnode))], force=True)
+
+            # Now that we've downloaded a new blob from the server,
+            # we need to rebuild the ancestor map to recompute the
+            # linknodes.
+            self._ancestormap = None
+            linknode = self.ancestormap()[fnode][2] # 2 is linknode
+            if self._verifylinknode(revs, linknode):
+                return linknode
+            return None
+        except Exception as e:
+            errormsg = ('warning: failed to prefetch filepath %s ' +
+                        'while adjusting linknode %s (%s)\n(this is ' +
+                        'generally benign but it may make ' +
+                        'this operation take longer to calculate ' +
+                        'things locally)')
+            repo.ui.warn(_(errormsg) % (path, hex(linknode), e))
+            return None
 
     def _verifylinknode(self, revs, linknode):
         """
