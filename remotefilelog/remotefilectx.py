@@ -298,7 +298,6 @@ class remotefilectx(context.filectx):
                     lnode = self._linknodeviafastlog(repo, path, ancrev, fnode,
                                                      cl, mfl)
                     if lnode:
-                        repo.ui.log('linkrevfixup', _('success\n'))
                         return lnode
                 seenpublic = True
                 try:
@@ -344,6 +343,7 @@ class remotefilectx(context.filectx):
                 ancrev = repo[str(anc['hash'])].rev()
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
                 if lnode is not None:
+                    repo.ui.log('linkrevfixup', _('success\n'))
                     return lnode
             return None
         except Exception as e:
