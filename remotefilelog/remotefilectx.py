@@ -21,15 +21,15 @@ def createconduit(ui):
         try:
             from hgext3rd import fbconduit as conduit
         except ImportError:
-            ui.log('fastloglinkrevfixup',
+            ui.log('linkrevfixup',
                    _('unable to find fbconduit extension\n'))
             return False
     if not util.safehasattr(conduit, 'conduit_config'):
-        ui.log('fastloglinkrevfixup',
+        ui.log('linkrevfixup',
                _('incompatible conduit module; disabling fastlog\n'))
         return False
     if not conduit.conduit_config(ui):
-        ui.log('fastloglinkrevfixup',
+        ui.log('linkrevfixup',
                _('no conduit host specified in config; disabling fastlog\n'))
         return False
     return conduit
@@ -298,7 +298,7 @@ class remotefilectx(context.filectx):
                     lnode = self._linknodeviafastlog(repo, path, ancrev, fnode,
                                                      cl, mfl)
                     if lnode:
-                        repo.ui.log('fastloglinkrevfixup', _('success\n'))
+                        repo.ui.log('linkrevfixup', _('success\n'))
                         return lnode
                 seenpublic = True
                 try:
@@ -337,7 +337,7 @@ class remotefilectx(context.filectx):
                 skip=0,
             )
             if results is None:
-                repo.ui.log('fastloglinkrevfixup',
+                repo.ui.log('linkrevfixup',
                             _('fastlog returned 0 results\n'))
                 return None
             for anc in results:
@@ -347,7 +347,7 @@ class remotefilectx(context.filectx):
                     return lnode
             return None
         except Exception as e:
-            repo.ui.log('fastloglinkrevfixup',
+            repo.ui.log('linkrevfixup',
                         _('call to fastlog failed (%s)\n') % e)
             return None
 
