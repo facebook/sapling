@@ -21,3 +21,6 @@ main deb should have .so but no .py
 mercurial-common should have py but no .so or pyc
   $ dpkg --contents mercurial-common_*.deb | egrep '(localrepo|parsers.*so)'
   * ./usr/lib/python2.7/dist-packages/mercurial/localrepo.py (glob)
+zsh completions should be in the common package
+  $ dpkg --contents mercurial-common_*.deb | egrep 'zsh.*[^/]$'
+  * ./usr/share/zsh/vendor-completions/_hg (glob)
