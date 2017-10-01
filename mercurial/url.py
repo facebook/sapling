@@ -19,6 +19,7 @@ from . import (
     error,
     httpconnection as httpconnectionmod,
     keepalive,
+    pycompat,
     sslutil,
     util,
 )
@@ -495,13 +496,13 @@ def opener(ui, authinfo=None):
     # agent string for anything, clients should be able to define whatever
     # user agent they deem appropriate.
     agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
-    opener.addheaders = [('User-agent', agent)]
+    opener.addheaders = [(r'User-agent', pycompat.sysstr(agent))]
 
     # This header should only be needed by wire protocol requests. But it has
     # been sent on all requests since forever. We keep sending it for backwards
     # compatibility reasons. Modern versions of the wire protocol use
     # X-HgProto-<N> for advertising client support.
-    opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
+    opener.addheaders.append((r'Accept', r'application/mercurial-0.1'))
     return opener
 
 def open(ui, url_, data=None):
