@@ -348,5 +348,4 @@ diffoptsform = '
     <input id="ignorewsamount-checkbox" type="checkbox" />
     <span>At end of lines:</span>
     <input id="ignorewseol-checkbox" type="checkbox" />
-  </form>
-  </div>'
+  </form>'
