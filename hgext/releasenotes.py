@@ -576,6 +576,9 @@ def releasenotes(ui, repo, file_=None, **opts):
 
     incoming = parsenotesfromrevisions(repo, sections.names(), revs)
 
+    if file_ is None:
+        return ui.write(serializenotes(sections, incoming))
+
     try:
         with open(file_, 'rb') as fh:
             notes = parsereleasenotesfile(sections, fh.read())

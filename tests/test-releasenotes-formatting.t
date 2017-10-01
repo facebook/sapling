@@ -434,3 +434,26 @@ Raise error on simultaneous usage of flags
   $ hg releasenotes -l -c
   abort: cannot use both '--list' and '--check'
   [255]
+
+Display release notes for specified revs if no file is mentioned
+
+  $ hg init relnotes-nofile
+  $ cd relnotes-nofile
+
+  $ touch fix1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. fix:: Title of First Fix
+  > 
+  >    First paragraph of fix 1.
+  > EOF
+
+  $ hg releasenote -r .
+  Bug Fixes
+  =========
+  
+  Title of First Fix
+  ------------------
+  
+  First paragraph of fix 1.
