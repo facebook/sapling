@@ -664,6 +664,8 @@ def _wraprepo(ui, repo):
     ('', 'clear-rules', False, _('clears local include/exclude rules')),
     ('', 'refresh', False, _('updates the working after sparseness changes')),
     ('', 'reset', False, _('makes the repo full again')),
+    ('', 'cwd-list', False, _('list the full contents of the current '
+                              'directory')),
     ] + commands.templateopts,
     _('[--OPTION] PATTERN...'))
 def sparse(ui, repo, *pats, **opts):
@@ -705,6 +707,10 @@ def sparse(ui, repo, *pats, **opts):
     --clear-rules removes all local include and exclude rules, while leaving
     any enabled profiles in place.
 
+    --cwd-list list all the contents of the current directory. The files that
+    are excluded by the current sparse checkout are annotated with a hyphen
+    ('-') before the name.
+
     The following config option defines whether sparse treats supplied
     paths as relative to repo root or to the current working dir for
     include and exclude options:
@@ -731,8 +737,9 @@ def sparse(ui, repo, *pats, **opts):
     delete = opts.get('delete')
     refresh = opts.get('refresh')
     reset = opts.get('reset')
+    cwdlist = opts.get('cwd_list')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-                 importrules, refresh, clearrules, reset])
+                 importrules, refresh, clearrules, reset, cwdlist])
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
@@ -767,6 +774,9 @@ def sparse(ui, repo, *pats, **opts):
             _verbose_output(ui, opts, 0, 0, 0, *fcounts)
         finally:
             wlock.release()
+
+    if cwdlist:
+        _cwdlist(repo)
 
 def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             delete=False, enableprofile=False, disableprofile=False,
@@ -1040,6 +1050,42 @@ def _verbose_output(ui, opts, profilecount, includecount, excludecount, added,
                          dropped)
             fm.condwrite(ui.verbose, 'files_conflicting',
                          'Files conflicting: %d\n', lookup)
+
+def _cwdlist(repo):
+    """ List the contents in the current directory. Annotate
+    the files in the sparse profile.
+    """
+    ctx = repo['.']
+    mf = ctx.manifest()
+    cwd = util.normpath(os.getcwd())
+
+    # Get the root of the repo so that we remove the content of
+    # the root from the current working directory
+    root = repo.root
+    if cwd.startswith(root):
+        cwd = cwd[len(root):]
+    else:
+        raise error.Abort(_("the current working directory should begin " +
+            "with the root %s"% root))
+
+    cwd = cwd.strip("/")
+    sparsematch = repo.sparsematch(ctx.rev())
+    checkedoutentries = set()
+    allentries = set()
+    cwdlength = len(cwd) + 1
+    for filepath in mf:
+        if filepath.startswith(cwd):
+            tail = filepath[cwdlength:] if cwdlength > 1 else filepath
+            entryname = tail.split('/', 1)[0]
+
+            allentries.add(entryname)
+            if sparsematch(filepath):
+                checkedoutentries.add(entryname)
+
+    ui = repo.ui
+    for entry in sorted(allentries):
+        marker = ' ' if entry in checkedoutentries else '-'
+        ui.status("%s %s\n" % (marker, entry))
 
 class forceincludematcher(object):
     """A matcher that returns true for any of the forced includes before testing

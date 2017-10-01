@@ -338,6 +338,23 @@ Test that add -s adds dirs to sparse profile
   [exclude]
   
   
+Test --cwd-list
+  $ hg commit -m 'commit'
+  $ hg sparse --cwd-list
+    add
+  - hide
+  - show
+  - show2
+  $ cd add
+  $ hg sparse --cwd-list
+    bar
+    foo
+  $ hg sparse -I foo
+  $ hg sparse --delete .
+  $ hg sparse --cwd-list
+  - bar
+    foo
+  $ cd ..
 
   $ cd ..
 
