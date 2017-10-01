@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import collections
+import time
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import context, util, error, ancestor, phases, extensions
@@ -333,6 +334,7 @@ class remotefilectx(context.filectx):
 
     def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl,
                             commonlogkwargs):
+        start = time.time()
         reponame = repo.ui.config('fbconduit', 'reponame')
         logmsg = ''
         if self._conduit is None:
@@ -363,7 +365,9 @@ class remotefilectx(context.filectx):
             logmsg = 'fastlog failed (%s)' % e
             return None
         finally:
-            repo.ui.log('linkrevfixup', logmsg, **commonlogkwargs)
+            elapsed = time.time() - start
+            repo.ui.log('linkrevfixup', logmsg, elapsed=elapsed * 1000,
+                        **commonlogkwargs)
 
 
     def _verifylinknode(self, revs, linknode):
