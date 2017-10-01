@@ -1052,7 +1052,7 @@ def extdatasource(repo, source):
         src = url.open(repo.ui, spec)
 
     try:
-        for l in src.readlines():
+        for l in src:
             if " " in l:
                 k, v = l.strip().split(" ", 1)
             else:
