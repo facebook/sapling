@@ -274,7 +274,8 @@ class remotefilectx(context.filectx):
                         return lnode
                 # If fastlog is not enabled and/or failed, let's try
                 # prefetching
-                lnode = self._forceprefetch(repo, path, fnode, revs)
+                lnode = self._forceprefetch(repo, path, fnode, revs,
+                                            commonlogkwargs)
                 if lnode:
                     return lnode
                 seenpublic = True
@@ -318,7 +319,8 @@ class remotefilectx(context.filectx):
             repo.ui.log('linkrevfixup', logmsg, elapsed=elapsed * 1000,
                         **commonlogkwargs)
 
-    def _forceprefetch(self, repo, path, fnode, revs):
+    def _forceprefetch(self, repo, path, fnode, revs,
+                       commonlogkwargs):
         # This next part is super non-obvious, so big comment block time!
         #
         # It is possible to get extremely bad performance here when a fairly
@@ -360,6 +362,8 @@ class remotefilectx(context.filectx):
         # the slow path is used too much. One promising possibility is using
         # obsolescence markers to find a more-likely-correct linkrev.
 
+        logmsg = ''
+        start = time.time()
         try:
             repo.fileservice.prefetch([(path, hex(fnode))], force=True)
 
@@ -369,16 +373,17 @@ class remotefilectx(context.filectx):
             self._ancestormap = None
             linknode = self.ancestormap()[fnode][2] # 2 is linknode
             if self._verifylinknode(revs, linknode):
+                logmsg = 'remotefilelog prefetching succeeded'
                 return linknode
+            logmsg = 'remotefilelog prefetching not found'
             return None
         except Exception as e:
-            errormsg = ('warning: failed to prefetch filepath %s ' +
-                        'while adjusting linknode %s (%s)\n(this is ' +
-                        'generally benign but it may make ' +
-                        'this operation take longer to calculate ' +
-                        'things locally)')
-            repo.ui.warn(_(errormsg) % (path, hex(linknode), e))
+            logmsg = 'remotefilelog prefetching failed (%s)' % e
             return None
+        finally:
+            elapsed = time.time() - start
+            repo.ui.log('linkrevfixup', logmsg, elapsed=elapsed * 1000,
+                        **commonlogkwargs)
 
     def _verifylinknode(self, revs, linknode):
         """
