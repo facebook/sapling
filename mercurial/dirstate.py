@@ -1300,6 +1300,9 @@ class dirstatemap(object):
     def iteritems(self):
         return self._map.iteritems()
 
+    def __len__(self):
+        return len(self._map)
+
     def __iter__(self):
         return iter(self._map)
 
