@@ -2266,6 +2266,7 @@ def applied(ui, repo, patch=None, **opts):
     Returns 0 on success."""
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
 
     if patch:
         if patch not in q.series:
@@ -2299,6 +2300,7 @@ def unapplied(ui, repo, patch=None, **opts):
     Returns 0 on success."""
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     if patch:
         if patch not in q.series:
             raise error.Abort(_("patch %s is not in series file") % patch)
@@ -2361,6 +2363,7 @@ def qimport(ui, repo, *filename, **opts):
 
     Returns 0 if import succeeded.
     """
+    opts = pycompat.byteskwargs(opts)
     with repo.lock(): # cause this may move phase
         q = repo.mq
         try:
@@ -2415,7 +2418,7 @@ def init(ui, repo, **opts):
 
     This command is deprecated. Without -c, it's implied by other relevant
     commands. With -c, use :hg:`init --mq` instead."""
-    return qinit(ui, repo, create=opts.get('create_repo'))
+    return qinit(ui, repo, create=opts.get(r'create_repo'))
 
 @command("qclone",
          [('', 'pull', None, _('use pull protocol to copy metadata')),
@@ -2445,6 +2448,7 @@ def clone(ui, source, dest=None, **opts):
 
     Return 0 on success.
     '''
+    opts = pycompat.byteskwargs(opts)
     def patchdir(repo):
         """compute a patch repo url from a repo object"""
         url = repo.url()
@@ -2526,8 +2530,8 @@ def series(ui, repo, **opts):
     """print the entire series file
 
     Returns 0 on success."""
-    repo.mq.qseries(repo, missing=opts.get('missing'),
-                    summary=opts.get('summary'))
+    repo.mq.qseries(repo, missing=opts.get(r'missing'),
+                    summary=opts.get(r'summary'))
     return 0
 
 @command("qtop", seriesopts, _('hg qtop [-s]'))
@@ -2543,7 +2547,7 @@ def top(ui, repo, **opts):
 
     if t:
         q.qseries(repo, start=t - 1, length=1, status='A',
-                  summary=opts.get('summary'))
+                  summary=opts.get(r'summary'))
     else:
         ui.write(_("no patches applied\n"))
         return 1
@@ -2558,7 +2562,7 @@ def next(ui, repo, **opts):
     if end == len(q.series):
         ui.write(_("all patches applied\n"))
         return 1
-    q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
+    q.qseries(repo, start=end, length=1, summary=opts.get(r'summary'))
 
 @command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
@@ -2575,7 +2579,7 @@ def prev(ui, repo, **opts):
         return 1
     idx = q.series.index(q.applied[-2].name)
     q.qseries(repo, start=idx, length=1, status='A',
-              summary=opts.get('summary'))
+              summary=opts.get(r'summary'))
 
 def setupheaderopts(ui, opts):
     if not opts.get('user') and opts.get('currentuser'):
@@ -2621,11 +2625,12 @@ def new(ui, repo, patch, *args, **opts):
 
     Returns 0 on successful creation of a new patch.
     """
+    opts = pycompat.byteskwargs(opts)
     msg = cmdutil.logmessage(ui, opts)
     q = repo.mq
     opts['msg'] = msg
     setupheaderopts(ui, opts)
-    q.new(repo, patch, *args, **opts)
+    q.new(repo, patch, *args, **pycompat.strkwargs(opts))
     q.savedirty()
     return 0
 
@@ -2666,11 +2671,12 @@ def refresh(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     q = repo.mq
     message = cmdutil.logmessage(ui, opts)
     setupheaderopts(ui, opts)
     with repo.wlock():
-        ret = q.refresh(repo, pats, msg=message, **opts)
+        ret = q.refresh(repo, pats, msg=message, **pycompat.strkwargs(opts))
         q.savedirty()
         return ret
 
@@ -2694,7 +2700,7 @@ def diff(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
     ui.pager('qdiff')
-    repo.mq.diff(repo, pats, opts)
+    repo.mq.diff(repo, pats, pycompat.byteskwargs(opts))
     return 0
 
 @command('qfold',
@@ -2716,6 +2722,7 @@ def fold(ui, repo, *files, **opts):
     current patch header, separated by a line of ``* * *``.
 
     Returns 0 on success."""
+    opts = pycompat.byteskwargs(opts)
     q = repo.mq
     if not files:
         raise error.Abort(_('qfold requires at least one patch name'))
@@ -2774,6 +2781,7 @@ def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
 
     Returns 0 on success.'''
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     q = repo.mq
     patch = q.lookup(patch)
@@ -2839,7 +2847,7 @@ def guard(ui, repo, *args, **opts):
     applied = set(p.name for p in q.applied)
     patch = None
     args = list(args)
-    if opts.get('list'):
+    if opts.get(r'list'):
         if args or opts.get('none'):
             raise error.Abort(_('cannot mix -l/--list with options or '
                                'arguments'))
@@ -2933,6 +2941,7 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
@@ -2973,6 +2982,7 @@ def pop(ui, repo, patch=None, **opts):
 
     Return 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
@@ -3052,8 +3062,8 @@ def restore(ui, repo, rev, **opts):
     This command is deprecated, use :hg:`rebase` instead."""
     rev = repo.lookup(rev)
     q = repo.mq
-    q.restore(repo, rev, delete=opts.get('delete'),
-              qupdate=opts.get('update'))
+    q.restore(repo, rev, delete=opts.get(r'delete'),
+              qupdate=opts.get(r'update'))
     q.savedirty()
     return 0
 
@@ -3069,6 +3079,7 @@ def save(ui, repo, **opts):
 
     This command is deprecated, use :hg:`rebase` instead."""
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     message = cmdutil.logmessage(ui, opts)
     ret = q.save(repo, msg=message)
     if ret:
@@ -3138,6 +3149,7 @@ def select(ui, repo, *args, **opts):
     Returns 0 on success.'''
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     guards = q.active()
     pushable = lambda i: q.pushable(q.applied[i].name)[0]
     if args or opts.get('none'):
@@ -3226,9 +3238,9 @@ def finish(ui, repo, *revrange, **opts):
 
     Returns 0 on success.
     """
-    if not opts.get('applied') and not revrange:
+    if not opts.get(r'applied') and not revrange:
         raise error.Abort(_('no revisions specified'))
-    elif opts.get('applied'):
+    elif opts.get(r'applied'):
         revrange = ('qbase::qtip',) + revrange
 
     q = repo.mq
@@ -3357,6 +3369,7 @@ def qqueue(ui, repo, name=None, **opts):
         fh.close()
         repo.vfs.rename('patches.queues.new', _allqueues)
 
+    opts = pycompat.byteskwargs(opts)
     if not name or opts.get('list') or opts.get('active'):
         current = _getcurrent()
         if opts.get('active'):
@@ -3528,13 +3541,13 @@ def reposetup(ui, repo):
 
 def mqimport(orig, ui, repo, *args, **kwargs):
     if (util.safehasattr(repo, 'abortifwdirpatched')
-        and not kwargs.get('no_commit', False)):
+        and not kwargs.get(r'no_commit', False)):
         repo.abortifwdirpatched(_('cannot import over an applied patch'),
-                                   kwargs.get('force'))
+                                   kwargs.get(r'force'))
     return orig(ui, repo, *args, **kwargs)
 
 def mqinit(orig, ui, *args, **kwargs):
-    mq = kwargs.pop('mq', None)
+    mq = kwargs.pop(r'mq', None)
 
     if not mq:
         return orig(ui, *args, **kwargs)
