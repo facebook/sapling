@@ -322,6 +322,7 @@ class remotefilectx(context.filectx):
 
     def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl):
         reponame = repo.ui.config('fbconduit', 'reponame')
+        logmsg = ''
         if self._conduit is None:
             return None
         try:
@@ -336,20 +337,22 @@ class remotefilectx(context.filectx):
                 skip=0,
             )
             if results is None:
-                repo.ui.log('linkrevfixup',
-                            _('fastlog returned 0 results\n'))
+                logmsg = 'fastlog returned 0 results'
                 return None
             for anc in results:
                 ancrev = repo[str(anc['hash'])].rev()
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
                 if lnode is not None:
-                    repo.ui.log('linkrevfixup', _('success\n'))
+                    logmsg = 'fastlog succeded'
                     return lnode
+            logmsg = 'fastlog succeded but linknode was not found'
             return None
         except Exception as e:
-            repo.ui.log('linkrevfixup',
-                        _('call to fastlog failed (%s)\n') % e)
+            logmsg = 'fastlog failed (%s)' % e
             return None
+        finally:
+            repo.ui.log('linkrevfixup', logmsg)
+
 
     def _verifylinknode(self, revs, linknode):
         """
