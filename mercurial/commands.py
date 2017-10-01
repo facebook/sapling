@@ -1339,18 +1339,6 @@ def clone(ui, source, dest=None, **opts):
       incorrectly, but do not report errors. In these cases, use the
       --pull option to avoid hardlinking.
 
-      In some cases, you can clone repositories and the working
-      directory using full hardlinks with ::
-
-        $ cp -al REPO REPOCLONE
-
-      This is the fastest way to clone, but it is not always safe. The
-      operation is not atomic (making sure REPO is not modified during
-      the operation is up to you) and you have to make sure your
-      editor breaks hardlinks (Emacs and most Linux Kernel tools do
-      so). Also, this is not compatible with certain extensions that
-      place their metadata under the .hg directory, such as mq.
-
       Mercurial will update the working directory to the first applicable
       revision from this list:
 
