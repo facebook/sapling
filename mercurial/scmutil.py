@@ -13,6 +13,7 @@ import hashlib
 import os
 import re
 import socket
+import subprocess
 import weakref
 
 from .i18n import _
@@ -1038,20 +1039,18 @@ def extdatasource(repo, source):
         raise error.Abort(_("unknown extdata source '%s'") % source)
 
     data = {}
-    if spec.startswith("shell:"):
-        # external commands should be run relative to the repo root
-        cmd = spec[6:]
-        cwd = os.getcwd()
-        os.chdir(repo.root)
-        try:
-            src = util.popen(cmd)
-        finally:
-            os.chdir(cwd)
-    else:
-        # treat as a URL or file
-        src = url.open(repo.ui, spec)
-
+    src = proc = None
     try:
+        if spec.startswith("shell:"):
+            # external commands should be run relative to the repo root
+            cmd = spec[6:]
+            proc = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                                    close_fds=util.closefds,
+                                    stdout=subprocess.PIPE, cwd=repo.root)
+            src = proc.stdout
+        else:
+            # treat as a URL or file
+            src = url.open(repo.ui, spec)
         for l in src:
             if " " in l:
                 k, v = l.strip().split(" ", 1)
@@ -1064,7 +1063,10 @@ def extdatasource(repo, source):
             except (error.LookupError, error.RepoLookupError):
                 pass # we ignore data for nodes that don't exist locally
     finally:
-        src.close()
+        if proc:
+            proc.communicate()
+        if src:
+            src.close()
 
     return data
 
