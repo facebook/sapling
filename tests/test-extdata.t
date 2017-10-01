@@ -46,8 +46,8 @@ test weight of extdata() revset
 test non-zero exit of shell command
 
   $ hg log -qr "extdata(emptygrep)"
-  $ hg log -qr "extdata(emptygrep)" --debug
-  extdata command 'cat extdata.txt | grep empty' exited with status * (glob)
+  abort: extdata command 'cat extdata.txt | grep empty' failed: exited with status 1
+  [255]
 
 test bad extdata() revset source
 
