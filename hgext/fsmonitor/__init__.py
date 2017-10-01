@@ -107,6 +107,7 @@ from mercurial import (
     merge,
     pathutil,
     pycompat,
+    registrar,
     scmutil,
     util,
 )
@@ -123,6 +124,22 @@ from . import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fsmonitor', 'mode',
+    default='on',
+)
+configitem('fsmonitor', 'walk_on_invalidate',
+    default=False,
+)
+configitem('fsmonitor', 'timeout',
+    default='2',
+)
+configitem('fsmonitor', 'blacklistusers',
+    default=list,
+)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:

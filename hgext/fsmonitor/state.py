@@ -29,11 +29,10 @@ class state(object):
         self._lastclock = None
         self._identity = util.filestat(None)
 
-        self.mode = self._ui.config('fsmonitor', 'mode', default='on')
+        self.mode = self._ui.config('fsmonitor', 'mode')
         self.walk_on_invalidate = self._ui.configbool(
-            'fsmonitor', 'walk_on_invalidate', False)
-        self.timeout = float(self._ui.config(
-            'fsmonitor', 'timeout', default='2'))
+            'fsmonitor', 'walk_on_invalidate')
+        self.timeout = float(self._ui.config('fsmonitor', 'timeout'))
 
     def get(self):
         try:
