@@ -7,13 +7,14 @@
 
 from __future__ import absolute_import
 
-import collections
-
 from .i18n import _
 from .node import (
     bin,
     hex,
     nullid,
+)
+from .thirdparty import (
+    attr,
 )
 
 from . import (
@@ -142,10 +143,16 @@ def _delayopener(opener, target, buf):
         return appender(opener, name, mode, buf)
     return _delay
 
-_changelogrevision = collections.namedtuple(u'changelogrevision',
-                                            (u'manifest', u'user', u'date',
-                                             u'files', u'description',
-                                             u'extra'))
+@attr.s
+class _changelogrevision(object):
+    # Extensions might modify _defaultextra, so let the constructor below pass
+    # it in
+    extra = attr.ib()
+    manifest = attr.ib(default=nullid)
+    user = attr.ib(default='')
+    date = attr.ib(default=(0, 0))
+    files = attr.ib(default=[])
+    description = attr.ib(default='')
 
 class changelogrevision(object):
     """Holds results of a parsed changelog revision.
@@ -162,14 +169,7 @@ class changelogrevision(object):
 
     def __new__(cls, text):
         if not text:
-            return _changelogrevision(
-                manifest=nullid,
-                user='',
-                date=(0, 0),
-                files=[],
-                description='',
-                extra=_defaultextra,
-            )
+            return _changelogrevision(extra=_defaultextra)
 
         self = super(changelogrevision, cls).__new__(cls)
         # We could return here and implement the following as an __init__.
