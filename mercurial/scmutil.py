@@ -1065,6 +1065,10 @@ def extdatasource(repo, source):
     finally:
         if proc:
             proc.communicate()
+            if proc.returncode != 0:
+                # not an error so 'cmd | grep' can be empty
+                repo.ui.debug("extdata command '%s' %s\n"
+                              % (cmd, util.explainexit(proc.returncode)[0]))
         if src:
             src.close()
 

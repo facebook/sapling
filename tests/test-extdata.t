@@ -12,6 +12,7 @@ test revset support
   > filedata = file:extdata.txt
   > notes = notes.txt
   > shelldata = shell:cat extdata.txt | grep 2
+  > emptygrep = shell:cat extdata.txt | grep empty
   > EOF
   $ cat <<'EOF' > extdata.txt
   > 2 another comment on 2
@@ -41,6 +42,12 @@ test weight of extdata() revset
       (symbol 'filedata'))
     (symbol '3'))
   3
+
+test non-zero exit of shell command
+
+  $ hg log -qr "extdata(emptygrep)"
+  $ hg log -qr "extdata(emptygrep)" --debug
+  extdata command 'cat extdata.txt | grep empty' exited with status * (glob)
 
 test bad extdata() revset source
 
