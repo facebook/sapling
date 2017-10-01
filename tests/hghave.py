@@ -573,8 +573,10 @@ def has_docker():
 
 @check("debhelper", "debian packaging tools")
 def has_debhelper():
+    # Some versions of dpkg say `dpkg', some say 'dpkg' (` vs ' on the first
+    # quote), so just accept anything in that spot.
     dpkg = matchoutput('dpkg --version',
-                       br"Debian `dpkg' package management program")
+                       br"Debian .dpkg' package management program")
     dh = matchoutput('dh --help',
                      br'dh is a part of debhelper.', ignorestatus=True)
     dh_py2 = matchoutput('dh_python2 --help',
