@@ -25,6 +25,7 @@ outputs, which should be fixed later.
   > -X doc/gendoc.py \
   > -X doc/hgmanpage.py \
   > -X i18n/posplit \
+  > -X mercurial/thirdparty \
   > -X tests/hypothesishelpers.py \
   > -X tests/test-commit-interactive.t \
   > -X tests/test-contrib-check-code.t \

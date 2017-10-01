@@ -35,6 +35,8 @@ allowsymbolimports = (
     'mercurial.pure.mpatch',
     'mercurial.pure.osutil',
     'mercurial.pure.parsers',
+    # third-party imports should be directly imported
+    'mercurial.thirdparty',
 )
 
 # Whitelist of symbols that can be directly imported.
