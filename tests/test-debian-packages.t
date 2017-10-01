@@ -1,4 +1,4 @@
-#require test-repo slow debhelper
+#require test-repo slow debhelper debdeps
 
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ testrepohgenv
