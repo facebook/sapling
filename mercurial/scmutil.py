@@ -1203,15 +1203,16 @@ _reportobsoletedsource = [
 def registersummarycallback(repo, otr, txnname=''):
     """register a callback to issue a summary after the transaction is closed
     """
-    for source in _reportobsoletedsource:
-        if txnname.startswith(source):
-            reporef = weakref.ref(repo)
-            def reportsummary(tr):
-                """the actual callback reporting the summary"""
-                repo = reporef()
-                obsoleted = obsutil.getobsoleted(repo, tr)
-                if obsoleted:
-                    repo.ui.status(_('obsoleted %i changesets\n')
-                                   % len(obsoleted))
-            otr.addpostclose('00-txnreport', reportsummary)
-            break
+    def txmatch(sources):
+        return any(txnname.startswith(source) for source in sources)
+
+    if txmatch(_reportobsoletedsource):
+        reporef = weakref.ref(repo)
+        def reportsummary(tr):
+            """the actual callback reporting the summary"""
+            repo = reporef()
+            obsoleted = obsutil.getobsoleted(repo, tr)
+            if obsoleted:
+                repo.ui.status(_('obsoleted %i changesets\n')
+                               % len(obsoleted))
+        otr.addpostclose('00-txnreport', reportsummary)
