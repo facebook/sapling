@@ -135,6 +135,15 @@ b"""# example system-wide hg config (see 'hg help config' for more info)
 """,
 }
 
+def _maybestrurl(maybebytes):
+    if maybebytes is None:
+        return None
+    return pycompat.strurl(maybebytes)
+
+def _maybebytesurl(maybestr):
+    if maybestr is None:
+        return None
+    return pycompat.bytesurl(maybestr)
 
 class httppasswordmgrdbproxy(object):
     """Delays loading urllib2 until it's needed."""
@@ -147,10 +156,18 @@ class httppasswordmgrdbproxy(object):
         return self._mgr
 
     def add_password(self, realm, uris, user, passwd):
-        return self._get_mgr().add_password(realm, uris, user, passwd)
+        if isinstance(uris, tuple):
+            uris = tuple(_maybestrurl(u) for u in uris)
+        else:
+            uris = _maybestrurl(uris)
+        return self._get_mgr().add_password(
+            _maybestrurl(realm), uris,
+            _maybestrurl(user), _maybestrurl(passwd))
 
     def find_user_password(self, realm, uri):
-        return self._get_mgr().find_user_password(realm, uri)
+        return tuple(_maybebytesurl(v) for v in
+                     self._get_mgr().find_user_password(_maybestrurl(realm),
+                                                        _maybestrurl(uri)))
 
 def _catchterm(*args):
     raise error.SignalInterrupt
