@@ -865,9 +865,10 @@ def annotate(web, req, tmpl):
 
     The ``ignorews``, ``ignorewsamount``, ``ignorewseol``, and
     ``ignoreblanklines`` query string arguments have the same meaning as
-    their ``[annotate]`` config equivalents. A value of ``0`` sets the
-    whitespace option to false. All other values are true. If not defined,
-    the server default settings are used.
+    their ``[annotate]`` config equivalents. It uses the hgrc boolean
+    parsing logic to interpret the value. e.g. ``0`` and ``false`` are
+    false and ``1`` and ``true`` are true. If not defined, the server
+    default settings are used.
 
     The ``fileannotate`` template is rendered.
     """

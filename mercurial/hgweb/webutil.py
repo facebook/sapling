@@ -177,12 +177,8 @@ def difffeatureopts(req, ui, section):
     for k in ('ignorews', 'ignorewsamount', 'ignorewseol', 'ignoreblanklines'):
         v = req.form.get(k, [None])[0]
         if v is not None:
-            try:
-                v = bool(int(v))
-            except ValueError:
-                v = True
-
-            setattr(diffopts, k, v)
+            v = util.parsebool(v)
+            setattr(diffopts, k, v if v is not None else True)
 
     return diffopts
 
