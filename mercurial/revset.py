@@ -786,6 +786,17 @@ def contentdivergent(repo, subset, x):
     contentdivergent = obsmod.getrevs(repo, 'contentdivergent')
     return subset & contentdivergent
 
+@predicate('extdata(source)', safe=False, weight=100)
+def extdata(repo, subset, x):
+    """Changesets in the specified extdata source. (EXPERIMENTAL)"""
+    # i18n: "extdata" is a keyword
+    args = getargsdict(x, 'extdata', 'source')
+    source = getstring(args.get('source'),
+                       # i18n: "extdata" is a keyword
+                       _('extdata takes at least 1 string argument'))
+    data = scmutil.extdatasource(repo, source)
+    return subset & baseset(data)
+
 @predicate('extinct()', safe=True)
 def extinct(repo, subset, x):
     """Obsolete changesets with obsolete descendants only.
