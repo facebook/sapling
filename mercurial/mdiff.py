@@ -457,7 +457,7 @@ def b85diff(to, tn):
     # TODO: deltas
     ret = []
     ret.append('GIT binary patch\n')
-    ret.append('literal %s\n' % len(tn))
+    ret.append('literal %d\n' % len(tn))
     for l in chunk(zlib.compress(tn)):
         ret.append(fmtline(l))
     ret.append('\n')

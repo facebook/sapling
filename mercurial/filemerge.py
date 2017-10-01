@@ -515,7 +515,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
                            (tool, fcd.path()))
         repo.ui.debug('launching merge tool: %s\n' % cmd)
         r = ui.system(cmd, cwd=repo.root, environ=env, blockedtag='mergetool')
-        repo.ui.debug('merge tool returned: %s\n' % r)
+        repo.ui.debug('merge tool returned: %d\n' % r)
         return True, r, False
     finally:
         util.unlink(b)
