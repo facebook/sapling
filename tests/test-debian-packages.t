@@ -24,3 +24,9 @@ mercurial-common should have py but no .so or pyc
 zsh completions should be in the common package
   $ dpkg --contents mercurial-common_*.deb | egrep 'zsh.*[^/]$'
   * ./usr/share/zsh/vendor-completions/_hg (glob)
+chg should be installed alongside hg, in the 'mercurial' package
+  $ dpkg --contents mercurial_*.deb | egrep 'chg$'
+  * ./usr/bin/chg (glob)
+chg should come with a man page
+  $ dpkg --contents mercurial_*.deb | egrep 'man.*chg'
+  * ./usr/share/man/man1/chg.1.gz (glob)

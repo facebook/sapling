@@ -16,6 +16,11 @@ override_dh_python2:
 
 override_dh_install:
 	python$(PYVERS) setup.py install --root $(CURDIR)/debian/mercurial --install-layout=deb
+	# chg
+	make -C contrib/chg \
+		DESTDIR=$(CURDIR)/debian/mercurial \
+		PREFIX=/usr \
+		clean install
 	# remove arch-independent python stuff
 	find $(CURDIR)/debian/mercurial/usr/lib \
 		! -name '*.so' ! -type d -delete , \
@@ -31,6 +36,7 @@ override_dh_install:
 	cp contrib/hgk $(CURDIR)/debian/mercurial-common/usr/share/mercurial
 	mkdir -p $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
 	cp contrib/debian/*.rc $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
+	# completions
 	mkdir -p $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions
 	cp contrib/bash_completion $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions/hg
 	mkdir -p $(CURDIR)/debian/mercurial-common/usr/share/zsh/vendor-completions
