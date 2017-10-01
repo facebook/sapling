@@ -322,11 +322,12 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         chain = None
         while True:
+            # returns: (node, p1, p2, cs, deltabase, delta, flags) or None
             revisiondata = source.deltachunk(chain)
             if not revisiondata:
                 break
 
-            chain = revisiondata['node']
+            chain = revisiondata[0]
 
             revisiondatas[(f, chain)] = revisiondata
             queue.append((f, chain))
@@ -358,8 +359,8 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     prefetchfiles = []
     for f, node in queue:
         revisiondata = revisiondatas[(f, node)]
-        dependents = [revisiondata['p1'], revisiondata['p2'],
-                      revisiondata['deltabase']]
+        # revisiondata: (node, p1, p2, cs, deltabase, delta, flags)
+        dependents = [revisiondata[1], revisiondata[2], revisiondata[4]]
 
         for dependent in dependents:
             if dependent == nullid or (f, dependent) in revisiondatas:
@@ -382,11 +383,8 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         fl = repo.file(f)
 
         revisiondata = revisiondatas[(f, node)]
-        p1 = revisiondata['p1']
-        p2 = revisiondata['p2']
-        linknode = revisiondata['cs']
-        deltabase = revisiondata['deltabase']
-        delta = revisiondata['delta']
+        # revisiondata: (node, p1, p2, cs, deltabase, delta, flags)
+        node, p1, p2, linknode, deltabase, delta, flags = revisiondata
 
         if not available(f, node, f, deltabase):
             continue
