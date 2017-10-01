@@ -146,11 +146,11 @@ class httppasswordmgrdbproxy(object):
             self._mgr = urlreq.httppasswordmgrwithdefaultrealm()
         return self._mgr
 
-    def add_password(self, *args, **kwargs):
-        return self._get_mgr().add_password(*args, **kwargs)
+    def add_password(self, realm, uris, user, passwd):
+        return self._get_mgr().add_password(realm, uris, user, passwd)
 
-    def find_user_password(self, *args, **kwargs):
-        return self._get_mgr().find_user_password(*args, **kwargs)
+    def find_user_password(self, realm, uri):
+        return self._get_mgr().find_user_password(realm, uri)
 
 def _catchterm(*args):
     raise error.SignalInterrupt
