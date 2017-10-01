@@ -231,7 +231,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     dmap = self._map
     nonnormalset = getattr(self, '_nonnormalset', None)
 
-    copymap = self._copymap
+    copymap = self._map.copymap
     getkind = stat.S_IFMT
     dirkind = stat.S_IFDIR
     regkind = stat.S_IFREG
