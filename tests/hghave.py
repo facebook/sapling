@@ -581,7 +581,11 @@ def has_debhelper():
                      br'dh is a part of debhelper.', ignorestatus=True)
     dh_py2 = matchoutput('dh_python2 --help',
                          br'other supported Python versions')
-    return dpkg and dh and dh_py2
+    # debuild comes from the 'devscripts' package, though you might want
+    # the 'build-debs' package instead, which has a dependency on devscripts.
+    debuild = matchoutput('debuild --help',
+                          br'to run debian/rules with given parameter')
+    return dpkg and dh and dh_py2 and debuild
 
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
