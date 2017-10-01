@@ -221,7 +221,7 @@ class httppeer(wireproto.wirepeer):
                 argsio = io.BytesIO(strargs)
                 argsio.length = len(strargs)
                 data = _multifile(argsio, data)
-            headers['X-HgArgs-Post'] = len(strargs)
+            headers[r'X-HgArgs-Post'] = len(strargs)
         else:
             if len(args) > 0:
                 httpheader = self.capable('httpheader')
@@ -244,10 +244,10 @@ class httppeer(wireproto.wirepeer):
         elif data is not None:
             size = len(data)
         if size and self.ui.configbool('ui', 'usehttp2'):
-            headers['Expect'] = '100-Continue'
-            headers['X-HgHttp2'] = '1'
-        if data is not None and 'Content-Type' not in headers:
-            headers['Content-Type'] = 'application/mercurial-0.1'
+            headers[r'Expect'] = r'100-Continue'
+            headers[r'X-HgHttp2'] = r'1'
+        if data is not None and r'Content-Type' not in headers:
+            headers[r'Content-Type'] = r'application/mercurial-0.1'
 
         # Tell the server we accept application/mercurial-0.2 and multiple
         # compression formats if the server is capable of emitting those
@@ -281,7 +281,7 @@ class httppeer(wireproto.wirepeer):
                 varyheaders.append(header)
 
         if varyheaders:
-            headers['Vary'] = ','.join(varyheaders)
+            headers[r'Vary'] = r','.join(varyheaders)
 
         req = self._requestbuilder(pycompat.strurl(cu), data, headers)
 
