@@ -315,3 +315,41 @@ Fastlog should never get called on draft commits
   > EOF
   $ rm $TESTTMP/bad_conduit.pyc
   $ hg log -f x > /dev/null
+
+Test linknode fixup logging
+
+Setup extension that logs ui.log linkrevfixup output on the stderr
+  $ cat >> $TESTTMP/uilog.py <<EOF
+  > from mercurial import extensions
+  > from mercurial import ui as uimod
+  > def uisetup(ui):
+  >     extensions.wrapfunction(uimod.ui, 'log', mylog)
+  > def mylog(orig, self, service, *msg, **opts):
+  >     if service in ['linkrevfixup']:
+  >         kwstr = ", ".join("%s=%s" % (k, v) for k, v in
+  >                           sorted(opts.iteritems()))
+  >         msgstr = msg[0] % msg[1:]
+  >         self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
+  >     return orig(self, service, *msg, **opts)
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > uilog=$TESTTMP/uilog.py
+  > EOF
+
+Silencing stdout because we are interested only in ui.log output
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
+  linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
+  linkrevfixup: fastlog succeded (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
+
+Fastlog fails
+  $ cat > $TESTTMP/bad_conduit.py <<EOF
+  > def call_conduit(*args, **kwargs):
+  >   raise Exception('error')
+  > def conduit_config(*args, **kwargs):
+  >   return True
+  > EOF
+  $ rm $TESTTMP/bad_conduit.pyc
+  $ hg log -f x -T '{node|short} {desc} {phase} {files}\n' > /dev/null
+  linkrevfixup: adjusting linknode (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)
+  linkrevfixup: fastlog failed (error) (filepath=x, fnode=d4a3ed9310e5bd9887e3bf779da5077efab28216, reponame=master, revs=a5957b6bf0bdeb9b96368bddd2838004ad966b7d, user=test)

@@ -477,3 +477,15 @@ def trygetattr(obj, names):
 def peercapabilities(peer):
     """return capabilities of a peer"""
     return trygetattr(peer, ('_capabilities', 'capabilities'))()
+
+def getusername(ui):
+    try:
+        return util.shortuser(ui.username())
+    except Exception:
+        return 'unknown'
+
+def getreponame(ui):
+    reponame = ui.config('paths', 'default')
+    if reponame:
+        return os.path.basename(reponame)
+    return "unknown"

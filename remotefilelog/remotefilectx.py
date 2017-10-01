@@ -9,6 +9,7 @@ import collections
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import context, util, error, ancestor, phases, extensions
+from . import shallowutil
 
 propertycache = util.propertycache
 conduit = None
@@ -240,6 +241,16 @@ class remotefilectx(context.filectx):
         if self._verifylinknode(revs, linknode):
             return linknode
 
+        commonlogkwargs = {
+            'revs': ' '.join([hex(cl.node(rev)) for rev in revs]),
+            'fnode': hex(fnode),
+            'filepath': path,
+            'user': shallowutil.getusername(repo.ui),
+            'reponame': shallowutil.getreponame(repo.ui),
+        }
+
+        repo.ui.log('linkrevfixup', 'adjusting linknode', **commonlogkwargs)
+
         pc = repo._phasecache
         seenpublic = False
         iteranc = cl.ancestors(revs, inclusive=inclusive)
@@ -296,7 +307,7 @@ class remotefilectx(context.filectx):
                 # commits
                 if repo.ui.configbool('fastlog', 'enabled'):
                     lnode = self._linknodeviafastlog(repo, path, ancrev, fnode,
-                                                     cl, mfl)
+                                                     cl, mfl, commonlogkwargs)
                     if lnode:
                         return lnode
                 seenpublic = True
@@ -320,7 +331,8 @@ class remotefilectx(context.filectx):
 
         return linknode
 
-    def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl):
+    def _linknodeviafastlog(self, repo, path, srcrev, fnode, cl, mfl,
+                            commonlogkwargs):
         reponame = repo.ui.config('fbconduit', 'reponame')
         logmsg = ''
         if self._conduit is None:
@@ -351,7 +363,7 @@ class remotefilectx(context.filectx):
             logmsg = 'fastlog failed (%s)' % e
             return None
         finally:
-            repo.ui.log('linkrevfixup', logmsg)
+            repo.ui.log('linkrevfixup', logmsg, **commonlogkwargs)
 
 
     def _verifylinknode(self, revs, linknode):
