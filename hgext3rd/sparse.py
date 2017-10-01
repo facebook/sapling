@@ -1066,7 +1066,7 @@ def _cwdlist(repo):
         cwd = cwd[len(root):]
     else:
         raise error.Abort(_("the current working directory should begin " +
-            "with the root %s"% root))
+            "with the root %s") % root)
 
     cwd = cwd.strip("/")
     sparsematch = repo.sparsematch(ctx.rev())
