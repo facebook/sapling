@@ -1,20 +1,33 @@
 from util import isgitsshuri
 from mercurial import util
 from mercurial.error import RepoError
-from mercurial.peer import peerrepository
+
+peerapi = False
+try:
+    from mercurial.repository import peer as peerrepository
+    peerapi = True
+except ImportError:
+    from mercurial.peer import peerrepository
 
 class gitrepo(peerrepository):
-    capabilities = ['lookup']
-
-    def _capabilities(self):
-        return self.capabilities
-
     def __init__(self, ui, path, create):
         if create:  # pragma: no cover
             raise util.Abort('Cannot create a git repository.')
-        self.ui = ui
+        self._ui = ui
         self.path = path
         self.localrepo = None
+
+    _peercapabilities = ['lookup']
+
+    def _capabilities(self):
+        return self._peercapabilities
+
+    def capabilities(self):
+        return self._peercapabilities
+
+    @property
+    def ui(self):
+        return self._ui
 
     def url(self):
         return self.path
@@ -47,6 +60,37 @@ class gitrepo(peerrepository):
 
     def pushkey(self, namespace, key, old, new):
         return False
+
+    if peerapi:
+        def branchmap(self):
+            raise NotImplementedError
+
+        def canpush(self):
+            return True
+
+        def close(self):
+            pass
+
+        def debugwireargs(self):
+            raise NotImplementedError
+
+        def getbundle(self):
+            raise NotImplementedError
+
+        def iterbatch(self):
+            raise NotImplementedError
+
+        def known(self):
+            raise NotImplementedError
+
+        def peer(self):
+            return self
+
+        def stream_out(self):
+            raise NotImplementedError
+
+        def unbundle(self):
+            raise NotImplementedError
 
 instance = gitrepo
 
