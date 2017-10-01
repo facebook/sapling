@@ -92,6 +92,7 @@ import threading
 
 from .i18n import _
 from . import (
+    pycompat,
     util,
 )
 
@@ -235,7 +236,8 @@ class KeepAliveHandler(object):
         # The string form of BadStatusLine is the status line. Add some context
         # to make the error message slightly more useful.
         except httplib.BadStatusLine as err:
-            raise urlerr.urlerror(_('bad HTTP status line: %s') % err.line)
+            raise urlerr.urlerror(
+                _('bad HTTP status line: %s') % pycompat.sysbytes(err.line))
         except (socket.error, httplib.HTTPException) as err:
             raise urlerr.urlerror(err)
 
@@ -358,9 +360,12 @@ class HTTPResponse(httplib.HTTPResponse):
 
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
+        extrakw = {}
+        if not pycompat.ispy3:
+            extrakw['strict'] = True
+            extrakw['buffering'] = True
         httplib.HTTPResponse.__init__(self, sock, debuglevel=debuglevel,
-                                      strict=True, method=method,
-                                      buffering=True)
+                                      method=method, **extrakw)
         self.fileno = sock.fileno
         self.code = None
         self._rbuf = ''
