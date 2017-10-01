@@ -18,6 +18,7 @@ from .i18n import _
 from . import (
     httpclient,
     sslutil,
+    urllibcompat,
     util,
 )
 
@@ -174,13 +175,14 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         # object. On Python 2.6.5, it's stored in the _tunnel_host
         # attribute which has no accessor.
         tunhost = getattr(req, '_tunnel_host', None)
-        host = req.get_host()
+        host = urllibcompat.gethost(req)
         if tunhost:
             proxyhost = host
             host = tunhost
         elif req.has_proxy():
-            proxyhost = req.get_host()
-            host = req.get_selector().split('://', 1)[1].split('/', 1)[0]
+            proxyhost = urllibcompat.gethost(req)
+            host = urllibcompat.getselector(
+                req).split('://', 1)[1].split('/', 1)[0]
         else:
             proxyhost = None
 
@@ -219,7 +221,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         headers = dict(
             (name.title(), val) for name, val in headers.items())
         try:
-            path = req.get_selector()
+            path = urllibcompat.getselector(req)
             if '://' in path:
                 path = path.split('://', 1)[1].split('/', 1)[1]
             if path[0] != '/':
@@ -233,7 +235,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         # object initialized properly.
         r.recv = r.read
 
-        resp = urlreq.addinfourl(r, r.headers, req.get_full_url())
+        resp = urlreq.addinfourl(r, r.headers, urllibcompat.getfullurl(req))
         resp.code = r.status
         resp.msg = r.reason
         return resp
@@ -242,7 +244,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
     # target, and then allows full URIs in the request path, which it
     # then observes and treats as a signal to do proxying instead.
     def http_open(self, req):
-        if req.get_full_url().startswith('https'):
+        if urllibcompat.getfullurl(req).startswith('https'):
             return self.https_open(req)
         def makehttpcon(*args, **kwargs):
             k2 = dict(kwargs)
@@ -251,9 +253,9 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         return self.do_open(makehttpcon, req, False)
 
     def https_open(self, req):
-        # req.get_full_url() does not contain credentials and we may
+        # urllibcompat.getfullurl(req) does not contain credentials and we may
         # need them to match the certificates.
-        url = req.get_full_url()
+        url = urllibcompat.getfullurl(req)
         user, password = self.pwmgr.find_stored_password(url)
         res = readauthforuri(self.ui, url, user)
         if res:

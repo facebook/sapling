@@ -21,6 +21,7 @@ from . import (
     keepalive,
     pycompat,
     sslutil,
+    urllibcompat,
     util,
 )
 
@@ -119,7 +120,7 @@ class proxyhandler(urlreq.proxyhandler):
         self.ui = ui
 
     def proxy_open(self, req, proxy, type_):
-        host = req.get_host().split(':')[0]
+        host = urllibcompat.gethost(req).split(':')[0]
         for e in self.no_list:
             if host == e:
                 return None
@@ -166,10 +167,10 @@ def _generic_start_transaction(handler, h, req):
             tunnel_host = 'https://' + tunnel_host
         new_tunnel = True
     else:
-        tunnel_host = req.get_selector()
+        tunnel_host = urllibcompat.getselector(req)
         new_tunnel = False
 
-    if new_tunnel or tunnel_host == req.get_full_url(): # has proxy
+    if new_tunnel or tunnel_host == urllibcompat.getfullurl(req): # has proxy
         u = util.url(tunnel_host)
         if new_tunnel or u.scheme == 'https': # only use CONNECT for HTTPS
             h.realhostport = ':'.join([u.host, (u.port or '443')])
@@ -320,9 +321,9 @@ if has_https:
             return keepalive.KeepAliveHandler._start_transaction(self, h, req)
 
         def https_open(self, req):
-            # req.get_full_url() does not contain credentials and we may
-            # need them to match the certificates.
-            url = req.get_full_url()
+            # urllibcompat.getfullurl() does not contain credentials
+            # and we may need them to match the certificates.
+            url = urllibcompat.getfullurl(req)
             user, password = self.pwmgr.find_stored_password(url)
             res = httpconnectionmod.readauthforuri(self.ui, url, user)
             if res:
@@ -406,7 +407,8 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
                         self, auth_header, host, req, headers)
 
     def retry_http_basic_auth(self, host, req, realm):
-        user, pw = self.passwd.find_user_password(realm, req.get_full_url())
+        user, pw = self.passwd.find_user_password(
+            realm, urllibcompat.getfullurl(req))
         if pw is not None:
             raw = "%s:%s" % (user, pw)
             auth = 'Basic %s' % base64.b64encode(raw).strip()

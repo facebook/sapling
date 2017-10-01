@@ -28,6 +28,7 @@ import socket
 import stat
 
 from . import (
+    urllibcompat,
     util,
 )
 
@@ -214,8 +215,8 @@ class FileRangeHandler(urlreq.filehandler):
     server would.
     """
     def open_local_file(self, req):
-        host = req.get_host()
-        file = req.get_selector()
+        host = urllibcompat.gethost(req)
+        file = urllibcompat.getselector(req)
         localfile = urlreq.url2pathname(file)
         stats = os.stat(localfile)
         size = stats[stat.ST_SIZE]
@@ -252,7 +253,7 @@ class FileRangeHandler(urlreq.filehandler):
 
 class FTPRangeHandler(urlreq.ftphandler):
     def ftp_open(self, req):
-        host = req.get_host()
+        host = urllibcompat.gethost(req)
         if not host:
             raise IOError('ftp error', 'no host given')
         host, port = splitport(host)

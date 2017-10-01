@@ -93,6 +93,7 @@ import threading
 from .i18n import _
 from . import (
     pycompat,
+    urllibcompat,
     util,
 )
 
@@ -206,7 +207,7 @@ class KeepAliveHandler(object):
         return self.do_open(HTTPConnection, req)
 
     def do_open(self, http_class, req):
-        host = req.get_host()
+        host = urllibcompat.gethost(req)
         if not host:
             raise urlerr.urlerror('no host given')
 
@@ -317,10 +318,11 @@ class KeepAliveHandler(object):
             if n in headers:
                 skipheaders['skip_' + n.replace('-', '_')] = 1
         try:
-            if req.has_data():
-                data = req.get_data()
+            if urllibcompat.hasdata(req):
+                data = urllibcompat.getdata(req)
                 h.putrequest(
-                    req.get_method(), req.get_selector(), **skipheaders)
+                    req.get_method(), urllibcompat.getselector(req),
+                    **skipheaders)
                 if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
@@ -328,13 +330,14 @@ class KeepAliveHandler(object):
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest(
-                    req.get_method(), req.get_selector(), **skipheaders)
+                    req.get_method(), urllibcompat.getselector(req),
+                    **skipheaders)
         except socket.error as err:
             raise urlerr.urlerror(err)
         for k, v in headers.items():
             h.putheader(k, v)
         h.endheaders()
-        if req.has_data():
+        if urllibcompat.hasdata(req):
             h.send(data)
 
 class HTTPHandler(KeepAliveHandler, urlreq.httphandler):
