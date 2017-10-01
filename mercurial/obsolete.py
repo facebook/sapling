@@ -416,6 +416,14 @@ def _fm1encodeonemarker(marker):
     for key, value in metadata:
         lk = len(key)
         lv = len(value)
+        if lk > 255:
+            msg = ('obsstore metadata key cannot be longer than 255 bytes'
+                   ' (key "%s" is %u bytes)') % (key, lk)
+            raise error.ProgrammingError(msg)
+        if lv > 255:
+            msg = ('obsstore metadata value cannot be longer than 255 bytes'
+                   ' (value "%s" for key "%s" is %u bytes)') % (value, key, lv)
+            raise error.ProgrammingError(msg)
         data.append(lk)
         data.append(lv)
         totalsize += lk + lv
