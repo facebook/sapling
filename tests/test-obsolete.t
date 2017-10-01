@@ -760,8 +760,12 @@ Template keywords
   3de5eca88c00 ????-??-?? (glob)
   $ hg debugobsolete -r6 -T '{join(metadata % "{key}={value}", " ")}\n'
   user=test <test@example.net>
-  $ hg debugobsolete -r6 -T '{metadata}\n'
+  $ hg debugobsolete -r6 -T '{metadata}\n{metadata}\n'
   'user': 'test <test@example.net>'
+  'user': 'test <test@example.net>'
+  $ hg debugobsolete -r6 -T '{succnodes}\n{succnodes}\n'
+  3de5eca88c00aa039da7399a220f4a5221faa585
+  3de5eca88c00aa039da7399a220f4a5221faa585
   $ hg debugobsolete -r6 -T '{flag} {get(metadata, "user")}\n'
   0 test <test@example.net>
 

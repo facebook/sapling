@@ -348,15 +348,14 @@ class _templateconverter(object):
         data = util.sortdict(_iteritems(data))
         def f():
             yield _plainconverter.formatdict(data, key, value, fmt, sep)
-        return templatekw.hybriddict(data, key=key, value=value, fmt=fmt,
-                                     gen=f())
+        return templatekw.hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
     @staticmethod
     def formatlist(data, name, fmt, sep):
         '''build object that can be evaluated as either plain string or list'''
         data = list(data)
         def f():
             yield _plainconverter.formatlist(data, name, fmt, sep)
-        return templatekw.hybridlist(data, name=name, fmt=fmt, gen=f())
+        return templatekw.hybridlist(data, name=name, fmt=fmt, gen=f)
 
 class templateformatter(baseformatter):
     def __init__(self, ui, out, topic, opts):

@@ -39,15 +39,12 @@ class _hybrid(object):
 
     def __init__(self, gen, values, makemap, joinfmt):
         if gen is not None:
-            self.gen = gen
+            self.gen = gen  # generator or function returning generator
         self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
-    @util.propertycache
     def gen(self):
-        return self._defaultgen()
-    def _defaultgen(self):
-        """Generator to stringify this as {join(self, ' ')}"""
+        """Default generator to stringify this as {join(self, ' ')}"""
         for i, x in enumerate(self._values):
             if i > 0:
                 yield ' '
@@ -104,9 +101,12 @@ def hybridlist(data, name, fmt='%s', gen=None):
 def unwraphybrid(thing):
     """Return an object which can be stringified possibly by using a legacy
     template"""
-    if not util.safehasattr(thing, 'gen'):
+    gen = getattr(thing, 'gen', None)
+    if gen is None:
         return thing
-    return thing.gen
+    if callable(gen):
+        return gen()
+    return gen
 
 def unwrapvalue(thing):
     """Move the inner value object out of the wrapper"""
@@ -685,7 +685,7 @@ def showsuccessorssets(repo, ctx, **args):
     # Format the successorssets
     def render(d):
         t = []
-        for i in d.gen:
+        for i in d.gen():
             t.append(i)
         return "".join(t)
 
