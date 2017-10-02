@@ -400,7 +400,11 @@ def annotate(ui, repo, *pats, **opts):
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
             fm.startitem()
             fm.write(fields, "".join(f), *p)
-            fm.write('line', ": %s", l[1])
+            if l[0].skip:
+                fmt = "* %s"
+            else:
+                fmt = ": %s"
+            fm.write('line', fmt, l[1])
 
         if not lines[-1][1].endswith('\n'):
             fm.plain('\n')
