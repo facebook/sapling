@@ -347,7 +347,7 @@ class internalmerge(_funcregistrarbase):
     fullmerge   o        o        o
     ========== ======== ======== =========
 
-    Optional argument 'onfalure' is the format of warning message
+    Optional argument 'onfailure' is the format of warning message
     to be used at failure of merging (target filename is specified
     at formatting). Or, None or so, if warning message should be
     suppressed.
