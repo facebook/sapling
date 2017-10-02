@@ -1167,14 +1167,18 @@ def batchget(repo, mctx, wctx, actions):
                 repo.ui.note(_("getting %s\n") % f)
 
             if backup:
+                # If a file or directory exists with the same name, back that
+                # up.  Otherwise, look to see if there is a file that conflicts
+                # with a directory this file is in, and if so, back that up.
                 absf = repo.wjoin(f)
+                if not repo.wvfs.lexists(f):
+                    for p in util.finddirs(f):
+                        if repo.wvfs.isfileorlink(p):
+                            absf = repo.wjoin(p)
+                            break
                 orig = scmutil.origpath(ui, repo, absf)
-                try:
-                    if repo.wvfs.isfileorlink(f):
-                        util.rename(absf, orig)
-                except OSError as e:
-                    if e.errno != errno.ENOENT:
-                        raise
+                if repo.wvfs.lexists(absf):
+                    util.rename(absf, orig)
             wctx[f].clearunknown()
             wctx[f].write(fctx(f).data(), flags, backgroundclose=True)
             if i == 100:
