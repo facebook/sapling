@@ -741,13 +741,23 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                     actions[f] = ('g', (fl2, True), "remote created")
 
     for f in sorted(abortconflicts):
-        repo.ui.warn(_("%s: untracked file differs\n") % f)
+        warn = repo.ui.warn
+        if f in pathconflicts:
+            if repo.wvfs.isfileorlink(f):
+                warn(_("%s: untracked file conflicts with directory\n") % f)
+            else:
+                warn(_("%s: untracked directory conflicts with file\n") % f)
+        else:
+            warn(_("%s: untracked file differs\n") % f)
     if abortconflicts:
         raise error.Abort(_("untracked files in working directory "
                             "differ from files in requested revision"))
 
     for f in sorted(warnconflicts):
-        repo.ui.warn(_("%s: replacing untracked file\n") % f)
+        if repo.wvfs.isfileorlink(f):
+            repo.ui.warn(_("%s: replacing untracked file\n") % f)
+        else:
+            repo.ui.warn(_("%s: replacing untracked files in directory\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
         if m == 'c':

@@ -37,7 +37,7 @@ Basic update - local directory conflicts with remote file
   $ mkdir a
   $ echo 3 > a/b
   $ hg up file
-  a: untracked file differs
+  a: untracked directory conflicts with file
   abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg up --clean file

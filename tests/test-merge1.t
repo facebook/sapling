@@ -30,7 +30,7 @@ of the files in a commit we're updating to
 
   $ mkdir b && touch b/nonempty
   $ hg up
-  b: untracked file differs
+  b: untracked directory conflicts with file
   abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg ci
