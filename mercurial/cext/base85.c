@@ -96,14 +96,12 @@ static PyObject *b85decode(PyObject *self, PyObject *args)
 	dst = PyBytes_AsString(out);
 
 	i = 0;
-	while (i < len)
-	{
+	while (i < len) {
 		acc = 0;
 		cap = len - i - 1;
 		if (cap > 4)
 			cap = 4;
-		for (j = 0; j < cap; i++, j++)
-		{
+		for (j = 0; j < cap; i++, j++) {
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
 				return PyErr_Format(
@@ -112,8 +110,7 @@ static PyObject *b85decode(PyObject *self, PyObject *args)
 					(int)i);
 			acc = acc * 85 + c;
 		}
-		if (i++ < len)
-		{
+		if (i++ < len) {
 			c = b85dec[(int)*text++] - 1;
 			if (c < 0)
 				return PyErr_Format(
@@ -136,8 +133,7 @@ static PyObject *b85decode(PyObject *self, PyObject *args)
 			acc *= 85;
 		if (cap && cap < 4)
 			acc += 0xffffff >> (cap - 1) * 8;
-		for (j = 0; j < cap; j++)
-		{
+		for (j = 0; j < cap; j++) {
 			acc = (acc << 8) | (acc >> 24);
 			*dst++ = acc;
 		}

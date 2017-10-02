@@ -445,8 +445,7 @@ static Py_ssize_t add_roots_get_min(indexObject *self, PyObject *list,
 		iter = PyObject_GetIter(list);
 		if (iter == NULL)
 			return -2;
-		while ((iter_item = PyIter_Next(iter)))
-		{
+		while ((iter_item = PyIter_Next(iter))) {
 			iter_item_long = PyInt_AS_LONG(iter_item);
 			Py_DECREF(iter_item);
 			if (iter_item_long < min_idx)
