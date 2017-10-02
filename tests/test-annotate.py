@@ -80,9 +80,11 @@ class AnnotateTests(unittest.TestCase):
                                  diffopts)
         self.assertEqual(childann[0], [
             annotateline('old', 1),
-            annotateline('old', 2),
+            annotateline('old', 2, True),
+            # note that this line was carried over from earlier so it is *not*
+            # marked skipped
             annotateline('p2', 2),
-            annotateline('p2', 2),
+            annotateline('p2', 2, True),
             annotateline('p2', 3),
         ])
 
@@ -91,9 +93,9 @@ class AnnotateTests(unittest.TestCase):
                                  diffopts)
         self.assertEqual(childann[0], [
             annotateline('old', 1),
-            annotateline('old', 2),
+            annotateline('old', 2, True),
             annotateline('p1', 3),
-            annotateline('p1', 3),
+            annotateline('p1', 3, True),
             annotateline('p2', 3),
         ])
 

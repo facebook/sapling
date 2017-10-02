@@ -1111,6 +1111,8 @@ class basefilectx(object):
 class annotateline(object):
     fctx = attr.ib()
     lineno = attr.ib(default=False)
+    # Whether this annotation was the result of a skip-annotate.
+    skip = attr.ib(default=False)
 
 def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     r'''
@@ -1159,7 +1161,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
                     for bk in xrange(b1, b2):
                         if child[0][bk].fctx == childfctx:
                             ak = min(a1 + (bk - b1), a2 - 1)
-                            child[0][bk] = parent[0][ak]
+                            child[0][bk] = attr.evolve(parent[0][ak], skip=True)
                 else:
                     remaining[idx][1].append((a1, a2, b1, b2))
 
@@ -1170,7 +1172,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
                 for bk in xrange(b1, b2):
                     if child[0][bk].fctx == childfctx:
                         ak = min(a1 + (bk - b1), a2 - 1)
-                        child[0][bk] = parent[0][ak]
+                        child[0][bk] = attr.evolve(parent[0][ak], skip=True)
     return child
 
 class filectx(basefilectx):
