@@ -1243,12 +1243,27 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             wctx[f].remove()
 
     numupdates = sum(len(l) for m, l in actions.items() if m != 'k')
+    z = 0
 
     if [a for a in actions['r'] if a[0] == '.hgsubstate']:
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
-    # remove in parallel (must come first)
-    z = 0
+    # record path conflicts
+    for f, args, msg in actions['p']:
+        f1, fo = args
+        s = repo.ui.status
+        s(_("%s: path conflict - a file or link has the same name as a "
+            "directory\n") % f)
+        if fo == 'l':
+            s(_("the local file has been renamed to %s\n") % f1)
+        else:
+            s(_("the remote file has been renamed to %s\n") % f1)
+        s(_("resolve manually then use 'hg resolve --mark %s'\n") % f)
+        ms.addpath(f, f1, fo)
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+
+    # remove in parallel (must come before getting)
     prog = worker.worker(repo.ui, 0.001, batchremove, (repo, wctx),
                          actions['r'])
     for i, item in prog:
@@ -1698,7 +1713,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
                     del actionbyfile[f]
 
         # Convert to dictionary-of-lists format
-        actions = dict((m, []) for m in 'a am f g cd dc r dm dg m e k'.split())
+        actions = dict((m, [])
+                       for m in 'a am f g cd dc r dm dg m e k p'.split())
         for f, (m, args, msg) in actionbyfile.iteritems():
             if m not in actions:
                 actions[m] = []
