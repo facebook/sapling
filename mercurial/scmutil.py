@@ -38,6 +38,7 @@ from . import (
     similar,
     url,
     util,
+    vfs,
 )
 
 if pycompat.osname == 'nt':
@@ -573,18 +574,34 @@ def origpath(ui, repo, filepath):
     Fall back to default (filepath with .orig suffix) if not specified
     '''
     origbackuppath = ui.config('ui', 'origbackuppath')
-    if origbackuppath is None:
+    if not origbackuppath:
         return filepath + ".orig"
 
-    filepathfromroot = os.path.relpath(filepath, start=repo.root)
-    fullorigpath = repo.wjoin(origbackuppath, filepathfromroot)
+    # Convert filepath from an absolute path into a path inside the repo.
+    filepathfromroot = util.normpath(os.path.relpath(filepath,
+                                                     start=repo.root))
 
-    origbackupdir = repo.vfs.dirname(fullorigpath)
-    if not repo.vfs.exists(origbackupdir):
-        ui.note(_('creating directory: %s\n') % origbackupdir)
-        util.makedirs(origbackupdir)
+    origvfs = vfs.vfs(repo.wjoin(origbackuppath))
+    origbackupdir = origvfs.dirname(filepathfromroot)
+    if not origvfs.isdir(origbackupdir) or origvfs.islink(origbackupdir):
+        ui.note(_('creating directory: %s\n') % origvfs.join(origbackupdir))
 
-    return fullorigpath
+        # Remove any files that conflict with the backup file's path
+        for f in reversed(list(util.finddirs(filepathfromroot))):
+            if origvfs.isfileorlink(f):
+                ui.note(_('removing conflicting file: %s\n')
+                        % origvfs.join(f))
+                origvfs.unlink(f)
+                break
+
+        origvfs.makedirs(origbackupdir)
+
+    if origvfs.isdir(filepathfromroot):
+        ui.note(_('removing conflicting directory: %s\n')
+                % origvfs.join(filepathfromroot))
+        origvfs.rmtree(filepathfromroot, forcibly=True)
+
+    return origvfs.join(filepathfromroot)
 
 class _containsnode(object):
     """proxy __contains__(node) to container.__contains__ which accepts revs"""
