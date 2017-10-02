@@ -50,7 +50,7 @@ class EdenClient(EdenService.Client):
     def __init__(self, eden_dir=None, mounted_path=None):
         self._eden_dir = eden_dir
         if mounted_path:
-            sock_path = os.path.join(mounted_path, '.eden', 'socket')
+            sock_path = os.readlink(os.path.join(mounted_path, '.eden', 'socket'))
         else:
             sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
         self._socket = TSocket(unix_socket=sock_path)
