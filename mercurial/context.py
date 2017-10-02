@@ -25,6 +25,9 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
+from .thirdparty import (
+    attr,
+)
 from . import (
     encoding,
     error,
@@ -983,10 +986,11 @@ class basefilectx(object):
 
         if linenumber:
             def decorate(text, rev):
-                return ([(rev, i) for i in xrange(1, lines(text) + 1)], text)
+                return ([annotateline(fctx=rev, lineno=i)
+                         for i in xrange(1, lines(text) + 1)], text)
         else:
             def decorate(text, rev):
-                return ([(rev, False)] * lines(text), text)
+                return ([annotateline(fctx=rev)] * lines(text), text)
 
         getlog = util.lrucachefunc(lambda x: self._repo.file(x))
 
@@ -1103,6 +1107,11 @@ class basefilectx(object):
         """
         return self._repo.wwritedata(self.path(), self.data())
 
+@attr.s(slots=True, frozen=True)
+class annotateline(object):
+    fctx = attr.ib()
+    lineno = attr.ib(default=False)
+
 def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     r'''
     Given parent and child fctxes and annotate data for parents, for all lines
@@ -1148,7 +1157,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
             for (a1, a2, b1, b2), _t in blocks:
                 if a2 - a1 >= b2 - b1:
                     for bk in xrange(b1, b2):
-                        if child[0][bk][0] == childfctx:
+                        if child[0][bk].fctx == childfctx:
                             ak = min(a1 + (bk - b1), a2 - 1)
                             child[0][bk] = parent[0][ak]
                 else:
@@ -1159,7 +1168,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
         for parent, blocks in remaining:
             for a1, a2, b1, b2 in blocks:
                 for bk in xrange(b1, b2):
-                    if child[0][bk][0] == childfctx:
+                    if child[0][bk].fctx == childfctx:
                         ak = min(a1 + (bk - b1), a2 - 1)
                         child[0][bk] = parent[0][ak]
     return child

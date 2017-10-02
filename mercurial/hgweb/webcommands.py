@@ -906,7 +906,8 @@ def annotate(web, req, tmpl):
 
         previousrev = None
         blockparitygen = paritygen(1)
-        for lineno, ((f, targetline), l) in enumerate(lines):
+        for lineno, (aline, l) in enumerate(lines):
+            f = aline.fctx
             rev = f.rev()
             if rev != previousrev:
                 blockhead = True
@@ -924,7 +925,7 @@ def annotate(web, req, tmpl):
                    "file": f.path(),
                    "blockhead": blockhead,
                    "blockparity": blockparity,
-                   "targetline": targetline,
+                   "targetline": aline.lineno,
                    "line": l,
                    "lineno": lineno + 1,
                    "lineid": "l%d" % (lineno + 1),

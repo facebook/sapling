@@ -326,12 +326,12 @@ def annotate(ui, repo, *pats, **opts):
         hexfn = rootfm.hexfunc
         formatrev = formathex = pycompat.bytestr
 
-    opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
-             ('number', ' ', lambda x: x[0].rev(), formatrev),
-             ('changeset', ' ', lambda x: hexfn(x[0].node()), formathex),
-             ('date', ' ', lambda x: x[0].date(), util.cachefunc(datefunc)),
-             ('file', ' ', lambda x: x[0].path(), str),
-             ('line_number', ':', lambda x: x[1], str),
+    opmap = [('user', ' ', lambda x: x.fctx.user(), ui.shortuser),
+             ('number', ' ', lambda x: x.fctx.rev(), formatrev),
+             ('changeset', ' ', lambda x: hexfn(x.fctx.node()), formathex),
+             ('date', ' ', lambda x: x.fctx.date(), util.cachefunc(datefunc)),
+             ('file', ' ', lambda x: x.fctx.path(), str),
+             ('line_number', ':', lambda x: x.lineno, str),
             ]
     fieldnamemap = {'number': 'rev', 'changeset': 'node'}
 
