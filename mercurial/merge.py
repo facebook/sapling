@@ -641,6 +641,34 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
 
+def _checkunknowndirs(repo, f):
+    """
+    Look for any unknown files or directories that may have a path conflict
+    with a file.  If any path prefix of the file exists as a file or link,
+    then it conflicts.  If the file itself is a directory that contains any
+    file that is not tracked, then it conflicts.
+
+    Returns the shortest path at which a conflict occurs, or None if there is
+    no conflict.
+    """
+
+    # Check for path prefixes that exist as unknown files.
+    for p in reversed(list(util.finddirs(f))):
+        if (repo.wvfs.audit.check(p)
+                and repo.wvfs.isfileorlink(p)
+                and repo.dirstate.normalize(p) not in repo.dirstate):
+            return p
+
+    # Check if the file conflicts with a directory containing unknown files.
+    if repo.wvfs.audit.check(f) and repo.wvfs.isdir(f):
+        # Does the directory contain any files that are not in the dirstate?
+        for p, dirs, files in repo.wvfs.walk(f):
+            for fn in files:
+                relf = repo.dirstate.normalize(repo.wvfs.reljoin(p, fn))
+                if relf not in repo.dirstate:
+                    return f
+    return None
+
 def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     """
     Considers any actions that care about the presence of conflicting unknown
