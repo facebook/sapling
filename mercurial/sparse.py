@@ -487,7 +487,7 @@ def refreshwdir(repo, origstatus, origsparsematch, force=False):
 
     # Apply changes to disk
     typeactions = dict((m, [])
-                       for m in 'a f g am cd dc r dm dg m e k p'.split())
+                       for m in 'a f g am cd dc r dm dg m e k p pr'.split())
     for f, (m, args, msg) in actions.iteritems():
         if m not in typeactions:
             typeactions[m] = []

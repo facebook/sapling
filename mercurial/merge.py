@@ -1263,13 +1263,25 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
 
-    # remove in parallel (must come before getting)
+    # remove in parallel (must come before resolving path conflicts and getting)
     prog = worker.worker(repo.ui, 0.001, batchremove, (repo, wctx),
                          actions['r'])
     for i, item in prog:
         z += i
         progress(_updating, z, item=item, total=numupdates, unit=_files)
     removed = len(actions['r'])
+
+    # resolve path conflicts (must come before getting)
+    for f, args, msg in actions['pr']:
+        repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
+        f0, = args
+        if wctx[f0].lexists():
+            repo.ui.note(_("moving %s to %s\n") % (f0, f))
+            wctx[f].audit()
+            wctx[f].write(wctx.filectx(f0).data(), wctx.filectx(f0).flags())
+            wctx[f0].remove()
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
 
     # We should flush before forking into worker processes, since those workers
     # flush when they complete, and we don't want to duplicate work.
@@ -1442,6 +1454,17 @@ def recordupdates(repo, actions, branchmerge):
     # forget (must come first)
     for f, args, msg in actions.get('f', []):
         repo.dirstate.drop(f)
+
+    # resolve path conflicts
+    for f, args, msg in actions.get('pr', []):
+        f0, = args
+        origf0 = repo.dirstate.copied(f0) or f0
+        repo.dirstate.add(f)
+        repo.dirstate.copy(origf0, f)
+        if f0 == origf0:
+            repo.dirstate.remove(f0)
+        else:
+            repo.dirstate.drop(f0)
 
     # re-add
     for f, args, msg in actions.get('a', []):
@@ -1678,7 +1701,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
         if updatecheck == 'noconflict':
             for f, (m, args, msg) in actionbyfile.iteritems():
-                if m not in ('g', 'k', 'e', 'r'):
+                if m not in ('g', 'k', 'e', 'r', 'pr'):
                     msg = _("conflicting changes")
                     hint = _("commit or update --clean to discard changes")
                     raise error.Abort(msg, hint=hint)
@@ -1714,7 +1737,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
         # Convert to dictionary-of-lists format
         actions = dict((m, [])
-                       for m in 'a am f g cd dc r dm dg m e k p'.split())
+                       for m in 'a am f g cd dc r dm dg m e k p pr'.split())
         for f, (m, args, msg) in actionbyfile.iteritems():
             if m not in actions:
                 actions[m] = []
