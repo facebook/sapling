@@ -273,7 +273,7 @@ pypats = [
 #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=',
 #     "don't use underbars in identifiers"),
     (r'^\s+(self\.)?[A-Za-z][a-z0-9]+[A-Z]\w* = ',
-     "don't use camelcase in identifiers"),
+     "don't use camelcase in identifiers", r'#.*camelcase-required'),
     (r'^\s*(if|while|def|class|except|try)\s[^[\n]*:\s*[^\\n]#\s]+',
      "linebreak after :"),
     (r'class\s[^( \n]+:', "old-style class, use class foo(object)",
