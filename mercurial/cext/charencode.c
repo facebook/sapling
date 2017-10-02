@@ -319,13 +319,20 @@ static Py_ssize_t jsonescapelen(const char *buf, Py_ssize_t len, bool paranoid)
 static char jsonescapechar2(char c)
 {
 	switch (c) {
-	case '\b': return 'b';
-	case '\t': return 't';
-	case '\n': return 'n';
-	case '\f': return 'f';
-	case '\r': return 'r';
-	case '"':  return '"';
-	case '\\': return '\\';
+	case '\b':
+		return 'b';
+	case '\t':
+		return 't';
+	case '\n':
+		return 'n';
+	case '\f':
+		return 'f';
+	case '\r':
+		return 'r';
+	case '"':
+		return '"';
+	case '\\':
+		return '\\';
 	}
 	return '\0';  /* should not happen */
 }
