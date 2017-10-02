@@ -151,7 +151,7 @@ class _changelogrevision(object):
     manifest = attr.ib(default=nullid)
     user = attr.ib(default='')
     date = attr.ib(default=(0, 0))
-    files = attr.ib(default=[])
+    files = attr.ib(default=attr.Factory(list))
     description = attr.ib(default='')
 
 class changelogrevision(object):
