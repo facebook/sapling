@@ -4272,23 +4272,26 @@ def resolve(ui, repo, *pats, **opts):
         fm = ui.formatter('resolve', opts)
         ms = mergemod.mergestate.read(repo)
         m = scmutil.match(repo[None], pats, opts)
+
+        # Labels and keys based on merge state.  Unresolved path conflicts show
+        # as 'P'.  Resolved path conflicts show as 'R', the same as normal
+        # resolved conflicts.
+        mergestateinfo = {
+            'u': ('resolve.unresolved', 'U'),
+            'r': ('resolve.resolved', 'R'),
+            'pu': ('resolve.unresolved', 'P'),
+            'pr': ('resolve.resolved', 'R'),
+            'd': ('resolve.driverresolved', 'D'),
+        }
+
         for f in ms:
             if not m(f):
                 continue
 
-            # Set label based on merge state.
-            l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved',
-                              'pu': 'unresolved', 'pr': 'resolved',
-                              'd': 'driverresolved'}[ms[f]]
-
-            # Set key based on merge state.  Unresolved path conflicts show
-            # as 'P'.  Resolved path conflicts show as 'R', the same as normal
-            # resolved conflicts.
-            key = {'pu': 'P', 'pr': 'R'}.get(ms[f], ms[f].upper())
-
+            label, key = mergestateinfo[ms[f]]
             fm.startitem()
-            fm.condwrite(not nostatus, 'status', '%s ', key, label=l)
-            fm.write('path', '%s\n', f, label=l)
+            fm.condwrite(not nostatus, 'status', '%s ', key, label=label)
+            fm.write('path', '%s\n', f, label=label)
         fm.end()
         return 0
 
