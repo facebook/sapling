@@ -37,7 +37,8 @@ Basic update - local directory conflicts with remote file
   $ mkdir a
   $ echo 3 > a/b
   $ hg up file
-  abort: *: '$TESTTMP/repo/a' (glob)
+  a: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg up --clean file
   abort: *: '$TESTTMP/repo/a' (glob)
@@ -53,13 +54,9 @@ Basic update - untracked file conflicts with remote directory
   $ hg up -q 0
   $ echo untracked > a
   $ hg up --config merge.checkunknown=warn dir
-  abort: *: '$TESTTMP/repo/a/b' (glob)
-  [255]
-
-Repo is in a very bad state now - recover manually
-
-  $ rm -f a
-  $ hg up -q --clean 0
+  a: replacing untracked file
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark dir)
 
 Basic clean update - local directory conflicts with changed remote file
 

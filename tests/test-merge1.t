@@ -30,17 +30,17 @@ of the files in a commit we're updating to
 
   $ mkdir b && touch b/nonempty
   $ hg up
-  abort: *: '$TESTTMP/t/b' (glob)
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg ci
-  abort: last update was interrupted
-  (use 'hg update' to get a consistent checkout)
-  [255]
+  nothing changed
+  [1]
   $ hg sum
   parent: 0:538afb845929 
    commit #0
   branch: default
-  commit: 1 unknown (interrupted update)
+  commit: 1 unknown (clean)
   update: 1 new changesets (update)
   phases: 2 draft
   $ rm b/nonempty

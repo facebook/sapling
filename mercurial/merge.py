@@ -676,6 +676,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     choose a different action.
     """
     fileconflicts = set()
+    pathconflicts = set()
     warnconflicts = set()
     abortconflicts = set()
     unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
@@ -691,11 +692,15 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
                     fileconflicts.add(f)
+                elif f not in wctx:
+                    path = _checkunknowndirs(repo, f)
+                    if path is not None:
+                        pathconflicts.add(path)
             elif m == 'dg':
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     fileconflicts.add(f)
 
-        allconflicts = fileconflicts
+        allconflicts = fileconflicts | pathconflicts
         ignoredconflicts = set([c for c in allconflicts
                                 if repo.dirstate._ignore(c)])
         unknownconflicts = allconflicts - ignoredconflicts
@@ -745,8 +750,9 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         repo.ui.warn(_("%s: replacing untracked file\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
-        backup = f in fileconflicts
         if m == 'c':
+            backup = (f in fileconflicts or f in pathconflicts or
+                      any(p in pathconflicts for p in util.finddirs(f)))
             flags, = args
             actions[f] = ('g', (flags, backup), msg)
 
