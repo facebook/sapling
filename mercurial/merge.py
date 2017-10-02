@@ -66,6 +66,7 @@ class mergestate(object):
     C: a change/delete or delete/change conflict
     D: a file that the external merge driver will merge internally
        (experimental)
+    P: a path conflict (file vs directory)
     m: the external merge driver defined for this merge plus its run state
        (experimental)
     f: a (filename, dictionary) tuple of optional values for a given file
@@ -79,6 +80,15 @@ class mergestate(object):
     m: driver-resolved files marked -- only needs to be run before commit
     s: success/skipped -- does not need to be run any more
 
+    Merge record states (stored in self._state, indexed by filename):
+    u: unresolved conflict
+    r: resolved conflict
+    pu: unresolved path conflict (file conflicts with directory)
+    pr: resolved path conflict
+    d: driver-resolved conflict
+
+    The resolve command transitions between 'u' and 'r' for conflicts and
+    'pu' and 'pr' for path conflicts.
     '''
     statepathv1 = 'merge/state'
     statepathv2 = 'merge/state2'
@@ -158,7 +168,7 @@ class mergestate(object):
 
                 self._readmergedriver = bits[0]
                 self._mdstate = mdstate
-            elif rtype in 'FDC':
+            elif rtype in 'FDCP':
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif rtype == 'f':
@@ -354,6 +364,8 @@ class mergestate(object):
         for d, v in self._state.iteritems():
             if v[0] == 'd':
                 records.append(('D', '\0'.join([d] + v)))
+            elif v[0] in ('pu', 'pr'):
+                records.append(('P', '\0'.join([d] + v)))
             # v[1] == local ('cd'), v[6] == other ('dc') -- not supported by
             # older versions of Mercurial
             elif v[1] == nullhex or v[6] == nullhex:
@@ -422,6 +434,15 @@ class mergestate(object):
         self._stateextras[fd] = {'ancestorlinknode': hex(fca.node())}
         self._dirty = True
 
+    def addpath(self, path, frename, forigin):
+        """add a new conflicting path to the merge state
+        path:    the path that conflicts
+        frename: the filename the conflicting file was renamed to
+        forigin: origin of the file ('l' or 'r' for local/remote)
+        """
+        self._state[path] = ['pu', frename, forigin]
+        self._dirty = True
+
     def __contains__(self, dfile):
         return dfile in self._state
 
@@ -445,7 +466,7 @@ class mergestate(object):
         """Obtain the paths of unresolved files."""
 
         for f, entry in self._state.iteritems():
-            if entry[0] == 'u':
+            if entry[0] in ('u', 'pu'):
                 yield f
 
     def driverresolved(self):
