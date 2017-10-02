@@ -527,21 +527,29 @@ invalid global arguments for normal commands, aliases, and shell aliases
 
 environment variable changes in alias commands
 
-  $ cat > $TESTTMP/setcount.py <<EOF
+  $ cat > $TESTTMP/expandalias.py <<EOF
   > import os
-  > def uisetup(ui):
+  > from mercurial import cmdutil, commands, registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('expandalias')
+  > def expandalias(ui, repo, name):
+  >     alias = cmdutil.findcmd(name, commands.table)[1][0]
+  >     ui.write('%s args: %s\n' % (name, ' '.join(alias.args)))
   >     os.environ['COUNT'] = '2'
+  >     ui.write('%s args: %s (with COUNT=2)\n' % (name, ' '.join(alias.args)))
   > EOF
 
   $ cat >> $HGRCPATH <<'EOF'
   > [extensions]
-  > setcount = $TESTTMP/setcount.py
+  > expandalias = $TESTTMP/expandalias.py
   > [alias]
-  > showcount = log -T "$COUNT\n" -r .
+  > showcount = log -T "$COUNT" -r .
   > EOF
 
-  $ COUNT=1 hg showcount
-  2
+  $ COUNT=1 hg expandalias showcount
+  showcount args: -T 1 -r .
+  showcount args: -T 2 -r . (with COUNT=2)
 
 This should show id:
 
