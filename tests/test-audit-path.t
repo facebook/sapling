@@ -103,7 +103,8 @@ attack back/test where back symlinks to ..
   back/test
 #if symlink
   $ hg update -Cr2
-  abort: path 'back/test' traverses symbolic link 'back'
+  back: is both a file and a directory
+  abort: destination manifest contains path conflicts
   [255]
 #else
 ('back' will be a file and cause some other system specific error)
@@ -160,8 +161,12 @@ try trivial merge
 
   $ hg up -qC 1
   $ hg merge 2
-  abort: path 'a/poisoned' traverses symbolic link 'a'
-  [255]
+  a: path conflict - a file or link has the same name as a directory
+  the local file has been renamed to a~aa04623eb0c3
+  resolve manually then use 'hg resolve --mark a'
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
 try rebase onto other revision: cache of audited paths should be discarded,
 and the rebase should fail (issue5628)
@@ -169,8 +174,11 @@ and the rebase should fail (issue5628)
   $ hg up -qC 2
   $ hg rebase -s 2 -d 1 --config extensions.rebase=
   rebasing 2:e73c21d6b244 "file a/poisoned" (tip)
-  abort: path 'a/poisoned' traverses symbolic link 'a'
-  [255]
+  a: path conflict - a file or link has the same name as a directory
+  the local file has been renamed to a~aa04623eb0c3
+  resolve manually then use 'hg resolve --mark a'
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
   $ ls ../merge-symlink-out
 
   $ cd ..
@@ -202,7 +210,8 @@ try linear update where symlink already exists:
 
   $ hg up -qC 0
   $ hg up 1
-  abort: path 'a/b' traverses symbolic link 'a'
+  a: is both a file and a directory
+  abort: destination manifest contains path conflicts
   [255]
 
 try linear update including symlinked directory and its content: paths are
@@ -211,7 +220,8 @@ audited first by calculateupdates(), where no symlink is created so both
 
   $ hg up -qC null
   $ hg up 1
-  abort: path 'a/b' traverses symbolic link 'a'
+  a: is both a file and a directory
+  abort: destination manifest contains path conflicts
   [255]
   $ ls ../update-symlink-out
 
@@ -222,7 +232,8 @@ a symlink.
   $ rm -f a
   $ hg up -qC 2
   $ hg up 1
-  abort: path 'a/b' traverses symbolic link 'a'
+  a: is both a file and a directory
+  abort: destination manifest contains path conflicts
   [255]
   $ ls ../update-symlink-out
 

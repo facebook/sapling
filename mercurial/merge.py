@@ -851,6 +851,107 @@ def driverconclude(repo, ms, wctx, labels=None):
     This is currently not implemented -- it's an extension point."""
     return True
 
+def _filesindirs(repo, manifest, dirs):
+    """
+    Generator that yields pairs of all the files in the manifest that are found
+    inside the directories listed in dirs, and which directory they are found
+    in.
+    """
+    for f in manifest:
+        for p in util.finddirs(f):
+            if p in dirs:
+                yield f, p
+                break
+
+def checkpathconflicts(repo, wctx, mctx, actions):
+    """
+    Check if any actions introduce path conflicts in the repository, updating
+    actions to record or handle the path conflict accordingly.
+    """
+    mf = wctx.manifest()
+
+    # The set of local files that conflict with a remote directory.
+    localconflicts = set()
+
+    # The set of directories that conflict with a remote file, and so may cause
+    # conflicts if they still contain any files after the merge.
+    remoteconflicts = set()
+
+    # The set of directories that appear as both a file and a directory in the
+    # remote manifest.  These indicate an invalid remote manifest, which
+    # can't be updated to cleanly.
+    invalidconflicts = set()
+
+    # The set of files deleted by all the actions.
+    deletedfiles = set()
+
+    for f, (m, args, msg) in actions.items():
+        if m in ('c', 'dc', 'm', 'cm'):
+            # This action may create a new local file.
+            if mf.hasdir(f):
+                # The file aliases a local directory.  This might be ok if all
+                # the files in the local directory are being deleted.  This
+                # will be checked once we know what all the deleted files are.
+                remoteconflicts.add(f)
+            for p in util.finddirs(f):
+                if p in mf:
+                    if p in mctx:
+                        # The file is in a directory which aliases both a local
+                        # and a remote file.  This is an internal inconsistency
+                        # within the remote manifest.
+                        invalidconflicts.add(p)
+                    else:
+                        # The file is in a directory which aliases a local file.
+                        # We will need to rename the local file.
+                        localconflicts.add(p)
+                if p in actions and actions[p][0] in ('c', 'dc', 'm', 'cm'):
+                    # The file is in a directory which aliases a remote file.
+                    # This is an internal inconsistency within the remote
+                    # manifest.
+                    invalidconflicts.add(p)
+
+        # Track the names of all deleted files.
+        if m == 'r':
+            deletedfiles.add(f)
+        if m == 'm':
+            f1, f2, fa, move, anc = args
+            if move:
+                deletedfiles.add(f1)
+        if m == 'dm':
+            f2, flags = args
+            deletedfiles.add(f2)
+
+    # Rename all local conflicting files that have not been deleted.
+    for p in localconflicts:
+        if p not in deletedfiles:
+            ctxname = str(wctx).rstrip('+')
+            pnew = util.safename(p, ctxname, wctx, set(actions.keys()))
+            actions[pnew] = ('pr', (p,), "local path conflict")
+            actions[p] = ('p', (pnew, 'l'), "path conflict")
+
+    if remoteconflicts:
+        # Check if all files in the conflicting directories have been removed.
+        ctxname = str(mctx).rstrip('+')
+        for f, p in _filesindirs(repo, mf, remoteconflicts):
+            if f not in deletedfiles:
+                m, args, msg = actions[p]
+                pnew = util.safename(p, ctxname, wctx, set(actions.keys()))
+                if m in ('dc', 'm'):
+                    # Action was merge, just update target.
+                    actions[pnew] = (m, args, msg)
+                else:
+                    # Action was create, change to renamed get action.
+                    fl = args[0]
+                    actions[pnew] = ('dg', (p, fl), "remote path conflict")
+                actions[p] = ('p', (pnew, 'r'), "path conflict")
+                remoteconflicts.remove(p)
+                break
+
+    if invalidconflicts:
+        for p in invalidconflicts:
+            repo.ui.warn(_("%s: is both a file and a directory\n") % p)
+        raise error.Abort(_("destination manifest contains path conflicts"))
+
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                   acceptremote, followcopies, forcefulldiff=False):
     """
@@ -1025,6 +1126,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 else:
                     actions[f] = ('dc', (None, f, f, False, pa.node()),
                                   "prompt deleted/changed")
+
+    # If we are merging, look for path conflicts.
+    checkpathconflicts(repo, wctx, p2, actions)
 
     return actions, diverge, renamedelete
 

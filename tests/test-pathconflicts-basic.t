@@ -25,11 +25,16 @@ Basic merge - local file conflicts with remote directory
   $ hg bookmark -i
   $ hg merge --verbose dir
   resolving manifests
+  a: path conflict - a file or link has the same name as a directory
+  the local file has been renamed to a~853701544ac3
+  resolve manually then use 'hg resolve --mark a'
+  moving a to a~853701544ac3
   getting a/b
-  abort: *: '$TESTTMP/repo/a/b' (glob)
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ hg update --clean .
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Basic update - local directory conflicts with remote file
 
