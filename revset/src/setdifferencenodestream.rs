@@ -167,13 +167,13 @@ mod test {
     use super::*;
     use SingleNodeHash;
     use UnionNodeStream;
-    use assert_node_sequence;
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
-    use string_to_nodehash;
+    use tests::assert_node_sequence;
+    use tests::string_to_nodehash;
 
     #[test]
     fn difference_identical_node() {

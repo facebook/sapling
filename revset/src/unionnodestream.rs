@@ -146,7 +146,6 @@ impl Stream for UnionNodeStream {
 mod test {
     use super::*;
     use {NodeStream, SingleNodeHash};
-    use assert_node_sequence;
     use branch_even;
     use branch_uneven;
     use branch_wide;
@@ -155,7 +154,8 @@ mod test {
     use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
-    use string_to_nodehash;
+    use tests::assert_node_sequence;
+    use tests::string_to_nodehash;
 
     #[test]
     fn union_identical_node() {

@@ -48,13 +48,13 @@ impl Stream for SingleNodeHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use assert_node_sequence;
     use blobrepo::{BlobRepo, MemBlobState};
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
     use std::sync::Arc;
-    use string_to_nodehash;
+    use tests::assert_node_sequence;
+    use tests::string_to_nodehash;
 
     #[test]
     fn valid_node() {
