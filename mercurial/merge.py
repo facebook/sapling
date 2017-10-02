@@ -675,7 +675,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     files. For some actions, the result is to abort; for others, it is to
     choose a different action.
     """
-    conflicts = set()
+    fileconflicts = set()
     warnconflicts = set()
     abortconflicts = set()
     unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
@@ -690,14 +690,15 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
-                    conflicts.add(f)
+                    fileconflicts.add(f)
             elif m == 'dg':
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
-                    conflicts.add(f)
+                    fileconflicts.add(f)
 
-        ignoredconflicts = set([c for c in conflicts
+        allconflicts = fileconflicts
+        ignoredconflicts = set([c for c in allconflicts
                                 if repo.dirstate._ignore(c)])
-        unknownconflicts = conflicts - ignoredconflicts
+        unknownconflicts = allconflicts - ignoredconflicts
         collectconflicts(ignoredconflicts, ignoredconfig)
         collectconflicts(unknownconflicts, unknownconfig)
     else:
@@ -744,7 +745,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         repo.ui.warn(_("%s: replacing untracked file\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
-        backup = f in conflicts
+        backup = f in fileconflicts
         if m == 'c':
             flags, = args
             actions[f] = ('g', (flags, backup), msg)
