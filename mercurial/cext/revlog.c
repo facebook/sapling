@@ -407,7 +407,8 @@ static PyObject *list_copy(PyObject *list)
 	return newlist;
 }
 
-static int check_filter(PyObject *filter, Py_ssize_t arg) {
+static int check_filter(PyObject *filter, Py_ssize_t arg)
+{
 	if (filter) {
 		PyObject *arglist, *result;
 		int isfiltered;

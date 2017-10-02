@@ -321,7 +321,8 @@ quit:
 /*
  * Build a set of non-normal and other parent entries from the dirstate dmap
 */
-static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args) {
+static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args)
+{
 	PyObject *dmap, *fname, *v;
 	PyObject *nonnset = NULL, *otherpset = NULL, *result = NULL;
 	Py_ssize_t pos;
@@ -645,7 +646,8 @@ bail:
 }
 
 
-static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
+static PyObject *fm1readmarkers(PyObject *self, PyObject *args)
+{
 	const char *data, *dataend;
 	int datalen;
 	Py_ssize_t offset, stop;

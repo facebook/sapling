@@ -40,12 +40,14 @@ typedef struct {
 #define MANIFEST_MALFORMED -3
 
 /* get the length of the path for a line */
-static size_t pathlen(line *l) {
+static size_t pathlen(line *l)
+{
 	return strlen(l->start);
 }
 
 /* get the node value of a single line */
-static PyObject *nodeof(line *l) {
+static PyObject *nodeof(line *l)
+{
 	char *s = l->start;
 	ssize_t llen = pathlen(l);
 	PyObject *hash = unhexlify(s + llen + 1, 40);
@@ -434,7 +436,8 @@ static int lazymanifest_delitem(lazymanifest *self, PyObject *key)
 
 /* Do a binary search for the insertion point for new, creating the
  * new entry if needed. */
-static int internalsetitem(lazymanifest *self, line *new) {
+static int internalsetitem(lazymanifest *self, line *new)
+{
 	int start = 0, end = self->numlines;
 	while (start < end) {
 		int pos = start + (end - start) / 2;
@@ -602,7 +605,8 @@ static PySequenceMethods lazymanifest_seq_meths = {
 static PyTypeObject lazymanifestType;
 
 /* If the manifest has changes, build the new manifest text and reindex it. */
-static int compact(lazymanifest *self) {
+static int compact(lazymanifest *self)
+{
 	int i;
 	ssize_t need = 0;
 	char *data;
