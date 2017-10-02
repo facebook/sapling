@@ -183,12 +183,12 @@ mod test {
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
         ));
 
-        assert_node_sequence(vec![], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
 
     #[test]
@@ -199,12 +199,12 @@ mod test {
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
             Box::new(NotReadyEmptyStream { poll_count: 0 }),
         ));
 
-        assert_node_sequence(vec![head_hash], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
     }
 
     #[test]
@@ -215,12 +215,12 @@ mod test {
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             Box::new(NotReadyEmptyStream { poll_count: 0 }),
             Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
         ));
 
-        assert_node_sequence(vec![], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod test {
 
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             Box::new(SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
@@ -242,6 +242,8 @@ mod test {
         ));
 
         assert_node_sequence(
+            repo_generation,
+            &repo,
             vec![
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             ],
@@ -330,7 +332,7 @@ mod test {
 
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             nodestream,
             Box::new(SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
@@ -339,6 +341,8 @@ mod test {
         ));
 
         assert_node_sequence(
+            repo_generation,
+            &repo,
             vec![
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
@@ -374,7 +378,7 @@ mod test {
 
         let nodestream = Box::new(SetDifferenceNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             Box::new(SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
@@ -382,6 +386,6 @@ mod test {
             nodestream,
         ));
 
-        assert_node_sequence(vec![], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
 }

@@ -147,6 +147,9 @@ mod test {
     use super::*;
     use {NodeStream, SingleNodeHash};
     use assert_node_sequence;
+    use branch_even;
+    use branch_uneven;
+    use branch_wide;
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
@@ -166,12 +169,13 @@ mod test {
         ];
         let nodestream = Box::new(UnionNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             inputs.into_iter(),
         ));
 
-        assert_node_sequence(vec![head_hash.clone()], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![head_hash.clone()], nodestream);
     }
+
     #[test]
     fn union_error_node() {
         let repo = Arc::new(linear::getrepo());
@@ -184,7 +188,7 @@ mod test {
         ];
         let mut nodestream = spawn(Box::new(UnionNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             inputs.into_iter(),
         )));
 
@@ -197,6 +201,7 @@ mod test {
             "No error for bad node"
         );
     }
+
     #[test]
     fn union_three_nodes() {
         let repo = Arc::new(linear::getrepo());
@@ -219,12 +224,14 @@ mod test {
         ];
         let nodestream = Box::new(UnionNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             inputs.into_iter(),
         ));
 
         // But, once I hit the asserts, I expect them in generation order.
         assert_node_sequence(
+            repo_generation,
+            &repo,
             vec![
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -233,6 +240,7 @@ mod test {
             nodestream,
         );
     }
+
     #[test]
     fn union_nothing() {
         let repo = Arc::new(linear::getrepo());
@@ -241,11 +249,12 @@ mod test {
         let inputs: Vec<Box<NodeStream>> = vec![];
         let nodestream = Box::new(UnionNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             inputs.into_iter(),
         ));
-        assert_node_sequence(vec![], nodestream);
+        assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
+
     #[test]
     fn union_nesting() {
         let repo = Arc::new(linear::getrepo());
@@ -278,11 +287,13 @@ mod test {
         ];
         let nodestream = Box::new(UnionNodeStream::new(
             &repo,
-            repo_generation,
+            repo_generation.clone(),
             inputs.into_iter(),
         ));
 
         assert_node_sequence(
+            repo_generation,
+            &repo,
             vec![
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
@@ -291,6 +302,7 @@ mod test {
             nodestream,
         );
     }
+
     #[test]
     fn slow_ready_union_nothing() {
         // Tests that we handle an input staying at NotReady for a while without panicing
@@ -319,6 +331,135 @@ mod test {
         panic!(
             "Union of something that's not ready {} times failed to complete",
             repeats
+        );
+    }
+
+    #[test]
+    fn union_branch_even_repo() {
+        let repo = Arc::new(branch_even::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Two nodes should share the same generation number
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                &repo,
+            )),
+        ];
+        let nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn union_branch_uneven_repo() {
+        let repo = Arc::new(branch_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Two nodes should share the same generation number
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                &repo,
+            )),
+        ];
+        let nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn union_branch_wide_repo() {
+        let repo = Arc::new(branch_wide::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Two nodes should share the same generation number
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20"),
+                &repo,
+            )),
+        ];
+        let nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("49f53ab171171b3180e125b918bd1cf0af7e5449"),
+                string_to_nodehash("c27ef5b7f15e9930e5b93b1f32cc2108a2aabe12"),
+                string_to_nodehash("4685e9e62e4885d477ead6964a7600c750e39b03"),
+                string_to_nodehash("9e8521affb7f9d10e9551a99c526e69909042b20"),
+            ],
+            nodestream,
         );
     }
 }

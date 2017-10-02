@@ -49,19 +49,26 @@ impl Stream for SingleNodeHash {
 mod test {
     use super::*;
     use assert_node_sequence;
+    use blobrepo::{BlobRepo, MemBlobState};
     use futures::executor::spawn;
     use linear;
+    use repoinfo::RepoGenCache;
+    use std::sync::Arc;
     use string_to_nodehash;
 
     #[test]
     fn valid_node() {
-        let repo = linear::getrepo();
+        let repo = Arc::new(linear::getrepo());
         let nodestream = SingleNodeHash::new(
             string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
             &repo,
         );
 
+        let repo_generation: RepoGenCache<BlobRepo<MemBlobState>> = RepoGenCache::new(10);
+
         assert_node_sequence(
+            repo_generation,
+            &repo,
             vec![
                 string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
             ].into_iter(),
