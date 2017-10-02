@@ -79,12 +79,14 @@ def run():
     err = None
     try:
         status = (dispatch(req) or 0) & 255
-    except error.StdioError as err:
+    except error.StdioError as e:
+        err = e
         status = -1
     if util.safehasattr(req.ui, 'fout'):
         try:
             req.ui.fout.flush()
-        except IOError as err:
+        except IOError as e:
+            err = e
             status = -1
     if util.safehasattr(req.ui, 'ferr'):
         if err is not None and err.errno != errno.EPIPE:
