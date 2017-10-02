@@ -1933,8 +1933,13 @@ class workingfilectx(committablefilectx):
         ``write()`` can be called successfully.
         """
         wvfs = self._repo.wvfs
-        if wvfs.isdir(self._path) and not wvfs.islink(self._path):
-            wvfs.removedirs(self._path)
+        f = self._path
+        if wvfs.isdir(f) and not wvfs.islink(f):
+            wvfs.rmtree(f, forcibly=True)
+        for p in reversed(list(util.finddirs(f))):
+            if wvfs.isfileorlink(p):
+                wvfs.unlink(p)
+                break
 
     def setflags(self, l, x):
         self._repo.wvfs.setflags(self._path, l, x)

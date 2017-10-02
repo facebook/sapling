@@ -35,6 +35,7 @@ Basic merge - local file conflicts with remote directory
   [1]
   $ hg update --clean .
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ rm a~853701544ac3
 
 Basic update - local directory conflicts with remote file
 
@@ -46,13 +47,19 @@ Basic update - local directory conflicts with remote file
   abort: untracked files in working directory differ from files in requested revision
   [255]
   $ hg up --clean file
-  abort: *: '$TESTTMP/repo/a' (glob)
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark file)
 
-Repo is in a very bad state now - recover manually
+Repo state is ok
 
-  $ rm -r a
-  $ hg up -q --clean 0
+  $ hg sum
+  parent: 1:853701544ac3 
+   file
+  branch: default
+  bookmarks: *file
+  commit: (clean)
+  update: 2 new changesets (update)
+  phases: 4 draft
 
 Basic update - untracked file conflicts with remote directory
 
@@ -62,6 +69,9 @@ Basic update - untracked file conflicts with remote directory
   a: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark dir)
+  $ cat a.orig
+  untracked
+  $ rm -f a.orig
 
 Basic clean update - local directory conflicts with changed remote file
 
@@ -73,11 +83,17 @@ Basic clean update - local directory conflicts with changed remote file
   abort: *: '$TESTTMP/repo/a' (glob)
   [255]
   $ hg up --clean file2
-  abort: *: '$TESTTMP/repo/a' (glob)
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark file2)
 
-Repo is in a very bad state now - recover manually
+Repo state is ok
 
-  $ rm -r a
-  $ hg up -q --clean 0
+  $ hg sum
+  parent: 2:f64e09fac717 
+   file2
+  branch: default
+  bookmarks: *file2
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
+  phases: 4 draft
 
