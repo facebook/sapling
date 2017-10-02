@@ -4275,10 +4275,19 @@ def resolve(ui, repo, *pats, **opts):
         for f in ms:
             if not m(f):
                 continue
+
+            # Set label based on merge state.
             l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved',
+                              'pu': 'unresolved', 'pr': 'resolved',
                               'd': 'driverresolved'}[ms[f]]
+
+            # Set key based on merge state.  Unresolved path conflicts show
+            # as 'P'.  Resolved path conflicts show as 'R', the same as normal
+            # resolved conflicts.
+            key = {'pu': 'P', 'pr': 'R'}.get(ms[f], ms[f].upper())
+
             fm.startitem()
-            fm.condwrite(not nostatus, 'status', '%s ', ms[f].upper(), label=l)
+            fm.condwrite(not nostatus, 'status', '%s ', key, label=l)
             fm.write('path', '%s\n', f, label=l)
         fm.end()
         return 0
@@ -4325,6 +4334,17 @@ def resolve(ui, repo, *pats, **opts):
                                 % f)
                 else:
                     runconclude = True
+                continue
+
+            # path conflicts must be resolved manually
+            if ms[f] in ("pu", "pr"):
+                if mark:
+                    ms.mark(f, "pr")
+                elif unmark:
+                    ms.mark(f, "pu")
+                elif ms[f] == "pu":
+                    ui.warn(_('%s: path conflict must be resolved manually\n')
+                            % f)
                 continue
 
             if mark:
