@@ -26,6 +26,7 @@ import errno
 import gc
 import hashlib
 import imp
+import itertools
 import mmap
 import os
 import platform as pyplatform
@@ -3835,3 +3836,26 @@ i18nfunctions = bundlecompressiontopics().values()
 
 # convenient shortcut
 dst = debugstacktrace
+
+def safename(f, tag, ctx, others=None):
+    """
+    Generate a name that it is safe to rename f to in the given context.
+
+    f:      filename to rename
+    tag:    a string tag that will be included in the new name
+    ctx:    a context, in which the new name must not exist
+    others: a set of other filenames that the new name must not be in
+
+    Returns a file name of the form oldname~tag[~number] which does not exist
+    in the provided context and is not in the set of other names.
+    """
+    if others is None:
+        others = set()
+
+    fn = '%s~%s' % (f, tag)
+    if fn not in ctx and fn not in others:
+        return fn
+    for n in itertools.count(1):
+        fn = '%s~%s~%s' % (f, tag, n)
+        if fn not in ctx and fn not in others:
+            return fn
