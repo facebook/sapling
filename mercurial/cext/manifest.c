@@ -9,8 +9,8 @@
 #include <Python.h>
 
 #include <assert.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "charencode.h"
 #include "util.h"

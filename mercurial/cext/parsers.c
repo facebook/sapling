@@ -12,9 +12,9 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "bitmanipulation.h"
 #include "charencode.h"
 #include "util.h"
-#include "bitmanipulation.h"
 
 #ifdef IS_PY3K
 /* The mapping of Python types is meant to be temporary to get Python

@@ -25,10 +25,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
 #include "bitmanipulation.h"
 #include "compat.h"
 #include "mpatch.h"
+#include "util.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;
