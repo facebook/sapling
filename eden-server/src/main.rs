@@ -42,8 +42,8 @@ use std::sync::Arc;
 
 use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState};
 use clap::App;
-use futures::{Future, Stream};
-use futures_ext::{FutureExt, StreamExt};
+use futures::{Future, IntoFuture, Stream};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
@@ -139,6 +139,20 @@ impl TreeMetadata {
             size,
         }
     }
+
+    fn from_entry(
+        entry: Box<mercurial_types::Entry<Error = blobrepo::Error>>,
+    ) -> BoxFuture<TreeMetadata, blobrepo::Error> {
+        if entry.get_type() == mercurial_types::Type::Tree {
+            // No need to calculate the size of the directory
+            Ok(TreeMetadata::new(None, entry)).into_future().boxify()
+        } else {
+            entry
+                .get_size()
+                .map(|size| TreeMetadata::new(size, entry))
+                .boxify()
+        }
+    }
 }
 
 struct EdenServer<State> {
@@ -185,9 +199,9 @@ where
 
         repo.get_manifest_by_nodeid(&hash)
             .map(|manifest| {
-                manifest.list().and_then(|entry| {
-                    entry.get_size().map(|size| TreeMetadata::new(size, entry))
-                })
+                manifest
+                    .list()
+                    .and_then(|entry| TreeMetadata::from_entry(entry))
             })
             .flatten_stream()
             .map_err(Error::from)
@@ -313,7 +327,10 @@ fn main() {
         .to_string();
 
     let blobrepo_folder = Path::new(blobrepo_folder);
-    match matches.value_of("repotype").expect("required argument 'repotype' is not provided") {
+    match matches
+        .value_of("repotype")
+        .expect("required argument 'repotype' is not provided")
+    {
         "files" => start_server(
             addr,
             reponame,
