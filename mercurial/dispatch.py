@@ -75,6 +75,7 @@ class request(object):
 
 def run():
     "run the command in sys.argv"
+    _initstdio()
     req = request(pycompat.sysargv[1:])
     err = None
     try:
@@ -94,6 +95,10 @@ def run():
                               encoding.strtolocal(err.strerror))
         req.ui.ferr.flush()
     sys.exit(status & 255)
+
+def _initstdio():
+    for fp in (sys.stdin, sys.stdout, sys.stderr):
+        util.setbinary(fp)
 
 def _getsimilar(symbols, value):
     sim = lambda x: difflib.SequenceMatcher(None, value, x).ratio()

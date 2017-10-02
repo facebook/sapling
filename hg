@@ -37,11 +37,5 @@ except ImportError:
     sys.stderr.write("(check your install and PYTHONPATH)\n")
     sys.exit(-1)
 
-from mercurial import (
-    dispatch,
-    util,
-)
-for fp in (sys.stdin, sys.stdout, sys.stderr):
-    util.setbinary(fp)
-
+from mercurial import dispatch
 dispatch.run()
