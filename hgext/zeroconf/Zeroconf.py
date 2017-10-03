@@ -80,6 +80,7 @@ __author__ = "Paul Scott-Murphy"
 __email__ = "paul at scott dash murphy dot com"
 __version__ = "0.12"
 
+import errno
 import itertools
 import select
 import socket
@@ -937,7 +938,16 @@ class Listener(object):
         self.zeroconf.engine.addReader(self, self.zeroconf.socket)
 
     def handle_read(self):
-        data, (addr, port) = self.zeroconf.socket.recvfrom(_MAX_MSG_ABSOLUTE)
+        data = addr = port = None
+        sock = self.zeroconf.socket
+        try:
+            data, (addr, port) = sock.recvfrom(_MAX_MSG_ABSOLUTE)
+        except socket.error as e:
+            if e.errno == errno.EBADF:
+                # some other thread may close the socket
+                return
+            else:
+                raise
         self.data = data
         msg = DNSIncoming(data)
         if msg.isQuery():
