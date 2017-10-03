@@ -413,20 +413,18 @@ preoutgoing hook can prevent outgoing changes for local clones
   > 
   > uncallable = 0
   > 
-  > def printargs(args):
-  >     args.pop('ui', None)
-  >     args.pop('repo', None)
+  > def printargs(ui, args):
   >     a = list(args.items())
   >     a.sort()
-  >     print('hook args:')
+  >     ui.write('hook args:\n')
   >     for k, v in a:
-  >        print(' ', k, v)
+  >        ui.write('  %s %s\n' % (k, v))
   > 
-  > def passhook(**args):
-  >     printargs(args)
+  > def passhook(ui, repo, **args):
+  >     printargs(ui, args)
   > 
-  > def failhook(**args):
-  >     printargs(args)
+  > def failhook(ui, repo, **args):
+  >     printargs(ui, args)
   >     return True
   > 
   > class LocalException(Exception):
@@ -445,7 +443,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     ui.note('verbose output from hook\n')
   > 
   > def printtags(ui, repo, **args):
-  >     print(sorted(repo.tags()))
+  >     ui.write('%s\n' % sorted(repo.tags()))
   > 
   > class container:
   >     unreachable = 1
@@ -629,8 +627,8 @@ make sure --traceback works
   $ cd c
 
   $ cat > hookext.py <<EOF
-  > def autohook(**args):
-  >     print("Automatically installed hook")
+  > def autohook(ui, **args):
+  >     ui.write('Automatically installed hook\n')
   > 
   > def reposetup(ui, repo):
   >     repo.ui.setconfig("hooks", "commit.auto", autohook)
@@ -666,8 +664,8 @@ test python hook configured with python:[file]:[hook] syntax
 
   $ cd hooks
   $ cat > testhooks.py <<EOF
-  > def testhook(**args):
-  >     print('hook works')
+  > def testhook(ui, **args):
+  >     ui.write('hook works\n')
   > EOF
   $ echo '[hooks]' > ../repo/.hg/hgrc
   $ echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc
