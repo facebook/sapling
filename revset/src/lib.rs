@@ -44,6 +44,10 @@ extern crate branch_uneven;
 extern crate branch_wide;
 #[cfg(test)]
 extern crate linear;
+#[cfg(test)]
+extern crate merge_even;
+#[cfg(test)]
+extern crate merge_uneven;
 
 #[cfg(test)]
 mod tests;

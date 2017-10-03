@@ -10,8 +10,6 @@ use mercurial_types::{NodeHash, Repo};
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashSet;
-use std::collections::hash_set::IntoIter;
-use std::mem::replace;
 use std::sync::Arc;
 
 use NodeStream;
@@ -19,12 +17,14 @@ use errors::*;
 use setcommon::*;
 
 pub struct SetDifferenceNodeStream {
-    keep_input: (InputStream, Poll<Option<(NodeHash, Generation)>, Error>),
-    remove_input: (InputStream, Poll<Option<(NodeHash, Generation)>, Error>),
-    current_generation: Option<Generation>,
-    keep_nodes: HashSet<NodeHash>,
+    keep_input: InputStream,
+    next_keep: Async<Option<(NodeHash, Generation)>>,
+
+    remove_input: InputStream,
+    next_remove: Async<Option<(NodeHash, Generation)>>,
+
     remove_nodes: HashSet<NodeHash>,
-    drain: Option<IntoIter<NodeHash>>,
+    remove_generation: Option<Generation>,
 }
 
 impl SetDifferenceNodeStream {
@@ -37,78 +37,29 @@ impl SetDifferenceNodeStream {
     where
         R: Repo,
     {
-        let keep_input = (
-            add_generations(keep_input, repo_generation.clone(), repo.clone()),
-            Ok(Async::NotReady),
-        );
-        let remove_input = (
-            add_generations(remove_input, repo_generation.clone(), repo.clone()),
-            Ok(Async::NotReady),
-        );
         SetDifferenceNodeStream {
-            keep_input,
-            remove_input,
-            current_generation: None,
-            keep_nodes: HashSet::new(),
+            keep_input: add_generations(keep_input, repo_generation.clone(), repo.clone()),
+            next_keep: Async::NotReady,
+            remove_input: add_generations(remove_input, repo_generation, repo.clone()),
+            next_remove: Async::NotReady,
+
             remove_nodes: HashSet::new(),
-            drain: None,
+            remove_generation: None,
         }
     }
 
-    fn poll_both_inputs(&mut self) {
-        if let Ok(Async::NotReady) = self.keep_input.1 {
-            self.keep_input.1 = self.keep_input.0.poll();
+    fn next_keep(&mut self) -> Result<&Async<Option<(NodeHash, Generation)>>> {
+        if self.next_keep.is_not_ready() {
+            self.next_keep = self.keep_input.poll()?;
         }
-        if let Ok(Async::NotReady) = self.remove_input.1 {
-            self.remove_input.1 = self.remove_input.0.poll();
-        }
+        Ok(&self.next_keep)
     }
 
-    fn both_inputs_ready(&self) -> bool {
-        let keep_ready = match self.keep_input.1 {
-            Ok(Async::Ready(_)) => true,
-            _ => false,
-        };
-        let remove_ready = match self.remove_input.1 {
-            Ok(Async::Ready(_)) => true,
-            _ => false,
-        };
-        remove_ready && keep_ready
-    }
-
-    fn keep_input_finished(&self) -> bool {
-        match self.keep_input.1 {
-            Ok(Async::Ready(None)) => true,
-            _ => false,
+    fn next_remove(&mut self) -> Result<&Async<Option<(NodeHash, Generation)>>> {
+        if self.next_remove.is_not_ready() {
+            self.next_remove = self.remove_input.poll()?;
         }
-    }
-
-    fn accumulate_nodes(&mut self) {
-        if let Ok(Async::Ready(Some((hash, gen_id)))) = self.keep_input.1 {
-            if Some(gen_id) == self.current_generation {
-                self.keep_nodes.insert(hash);
-                self.keep_input.1 = Ok(Async::NotReady);
-            } else {
-                self.current_generation = None;
-            }
-        } else {
-            self.current_generation = None;
-        }
-
-        if let Ok(Async::Ready(Some((hash, gen_id)))) = self.remove_input.1 {
-            if Some(gen_id) == self.current_generation {
-                self.remove_nodes.insert(hash);
-            }
-            if Some(gen_id) >= self.current_generation {
-                self.remove_input.1 = Ok(Async::NotReady);
-            }
-        }
-    }
-
-    fn update_current_generation(&mut self) {
-        if let Ok(Async::Ready(Some((_, gen_id)))) = self.keep_input.1 {
-            self.current_generation = Some(gen_id);
-        }
+        Ok(&self.next_remove)
     }
 }
 
@@ -119,44 +70,39 @@ impl Stream for SetDifferenceNodeStream {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and
         // the standard futures::executor expects you to only return NotReady if blocked on I/O.
         loop {
-            self.poll_both_inputs();
+            let (keep_hash, keep_gen) = match self.next_keep()? {
+                &Async::NotReady => return Ok(Async::NotReady),
+                &Async::Ready(None) => return Ok(Async::Ready(None)),
+                &Async::Ready(Some((hash, gen))) => (hash, gen),
+            };
 
-            // Empty the drain if any - return all items for this generation
-            let next_in_drain = self.drain.as_mut().and_then(|drain| drain.next());
-            if next_in_drain.is_some() {
-                return Ok(Async::Ready(next_in_drain));
-            } else {
-                self.drain = None;
-            }
-
-            // Return any errors
-            if self.keep_input.1.is_err() {
-                let err = replace(&mut self.keep_input.1, Ok(Async::NotReady));
-                return Err(err.unwrap_err());
-            }
-            if self.remove_input.1.is_err() {
-                let err = replace(&mut self.remove_input.1, Ok(Async::NotReady));
-                return Err(err.unwrap_err());
+            // Clear nodes that won't affect future results
+            if self.remove_generation != Some(keep_gen) {
+                self.remove_nodes.clear();
+                self.remove_generation = Some(keep_gen);
             }
 
-            if !self.both_inputs_ready() {
-                return Ok(Async::NotReady);
+            // Gather the current generation's remove hashes
+            loop {
+                let remove_hash = match self.next_remove()? {
+                    &Async::NotReady => return Ok(Async::NotReady),
+                    &Async::Ready(Some((hash, gen))) if gen == keep_gen => hash,
+                    &Async::Ready(Some((_, gen))) if gen > keep_gen => {
+                        // Refers to a generation that's already past (probably nothing on keep
+                        // side of this generation). Skip it.
+                        self.next_remove = Async::NotReady;
+                        continue;
+                    }
+                    _ => break, // Either no more or gen < keep_gen
+                };
+                self.remove_nodes.insert(remove_hash);
+                self.next_remove = Async::NotReady; // will cause polling of remove_input
             }
 
-            match self.current_generation {
-                None => if self.keep_nodes.is_empty() {
-                    self.update_current_generation();
-                } else {
-                    let remove_nodes = replace(&mut self.remove_nodes, HashSet::new());
-                    let mut keep_nodes = replace(&mut self.keep_nodes, HashSet::new());
-                    keep_nodes.retain(|hash| !remove_nodes.contains(hash));
-                    self.drain = Some(keep_nodes.into_iter());
-                },
-                Some(_) => self.accumulate_nodes(),
-            }
-            // If we cannot ever output another node, we're done.
-            if self.keep_input_finished() && self.drain.is_none() && self.keep_nodes.is_empty() {
-                return Ok(Async::Ready(None));
+            self.next_keep = Async::NotReady; // will cause polling of keep_input
+
+            if !self.remove_nodes.contains(&keep_hash) {
+                return Ok(Async::Ready(Some(keep_hash)));
             }
         }
     }
@@ -169,6 +115,8 @@ mod test {
     use UnionNodeStream;
     use futures::executor::spawn;
     use linear;
+    use merge_even;
+    use merge_uneven;
     use repoinfo::RepoGenCache;
     use setcommon::NotReadyEmptyStream;
     use std::sync::Arc;
@@ -387,5 +335,143 @@ mod test {
         ));
 
         assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+    }
+
+    #[test]
+    fn difference_merge_even() {
+        let repo = Arc::new(merge_even::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Top three commits in my hg log -G -r 'all()' output
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("babf5e4dea7ffcf32c3740ff2f1351de4e15c889"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                &repo,
+            )),
+        ];
+        let left_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        // Everything from base to just before merge on one side
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                &repo,
+            )),
+        ];
+        let right_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let nodestream = Box::new(SetDifferenceNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            left_nodestream,
+            right_nodestream,
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("babf5e4dea7ffcf32c3740ff2f1351de4e15c889"),
+                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn difference_merge_uneven() {
+        let repo = Arc::new(merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Merge commit, and one from each branch
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                &repo,
+            )),
+        ];
+        let left_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        // Everything from base to just before merge on one side
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                &repo,
+            )),
+        ];
+        let right_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let nodestream = Box::new(SetDifferenceNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            left_nodestream,
+            right_nodestream,
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+            ],
+            nodestream,
+        );
     }
 }
