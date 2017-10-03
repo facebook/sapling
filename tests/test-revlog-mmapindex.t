@@ -9,11 +9,12 @@ create verbosemmap.py
   >     util,
   > )
   > 
-  > def mmapread(orig, fp):
-  >     print "mmapping %s" % fp.name
-  >     return orig(fp)
-  > 
   > def extsetup(ui):
+  >     def mmapread(orig, fp):
+  >         ui.write("mmapping %s\n" % fp.name)
+  >         ui.flush()
+  >         return orig(fp)
+  > 
   >     extensions.wrapfunction(util, 'mmapread', mmapread)
   > EOF
 
