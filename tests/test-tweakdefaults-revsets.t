@@ -18,66 +18,27 @@ Setup repo
 
 Test that warning is shown whenever ':' is used with singlecolonwarn set
 
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:2' --config tweakdefaults.singlecolonwarn=1
+  $ hg log -T '{rev} ' -r '0:2' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:2'
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
-  $ hg log -G -T '{rev} {bookmarks}' -r ':2' --config tweakdefaults.singlecolonwarn=1
+  0 1 2  (no-eol)
+  $ hg log -T '{rev} ' -r '0:2'
+  0 1 2  (no-eol)
+  $ hg log -T '{rev} ' -r ':2' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
-  $ hg log -G -T '{rev} {bookmarks}' -r ':2'
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:' --config tweakdefaults.singlecolonwarn=1
+  0 1 2  (no-eol)
+  $ hg log -T '{rev} ' -r ':2'
+  0 1 2  (no-eol)
+  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:'
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
+  0 1 2  (no-eol)
+  $ hg log -T '{rev} ' -r '0:'
+  0 1 2  (no-eol)
 
 In this testcase warning should not be shown
-  $ hg log -G -T '{rev} {bookmarks}' -r ':' --config tweakdefaults.singlecolonwarn=1
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
+  $ hg log -T '{rev} ' -r ':' --config tweakdefaults.singlecolonwarn=1
+  0 1 2  (no-eol)
+
 Check that the custom message can be used
-  $ hg log -G -T '{rev} {bookmarks}' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
+  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
   hey stop that
-  @  2
-  |
-  | o  1
-  |/
-  o  0
-  
+  0 1 2  (no-eol)
