@@ -73,6 +73,7 @@ thrift_library(
     languages = [
         "java",
         "py",
+        "rust",
     ],
     py_base_module = "facebook",
     thrift_args = ["--strict"],

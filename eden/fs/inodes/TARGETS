@@ -5,6 +5,7 @@ thrift_library(
     languages = [
         "cpp2",
         "py",
+        "rust",
     ],
     py_base_module = "facebook.eden",
     thrift_args = ["--strict"],
@@ -23,6 +24,7 @@ thrift_library(
         "cpp2",
         "java",
         "py",
+        "rust",
     ],
     py_base_module = "facebook",
     thrift_args = ["--strict"],
