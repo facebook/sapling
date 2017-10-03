@@ -4,9 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::cmp;
-
-use itertools::{self, PutBack};
 use quickcheck::{Arbitrary, Gen};
 use rand::distributions::{IndependentSample, LogNormal};
 
@@ -120,29 +117,6 @@ impl Fragment {
         self.start <= offset && offset < self.post_end()
     }
 
-    /// Split the Fragment at the given offset. The Fragment is modified in-place, and the
-    /// split-off portion is made into a new Fragment. Returns None if the split point
-    /// does not fall within the Fragment's content bounds.
-    pub fn split(&mut self, at: usize) -> Option<Fragment> {
-        if !self.contains_offset(at) {
-            return None;
-        }
-        // The split point may occur after the end index of this Fragment if the new content is
-        // longer than the text being replaced. If so, clamp the split point to the end index.
-        let split = cmp::min(self.end, at);
-
-        // Adjust the original Fragment to only refer to the first part of the split content.
-        let end = self.end;
-        self.end = split;
-
-        // Construct a new Fragment for the second part of the split content.
-        Some(Fragment {
-            start: split,
-            end: end,
-            content: self.content.split_off(at - self.start),
-        })
-    }
-
     fn verify(&self) -> Result<()> {
         if self.start > self.end {
             bail!("invalid fragment: start {} > end {}", self.start, self.end);
@@ -230,113 +204,15 @@ pub fn apply(text: &[u8], delta: Delta) -> Vec<u8> {
 }
 
 /// Apply a chain of Deltas to an input text, returning the result.
-/// Should be faster than applying the Deltas one at a time since no
-/// intermediate versions are produced.
 pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Vec<u8> {
-    let combined = combine_chain(deltas);
-    apply(text, combined)
-}
-
-/// Combine a chain of Deltas into an equivalent single Delta.
-pub fn combine_chain<I: IntoIterator<Item = Delta>>(deltas: I) -> Delta {
-    deltas.into_iter().fold(Delta::default(), combine)
-}
-
-/// Destructively combine two Deltas into a new Delta that is equivalent to
-/// applying the original two Deltas in sequence.
-pub fn combine(first: Delta, second: Delta) -> Delta {
-    let mut combined = Vec::new();
-    let mut first_frags = itertools::put_back(first.frags.into_iter());
-
-    // Cumulative change in length caused by the fragments in `first` that have been
-    // processed so far. We need to keep track of this because the offsets in `second`
-    // are relative to the text after `first` is applied. We need to adjust
-    // all of the offsets in `second` to compensate for this.
-    let mut cum_len_change = 0;
-
-    for mut frag in second.frags {
-        // Take frags in `first` that occur before the current frag.
-        let before = take_frags(
-            Some(&mut combined),
-            &mut first_frags,
-            frag.start,
-            cum_len_change,
-        );
-
-        // Skip frags in `first` that overlap the current frag.
-        let after = take_frags(None, &mut first_frags, frag.end, before);
-
-        // Adjust offsets in the new fragment to compensate for length changes caused by
-        // the taken and skipped fragments respectively.
-        frag.start = adjust(frag.start, before);
-        frag.end = adjust(frag.end, after);
-
-        combined.push(frag);
-        cum_len_change = after;
+    let mut res = Vec::from(text);
+    for delta in deltas {
+        res = apply(&res, delta);
     }
-
-    // Add any remaining fragments from `first`.
-    combined.extend(first_frags);
-
-    Delta { frags: combined }
+    res
 }
 
-/// Move Fragments from src to dst until the given cutoff is reached. If the last Fragment
-/// overlaps the cutoff, it will be split; the first half will be moved to dst while the
-/// remainder will be put back into src. If dst is None, then the taken Fragments are dropped.
-/// Returns the updated cumulative change of length that includes all of the taken fragments.
-fn take_frags<I>(
-    mut dst: Option<&mut Vec<Fragment>>,
-    src: &mut PutBack<I>,
-    cutoff: usize,
-    mut cum_len_change: isize,
-) -> isize
-where
-    I: Iterator<Item = Fragment>,
-{
-    while let Some(mut frag) = src.next() {
-        // Adjust cutoff offset to account for the cumulative length change so far.
-        let adjusted = adjust(cutoff, cum_len_change);
-
-        // Does this fragment end after the cutoff?
-        if frag.post_end() > adjusted {
-            // Split the fragment if it starts before the cutoff.
-            if let Some(rest) = frag.split(adjusted) {
-                src.put_back(rest);
-                cum_len_change += frag.length_change();
-                dst.as_mut().map(|v| v.push(frag));
-            } else {
-                // Fragment started after the cutoff, so put it back.
-                src.put_back(frag);
-            }
-            break;
-        }
-
-        // Push the fragment to the output and update the cumulative length change accordingly.
-        cum_len_change += frag.length_change();
-        dst.as_mut().map(|v| v.push(frag));
-    }
-
-    cum_len_change
-}
-
-/// Subtract the second (signed) value from the first (unsigned) value.
-/// This function is here mostly to avoid cluttering the code with casts whenever
-/// we need to adjust an offset.
-fn adjust(offset: usize, adjustment: isize) -> usize {
-    // XXX: Not explicitly checking for overflow/underflow since interger operations should
-    // be checked in debug builds by default, as specified in RFC 560:
-    // https://github.com/rust-lang/rfcs/pull/560
-    // The alternative would be to use checked_add() and checked_sub() which would impose
-    // a runtime cost in optimized builds, which is probably undesirable here.
-    if adjustment < 0 {
-        offset + (-adjustment) as usize
-    } else {
-        offset - adjustment as usize
-    }
-}
-
-/// XXX: Comatibility functions for the old bdiff module for testing purposes. The delta
+/// XXX: Compatibility functions for the old bdiff module for testing purposes. The delta
 /// module will replace that one once all instances of Vec<bdiff::Delta> are replaced
 /// with delta::Delta, and this compatibility module will be removed at that time.
 pub mod compat {
@@ -419,131 +295,6 @@ mod tests {
         fn fragment_shrink(fragment: Fragment) -> bool {
             fragment.shrink().take(100).all(|f| f.verify().is_ok())
         }
-    }
-
-    /// Test a fragment that decreases the size of the content.
-    #[test]
-    fn test_fragment_shrink() {
-        let mut frag = Fragment {
-            start: 10,
-            end: 20,
-            content: vec![1, 2, 3, 4, 5],
-        };
-
-        assert_eq!(frag.post_end(), 15);
-        assert_eq!(frag.length_change(), -5);
-
-        assert!(frag.contains_offset(12));
-        assert!(!frag.contains_offset(17));
-
-        assert_eq!(frag.split(17), None);
-        let rest = frag.split(12).unwrap();
-
-        assert_eq!(
-            frag,
-            Fragment {
-                start: 10,
-                end: 12,
-                content: vec![1, 2],
-            }
-        );
-        assert_eq!(
-            rest,
-            Fragment {
-                start: 12,
-                end: 20,
-                content: vec![3, 4, 5],
-            }
-        );
-    }
-
-    /// Test a fragment that increases the size of the content.
-    #[test]
-    fn test_fragment_grow() {
-        let mut frag = Fragment {
-            start: 10,
-            end: 15,
-            content: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        };
-
-        assert_eq!(frag.post_end(), 20);
-        assert_eq!(frag.length_change(), 5);
-
-        assert!(frag.contains_offset(17));
-
-        // We're splitting within the content bounds of this Fragment, but after the end
-        // offset. As a result, the split point should be the end offset, but the content
-        // should still be split from the original split offset.
-        let rest = frag.split(17).unwrap();
-
-        assert_eq!(
-            frag,
-            Fragment {
-                start: 10,
-                end: 15,
-                content: vec![1, 2, 3, 4, 5, 6, 7],
-            }
-        );
-        assert_eq!(
-            rest,
-            Fragment {
-                start: 15,
-                end: 15,
-                content: vec![8, 9, 10],
-            }
-        );
-    }
-
-    /// Test combining two Deltas with overlapping fragments.
-    #[test]
-    fn test_combine() {
-        let delta1 = Delta {
-            frags: vec![
-                Fragment {
-                    start: 3,
-                    end: 6,
-                    content: vec![1, 2, 3, 4, 5],
-                },
-                Fragment {
-                    start: 8,
-                    end: 16,
-                    content: vec![6, 7, 8, 9],
-                },
-            ],
-        };
-
-        let delta2 = Delta {
-            frags: vec![
-                Fragment {
-                    start: 7,
-                    end: 12,
-                    content: vec![10, 11, 12, 13],
-                },
-            ],
-        };
-
-        let expected = Delta {
-            frags: vec![
-                Fragment {
-                    start: 3,
-                    end: 6,
-                    content: vec![1, 2, 3, 4],
-                },
-                Fragment {
-                    start: 6,
-                    end: 10,
-                    content: vec![10, 11, 12, 13],
-                },
-                Fragment {
-                    start: 10,
-                    end: 16,
-                    content: vec![8, 9],
-                },
-            ],
-        };
-
-        let combined = combine(delta1, delta2);
-        assert_eq!(combined, expected);
     }
 
     #[test]
