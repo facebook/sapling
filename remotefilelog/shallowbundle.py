@@ -75,8 +75,6 @@ class shallowcg1packer(changegroup.cg1packer):
         """
         sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
                                             True)
-        sendflat &= not self._repo.ui.configbool('treemanifest', 'treeonly')
-
         if sendflat:
             # In this code path, generating the manifests populates fnodes for
             # us.
