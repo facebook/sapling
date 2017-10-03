@@ -595,7 +595,7 @@ CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 # list in group 2, and the preceeding line output in group 1:
 #
 #   output..output (feature !)\n
-optline = re.compile(b'(.+) \((.+?) !\)\n$')
+optline = re.compile(b'(.*) \((.+?) !\)\n$')
 
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
