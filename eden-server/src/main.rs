@@ -20,6 +20,7 @@ extern crate clap;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate futures_cpupool;
 extern crate futures_ext;
 extern crate hyper;
 #[macro_use]
@@ -43,6 +44,7 @@ use std::sync::Arc;
 use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState};
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
+use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
@@ -157,6 +159,7 @@ impl TreeMetadata {
 
 struct EdenServer<State> {
     name_to_repo: NameToRepo<State>,
+    cpupool: Arc<CpuPool>,
 }
 
 impl<State> EdenServer<State>
@@ -164,8 +167,11 @@ where
     EdenServer<State>: Service,
     State: BlobState,
 {
-    fn new(name_to_repo: NameToRepo<State>) -> EdenServer<State> {
-        EdenServer { name_to_repo }
+    fn new(name_to_repo: NameToRepo<State>, cpupool: Arc<CpuPool>) -> EdenServer<State> {
+        EdenServer {
+            name_to_repo,
+            cpupool,
+        }
     }
 
     fn get_root_tree_manifest_id(
@@ -197,13 +203,12 @@ where
             }
         };
 
+        let cpupool = self.cpupool.clone();
         repo.get_manifest_by_nodeid(&hash)
-            .map(|manifest| {
-                manifest
-                    .list()
-                    .and_then(|entry| TreeMetadata::from_entry(entry))
-            })
+            .map(|manifest| manifest.list())
             .flatten_stream()
+            .map(move |entry| cpupool.spawn(TreeMetadata::from_entry(entry)))
+            .buffer_unordered(100) // Schedules 100 futures on cpupool
             .map_err(Error::from)
             .boxify()
     }
@@ -293,7 +298,8 @@ where
     let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
-    let func = move || Ok(EdenServer::new(map.clone()));
+    let cpupool = Arc::new(CpuPool::new_num_cpus());
+    let func = move || Ok(EdenServer::new(map.clone(), cpupool.clone()));
     let server = Http::new().bind(&addr, func).expect("Failed to run server");
     server.run().expect("Error while running service");
 }
