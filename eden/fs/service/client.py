@@ -54,7 +54,10 @@ class EdenClient(EdenService.Client):
         else:
             sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
         self._socket = TSocket(unix_socket=sock_path)
-        self._socket.setTimeout(60000)  # in milliseconds
+        # We used to set a timeout here, but picking the right duration is hard,
+        # and safely retrying an arbitrary thrift call may not be safe.  So we
+        # just leave the client with no timeout.
+        #self._socket.setTimeout(60000)  # in milliseconds
         self._transport = THeaderTransport(self._socket)
         self._protocol = THeaderProtocol(self._transport)
         super(EdenClient, self).__init__(self._protocol)
@@ -70,9 +73,10 @@ class EdenClient(EdenService.Client):
         try:
             self._transport.open()
         except TTransportException as ex:
-            self._transport.close()
+            self.close()
             if ex.type == TTransportException.NOT_OPEN:
                 raise EdenNotRunningError(self._eden_dir)
+            raise
 
     def close(self):
         if self._transport is not None:
