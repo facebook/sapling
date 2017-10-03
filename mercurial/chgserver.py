@@ -68,6 +68,7 @@ def _hashlist(items):
 # sensitive config sections affecting confighash
 _configsections = [
     'alias',  # affects global state commands.table
+    'eol',    # uses setconfig('eol', ...)
     'extdiff',  # uisetup will register new commands
     'extensions',
 ]
