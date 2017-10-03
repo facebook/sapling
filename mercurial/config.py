@@ -177,6 +177,7 @@ class config(object):
                 if sections and section not in sections:
                     continue
                 if self.get(section, name) is not None:
+                    self._data[section] = self._data[section].preparewrite()
                     del self._data[section][name]
                 self._unset.append((section, name))
                 continue
