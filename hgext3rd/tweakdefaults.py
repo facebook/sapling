@@ -40,8 +40,9 @@ Config::
     # change rebase exit from 1 to 0 if nothing is rebased
     nooprebase = True
 
-    # whether to show a warning on some deprecated usages
+    # whether to show a warning or abort on some deprecated usages
     singlecolonwarn = False
+    singlecolonabort = False
 
     # educational messages
     bmnodesthint = ''
@@ -700,7 +701,9 @@ def _analyzewrapper(orig, x, ui):
     """Wraps analyzer to detect the use of colons in the revisions"""
     result = orig(x)
 
-    enabled = ui.configbool('tweakdefaults', 'singlecolonwarn')
+    warn = ui.configbool('tweakdefaults', 'singlecolonwarn')
+    abort = ui.configbool('tweakdefaults', 'singlecolonabort')
+    enabled = warn or abort
 
     # The last condition is added so that warnings are not shown if
     # hg log --follow is invoked w/o arguments
@@ -708,8 +711,11 @@ def _analyzewrapper(orig, x, ui):
             (x[0] in ('range', 'rangepre', 'rangepost')) and \
             x != ('rangepre', ('symbol', '.')):
         msg = ui.config('tweakdefaults', 'singlecolonmsg',
-                        _("warning: use of ':' is deprecated"))
-        ui.warn('%s\n' % msg)
+                        _("use of ':' is deprecated"))
+        if abort:
+            raise error.Abort('%s' % msg)
+        if warn:
+            ui.warn(_('warning: %s\n') % msg)
 
     return result
 

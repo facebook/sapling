@@ -40,5 +40,13 @@ In this testcase warning should not be shown
 
 Check that the custom message can be used
   $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
-  hey stop that
+  warning: hey stop that
   0 1 2  (no-eol)
+
+Check that we can abort as well
+  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonabort=1
+  abort: use of ':' is deprecated
+  [255]
+  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonabort=1 --config tweakdefaults.singlecolonmsg="no more colons"
+  abort: no more colons
+  [255]
