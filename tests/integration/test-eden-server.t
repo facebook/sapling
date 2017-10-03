@@ -6,15 +6,44 @@
   $ touch a
   $ hg add a
   $ hg ci -ma
+
   $ echo 1 > b
   $ echo 2 > c
   $ hg add b c
   $ hg ci -mb
+
+Add commit with a copy
   $ hg cp c d
   $ hg ci -mc
+
+Add commit with null manifest
+  $ hg up null
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  $ echo 1 > 1
+  $ hg add 1
+  $ hg ci -m 'null manifest'
+  created new head
+  $ hg rm 1
+  $ hg commit --amend
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/813c7514ad5e-4be04d8b-amend.hg (glob)
+  $ hg log -r 7f48e9c786d1 -T '{node}'
+  7f48e9c786d1cbab525424e45139585724f84e28 (no-eol)
+  $ hg debugdata -c 7f48e9c786d1cbab525424e45139585724f84e28
+  0000000000000000000000000000000000000000
+  test
+  0 0 amend_source:813c7514ad5e14493de885987c241c14c5cd3153
+  
+  null manifest (no-eol)
+ 
   $ hg log
-  changeset:   2:533267b0e203
+  changeset:   3:7f48e9c786d1
   tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     null manifest
+  
+  changeset:   2:533267b0e203
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -32,17 +61,30 @@
   $ cd ..
   $ mkdir $TESTTMP/blobrepo
 #if files
-  $ blobimport --blobstore files repo $TESTTMP/blobrepo
+  $ blobimport --blobstore files repo $TESTTMP/blobrepo > out.txt
+  $ grep changeset < out.txt
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO 3: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+
+Heads output order is unpredictable, let's sort them by commit hash
+  $ grep head < out.txt | sort -k 6
   * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO head 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
 #else
-  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction
+  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction > out.txt
+  $ grep changeset < out.txt
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO 3: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+
+Heads output order is unpredictable, let's sort them by commit hash
+  $ grep head < out.txt | sort -k 6
   * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  * INFO head 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  $ grep compaction < out.txt
   * INFO compaction started (glob)
   * INFO compaction finished (glob)
 #endif

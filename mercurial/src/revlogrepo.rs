@@ -19,7 +19,8 @@ use futures::stream::{self, BoxStream};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks, Version};
-use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash, Repo};
+use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash,
+                      Repo, NULL_HASH};
 use stockbookmarks::StockBookmarks;
 
 pub use changeset::RevlogChangeset;
@@ -190,10 +191,16 @@ impl RevlogRepo {
     }
 
     pub fn get_manifest_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {
-        self.manifest
-            .get_idx_by_nodeid(nodeid)
-            .and_then(|idx| self.manifest.get_rev(idx))
-            .into_future()
+        // It's possible that commit has null pointer to manifest hash.
+        // In that case we want to return empty blobnode
+        let blobnode = if nodeid == &NULL_HASH {
+            Ok(BlobNode::new(vec![], None, None))
+        } else {
+            self.manifest
+                .get_idx_by_nodeid(nodeid)
+                .and_then(|idx| self.manifest.get_rev(idx))
+        };
+        blobnode.into_future()
     }
 
     pub fn get_tree_manifest_blob_by_nodeid(
