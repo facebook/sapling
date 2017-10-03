@@ -263,8 +263,14 @@ Testing --debug:
 
 Testing --traceback:
 
+#if no-chg
   $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
   Traceback (most recent call last):
+#else
+Traceback for '--config' errors not supported with chg.
+  $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
+  [1]
+#endif
 
 Testing --time:
 
