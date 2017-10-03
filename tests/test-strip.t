@@ -962,8 +962,11 @@ Use delayedstrip to strip inside a transaction
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import commands, repair
-  > def reposetup(ui, repo):
+  > from mercurial import commands, registrar, repair
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('testdelayedstrip')
+  > def testdelayedstrip(ui, repo):
   >     def getnodes(expr):
   >         return [repo.changelog.node(r) for r in repo.revs(expr)]
   >     with repo.wlock():
@@ -973,10 +976,10 @@ Use delayedstrip to strip inside a transaction
   >                 repair.delayedstrip(ui, repo, getnodes('G+H+Z'), 'I')
   >                 commands.commit(ui, repo, message='J', date='0 0')
   > EOF
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/delayedstrip.py
+  $ hg testdelayedstrip --config extensions.t=$TESTTMP/delayedstrip.py
   warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
   saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-17475721-I.hg (glob)
-  
+
   $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
   @  6:2f2d51af6205 J
   |
@@ -1009,8 +1012,11 @@ Test high-level scmutil.cleanupnodes API
   $ cp -R . ../scmutilcleanup.obsstore
 
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-  > from mercurial import scmutil
-  > def reposetup(ui, repo):
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('testnodescleanup')
+  > def testnodescleanup(ui, repo):
   >     def nodes(expr):
   >         return [repo.changelog.node(r) for r in repo.revs(expr)]
   >     def node(expr):
@@ -1024,10 +1030,10 @@ Test high-level scmutil.cleanupnodes API
   >                 scmutil.cleanupnodes(repo, mapping, 'replace')
   >                 scmutil.cleanupnodes(repo, nodes('((B::)+I+Z)-D2'), 'replace')
   > EOF
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/scmutilcleanup.py
+  $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
   warning: orphaned descendants detected, not stripping 112478962961, 1fc8102cda62, 26805aba1e60
   saved backup bundle to $TESTTMP/scmutilcleanup/.hg/strip-backup/f585351a92f8-73fb7c03-replace.hg (glob)
-  
+
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  8:1473d4b996d1 G2 b-F@divergent3 b-G
   |
@@ -1068,8 +1074,8 @@ we have reusable code here
   > stabilization.track-operation=1
   > EOF
 
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/scmutilcleanup.py
-  
+  $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
+
   $ rm .hg/localtags
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  12:1473d4b996d1 G2 b-F@divergent3 b-G
