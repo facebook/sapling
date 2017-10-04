@@ -19,7 +19,7 @@
 
 /* Hash implementation from diffutils */
 #define ROL(v, n) ((v) << (n) | (v) >> (sizeof(v) * CHAR_BIT - (n)))
-#define HASH(h, c) ((c) + ROL(h ,7))
+#define HASH(h, c) ((c) + ROL(h, 7))
 
 struct pos {
 	int pos, len;
