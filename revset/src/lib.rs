@@ -48,6 +48,10 @@ extern crate linear;
 extern crate merge_even;
 #[cfg(test)]
 extern crate merge_uneven;
+#[cfg(test)]
+extern crate unshared_merge_even;
+#[cfg(test)]
+extern crate unshared_merge_uneven;
 
 #[cfg(test)]
 mod tests;

@@ -68,11 +68,11 @@ impl IntersectNodeStream {
         for &mut (_, ref mut state) in self.inputs.iter_mut() {
             if let Ok(Async::Ready(Some((hash, gen_id)))) = *state {
                 if Some(gen_id) == self.current_generation {
-                    found_hashes = true;
                     *self.accumulator.entry(hash).or_insert(0) += 1;
                 }
                 // Inputs of higher generation than the current one get consumed and dropped
                 if Some(gen_id) >= self.current_generation {
+                    found_hashes = true;
                     *state = Ok(Async::NotReady);
                 }
             }
@@ -165,6 +165,8 @@ mod test {
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
+    use unshared_merge_even;
+    use unshared_merge_uneven;
 
     #[test]
     fn intersect_identical_node() {
@@ -428,4 +430,147 @@ mod test {
         );
     }
 
+    #[test]
+    fn intersect_unshared_merge_even() {
+        let repo = Arc::new(unshared_merge_even::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Post-merge, merge, and both unshared branches
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("cc7f14bc631bca43eaa32c25b04a638d54d10b70"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("33fb49d8a47b29290f5163e30b294339c89505a2"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+                &repo,
+            )),
+        ];
+        let left_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        // Four commits from one branch
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
+                &repo,
+            )),
+        ];
+        let right_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
+        let nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn intersect_unshared_merge_uneven() {
+        let repo = Arc::new(unshared_merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        // Post-merge, merge, and both unshared branches
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("9c6dd4e2c2f43c89613b094efb426cc42afdee2a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+                &repo,
+            )),
+        ];
+        let left_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        // Four commits from one branch
+        let inputs: Vec<Box<NodeStream>> = vec![
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
+                &repo,
+            )),
+            Box::new(SingleNodeHash::new(
+                string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
+                &repo,
+            )),
+        ];
+        let right_nodestream = Box::new(UnionNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
+        let nodestream = Box::new(IntersectNodeStream::new(
+            &repo,
+            repo_generation.clone(),
+            inputs.into_iter(),
+        ));
+
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
+            ],
+            nodestream,
+        );
+    }
 }
