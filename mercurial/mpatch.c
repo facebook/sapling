@@ -64,7 +64,7 @@ static ssize_t lsize(struct mpatch_flist *a)
    for changes in offset. the last hunk may be split if necessary.
 */
 static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
-	int offset)
+                  int offset)
 {
 	struct mpatch_frag *d = dest->tail, *s = src->head;
 	int postend, c, l;
@@ -145,7 +145,7 @@ static int discard(struct mpatch_flist *src, int cut, int offset)
 /* combine hunk lists a and b, while adjusting b for offset changes in a/
    this deletes a and b and returns the resultant list. */
 static struct mpatch_flist *combine(struct mpatch_flist *a,
-	struct mpatch_flist *b)
+                                    struct mpatch_flist *b)
 {
 	struct mpatch_flist *c = NULL;
 	struct mpatch_frag *bh, *ct;
@@ -239,7 +239,7 @@ ssize_t mpatch_calcsize(ssize_t len, struct mpatch_flist *l)
 }
 
 int mpatch_apply(char *buf, const char *orig, ssize_t len,
-	struct mpatch_flist *l)
+                 struct mpatch_flist *l)
 {
 	struct mpatch_frag *f = l->head;
 	int last = 0;
@@ -261,9 +261,9 @@ int mpatch_apply(char *buf, const char *orig, ssize_t len,
 }
 
 /* recursively generate a patch of all bins between start and end */
-struct mpatch_flist *mpatch_fold(void *bins,
-	struct mpatch_flist* (*get_next_item)(void*, ssize_t),
-	ssize_t start, ssize_t end)
+struct mpatch_flist *
+mpatch_fold(void *bins, struct mpatch_flist *(*get_next_item)(void *, ssize_t),
+            ssize_t start, ssize_t end)
 {
 	ssize_t len;
 
