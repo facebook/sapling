@@ -78,8 +78,7 @@ static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
 			/* save this hunk */
 			offset += s->start + s->len - s->end;
 			*d++ = *s++;
-		}
-		else {
+		} else {
 			/* break up this hunk */
 			c = cut - offset;
 			if (s->end < c)
@@ -122,8 +121,7 @@ static int discard(struct mpatch_flist *src, int cut, int offset)
 		if (postend <= cut) {
 			offset += s->start + s->len - s->end;
 			s++;
-		}
-		else {
+		} else {
 			c = cut - offset;
 			if (s->end < c)
 				c = s->end;
