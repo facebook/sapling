@@ -24,6 +24,7 @@ extern crate error_chain;
 #[macro_use]
 extern crate slog;
 extern crate slog_kvfilter;
+extern crate slog_stats;
 extern crate slog_term;
 
 #[macro_use]
@@ -39,6 +40,7 @@ extern crate mercurial_types;
 extern crate metaconfig;
 extern crate services;
 extern crate sshrelay;
+extern crate stats;
 
 mod errors;
 mod repo;
@@ -135,10 +137,24 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
         // TODO: switch to TermDecorator, which supports color
         let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
         let drain = slog_term::FullFormat::new(decorator).build();
+        let drain = slog_stats::StatsDrain::new(drain);
         drain.filter_level(level)
     };
 
     Logger::root(drain.fuse(), o![])
+}
+
+fn start_stats() -> Result<JoinHandle<!>> {
+    Ok(thread::Builder::new()
+        .name("stats_aggregation".to_owned())
+        .spawn(move || {
+            let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+            let scheduler = stats::schedule_stats_aggregation(&core.handle())
+                .expect("failed to create stats aggregation scheduler");
+            core.run(scheduler).expect("stats scheduler failed");
+            // stats scheduler shouldn't finish successfully
+            unreachable!()
+        })?)
 }
 
 fn start_thrift_service<'a>(
@@ -327,6 +343,7 @@ fn main() {
     fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
         info!(root_log, "Starting up");
 
+        let stats_aggregation = start_stats()?;
         let maybe_thrift = match start_thrift_service(&root_log, &matches) {
             None => None,
             Some(handle) => Some(handle?),
@@ -336,7 +353,11 @@ fn main() {
         let repo_listeners =
             start_repo_listeners(config.repos.into_iter().map(|(_, c)| c.repotype), root_log)?;
 
-        for handle in maybe_thrift.into_iter().chain(repo_listeners.into_iter()) {
+        for handle in vec![stats_aggregation]
+            .into_iter()
+            .chain(maybe_thrift.into_iter())
+            .chain(repo_listeners.into_iter())
+        {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
                 Err(err) => crit!(
