@@ -981,16 +981,9 @@ def followlines(repo, subset, x):
         rev = revs.last()
 
     pat = getstring(args['file'], _("followlines requires a pattern"))
-    if not matchmod.patkind(pat):
-        fname = pathutil.canonpath(repo.root, repo.getcwd(), pat)
-    else:
-        m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=repo[rev])
-        files = [f for f in repo[rev] if m(f)]
-        if len(files) != 1:
-            # i18n: "followlines" is a keyword
-            raise error.ParseError(_("followlines expects exactly one file"))
-        fname = files[0]
-
+    # i18n: "followlines" is a keyword
+    msg = _("followlines expects exactly one file")
+    fname = scmutil.parsefollowlinespattern(repo, rev, pat, msg)
     # i18n: "followlines" is a keyword
     lr = getrange(args['lines'][0], _("followlines expects a line range"))
     fromline, toline = [getinteger(a, _("line range bounds must be integers"))

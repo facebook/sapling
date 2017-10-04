@@ -567,6 +567,20 @@ def matchfiles(repo, files, badfn=None):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files, badfn=badfn)
 
+def parsefollowlinespattern(repo, rev, pat, msg):
+    """Return a file name from `pat` pattern suitable for usage in followlines
+    logic.
+    """
+    if not matchmod.patkind(pat):
+        return pathutil.canonpath(repo.root, repo.getcwd(), pat)
+    else:
+        ctx = repo[rev]
+        m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=ctx)
+        files = [f for f in ctx if m(f)]
+        if len(files) != 1:
+            raise error.ParseError(msg)
+        return files[0]
+
 def origpath(ui, repo, filepath):
     '''customize where .orig files are created
 
