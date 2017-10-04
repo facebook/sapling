@@ -21,12 +21,15 @@ populate the depot
   add //depot/Main/d#1
   Change 1 submitted.
 
-  $ p4 edit Main/a Main/b/c Main/d
+  $ p4 edit Main/a Main/d
   //depot/Main/a#1 - opened for edit
-  //depot/Main/b/c#1 - opened for edit
   //depot/Main/d#1 - opened for edit
   $ echo a >> Main/a
   $ echo d >> Main/d
+  $ p4 edit -ttext Main/b/c
+  //depot/Main/b/c#1 - opened for edit
+  $ rm Main/b/c
+  $ echo d > Main/b/c
   $ p4 submit -d second
   Submitting change 2.
   Locking 3 files ...
@@ -52,12 +55,12 @@ Simple import
   writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
   updating the branch cache (?)
   writing filelog: 1f6b5bb93f1d, p1 000000000000, linkrev 0, 4 bytes, src: *, path: Main/b/c (glob)
-  writing filelog: 3b479db02621, p1 1f6b5bb93f1d, linkrev 1, 4 bytes, src: *, path: Main/b/c (glob)
+  writing filelog: c29ae1cbd245, p1 1f6b5bb93f1d, linkrev 1, 2 bytes, src: *, path: Main/b/c (glob)
   writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
   writing filelog: f83f0637e55e, p1 a9092a3d84a3, linkrev 1, 4 bytes, src: *, path: Main/d (glob)
   changelist 1: writing manifest. node: 05414d16d473 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: fb65d73ad7d5 p1: 05414d16d473 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: 9408cdd6d4f7 p1: 05414d16d473 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   updating the branch cache (?)
   2 revision(s), 3 file(s) imported.
@@ -71,7 +74,7 @@ Verify
   checking files
   3 files, 2 changesets, 6 total revisions
 
-  $ hg update tip
+  $ hg update 0
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # Ensure that the file is a symlink (-L) and is valid (-f) this ensures
@@ -79,9 +82,14 @@ Verify
 
   $ test -L Main/b/c
   $ test -f Main/b/c
-  $ hg --debug manifest
+  $ hg --debug manifest -r 0
+  b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 644   Main/a
+  1f6b5bb93f1da278ef1fead1e4740a03d8802e9f 644 @ Main/b/c
+  a9092a3d84a37b9993b5c73576f6de29b7ea50f6 755 * Main/d
+
+  $ hg --debug manifest -r 1
   a80d06849b333b8a3d5c445f8ba3142010dcdc9e 644   Main/a
-  3b479db02621d5ff591921d4946681bebd4b2e2e 644 @ Main/b/c
+  c29ae1cbd245c01122ab671684e87b26183de12b 644   Main/b/c
   f83f0637e55e3c48e9922f14a016761626d79d3d 755 * Main/d
 
 End Test

@@ -349,6 +349,7 @@ class FileImporter(object):
                     c.cl, self.relpath))
 
             meta = {}
+            fileflags[c.cl] = ''
             if self._p4filelog.isexec(c.cl):
                 fileflags[c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
@@ -410,6 +411,7 @@ class BlobFileImporter(FileImporter):
                     c.cl, self.relpath))
 
             meta = {}
+            fileflags[c.cl] = ' '
             if self._p4filelog.isexec(c.cl):
                 fileflags[c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
