@@ -275,5 +275,5 @@ mpatch_fold(void *bins, struct mpatch_flist *(*get_next_item)(void *, ssize_t),
 	/* divide and conquer, memory management is elsewhere */
 	len = (end - start) / 2;
 	return combine(mpatch_fold(bins, get_next_item, start, start + len),
-		       mpatch_fold(bins, get_next_item, start + len, end));
+	               mpatch_fold(bins, get_next_item, start + len, end));
 }
