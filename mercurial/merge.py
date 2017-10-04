@@ -1727,11 +1727,11 @@ def update(repo, node, branchmerge, force, ancestor=None,
     mergeforce = whether the merge was run with 'merge --force' (deprecated): if
       this is True, then 'force' should be True as well.
 
-    The table below shows all the behaviors of the update command
-    given the -c and -C or no options, whether the working directory
-    is dirty, whether a revision is specified, and the relationship of
-    the parent rev to the target rev (linear or not). Match from top first. The
-    -n option doesn't exist on the command line, but represents the
+    The table below shows all the behaviors of the update command given the
+    -c/--check and -C/--clean or no options, whether the working directory is
+    dirty, whether a revision is specified, and the relationship of the parent
+    rev to the target rev (linear or not). Match from top first. The -n
+    option doesn't exist on the command line, but represents the
     experimental.updatecheck=noconflict option.
 
     This logic is tested by test-update-branches.t.
