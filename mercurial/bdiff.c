@@ -9,13 +9,13 @@
  Based roughly on Python difflib
 */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
-#include "compat.h"
-#include "bitmanipulation.h"
 #include "bdiff.h"
+#include "bitmanipulation.h"
+#include "compat.h"
 
 /* Hash implementation from diffutils */
 #define ROL(v, n) ((v) << (n) | (v) >> (sizeof(v) * CHAR_BIT - (n)))
