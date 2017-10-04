@@ -318,5 +318,3 @@ void bdiff_freehunks(struct bdiff_hunk *l)
 		free(l);
 	}
 }
-
-
