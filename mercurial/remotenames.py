@@ -17,6 +17,46 @@ from . import (
 # directory name in .hg/ in which remotenames files will be present
 remotenamedir = 'remotenames'
 
+def readremotenamefile(repo, filename):
+    """
+    reads a file from .hg/remotenames/ directory and yields it's content
+    filename: the file to be read
+    yield a tuple (node, remotepath, name)
+    """
+
+    vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
+    if not vfs.exists(filename):
+        return
+    f = vfs(filename)
+    lineno = 0
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        # contains the version number
+        if lineno == 0:
+            lineno += 1
+        try:
+            node, remote, rname = line.split('\0')
+            yield node, remote, rname
+        except ValueError:
+            pass
+
+    f.close()
+
+def readremotenames(repo):
+    """
+    read the details about the remotenames stored in .hg/remotenames/ and
+    yields a tuple (node, remotepath, name). It does not yields information
+    about whether an entry yielded is branch or bookmark. To get that
+    information, call the respective functions.
+    """
+
+    for bmentry in readremotenamefile(repo, 'bookmarks'):
+        yield bmentry
+    for branchentry in readremotenamefile(repo, 'branches'):
+        yield branchentry
+
 def writeremotenamefile(repo, remotepath, names, nametype):
     vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
     f = vfs(nametype, 'w', atomictemp=True)
