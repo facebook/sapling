@@ -30,7 +30,7 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 	unsigned hash;
 	int i;
 	const char *p, *b = a;
-	const char * const plast = a + len - 1;
+	const char *const plast = a + len - 1;
 	struct bdiff_line *l;
 
 	/* count the lines */
