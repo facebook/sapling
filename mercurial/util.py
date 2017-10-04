@@ -50,6 +50,7 @@ from . import (
     i18n,
     policy,
     pycompat,
+    urllibcompat,
 )
 
 base85 = policy.importmod(r'base85')
@@ -62,7 +63,6 @@ b85encode = base85.b85encode
 cookielib = pycompat.cookielib
 empty = pycompat.empty
 httplib = pycompat.httplib
-httpserver = pycompat.httpserver
 pickle = pycompat.pickle
 queue = pycompat.queue
 socketserver = pycompat.socketserver
@@ -70,9 +70,11 @@ stderr = pycompat.stderr
 stdin = pycompat.stdin
 stdout = pycompat.stdout
 stringio = pycompat.stringio
-urlerr = pycompat.urlerr
-urlreq = pycompat.urlreq
 xmlrpclib = pycompat.xmlrpclib
+
+httpserver = urllibcompat.httpserver
+urlerr = urllibcompat.urlerr
+urlreq = urllibcompat.urlreq
 
 # workaround for win32mbcs
 _filenamebytestr = pycompat.bytestr
