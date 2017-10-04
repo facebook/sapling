@@ -23,6 +23,8 @@ extern crate error_chain;
 
 #[macro_use]
 extern crate slog;
+#[macro_use]
+extern crate slog_glog_fmt;
 extern crate slog_kvfilter;
 extern crate slog_stats;
 extern crate slog_term;
@@ -61,6 +63,7 @@ use futures_ext::{encode, StreamLayeredExt};
 use clap::{App, ArgGroup, ArgMatches};
 
 use slog::{Drain, Level, Logger};
+use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_kvfilter::KVFilter;
 
 use bytes::Bytes;
@@ -136,12 +139,15 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     let drain = {
         // TODO: switch to TermDecorator, which supports color
         let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
-        let drain = slog_term::FullFormat::new(decorator).build();
+        let drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
         let drain = slog_stats::StatsDrain::new(drain);
         drain.filter_level(level)
     };
 
-    Logger::root(drain.fuse(), o![])
+    Logger::root(
+        drain.fuse(),
+        o!(kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
+    )
 }
 
 fn start_stats() -> Result<JoinHandle<!>> {
@@ -218,7 +224,7 @@ where
 
     if repos.iter().any(Result::is_err) {
         for err in repos.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to initialize repo {}", err);
+            crit!(root_log, "Failed to initialize repo"; err);
         }
         bail!(ErrorKind::Initialization(
             "at least one of the repos failed to be initialized",
@@ -241,7 +247,7 @@ where
 
     if handles.iter().any(Result::is_err) {
         for err in handles.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to spawn listener thread {}", err);
+            crit!(root_log, "Failed to spawn listener thread"; err);
         }
         bail!(ErrorKind::Initialization(
             "at least one of the listener threads failed to be spawned",
@@ -266,7 +272,7 @@ where
         .for_each(move |sock| {
             match sock.peer_addr() {
                 Ok(addr) => info!(listen_log, "New connection from {:?}", addr),
-                Err(err) => error!(listen_log, "Failed to get peer addr: {}", err),
+                Err(err) => error!(listen_log, "Failed to get peer addr"; Error::from(err)),
             };
 
             // Have a connection. Extract std{in,out,err} streams for socket
@@ -314,11 +320,7 @@ where
             // TODO: seems to leave the client hanging?
             let conn_log = conn_log.clone();
             let endres = endres.or_else(move |err| {
-                error!(conn_log, "Command failed: {}", err; "remote" => "true");
-
-                for e in err.iter().skip(1) {
-                    error!(conn_log, "caused by: {}", e; "remote" => "true");
-                }
+                error!(conn_log, "Command failed"; err, "remote" => "true");
                 Ok(())
             });
 
@@ -360,12 +362,7 @@ fn main() {
         {
             let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
             match handle.join() {
-                Err(err) => crit!(
-                    root_log,
-                    "Thread {} failed with error {:?}",
-                    thread_name,
-                    err
-                ),
+                Err(panic) => crit!(root_log, "Thread {} paniced with: {:?}", thread_name, panic),
             }
         }
 
@@ -375,12 +372,7 @@ fn main() {
 
     match run_server(&root_log, matches) {
         Err(e) => {
-            error!(root_log, "Failed: {}", e);
-
-            for e in e.iter().skip(1) {
-                error!(root_log, "caused by: {}", e);
-            }
-
+            crit!(root_log, "Server fatal error"; e);
             std::process::exit(1);
         }
     }

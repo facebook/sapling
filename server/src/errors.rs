@@ -30,3 +30,5 @@ error_chain! {
         Utf8(::std::str::Utf8Error);
     }
 }
+
+impl_kv_error!(Error);
