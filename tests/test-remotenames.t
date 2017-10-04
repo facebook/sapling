@@ -60,14 +60,16 @@ Making a client repo
   adding remote bookmark bar
   adding remote bookmark foo
   new changesets 18d04c59bb5d:3e1487808078
-  
-  Remotenames info
-  path: file:$TESTTMP/server
-  Bookmarks:
-  foo: 62615734edd52f06b6fb9c2beb429e4fe30d57b8
-  bar: 87d6d66763085b629e6d7ed56778c79827273022
-  Branches:
-  wat: ['3e1487808078543b0af6d10dadf5d46943578db0']
-  default: ['ec2426147f0e39dbc9cef599b066be6035ce691d']
-  
   (run 'hg heads' to see heads)
+
+  $ cat .hg/remotenames/bookmarks
+  0
+  
+  87d6d66763085b629e6d7ed56778c79827273022\x00file:$TESTTMP/server\x00bar (esc)
+  62615734edd52f06b6fb9c2beb429e4fe30d57b8\x00file:$TESTTMP/server\x00foo (esc)
+
+  $ cat .hg/remotenames/branches
+  0
+  
+  ec2426147f0e39dbc9cef599b066be6035ce691d\x00file:$TESTTMP/server\x00default (esc)
+  3e1487808078543b0af6d10dadf5d46943578db0\x00file:$TESTTMP/server\x00wat (esc)

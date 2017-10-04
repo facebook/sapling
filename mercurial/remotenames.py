@@ -10,6 +10,44 @@ from __future__ import absolute_import
 
 from .node import hex
 
+from . import (
+    vfs as vfsmod,
+)
+
+# directory name in .hg/ in which remotenames files will be present
+remotenamedir = 'remotenames'
+
+def writeremotenamefile(repo, remotepath, names, nametype):
+    vfs = vfsmod.vfs(repo.vfs.join(remotenamedir))
+    f = vfs(nametype, 'w', atomictemp=True)
+    # write the storage version info on top of file
+    # version '0' represents the very initial version of the storage format
+    f.write('0\n\n')
+
+    for name, node in sorted(names.iteritems()):
+        if nametype == "branches":
+            for n in node:
+                f.write('%s\0%s\0%s\n' % (n, remotepath, name))
+        elif nametype == "bookmarks":
+            if node:
+                f.write('%s\0%s\0%s\n' % (node, remotepath, name))
+
+    f.close()
+
+def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
+    """
+    save remotenames i.e. remotebookmarks and remotebranches in their
+    respective files under ".hg/remotenames/" directory.
+    """
+    wlock = repo.wlock()
+    try:
+        if bookmarks:
+            writeremotenamefile(repo, remotepath, bookmarks, 'bookmarks')
+        if branches:
+            writeremotenamefile(repo, remotepath, branches, 'branches')
+    finally:
+        wlock.release()
+
 def pullremotenames(localrepo, remoterepo):
     """
     pulls bookmarks and branches information of the remote repo during a
@@ -31,13 +69,4 @@ def pullremotenames(localrepo, remoterepo):
             if node in repo and not repo[node].obsolete():
                 bmap[branch].append(hex(node))
 
-    # writing things to ui till the time we import the saving functionality
-    ui = localrepo.ui
-    ui.write("\nRemotenames info\npath: %s\n" % remotepath)
-    ui.write("Bookmarks:\n")
-    for bm, node in bookmarks.iteritems():
-        ui.write("%s: %s\n" % (bm, node))
-    ui.write("Branches:\n")
-    for branch, node in bmap.iteritems():
-        ui.write("%s: %s\n" % (branch, node))
-    ui.write("\n")
+    saveremotenames(localrepo, remotepath, bmap, bookmarks)
