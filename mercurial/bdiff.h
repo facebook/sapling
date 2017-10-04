@@ -15,7 +15,7 @@ struct bdiff_hunk {
 
 int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr);
 int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b, int bn,
-	struct bdiff_hunk *base);
+               struct bdiff_hunk *base);
 void bdiff_freehunks(struct bdiff_hunk *l);
 
 #endif
