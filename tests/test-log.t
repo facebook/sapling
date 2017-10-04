@@ -15,6 +15,8 @@ Log on empty repository: checking consistency
   $ hg log -r null -q
   -1:000000000000
 
+  $ cd ..
+
 The g is crafted to have 2 filelog topological heads in a linear
 changeset graph
 
