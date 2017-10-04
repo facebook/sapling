@@ -27,6 +27,7 @@ from . import (
     phases,
     pushkey,
     pycompat,
+    remotenames,
     scmutil,
     sslutil,
     streamclone,
@@ -1303,6 +1304,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock, wlock)
+
+    # storing remotenames
+    if repo.ui.configbool('experimental', 'remotenames'):
+        remotenames.pullremotenames(repo, remote)
 
     return pullop
 

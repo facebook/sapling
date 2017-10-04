@@ -532,6 +532,9 @@ coreconfigitem('experimental', 'obsmarkers-exchange-debug',
 coreconfigitem('experimental', 'rebase.multidest',
     default=False,
 )
+coreconfigitem('experimental', 'remotenames',
+    default=False,
+)
 coreconfigitem('experimental', 'revlogv2',
     default=None,
 )
