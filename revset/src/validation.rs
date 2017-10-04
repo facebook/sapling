@@ -1,0 +1,180 @@
+// Copyright (c) 2017-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use futures::{Async, Poll};
+use futures::stream::Stream;
+use mercurial_types::{NodeHash, Repo};
+use repoinfo::{Generation, RepoGenCache};
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use NodeStream;
+use errors::*;
+use setcommon::{add_generations, InputStream};
+
+/// A wrapper around a NodeStream that asserts that the two revset invariants hold:
+/// 1. The generation number never increases
+/// 2. No hash is seen twice
+/// This uses memory proportional to the number of hashes in the revset.
+pub struct ValidateNodeStream {
+    wrapped: InputStream,
+    last_generation: Option<Generation>,
+    seen_hashes: HashSet<NodeHash>,
+}
+
+impl ValidateNodeStream {
+    pub fn new<R>(
+        wrapped: Box<NodeStream>,
+        repo: &Arc<R>,
+        repo_generation: RepoGenCache<R>,
+    ) -> ValidateNodeStream
+    where
+        R: Repo,
+    {
+        ValidateNodeStream {
+            wrapped: add_generations(wrapped, repo_generation, repo.clone()),
+            last_generation: None,
+            seen_hashes: HashSet::new(),
+        }
+    }
+}
+
+impl Stream for ValidateNodeStream {
+    type Item = NodeHash;
+    type Error = Error;
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let next = self.wrapped.poll()?;
+
+        let (hash, gen) = match next {
+            Async::NotReady => return Ok(Async::NotReady),
+            Async::Ready(None) => return Ok(Async::Ready(None)),
+            Async::Ready(Some((hash, gen))) => (hash, gen),
+        };
+
+        assert!(
+            self.seen_hashes.insert(hash),
+            format!("Hash {} seen twice", hash)
+        );
+
+        assert!(
+            self.last_generation.is_none() || self.last_generation >= Some(gen),
+            "Generation number increased unexpectedly"
+        );
+
+        self.last_generation = Some(gen);
+
+        Ok(Async::Ready(Some(hash)))
+    }
+}
+
+mod test {
+    use super::*;
+    use SingleNodeHash;
+    use linear;
+
+    use repoinfo::RepoGenCache;
+    use setcommon::NotReadyEmptyStream;
+    use std::sync::Arc;
+    use tests::assert_node_sequence;
+    use tests::string_to_nodehash;
+
+    #[test]
+    fn validate_accepts_single_node() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+
+        let nodestream = SingleNodeHash::new(head_hash, &repo);
+
+        let nodestream = Box::new(ValidateNodeStream::new(
+            Box::new(nodestream),
+            &repo,
+            repo_generation.clone(),
+        ));
+        assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
+    }
+
+    #[test]
+    fn slow_ready_validates() {
+        // Tests that we handle an input staying at NotReady for a while without panicing
+        let repeats = 10;
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+        let mut nodestream = Box::new(ValidateNodeStream::new(
+            Box::new(NotReadyEmptyStream {
+                poll_count: repeats,
+            }),
+            &repo,
+            repo_generation,
+        ));
+
+        // Keep polling until we should be done.
+        for _ in 0..repeats + 1 {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                Ok(Async::NotReady) => (),
+                x => panic!("Unexpected poll result {:?}", x),
+            }
+        }
+        panic!(
+            "Set difference of something that's not ready {} times failed to complete",
+            repeats
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn repeat_hash_panics() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+        let nodestream =
+            SingleNodeHash::new(head_hash, &repo).chain(SingleNodeHash::new(head_hash, &repo));
+
+        let mut nodestream = Box::new(ValidateNodeStream::new(
+            Box::new(nodestream),
+            &repo,
+            repo_generation,
+        ));
+
+        loop {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                _ => (),
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_order_panics() {
+        let repo = Arc::new(linear::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = SingleNodeHash::new(
+            string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+            &repo,
+        ).chain(SingleNodeHash::new(
+            string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
+            &repo,
+        ));
+
+        let mut nodestream = Box::new(ValidateNodeStream::new(
+            Box::new(nodestream),
+            &repo,
+            repo_generation,
+        ));
+
+        loop {
+            match nodestream.poll() {
+                Ok(Async::Ready(None)) => return,
+                _ => (),
+            }
+        }
+    }
+}

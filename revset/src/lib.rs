@@ -32,6 +32,9 @@ pub mod errors;
 
 pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + 'static;
 
+mod validation;
+pub use validation::ValidateNodeStream;
+
 #[cfg(test)]
 extern crate ascii;
 #[cfg(test)]
