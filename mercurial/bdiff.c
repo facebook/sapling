@@ -79,7 +79,8 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 
 static inline int cmp(struct bdiff_line *a, struct bdiff_line *b)
 {
-	return a->hash != b->hash || a->len != b->len || memcmp(a->l, b->l, a->len);
+	return a->hash != b->hash || a->len != b->len ||
+	       memcmp(a->l, b->l, a->len);
 }
 
 static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
@@ -211,8 +212,7 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 	}
 
 	/* expand match to include subsequent popular lines */
-	while (mi + mk < a2 && mj + mk < b2 &&
-	       a[mi + mk].e == b[mj + mk].e)
+	while (mi + mk < a2 && mj + mk < b2 && a[mi + mk].e == b[mj + mk].e)
 		mk++;
 
 	*omi = mi;
@@ -238,7 +238,8 @@ static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
 		if (!l)
 			return NULL;
 
-		l->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
+		l->next =
+		    (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!l->next)
 			return NULL;
 
@@ -274,7 +275,8 @@ int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
 			return -1;
 
 		/* sentinel end hunk */
-		curr->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
+		curr->next =
+		    (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!curr->next)
 			return -1;
 		curr = curr->next;
@@ -293,10 +295,9 @@ int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
 			break;
 
 		if (curr->a2 == next->a1 || curr->b2 == next->b1)
-			while (curr->a2 < an && curr->b2 < bn
-			       && next->a1 < next->a2
-			       && next->b1 < next->b2
-			       && !cmp(a + curr->a2, b + curr->b2)) {
+			while (curr->a2 < an && curr->b2 < bn &&
+			       next->a1 < next->a2 && next->b1 < next->b2 &&
+			       !cmp(a + curr->a2, b + curr->b2)) {
 				curr->a2++;
 				next->a1++;
 				curr->b2++;
