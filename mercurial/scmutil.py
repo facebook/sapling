@@ -1206,13 +1206,23 @@ def registersummarycallback(repo, otr, txnname=''):
     def txmatch(sources):
         return any(txnname.startswith(source) for source in sources)
 
-    if txmatch(_reportobsoletedsource):
+    categories = []
+
+    def reportsummary(func):
+        """decorator for report callbacks."""
         reporef = weakref.ref(repo)
-        def reportsummary(tr):
-            """the actual callback reporting the summary"""
+        def wrapped(tr):
             repo = reporef()
+            func(repo, tr)
+        newcat = '%2i-txnreport' % len(categories)
+        otr.addpostclose(newcat, wrapped)
+        categories.append(newcat)
+        return wrapped
+
+    if txmatch(_reportobsoletedsource):
+        @reportsummary
+        def reportobsoleted(repo, tr):
             obsoleted = obsutil.getobsoleted(repo, tr)
             if obsoleted:
                 repo.ui.status(_('obsoleted %i changesets\n')
                                % len(obsoleted))
-        otr.addpostclose('00-txnreport', reportsummary)
