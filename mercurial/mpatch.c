@@ -36,7 +36,8 @@ static struct mpatch_flist *lalloc(ssize_t size)
 
 	a = (struct mpatch_flist *)malloc(sizeof(struct mpatch_flist));
 	if (a) {
-		a->base = (struct mpatch_frag *)malloc(sizeof(struct mpatch_frag) * size);
+		a->base = (struct mpatch_frag *)malloc(
+		    sizeof(struct mpatch_frag) * size);
 		if (a->base) {
 			a->head = a->tail = a->base;
 			return a;
