@@ -84,7 +84,7 @@ static inline int cmp(struct bdiff_line *a, struct bdiff_line *b)
 }
 
 static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
-	int bn)
+                       int bn)
 {
 	int i, j, buckets = 1, t, scale;
 	struct pos *h = NULL;
@@ -150,8 +150,8 @@ static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
 }
 
 static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
-			struct pos *pos,
-			 int a1, int a2, int b1, int b2, int *omi, int *omj)
+                         struct pos *pos, int a1, int a2, int b1, int b2,
+                         int *omi, int *omj)
 {
 	int mi = a1, mj = b1, mk = 0, i, j, k, half, bhalf;
 
@@ -222,8 +222,8 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 }
 
 static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
-				struct pos *pos,
-			    int a1, int a2, int b1, int b2, struct bdiff_hunk *l)
+                                  struct pos *pos, int a1, int a2, int b1,
+                                  int b2, struct bdiff_hunk *l)
 {
 	int i, j, k;
 
@@ -256,8 +256,8 @@ static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
 	}
 }
 
-int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
-		int bn, struct bdiff_hunk *base)
+int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b, int bn,
+               struct bdiff_hunk *base)
 {
 	struct bdiff_hunk *curr;
 	struct pos *pos;
