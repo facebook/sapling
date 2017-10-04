@@ -14,6 +14,7 @@
 #define IS_PY3K
 #endif
 
+/* clang-format off */
 typedef struct {
 	PyObject_HEAD
 	char state;
@@ -21,11 +22,12 @@ typedef struct {
 	int size;
 	int mtime;
 } dirstateTupleObject;
+/* clang-format on */
 
 extern PyTypeObject dirstateTupleType;
 #define dirstate_tuple_check(op) (Py_TYPE(op) == &dirstateTupleType)
 
-#define MIN(a, b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
 #if defined(_MSC_VER) || __STDC_VERSION__ < 199901L
 #define true 1
