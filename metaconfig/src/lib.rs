@@ -26,5 +26,7 @@ pub mod repoconfig;
 
 pub use repoconfig::RepoConfigs;
 
+pub use errors::{Error, ErrorKind};
+
 #[cfg(test)]
 extern crate mercurial_types_mocks;

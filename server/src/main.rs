@@ -7,10 +7,11 @@
 #![deny(warnings)]
 // TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
 #![allow(deprecated)]
+#![feature(never_type)]
 
-extern crate bytes;
 #[macro_use]
 extern crate futures;
+extern crate futures_ext;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_uds;
@@ -30,7 +31,7 @@ extern crate maplit;
 
 extern crate async_compression;
 extern crate blobrepo;
-extern crate futures_ext;
+extern crate bytes;
 extern crate hgproto;
 extern crate mercurial;
 extern crate mercurial_bundles;
@@ -39,32 +40,32 @@ extern crate metaconfig;
 extern crate services;
 extern crate sshrelay;
 
+mod errors;
+mod repo;
+mod listener;
+
 use std::io;
 use std::panic;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
+use futures_ext::{encode, StreamLayeredExt};
 
-use clap::{App, Arg, ArgGroup};
+use clap::{App, ArgGroup, ArgMatches};
 
-use slog::{Drain, Level, LevelFilter, Logger};
+use slog::{Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
 
 use bytes::Bytes;
-use futures_ext::{encode, StreamLayeredExt};
 use hgproto::HgService;
 use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoType;
-
-mod errors;
-mod repo;
-mod listener;
 
 use errors::*;
 
@@ -90,13 +91,161 @@ impl io::Write for SenderBytesWrite {
     }
 }
 
+// Exit the whole process if any of the threads fails to catch a panic
+fn setup_panic_hook() {
+    let original_hook = panic::take_hook();
+
+    panic::set_hook(Box::new(move |info| {
+        original_hook(info);
+        std::process::exit(1);
+    }));
+}
+
+fn setup_app<'a, 'b>() -> App<'a, 'b> {
+    App::new("mononoke server")
+        .version("0.0.0")
+        .about("serve repos")
+        .args_from_usage(
+            r#"
+            <crpath>      -P, --configrepo_path [PATH]           'path to the config repo'
+
+            [crbookmark]  -B, --configrepo_bookmark [BOOKMARK]   'config repo bookmark'
+            [crhash]      -C, --configrepo_hash [HASH]           'config repo commit hash'
+
+            -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
+
+            -d, --debug                                          'print debug level output'
+        "#,
+        )
+        .group(
+            ArgGroup::default()
+                .args(&["crbookmark", "crhash"])
+                .required(true),
+        )
+}
+
+fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
+    let level = if matches.is_present("debug") {
+        Level::Debug
+    } else {
+        Level::Info
+    };
+
+    let drain = {
+        // TODO: switch to TermDecorator, which supports color
+        let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
+        let drain = slog_term::FullFormat::new(decorator).build();
+        drain.filter_level(level)
+    };
+
+    Logger::root(drain.fuse(), o![])
+}
+
+fn start_thrift_service<'a>(
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+) -> Option<Result<JoinHandle<!>>> {
+    matches.value_of("thrift_port").map(|port| {
+        let port = port.parse().expect("Failed to parse thrift_port as number");
+        info!(logger, "Initializing thrift server on port {}", port);
+
+        thread::Builder::new()
+            .name("thrift_service".to_owned())
+            .spawn(move || {
+                services::run_service_framework(
+                    "mononoke_server",
+                    port,
+                    0, // Disables separate status http server
+                ).expect("failure while running thrift service framework")
+            })
+            .map_err(Error::from)
+    })
+}
+
+fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+    let config_repo = RepoType::Revlog(matches.value_of("crpath").unwrap().into()).open()?;
+
+    let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
+        config_repo
+            .get_bookmarks()?
+            .get(&bookmark)
+            .wait()?
+            .ok_or_else(|| Error::from("bookmark for config repo not found"))?
+            .0
+    } else {
+        mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())?
+    };
+
+    info!(
+        logger,
+        "Config repository will be read from commit: {}",
+        node_hash
+    );
+
+    RepoConfigs::read_config_repo(config_repo, node_hash)
+        .from_err()
+        .wait()
+}
+
+fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
+where
+    I: IntoIterator<Item = RepoType>,
+{
+    // Given the list of paths to repos:
+    // - initialize the repo
+    // - create a thread for it
+    // - wait for connections in that thread
+    let repos: Vec<_> = repos
+        .into_iter()
+        .map(|repotype| repo::init_repo(root_log, &repotype))
+        .collect();
+
+    if repos.iter().any(Result::is_err) {
+        for err in repos.into_iter().filter_map(Result::err) {
+            crit!(root_log, "Failed to initialize repo {}", err);
+        }
+        bail!(ErrorKind::Initialization(
+            "at least one of the repos failed to be initialized",
+        ));
+    }
+
+    let handles: Vec<_> = repos
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(move |(sockname, repo)| {
+            let listen_log = root_log.new(o!("repo" => repo.path().clone()));
+            // start a thread for each repo to own the reactor and start listening for
+            // connections and detach it
+            thread::Builder::new()
+                .name(format!("listener_{}", repo.path()))
+                .spawn(move || repo_listen(sockname, repo, listen_log))
+                .map_err(Error::from)
+        })
+        .collect();
+
+    if handles.iter().any(Result::is_err) {
+        for err in handles.into_iter().filter_map(Result::err) {
+            crit!(root_log, "Failed to spawn listener thread {}", err);
+        }
+        bail!(ErrorKind::Initialization(
+            "at least one of the listener threads failed to be spawned",
+        ));
+    }
+
+    Ok(handles.into_iter().filter_map(Result::ok).collect())
+}
+
 // Listener thread for a specific repo
-fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Result<()> {
-    let mut core = tokio_core::reactor::Core::new()?;
+fn repo_listen<P>(sockname: P, repo: repo::HgRepo, listen_log: Logger) -> !
+where
+    P: AsRef<Path>,
+{
+    let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
     let handle = core.handle();
     let repo = Arc::new(repo);
 
-    let server = listener::listener(sockname, &handle)?
+    let server = listener::listener(sockname, &handle)
+        .expect("failed to create listener")
         .map_err(Error::from)
         .for_each(move |sock| {
             match sock.peer_addr() {
@@ -124,7 +273,7 @@ fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Resu
                 },
             );
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
-            let conn_log = slog::Logger::root(drain, o![]);
+            let conn_log = Logger::root(drain, o![]);
 
             // Construct a repo
             let client = repo::RepoClient::new(repo.clone(), &conn_log);
@@ -163,174 +312,55 @@ fn repo_listen(sockname: &Path, repo: repo::HgRepo, listen_log: &Logger) -> Resu
             Ok(())
         });
 
-    core.run(server)?;
+    core.run(server)
+        .expect("failure while running listener on tokio core");
 
-    Ok(())
-}
-
-fn run<'a, I>(repos: I, root_log: &Logger) -> Result<()>
-where
-    I: IntoIterator<Item = RepoType>,
-{
-    // Given the list of paths to repos:
-    // - initialize the repo
-    // - create a thread for it
-    // - wait for connections in that thread
-    let threads = repos
-        .into_iter()
-        .map(|repotype| {
-            repo::init_repo(root_log, &repotype).and_then(move |(sockname, repo)| {
-                let repopath = repo.path().clone();
-                let listen_log = root_log.new(o!("repo" => repopath.clone()));
-                info!(listen_log, "Listening for connections");
-
-                // start a thread for each repo to own the reactor and start listening for
-                // connections
-                let t = thread::spawn(move || {
-                    // Not really sure this is actually Unwind Safe
-                    // (future version of slog will make this explicit)
-                    let unw = panic::catch_unwind(panic::AssertUnwindSafe(
-                        || repo_listen(&sockname, repo, &listen_log),
-                    ));
-                    match unw {
-                        Err(err) => {
-                            crit!(
-                                listen_log,
-                                "Listener thread {} paniced: {:?}",
-                                repopath,
-                                err
-                            );
-                            Ok(())
-                        }
-                        Ok(v) => v,
-                    }
-                });
-                Ok(t)
-            })
-        })
-        .collect::<Vec<_>>();
-
-    // Check for an report any repo initialization errors
-    for err in threads.iter().filter_map(|t| t.as_ref().err()) {
-        error!(root_log, "{}", err);
-        for chain_link in err.iter().skip(1) {
-            error!(root_log, "Reason: {}", chain_link)
-        }
-    }
-
-    // Wait for all threads, and report any problem they have
-    for thread in threads.into_iter().filter_map(Result::ok) {
-        if let Err(err) = thread.join().expect("thread join failed") {
-            error!(root_log, "Listener failure: {:?}", err);
-        }
-    }
-
-    Ok(())
+    // The server is an infinite stream of connections
+    unreachable!();
 }
 
 fn main() {
-    let matches = App::new("mononoke server")
-        .version("0.0.0")
-        .about("serve repos")
-        .args_from_usage("[debug] -d, --debug     'print debug level output'")
-        .arg(
-            Arg::with_name("thrift_port")
-                .long("thrift_port")
-                .short("p")
-                .takes_value(true)
-                .help("if provided then thrift server will start on this port"),
-        )
-        .arg(
-            Arg::with_name("crpath")
-                .long("configrepo_path")
-                .short("P")
-                .takes_value(true)
-                .required(true)
-                .help("path to the config repo"),
-        )
-        .arg(
-            Arg::with_name("crbookmark")
-                .long("configrepo_bookmark")
-                .short("B")
-                .takes_value(true)
-                .help("config repo bookmark"),
-        )
-        .arg(
-            Arg::with_name("crhash")
-                .long("configrepo_commithash")
-                .short("C")
-                .takes_value(true)
-                .help("config repo commit hash"),
-        )
-        .group(
-            ArgGroup::default()
-                .args(&["crbookmark", "crhash"])
-                .required(true),
-        )
-        .get_matches();
+    setup_panic_hook();
+    let matches = setup_app().get_matches();
+    let root_log = setup_logger(&matches);
 
-    let level = if matches.is_present("debug") {
-        Level::Debug
-    } else {
-        Level::Info
-    };
+    fn run_server<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<!> {
+        info!(root_log, "Starting up");
 
-    // TODO: switch to TermDecorator, which supports color
-    let drain = slog_term::PlainSyncDecorator::new(io::stdout());
-    let drain = slog_term::FullFormat::new(drain).build();
-    let drain = LevelFilter::new(drain, level).fuse();
-    let root_log = slog::Logger::root(drain, o![]);
+        let maybe_thrift = match start_thrift_service(&root_log, &matches) {
+            None => None,
+            Some(handle) => Some(handle?),
+        };
 
-    info!(root_log, "Starting up");
+        let config = get_config(root_log, &matches)?;
+        let repo_listeners =
+            start_repo_listeners(config.repos.into_iter().map(|(_, c)| c.repotype), root_log)?;
 
-    let thrift_server = matches.value_of("thrift_port").map(|port| {
-        let port = port.parse().expect("Failed to parse thrift_port as number");
-        services::init_service_framework(
-            "mononoke_server",
-            port,
-            0, // Disables separate status http server
-        )
-    });
-
-    let config_repo = RepoType::Revlog(matches.value_of("crpath").unwrap().into())
-        .open()
-        .unwrap();
-
-    let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
-        config_repo
-            .get_bookmarks()
-            .expect("Failed to get bookmarks for config repo")
-            .get(&bookmark)
-            .wait()
-            .expect("Error while looking up bookmark for config repo")
-            .expect("Bookmark for config repo not found")
-            .0
-    } else {
-        mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())
-            .expect("Commit for config repo not found")
-    };
-
-    info!(
-        root_log,
-        "Config repository will be read from commit: {}",
-        node_hash
-    );
-
-    let config = RepoConfigs::read_config_repo(config_repo, node_hash)
-        .wait()
-        .unwrap();
-
-    if let Err(ref e) = run(config.repos.into_iter().map(|(_, c)| c.repotype), &root_log) {
-        error!(root_log, "Failed: {}", e);
-
-        for e in e.iter().skip(1) {
-            error!(root_log, "caused by: {}", e);
+        for handle in maybe_thrift.into_iter().chain(repo_listeners.into_iter()) {
+            let thread_name = handle.thread().name().unwrap_or("unknown").to_owned();
+            match handle.join() {
+                Err(err) => crit!(
+                    root_log,
+                    "Thread {} failed with error {:?}",
+                    thread_name,
+                    err
+                ),
+            }
         }
 
-        std::process::exit(1);
+        info!(root_log, "No service to run, shutting down");
+        std::process::exit(0);
     }
 
-    if let Some(handle) = thrift_server {
-        handle.join().unwrap().unwrap();
+    match run_server(&root_log, matches) {
+        Err(e) => {
+            error!(root_log, "Failed: {}", e);
+
+            for e in e.iter().skip(1) {
+                error!(root_log, "caused by: {}", e);
+            }
+
+            std::process::exit(1);
+        }
     }
 }

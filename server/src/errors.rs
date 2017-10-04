@@ -8,10 +8,19 @@ use bytes::Bytes;
 
 #[recursion_limit = "1024"]
 error_chain! {
+    errors {
+        Initialization(msg: &'static str) {
+            description("failed to initialize server")
+            display("{}", msg)
+        }
+    }
+
     links {
         Blobrepo(::blobrepo::Error, ::blobrepo::ErrorKind);
         HgProto(::hgproto::Error, ::hgproto::ErrorKind);
         Mercurial(::mercurial::Error, ::mercurial::ErrorKind);
+        MercurialTypes(::mercurial_types::Error, ::mercurial_types::ErrorKind);
+        Metaconfig(::metaconfig::Error, ::metaconfig::ErrorKind);
     }
 
     foreign_links {
