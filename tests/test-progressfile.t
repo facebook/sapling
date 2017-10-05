@@ -75,12 +75,12 @@
   $ hg -y loop 5
   \r (no-eol) (esc)
   loop [                                                ] 0/5\r (no-eol) (esc)
-  loop [========>                                       ] 1/5\r (no-eol) (esc)
+  loop [=======>                                    ] 1/5 09s\r (no-eol) (esc)
   loop [================>                           ] 2/5 07s\r (no-eol) (esc)
   loop [=========================>                  ] 3/5 05s\r (no-eol) (esc)
   loop [==================================>         ] 4/5 03s\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  {"state": {"loop": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 5, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
+  {"state": {"loop": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 5, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {"loop": {"active": true, "estimate_sec": 13, "estimate_str": "13s", "item": "item #1", "pos": 1, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 5, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {"loop": {"active": true, "estimate_sec": 8, "estimate_str": "08s", "item": "item #2", "pos": 2, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 5, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {"loop": {"active": true, "estimate_sec": 5, "estimate_str": "05s", "item": "item #3", "pos": 3, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 5, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
@@ -91,12 +91,12 @@
   \r (no-eol) (esc)
   loop [                                                ] 0/2\r (no-eol) (esc)
   nested [                                              ] 0/3\r (no-eol) (esc)
-  nested [==============>                               ] 1/3\r (no-eol) (esc)
+  nested [=============>                            ] 1/3 05s\r (no-eol) (esc)
   nested [===========================>              ] 2/3 03s\r (no-eol) (esc)
   loop [=====================>                      ] 1/2 11s\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  {"state": {"loop": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
-  {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}, "nested": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "nested #0", "pos": 0, "speed_str": null, "topic": "nested", "total": 3, "unit": "nestnum", "units_per_sec": null}}, "topics": ["loop", "nested"]}
+  {"state": {"loop": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
+  {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}, "nested": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "nested #0", "pos": 0, "speed_str": "0 nestnum/sec", "topic": "nested", "total": 3, "unit": "nestnum", "units_per_sec": null}}, "topics": ["loop", "nested"]}
   {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}, "nested": {"active": true, "estimate_sec": 7, "estimate_str": "07s", "item": "nested #1", "pos": 1, "speed_str": "0 nestnum/sec", "topic": "nested", "total": 3, "unit": "nestnum", "units_per_sec": null}}, "topics": ["loop", "nested"]}
   {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}, "nested": {"active": true, "estimate_sec": 3, "estimate_str": "03s", "item": "nested #2", "pos": 2, "speed_str": "0 nestnum/sec", "topic": "nested", "total": 3, "unit": "nestnum", "units_per_sec": null}}, "topics": ["loop", "nested"]}
   {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
