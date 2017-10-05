@@ -259,12 +259,13 @@ def _trackdirstatesizes(runcommand, lui, repo, *args):
         # if the _map attribute is missing on the map, the dirstate was not
         # loaded. If present, it *could* be a sqldirstate map.
         if '_map' in vars(dirstate):
-            map_ = dirstate._map
+            map_ = dirstate._map._map
             # check for a sqldirstate, only load length if cache was activated
             sqldirstate = util.safehasattr(map_, '_lookupcache')
             logsize = map_._lookupcache is not None if sqldirstate else True
             if logsize:
-                lui.log('dirstate_size', '', dirstate_size=len(dirstate._map))
+                lui.log('dirstate_size', '',
+                        dirstate_size=len(map_))
     return res
 
 def _tracksparseprofiles(runcommand, lui, repo, *args):
