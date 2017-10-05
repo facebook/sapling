@@ -187,7 +187,7 @@ class requestcontext(object):
         if style == styles[0]:
             vars['style'] = style
 
-        start = req.url[-1] == '?' and '&' or '?'
+        start = '&' if req.url[-1] == '?' else '?'
         sessionvars = webutil.sessionvars(vars, start)
 
         if not self.reponame:

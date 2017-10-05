@@ -508,7 +508,7 @@ class hgwebdir(object):
         if style == styles[0]:
             vars['style'] = style
 
-        start = url[-1] == '?' and '&' or '?'
+        start = '&' if url[-1] == '?' else '?'
         sessionvars = webutil.sessionvars(vars, start)
         logourl = config('web', 'logourl')
         logoimg = config('web', 'logoimg')
