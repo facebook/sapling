@@ -10,4 +10,3 @@ class CorruptedFileError(Exception):
 
 class CannotReuseError(Exception):
     """cannot reuse or update the cache incrementally"""
-    pass

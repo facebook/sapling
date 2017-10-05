@@ -69,7 +69,6 @@ class basepackstore(object):
                 # list of paths.
                 if getattr(ex, 'errno', None) != errno.ENOENT:
                     ui.warn(_('unable to load pack %s: %s\n') % (filepath, ex))
-                    pass
                 continue
             self.packs.append(pack)
 

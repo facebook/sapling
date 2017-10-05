@@ -893,7 +893,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                         mfdatastore.getmissing([(childpath, bin(cnode))])):
                         import pdb
                         pdb.set_trace()
-                        pass
 
             # Only use deltas if the delta base is in this same pack file
             if np1 != nullid and (nname, np1) in includedentries:
@@ -913,13 +912,11 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                 if fdiff is None:
                     import pdb
                     pdb.set_trace()
-                    pass
                 else:
                     l, r = fdiff
                     if l != (None, ''):
                         import pdb
                         pdb.set_trace()
-                        pass
 
             for fname, fnode, fflags in adds:
                 fdiff = diff.get(fname)
@@ -929,13 +926,11 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
                     if origtree.get(fname) != newtree.get(fname):
                         import pdb
                         pdb.set_trace()
-                        pass
                 else:
                     l, r = fdiff
                     if l != (fnode, fflags):
                         import pdb
                         pdb.set_trace()
-                        pass
         builttrees[mfrevlog.node(rev)] = newtree
 
         mfnode = mfrevlog.node(rev)

@@ -1080,4 +1080,3 @@ def _silent_debug(*args, **kwargs):
     """Replacement for ui.debug that silently swallows the arguments.
     Typically enabled when running the mercurial test suite by setting:
     --extra-config-opt=fastmanifest.silent=True"""
-    pass

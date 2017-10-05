@@ -18,11 +18,9 @@ class indexapi(object):
 
     def __init__(self):
         """Initializes the metadata store connection."""
-        pass
 
     def close(self):
         """Cleans up the metadata store connection."""
-        pass
 
     def __enter__(self):
         return self

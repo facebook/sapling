@@ -281,7 +281,7 @@ def cachemanifestfillandtrim(ui, repo, revset):
                     else:
                         metricscollector.get().recordsample("cacheoverflow",
                                 hit=True)
-                        pass # We didn't have enough space for that rev
+                        # We didn't have enough space for that rev
     except error.LockHeld:
         return
     except (OSError, IOError) as ex:
