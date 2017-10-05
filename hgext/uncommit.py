@@ -98,15 +98,13 @@ def _commitfiltered(repo, ctx, match, allowempty):
         newid = repo.commitctx(new)
     return newid
 
-def _uncommitdirstate(repo, oldctx, match):
-    """Fix the dirstate after switching the working directory from
-    oldctx to a copy of oldctx not containing changed files matched by
-    match.
+def _fixdirstate(repo, oldctx, newctx, status):
+    """ fix the dirstate after switching the working directory from oldctx to
+    newctx which can be result of either unamend or uncommit.
     """
-    ctx = repo['.']
     ds = repo.dirstate
     copies = dict(ds.copies())
-    s = repo.status(oldctx.p1(), oldctx, match=match)
+    s = status
     for f in s.modified:
         if ds[f] == 'r':
             # modified + removed -> removed
@@ -138,7 +136,7 @@ def _uncommitdirstate(repo, oldctx, match):
                   for dst, src in oldcopies.iteritems())
     # Adjust the dirstate copies
     for dst, src in copies.iteritems():
-        if (src not in ctx or dst in ctx or ds[dst] != 'a'):
+        if (src not in newctx or dst in newctx or ds[dst] != 'a'):
             src = None
         ds.copy(src, dst)
 
@@ -194,53 +192,13 @@ def uncommit(ui, repo, *pats, **opts):
 
             with repo.dirstate.parentchange():
                 repo.dirstate.setparents(newid, node.nullid)
-                _uncommitdirstate(repo, old, match)
+                s = repo.status(old.p1(), old, match=match)
+                _fixdirstate(repo, old, repo[newid], s)
 
 def predecessormarkers(ctx):
     """yields the obsolete markers marking the given changeset as a successor"""
     for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
         yield obsutil.marker(ctx.repo(), data)
-
-def _unamenddirstate(repo, predctx, curctx):
-    """"""
-
-    s = repo.status(predctx, curctx)
-    ds = repo.dirstate
-    copies = dict(ds.copies())
-    for f in s.modified:
-        if ds[f] == 'r':
-            # modified + removed -> removed
-            continue
-        ds.normallookup(f)
-
-    for f in s.added:
-        if ds[f] == 'r':
-            # added + removed -> unknown
-            ds.drop(f)
-        elif ds[f] != 'a':
-            ds.add(f)
-
-    for f in s.removed:
-        if ds[f] == 'a':
-            # removed + added -> normal
-            ds.normallookup(f)
-        elif ds[f] != 'r':
-            ds.remove(f)
-
-    # Merge old parent and old working dir copies
-    oldcopies = {}
-    for f in (s.modified + s.added):
-        src = curctx[f].renamed()
-        if src:
-            oldcopies[f] = src[0]
-    oldcopies.update(copies)
-    copies = dict((dst, oldcopies.get(src, src))
-                  for dst, src in oldcopies.iteritems())
-    # Adjust the dirstate copies
-    for dst, src in copies.iteritems():
-        if (src not in predctx or dst in predctx or ds[dst] != 'a'):
-            src = None
-        ds.copy(src, dst)
 
 @command('^unamend', [])
 def unamend(ui, repo, **opts):
@@ -312,7 +270,8 @@ def unamend(ui, repo, **opts):
 
         with dirstate.parentchange():
             dirstate.setparents(newprednode, node.nullid)
-            _unamenddirstate(repo, newpredctx, curctx)
+            s = repo.status(predctx, curctx)
+            _fixdirstate(repo, curctx, newpredctx, s)
 
         mapping = {curctx.node(): (newprednode,)}
         scmutil.cleanupnodes(repo, mapping, 'unamend')
