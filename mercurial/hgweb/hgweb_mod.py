@@ -30,6 +30,7 @@ from .. import (
     hg,
     hook,
     profiling,
+    pycompat,
     repoview,
     templatefilters,
     templater,
@@ -59,6 +60,17 @@ archivespecs = util.sortdict((
     ('gz', ('application/x-gzip', 'tgz', '.tar.gz', None)),
     ('bz2', ('application/x-bzip2', 'tbz2', '.tar.bz2', None)),
 ))
+
+def getstyle(req, configfn, templatepath):
+    fromreq = req.form.get('style', [None])[0]
+    if fromreq is not None:
+        fromreq = pycompat.sysbytes(fromreq)
+    styles = (
+        fromreq,
+        configfn('web', 'style'),
+        'paper',
+    )
+    return styles, templater.stylemap(styles, templatepath)
 
 def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
@@ -170,12 +182,8 @@ class requestcontext(object):
         # figure out which style to use
 
         vars = {}
-        styles = (
-            req.form.get('style', [None])[0],
-            self.config('web', 'style'),
-            'paper',
-        )
-        style, mapfile = templater.stylemap(styles, self.templatepath)
+        styles, (style, mapfile) = getstyle(req, self.config,
+                                            self.templatepath)
         if style == styles[0]:
             vars['style'] = style
 

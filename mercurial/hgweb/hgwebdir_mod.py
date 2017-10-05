@@ -503,12 +503,8 @@ class hgwebdir(object):
             url += '/'
 
         vars = {}
-        styles = (
-            req.form.get('style', [None])[0],
-            config('web', 'style'),
-            'paper'
-        )
-        style, mapfile = templater.stylemap(styles, self.templatepath)
+        styles, (style, mapfile) = hgweb_mod.getstyle(req, config,
+                                                      self.templatepath)
         if style == styles[0]:
             vars['style'] = style
 
