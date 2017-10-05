@@ -37,10 +37,10 @@ def _splitURI(uri):
     Just like CGI environment, the path is unquoted, the query is
     not.
     """
-    if '?' in uri:
-        path, query = uri.split('?', 1)
+    if r'?' in uri:
+        path, query = uri.split(r'?', 1)
     else:
-        path, query = uri, ''
+        path, query = uri, r''
     return urlreq.unquote(path), query
 
 class _error_logger(object):
