@@ -26,6 +26,7 @@ extern crate slog;
 #[macro_use]
 extern crate slog_glog_fmt;
 extern crate slog_kvfilter;
+extern crate slog_logview;
 extern crate slog_stats;
 extern crate slog_term;
 
@@ -65,6 +66,7 @@ use clap::{App, ArgGroup, ArgMatches};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_kvfilter::KVFilter;
+use slog_logview::LogViewDrain;
 
 use bytes::Bytes;
 use hgproto::HgService;
@@ -137,9 +139,13 @@ fn setup_logger<'a>(matches: &ArgMatches<'a>) -> Logger {
     };
 
     let drain = {
-        // TODO: switch to TermDecorator, which supports color
-        let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
-        let drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
+        let drain = {
+            // TODO: switch to TermDecorator, which supports color
+            let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
+            let stderr_drain = GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer);
+            let logview_drain = LogViewDrain::new("errorlog_mononoke");
+            slog::Duplicate::new(stderr_drain, logview_drain)
+        };
         let drain = slog_stats::StatsDrain::new(drain);
         drain.filter_level(level)
     };
