@@ -199,7 +199,6 @@ availablepymodules = hgext3rd
 availablepackages = hgext3rdpkgs + [
     'infinitepush',
     'phabricator',
-    'sqldirstate',
     'remotefilelog',
 ]
 
