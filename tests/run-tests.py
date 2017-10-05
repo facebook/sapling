@@ -2085,47 +2085,7 @@ class TextTestRunner(unittest.TextTestRunner):
             savetimes(self._runner._outputdir, result)
 
             if failed and self._runner.options.known_good_rev:
-                bisectcmd = ['hg', 'bisect']
-                bisectrepo = self._runner.options.bisect_repo
-                if bisectrepo:
-                    bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
-                def nooutput(args):
-                    p = subprocess.Popen(args, stderr=subprocess.STDOUT,
-                                         stdout=subprocess.PIPE)
-                    p.stdout.read()
-                    p.wait()
-                for test, msg in result.failures:
-                    nooutput(bisectcmd + ['--reset']),
-                    nooutput(bisectcmd + ['--bad', '.'])
-                    nooutput(bisectcmd + ['--good',
-                              self._runner.options.known_good_rev])
-                    # TODO: we probably need to forward more options
-                    # that alter hg's behavior inside the tests.
-                    opts = ''
-                    withhg = self._runner.options.with_hg
-                    if withhg:
-                        opts += ' --with-hg=%s ' % shellquote(_strpath(withhg))
-                    rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
-                                           test)
-                    sub = subprocess.Popen(bisectcmd + ['--command', rtc],
-                                           stderr=subprocess.STDOUT,
-                                           stdout=subprocess.PIPE)
-                    data = sub.stdout.read()
-                    sub.wait()
-                    m = re.search(
-                        (br'\nThe first (?P<goodbad>bad|good) revision '
-                         br'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
-                         br'summary: +(?P<summary>[^\n]+)\n'),
-                        data, (re.MULTILINE | re.DOTALL))
-                    if m is None:
-                        self.stream.writeln(
-                            'Failed to identify failure point for %s' % test)
-                        continue
-                    dat = m.groupdict()
-                    verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
-                    self.stream.writeln(
-                        '%s %s by %s (%s)' % (
-                            test, verb, dat['node'], dat['summary']))
+                self._bisecttests(t for t, m in result.failures)
             self.stream.writeln(
                 '# Ran %d tests, %d skipped, %d failed.'
                 % (result.testsRun, skipped + ignored, failed))
@@ -2137,6 +2097,49 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.flush()
 
         return result
+
+    def _bisecttests(self, tests):
+        bisectcmd = ['hg', 'bisect']
+        bisectrepo = self._runner.options.bisect_repo
+        if bisectrepo:
+            bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
+        def nooutput(args):
+            p = subprocess.Popen(args, stderr=subprocess.STDOUT,
+                                 stdout=subprocess.PIPE)
+            p.stdout.read()
+            p.wait()
+        for test in tests:
+            nooutput(bisectcmd + ['--reset']),
+            nooutput(bisectcmd + ['--bad', '.'])
+            nooutput(bisectcmd + ['--good',
+                      self._runner.options.known_good_rev])
+            # TODO: we probably need to forward more options
+            # that alter hg's behavior inside the tests.
+            opts = ''
+            withhg = self._runner.options.with_hg
+            if withhg:
+                opts += ' --with-hg=%s ' % shellquote(_strpath(withhg))
+            rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
+                                   test)
+            sub = subprocess.Popen(bisectcmd + ['--command', rtc],
+                                   stderr=subprocess.STDOUT,
+                                   stdout=subprocess.PIPE)
+            data = sub.stdout.read()
+            sub.wait()
+            m = re.search(
+                (br'\nThe first (?P<goodbad>bad|good) revision '
+                 br'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
+                 br'summary: +(?P<summary>[^\n]+)\n'),
+                data, (re.MULTILINE | re.DOTALL))
+            if m is None:
+                self.stream.writeln(
+                    'Failed to identify failure point for %s' % test)
+                continue
+            dat = m.groupdict()
+            verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
+            self.stream.writeln(
+                '%s %s by %s (%s)' % (
+                    test, verb, dat['node'], dat['summary']))
 
     def printtimes(self, times):
         # iolock held by run
