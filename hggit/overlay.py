@@ -397,7 +397,15 @@ class overlaychangelog(overlayrevlog):
             return overlaychangectx(self.repo, sha).totuple()
 
     def changelogrevision(self, noderev):
-        return changelog._changelogrevision(*self.read(noderev))
+        values = self.read(noderev)
+        return changelog._changelogrevision(
+            manifest=values[0],
+            user=values[1],
+            date=values[2],
+            files=values[3],
+            description=values[4],
+            extra=values[5],
+        )
 
 class overlayrepo(object):
     def __init__(self, handler, commits, refs):
