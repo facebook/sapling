@@ -123,4 +123,4 @@ def drop(ui, repo, *revs, **opts):
                                   "'hg rebase --continue', " +
                                   "and then re-run 'hg drop'\n"))
                         raise
-                    scmutil.cleanupnodes(repo, [revid], 'drop')
+                    scmutil.cleanupnodes(repo, [changectx.node()], 'drop')
