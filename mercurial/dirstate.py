@@ -386,53 +386,11 @@ class dirstate(object):
             raise
 
     def _read(self):
-        self._map = dirstatemap(self._ui, self._opener, self._root)
-
         # ignore HG_PENDING because identity is used only for writing
         self._identity = util.filestat.frompath(
             self._opener.join(self._filename))
-        try:
-            fp = self._map._opendirstatefile()
-            try:
-                st = fp.read()
-            finally:
-                fp.close()
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-            return
-        if not st:
-            return
-
-        if util.safehasattr(parsers, 'dict_new_presized'):
-            # Make an estimate of the number of files in the dirstate based on
-            # its size. From a linear regression on a set of real-world repos,
-            # all over 10,000 files, the size of a dirstate entry is 85
-            # bytes. The cost of resizing is significantly higher than the cost
-            # of filling in a larger presized dict, so subtract 20% from the
-            # size.
-            #
-            # This heuristic is imperfect in many ways, so in a future dirstate
-            # format update it makes sense to just record the number of entries
-            # on write.
-            self._map._map = parsers.dict_new_presized(len(st) / 71)
-
-        # Python's garbage collector triggers a GC each time a certain number
-        # of container objects (the number being defined by
-        # gc.get_threshold()) are allocated. parse_dirstate creates a tuple
-        # for each file in the dirstate. The C version then immediately marks
-        # them as not to be tracked by the collector. However, this has no
-        # effect on when GCs are triggered, only on what objects the GC looks
-        # into. This means that O(number of files) GCs are unavoidable.
-        # Depending on when in the process's lifetime the dirstate is parsed,
-        # this can get very expensive. As a workaround, disable GC while
-        # parsing the dirstate.
-        #
-        # (we cannot decorate the function directly since it is in a C module)
-        parse_dirstate = util.nogc(parsers.parse_dirstate)
-        p = parse_dirstate(self._map._map, self._map.copymap, st)
-        if not self._map._dirtyparents:
-            self._map.setparents(*p)
+        self._map = dirstatemap(self._ui, self._opener, self._root)
+        self._map.read()
 
     def invalidate(self):
         '''Causes the next access to reread the dirstate.
@@ -1399,3 +1357,47 @@ class dirstatemap(object):
     def setparents(self, p1, p2):
         self._parents = (p1, p2)
         self._dirtyparents = True
+
+    def read(self):
+        try:
+            fp = self._opendirstatefile()
+            try:
+                st = fp.read()
+            finally:
+                fp.close()
+        except IOError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            return
+        if not st:
+            return
+
+        if util.safehasattr(parsers, 'dict_new_presized'):
+            # Make an estimate of the number of files in the dirstate based on
+            # its size. From a linear regression on a set of real-world repos,
+            # all over 10,000 files, the size of a dirstate entry is 85
+            # bytes. The cost of resizing is significantly higher than the cost
+            # of filling in a larger presized dict, so subtract 20% from the
+            # size.
+            #
+            # This heuristic is imperfect in many ways, so in a future dirstate
+            # format update it makes sense to just record the number of entries
+            # on write.
+            self._map = parsers.dict_new_presized(len(st) / 71)
+
+        # Python's garbage collector triggers a GC each time a certain number
+        # of container objects (the number being defined by
+        # gc.get_threshold()) are allocated. parse_dirstate creates a tuple
+        # for each file in the dirstate. The C version then immediately marks
+        # them as not to be tracked by the collector. However, this has no
+        # effect on when GCs are triggered, only on what objects the GC looks
+        # into. This means that O(number of files) GCs are unavoidable.
+        # Depending on when in the process's lifetime the dirstate is parsed,
+        # this can get very expensive. As a workaround, disable GC while
+        # parsing the dirstate.
+        #
+        # (we cannot decorate the function directly since it is in a C module)
+        parse_dirstate = util.nogc(parsers.parse_dirstate)
+        p = parse_dirstate(self._map, self.copymap, st)
+        if not self._dirtyparents:
+            self.setparents(*p)
