@@ -9,9 +9,8 @@ use std::io;
 use std::fs;
 
 use futures::Stream;
-use futures::stream::BoxStream;
 use futures::sync::mpsc;
-use futures_ext::FutureExt;
+use futures_ext::{BoxStream, FutureExt, StreamExt};
 
 use bytes::Bytes;
 use tokio_core::reactor::Handle;
@@ -55,7 +54,7 @@ where
         }
     }
 
-    Ok(listener.incoming().map(|(socket, _)| socket).boxed())
+    Ok(listener.incoming().map(|(socket, _)| socket).boxify())
 }
 
 pub struct Stdio {
@@ -78,7 +77,7 @@ where
         Some(s.data())
     } else {
         None
-    }).boxed();
+    }).boxify();
 
     let (stdout, stderr) = {
         let (otx, orx) = mpsc::channel(1);

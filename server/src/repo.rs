@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use futures::{future, stream, Async, BoxFuture, Future, IntoFuture, Poll, Stream};
-use futures_ext::StreamExt;
+use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use slog::Logger;
 
@@ -186,9 +186,9 @@ impl RepoClient {
                             // AsciiString doesn't currently implement AsRef<[u8]>, so switch to
                             // Vec which does
                             let hash: Vec<u8> = hash.to_hex().into();
-                            Ok((name, hash)).into_future().boxed()
+                            Ok((name, hash)).into_future().boxify()
                         }
-                        None => future::empty().boxed(),
+                        None => future::empty().boxify(),
                     }
                 })
             });
@@ -201,7 +201,7 @@ impl RepoClient {
             encode_fut
                 .map(|cursor| Bytes::from(cursor.into_inner()))
                 .from_err()
-                .boxed(),
+                .boxify(),
         )
     }
 }
@@ -259,7 +259,7 @@ impl HgCommands for RepoClient {
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
         let repo = self.repo.clone();
-        stream::iter(pairs.into_iter().map(|p| Ok(p)))
+        stream::iter_ok(pairs.into_iter())
             .and_then(move |(top, bottom)| {
                 let mut f = 1;
                 ParentStream::new(&repo, top, bottom)
@@ -274,7 +274,7 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
-            .boxed()
+            .boxify()
     }
 
     // @wireprotocommand('changegroup', 'roots')
@@ -282,7 +282,7 @@ impl HgCommands for RepoClient {
         // TODO: streaming something
         info!(self.logger, "changegroup roots {:?}", roots);
 
-        future::ok(()).boxed()
+        future::ok(()).boxify()
     }
 
     // @wireprotocommand('heads')
@@ -295,7 +295,7 @@ impl HgCommands for RepoClient {
             .collect()
             .from_err()
             .and_then(|v| Ok(v.into_iter().collect()))
-            .boxed()
+            .boxify()
     }
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
@@ -307,7 +307,7 @@ impl HgCommands for RepoClient {
             .collect();
         future::join_all(known_futures)
             .from_err::<hgproto::Error>()
-            .boxed()
+            .boxify()
     }
 
     // @wireprotocommand('getbundle', '*')
@@ -316,7 +316,7 @@ impl HgCommands for RepoClient {
 
         match self.create_bundle(args) {
             Ok(res) => res,
-            Err(err) => Err(err).into_future().boxed(),
+            Err(err) => Err(err).into_future().boxify(),
         }
     }
 
@@ -329,7 +329,7 @@ impl HgCommands for RepoClient {
         caps.push(format!("bundle2={}", bundle2caps()));
         res.insert("capabilities".to_string(), caps);
 
-        future::ok(res).boxed()
+        future::ok(res).boxify()
     }
 
     // @wireprotocommand('unbundle', 'heads')
@@ -338,6 +338,6 @@ impl HgCommands for RepoClient {
         heads: Vec<NodeHash>, /* , _stream: BoxStream<Vec<u8>, Error> */
     ) -> HgCommandRes<()> {
         info!(self.logger, "unbundle heads {:?}", heads);
-        future::ok(()).boxed()
+        future::ok(()).boxify()
     }
 }
