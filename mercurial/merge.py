@@ -361,17 +361,28 @@ class mergestate(object):
         if self.mergedriver:
             records.append(('m', '\0'.join([
                 self.mergedriver, self._mdstate])))
-        for d, v in self._state.iteritems():
+        # Write out state items. In all cases, the value of the state map entry
+        # is written as the contents of the record. The record type depends on
+        # the type of state that is stored, and capital-letter records are used
+        # to prevent older versions of Mercurial that do not support the feature
+        # from loading them.
+        for filename, v in self._state.iteritems():
             if v[0] == 'd':
-                records.append(('D', '\0'.join([d] + v)))
+                # Driver-resolved merge. These are stored in 'D' records.
+                records.append(('D', '\0'.join([filename] + v)))
             elif v[0] in ('pu', 'pr'):
-                records.append(('P', '\0'.join([d] + v)))
-            # v[1] == local ('cd'), v[6] == other ('dc') -- not supported by
-            # older versions of Mercurial
+                # Path conflicts. These are stored in 'P' records.  The current
+                # resolution state ('pu' or 'pr') is stored within the record.
+                records.append(('P', '\0'.join([filename] + v)))
             elif v[1] == nullhex or v[6] == nullhex:
-                records.append(('C', '\0'.join([d] + v)))
+                # Change/Delete or Delete/Change conflicts. These are stored in
+                # 'C' records. v[1] is the local file, and is nullhex when the
+                # file is deleted locally ('dc'). v[6] is the remote file, and
+                # is nullhex when the file is deleted remotely ('cd').
+                records.append(('C', '\0'.join([filename] + v)))
             else:
-                records.append(('F', '\0'.join([d] + v)))
+                # Normal files.  These are stored in 'F' records.
+                records.append(('F', '\0'.join([filename] + v)))
         for filename, extras in sorted(self._stateextras.iteritems()):
             rawextras = '\0'.join('%s\0%s' % (k, v) for k, v in
                                   extras.iteritems())
