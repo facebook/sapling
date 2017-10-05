@@ -69,6 +69,7 @@ cpp_library(
         "@/folly:thread_local",
         "@/folly:thread_name",
         "@/folly:unit",
+        "@/folly/executors:global_executor",
         "@/folly/experimental:string_keyed_unordered_map",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",

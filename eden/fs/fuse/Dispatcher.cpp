@@ -12,8 +12,8 @@
 #include <folly/Exception.h>
 #include <folly/Format.h>
 #include <folly/MoveWrapper.h>
+#include <folly/executors/GlobalExecutor.h>
 #include <folly/experimental/logging/xlog.h>
-#include <wangle/concurrent/GlobalExecutor.h>
 
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
