@@ -560,8 +560,8 @@ def perfdirfoldmap(ui, repo, **opts):
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
-        dirstate._dirfoldmap.get('a')
-        del dirstate._dirfoldmap
+        dirstate._map.dirfoldmap.get('a')
+        del dirstate._map.dirfoldmap
         del dirstate._map.dirs
     timer(d)
     fm.end()

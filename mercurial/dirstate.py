@@ -132,14 +132,6 @@ class dirstate(object):
         self._read()
         return self._map
 
-    @propertycache
-    def _dirfoldmap(self):
-        f = {}
-        normcase = util.normcase
-        for name in self._map.dirs:
-            f[normcase(name)] = name
-        return f
-
     @property
     def _sparsematcher(self):
         """The matcher for the sparse checkout.
@@ -372,8 +364,7 @@ class dirstate(object):
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it.'''
 
-        for a in ("_map", "_dirfoldmap", "_branch",
-                  "_ignore"):
+        for a in ("_map", "_branch", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0
@@ -568,7 +559,7 @@ class dirstate(object):
         normed = util.normcase(path)
         folded = self._map.filefoldmap.get(normed, None)
         if folded is None:
-            folded = self._dirfoldmap.get(normed, None)
+            folded = self._map.dirfoldmap.get(normed, None)
         if folded is None:
             if isknown:
                 folded = path
@@ -576,7 +567,7 @@ class dirstate(object):
                 # store discovered result in dirfoldmap so that future
                 # normalizefile calls don't start matching directories
                 folded = self._discoverpath(path, normed, ignoremissing, exists,
-                                            self._dirfoldmap)
+                                            self._map.dirfoldmap)
         return folded
 
     def normalize(self, path, isknown=False, ignoremissing=False):
@@ -875,7 +866,7 @@ class dirstate(object):
                 if len(paths) > 1:
                     for path in paths:
                         folded = self._discoverpath(path, norm, True, None,
-                                                    self._dirfoldmap)
+                                                    self._map.dirfoldmap)
                         if path != folded:
                             results[path] = None
 
@@ -1396,3 +1387,10 @@ class dirstatemap(object):
         self.read()
         return self.identity
 
+    @propertycache
+    def dirfoldmap(self):
+        f = {}
+        normcase = util.normcase
+        for name in self.dirs:
+            f[normcase(name)] = name
+        return f
