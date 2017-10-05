@@ -479,7 +479,7 @@ def diffs(web, tmpl, ctx, basectx, files, style, linerange=None,
     parity = paritygen(web.stripecount)
 
     diffhunks = patch.diffhunks(repo, node1, node2, m, opts=diffopts)
-    for blockno, (header, hunks) in enumerate(diffhunks, 1):
+    for blockno, (fctx1, fctx2, header, hunks) in enumerate(diffhunks, 1):
         if style != 'raw':
             header = header[1:]
         lines = [h + '\n' for h in header]

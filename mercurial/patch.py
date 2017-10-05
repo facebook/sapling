@@ -2319,10 +2319,11 @@ def diff(repo, node1=None, node2=None, match=None, changes=None,
 
     copy, if not empty, should contain mappings {dst@y: src@x} of copy
     information.'''
-    for hdr, hunks in diffhunks(repo, node1=node1, node2=node2, match=match,
-                                changes=changes, opts=opts,
-                                losedatafn=losedatafn, prefix=prefix,
-                                relroot=relroot, copy=copy):
+    for fctx1, fctx2, hdr, hunks in diffhunks(
+            repo, node1=node1, node2=node2,
+            match=match, changes=changes, opts=opts,
+            losedatafn=losedatafn, prefix=prefix, relroot=relroot, copy=copy,
+    ):
         text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
         if hdr and (text or len(hdr) > 1):
             yield '\n'.join(hdr) + '\n'
@@ -2687,7 +2688,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                                             content2, date2,
                                             path1, path2, opts=opts)
             header.extend(uheaders)
-        yield header, hunks
+        yield fctx1, fctx2, header, hunks
 
 def diffstatsum(stats):
     maxfile, maxtotal, addtotal, removetotal, binary = 0, 0, 0, 0, False
