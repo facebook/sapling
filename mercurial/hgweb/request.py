@@ -39,7 +39,7 @@ shortcuts = {
 
 def normalize(form):
     # first expand the shortcuts
-    for k in shortcuts.iterkeys():
+    for k in shortcuts:
         if k in form:
             for name, value in shortcuts[k]:
                 if value is None:
