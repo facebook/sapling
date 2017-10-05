@@ -15,6 +15,7 @@ from .common import (
 )
 
 from .. import (
+    error,
     util,
     wireproto,
 )
@@ -199,3 +200,4 @@ def call(repo, req, cmd):
         rsp = rsp.message
         req.respond(HTTP_OK, HGERRTYPE, body=rsp)
         return []
+    raise error.ProgrammingError('hgweb.protocol internal failure', rsp)
