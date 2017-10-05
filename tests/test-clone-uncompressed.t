@@ -74,7 +74,7 @@ Cannot stream clone when there are secret changesets
 Streaming of secrets can be overridden by server config
 
   $ cd server
-  $ hg --config server.uncompressedallowsecret=true serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.uncompressedallowsecret=true -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -90,7 +90,7 @@ Streaming of secrets can be overridden by server config
 Verify interaction between preferuncompressed and secret presence
 
   $ cd server
-  $ hg --config server.preferuncompressed=true serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.preferuncompressed=true -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -106,7 +106,7 @@ Verify interaction between preferuncompressed and secret presence
 Clone not allowed when full bundles disabled and can't serve secrets
 
   $ cd server
-  $ hg --config server.disablefullbundle=true serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.disablefullbundle=true -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -154,7 +154,7 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
   $ touch repo/f1
   $ $TESTDIR/seq.py 50000 > repo/f2
   $ hg -R repo ci -Aqm "0"
-  $ hg -R repo serve -p $HGPORT1 -d --pid-file=hg.pid --config extensions.delayer=delayer.py
+  $ hg serve -R repo -p $HGPORT1 -d --pid-file=hg.pid --config extensions.delayer=delayer.py
   $ cat hg.pid >> $DAEMON_PIDS
 
 clone while modifying the repo between stating file with write lock and

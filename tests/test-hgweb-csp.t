@@ -110,7 +110,7 @@ hgweb_mod w/o hgwebdir works as expected
 
   $ killdaemons.py
 
-  $ hg -R repo1 serve -p $HGPORT -d --pid-file=hg.pid --config "web.csp=image-src 'self'; script-src https://example.com/ 'nonce-%nonce%'"
+  $ hg serve -R repo1 -p $HGPORT -d --pid-file=hg.pid --config "web.csp=image-src 'self'; script-src https://example.com/ 'nonce-%nonce%'"
   $ cat hg.pid > $DAEMON_PIDS
 
 static page sends CSP

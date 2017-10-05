@@ -10,7 +10,7 @@
   $ hg -q commit -A -m initial
   $ cd ..
 
-  $ hg -R server serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve -R server -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
 compression formats are advertised in compression capability
@@ -25,7 +25,7 @@ compression formats are advertised in compression capability
 
 server.compressionengines can replace engines list wholesale
 
-  $ hg --config server.compressionengines=none -R server serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve --config server.compressionengines=none -R server -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
   $ get-with-headers.py $LOCALIP:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=none$' > /dev/null
 
@@ -33,7 +33,7 @@ server.compressionengines can replace engines list wholesale
 
 Order of engines can also change
 
-  $ hg --config server.compressionengines=none,zlib -R server serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve --config server.compressionengines=none,zlib -R server -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
   $ get-with-headers.py $LOCALIP:$HGPORT '?cmd=capabilities' | tr ' ' '\n' | grep '^compression=none,zlib$' > /dev/null
 
@@ -41,7 +41,7 @@ Order of engines can also change
 
 Start a default server again
 
-  $ hg -R server serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve -R server -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
 
 Server should send application/mercurial-0.1 to clients if no Accept is used
@@ -113,7 +113,7 @@ application/mercurial-0.2 is not yet used on non-streaming responses
 Now test protocol preference usage
 
   $ killdaemons.py
-  $ hg --config server.compressionengines=none,zlib -R server serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve --config server.compressionengines=none,zlib -R server -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid > $DAEMON_PIDS
 
 No Accept will send 0.1+zlib, even though "none" is preferred b/c "none" isn't supported on 0.1

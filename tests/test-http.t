@@ -345,7 +345,7 @@ check error log
 check abort error reporting while pulling/cloning
 
   $ $RUNTESTDIR/killdaemons.py
-  $ hg -R test serve -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
+  $ hg serve -R test -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
   $ cat hg3.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ abort-clone
   requesting all changes
@@ -356,7 +356,7 @@ check abort error reporting while pulling/cloning
 
 disable pull-based clones
 
-  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
+  $ hg serve -R test -p $HGPORT1 -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
   $ cat hg4.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT1/ disable-pull-clone
   requesting all changes

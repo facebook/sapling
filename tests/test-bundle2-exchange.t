@@ -1029,7 +1029,7 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1 = false
   > EOF
-  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -R bundle2onlyserver -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
   requesting all changes
@@ -1053,7 +1053,7 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg -R bundle2onlyserver serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -R bundle2onlyserver -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
