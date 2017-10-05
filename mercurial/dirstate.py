@@ -136,7 +136,7 @@ class dirstate(object):
     def _dirfoldmap(self):
         f = {}
         normcase = util.normcase
-        for name in self._dirs:
+        for name in self._map.dirs:
             f[normcase(name)] = name
         return f
 
@@ -166,12 +166,8 @@ class dirstate(object):
     def _pl(self):
         return self._map.parents()
 
-    @propertycache
-    def _dirs(self):
-        return self._map.dirs()
-
     def dirs(self):
-        return self._dirs
+        return self._map.dirs
 
     @rootcache('.hgignore')
     def _ignore(self):
@@ -377,7 +373,7 @@ class dirstate(object):
         check whether the dirstate has changed before rereading it.'''
 
         for a in ("_map", "_dirfoldmap", "_branch",
-                  "_dirs", "_ignore"):
+                  "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0
@@ -405,8 +401,8 @@ class dirstate(object):
         return self._map.copymap
 
     def _droppath(self, f):
-        if self[f] not in "?r" and "_dirs" in self.__dict__:
-            self._dirs.delpath(f)
+        if self[f] not in "?r" and "dirs" in self._map.__dict__:
+            self._map.dirs.delpath(f)
 
         if "filefoldmap" in self._map.__dict__:
             normed = util.normcase(f)
@@ -419,18 +415,18 @@ class dirstate(object):
         oldstate = self[f]
         if state == 'a' or oldstate == 'r':
             scmutil.checkfilename(f)
-            if f in self._dirs:
+            if f in self._map.dirs:
                 raise error.Abort(_('directory %r already in dirstate') % f)
             # shadows
             for d in util.finddirs(f):
-                if d in self._dirs:
+                if d in self._map.dirs:
                     break
                 entry = self._map.get(d)
                 if entry is not None and entry[0] != 'r':
                     raise error.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
-        if oldstate in "?r" and "_dirs" in self.__dict__:
-            self._dirs.addpath(f)
+        if oldstate in "?r" and "dirs" in self._map.__dict__:
+            self._map.dirs.addpath(f)
         self._dirty = True
         self._updatedfiles.add(f)
         self._map[f] = dirstatetuple(state, mode, size, mtime)
@@ -607,8 +603,6 @@ class dirstate(object):
 
     def clear(self):
         self._map = dirstatemap(self._ui, self._opener, self._root)
-        if "_dirs" in self.__dict__:
-            delattr(self, "_dirs")
         self._map.setparents(nullid, nullid)
         self._lastnormaltime = 0
         self._updatedfiles.clear()
@@ -1287,6 +1281,7 @@ class dirstatemap(object):
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
+    @propertycache
     def dirs(self):
         """Returns a set-like object containing all the directories in the
         current dirstate.
