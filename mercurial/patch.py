@@ -994,53 +994,56 @@ class recordhunk(object):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-messages = {
-    'multiple': {
-        'discard': _("discard change %d/%d to '%s'?"),
-        'record': _("record change %d/%d to '%s'?"),
-        'revert': _("revert change %d/%d to '%s'?"),
-    },
-    'single': {
-        'discard': _("discard this change to '%s'?"),
-        'record': _("record this change to '%s'?"),
-        'revert': _("revert this change to '%s'?"),
-    },
-    'help': {
-        'discard': _('[Ynesfdaq?]'
-                     '$$ &Yes, discard this change'
-                     '$$ &No, skip this change'
-                     '$$ &Edit this change manually'
-                     '$$ &Skip remaining changes to this file'
-                     '$$ Discard remaining changes to this &file'
-                     '$$ &Done, skip remaining changes and files'
-                     '$$ Discard &all changes to all remaining files'
-                     '$$ &Quit, discarding no changes'
-                     '$$ &? (display help)'),
-        'record': _('[Ynesfdaq?]'
-                    '$$ &Yes, record this change'
-                    '$$ &No, skip this change'
-                    '$$ &Edit this change manually'
-                    '$$ &Skip remaining changes to this file'
-                    '$$ Record remaining changes to this &file'
-                    '$$ &Done, skip remaining changes and files'
-                    '$$ Record &all changes to all remaining files'
-                    '$$ &Quit, recording no changes'
-                    '$$ &? (display help)'),
-        'revert': _('[Ynesfdaq?]'
-                    '$$ &Yes, revert this change'
-                    '$$ &No, skip this change'
-                    '$$ &Edit this change manually'
-                    '$$ &Skip remaining changes to this file'
-                    '$$ Revert remaining changes to this &file'
-                    '$$ &Done, skip remaining changes and files'
-                    '$$ Revert &all changes to all remaining files'
-                    '$$ &Quit, reverting no changes'
-                    '$$ &? (display help)')
+def getmessages():
+    return {
+        'multiple': {
+            'discard': _("discard change %d/%d to '%s'?"),
+            'record': _("record change %d/%d to '%s'?"),
+            'revert': _("revert change %d/%d to '%s'?"),
+        },
+        'single': {
+            'discard': _("discard this change to '%s'?"),
+            'record': _("record this change to '%s'?"),
+            'revert': _("revert this change to '%s'?"),
+        },
+        'help': {
+            'discard': _('[Ynesfdaq?]'
+                         '$$ &Yes, discard this change'
+                         '$$ &No, skip this change'
+                         '$$ &Edit this change manually'
+                         '$$ &Skip remaining changes to this file'
+                         '$$ Discard remaining changes to this &file'
+                         '$$ &Done, skip remaining changes and files'
+                         '$$ Discard &all changes to all remaining files'
+                         '$$ &Quit, discarding no changes'
+                         '$$ &? (display help)'),
+            'record': _('[Ynesfdaq?]'
+                        '$$ &Yes, record this change'
+                        '$$ &No, skip this change'
+                        '$$ &Edit this change manually'
+                        '$$ &Skip remaining changes to this file'
+                        '$$ Record remaining changes to this &file'
+                        '$$ &Done, skip remaining changes and files'
+                        '$$ Record &all changes to all remaining files'
+                        '$$ &Quit, recording no changes'
+                        '$$ &? (display help)'),
+            'revert': _('[Ynesfdaq?]'
+                        '$$ &Yes, revert this change'
+                        '$$ &No, skip this change'
+                        '$$ &Edit this change manually'
+                        '$$ &Skip remaining changes to this file'
+                        '$$ Revert remaining changes to this &file'
+                        '$$ &Done, skip remaining changes and files'
+                        '$$ Revert &all changes to all remaining files'
+                        '$$ &Quit, reverting no changes'
+                        '$$ &? (display help)')
+        }
     }
-}
 
 def filterpatch(ui, headers, operation=None):
     """Interactively filter patch chunks into applied-only chunks"""
+    messages = getmessages()
+
     if operation is None:
         operation = 'record'
 
