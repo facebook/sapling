@@ -15,12 +15,11 @@ New errors are not allowed. Warnings are strongly discouraged.
   >   hg files --cwd $RUNTESTDIR/.. "set:(**.py or **.txt) - tests/**" | sed "s#^#${RUNTESTDIR}/../#"
   > ) | sed 's|\\|/|g' |
   >   $PYTHON $RUNTESTDIR/../contrib/check-config.py
+  abort: repository requires features unknown to this Mercurial: lz4revlog!
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
       elif ui.configbool('p4fastimport', 'useworker', False):
   conflict on p4fastimport.useworker: ('bool', '') != ('str', '')
   at hgext3rd/p4fastimport/util.py:*: (glob)
-      if ui.configbool("experimental", "histeditng"):
-  conflict on experimental.histeditng: ('bool', '') != ('str', '')
-  at */hgext/histedit.py:*: (glob)
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
@@ -41,16 +40,19 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbconduit.protocol (str)
   undocumented: fbconduit.reponame (str)
   undocumented: fbhistedit.exec_in_user_shell (str)
-  undocumented: format.sqldirstate (bool)
+  undocumented: format.manifestcachesize (int)
   undocumented: grep.command (str) ['grep']
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
+  undocumented: pager.pager (str)
+  undocumented: paths.default (str)
   undocumented: perftweaks.cachenoderevs (bool) [True]
   undocumented: perftweaks.disablebranchcache (bool)
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: perftweaks.disabletags (bool)
   undocumented: perftweaks.preferdeltas (bool)
   undocumented: phabstatus.logpeekahead (int) [30]
+  undocumented: phases.publish (bool) [untrusted=True]
   undocumented: phrevset.callsign (str)
   undocumented: pushrebase.blocknonpushrebase (bool)
   undocumented: pushrebase.rewritedates (bool)
@@ -82,12 +84,10 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: simplecache.port (str) [11101]
   undocumented: simplecache.version (str) ['1']
   undocumented: smartlog.ignorebookmarks (str) ['!']
-  undocumented: sqldirstate.cachebuildtreshold (str) [10000]
-  undocumented: sqldirstate.downgrade (bool)
-  undocumented: sqldirstate.skipbackups (bool) [True]
-  undocumented: sqldirstate.tracefile (str)
-  undocumented: sqldirstate.upgrade (bool)
+  undocumented: sparse.missingwarning (bool)
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.autocreatetrees (bool)
   undocumented: treemanifest.verifyautocreate (bool)
+  undocumented: ui.allowemptycommit (bool)
   undocumented: ui.editor.chunkselector (str)
+  undocumented: ui.supportcontact (str)
