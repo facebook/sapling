@@ -138,18 +138,6 @@ class dirstate(object):
         return self._identity
 
     @propertycache
-    def _nonnormalset(self):
-        nonnorm, otherparents = self._map.nonnormalentries()
-        self._otherparentset = otherparents
-        return nonnorm
-
-    @propertycache
-    def _otherparentset(self):
-        nonnorm, otherparents = self._map.nonnormalentries()
-        self._nonnormalset = nonnorm
-        return otherparents
-
-    @propertycache
     def _filefoldmap(self):
         return self._map.filefoldmap()
 
@@ -349,7 +337,8 @@ class dirstate(object):
         self._map.setparents(p1, p2)
         copies = {}
         if oldp2 != nullid and p2 == nullid:
-            candidatefiles = self._nonnormalset.union(self._otherparentset)
+            candidatefiles = self._map.nonnormalset.union(
+                                self._map.otherparentset)
             for f in candidatefiles:
                 s = self._map.get(f)
                 if s is None:
@@ -401,8 +390,7 @@ class dirstate(object):
 
         for a in ("_map", "_identity",
                   "_filefoldmap", "_dirfoldmap", "_branch",
-                  "_dirs", "_ignore", "_nonnormalset",
-                  "_otherparentset"):
+                  "_dirs", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
         self._lastnormaltime = 0
@@ -460,9 +448,9 @@ class dirstate(object):
         self._updatedfiles.add(f)
         self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
-            self._nonnormalset.add(f)
+            self._map.nonnormalset.add(f)
         if size == -2:
-            self._otherparentset.add(f)
+            self._map.otherparentset.add(f)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
@@ -471,8 +459,8 @@ class dirstate(object):
         self._addpath(f, 'n', s.st_mode,
                       s.st_size & _rangemask, mtime & _rangemask)
         self._map.copymap.pop(f, None)
-        if f in self._nonnormalset:
-            self._nonnormalset.remove(f)
+        if f in self._map.nonnormalset:
+            self._map.nonnormalset.remove(f)
         if mtime > self._lastnormaltime:
             # Remember the most recent modification timeslot for status(),
             # to make sure we won't miss future size-preserving file content
@@ -500,8 +488,8 @@ class dirstate(object):
                     return
         self._addpath(f, 'n', 0, -1, -1)
         self._map.copymap.pop(f, None)
-        if f in self._nonnormalset:
-            self._nonnormalset.remove(f)
+        if f in self._map.nonnormalset:
+            self._map.nonnormalset.remove(f)
 
     def otherparent(self, f):
         '''Mark as coming from the other parent, always dirty.'''
@@ -534,9 +522,9 @@ class dirstate(object):
                     size = -1
                 elif entry[0] == 'n' and entry[2] == -2: # other parent
                     size = -2
-                    self._otherparentset.add(f)
+                    self._map.otherparentset.add(f)
         self._map[f] = dirstatetuple('r', 0, size, 0)
-        self._nonnormalset.add(f)
+        self._map.nonnormalset.add(f)
         if size == 0:
             self._map.copymap.pop(f, None)
 
@@ -552,8 +540,8 @@ class dirstate(object):
             self._dirty = True
             self._droppath(f)
             del self._map[f]
-            if f in self._nonnormalset:
-                self._nonnormalset.remove(f)
+            if f in self._map.nonnormalset:
+                self._map.nonnormalset.remove(f)
             self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
@@ -632,8 +620,6 @@ class dirstate(object):
 
     def clear(self):
         self._map = dirstatemap(self._ui, self._opener, self._root)
-        self._nonnormalset = set()
-        self._otherparentset = set()
         if "_dirs" in self.__dict__:
             delattr(self, "_dirs")
         self._map.setparents(nullid, nullid)
@@ -687,7 +673,7 @@ class dirstate(object):
                 e = dmap.get(f)
                 if e is not None and e[0] == 'n' and e[3] == now:
                     dmap[f] = dirstatetuple(e[0], e[1], e[2], -1)
-                    self._nonnormalset.add(f)
+                    self._map.nonnormalset.add(f)
 
             # emulate that all 'dirstate.normal' results are written out
             self._lastnormaltime = 0
@@ -740,7 +726,6 @@ class dirstate(object):
                     break
 
         self._map.write(st, now)
-        self._nonnormalset, self._otherparentset = self._map.nonnormalentries()
         self._lastnormaltime = 0
         self._dirty = False
 
@@ -1405,3 +1390,17 @@ class dirstatemap(object):
                                        self.parents(), now))
         st.close()
         self._dirtyparents = False
+        self.nonnormalset, self.otherparentset = self.nonnormalentries()
+
+    @propertycache
+    def nonnormalset(self):
+        nonnorm, otherparents = self.nonnormalentries()
+        self.otherparentset = otherparents
+        return nonnorm
+
+    @propertycache
+    def otherparentset(self):
+        nonnorm, otherparents = self.nonnormalentries()
+        self.nonnormalset = nonnorm
+        return otherparents
+
