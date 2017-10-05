@@ -59,15 +59,15 @@ class wsgirequest(object):
     for obtaining request parameters, writing HTTP output, etc.
     """
     def __init__(self, wsgienv, start_response):
-        version = wsgienv['wsgi.version']
+        version = wsgienv[r'wsgi.version']
         if (version < (1, 0)) or (version >= (2, 0)):
             raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
                                % version)
-        self.inp = wsgienv['wsgi.input']
-        self.err = wsgienv['wsgi.errors']
-        self.threaded = wsgienv['wsgi.multithread']
-        self.multiprocess = wsgienv['wsgi.multiprocess']
-        self.run_once = wsgienv['wsgi.run_once']
+        self.inp = wsgienv[r'wsgi.input']
+        self.err = wsgienv[r'wsgi.errors']
+        self.threaded = wsgienv[r'wsgi.multithread']
+        self.multiprocess = wsgienv[r'wsgi.multiprocess']
+        self.run_once = wsgienv[r'wsgi.run_once']
         self.env = wsgienv
         self.form = normalize(cgi.parse(self.inp,
                                         self.env,

@@ -63,7 +63,7 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         """Prepare .socket of new HTTPServer instance"""
 
     def __init__(self, *args, **kargs):
-        self.protocol_version = 'HTTP/1.1'
+        self.protocol_version = r'HTTP/1.1'
         httpservermod.basehttprequesthandler.__init__(self, *args, **kargs)
 
     def _log_any(self, fp, format, *args):
@@ -112,45 +112,45 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         path, query = _splitURI(self.path)
 
         env = {}
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        env['REQUEST_METHOD'] = self.command
-        env['SERVER_NAME'] = self.server.server_name
-        env['SERVER_PORT'] = str(self.server.server_port)
-        env['REQUEST_URI'] = self.path
-        env['SCRIPT_NAME'] = self.server.prefix
-        env['PATH_INFO'] = path[len(self.server.prefix):]
-        env['REMOTE_HOST'] = self.client_address[0]
-        env['REMOTE_ADDR'] = self.client_address[0]
+        env[r'GATEWAY_INTERFACE'] = r'CGI/1.1'
+        env[r'REQUEST_METHOD'] = self.command
+        env[r'SERVER_NAME'] = self.server.server_name
+        env[r'SERVER_PORT'] = str(self.server.server_port)
+        env[r'REQUEST_URI'] = self.path
+        env[r'SCRIPT_NAME'] = self.server.prefix
+        env[r'PATH_INFO'] = path[len(self.server.prefix):]
+        env[r'REMOTE_HOST'] = self.client_address[0]
+        env[r'REMOTE_ADDR'] = self.client_address[0]
         if query:
-            env['QUERY_STRING'] = query
+            env[r'QUERY_STRING'] = query
 
         if self.headers.typeheader is None:
-            env['CONTENT_TYPE'] = self.headers.type
+            env[r'CONTENT_TYPE'] = self.headers.type
         else:
-            env['CONTENT_TYPE'] = self.headers.typeheader
+            env[r'CONTENT_TYPE'] = self.headers.typeheader
         length = self.headers.getheader('content-length')
         if length:
-            env['CONTENT_LENGTH'] = length
+            env[r'CONTENT_LENGTH'] = length
         for header in [h for h in self.headers.keys()
                        if h not in ('content-type', 'content-length')]:
-            hkey = 'HTTP_' + header.replace('-', '_').upper()
-            hval = self.headers.getheader(header)
-            hval = hval.replace('\n', '').strip()
+            hkey = r'HTTP_' + header.replace(r'-', r'_').upper()
+            hval = self.headers.get(header)
+            hval = hval.replace(r'\n', r'').strip()
             if hval:
                 env[hkey] = hval
-        env['SERVER_PROTOCOL'] = self.request_version
-        env['wsgi.version'] = (1, 0)
-        env['wsgi.url_scheme'] = self.url_scheme
-        if env.get('HTTP_EXPECT', '').lower() == '100-continue':
+        env[r'SERVER_PROTOCOL'] = self.request_version
+        env[r'wsgi.version'] = (1, 0)
+        env[r'wsgi.url_scheme'] = self.url_scheme
+        if env.get(r'HTTP_EXPECT', '').lower() == '100-continue':
             self.rfile = common.continuereader(self.rfile, self.wfile.write)
 
-        env['wsgi.input'] = self.rfile
-        env['wsgi.errors'] = _error_logger(self)
-        env['wsgi.multithread'] = isinstance(self.server,
+        env[r'wsgi.input'] = self.rfile
+        env[r'wsgi.errors'] = _error_logger(self)
+        env[r'wsgi.multithread'] = isinstance(self.server,
                                              socketserver.ThreadingMixIn)
-        env['wsgi.multiprocess'] = isinstance(self.server,
+        env[r'wsgi.multiprocess'] = isinstance(self.server,
                                               socketserver.ForkingMixIn)
-        env['wsgi.run_once'] = 0
+        env[r'wsgi.run_once'] = 0
 
         self.saved_status = None
         self.saved_headers = []
