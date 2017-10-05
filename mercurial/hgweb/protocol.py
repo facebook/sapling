@@ -164,7 +164,7 @@ def call(repo, req, cmd):
                 yield chunk
 
     rsp = wireproto.dispatch(repo, p, cmd)
-    if isinstance(rsp, str):
+    if isinstance(rsp, bytes):
         req.respond(HTTP_OK, HGTYPE, body=rsp)
         return []
     elif isinstance(rsp, wireproto.streamres):
