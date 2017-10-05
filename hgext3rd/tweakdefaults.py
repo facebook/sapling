@@ -748,7 +748,7 @@ def _rebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
-def cleanupnodeswrapper(orig, repo, mapping, operation):
+def cleanupnodeswrapper(orig, repo, mapping, *args, **kwargs):
     if repo.ui.configbool('tweakdefaults', 'showupdated', False):
         maxoutput = 10
         oldnodes = sorted(mapping.keys())
@@ -761,7 +761,7 @@ def cleanupnodeswrapper(orig, repo, mapping, operation):
             lastoldnode = oldnodes[-1]
             lastnewnodes = mapping[lastoldnode]
             _printupdatednode(repo, lastoldnode, lastnewnodes)
-    return orig(repo, mapping, operation)
+    return orig(repo, mapping, *args, **kwargs)
 
 def _printupdatednode(repo, oldnode, newnodes):
     # oldnode was not updated if newnodes is an iterable
