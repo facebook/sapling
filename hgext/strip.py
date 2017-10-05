@@ -60,10 +60,19 @@ def checklocalchanges(repo, force=False, excsuffix=''):
 
 def _findupdatetarget(repo, nodes):
     unode, p2 = repo.changelog.parents(nodes[0])
+    currentbranch = repo[None].branch()
 
     if (util.safehasattr(repo, 'mq') and p2 != nullid
         and p2 in [x.node for x in repo.mq.applied]):
         unode = p2
+    elif currentbranch != repo[unode].branch():
+        pwdir = 'parents(wdir())'
+        revset = 'max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))'
+        branchtarget = repo.revs(revset, nodes, pwdir, pwdir, nodes, pwdir,
+                                 currentbranch)
+        if branchtarget:
+            cl = repo.changelog
+            unode = cl.node(branchtarget.first())
 
     return unode
 

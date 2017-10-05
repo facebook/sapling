@@ -941,6 +941,214 @@ Error during post-close callback of the strip transaction
   abort: boom
   [255]
 
+test stripping a working directory parent doesn't switch named branches
+
+  $ hg log -G
+  @  changeset:   1:eca11cf91c71
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg branch new-branch
+  marked working directory as branch new-branch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m "start new branch"
+  $ echo 'foo' > foo.txt
+  $ hg ci -Aqm foo
+  $ hg up default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'bar' > bar.txt
+  $ hg ci -Aqm bar
+  $ hg up new-branch
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg log -G
+  @  changeset:   4:35358f982181
+  |  tag:         tip
+  |  parent:      1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     bar
+  |
+  | @  changeset:   3:f62c6c09b707
+  | |  branch:      new-branch
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     foo
+  | |
+  | o  changeset:   2:b1d33a8cadd9
+  |/   branch:      new-branch
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg strip --force -r 35358f982181
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-50d992d4-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg up default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'bar' > bar.txt
+  $ hg ci -Aqm bar
+  $ hg up new-branch
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ hg log -G
+  @    changeset:   5:4cf5e92caec2
+  |\   branch:      new-branch
+  | |  tag:         tip
+  | |  parent:      3:f62c6c09b707
+  | |  parent:      4:35358f982181
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge
+  | |
+  | o  changeset:   4:35358f982181
+  | |  parent:      1:eca11cf91c71
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     bar
+  | |
+  o |  changeset:   3:f62c6c09b707
+  | |  branch:      new-branch
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     foo
+  | |
+  o |  changeset:   2:b1d33a8cadd9
+  |/   branch:      new-branch
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg strip -r 35358f982181
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg pull -u $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg
+  pulling from $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg strip -k -r 35358f982181
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+  $ hg diff
+  diff -r f62c6c09b707 bar.txt
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/bar.txt	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +bar
+
 Use delayedstrip to strip inside a transaction
 
   $ cd $TESTTMP
