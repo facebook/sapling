@@ -1,13 +1,26 @@
 #testcases files rocksdb
 
+  $ CACHEDIR=$PWD/hgcache
   $ . $TESTDIR/library.sh
   $ hg init repo
   $ cd repo
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > [treemanifest]
+  > server=True
+  > [remotefilelog]
+  > server=True
+  > shallowtrees=True
+  > [experimental]
+  > evolution=createmarkers
+  > EOF
+
   $ touch a
   $ hg add a
   $ hg ci -ma
 
-  $ echo 1 > b
+  $ echo '1' > b
   $ echo 2 > c
   $ hg add b c
   $ hg ci -mb
@@ -24,8 +37,7 @@ Add commit with null manifest
   $ hg ci -m 'null manifest'
   created new head
   $ hg rm 1
-  $ hg commit --amend
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/813c7514ad5e-4be04d8b-amend.hg (glob)
+  $ hg commit --amend --traceback
   $ hg log -r 7f48e9c786d1 -T '{node}'
   7f48e9c786d1cbab525424e45139585724f84e28 (no-eol)
   $ hg debugdata -c 7f48e9c786d1cbab525424e45139585724f84e28
@@ -34,10 +46,21 @@ Add commit with null manifest
   0 0 amend_source:813c7514ad5e14493de885987c241c14c5cd3153
   
   null manifest (no-eol)
- 
+
+Add commit with a directory
+  $ mkdir dir
+  $ echo content > dir/content
+  $ hg add dir/content
+  $ hg ci -m 'commit with dir'
+
   $ hg log
-  changeset:   3:7f48e9c786d1
+  changeset:   5:617e87e2aa2f
   tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commit with dir
+  
+  changeset:   4:7f48e9c786d1
   parent:      -1:000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -66,29 +89,35 @@ Add commit with null manifest
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  * INFO 3: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  * INFO 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
   $ grep head < out.txt | sort -k 6
   * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  * INFO head 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  * INFO head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+
 #else
   $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction > out.txt
   $ grep changeset < out.txt
   * INFO 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   * INFO 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   * INFO 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  * INFO 3: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  * INFO 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
   $ grep head < out.txt | sort -k 6
   * INFO head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  * INFO head 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  * INFO head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  * INFO head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
   $ grep compaction < out.txt
   * INFO compaction started (glob)
   * INFO compaction finished (glob)
 #endif
-
 Temporary hack because blobimport doesn't import bookmarks yet
   $ mkdir $TESTTMP/blobrepo/books
 #if files
@@ -184,6 +213,31 @@ Empty file
   ]
   $ curl http://localhost:3000/repo/blob/fc702583f9c961dea176fd367862c299b4a551f2/ 2> /dev/null
   2
+
+  $ curl http://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid 2> /dev/null
+  ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
+
+  $ curl http://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | jq 'sort_by(.path)'
+  [
+    {
+      "hash": "e7405b0462d8b2dd80219b713a93aea2c9a3c468",
+      "path": "dir",
+      "size": null,
+      "type": "Tree"
+    }
+  ]
+
+  $ curl http://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468/ 2> /dev/null | jq 'sort_by(.path)'
+  [
+    {
+      "hash": "7108421418404a937c684d2479a34a24d2ce4757",
+      "path": "content",
+      "size": 8,
+      "type": "File"
+    }
+  ]
+  $ curl http://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757/ 2> /dev/null
+  content
 
 Send incorrect requests
   $ curl http://localhost:3000/repo/cs/hash/roottreemanifestid 2> /dev/null
