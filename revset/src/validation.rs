@@ -70,6 +70,7 @@ impl Stream for ValidateNodeStream {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
     use SingleNodeHash;
