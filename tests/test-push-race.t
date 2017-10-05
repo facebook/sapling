@@ -15,7 +15,6 @@ A set of extension and shell functions ensures this scheduling.
   > Client with the extensions will create a file when ready and get stuck until
   > a file is created."""
   > 
-  > import atexit
   > import errno
   > import os
   > import time
@@ -51,7 +50,7 @@ A set of extension and shell functions ensures this scheduling.
   >                 except OSError as exc:
   >                     if exc.errno != errno.ENOENT:
   >                         raise
-  >             atexit.register(delete)
+  >             ui.atexit(delete)
   >     return orig(pushop)
   > 
   > def uisetup(ui):
