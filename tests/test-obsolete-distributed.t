@@ -16,15 +16,8 @@ to happen in the local case but can easily happen in the distributed case.
   > evolution = all
   > [phases]
   > publish = False
-  > [templates]
-  > obsfatesuccessors = "{if(successors, " as ")}{join(successors, ", ")}"
-  > obsfateverb = "{obsfateverb(successors)}"
-  > obsfateoperations = "{if(obsfateoperations(markers), " using {join(obsfateoperations(markers), ", ")}")}"
-  > obsfateusers = "{if(obsfateusers(markers), " by {join(obsfateusers(markers), ", ")}")}"
-  > obsfatedate = "{if(obsfatedate(markers), "{ifeq(min(obsfatedate(markers)), max(obsfatedate(markers)), " (at {min(obsfatedate(markers))|isodate})", " (between {min(obsfatedate(markers))|isodate} and {max(obsfatedate(markers))|isodate})")}")}"
-  > obsfate = "{obsfateverb}{obsfateoperations}{obsfatesuccessors}{obsfateusers}{obsfatedate}; "
   > [ui]
-  > logtemplate= {rev}:{node|short} {desc} {if(succsandmarkers, "[{succsandmarkers % "{obsfate}"}]")}\n
+  > logtemplate= {rev}:{node|short} {desc}{if(obsfate, " [{join(obsfate, "; ")}]")}\n
   > EOF
 
 Check distributed chain building
@@ -63,7 +56,7 @@ Initial setup
   |
   | o  2:7f6b0a6f5c25 c_A1
   |/
-  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000); ]
+  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -100,11 +93,11 @@ server side: create new revision on the server (obsoleting another one)
   $ hg log -G --hidden
   @  4:391a2bf12b1b c_B1
   |
-  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000); ]
+  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
   |/
   | o  2:7f6b0a6f5c25 c_A1
   |/
-  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000); ]
+  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -127,9 +120,9 @@ client side: create a marker between two common changesets
   $ hg log -G --hidden
   @  3:e5d7dda7cd28 c_B0
   |
-  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000); ]
+  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000); ]
+  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -161,11 +154,11 @@ client side: pull from the server
   $ hg log -G --hidden
   o  4:391a2bf12b1b c_B1
   |
-  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000); ]
+  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000); ]
+  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000); ]
+  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000)]
   |/
   @  0:e82fb8d02bbf ROOT
   
@@ -197,11 +190,11 @@ obsolete on the server side but the marker is sent out.)
   $ hg -R ../server/ log -G --hidden
   @  4:391a2bf12b1b c_B1
   |
-  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000); ]
+  | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000); ]
+  | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000); ]
+  | x  1:e1b46f0f979f c_A0 [rewritten as 2:7f6b0a6f5c25 by server (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -298,13 +291,13 @@ Bob pulls from Alice and rewrites them
   $ hg log -G --hidden
   @  5:956063ac4557 c_B1
   |
-  | x  4:5ffb9e311b35 c_B0 [rewritten using amend as 5:956063ac4557 by bob (at 1970-01-01 00:00 +0000); ]
+  | x  4:5ffb9e311b35 c_B0 [rewritten using amend as 5:956063ac4557 by bob (at 1970-01-01 00:00 +0000)]
   |/
   o  3:5b5708a437f2 c_A1
   |
-  | x  2:ef908e42ce65 c_B0 [rewritten using rebase as 4:5ffb9e311b35 by bob (at 1970-01-01 00:00 +0000); ]
+  | x  2:ef908e42ce65 c_B0 [rewritten using rebase as 4:5ffb9e311b35 by bob (at 1970-01-01 00:00 +0000)]
   | |
-  | x  1:d33b0a3a6464 c_A0 [rewritten using amend as 3:5b5708a437f2 by bob (at 1970-01-01 00:00 +0000); ]
+  | x  1:d33b0a3a6464 c_A0 [rewritten using amend as 3:5b5708a437f2 by bob (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -345,13 +338,13 @@ Celeste pulls from Bob and rewrites them again
   $ hg log -G --hidden
   @  5:77ae25d99ff0 c_B2
   |
-  | x  4:3cf8de21cc22 c_B1 [rewritten using amend as 5:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000); ]
+  | x  4:3cf8de21cc22 c_B1 [rewritten using amend as 5:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000)]
   |/
   o  3:9866d64649a5 c_A2
   |
-  | x  2:956063ac4557 c_B1 [rewritten using rebase as 4:3cf8de21cc22 by celeste (at 1970-01-01 00:00 +0000); ]
+  | x  2:956063ac4557 c_B1 [rewritten using rebase as 4:3cf8de21cc22 by celeste (at 1970-01-01 00:00 +0000)]
   | |
-  | x  1:5b5708a437f2 c_A1 [rewritten using amend as 3:9866d64649a5 by celeste (at 1970-01-01 00:00 +0000); ]
+  | x  1:5b5708a437f2 c_A1 [rewritten using amend as 3:9866d64649a5 by celeste (at 1970-01-01 00:00 +0000)]
   |/
   o  0:e82fb8d02bbf ROOT
   
@@ -469,17 +462,17 @@ decision is made in that case, so receiving the changesets are not an option).
   @  0:e82fb8d02bbf ROOT
   
   $ hg log -G --hidden
-  x  6:956063ac4557 c_B1 [rewritten using amend, rebase as 4:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000); ]
+  x  6:956063ac4557 c_B1 [rewritten using amend, rebase as 4:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000)]
   |
-  x  5:5b5708a437f2 c_A1 [rewritten using amend as 3:9866d64649a5 by celeste (at 1970-01-01 00:00 +0000); ]
+  x  5:5b5708a437f2 c_A1 [rewritten using amend as 3:9866d64649a5 by celeste (at 1970-01-01 00:00 +0000)]
   |
   | o  4:77ae25d99ff0 c_B2
   | |
   | o  3:9866d64649a5 c_A2
   |/
-  | x  2:ef908e42ce65 c_B0 [rewritten using amend, rebase as 6:956063ac4557 by bob (at 1970-01-01 00:00 +0000); ]
+  | x  2:ef908e42ce65 c_B0 [rewritten using amend, rebase as 6:956063ac4557 by bob (at 1970-01-01 00:00 +0000)]
   | |
-  | x  1:d33b0a3a6464 c_A0 [rewritten using amend as 5:5b5708a437f2 by bob (at 1970-01-01 00:00 +0000); ]
+  | x  1:d33b0a3a6464 c_A0 [rewritten using amend as 5:5b5708a437f2 by bob (at 1970-01-01 00:00 +0000)]
   |/
   @  0:e82fb8d02bbf ROOT
   

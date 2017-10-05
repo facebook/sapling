@@ -783,3 +783,44 @@ def markersoperations(markers):
                      if meta.get('operation'))
 
     return sorted(operations)
+
+def obsfateprinter(successors, markers, ui):
+    """ Build a obsfate string for a single successorset using all obsfate
+    related function defined in obsutil
+    """
+    line = []
+
+    # Verb
+    line.append(successorsetverb(successors))
+
+    # Operations
+    operations = markersoperations(markers)
+    if operations:
+        line.append(" using %s" % ", ".join(operations))
+
+    # Successors
+    if successors:
+        fmtsuccessors = [successors.joinfmt(succ) for succ in successors]
+        line.append(" as %s" % ", ".join(fmtsuccessors))
+
+    # Users
+    users = markersusers(markers)
+
+    if users:
+        line.append(" by %s" % ", ".join(users))
+
+    # Date
+    dates = markersdates(markers)
+
+    min_date = min(dates)
+    max_date = max(dates)
+
+    if min_date == max_date:
+        fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
+        line.append(" (at %s)" % fmtmin_date)
+    else:
+        fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
+        fmtmax_date = util.datestr(max_date, '%Y-%m-%d %H:%M %1%2')
+        line.append(" (between %s and %s)" % (fmtmin_date, fmtmax_date))
+
+    return "".join(line)

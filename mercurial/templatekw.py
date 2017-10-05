@@ -600,6 +600,23 @@ def showmanifest(**args):
     # rev and node are completely different from changeset's.
     return _mappable(f, None, f, lambda x: {'rev': mrev, 'node': mhex})
 
+@templatekeyword('obsfate')
+def showobsfate(**args):
+    # this function returns a list containing pre-formatted obsfate strings.
+    #
+    # This function will be replaced by templates fragments when we will have
+    # the verbosity templatekw available.
+    succsandmarkers = showsuccsandmarkers(**args)
+
+    ui = args['ui']
+
+    values = []
+
+    for x in succsandmarkers:
+        values.append(obsutil.obsfateprinter(x['successors'], x['markers'], ui))
+
+    return showlist("fate", values, args)
+
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""
     args = pycompat.byteskwargs(args)
