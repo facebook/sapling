@@ -52,6 +52,7 @@ show the edit commands offered by outgoing
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -86,6 +87,7 @@ show the error from unrelated repos
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -112,6 +114,7 @@ test sensitivity to branch in URL:
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date

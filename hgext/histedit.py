@@ -39,6 +39,7 @@ file open in your editor::
  #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
+ #  b, base = checkout changeset and apply further changesets from there
  #
 
 In this file, lines beginning with ``#`` are ignored. You must specify a rule
@@ -61,6 +62,7 @@ would reorganize the file to look like this::
  #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
+ #  b, base = checkout changeset and apply further changesets from there
  #
 
 At which point you close the editor and ``histedit`` starts working. When you
@@ -815,6 +817,8 @@ class fold(histeditaction):
             replacements.append((ich, (n,)))
         return repo[n], replacements
 
+@action(['base', 'b'],
+        _('checkout changeset and apply further changesets from there'))
 class base(histeditaction):
 
     def run(self):
@@ -905,7 +909,6 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
         raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
-
 @command('histedit',
     [('', 'commands', '',
       _('read history edits from the specified file'), _('FILE')),
@@ -937,6 +940,8 @@ def histedit(ui, repo, *freeargs, **opts):
     - `roll` like fold, but discarding this commit's description and date
 
     - `edit` to edit this changeset (preserving date)
+
+    - `base` to checkout changeset and apply further changesets from there
 
     There are a number of ways to select the root changeset:
 
@@ -1631,7 +1636,3 @@ def extsetup(ui):
          _("use 'hg histedit --continue' or 'hg histedit --abort'")])
     cmdutil.afterresolvedstates.append(
         ['histedit-state', _('hg histedit --continue')])
-    if ui.configbool("experimental", "histeditng"):
-        globals()['base'] = action(['base', 'b'],
-            _('checkout changeset and apply further changesets from there')
-        )(base)
