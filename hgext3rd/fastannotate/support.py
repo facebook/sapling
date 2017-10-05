@@ -47,11 +47,19 @@ def _convertoutputs(repo, annotated, contents):
     # convert to what fctx.annotate returns: [((fctx, linenum), linecontent)]
     results = []
     fctxmap = {}
+    annotateline = getattr(hgcontext, 'annotateline', None)
     for i, (hsh, linenum, path) in enumerate(annotated):
         if (hsh, path) not in fctxmap:
             fctxmap[(hsh, path)] = _lazyfctx(repo, hsh, path)
         # linenum: the user wants 1-based, we have 0-based.
-        results.append(((fctxmap[(hsh, path)], linenum + 1), contents[i]))
+        lineno = linenum + 1
+        fctx = fctxmap[(hsh, path)]
+        line = contents[i]
+        if annotateline is None:
+            results.append(((fctx, lineno), line))
+        else:
+            # 2e32c6a31cc7 introduced annotateline
+            results.append((annotateline(fctx=fctx, lineno=lineno), line))
     return results
 
 def _getmaster(fctx):
