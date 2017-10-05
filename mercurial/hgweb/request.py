@@ -19,6 +19,7 @@ from .common import (
 )
 
 from .. import (
+    pycompat,
     util,
 )
 
@@ -89,6 +90,8 @@ class wsgirequest(object):
             pass
 
     def respond(self, status, type, filename=None, body=None):
+        if not isinstance(type, str):
+            type = pycompat.sysstr(type)
         if self._start_response is not None:
             self.headers.append(('Content-Type', type))
             if filename:
