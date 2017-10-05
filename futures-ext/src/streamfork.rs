@@ -166,14 +166,14 @@ where
 mod test {
     use super::*;
     use futures::Future;
-    use futures::stream::iter;
+    use futures::stream::iter_ok;
 
     #[test]
     fn simple() {
         let even = Vec::new();
         let odd = Vec::new();
 
-        let nums = iter((0i32..10).into_iter().map(Ok::<_, ()>));
+        let nums = iter_ok((0i32..10).into_iter());
         let (_, even, odd) = streamfork(nums, even, odd, |n| Ok::<_, ()>(*n % 2 == 1))
             .wait()
             .unwrap();

@@ -138,11 +138,7 @@ mod test {
 
         let decoder = NetstringDecoder::new();
 
-        let inp = stream::iter(vec![
-            Ok::<_, io::Error>(
-                Bytes::from(&b"13:hello, world!,"[..]),
-            ),
-        ]);
+        let inp = stream::iter_ok::<_, io::Error>(vec![Bytes::from(&b"13:hello, world!,"[..])]);
 
         let dec = decode(inp, decoder);
         let out = Vec::new();
@@ -164,10 +160,8 @@ mod test {
 
         let decoder = NetstringDecoder::new();
 
-        let inp = stream::iter(vec![
-            Ok::<_, io::Error>(
-                Bytes::from("13:hello, world!,".repeat(5000).as_bytes()),
-            ),
+        let inp = stream::iter_ok::<_, io::Error>(vec![
+            Bytes::from("13:hello, world!,".repeat(5000).as_bytes()),
         ]);
 
         let dec = decode(inp, decoder);
@@ -191,9 +185,9 @@ mod test {
 
         let decoder = NetstringDecoder::new();
 
-        let inp = stream::iter(vec![
-            Ok::<_, io::Error>(Bytes::from(&b"13:hel"[..])),
-            Ok(Bytes::from(&b"lo, world!,"[..])),
+        let inp = stream::iter_ok::<_, io::Error>(vec![
+            Bytes::from(&b"13:hel"[..]),
+            Bytes::from(&b"lo, world!,"[..]),
         ]);
 
         let dec = decode(inp, decoder);

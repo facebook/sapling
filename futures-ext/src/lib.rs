@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 #![feature(never_type)]
 
 #[cfg(test)]
@@ -296,7 +294,7 @@ mod test {
 
         let (tx, rx) = mpsc::channel(1);
 
-        let xfer = stream::iter::<_, _, MyErr>(vec![Ok(123)]).forward(tx);
+        let xfer = stream::iter_ok::<_, MyErr>(vec![123]).forward(tx);
 
         handle.spawn(xfer.discard());
 
@@ -308,7 +306,7 @@ mod test {
 
     #[test]
     fn enumerate() {
-        let s = stream::iter(vec![Ok::<_, ()>("hello"), Ok("there"), Ok("world")]);
+        let s = stream::iter_ok::<_, ()>(vec!["hello", "there", "world"]);
         let es = Enumerate::new(s);
         let v = es.collect().wait();
 
