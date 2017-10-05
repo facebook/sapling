@@ -2103,16 +2103,16 @@ class TextTestRunner(unittest.TextTestRunner):
         bisectrepo = self._runner.options.bisect_repo
         if bisectrepo:
             bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
-        def nooutput(args):
+        def pread(args):
             p = subprocess.Popen(args, stderr=subprocess.STDOUT,
                                  stdout=subprocess.PIPE)
-            p.stdout.read()
+            data = p.stdout.read()
             p.wait()
+            return data
         for test in tests:
-            nooutput(bisectcmd + ['--reset']),
-            nooutput(bisectcmd + ['--bad', '.'])
-            nooutput(bisectcmd + ['--good',
-                      self._runner.options.known_good_rev])
+            pread(bisectcmd + ['--reset']),
+            pread(bisectcmd + ['--bad', '.'])
+            pread(bisectcmd + ['--good', self._runner.options.known_good_rev])
             # TODO: we probably need to forward more options
             # that alter hg's behavior inside the tests.
             opts = ''
@@ -2121,11 +2121,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 opts += ' --with-hg=%s ' % shellquote(_strpath(withhg))
             rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
                                    test)
-            sub = subprocess.Popen(bisectcmd + ['--command', rtc],
-                                   stderr=subprocess.STDOUT,
-                                   stdout=subprocess.PIPE)
-            data = sub.stdout.read()
-            sub.wait()
+            data = pread(bisectcmd + ['--command', rtc])
             m = re.search(
                 (br'\nThe first (?P<goodbad>bad|good) revision '
                  br'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
