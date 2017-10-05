@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cgi
 import os
 import re
 import time
@@ -19,6 +18,7 @@ from . import (
     pycompat,
     registrar,
     templatekw,
+    url,
     util,
 )
 
@@ -128,7 +128,7 @@ def escape(text):
     """Any text. Replaces the special XML/XHTML characters "&", "<"
     and ">" with XML entities, and filters out NUL characters.
     """
-    return cgi.escape(text.replace('\0', ''), True)
+    return url.escape(text.replace('\0', ''), True)
 
 para_re = None
 space_re = None

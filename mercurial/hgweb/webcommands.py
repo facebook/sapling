@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cgi
 import copy
 import mimetypes
 import os
@@ -38,6 +37,7 @@ from .. import (
     smartset,
     templatefilters,
     templater,
+    url,
     util,
 )
 
@@ -1250,9 +1250,9 @@ def graph(web, req, tmpl):
             node = str(ctx)
             age = encodestr(templatefilters.age(ctx.date()))
             desc = templatefilters.firstline(encodestr(ctx.description()))
-            desc = cgi.escape(templatefilters.nonempty(desc))
-            user = cgi.escape(templatefilters.person(encodestr(ctx.user())))
-            branch = cgi.escape(encodestr(ctx.branch()))
+            desc = url.escape(templatefilters.nonempty(desc))
+            user = url.escape(templatefilters.person(encodestr(ctx.user())))
+            branch = url.escape(encodestr(ctx.branch()))
             try:
                 branchnode = web.repo.branchtip(branch)
             except error.RepoLookupError:
@@ -1261,8 +1261,8 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 data.append((node, vtx, edges, desc, user, age, branch,
-                             [cgi.escape(encodestr(x)) for x in ctx.tags()],
-                             [cgi.escape(encodestr(x))
+                             [url.escape(encodestr(x)) for x in ctx.tags()],
+                             [url.escape(encodestr(x))
                               for x in ctx.bookmarks()]))
             else:
                 edgedata = [{'col': edge[0], 'nextcol': edge[1],

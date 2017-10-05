@@ -20,13 +20,13 @@ when adding support for new constructs.
 
 from __future__ import absolute_import
 
-import cgi
 import re
 
 from .i18n import _
 from . import (
     encoding,
     pycompat,
+    url,
     util,
 )
 
@@ -552,7 +552,7 @@ def formathtml(blocks):
     listnest = []
 
     def escape(s):
-        return cgi.escape(s, True)
+        return url.escape(s, True)
 
     def openlist(start, level):
         if not listnest or listnest[-1][0] != start:
