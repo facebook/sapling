@@ -174,9 +174,12 @@ def wrapmanifestdictdiff(orig, self, m2, match=None, clean=False):
 
 class overlayfilectx(object):
     def __init__(self, repo, path, fileid=None):
-        self.repo = repo
+        self._repo = repo
         self._path = path
         self.fileid = fileid
+
+    def repo(self):
+        return self._repo
 
     # this is a hack to skip copy detection
     def ancestors(self):
@@ -195,7 +198,7 @@ class overlayfilectx(object):
         return self.fileid
 
     def data(self):
-        blob = self.repo.handler.git.get_object(_maybehex(self.fileid))
+        blob = self._repo.handler.git.get_object(_maybehex(self.fileid))
         return blob.data
 
     def isbinary(self):
@@ -203,12 +206,16 @@ class overlayfilectx(object):
 
 class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
-        self.repo = repo
+        # Can't store this in self._repo because the base class uses that field
+        self._hgrepo = repo
         if not isinstance(sha, basestring):
             sha = sha.hex()
         self.commit = repo.handler.git.get_object(_maybehex(sha))
         self._overlay = getattr(repo, 'gitoverlay', repo)
         self._rev = self._overlay.rev(bin(self.commit.id))
+
+    def repo(self):
+        return self._hgrepo
 
     def node(self):
         return bin(self.commit.id)
@@ -235,13 +242,13 @@ class overlaychangectx(context.changectx):
         return self.commit.message
 
     def parents(self):
-        cl = self.repo.changelog
+        cl = self._hgrepo.changelog
         parents = cl.parents(cl.node(self._rev))
         if not parents:
-            return [self.repo['null']]
+            return [self._hgrepo['null']]
         if parents[1] == nullid:
             parents = parents[:-1]
-        return [self.repo[sha] for sha in parents]
+        return [self._hgrepo[sha] for sha in parents]
 
     def manifestnode(self):
         return bin(self.commit.tree)
