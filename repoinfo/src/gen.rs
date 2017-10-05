@@ -89,7 +89,7 @@ where
     fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {
         let parents = repo
             .get_changeset_by_nodeid(nodeid) // Future<Changeset>
-            .map(|cs| stream::iter(cs.parents().into_iter().map(Result::Ok)))
+            .map(|cs| stream::iter_ok(cs.parents().into_iter()))
             .flatten_stream(); // Stream<NodeHash>
 
         let gen = parents
