@@ -270,7 +270,7 @@ Test peer-to-peer push/pull of tree only commits
 # Test pulling from a treeonly peer
   $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup)"
   bundle2-input-part: total payload size 827
-  bundle2-input-part: total payload size 171
+  bundle2-input-part: total payload size 48
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
   $ hg up tip
