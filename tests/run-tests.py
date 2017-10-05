@@ -2104,8 +2104,10 @@ class TextTestRunner(unittest.TextTestRunner):
         if bisectrepo:
             bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
         def pread(args):
+            env = os.environ.copy()
+            env['HGPLAIN'] = '1'
             p = subprocess.Popen(args, stderr=subprocess.STDOUT,
-                                 stdout=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, env=env)
             data = p.stdout.read()
             p.wait()
             return data
