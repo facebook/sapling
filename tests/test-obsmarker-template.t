@@ -58,11 +58,13 @@ Test setup
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2
   |    summary:     A1
   |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:a468dc9b3633
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -102,6 +104,26 @@ Predecessors template should show current revision as it is the working copy
   | @  471f378eab4c
   |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2
   o  ea207398892e
+  
+
+  $ hg log -G --config ui.logtemplate=
+  o  changeset:   3:d004c8f274b9
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A2
+  |
+  | @  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
   $ hg up 'desc(A1)' --hidden
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -294,6 +316,7 @@ Test templates with splitted commit
   | x  changeset:   1:471597cad322
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     split as 2:337fec4d2edc, 3:f257fde29c7a
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -469,11 +492,13 @@ Simulate a fold
   | x  changeset:   2:0dec01379d3b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 3:eb5a0daa2192
   | |  summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 3:eb5a0daa2192
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -640,6 +665,7 @@ Test setup
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -669,6 +695,8 @@ Test setup
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
+  |    obsfate:     rewritten using amend as 3:65b757b745b9
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -690,6 +718,7 @@ Test setup
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 4:019fadeab383
   |    summary:     A2
   |
   | o  changeset:   2:fdf9bde5129a
@@ -702,6 +731,8 @@ Test setup
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
+  |    obsfate:     rewritten using amend as 3:65b757b745b9
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -880,6 +911,7 @@ Test setup
   | x  changeset:   2:0dec01379d3b
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:b7ea6d14e664
   |    summary:     B0
   |
   o  changeset:   1:471f378eab4c
@@ -918,16 +950,19 @@ Test setup
   | |  parent:      1:471f378eab4c
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 4:eb5a0daa2192
   | |  summary:     B1
   | |
   | | x  changeset:   2:0dec01379d3b
   | |/   user:        test
   | |    date:        Thu Jan 01 00:00:00 1970 +0000
+  | |    obsfate:     rewritten using amend as 3:b7ea6d14e664
   | |    summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 4:eb5a0daa2192
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1166,11 +1201,13 @@ Test setup
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:7a230b46bf61
   |    summary:     A1
   |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1201,6 +1238,7 @@ Test setup
   | @  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:7a230b46bf61
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1608,6 +1646,8 @@ Diverge one of the splitted commit
   | x  changeset:   6:4a004186e638
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 8:b18bc8331526
+  |    obsfate:     rewritten using amend as 9:0b997eb7ceee
   |    summary:     Add A,B,C
   |
   o  changeset:   5:dd800401bd8c
@@ -2051,6 +2091,7 @@ Test templates with splitted and pruned commit
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  obsfate:     pruned
   |  summary:     A2
   |
   o  changeset:   2:617adc3a144c
@@ -2062,6 +2103,7 @@ Test templates with splitted and pruned commit
   | x  changeset:   1:471597cad322
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     split as 2:617adc3a144c, 3:0d0ef4bdf70e
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e

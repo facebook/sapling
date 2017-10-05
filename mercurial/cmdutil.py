@@ -1665,6 +1665,9 @@ class changeset_printer(object):
             self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
                           label='log.instability')
 
+        elif ctx.obsolete():
+            self._showobsfate(ctx)
+
         self._exthook(ctx)
 
         if self.ui.debugflag:
@@ -1712,6 +1715,15 @@ class changeset_printer(object):
         self.ui.write("\n")
 
         self.showpatch(ctx, matchfn)
+
+    def _showobsfate(self, ctx):
+        obsfate = templatekw.showobsfate(repo=self.repo, ctx=ctx, ui=self.ui)
+
+        if obsfate:
+            for obsfateline in obsfate:
+                # i18n: column positioning for "hg log"
+                self.ui.write(_("obsfate:     %s\n") % obsfateline,
+                              label='log.obsfate')
 
     def _exthook(self, ctx):
         '''empty method used by extension as a hook point
