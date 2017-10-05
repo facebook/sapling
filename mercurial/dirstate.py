@@ -739,12 +739,10 @@ class dirstate(object):
                     now = end # trust our estimate that the end is near now
                     break
 
-        st.write(parsers.pack_dirstate(self._map._map, self._map.copymap,
-                                       self._pl, now))
+        self._map.write(st, now)
         self._nonnormalset, self._otherparentset = self._map.nonnormalentries()
-        st.close()
         self._lastnormaltime = 0
-        self._dirty = self._map._dirtyparents = False
+        self._dirty = False
 
     def _dirignore(self, f):
         if f == '.':
@@ -1401,3 +1399,9 @@ class dirstatemap(object):
         p = parse_dirstate(self._map, self.copymap, st)
         if not self._dirtyparents:
             self.setparents(*p)
+
+    def write(self, st, now):
+        st.write(parsers.pack_dirstate(self._map, self.copymap,
+                                       self.parents(), now))
+        st.close()
+        self._dirtyparents = False
