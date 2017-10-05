@@ -133,10 +133,6 @@ class dirstate(object):
         return self._map
 
     @propertycache
-    def _filefoldmap(self):
-        return self._map.filefoldmap()
-
-    @propertycache
     def _dirfoldmap(self):
         f = {}
         normcase = util.normcase
@@ -380,7 +376,7 @@ class dirstate(object):
         rereads the dirstate. Use localrepo.invalidatedirstate() if you want to
         check whether the dirstate has changed before rereading it.'''
 
-        for a in ("_map", "_filefoldmap", "_dirfoldmap", "_branch",
+        for a in ("_map", "_dirfoldmap", "_branch",
                   "_dirs", "_ignore"):
             if a in self.__dict__:
                 delattr(self, a)
@@ -412,10 +408,10 @@ class dirstate(object):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
             self._dirs.delpath(f)
 
-        if "_filefoldmap" in self.__dict__:
+        if "filefoldmap" in self._map.__dict__:
             normed = util.normcase(f)
-            if normed in self._filefoldmap:
-                del self._filefoldmap[normed]
+            if normed in self._map.filefoldmap:
+                del self._map.filefoldmap[normed]
 
         self._updatedfiles.add(f)
 
@@ -563,18 +559,18 @@ class dirstate(object):
 
     def _normalizefile(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
-        folded = self._filefoldmap.get(normed, None)
+        folded = self._map.filefoldmap.get(normed, None)
         if folded is None:
             if isknown:
                 folded = path
             else:
                 folded = self._discoverpath(path, normed, ignoremissing, exists,
-                                            self._filefoldmap)
+                                            self._map.filefoldmap)
         return folded
 
     def _normalize(self, path, isknown, ignoremissing=False, exists=None):
         normed = util.normcase(path)
-        folded = self._filefoldmap.get(normed, None)
+        folded = self._map.filefoldmap.get(normed, None)
         if folded is None:
             folded = self._dirfoldmap.get(normed, None)
         if folded is None:
@@ -1270,6 +1266,7 @@ class dirstatemap(object):
                     otherparent.add(fname)
             return nonnorm, otherparent
 
+    @propertycache
     def filefoldmap(self):
         """Returns a dictionary mapping normalized case paths to their
         non-normalized versions.
