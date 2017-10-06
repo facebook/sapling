@@ -89,6 +89,7 @@ from mercurial import (
     mail,
     node as nodemod,
     patch,
+    pycompat,
     registrar,
     repair,
     scmutil,
@@ -318,7 +319,7 @@ def _getbundle(repo, dest, **opts):
     tmpfn = os.path.join(tmpdir, 'bundle')
     btype = ui.config('patchbomb', 'bundletype')
     if btype:
-        opts['type'] = btype
+        opts[r'type'] = btype
     try:
         commands.bundle(ui, repo, tmpfn, dest, **opts)
         return util.readfile(tmpfn)
@@ -338,8 +339,8 @@ def _getdescription(repo, defaultbody, sender, **opts):
     the user through the editor.
     """
     ui = repo.ui
-    if opts.get('desc'):
-        body = open(opts.get('desc')).read()
+    if opts.get(r'desc'):
+        body = open(opts.get(r'desc')).read()
     else:
         ui.write(_('\nWrite the introductory message for the '
                    'patch series.\n\n'))
@@ -359,21 +360,21 @@ def _getbundlemsgs(repo, sender, bundle, **opts):
     """
     ui = repo.ui
     _charsets = mail._charsets(ui)
-    subj = (opts.get('subject')
+    subj = (opts.get(r'subject')
             or prompt(ui, 'Subject:', 'A bundle for your repository'))
 
     body = _getdescription(repo, '', sender, **opts)
     msg = emailmod.MIMEMultipart.MIMEMultipart()
     if body:
-        msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
+        msg.attach(mail.mimeencode(ui, body, _charsets, opts.get(r'test')))
     datapart = emailmod.MIMEBase.MIMEBase('application', 'x-mercurial-bundle')
     datapart.set_payload(bundle)
-    bundlename = '%s.hg' % opts.get('bundlename', 'bundle')
+    bundlename = '%s.hg' % opts.get(r'bundlename', 'bundle')
     datapart.add_header('Content-Disposition', 'attachment',
                         filename=bundlename)
     emailmod.Encoders.encode_base64(datapart)
     msg.attach(datapart)
-    msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get('test'))
+    msg['Subject'] = mail.headencode(ui, subj, _charsets, opts.get(r'test'))
     return [(msg, subj, None)]
 
 def _makeintro(repo, sender, revs, patches, **opts):
@@ -384,9 +385,9 @@ def _makeintro(repo, sender, revs, patches, **opts):
     _charsets = mail._charsets(ui)
 
     # use the last revision which is likely to be a bookmarked head
-    prefix = _formatprefix(ui, repo, revs.last(), opts.get('flag'),
+    prefix = _formatprefix(ui, repo, revs.last(), opts.get(r'flag'),
                            0, len(patches), numbered=True)
-    subj = (opts.get('subject') or
+    subj = (opts.get(r'subject') or
             prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
     if not subj:
         return None         # skip intro if the user doesn't bother
@@ -394,7 +395,7 @@ def _makeintro(repo, sender, revs, patches, **opts):
     subj = prefix + ' ' + subj
 
     body = ''
-    if opts.get('diffstat'):
+    if opts.get(r'diffstat'):
         # generate a cumulative diffstat of the whole patch series
         diffstat = patch.diffstat(sum(patches, []))
         body = '\n' + diffstat
@@ -402,9 +403,9 @@ def _makeintro(repo, sender, revs, patches, **opts):
         diffstat = None
 
     body = _getdescription(repo, body, sender, **opts)
-    msg = mail.mimeencode(ui, body, _charsets, opts.get('test'))
+    msg = mail.mimeencode(ui, body, _charsets, opts.get(r'test'))
     msg['Subject'] = mail.headencode(ui, subj, _charsets,
-                                     opts.get('test'))
+                                     opts.get(r'test'))
     return (msg, subj, diffstat)
 
 def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
@@ -414,6 +415,7 @@ def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
 
     This function returns a list of "email" tuples (subject, content, None).
     """
+    bytesopts = pycompat.byteskwargs(opts)
     ui = repo.ui
     _charsets = mail._charsets(ui)
     patches = list(_getpatches(repo, revs, **opts))
@@ -423,7 +425,7 @@ def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
              % len(patches))
 
     # build the intro message, or skip it if the user declines
-    if introwanted(ui, opts, len(patches)):
+    if introwanted(ui, bytesopts, len(patches)):
         msg = _makeintro(repo, sender, revs, patches, **opts)
         if msg:
             msgs.append(msg)
@@ -437,8 +439,8 @@ def _getpatchmsgs(repo, sender, revs, patchnames=None, **opts):
     for i, (r, p) in enumerate(zip(revs, patches)):
         if patchnames:
             name = patchnames[i]
-        msg = makepatch(ui, repo, r, p, opts, _charsets, i + 1,
-                        len(patches), numbered, name)
+        msg = makepatch(ui, repo, r, p, bytesopts, _charsets,
+                        i + 1, len(patches), numbered, name)
         msgs.append(msg)
 
     return msgs
@@ -579,6 +581,7 @@ def email(ui, repo, *revs, **opts):
     Before using this command, you will need to enable email in your
     hgrc. See the [email] section in hgrc(5) for details.
     '''
+    opts = pycompat.byteskwargs(opts)
 
     _charsets = mail._charsets(ui)
 
@@ -672,12 +675,13 @@ def email(ui, repo, *revs, **opts):
               prompt(ui, 'From', ui.username()))
 
     if bundle:
-        bundledata = _getbundle(repo, dest, **opts)
-        bundleopts = opts.copy()
-        bundleopts.pop('bundle', None)  # already processed
+        stropts = pycompat.strkwargs(opts)
+        bundledata = _getbundle(repo, dest, **stropts)
+        bundleopts = stropts.copy()
+        bundleopts.pop(r'bundle', None)  # already processed
         msgs = _getbundlemsgs(repo, sender, bundledata, **bundleopts)
     else:
-        msgs = _getpatchmsgs(repo, sender, revs, **opts)
+        msgs = _getpatchmsgs(repo, sender, revs, **pycompat.strkwargs(opts))
 
     showaddrs = []
 
