@@ -1035,7 +1035,11 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     if metadata is None:
         metadata = {}
     if 'user' not in metadata:
-        metadata['user'] = repo.ui.username()
+        develuser = repo.ui.config('devel', 'user.obsmarker')
+        if develuser:
+            metadata['user'] = develuser
+        else:
+            metadata['user'] = repo.ui.username()
 
     # Operation metadata handling
     useoperation = repo.ui.configbool('experimental',

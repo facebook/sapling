@@ -42,8 +42,8 @@ Test setup
   $ mkcommit ROOT
   $ mkcommit A0
   $ echo 42 >> A0
-  $ HGUSER=test1 hg commit --amend -m "A1" --config devel.default-date="1234567890 0"
-  $ HGUSER=test2 hg commit --amend -m "A2" --config devel.default-date="987654321 0"
+  $ hg commit --amend -m "A1" --config devel.default-date="1234567890 0" --config devel.user.obsmarker=test1
+  $ hg commit --amend -m "A2" --config devel.default-date="987654321 0" --config devel.user.obsmarker=test2
 
   $ hg log --hidden -G
   @  changeset:   3:d004c8f274b9
