@@ -29,6 +29,7 @@ Global setup
   >     {if(successorssets, "\n  json: {successorssets|json}")}\n'
   > fatelog = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers % "{obsfatetempl}"} \n" )}'
   > fatelogjson = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers|json}\n")}'
+  > fatelogkw = log -G -T '{node|short}\n{if(obsfate, "{obsfate % "  Obsfate: {fate}\n"}")}'
   > EOF
 
 Test templates on amended commit
@@ -92,6 +93,14 @@ Predecessors template should show current revision as it is the working copy
   |
   | @  471f378eab4c
   |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  o  ea207398892e
+  
+
+  $ hg fatelogkw
+  o  d004c8f274b9
+  |
+  | @  471f378eab4c
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000)
   o  ea207398892e
   
   $ hg up 'desc(A1)' --hidden
@@ -200,6 +209,37 @@ visible.
   |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["operation", "amend"], ["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["operation", "amend"], ["user", "test"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
+  o  ea207398892e
+  
+
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  d004c8f274b9
+  |
+  | x  a468dc9b3633
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  d004c8f274b9
+  |
+  | x  a468dc9b3633
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  d004c8f274b9
+  |
+  | x  a468dc9b3633
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
   o  ea207398892e
   
 Test templates with splitted commit
@@ -345,6 +385,37 @@ with --hidden
   |/     Obsfate: [{"markers": [["471597cad322d1f659bb169751be9133dad92ef3", ["337fec4d2edcf0e7a467e35f818234bc620068b5", "f257fde29c7a847c9b607f6e958656d0df0fb15c"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["337fec4d2edcf0e7a467e35f818234bc620068b5", "f257fde29c7a847c9b607f6e958656d0df0fb15c"]}]
   o  ea207398892e
   
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  f257fde29c7a
+  |
+  o  337fec4d2edc
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  f257fde29c7a
+  |
+  o  337fec4d2edc
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  f257fde29c7a
+  |
+  o  337fec4d2edc
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+
 Test templates with folded commit
 =================================
 
@@ -514,6 +585,36 @@ with --hidden
   | |    Obsfate: [{"markers": [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"], 0, [["user", "test"]], [0.0, 0], null]], "successors": ["eb5a0daa21923bbf8caeb2c42085b9e463861fd0"]}]
+  o  ea207398892e
+  
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  eb5a0daa2192
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  eb5a0daa2192
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  eb5a0daa2192
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
 
@@ -713,6 +814,46 @@ Predecessors template should the predecessors as we force their display with
   |/
   | x  471f378eab4c
   |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["fdf9bde5129a28d4548fadd3f62b265cdd3b7a2e"]}, {"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["65b757b745b935093c87a2bccd877521cccffcbd"], 0, [["operation", "amend"], ["user", "test"]], [0.0, 0], null]], "successors": ["65b757b745b935093c87a2bccd877521cccffcbd"]}]
+  o  ea207398892e
+  
+
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  o  019fadeab383
+  |
+  | x  65b757b745b9
+  |/     Obsfate: rewritten using amend as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000)
+  | @  fdf9bde5129a
+  |/
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  o  019fadeab383
+  |
+  | x  65b757b745b9
+  |/     Obsfate: rewritten using amend as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000)
+  | @  fdf9bde5129a
+  |/
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  o  019fadeab383
+  |
+  | x  65b757b745b9
+  |/     Obsfate: rewritten using amend as 4:019fadeab383 by test (at 1970-01-01 00:00 +0000)
+  | @  fdf9bde5129a
+  |/
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
 
@@ -947,6 +1088,43 @@ with --hidden
   o  ea207398892e
   
 
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  eb5a0daa2192
+  |
+  | x  b7ea6d14e664
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | | x  0dec01379d3b
+  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  eb5a0daa2192
+  |
+  | x  b7ea6d14e664
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | | x  0dec01379d3b
+  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  eb5a0daa2192
+  |
+  | x  b7ea6d14e664
+  | |    Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  | | x  0dec01379d3b
+  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664 by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+
 Test template with pushed and pulled obs markers
 ================================================
 
@@ -1097,6 +1275,31 @@ with --hidden
   o  ea207398892e
   
 
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  7a230b46bf61
+  |
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  7a230b46bf61
+  |
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  7a230b46bf61
+  |
+  | x  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+
 Test template with obsmarkers cycle
 ===================================
 
@@ -1234,6 +1437,41 @@ Check templates
   |      json: [["0dec01379d3be6318c470ead31b1fe7ae7cb53d5"]]
   @  ea207398892e
   
+
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  @  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  @  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  @  ea207398892e
+  
+
 Test template with split + divergence with cycles
 =================================================
 
@@ -1583,6 +1821,84 @@ Check templates
   |
   o  ea207398892e
   
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  o  eceed8f98ffc
+  |
+  | o  0b997eb7ceee
+  | |
+  o |  b18bc8331526
+  |/
+  | x  ba2ed02b0c9a
+  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000)
+  | x  4a004186e638
+  |/     Obsfate: rewritten using amend as 8:b18bc8331526 by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 9:0b997eb7ceee by test (at 1970-01-01 00:00 +0000)
+  o  dd800401bd8c
+  |
+  | @  9bd10a0775e4
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a by test (at 1970-01-01 00:00 +0000)
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  o  eceed8f98ffc
+  |
+  | o  0b997eb7ceee
+  | |
+  o |  b18bc8331526
+  |/
+  | x  ba2ed02b0c9a
+  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000)
+  | x  4a004186e638
+  |/     Obsfate: rewritten using amend as 8:b18bc8331526 by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 9:0b997eb7ceee by test (at 1970-01-01 00:00 +0000)
+  o  dd800401bd8c
+  |
+  | @  9bd10a0775e4
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a by test (at 1970-01-01 00:00 +0000)
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  o  eceed8f98ffc
+  |
+  | o  0b997eb7ceee
+  | |
+  o |  b18bc8331526
+  |/
+  | x  ba2ed02b0c9a
+  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc by test (at 1970-01-01 00:00 +0000)
+  | x  4a004186e638
+  |/     Obsfate: rewritten using amend as 8:b18bc8331526 by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 9:0b997eb7ceee by test (at 1970-01-01 00:00 +0000)
+  o  dd800401bd8c
+  |
+  | @  9bd10a0775e4
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a by test (at 1970-01-01 00:00 +0000)
+  o  f897c6137566
+  |
+  | x  0dec01379d3b
+  | |    Obsfate: rewritten as 3:f897c6137566 by test (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 1:471f378eab4c by test (at 1970-01-01 00:00 +0000)
+  | x  471f378eab4c
+  |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
 Test templates with pruned commits
 ==================================
 
@@ -1654,6 +1970,39 @@ Check output
   |/     Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   | @  471f378eab4c
   |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000); rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000);
+  o  ea207398892e
+  
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  x  65b757b745b9
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | x  fdf9bde5129a
+  |/     Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | @  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  x  65b757b745b9
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | x  fdf9bde5129a
+  |/     Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | @  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  x  65b757b745b9
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | x  fdf9bde5129a
+  |/     Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  | @  471f378eab4c
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
+  |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
 
@@ -1744,5 +2093,36 @@ Check templates
   |
   | x  471597cad322
   |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000);
+  o  ea207398892e
+  
+
+Check other fatelog implementations
+-----------------------------------
+
+  $ hg fatelogkw --hidden -q
+  @  0d0ef4bdf70e
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  o  617adc3a144c
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden
+  @  0d0ef4bdf70e
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  o  617adc3a144c
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000)
+  o  ea207398892e
+  
+  $ hg fatelogkw --hidden -v
+  @  0d0ef4bdf70e
+  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000)
+  o  617adc3a144c
+  |
+  | x  471597cad322
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
