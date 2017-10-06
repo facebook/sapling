@@ -17,7 +17,7 @@ Global setup
   > obsfateoperations = "{if(obsfateoperations(markers), " using {join(obsfateoperations(markers), ", ")}")}"
   > obsfateusers = "{if(obsfateusers(markers), " by {join(obsfateusers(markers), ", ")}")}"
   > obsfatedate = "{if(obsfatedate(markers), "{ifeq(min(obsfatedate(markers)), max(obsfatedate(markers)), " (at {min(obsfatedate(markers))|isodate})", " (between {min(obsfatedate(markers))|isodate} and {max(obsfatedate(markers))|isodate})")}")}"
-  > obsfate = "{obsfateverb}{obsfateoperations}{obsfatesuccessors}{obsfateusers}{obsfatedate}; "
+  > obsfatetempl = "{obsfateverb}{obsfateoperations}{obsfatesuccessors}{obsfateusers}{obsfatedate}; "
   > [alias]
   > tlog = log -G -T '{node|short}\
   >     {if(predecessors, "\n  Predecessors: {predecessors}")}\
@@ -27,7 +27,7 @@ Global setup
   >     {if(successorssets, "\n  Successors: {successorssets}")}\
   >     {if(successorssets, "\n  multi-line: {join(successorssets, "\n  multi-line: ")}")}\
   >     {if(successorssets, "\n  json: {successorssets|json}")}\n'
-  > fatelog = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers % "{obsfate}"} \n" )}'
+  > fatelog = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers % "{obsfatetempl}"} \n" )}'
   > fatelogjson = log -G -T '{node|short}\n{if(succsandmarkers, "  Obsfate: {succsandmarkers|json}\n")}'
   > EOF
 
