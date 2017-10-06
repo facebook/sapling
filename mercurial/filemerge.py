@@ -745,6 +745,20 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         if not r and back is not None:
             back.remove()
 
+def _haltmerge():
+    msg = _('merge halted after failed merge (see hg resolve)')
+    raise error.InterventionRequired(msg)
+
+def _onfilemergefailure(ui):
+    action = ui.config('merge', 'on-failure')
+    if action == 'prompt':
+        msg = _('continue merge operation (yn)?' '$$ &Yes $$ &No')
+        if ui.promptchoice(msg, 0) == 1:
+            _haltmerge()
+    if action == 'halt':
+        _haltmerge()
+    # default action is 'continue', in which case we neither prompt nor halt
+
 def _check(repo, r, ui, tool, fcd, files):
     fd = fcd.path()
     unused, unused, unused, back = files

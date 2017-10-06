@@ -1288,6 +1288,17 @@ This section specifies behavior during merges and updates.
    different contents. Similar to ``merge.checkignored``, except for files that
    are not ignored. (default: ``abort``)
 
+``on-failure``
+   When set to ``continue`` (the default), the merge process attempts to
+   merge all unresolved files using the merge chosen tool, regardless of
+   whether previous file merge attempts during the process succeeded or not.
+   Setting this to ``prompt`` will prompt after any merge failure continue
+   or halt the merge process. Setting this to ``halt`` will automatically
+   halt the merge process on any merge tool failure. The merge process
+   can be restarted by using the ``resolve`` command. When a merge is
+   halted, the repository is left in a normal ``unresolved`` merge state.
+   (default: ``continue``)
+
 ``merge-patterns``
 ------------------
 

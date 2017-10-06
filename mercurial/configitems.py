@@ -531,6 +531,9 @@ coreconfigitem('merge', 'checkignored',
 coreconfigitem('merge', 'followcopies',
     default=True,
 )
+coreconfigitem('merge', 'on-failure',
+    default='continue',
+)
 coreconfigitem('merge', 'preferancestor',
         default=lambda: ['*'],
 )
