@@ -402,177 +402,169 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
     return commit(ui, repo, recordinwlock, pats, opts)
 
-def tersestatus(root, statlist, status, ignorefn, ignore):
+
+# extracted at module level as it's required each time a file will be added
+# to dirnode class object below
+pathsep = pycompat.ossep
+
+class dirnode(object):
     """
-    Returns a list of statuses with directory collapsed if all the files in the
-    directory has the same status.
+    represents a directory in user working copy
+
+    stores information which is required for purpose of tersing the status
+
+    path is the path to the directory
+
+    statuses is a set of statuses of all files in this directory (this includes
+    all the files in all the subdirectories too)
+
+    files is a list of files which are direct child of this directory
+
+    subdirs is a dictionary of sub-directory name as the key and it's own
+    dirnode object as the value
     """
 
-    def numfiles(dirname):
+    def __init__(self, dirpath):
+        self.path = dirpath
+        self.statuses = set([])
+        self.files = []
+        self.subdirs = {}
+
+    def _addfileindir(self, filename, status):
+        """ adds a file in this directory as the direct child """
+        self.files.append((filename, status))
+
+    def addfile(self, filename, status):
         """
-        Calculates the number of tracked files in a given directory which also
-        includes files which were removed or deleted. Considers ignored files
-        if ignore argument is True or 'i' is present in status argument.
+        adds a file which is present in this directory to its direct parent
+        dirnode object
+
+        if the file is not direct child of this directory, we traverse to the
+        directory of which this file is a direct child of and add the file there
         """
-        if lencache.get(dirname):
-            return lencache[dirname]
-        if 'i' in status or ignore:
-            def match(localpath):
-                absolutepath = os.path.join(root, localpath)
-                if os.path.isdir(absolutepath) and isemptydir(absolutepath):
-                    return True
-                return False
+
+        # the filename contains a path separator, it means it's not the direct
+        # child of this directory
+        if pathsep in filename:
+            subdir, filep = filename.split(pathsep, 1)
+
+            # does the dirnode object for subdir exists
+            if subdir not in self.subdirs:
+                subdirpath = os.path.join(self.path, subdir)
+                self.subdirs[subdir] = dirnode(subdirpath)
+
+            # try adding the file in subdir
+            self.subdirs[subdir].addfile(filep, status)
+
         else:
-            def match(localpath):
-                # there can be directory whose all the files are ignored and
-                # hence the drectory should also be ignored while counting
-                # number of files or subdirs in it's parent directory. This
-                # checks the same.
-                # XXX: We need a better logic here.
-                if os.path.isdir(os.path.join(root, localpath)):
-                    return isignoreddir(localpath)
-                else:
-                    # XXX: there can be files which have the ignored pattern but
-                    # are not ignored. That leads to bug in counting number of
-                    # tracked files in the directory.
-                    return ignorefn(localpath)
-        lendir = 0
-        abspath = os.path.join(root, dirname)
-        # There might be cases when a directory does not exists as the whole
-        # directory can be removed and/or deleted.
-        try:
-            for f in os.listdir(abspath):
-                localpath = os.path.join(dirname, f)
-                if not match(localpath):
-                    lendir += 1
-        except OSError:
-            pass
-        lendir += len(absentdir.get(dirname, []))
-        lencache[dirname] = lendir
-        return lendir
+            self._addfileindir(filename, status)
 
-    def isemptydir(abspath):
-        """
-        Check whether a directory is empty or not, i.e. there is no files in the
-        directory and all its subdirectories.
-        """
-        for f in os.listdir(abspath):
-            fullpath = os.path.join(abspath, f)
-            if os.path.isdir(fullpath):
-                # recursion here
-                ret = isemptydir(fullpath)
-                if not ret:
-                    return False
-            else:
-                return False
-        return True
+        if status not in self.statuses:
+            self.statuses.add(status)
 
-    def isignoreddir(localpath):
-        """Return True if `localpath` directory is ignored or contains only
-        ignored files and should hence be considered ignored.
-        """
-        dirpath = os.path.join(root, localpath)
-        if ignorefn(dirpath):
-            return True
-        for f in os.listdir(dirpath):
-            filepath = os.path.join(dirpath, f)
-            if os.path.isdir(filepath):
-                # recursion here
-                ret = isignoreddir(os.path.join(localpath, f))
-                if not ret:
-                    return False
-            else:
-                if not ignorefn(os.path.join(localpath, f)):
-                    return False
-        return True
+def _addfilestotersed(path, files, tersedict):
+    """ adds files to the their respective status list in the final tersed list
 
-    def absentones(removedfiles, missingfiles):
-        """
-        Returns a dictionary of directories with files in it which are either
-        removed or missing (deleted) in them.
-        """
-        absentdir = {}
-        absentfiles = removedfiles + missingfiles
-        while absentfiles:
-            f = absentfiles.pop()
-            par = os.path.dirname(f)
-            if par == '':
-                continue
-            # we need to store files rather than number of files as some files
-            # or subdirectories in a directory can be counted twice. This is
-            # also we have used sets here.
-            try:
-                absentdir[par].add(f)
-            except KeyError:
-                absentdir[par] = set([f])
-            absentfiles.append(par)
-        return absentdir
+    path is the path of parent directory of the file
+    files is a list of tuple where each tuple is (filename, status)
+    tersedict is a dictonary which contains each status abbreviation as key and
+    list of files and tersed dirs in that status as value
+    """
+    for f, st in files:
+        tersedict[st].append(os.path.join(path, f))
 
-    indexes = {'m': 0, 'a': 1, 'r': 2, 'd': 3, 'u': 4, 'i': 5, 'c': 6}
-    # get a dictonary of directories and files which are missing as os.listdir()
-    # won't be able to list them.
-    absentdir = absentones(statlist[2], statlist[3])
-    finalrs = [[]] * len(indexes)
-    didsomethingchanged = False
-    # dictionary to store number of files and subdir in a directory so that we
-    # don't compute that again.
-    lencache = {}
+def _processtersestatus(subdir, tersedict, terseargs):
+    """a recursive function which process status for a certain directory.
 
-    for st in pycompat.bytestr(status):
+    subdir is an oject of dirnode class defined below. each object of dirnode
+    class has a set of statuses which files in that directory has. This ease our
+    check whether we can terse that directory or not.
 
-        try:
-            ind = indexes[st]
-        except KeyError:
-            # TODO: Need a better error message here
-            raise error.Abort("'%s' not recognized" % st)
+    tersedict is a dictonary which contains each status abbreviation as key and
+    list of files and tersed dirs in that status as value. In each function call
+    we are passing the same dict and adding files and dirs to it.
 
-        sfiles = statlist[ind]
-        if not sfiles:
-            continue
-        pardict = {}
-        for a in sfiles:
-            par = os.path.dirname(a)
-            pardict.setdefault(par, []).append(a)
+    terseargs is the string of arguments passed by the user with `--terse` flag.
 
-        rs = []
-        newls = []
-        for par, files in sorted(pardict.iteritems()):
-            lenpar = numfiles(par)
-            if lenpar == len(files):
-                newls.append(par)
+    Following are the cases which can happen:
 
-        if not newls:
-            continue
+    1) All the files in the directory (including all the files in its
+    subdirectories) share the same status and the user has asked us to terse
+    that status. -> we add the directory name to status list and return
 
-        while newls:
-            newel = newls.pop()
-            if newel == '':
-                continue
-            parn = os.path.dirname(newel)
-            pardict[newel] = []
-            # Adding pycompat.ossep as newel is a directory.
-            pardict.setdefault(parn, []).append(newel + pycompat.ossep)
-            lenpar = numfiles(parn)
-            if lenpar == len(pardict[parn]):
-                newls.append(parn)
+    2) If '1)' does not happen, we do following:
 
-        # dict.values() for Py3 compatibility
-        for files in pardict.values():
-            rs.extend(files)
+            a) Add all the files which are in this directory (only the ones in
+                this directory, not the subdirs) to their respective status list
 
-        rs.sort()
-        finalrs[ind] = rs
-        didsomethingchanged = True
+            b) Recurse the function on all the subdirectories of this directory
+    """
 
-    # If nothing is changed, make sure the order of files is preserved.
-    if not didsomethingchanged:
-        return statlist
+    if len(subdir.statuses) == 1:
+        onlyst = subdir.statuses.pop()
 
-    for x in xrange(len(indexes)):
-        if not finalrs[x]:
-            finalrs[x] = statlist[x]
+        # Making sure we terse only when the status abbreviation is passed as
+        # terse argument
+        if onlyst in terseargs:
+            tersedict[onlyst].append(subdir.path + pycompat.ossep)
+            return
 
-    return finalrs
+    # add the files to status list
+    _addfilestotersed(subdir.path, subdir.files, tersedict)
+
+    #recurse on the subdirs
+    for dirobj in subdir.subdirs.values():
+        _processtersestatus(dirobj, tersedict, terseargs)
+
+def tersedir(statuslist, terseargs):
+    """
+    terses the status if all the files in a directory shares the same status
+
+    statuslist is scmutil.status() object which contains a list of files for
+    each status.
+    terseargs is string which is passed by the user as the argument to `--terse`
+    flag.
+
+    The function makes a tree of objects of dirnode class, and at each node it
+    stores the information required to know whether we can terse a certain
+    directory or not.
+
+    tersedict (defined in the function) is a dictionary which has one word key
+    for each status and a list of files and dir in that status as the respective
+    value. The dictionary is passed to other helper functions which builds it.
+    """
+    # the order matters here as that is used to produce final list
+    allst = ('m', 'a', 'r', 'd', 'u', 'i', 'c')
+
+    # checking the argument validity
+    for s in terseargs:
+        if s not in allst:
+            raise error.Abort(_("'%s' not recognized") % s)
+
+    # creating a dirnode object for the root of the repo
+    rootobj = dirnode('')
+    pstatus = ('modified', 'added', 'deleted', 'clean', 'unknown',
+               'ignored', 'removed')
+
+    tersedict = {}
+    for attrname in pstatus:
+        for f in getattr(statuslist, attrname):
+            rootobj.addfile(f, attrname[0])
+        tersedict[attrname[0]] = []
+
+    # we won't be tersing the root dir, so add files in it
+    _addfilestotersed(rootobj.path, rootobj.files, tersedict)
+
+    # process each sub-directory and build tersedict
+    for subdir in rootobj.subdirs.values():
+        _processtersestatus(subdir, tersedict, terseargs)
+
+    tersedlist = []
+    for st in allst:
+        tersedict[st].sort()
+        tersedlist.append(tersedict[st])
+
+    return tersedlist
 
 def _commentlines(raw):
     '''Surround lineswith a comment char and a new line'''

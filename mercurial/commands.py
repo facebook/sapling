@@ -4805,12 +4805,18 @@ def status(ui, repo, *pats, **opts):
             show = states[:5]
 
     m = scmutil.match(repo[node2], pats, opts)
-    stat = repo.status(node1, node2, m,
-                       'ignored' in show, 'clean' in show, 'unknown' in show,
-                       opts.get('subrepos'))
     if terse:
-        stat = cmdutil.tersestatus(repo.root, stat, terse,
-                                    repo.dirstate._ignore, opts.get('ignored'))
+        # we need to compute clean and unknown to terse
+        stat = repo.status(node1, node2, m,
+                           'ignored' in show or 'i' in terse,
+                            True, True, opts.get('subrepos'))
+
+        stat = cmdutil.tersedir(stat, terse)
+    else:
+        stat = repo.status(node1, node2, m,
+                           'ignored' in show, 'clean' in show,
+                           'unknown' in show, opts.get('subrepos'))
+
     changestates = zip(states, pycompat.iterbytestr('MAR!?IC'), stat)
 
     if (opts.get('all') or opts.get('copies')
