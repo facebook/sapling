@@ -87,21 +87,7 @@ Predecessors template should show current revision as it is the working copy
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
   o  ea207398892e
   
-  $ hg fatelog -q --traceback
-  o  d004c8f274b9
-  |
-  | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
-  o  ea207398892e
-  
   $ hg fatelog
-  o  d004c8f274b9
-  |
-  | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
-  o  ea207398892e
-  
-  $ hg fatelog -v
   o  d004c8f274b9
   |
   | @  471f378eab4c
@@ -124,7 +110,7 @@ Predecessors template should show current revision as it is the working copy
   |      json: [["d004c8f274b9ec480a47a93c10dac5eee63adb78"]]
   o  ea207398892e
   
-  $ hg fatelog -v
+  $ hg fatelog
   o  d004c8f274b9
   |
   | @  a468dc9b3633
@@ -153,7 +139,7 @@ with --hidden
   |      json: [["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]]
   o  ea207398892e
   
-  $ hg fatelog --hidden -q
+  $ hg fatelog --hidden
   o  d004c8f274b9
   |
   | @  a468dc9b3633
@@ -192,13 +178,13 @@ visible.
   |      json: [["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]]
   o  ea207398892e
   
-  $ hg fatelog -v
+  $ hg fatelog
   @  d004c8f274b9
   |
   o  ea207398892e
   
 
-  $ hg fatelog -v --hidden
+  $ hg fatelog --hidden
   @  d004c8f274b9
   |
   | x  a468dc9b3633
@@ -1624,11 +1610,6 @@ Check output
   |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   o  ea207398892e
   
-  $ hg fatelog -v
-  @  471f378eab4c
-  |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
-  o  ea207398892e
-  
 Test templates with multiple pruned commits
 ===========================================
 
@@ -1665,7 +1646,7 @@ Check output
   |    Obsfate: pruned;
   o  ea207398892e
   
-  $ hg fatelog -v --hidden
+  $ hg fatelog --hidden
   x  65b757b745b9
   |    Obsfate: pruned by test (at 1970-01-01 00:00 +0000);
   | x  fdf9bde5129a
