@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 extern crate ascii;
 #[macro_use]
@@ -15,6 +13,7 @@ extern crate assert_matches;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate futures_ext;
 
 extern crate bookmarks;
 extern crate mercurial_types;
@@ -46,7 +45,8 @@ use std::error;
 
 use ascii::AsciiStr;
 use futures::future::{self, FutureResult};
-use futures::stream::{self, BoxStream, Stream};
+use futures::stream::{self, Stream};
+use futures_ext::{BoxStream, StreamExt};
 
 use bookmarks::{Bookmarks, Version};
 use mercurial_types::NodeHash;
@@ -143,12 +143,13 @@ where
 
     fn keys(&self) -> Self::Keys {
         // collect forces evaluation early, so that the stream can safely outlive self
-        stream::iter(
+        stream::iter_ok(
             self.bookmarks
                 .keys()
                 .map(|k| Ok(k.to_vec()))
                 .collect::<Vec<_>>(),
-        ).boxed()
+        ).and_then(|x| x)
+            .boxify()
     }
 }
 
