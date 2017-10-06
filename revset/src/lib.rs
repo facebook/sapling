@@ -52,8 +52,15 @@ extern crate merge_even;
 #[cfg(test)]
 extern crate merge_uneven;
 #[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+extern crate rand;
+#[cfg(test)]
 extern crate unshared_merge_even;
 #[cfg(test)]
 extern crate unshared_merge_uneven;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod quickchecks;
