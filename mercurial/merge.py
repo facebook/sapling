@@ -1537,30 +1537,32 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                 newactions.append((f, args, msg))
         mergeactions = newactions
 
-    # premerge
-    tocomplete = []
-    for f, args, msg in mergeactions:
-        repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        if f == '.hgsubstate': # subrepo states need updating
-            subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                             overwrite, labels)
-            continue
-        wctx[f].audit()
-        complete, r = ms.preresolve(f, wctx)
-        if not complete:
-            numupdates += 1
-            tocomplete.append((f, args, msg))
+    try:
+        # premerge
+        tocomplete = []
+        for f, args, msg in mergeactions:
+            repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
+            z += 1
+            progress(_updating, z, item=f, total=numupdates, unit=_files)
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
+                                 overwrite, labels)
+                continue
+            wctx[f].audit()
+            complete, r = ms.preresolve(f, wctx)
+            if not complete:
+                numupdates += 1
+                tocomplete.append((f, args, msg))
 
-    # merge
-    for f, args, msg in tocomplete:
-        repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        ms.resolve(f, wctx)
+        # merge
+        for f, args, msg in tocomplete:
+            repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
+            z += 1
+            progress(_updating, z, item=f, total=numupdates, unit=_files)
+            ms.resolve(f, wctx)
 
-    ms.commit()
+    finally:
+        ms.commit()
 
     unresolved = ms.unresolvedcount()
 
