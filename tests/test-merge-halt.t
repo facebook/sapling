@@ -44,8 +44,7 @@ Testing on-failure=halt
   merging a
   merging b
   merging a failed!
-  merging b failed!
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  merge halted after failed merge (see hg resolve)
   [1]
 
   $ hg resolve --list
@@ -65,8 +64,10 @@ Testing on-failure=prompt
   merging a
   merging b
   merging a failed!
+  continue merge operation (yn)? y
   merging b failed!
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  continue merge operation (yn)? n
+  merge halted after failed merge (see hg resolve)
   [1]
 
   $ hg resolve --list

@@ -739,6 +739,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         if r:
             if onfailure:
                 ui.warn(onfailure % fd)
+            _onfilemergefailure(ui)
 
         return True, r, deleted
     finally:
