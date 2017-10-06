@@ -2,10 +2,10 @@
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
 
 [templates]
-changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{summary}\n'
+changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lobsfate}{summary}\n'
 changeset_quiet = '{lnode}'
-changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lfiles}{lfile_copies_switch}{description}\n'
-changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
+changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lobsfate}{lfiles}{lfile_copies_switch}{description}\n'
+changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lobsfate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
 
 # File templates
 lfiles = '{if(files,
@@ -75,6 +75,10 @@ description = '{if(desc|strip, "{label('ui.note log.description',
                                        '{desc|strip}')}\n\n")}'
 
 status = '{status} {path}\n{if(copy, "  {copy}\n")}'
+
+# Obsfate templates, it would be removed once we introduce the obsfate
+# template fragment
+lobsfate = '{if(obsfate, "{label('log.obsfate', '{obsfate % "obsfate:     {fate}\n"}')}")}'
 
 [templatealias]
 labelcset(expr) = label(separate(" ",

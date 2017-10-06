@@ -117,7 +117,27 @@ Predecessors template should show current revision as it is the working copy
   | @  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test, test2
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+
+  $ hg log -G -T "default"
+  o  changeset:   3:d004c8f274b9
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A2
+  |
+  | @  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test, test2
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -263,6 +283,71 @@ Check other fatelog implementations
   | x  471f378eab4c
   |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
   o  ea207398892e
+  
+
+  $ hg log -G -T "default" --hidden
+  @  changeset:   3:d004c8f274b9
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A2
+  |
+  | x  changeset:   2:a468dc9b3633
+  |/   parent:      0:ea207398892e
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2
+  |    summary:     A1
+  |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:a468dc9b3633
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+  $ hg log -G -T "default" --hidden -v
+  @  changeset:   3:d004c8f274b9
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  files:       A0
+  |  description:
+  |  A2
+  |
+  |
+  | x  changeset:   2:a468dc9b3633
+  |/   parent:      0:ea207398892e
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  |    files:       A0
+  |    description:
+  |    A1
+  |
+  |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
+  |    files:       A0
+  |    description:
+  |    A0
+  |
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     files:       ROOT
+     description:
+     ROOT
+  
   
 Test templates with splitted commit
 ===================================
@@ -437,6 +522,31 @@ Check other fatelog implementations
   | x  471597cad322
   |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
+  
+
+  $ hg log -G -T "default" --hidden
+  @  changeset:   3:f257fde29c7a
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A0
+  |
+  o  changeset:   2:337fec4d2edc
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A0
+  |
+  | x  changeset:   1:471597cad322
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     split as 2:337fec4d2edc, 3:f257fde29c7a
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
 
 Test templates with folded commit
@@ -641,6 +751,31 @@ Check other fatelog implementations
   | x  471f378eab4c
   |/     Obsfate: rewritten as 3:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
+  
+  $ hg log -G -T "default" --hidden
+  @  changeset:   3:eb5a0daa2192
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  | x  changeset:   2:0dec01379d3b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 3:eb5a0daa2192
+  | |  summary:     B0
+  | |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 3:eb5a0daa2192
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
 
 Test templates with divergence
@@ -886,6 +1021,41 @@ Check other fatelog implementations
   |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
   |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
+  
+  $ hg log -G -T "default" --hidden
+  o  changeset:   4:019fadeab383
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  instability: content-divergent
+  |  summary:     A3
+  |
+  | x  changeset:   3:65b757b745b9
+  |/   parent:      0:ea207398892e
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 4:019fadeab383
+  |    summary:     A2
+  |
+  | @  changeset:   2:fdf9bde5129a
+  |/   parent:      0:ea207398892e
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    instability: content-divergent
+  |    summary:     A1
+  |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
+  |    obsfate:     rewritten using amend as 3:65b757b745b9
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
 
 Test templates with amended + folded commit
@@ -1159,6 +1329,38 @@ Check other fatelog implementations
   |/     Obsfate: rewritten as 4:eb5a0daa2192 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
+  $ hg log -G -T "default" --hidden
+  @  changeset:   4:eb5a0daa2192
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  | x  changeset:   3:b7ea6d14e664
+  | |  parent:      1:471f378eab4c
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 4:eb5a0daa2192
+  | |  summary:     B1
+  | |
+  | | x  changeset:   2:0dec01379d3b
+  | |/   user:        test
+  | |    date:        Thu Jan 01 00:00:00 1970 +0000
+  | |    obsfate:     rewritten using amend as 3:b7ea6d14e664
+  | |    summary:     B0
+  | |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 4:eb5a0daa2192
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
 
 Test template with pushed and pulled obs markers
 ================================================
@@ -1337,6 +1539,25 @@ Check other fatelog implementations
   |/     Obsfate: rewritten using amend as 2:7a230b46bf61 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
+  $ hg log -G -T "default" --hidden
+  @  changeset:   2:7a230b46bf61
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A2
+  |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:7a230b46bf61
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
 
 Test template with obsmarkers cycle
 ===================================
@@ -1508,6 +1729,32 @@ Check other fatelog implementations
   | x  471f378eab4c
   |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
   @  ea207398892e
+  
+  $ hg log -G -T "default" --hidden
+  o  changeset:   3:f897c6137566
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  | x  changeset:   2:0dec01379d3b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 3:f897c6137566
+  | |  obsfate:     rewritten as 1:471f378eab4c
+  | |  summary:     B0
+  | |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 2:0dec01379d3b
+  |    summary:     A0
+  |
+  @  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
 
 Test template with split + divergence with cycles
@@ -1939,6 +2186,80 @@ Check other fatelog implementations
   |/     Obsfate: rewritten as 2:0dec01379d3b by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
   
+  $ hg log -G -T "default" --hidden
+  o  changeset:   10:eceed8f98ffc
+  |  tag:         tip
+  |  parent:      8:b18bc8331526
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  instability: content-divergent
+  |  summary:     Add A,B,C
+  |
+  | o  changeset:   9:0b997eb7ceee
+  | |  parent:      5:dd800401bd8c
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  instability: content-divergent
+  | |  summary:     Add B only
+  | |
+  o |  changeset:   8:b18bc8331526
+  |/   parent:      5:dd800401bd8c
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    instability: content-divergent
+  |    summary:     Add only B
+  |
+  | x  changeset:   7:ba2ed02b0c9a
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten using rebase as 10:eceed8f98ffc
+  | |  summary:     Add A,B,C
+  | |
+  | x  changeset:   6:4a004186e638
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 8:b18bc8331526
+  |    obsfate:     rewritten using amend as 9:0b997eb7ceee
+  |    summary:     Add A,B,C
+  |
+  o  changeset:   5:dd800401bd8c
+  |  parent:      3:f897c6137566
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  instability: content-divergent
+  |  summary:     Add A,B,C
+  |
+  | @  changeset:   4:9bd10a0775e4
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a
+  |    summary:     Add A,B,C
+  |
+  o  changeset:   3:f897c6137566
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     C0
+  |
+  | x  changeset:   2:0dec01379d3b
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  obsfate:     rewritten as 3:f897c6137566
+  | |  obsfate:     rewritten as 1:471f378eab4c
+  | |  summary:     B0
+  | |
+  | x  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten as 2:0dec01379d3b
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
+  
+
 Test templates with pruned commits
 ==================================
 
@@ -2044,6 +2365,35 @@ Check other fatelog implementations
   |/     Obsfate: rewritten using amend as 2:fdf9bde5129a by test (at 1970-01-01 00:00 +0000)
   |      Obsfate: rewritten using amend as 3:65b757b745b9 by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
+  
+
+  $ hg log -G -T "default" --hidden
+  x  changeset:   3:65b757b745b9
+  |  tag:         tip
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  obsfate:     pruned
+  |  summary:     A2
+  |
+  | x  changeset:   2:fdf9bde5129a
+  |/   parent:      0:ea207398892e
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     pruned
+  |    summary:     A1
+  |
+  | @  changeset:   1:471f378eab4c
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
+  |    obsfate:     rewritten using amend as 3:65b757b745b9
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
 
 Test templates with splitted and pruned commit
@@ -2167,4 +2517,29 @@ Check other fatelog implementations
   | x  471597cad322
   |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e by test (at 1970-01-01 00:00 +0000)
   o  ea207398892e
+  
+  $ hg log -G -T "default" --hidden
+  @  changeset:   3:0d0ef4bdf70e
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  obsfate:     pruned
+  |  summary:     A2
+  |
+  o  changeset:   2:617adc3a144c
+  |  parent:      0:ea207398892e
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     A1
+  |
+  | x  changeset:   1:471597cad322
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    obsfate:     split as 2:617adc3a144c, 3:0d0ef4bdf70e
+  |    summary:     A0
+  |
+  o  changeset:   0:ea207398892e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     ROOT
   
