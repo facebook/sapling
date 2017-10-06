@@ -106,7 +106,7 @@ mod test {
         // Encode this sequence.
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let partial_write = PartialAsyncWrite::new(cursor, write_ops);
-        let packer = packer::Cg2Packer::new(seq.to_stream());
+        let packer = packer::Cg2Packer::new(seq.to_stream().and_then(|x| x));
         let sink = FramedWrite::new(partial_write, ChunkEncoder);
         let encode_fut = packer.forward(sink);
 

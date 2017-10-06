@@ -82,9 +82,11 @@ impl Cg2PartSequence {
     ///
     /// This returns a clone of everything because streams can't really return
     /// references at the moment.
-    pub fn to_stream(&self) -> stream::Iter<IntoIter<result::Result<changegroup::Part, Error>>> {
+    pub fn to_stream(
+        &self,
+    ) -> stream::IterOk<IntoIter<result::Result<changegroup::Part, Error>>, Error> {
         let part_results: Vec<_> = self.as_iter().cloned().map(|x| Ok(x)).collect();
-        stream::iter(part_results.into_iter())
+        stream::iter_ok(part_results.into_iter())
     }
 }
 

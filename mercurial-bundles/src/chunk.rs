@@ -222,7 +222,7 @@ mod test {
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let sink = FramedWrite::new(cursor, ChunkEncoder);
 
-        let encode_fut = sink.send_all(stream::iter(chunks_res));
+        let encode_fut = sink.send_all(stream::iter_ok(chunks_res).and_then(|x| x));
 
         let mut core = Core::new().unwrap();
 
