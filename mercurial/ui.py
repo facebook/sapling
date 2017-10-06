@@ -765,13 +765,15 @@ class ui(object):
             return feature not in exceptions
         return True
 
-    def username(self):
+    def username(self, acceptempty=False):
         """Return default username to be used in commits.
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
+        If not found and acceptempty is True, returns None.
         If not found and ui.askusername is True, ask the user, else use
         ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
+        If no username could be found, raise an Abort error.
         """
         user = encoding.environ.get("HGUSER")
         if user is None:
@@ -780,6 +782,8 @@ class ui(object):
                 user = os.path.expandvars(user)
         if user is None:
             user = encoding.environ.get("EMAIL")
+        if user is None and acceptempty:
+            return user
         if user is None and self.configbool("ui", "askusername"):
             user = self.prompt(_("enter a commit username:"), default=None)
         if user is None and not self.interactive():
