@@ -2296,7 +2296,8 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     return mdiff.diffopts(**pycompat.strkwargs(buildopts))
 
 def diff(repo, node1=None, node2=None, match=None, changes=None,
-         opts=None, losedatafn=None, prefix='', relroot='', copy=None):
+         opts=None, losedatafn=None, prefix='', relroot='', copy=None,
+         hunksfilterfn=None):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
@@ -2318,12 +2319,18 @@ def diff(repo, node1=None, node2=None, match=None, changes=None,
     patterns that fall outside it will be ignored.
 
     copy, if not empty, should contain mappings {dst@y: src@x} of copy
-    information.'''
+    information.
+
+    hunksfilterfn, if not None, should be a function taking a filectx and
+    hunks generator that may yield filtered hunks.
+    '''
     for fctx1, fctx2, hdr, hunks in diffhunks(
             repo, node1=node1, node2=node2,
             match=match, changes=changes, opts=opts,
             losedatafn=losedatafn, prefix=prefix, relroot=relroot, copy=copy,
     ):
+        if hunksfilterfn is not None:
+            hunks = hunksfilterfn(fctx2, hunks)
         text = ''.join(sum((list(hlines) for hrange, hlines in hunks), []))
         if hdr and (text or len(hdr) > 1):
             yield '\n'.join(hdr) + '\n'
