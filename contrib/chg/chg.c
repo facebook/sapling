@@ -369,7 +369,6 @@ static int isunsupported(int argc, const char *argv[])
 		SERVE = 1,
 		DAEMON = 2,
 		SERVEDAEMON = SERVE | DAEMON,
-		TIME = 4,
 	};
 	unsigned int state = 0;
 	int i;
@@ -381,11 +380,8 @@ static int isunsupported(int argc, const char *argv[])
 		else if (strcmp("-d", argv[i]) == 0 ||
 			 strcmp("--daemon", argv[i]) == 0)
 			state |= DAEMON;
-		else if (strcmp("--time", argv[i]) == 0)
-			state |= TIME;
 	}
-	return (state & TIME) == TIME ||
-	       (state & SERVEDAEMON) == SERVEDAEMON;
+	return (state & SERVEDAEMON) == SERVEDAEMON;
 }
 
 static void execoriginalhg(const char *argv[])
