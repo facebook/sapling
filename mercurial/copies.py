@@ -380,6 +380,10 @@ def _isfullcopytraceable(repo, c1, base):
     """ Checks that if base, source and destination are all no-public branches,
     if yes let's use the full copytrace algorithm for increased capabilities
     since it will be fast enough.
+
+    `experimental.copytrace.sourcecommitlimit` can be used to set a limit for
+    number of changesets from c1 to base such that if number of changesets are
+    more than the limit, full copytracing algorithm won't be used.
     """
     if c1.rev() is None:
         c1 = c1.p1()
