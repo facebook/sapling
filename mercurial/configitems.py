@@ -116,6 +116,9 @@ coreconfigitem('devel', 'all-warnings',
 coreconfigitem('devel', 'bundle2.debug',
     default=False,
 )
+coreconfigitem('devel', 'cache-vfs',
+    default=None,
+)
 coreconfigitem('devel', 'check-locks',
     default=False,
 )
