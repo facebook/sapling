@@ -348,6 +348,9 @@ coreconfigitem('experimental', 'mmapindexthreshold',
 coreconfigitem('experimental', 'nonnormalparanoidcheck',
     default=False,
 )
+coreconfigitem('experimental', 'effect-flags',
+    default=False,
+)
 coreconfigitem('experimental', 'stabilization',
     default=list,
     alias=[('experimental', 'evolution')],

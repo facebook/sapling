@@ -1049,8 +1049,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
 
     # Effect flag metadata handling
     saveeffectflag = repo.ui.configbool('experimental',
-                                        'effect-flags',
-                                        False)
+                                        'effect-flags')
 
     tr = repo.transaction('add-obsolescence-marker')
     try:
