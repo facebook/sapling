@@ -189,6 +189,10 @@ coreconfigitem('committemplate', '.*',
 coreconfigitem('debug', 'dirstate.delaywrite',
     default=0,
 )
+coreconfigitem('defaults', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('devel', 'all-warnings',
     default=False,
 )
