@@ -99,6 +99,10 @@ def getitemregister(configtable):
 
 coreconfigitem = getitemregister(coreitems)
 
+coreconfigitem('alias', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('annotate', 'nodates',
     default=None,
 )
