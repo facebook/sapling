@@ -70,6 +70,9 @@ configitem('blackbox', 'maxsize',
 configitem('blackbox', 'logsource',
     default=False,
 )
+configitem('blackbox', 'track',
+    default=['*'],
+)
 
 lastui = None
 
@@ -121,7 +124,7 @@ def wrapui(ui):
 
         @util.propertycache
         def track(self):
-            return self.configlist('blackbox', 'track', ['*'])
+            return self.configlist('blackbox', 'track')
 
         def log(self, event, *msg, **opts):
             global lastui
