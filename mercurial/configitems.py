@@ -272,6 +272,9 @@ coreconfigitem('experimental', 'format.compression',
 coreconfigitem('experimental', 'graphshorten',
     default=False,
 )
+coreconfigitem('experimental', 'graphstyle.parent',
+    default=dynamicdefault,
+)
 coreconfigitem('experimental', 'hook-track-tags',
     default=False,
 )
