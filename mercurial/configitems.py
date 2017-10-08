@@ -278,6 +278,9 @@ coreconfigitem('experimental', 'graphstyle.parent',
 coreconfigitem('experimental', 'graphstyle.missing',
     default=dynamicdefault,
 )
+coreconfigitem('experimental', 'graphstyle.grandparent',
+    default=dynamicdefault,
+)
 coreconfigitem('experimental', 'hook-track-tags',
     default=False,
 )
