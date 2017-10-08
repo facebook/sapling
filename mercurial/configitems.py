@@ -182,6 +182,10 @@ coreconfigitem('commands', 'status.verbose',
 coreconfigitem('commands', 'update.requiredest',
     default=False,
 )
+coreconfigitem('committemplate', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('debug', 'dirstate.delaywrite',
     default=0,
 )
