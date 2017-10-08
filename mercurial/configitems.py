@@ -146,6 +146,9 @@ coreconfigitem('devel', 'serverrequirecert',
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
 )
+coreconfigitem('devel', 'warn-config',
+    default=None,
+)
 coreconfigitem('diff', 'nodates',
     default=None,
 )
