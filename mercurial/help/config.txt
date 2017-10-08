@@ -1014,6 +1014,16 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   is released. See :hg:`help config.hooks.pretxnclose-bookmark` for details
   about available variables.
 
+``txnclose-phase``
+  Run after any phase change has been committed. At this point, the
+  transaction can no longer be rolled back. The hook will run after the lock
+  is released.
+  The affected node is available in ``$HG_NODE``, the new phase will be
+  available in ``$HG_PHASE`` while the previous phase will be available in
+  ``$HG_OLDPHASE``. In case of new node, ``$HG_OLDPHASE`` will be empty.  In
+  addition, the reason for the transaction opening will be in ``$HG_TXNNAME``,
+  and a unique identifier for the transaction will be in ``HG_TXNID``.
+
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
   for details about available variables.

@@ -632,3 +632,12 @@ def newcommitphase(ui):
 def hassecret(repo):
     """utility function that check if a repo have any secret changeset."""
     return bool(repo._phasecache.phaseroots[2])
+
+def preparehookargs(node, old, new):
+    if old is None:
+        old = ''
+    else:
+        old = '%s' % old
+    return {'node': node,
+            'oldphase': old,
+            'phase': '%s' % new}

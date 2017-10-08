@@ -1299,6 +1299,16 @@ class localrepository(object):
                         repo.hook('txnclose-bookmark', throw=False,
                                   txnname=desc, **pycompat.strkwargs(args))
 
+                if hook.hashook(repo.ui, 'txnclose-phase'):
+                    cl = repo.unfiltered().changelog
+                    phasemv = sorted(tr.changes['phases'].items())
+                    for rev, (old, new) in phasemv:
+                        args = tr.hookargs.copy()
+                        node = hex(cl.node(rev))
+                        args.update(phases.preparehookargs(node, old, new))
+                        repo.hook('txnclose-phase', throw=False, txnname=desc,
+                                  **pycompat.strkwargs(args))
+
                 repo.hook('txnclose', throw=False, txnname=desc,
                           **pycompat.strkwargs(hookargs))
             reporef()._afterlock(hookfunc)
