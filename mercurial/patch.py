@@ -2235,7 +2235,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                 return v
         if forceplain is not None and ui.plain():
             return forceplain
-        return getter(section, name or key, None, untrusted=untrusted)
+        return getter(section, name or key, untrusted=untrusted)
 
     # core options, expected to be understood by every diff parser
     buildopts = {

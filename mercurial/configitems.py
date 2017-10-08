@@ -146,6 +146,36 @@ coreconfigitem('devel', 'serverrequirecert',
 coreconfigitem('devel', 'strip-obsmarkers',
     default=True,
 )
+coreconfigitem('diff', 'nodates',
+    default=None,
+)
+coreconfigitem('diff', 'showfunc',
+    default=None,
+)
+coreconfigitem('diff', 'unified',
+    default=None,
+)
+coreconfigitem('diff', 'git',
+    default=None,
+)
+coreconfigitem('diff', 'ignorews',
+    default=None,
+)
+coreconfigitem('diff', 'ignorewsamount',
+    default=None,
+)
+coreconfigitem('diff', 'ignoreblanklines',
+    default=None,
+)
+coreconfigitem('diff', 'ignorewseol',
+    default=None,
+)
+coreconfigitem('diff', 'nobinary',
+    default=None,
+)
+coreconfigitem('diff', 'noprefix',
+    default=None,
+)
 coreconfigitem('email', 'charsets',
     default=list,
 )
