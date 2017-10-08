@@ -197,6 +197,9 @@ coreconfigitem('experimental', 'editortmpinhg',
 coreconfigitem('experimental', 'maxdeltachainspan',
     default=-1,
 )
+coreconfigitem('experimental', 'mmapindexthreshold',
+    default=None,
+)
 coreconfigitem('experimental', 'nonnormalparanoidcheck',
     default=False,
 )

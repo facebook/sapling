@@ -605,7 +605,7 @@ class localrepository(object):
         if 0 <= chainspan:
             self.svfs.options['maxdeltachainspan'] = chainspan
         mmapindexthreshold = self.ui.configbytes('experimental',
-                                                 'mmapindexthreshold', None)
+                                                 'mmapindexthreshold')
         if mmapindexthreshold is not None:
             self.svfs.options['mmapindexthreshold'] = mmapindexthreshold
 
