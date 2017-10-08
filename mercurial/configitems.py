@@ -275,6 +275,9 @@ coreconfigitem('experimental', 'graphshorten',
 coreconfigitem('experimental', 'graphstyle.parent',
     default=dynamicdefault,
 )
+coreconfigitem('experimental', 'graphstyle.missing',
+    default=dynamicdefault,
+)
 coreconfigitem('experimental', 'hook-track-tags',
     default=False,
 )
