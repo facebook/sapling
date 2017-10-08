@@ -149,6 +149,9 @@ coreconfigitem('devel', 'strip-obsmarkers',
 coreconfigitem('devel', 'warn-config',
     default=None,
 )
+coreconfigitem('devel', 'warn-config-default',
+    default=None,
+)
 coreconfigitem('diff', 'nodates',
     default=None,
 )
