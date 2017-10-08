@@ -194,6 +194,9 @@ coreconfigitem('experimental', 'crecordtest',
 coreconfigitem('experimental', 'editortmpinhg',
     default=False,
 )
+coreconfigitem('experimental', 'maxdeltachainspan',
+    default=-1,
+)
 coreconfigitem('experimental', 'nonnormalparanoidcheck',
     default=False,
 )

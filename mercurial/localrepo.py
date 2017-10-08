@@ -601,7 +601,7 @@ class localrepository(object):
                                                    'aggressivemergedeltas')
         self.svfs.options['aggressivemergedeltas'] = aggressivemergedeltas
         self.svfs.options['lazydeltabase'] = not scmutil.gddeltaconfig(self.ui)
-        chainspan = self.ui.configbytes('experimental', 'maxdeltachainspan', -1)
+        chainspan = self.ui.configbytes('experimental', 'maxdeltachainspan')
         if 0 <= chainspan:
             self.svfs.options['maxdeltachainspan'] = chainspan
         mmapindexthreshold = self.ui.configbytes('experimental',
