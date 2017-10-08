@@ -988,6 +988,20 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   phase changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``
   respectively, etc.
 
+``pretxnclose-bookmark``
+  Run right before a bookmark change is actually finalized. Any repository
+  change will be visible to the hook program. This lets you validate the
+  transaction content or change it. Exit status 0 allows the commit to
+  proceed. A non-zero status will cause the transaction to be rolled back.
+  The name of the bookmark will be available in ``$HG_BOOKMARK``, the new
+  bookmark location will be available in ``$HG_NODE`` while the previous
+  location will be available in ``$HG_OLDNODE``. In case of a bookmark
+  creation ``$HG_OLDNODE`` will be empty. In case of deletion ``$HG_NODE``
+  will be empty.
+  In addition, the reason for the transaction opening will be in
+  ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
+  ``HG_TXNID``.
+
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
@@ -997,14 +1011,8 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 ``txnclose-bookmark``
   Run after any bookmark change has been committed. At this point, the
   transaction can no longer be rolled back. The hook will run after the lock
-  is released.
-  The name of the bookmark will be available in ``$HG_BOOKMARK``, the new
-  bookmark location will be available in ``$HG_NODE`` while the previous
-  location will be available in ``$HG_OLDNODE``. In case of a bookmark
-  creation ``$HG_OLDNODE`` will be empty. In case of deletion ``$HG_NODE``
-  will be empty. In addition, the reason for the transaction opening will be
-  in ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
-  ``HG_TXNID``.
+  is released. See :hg:`help config.hooks.pretxnclose-bookmark` for details
+  about available variables.
 
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`

@@ -1063,3 +1063,99 @@ repositories visible to an external hook.
   rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
+
+Check pretxnclose-bookmark can abort a transaction
+--------------------------------------------------
+
+add hooks:
+
+* to prevent NEW bookmark on a non-public changeset
+* to prevent non-forward move of NEW bookmark
+
+  $ cat << EOF >> .hg/hgrc
+  > [hooks]
+  > pretxnclose-bookmark.force-public  = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "\$HG_NODE" -T '{phase}' | grep public > /dev/null)
+  > pretxnclose-bookmark.force-forward = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "max(\$HG_OLDNODE::\$HG_NODE)" -T 'MATCH' | grep MATCH > /dev/null)
+  > EOF
+
+  $ hg log -G -T phases
+  @  changeset:   6:81dcce76aa0b
+  |  tag:         tip
+  |  phase:       draft
+  |  parent:      4:125c9a1d6df6
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     xx
+  |
+  | o  changeset:   5:5fb12f0f2d51
+  | |  branch:      test
+  | |  bookmark:    Z
+  | |  phase:       draft
+  | |  parent:      3:9ba5f110a0b3
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     yy
+  | |
+  o |  changeset:   4:125c9a1d6df6
+  | |  bookmark:    Y
+  | |  bookmark:    Z@2
+  | |  phase:       public
+  | |  parent:      2:db815d6d32e6
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     x
+  | |
+  | o  changeset:   3:9ba5f110a0b3
+  |/   branch:      test
+  |    bookmark:    foo
+  |    bookmark:    four
+  |    phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     y
+  |
+  o  changeset:   2:db815d6d32e6
+  |  bookmark:    foo@2
+  |  bookmark:    should-end-on-two
+  |  bookmark:    x  y
+  |  phase:       public
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  | o  changeset:   1:925d80f479bb
+  |/   bookmark:    X2
+  |    bookmark:    Z@1
+  |    phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:f7b1eb17ad24
+     bookmark:    foo@1
+     phase:       public
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+
+attempt to create on a default changeset
+
+  $ hg bookmark -r 81dcce76aa0b NEW
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-bookmark.force-public hook exited with status 1
+  [255]
+
+create on a public changeset
+
+  $ hg bookmark -r 9ba5f110a0b3 NEW
+
+move to the other branch
+
+  $ hg bookmark -f -r 125c9a1d6df6 NEW
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-bookmark.force-forward hook exited with status 1
+  [255]

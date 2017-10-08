@@ -1235,8 +1235,17 @@ class localrepository(object):
             # This will have to be fixed before we remove the experimental
             # gating.
             tracktags(tr2)
-            reporef().hook('pretxnclose', throw=True,
-                           txnname=desc, **pycompat.strkwargs(tr.hookargs))
+            repo = reporef()
+            if hook.hashook(repo.ui, 'pretxnclose-bookmark'):
+                for name, (old, new) in sorted(tr.changes['bookmarks'].items()):
+                    args = tr.hookargs.copy()
+                    args.update(bookmarks.preparehookargs(name, old, new))
+                    repo.hook('pretxnclose-bookmark', throw=True,
+                              txnname=desc,
+                              **pycompat.strkwargs(args))
+
+            repo.hook('pretxnclose', throw=True,
+                      txnname=desc, **pycompat.strkwargs(tr.hookargs))
         def releasefn(tr, success):
             repo = reporef()
             if success:
