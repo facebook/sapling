@@ -1002,6 +1002,17 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
   ``HG_TXNID``.
 
+``pretxnclose-phase``
+  Run right before a phase change is actually finalized. Any repository change
+  will be visible to the hook program. This lets you validate the transaction
+  content or change it. Exit status 0 allows the commit to proceed.  A non-zero
+  status will cause the transaction to be rolled back.
+  The affected node is available in ``$HG_NODE``, the phase in ``$HG_PHASE``
+  while the previous ``$HG_OLDPHASE``. In case of new node, ``$HG_OLDPHASE``
+  will be empty.  In addition, the reason for the transaction opening will be in
+  ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
+  ``HG_TXNID``.
+
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
@@ -1017,12 +1028,8 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
 ``txnclose-phase``
   Run after any phase change has been committed. At this point, the
   transaction can no longer be rolled back. The hook will run after the lock
-  is released.
-  The affected node is available in ``$HG_NODE``, the new phase will be
-  available in ``$HG_PHASE`` while the previous phase will be available in
-  ``$HG_OLDPHASE``. In case of new node, ``$HG_OLDPHASE`` will be empty.  In
-  addition, the reason for the transaction opening will be in ``$HG_TXNNAME``,
-  and a unique identifier for the transaction will be in ``HG_TXNID``.
+  is released. See :hg:`help config.hooks.pretxnclose-phase` for details about
+  available variables.
 
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`

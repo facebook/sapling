@@ -1243,6 +1243,14 @@ class localrepository(object):
                     repo.hook('pretxnclose-bookmark', throw=True,
                               txnname=desc,
                               **pycompat.strkwargs(args))
+            if hook.hashook(repo.ui, 'pretxnclose-phase'):
+                cl = repo.unfiltered().changelog
+                for rev, (old, new) in tr.changes['phases'].items():
+                    args = tr.hookargs.copy()
+                    node = hex(cl.node(rev))
+                    args.update(phases.preparehookargs(node, old, new))
+                    repo.hook('pretxnclose-phase', throw=True, txnname=desc,
+                              **pycompat.strkwargs(args))
 
             repo.hook('pretxnclose', throw=True,
                       txnname=desc, **pycompat.strkwargs(tr.hookargs))

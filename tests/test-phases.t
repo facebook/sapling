@@ -732,3 +732,94 @@ repositories visible to an external hook.
   rollback completed
   abort: pretxnclose hook exited with status 1
   [255]
+
+Check that pretxnclose-phase hook can control phase movement
+
+  $ hg phase --force b3325c91a4d9 --secret
+  test-debug-phase: move rev 3: 0 -> 2
+  test-debug-phase: move rev 4: 0 -> 2
+  test-debug-phase: move rev 5: 1 -> 2
+  test-debug-phase: move rev 7: 0 -> 2
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:  0 -> 2
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  0 -> 2
+  test-hook-close-phase: a030c6be5127abc010fcbff1851536552e6951a8:  1 -> 2
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  0 -> 2
+  $ hg log -G -T phases
+  @    changeset:   7:17a481b3bccb
+  |\   tag:         tip
+  | |  phase:       secret
+  | |  parent:      6:cf9fe039dfd6
+  | |  parent:      4:a603bfb5a83e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge B' and E
+  | |
+  | o  changeset:   6:cf9fe039dfd6
+  | |  phase:       public
+  | |  parent:      1:27547f69f254
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     B'
+  | |
+  o |  changeset:   4:a603bfb5a83e
+  | |  phase:       secret
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     E
+  | |
+  o |  changeset:   3:b3325c91a4d9
+  | |  phase:       secret
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     D
+  | |
+  o |  changeset:   2:f838bfaca5c7
+  |/   phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     C
+  |
+  o  changeset:   1:27547f69f254
+  |  phase:       public
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     B
+  |
+  o  changeset:   0:4a2df7238c3b
+     phase:       public
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+
+Install a hook that prevent b3325c91a4d9 to become public
+
+  $ cat >> .hg/hgrc << EOF
+  > [hooks]
+  > pretxnclose-phase.nopublish_D = (echo \$HG_NODE| grep -v b3325c91a4d9>/dev/null) || [ 0 -lt \$HG_PHASE ]
+  > EOF
+
+Try various actions. only the draft move should succeed
+
+  $ hg phase --public b3325c91a4d9
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
+  [255]
+  $ hg phase --public a603bfb5a83e
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
+  [255]
+  $ hg phase --draft 17a481b3bccb
+  test-debug-phase: move rev 3: 2 -> 1
+  test-debug-phase: move rev 4: 2 -> 1
+  test-debug-phase: move rev 7: 2 -> 1
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:  2 -> 1
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  2 -> 1
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  2 -> 1
+  $ hg phase --public 17a481b3bccb
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
+  [255]
