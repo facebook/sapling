@@ -220,7 +220,7 @@ coreconfigitem('devel', 'deprec-warn',
 coreconfigitem('devel', 'disableloaddefaultcerts',
     default=False,
 )
-coreconfigitem('devel', 'empty-changegroup',
+coreconfigitem('devel', 'warn-empty-changegroup',
     default=False,
 )
 coreconfigitem('devel', 'legacy.exchange',
