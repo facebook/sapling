@@ -662,6 +662,10 @@ coreconfigitem('smtp', 'username',
 coreconfigitem('sparse', 'missingwarning',
     default=True,
 )
+coreconfigitem('templates', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('trusted', 'groups',
     default=list,
 )
