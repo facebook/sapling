@@ -603,7 +603,7 @@ class mergestate(object):
         self._results[f] = 0, 'g'
 
 def _getcheckunknownconfig(repo, section, name):
-    config = repo.ui.config(section, name, default='abort')
+    config = repo.ui.config(section, name)
     valid = ['abort', 'ignore', 'warn']
     if config not in valid:
         validstr = ', '.join(["'" + v + "'" for v in valid])
