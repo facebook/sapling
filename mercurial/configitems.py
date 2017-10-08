@@ -134,6 +134,9 @@ coreconfigitem('devel', 'deprec-warn',
 coreconfigitem('devel', 'disableloaddefaultcerts',
     default=False,
 )
+coreconfigitem('devel', 'empty-changegroup',
+    default=False,
+)
 coreconfigitem('devel', 'legacy.exchange',
     default=list,
 )
