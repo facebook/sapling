@@ -29,16 +29,14 @@ from . import (
     util,
 )
 
-def _toolstr(ui, tool, part, default=""):
-    return ui.config("merge-tools", tool + "." + part, default)
+def _toolstr(ui, tool, part, *args):
+    return ui.config("merge-tools", tool + "." + part, *args)
 
-def _toolbool(ui, tool, part, default=False):
-    return ui.configbool("merge-tools", tool + "." + part, default)
+def _toolbool(ui, tool, part,*args):
+    return ui.configbool("merge-tools", tool + "." + part, *args)
 
-def _toollist(ui, tool, part, default=None):
-    if default is None:
-        default = []
-    return ui.configlist("merge-tools", tool + "." + part, default)
+def _toollist(ui, tool, part):
+    return ui.configlist("merge-tools", tool + "." + part)
 
 internals = {}
 # Merge tools to document.
@@ -186,8 +184,8 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
     for k, v in ui.configitems("merge-tools"):
         t = k.split('.')[0]
         if t not in tools:
-            tools[t] = int(_toolstr(ui, t, "priority", "0"))
-        if _toolbool(ui, t, "disabled", False):
+            tools[t] = int(_toolstr(ui, t, "priority"))
+        if _toolbool(ui, t, "disabled"):
             disabled.add(t)
     names = tools.keys()
     tools = sorted([(-p, tool) for tool, p in tools.items()
@@ -327,7 +325,7 @@ def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
     try:
         premerge = _toolbool(ui, tool, "premerge", not binary)
     except error.ConfigError:
-        premerge = _toolstr(ui, tool, "premerge").lower()
+        premerge = _toolstr(ui, tool, "premerge", "").lower()
         if premerge not in validkeep:
             _valid = ', '.join(["'" + v + "'" for v in validkeep])
             raise error.ConfigError(_("%s.premerge not valid "
@@ -508,7 +506,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
                }
         ui = repo.ui
 
-        args = _toolstr(ui, tool, "args", '$local $base $other')
+        args = _toolstr(ui, tool, "args")
         if "$output" in args:
             # read input from backup, write to original
             out = a

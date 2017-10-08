@@ -544,6 +544,60 @@ coreconfigitem('merge', 'on-failure',
 coreconfigitem('merge', 'preferancestor',
         default=lambda: ['*'],
 )
+coreconfigitem('merge-tools', '.*',
+    default=None,
+    generic=True,
+)
+coreconfigitem('merge-tools', r'.*\.args$',
+    default="$local $base $other",
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.binary$',
+    default=False,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.check$',
+    default=list,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.checkchanged$',
+    default=False,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.executable$',
+    default=dynamicdefault,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.fixeol$',
+    default=False,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.gui$',
+    default=False,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.priority$',
+    default=0,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.premerge$',
+    default=dynamicdefault,
+    generic=True,
+    priority=-1,
+)
+coreconfigitem('merge-tools', r'.*\.symlink$',
+    default=False,
+    generic=True,
+    priority=-1,
+)
 coreconfigitem('pager', 'attend-.*',
     default=dynamicdefault,
     generic=True,
