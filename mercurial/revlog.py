@@ -1327,8 +1327,14 @@ class revlog(object):
         l = []
         ladd = l.append
 
+        firstrev = revs[0]
+        # Skip trailing revisions with empty diff
+        for lastrev in revs[::-1]:
+            if length(lastrev) != 0:
+                break
+
         try:
-            offset, data = self._getsegmentforrevs(revs[0], revs[-1], df=df)
+            offset, data = self._getsegmentforrevs(firstrev, lastrev, df=df)
         except OverflowError:
             # issue4215 - we can't cache a run of chunks greater than
             # 2G on Windows
