@@ -871,7 +871,8 @@ def _dispatch(req):
             # ui.pager() expects 'internal-always-' prefix in this case
             ui.pager('internal-always-' + cmd)
         elif options['pager'] != 'auto':
-            ui.disablepager()
+            for ui_ in uis:
+                ui_.disablepager()
 
         if options['version']:
             return commands.version_(ui)
