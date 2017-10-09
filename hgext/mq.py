@@ -1065,7 +1065,7 @@ class queue(object):
         if qfinished and repo.ui.configbool('mq', 'secret'):
             # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
-            tphase = repo.ui.config('phases', 'new-commit', phases.draft)
+            tphase = phases.newcommitphase(repo.ui)
             if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
                 with repo.transaction('qfinish') as tr:
                     phases.advanceboundary(repo, tr, tphase, qfinished)
