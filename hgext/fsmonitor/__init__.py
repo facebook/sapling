@@ -251,7 +251,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
 
     matchfn = match.matchfn
     matchalways = match.always()
-    dmap = self._map
+    dmap = self._map._map
     nonnormalset = getattr(self, '_nonnormalset', None)
 
     copymap = self._map.copymap
