@@ -42,7 +42,7 @@ Test setup
   $ mkcommit ROOT
   $ mkcommit A0
   $ echo 42 >> A0
-  $ hg commit --amend -m "A1" --config devel.default-date="1234567890 0" --config devel.user.obsmarker=test1
+  $ hg commit --amend -m "A1" --config devel.default-date="1234567890 0"
   $ hg commit --amend -m "A2" --config devel.default-date="987654321 0" --config devel.user.obsmarker=test2
 
   $ hg log --hidden -G
@@ -91,7 +91,7 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test1, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg up 'desc(A1)' --hidden
@@ -145,7 +145,7 @@ with --hidden
   | @  a468dc9b3633
   |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
 
@@ -190,7 +190,7 @@ visible.
   | x  a468dc9b3633
   |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000);
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test1 (at 2009-02-13 23:31 +0000);
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000);
   o  ea207398892e
   
   $ hg fatelogjson --hidden
@@ -199,7 +199,7 @@ visible.
   | x  a468dc9b3633
   |/     Obsfate: [{"markers": [["a468dc9b36338b14fdb7825f55ce3df4e71517ad", ["d004c8f274b9ec480a47a93c10dac5eee63adb78"], 0, [["operation", "amend"], ["user", "test2"]], [987654321.0, 0], null]], "successors": ["d004c8f274b9ec480a47a93c10dac5eee63adb78"]}]
   | x  471f378eab4c
-  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["operation", "amend"], ["user", "test1"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
+  |/     Obsfate: [{"markers": [["471f378eab4c5e25f6c77f785b27c936efb22874", ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"], 0, [["operation", "amend"], ["user", "test"]], [1234567890.0, 0], null]], "successors": ["a468dc9b36338b14fdb7825f55ce3df4e71517ad"]}]
   o  ea207398892e
   
 Test templates with splitted commit
