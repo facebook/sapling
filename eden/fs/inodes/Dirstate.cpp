@@ -26,14 +26,14 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectStore.h"
 
+using facebook::eden::hgdirstate::DirstateMergeState;
+using facebook::eden::hgdirstate::DirstateNonnormalFileStatus;
+using facebook::eden::hgdirstate::DirstateTuple;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringKeyedUnorderedMap;
 using folly::StringPiece;
 using folly::Unit;
-using facebook::eden::hgdirstate::DirstateNonnormalFileStatus;
-using facebook::eden::hgdirstate::DirstateMergeState;
-using facebook::eden::hgdirstate::DirstateTuple;
+using folly::makeFuture;
 using std::string;
 
 namespace facebook {
@@ -140,17 +140,30 @@ class ThriftStatusCallback : public InodeDiffCallback {
       // - UserStatusDirective::Remove, not on disk, not in source control:
       //   -> skip
       for (const auto& entry : data->hgDirstateTuples) {
-        auto nnFileStatus = entry.second.get_status();
-        if (nnFileStatus != DirstateNonnormalFileStatus::MarkedForAddition &&
-            nnFileStatus != DirstateNonnormalFileStatus::MarkedForRemoval) {
-          // TODO(mbolin): Handle this case.
-          continue;
+        switch (entry.second.get_status()) {
+          case DirstateNonnormalFileStatus::NotTracked:
+          case DirstateNonnormalFileStatus::Normal:
+            continue;
+          case DirstateNonnormalFileStatus::NeedsMerging:
+            if (entry.second.get_mergeState() ==
+                DirstateMergeState::NotApplicable) {
+              XLOG(ERR) << "Unexpected Nonnormal file " << entry.first
+                        << " has a merge state of NotApplicable while its "
+                        << "NonnormalFileStatus is NeedsMerging.";
+            } else {
+              status.entries.emplace(entry.first.str(), StatusCode::MODIFIED);
+            }
+            break;
+          case DirstateNonnormalFileStatus::MarkedForAddition:
+            status.entries.emplace(entry.first.str(), StatusCode::MISSING);
+            break;
+          case DirstateNonnormalFileStatus::MarkedForRemoval:
+            status.entries.emplace(entry.first.str(), StatusCode::REMOVED);
+            break;
+          default:
+            throw std::runtime_error(folly::to<string>(
+                "Unexpected file status: ", entry.second.get_status()));
         }
-        auto hgStatusCode =
-            (nnFileStatus == DirstateNonnormalFileStatus::MarkedForAddition)
-            ? StatusCode::MISSING
-            : StatusCode::REMOVED;
-        status.entries.emplace(entry.first.str(), hgStatusCode);
       }
     }
 
@@ -223,7 +236,7 @@ static bool isMagicPath(RelativePathPiece path) {
   }
   return false;
 }
-}
+} // namespace
 
 Future<Unit> Dirstate::onSnapshotChanged(const Tree* rootTree) {
   XLOG(INFO) << "Dirstate::onSnapshotChanged(" << rootTree->getHash() << ")";
@@ -431,5 +444,5 @@ std::ostream& operator<<(std::ostream& os, const ThriftHgStatus& status) {
   os << "}";
   return os;
 }
-}
-}
+} // namespace eden
+} // namespace facebook
