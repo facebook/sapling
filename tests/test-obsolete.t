@@ -159,9 +159,9 @@ check that heads does not report them
   5:5601fb93a350 (draft) [tip ] add new_3_c
   $ hg heads --hidden
   5:5601fb93a350 (draft) [tip ] add new_3_c
-  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 by test (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
-  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 by test (at 1970-01-01 00:22 +0000)]
-  2:245bde4270cd (draft *obsolete*) [ ] add original_c [rewritten as 3:cdbce2fbb163 by test (at 1970-01-01 00:00 -0002)]
+  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
+  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 (at 1970-01-01 00:22 +0000)]
+  2:245bde4270cd (draft *obsolete*) [ ] add original_c [rewritten as 3:cdbce2fbb163 (at 1970-01-01 00:00 -0002)]
 
 
 check that summary does not report them
@@ -277,11 +277,11 @@ Basic exclusive testing
   $ hg log -G --hidden
   @  6:6f9641995072 (draft) [tip ] add n3w_3_c
   |
-  | x  5:5601fb93a350 (draft *obsolete*) [ ] add new_3_c [rewritten as 6:6f9641995072 by test (at 1970-01-01 00:22 +0000)]
+  | x  5:5601fb93a350 (draft *obsolete*) [ ] add new_3_c [rewritten as 6:6f9641995072 (at 1970-01-01 00:22 +0000)]
   |/
-  | x  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 by test (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
+  | x  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
   |/
-  | x  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 by test (at 1970-01-01 00:22 +0000)]
+  | x  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 (at 1970-01-01 00:22 +0000)]
   |/
   | o  2:245bde4270cd (public) [ ] add original_c
   |/
@@ -435,11 +435,11 @@ clone support
   $ hg -R clone-dest log -G --hidden
   @  6:6f9641995072 (draft) [tip ] add n3w_3_c
   |
-  | x  5:5601fb93a350 (draft *obsolete*) [ ] add new_3_c [rewritten as 6:6f9641995072 by test (at 1970-01-01 00:22 +0000)]
+  | x  5:5601fb93a350 (draft *obsolete*) [ ] add new_3_c [rewritten as 6:6f9641995072 (at 1970-01-01 00:22 +0000)]
   |/
-  | x  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 by test (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
+  | x  4:ca819180edb9 (draft *obsolete*) [ ] add new_2_c [rewritten as 5:5601fb93a350 (between 1970-01-01 00:22 +0000 and 1970-01-01 00:22 +0000)]
   |/
-  | x  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 by test (at 1970-01-01 00:22 +0000)]
+  | x  3:cdbce2fbb163 (draft *obsolete*) [ ] add new_c [rewritten as 4:ca819180edb9 (at 1970-01-01 00:22 +0000)]
   |/
   | o  2:245bde4270cd (public) [ ] add original_c
   |/
@@ -520,7 +520,7 @@ detect outgoing obsolete and unstable
   $ hg debugobsolete | grep `getid original_d`
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   $ hg log -r 'obsolete()'
-  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned by test (at 1970-01-01 00:00 +0000)]
+  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned (at 1970-01-01 00:00 +0000)]
   $ hg summary
   parent: 5:cda648ca50f5 tip (orphan)
    add original_e
@@ -532,7 +532,7 @@ detect outgoing obsolete and unstable
   $ hg log -G -r '::orphan()'
   @  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   |
-  x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned by test (at 1970-01-01 00:00 +0000)]
+  x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned (at 1970-01-01 00:00 +0000)]
   |
   o  3:6f9641995072 (draft) [ ] add n3w_3_c
   |
@@ -571,7 +571,7 @@ Don't try to push extinct changeset
   1:7c3bad9141dc (public) [ ] add b
   2:245bde4270cd (public) [ ] add original_c
   3:6f9641995072 (draft) [ ] add n3w_3_c
-  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned by test (at 1970-01-01 00:00 +0000)]
+  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned (at 1970-01-01 00:00 +0000)]
   5:cda648ca50f5 (draft orphan) [tip ] add original_e
   $ hg push ../tmpf -f # -f because be push unstable too
   pushing to ../tmpf
@@ -595,7 +595,7 @@ Do not warn about new head when the new head is a successors of a remote one
   $ hg log -G
   @  5:cda648ca50f5 (draft orphan) [tip ] add original_e
   |
-  x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned by test (at 1970-01-01 00:00 +0000)]
+  x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned (at 1970-01-01 00:00 +0000)]
   |
   o  3:6f9641995072 (draft) [ ] add n3w_3_c
   |
@@ -638,7 +638,7 @@ Reminder of the repo situation
   |
   | x  5:cda648ca50f5 (draft *obsolete*) [ ] add original_e [rewritten as 6:3de5eca88c00 by test <test@example.net> (at 1970-01-01 00:00 +0000)]
   | |
-  | x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned by test (at 1970-01-01 00:00 +0000)]
+  | x  4:94b33453f93b (draft *obsolete*) [ ] add original_d [pruned (at 1970-01-01 00:00 +0000)]
   |/
   o  3:6f9641995072 (draft) [ ] add n3w_3_c
   |
@@ -928,7 +928,7 @@ Several troubles on the same changeset (create an unstable and bumped changeset)
 test the "obsolete" templatekw
 
   $ hg log -r 'obsolete()'
-  6:3de5eca88c00 (draft *obsolete*) [ ] add obsolete_e [pruned by test (at 1970-01-01 00:00 +0000)]
+  6:3de5eca88c00 (draft *obsolete*) [ ] add obsolete_e [pruned (at 1970-01-01 00:00 +0000)]
 
 test the "troubles" templatekw
 
@@ -1098,7 +1098,7 @@ Test that a local tag blocks a changeset from being hidden
   $ hg log -G
   @  2:323a9c3ddd91 (draft) [tip ] A
   |
-  | x  1:29f0c6921ddd (draft *obsolete*) [visible ] A [rewritten using amend as 2:323a9c3ddd91 by test (at 1970-01-01 00:00 +0000)]
+  | x  1:29f0c6921ddd (draft *obsolete*) [visible ] A [rewritten using amend as 2:323a9c3ddd91 (at 1970-01-01 00:00 +0000)]
   |/
   o  0:d20a80d4def3 (draft) [ ] base
   
@@ -1152,7 +1152,7 @@ Test bundle overlay onto hidden revision
   $ hg log -G --hidden
   @  2:b7d587542d40 (draft) [tip ] B+
   |
-  | x  1:44526ebb0f98 (draft *obsolete*) [ ] B [rewritten using amend as 2:b7d587542d40 by test (at 1970-01-01 00:00 +0000)]
+  | x  1:44526ebb0f98 (draft *obsolete*) [ ] B [rewritten using amend as 2:b7d587542d40 (at 1970-01-01 00:00 +0000)]
   |/
   o  0:4b34ecfb0d56 (draft) [ ] A
   
@@ -1279,7 +1279,7 @@ bookmarks change
   $ hg commit --amend -m "message"
   $ hg book bookb -r 13bedc178fce --hidden
   $ hg log -r 13bedc178fce
-  4:13bedc178fce (draft *obsolete*) [ bookb] add b [rewritten using amend as 5:a9b1f8652753 by test (at 1970-01-01 00:00 +0000)]
+  4:13bedc178fce (draft *obsolete*) [ bookb] add b [rewritten using amend as 5:a9b1f8652753 (at 1970-01-01 00:00 +0000)]
   $ hg book -d bookb
   $ hg log -r 13bedc178fce
   abort: hidden revision '13bedc178fce'!
@@ -1319,7 +1319,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   $ hg log -G --hidden
   @  3:b0551702f918 (draft) [tip ] 2
   |
-  | x  2:e008cf283490 (draft *obsolete*) [ ] 2 [rewritten using amend as 3:b0551702f918 by test (at 1970-01-01 00:00 +0000)]
+  | x  2:e008cf283490 (draft *obsolete*) [ ] 2 [rewritten using amend as 3:b0551702f918 (at 1970-01-01 00:00 +0000)]
   |/
   o  1:e016b03fd86f (draft) [ ] 1
   |

@@ -66,7 +66,7 @@ A_1 have two direct and divergent successors A_1 and A_1
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba by test (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   @  0:d20a80d4def3 base
   
@@ -127,11 +127,11 @@ indirect divergence with known changeset
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
-  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba by test (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   o  0:d20a80d4def3 base
   
@@ -185,7 +185,7 @@ indirect divergence with known changeset
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba by test (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   @  0:d20a80d4def3 base
   
@@ -259,11 +259,11 @@ divergence that converge again is not divergence anymore
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
-  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba by test (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba (at 1970-01-01 00:00 +0000); rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   o  0:d20a80d4def3 base
   
@@ -309,7 +309,7 @@ split is not divergences
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   @  0:d20a80d4def3 base
   
@@ -361,15 +361,15 @@ Even when subsequent rewriting happen
   $ hg log -G --hidden
   @  6:e442cfc57690 A_5
   |
-  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 by test (at 1970-01-01 00:00 +0000)]
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 (at 1970-01-01 00:00 +0000)]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a by test (at 1970-01-01 00:00 +0000)]
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   o  0:d20a80d4def3 base
   
@@ -437,19 +437,19 @@ Check more complex obsolescence graft (with divergence)
   |/
   | o  8:7ae126973a96 A_7
   |/
-  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   | |
-  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a by test (at 1970-01-01 00:00 +0000); split as 8:7ae126973a96, 9:14608b260df8 by test (at 1970-01-01 00:00 +0000)]
+  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a (at 1970-01-01 00:00 +0000); split as 8:7ae126973a96, 9:14608b260df8 (at 1970-01-01 00:00 +0000)]
   |/
-  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 by test (at 1970-01-01 00:00 +0000)]
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 (at 1970-01-01 00:00 +0000)]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a by test (at 1970-01-01 00:00 +0000)]
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   @  0:d20a80d4def3 base
   
@@ -535,25 +535,25 @@ fix the divergence
   $ hg log -G --hidden
   o  11:a139f71be9da A_A
   |
-  | x  10:bed64f5d2f5a A_9 [rewritten as 11:a139f71be9da by test (at 1970-01-01 00:00 +0000)]
+  | x  10:bed64f5d2f5a A_9 [rewritten as 11:a139f71be9da (at 1970-01-01 00:00 +0000)]
   |/
-  | x  9:14608b260df8 A_8 [rewritten as 11:a139f71be9da by test (at 1970-01-01 00:00 +0000)]
+  | x  9:14608b260df8 A_8 [rewritten as 11:a139f71be9da (at 1970-01-01 00:00 +0000)]
   |/
-  | x  8:7ae126973a96 A_7 [rewritten as 11:a139f71be9da by test (at 1970-01-01 00:00 +0000)]
+  | x  8:7ae126973a96 A_7 [rewritten as 11:a139f71be9da (at 1970-01-01 00:00 +0000)]
   |/
-  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   | |
-  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a by test (at 1970-01-01 00:00 +0000); split as 8:7ae126973a96, 9:14608b260df8 by test (at 1970-01-01 00:00 +0000)]
+  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a (at 1970-01-01 00:00 +0000); split as 8:7ae126973a96, 9:14608b260df8 (at 1970-01-01 00:00 +0000)]
   |/
-  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 by test (at 1970-01-01 00:00 +0000)]
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690 (at 1970-01-01 00:00 +0000)]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a by test (at 1970-01-01 00:00 +0000)]
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a (at 1970-01-01 00:00 +0000)]
   |/
-  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda by test (at 1970-01-01 00:00 +0000)]
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda (at 1970-01-01 00:00 +0000)]
   |/
-  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da by test (at 1970-01-01 00:00 +0000)]
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da (at 1970-01-01 00:00 +0000)]
   |/
   @  0:d20a80d4def3 base
   

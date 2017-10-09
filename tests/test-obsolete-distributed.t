@@ -51,7 +51,7 @@ Initial setup
   created new head
   $ hg debugobsolete `getid 'desc("c_A0")'` `getid 'desc("c_A1")'`
   obsoleted 1 changesets
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   @  3:e5d7dda7cd28 c_B0
   |
   | o  2:7f6b0a6f5c25 c_A1
@@ -90,7 +90,7 @@ server side: create new revision on the server (obsoleting another one)
   |/
   o  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   @  4:391a2bf12b1b c_B1
   |
   | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
@@ -117,7 +117,7 @@ client side: create a marker between two common changesets
   |
   o  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   @  3:e5d7dda7cd28 c_B0
   |
   | x  2:7f6b0a6f5c25 c_A1 [rewritten as 3:e5d7dda7cd28 by client (at 1970-01-01 00:00 +0000)]
@@ -151,7 +151,7 @@ client side: pull from the server
   |
   @  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   o  4:391a2bf12b1b c_B1
   |
   | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
@@ -187,7 +187,7 @@ obsolete on the server side but the marker is sent out.)
   |
   o  0:e82fb8d02bbf ROOT
   
-  $ hg -R ../server/ log -G --hidden
+  $ hg -R ../server/ log -G --hidden -v
   @  4:391a2bf12b1b c_B1
   |
   | x  3:e5d7dda7cd28 c_B0 [rewritten as 4:391a2bf12b1b by server (at 1970-01-01 00:00 +0000)]
@@ -288,7 +288,7 @@ Bob pulls from Alice and rewrites them
   |
   o  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   @  5:956063ac4557 c_B1
   |
   | x  4:5ffb9e311b35 c_B0 [rewritten using amend as 5:956063ac4557 by bob (at 1970-01-01 00:00 +0000)]
@@ -335,7 +335,7 @@ Celeste pulls from Bob and rewrites them again
   |
   o  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   @  5:77ae25d99ff0 c_B2
   |
   | x  4:3cf8de21cc22 c_B1 [rewritten using amend as 5:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000)]
@@ -461,7 +461,7 @@ decision is made in that case, so receiving the changesets are not an option).
   |
   @  0:e82fb8d02bbf ROOT
   
-  $ hg log -G --hidden
+  $ hg log -G --hidden -v
   x  6:956063ac4557 c_B1 [rewritten using amend, rebase as 4:77ae25d99ff0 by celeste (at 1970-01-01 00:00 +0000)]
   |
   x  5:5b5708a437f2 c_A1 [rewritten using amend as 3:9866d64649a5 by celeste (at 1970-01-01 00:00 +0000)]

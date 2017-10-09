@@ -788,6 +788,10 @@ def obsfateprinter(successors, markers, ui):
     """ Build a obsfate string for a single successorset using all obsfate
     related function defined in obsutil
     """
+    quiet = ui.quiet
+    verbose = ui.verbose
+    normal = not verbose and not quiet
+
     line = []
 
     # Verb
@@ -805,8 +809,14 @@ def obsfateprinter(successors, markers, ui):
 
     # Users
     users = markersusers(markers)
+    # Filter out current user in not verbose mode to reduce amount of
+    # information
+    if not verbose:
+        currentuser = ui.username(acceptempty=True)
+        if len(users) == 1 and currentuser in users:
+            users = None
 
-    if users:
+    if (verbose or normal) and users:
         line.append(" by %s" % ", ".join(users))
 
     # Date
