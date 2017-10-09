@@ -57,6 +57,24 @@ public:
   }
   void publishStats() {
   }
+
+  void addStatValue(const std::string& key, int64_t value = 1) {}
+  void addStatValue(
+    const std::string& key,
+    int64_t value,
+    stats::ExportType exportType) {}
+  int64_t setCounter(const std::string& key, int64_t value) {}
+  void clearCounter(const std::string& key) {}
 };
 
-}}
+}} // unnamed facebook::stats
+
+namespace facebook {
+/**
+ * convenience function; returns the ThreadCachedServiceData singleton
+ * which wraps ServiceData::get().
+ */
+inline stats::ThreadCachedServiceData& tcData() {
+  return *(stats::ThreadCachedServiceData::get());
+}
+}  // unnamed facebook
