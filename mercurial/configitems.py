@@ -396,7 +396,7 @@ coreconfigitem('phases', 'checksubrepos',
     default='follow',
 )
 coreconfigitem('phases', 'new-commit',
-    default=dynamicdefault,
+    default='draft',
 )
 coreconfigitem('phases', 'publish',
     default=True,

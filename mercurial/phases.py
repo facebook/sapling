@@ -619,7 +619,7 @@ def newcommitphase(ui):
     Handle all possible values for the phases.new-commit options.
 
     """
-    v = ui.config('phases', 'new-commit', draft)
+    v = ui.config('phases', 'new-commit')
     try:
         return phasenames.index(v)
     except ValueError:
