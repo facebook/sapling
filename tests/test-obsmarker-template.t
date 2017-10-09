@@ -100,7 +100,7 @@ Predecessors template should show current revision as it is the working copy
   o  d004c8f274b9
   |
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2 (between 2001-04-19 04:25 +0000 and 2009-02-13 23:31 +0000)
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test, test2
   o  ea207398892e
   
   $ hg up 'desc(A1)' --hidden
@@ -219,18 +219,18 @@ Check other fatelog implementations
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 (at 2001-04-19 04:25 +0000)
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 (at 2009-02-13 23:31 +0000)
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   @  d004c8f274b9
   |
   | x  a468dc9b3633
-  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  |/     Obsfate: rewritten using amend as 3:d004c8f274b9 by test2
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:a468dc9b3633 (at 2009-02-13 23:31 +0000)
+  |/     Obsfate: rewritten using amend as 2:a468dc9b3633
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -394,7 +394,7 @@ Check other fatelog implementations
   o  337fec4d2edc
   |
   | x  471597cad322
-  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a
   o  ea207398892e
   
   $ hg fatelogkw --hidden
@@ -403,7 +403,7 @@ Check other fatelog implementations
   o  337fec4d2edc
   |
   | x  471597cad322
-  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 2:337fec4d2edc, 3:f257fde29c7a
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -594,18 +594,18 @@ Check other fatelog implementations
   @  eb5a0daa2192
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:eb5a0daa2192
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 3:eb5a0daa2192
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   @  eb5a0daa2192
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:eb5a0daa2192
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 3:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 3:eb5a0daa2192
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -824,24 +824,24 @@ Check other fatelog implementations
   o  019fadeab383
   |
   | x  65b757b745b9
-  |/     Obsfate: rewritten using amend as 4:019fadeab383 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 4:019fadeab383
   | @  fdf9bde5129a
   |/
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 3:65b757b745b9 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a
+  |      Obsfate: rewritten using amend as 3:65b757b745b9
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   o  019fadeab383
   |
   | x  65b757b745b9
-  |/     Obsfate: rewritten using amend as 4:019fadeab383 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 4:019fadeab383
   | @  fdf9bde5129a
   |/
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 3:65b757b745b9 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a
+  |      Obsfate: rewritten using amend as 3:65b757b745b9
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1095,22 +1095,22 @@ Check other fatelog implementations
   @  eb5a0daa2192
   |
   | x  b7ea6d14e664
-  | |    Obsfate: rewritten as 4:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 4:eb5a0daa2192
   | | x  0dec01379d3b
-  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664 (at 1970-01-01 00:00 +0000)
+  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 4:eb5a0daa2192
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   @  eb5a0daa2192
   |
   | x  b7ea6d14e664
-  | |    Obsfate: rewritten as 4:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 4:eb5a0daa2192
   | | x  0dec01379d3b
-  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664 (at 1970-01-01 00:00 +0000)
+  | |/     Obsfate: rewritten using amend as 3:b7ea6d14e664
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 4:eb5a0daa2192 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 4:eb5a0daa2192
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1282,14 +1282,14 @@ Check other fatelog implementations
   @  7a230b46bf61
   |
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   @  7a230b46bf61
   |
   | x  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:7a230b46bf61 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:7a230b46bf61
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1445,20 +1445,20 @@ Check other fatelog implementations
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 (at 1970-01-01 00:00 +0000)
-  | |    Obsfate: rewritten as 1:471f378eab4c (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:f897c6137566
+  | |    Obsfate: rewritten as 1:471f378eab4c
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 2:0dec01379d3b
   @  ea207398892e
   
   $ hg fatelogkw --hidden
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 (at 1970-01-01 00:00 +0000)
-  | |    Obsfate: rewritten as 1:471f378eab4c (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:f897c6137566
+  | |    Obsfate: rewritten as 1:471f378eab4c
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 2:0dec01379d3b
   @  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1832,21 +1832,21 @@ Check other fatelog implementations
   o |  b18bc8331526
   |/
   | x  ba2ed02b0c9a
-  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc
   | x  4a004186e638
-  |/     Obsfate: rewritten using amend as 8:b18bc8331526 (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 9:0b997eb7ceee (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 8:b18bc8331526
+  |      Obsfate: rewritten using amend as 9:0b997eb7ceee
   o  dd800401bd8c
   |
   | @  9bd10a0775e4
-  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 (at 1970-01-01 00:00 +0000)
-  | |    Obsfate: rewritten as 1:471f378eab4c (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:f897c6137566
+  | |    Obsfate: rewritten as 1:471f378eab4c
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 2:0dec01379d3b
   o  ea207398892e
   
   $ hg fatelogkw --hidden
@@ -1857,21 +1857,21 @@ Check other fatelog implementations
   o |  b18bc8331526
   |/
   | x  ba2ed02b0c9a
-  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten using rebase as 10:eceed8f98ffc
   | x  4a004186e638
-  |/     Obsfate: rewritten using amend as 8:b18bc8331526 (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 9:0b997eb7ceee (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 8:b18bc8331526
+  |      Obsfate: rewritten using amend as 9:0b997eb7ceee
   o  dd800401bd8c
   |
   | @  9bd10a0775e4
-  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a
   o  f897c6137566
   |
   | x  0dec01379d3b
-  | |    Obsfate: rewritten as 3:f897c6137566 (at 1970-01-01 00:00 +0000)
-  | |    Obsfate: rewritten as 1:471f378eab4c (at 1970-01-01 00:00 +0000)
+  | |    Obsfate: rewritten as 3:f897c6137566
+  | |    Obsfate: rewritten as 1:471f378eab4c
   | x  471f378eab4c
-  |/     Obsfate: rewritten as 2:0dec01379d3b (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten as 2:0dec01379d3b
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -1977,22 +1977,22 @@ Check other fatelog implementations
 
   $ hg fatelogkw --hidden -q
   x  65b757b745b9
-  |    Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |    Obsfate: pruned
   | x  fdf9bde5129a
-  |/     Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: pruned
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 3:65b757b745b9 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a
+  |      Obsfate: rewritten using amend as 3:65b757b745b9
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   x  65b757b745b9
-  |    Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |    Obsfate: pruned
   | x  fdf9bde5129a
-  |/     Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: pruned
   | @  471f378eab4c
-  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a (at 1970-01-01 00:00 +0000)
-  |      Obsfate: rewritten using amend as 3:65b757b745b9 (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: rewritten using amend as 2:fdf9bde5129a
+  |      Obsfate: rewritten using amend as 3:65b757b745b9
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v
@@ -2101,20 +2101,20 @@ Check other fatelog implementations
 
   $ hg fatelogkw --hidden -q
   @  0d0ef4bdf70e
-  |    Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |    Obsfate: pruned
   o  617adc3a144c
   |
   | x  471597cad322
-  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e
   o  ea207398892e
   
   $ hg fatelogkw --hidden
   @  0d0ef4bdf70e
-  |    Obsfate: pruned (at 1970-01-01 00:00 +0000)
+  |    Obsfate: pruned
   o  617adc3a144c
   |
   | x  471597cad322
-  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e (at 1970-01-01 00:00 +0000)
+  |/     Obsfate: split as 2:617adc3a144c, 3:0d0ef4bdf70e
   o  ea207398892e
   
   $ hg fatelogkw --hidden -v

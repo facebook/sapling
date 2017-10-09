@@ -822,15 +822,16 @@ def obsfateprinter(successors, markers, ui):
     # Date
     dates = markersdates(markers)
 
-    min_date = min(dates)
-    max_date = max(dates)
+    if verbose:
+        min_date = min(dates)
+        max_date = max(dates)
 
-    if min_date == max_date:
-        fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
-        line.append(" (at %s)" % fmtmin_date)
-    else:
-        fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
-        fmtmax_date = util.datestr(max_date, '%Y-%m-%d %H:%M %1%2')
-        line.append(" (between %s and %s)" % (fmtmin_date, fmtmax_date))
+        if min_date == max_date:
+            fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
+            line.append(" (at %s)" % fmtmin_date)
+        else:
+            fmtmin_date = util.datestr(min_date, '%Y-%m-%d %H:%M %1%2')
+            fmtmax_date = util.datestr(max_date, '%Y-%m-%d %H:%M %1%2')
+            line.append(" (between %s and %s)" % (fmtmin_date, fmtmax_date))
 
     return "".join(line)
