@@ -96,8 +96,14 @@ import hashlib
 import os
 import stat
 import sys
+import weakref
 
 from mercurial.i18n import _
+from mercurial.node import (
+    hex,
+    nullid,
+)
+
 from mercurial import (
     context,
     encoding,
@@ -555,11 +561,12 @@ class poststatus(object):
 
 def makedirstate(repo, dirstate):
     class fsmonitordirstate(dirstate.__class__):
-        def _fsmonitorinit(self, fsmonitorstate, watchmanclient):
+        def _fsmonitorinit(self, repo):
             # _fsmonitordisable is used in paranoid mode
             self._fsmonitordisable = False
-            self._fsmonitorstate = fsmonitorstate
-            self._watchmanclient = watchmanclient
+            self._fsmonitorstate = repo._fsmonitorstate
+            self._watchmanclient = repo._watchmanclient
+            self._repo = weakref.proxy(repo)
 
         def walk(self, *args, **kwargs):
             orig = super(fsmonitordirstate, self).walk
@@ -575,8 +582,16 @@ def makedirstate(repo, dirstate):
             self._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
 
+        if dirstate._ui.configbool(
+            "experimental", "fsmonitor.wc_change_notify"):
+            def setparents(self, p1, p2=nullid):
+                with state_update(self._repo, name="hg.wc_change",
+                                  oldnode=self._pl[0], newnode=p1,
+                                  partial=False):
+                    return super(fsmonitordirstate, self).setparents(p1, p2)
+
     dirstate.__class__ = fsmonitordirstate
-    dirstate._fsmonitorinit(repo._fsmonitorstate, repo._watchmanclient)
+    dirstate._fsmonitorinit(repo)
 
 def wrapdirstate(orig, self):
     ds = orig(self)
@@ -607,47 +622,74 @@ def wrapsymlink(orig, source, link_name):
 
 class state_update(object):
     ''' This context manager is responsible for dispatching the state-enter
-        and state-leave signals to the watchman service '''
+        and state-leave signals to the watchman service. The enter and leave
+        methods can be invoked manually (for scenarios where context manager
+        semantics are not possible). If parameters oldnode and newnode are None,
+        they will be populated based on current working copy in enter and
+        leave, respectively. Similarly, if the distance is none, it will be
+        calculated based on the oldnode and newnode in the leave method.'''
 
-    def __init__(self, repo, node, distance, partial):
-        self.repo = repo
-        self.node = node
+    def __init__(self, repo, name, oldnode=None, newnode=None, distance=None,
+                 partial=False):
+        self.repo = repo.unfiltered()
+        self.name = name
+        self.oldnode = oldnode
+        self.newnode = newnode
         self.distance = distance
         self.partial = partial
         self._lock = None
         self.need_leave = False
 
     def __enter__(self):
+        self.enter()
+
+    def enter(self):
         # We explicitly need to take a lock here, before we proceed to update
         # watchman about the update operation, so that we don't race with
         # some other actor.  merge.update is going to take the wlock almost
         # immediately anyway, so this is effectively extending the lock
         # around a couple of short sanity checks.
+        if self.oldnode is None:
+            self.oldnode = self.repo['.'].node()
         self._lock = self.repo.wlock()
-        self.need_leave = self._state('state-enter')
+        self.need_leave = self._state(
+            'state-enter',
+            hex(self.oldnode))
         return self
 
     def __exit__(self, type_, value, tb):
+        abort = True if type_ else False
+        self.exit(abort=abort)
+
+    def exit(self, abort=False):
         try:
             if self.need_leave:
-                status = 'ok' if type_ is None else 'failed'
-                self._state('state-leave', status=status)
+                status = 'failed' if abort else 'ok'
+                if self.newnode is None:
+                    self.newnode = self.repo['.'].node()
+                if self.distance is None:
+                    self.distance = calcdistance(
+                        self.repo, self.oldnode, self.newnode)
+                self._state(
+                    'state-leave',
+                    hex(self.newnode),
+                    status=status)
         finally:
+            self.need_leave = False
             if self._lock:
                 self._lock.release()
 
-    def _state(self, cmd, status='ok'):
+    def _state(self, cmd, commithash, status='ok'):
         if not util.safehasattr(self.repo, '_watchmanclient'):
             return False
         try:
-            commithash = self.repo[self.node].hex()
             self.repo._watchmanclient.command(cmd, {
-                'name': 'hg.update',
+                'name': self.name,
                 'metadata': {
                     # the target revision
                     'rev': commithash,
                     # approximate number of commits between current and target
-                    'distance': self.distance,
+                    'distance': self.distance if self.distance else 0,
                     # success/failure (only really meaningful for state-leave)
                     'status': status,
                     # whether the working copy parent is changing
@@ -677,12 +719,14 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
 
     distance = 0
     partial = True
+    oldnode = repo['.'].node()
+    newnode = repo[node].node()
     if matcher is None or matcher.always():
         partial = False
-        distance = calcdistance(repo.unfiltered(), repo['.'].node(),
-                                repo[node].node())
+        distance = calcdistance(repo.unfiltered(), oldnode, newnode)
 
-    with state_update(repo, node, distance, partial):
+    with state_update(repo, name="hg.update", oldnode=oldnode, newnode=newnode,
+                      distance=distance, partial=partial):
         return orig(
             repo, node, branchmerge, force, ancestor, mergeancestor,
             labels, matcher, **kwargs)
@@ -727,5 +771,33 @@ def reposetup(ui, repo):
             def status(self, *args, **kwargs):
                 orig = super(fsmonitorrepo, self).status
                 return overridestatus(orig, self, *args, **kwargs)
+
+            if ui.configbool("experimental", "fsmonitor.transaction_notify"):
+                def transaction(self, *args, **kwargs):
+                    tr = super(fsmonitorrepo, self).transaction(
+                               *args, **kwargs)
+                    if tr.count != 1:
+                        return tr
+                    stateupdate = state_update(self, name="hg.transaction")
+                    stateupdate.enter()
+
+                    class fsmonitortrans(tr.__class__):
+                        def _abort(self):
+                            try:
+                                result = super(fsmonitortrans, self)._abort()
+                            finally:
+                                stateupdate.exit(abort=True)
+                            return result
+
+                        def close(self):
+                            try:
+                                result = super(fsmonitortrans, self).close()
+                            finally:
+                                if self.count == 0:
+                                    stateupdate.exit()
+                            return result
+
+                    tr.__class__ = fsmonitortrans
+                    return tr
 
         repo.__class__ = fsmonitorrepo
