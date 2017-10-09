@@ -330,6 +330,9 @@ coreconfigitem('experimental', 'clientcompressionengines',
 coreconfigitem('experimental', 'copytrace',
     default='on',
 )
+coreconfigitem('experimental', 'copytrace.movecandidateslimit',
+    default=100,
+)
 coreconfigitem('experimental', 'copytrace.sourcecommitlimit',
     default=100,
 )

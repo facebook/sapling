@@ -201,6 +201,65 @@ Check a few potential move candidates
   $ cd ..
   $ rm -rf repo
 
+Test the copytrace.movecandidateslimit with many move candidates
+----------------------------------------------------------------
+
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo a > a
+  $ hg add a
+  $ hg ci -m initial
+  $ hg mv a foo
+  $ echo a > b
+  $ echo a > c
+  $ echo a > d
+  $ echo a > e
+  $ echo a > f
+  $ echo a > g
+  $ hg add b
+  $ hg add c
+  $ hg add d
+  $ hg add e
+  $ hg add f
+  $ hg add g
+  $ hg ci -m 'mv a foo, add many files'
+  $ hg up -q ".^"
+  $ echo b > a
+  $ hg ci -m 'mod a'
+  created new head
+
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
+  @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
+  |   desc: mod a
+  | o  changeset: 8329d5c6bf479ec5ca59b9864f3f45d07213f5a4
+  |/    desc: mv a foo, add many files
+  o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
+      desc: initial
+
+With small limit
+
+  $ hg rebase -s 2 -d 1 --config experimental.copytrace.movecandidateslimit=0
+  rebasing 2:ef716627c70b "mod a" (tip)
+  skipping copytracing for 'a', more candidates than the limit: 7
+  other [source] changed a which local [dest] deleted
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ hg rebase --abort
+  rebase aborted
+
+With default limit which is 100
+
+  $ hg rebase -s 2 -d 1
+  rebasing 2:ef716627c70b "mod a" (tip)
+  merging foo and a to foo
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/ef716627c70b-24681561-rebase.hg (glob)
+
+  $ cd ..
+  $ rm -rf repo
+
 Move file in one branch and delete it in another
 -----------------------------------------------
 

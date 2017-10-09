@@ -11,6 +11,8 @@ import collections
 import heapq
 import os
 
+from .i18n import _
+
 from . import (
     match as matchmod,
     node,
@@ -644,6 +646,11 @@ def _heuristicscopytracing(repo, c1, c2, base):
 
         [experimental]
         copytrace = heuristics
+
+    In some cases the copy/move candidates found by heuristics can be very large
+    in number and that will make the algorithm slow. The number of possible
+    candidates to check can be limited by using the config
+    `experimental.copytrace.movecandidateslimit` which defaults to 100.
     """
 
     if c1.rev() is None:
@@ -704,6 +711,17 @@ def _heuristicscopytracing(repo, c1, c2, base):
             # f is guaranteed to be present in c2, that's why
             # c2.filectx(f) won't fail
             f2 = c2.filectx(f)
+            # we can have a lot of candidates which can slow down the heuristics
+            # config value to limit the number of candidates moves to check
+            maxcandidates = repo.ui.configint('experimental',
+                                              'copytrace.movecandidateslimit')
+
+            if len(movecandidates) > maxcandidates:
+                repo.ui.status(_("skipping copytracing for '%s', more "
+                                 "candidates than the limit: %d\n")
+                               % (f, len(movecandidates)))
+                continue
+
             for candidate in movecandidates:
                 f1 = c1.filectx(candidate)
                 if _related(f1, f2, anc.rev()):
