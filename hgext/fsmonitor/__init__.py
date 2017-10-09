@@ -660,6 +660,14 @@ class state_update(object):
                 'watchman', 'Exception %s while running %s\n', e, cmd)
             return False
 
+# Estimate the distance between two nodes
+def calcdistance(repo, oldnode, newnode):
+    anc = repo.changelog.ancestor(oldnode, newnode)
+    ancrev = repo[anc].rev()
+    distance = (abs(repo[oldnode].rev() - ancrev)
+        + abs(repo[newnode].rev() - ancrev))
+    return distance
+
 # Bracket working copy updates with calls to the watchman state-enter
 # and state-leave commands.  This allows clients to perform more intelligent
 # settling during bulk file change scenarios
@@ -671,14 +679,8 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
     partial = True
     if matcher is None or matcher.always():
         partial = False
-        wc = repo[None]
-        parents = wc.parents()
-        if len(parents) == 2:
-            anc = repo.changelog.ancestor(parents[0].node(), parents[1].node())
-            ancrev = repo[anc].rev()
-            distance = abs(repo[node].rev() - ancrev)
-        elif len(parents) == 1:
-            distance = abs(repo[node].rev() - parents[0].rev())
+        distance = calcdistance(repo.unfiltered(), repo['.'].node(),
+                                repo[node].node())
 
     with state_update(repo, node, distance, partial):
         return orig(
