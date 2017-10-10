@@ -1280,10 +1280,19 @@ class localrepository(object):
             # fixes the function accumulation.
             hookargs = tr2.hookargs
 
-            def hook():
-                reporef().hook('txnclose', throw=False, txnname=desc,
-                               **pycompat.strkwargs(hookargs))
-            reporef()._afterlock(hook)
+            def hookfunc():
+                repo = reporef()
+                if hook.hashook(repo.ui, 'txnclose-bookmark'):
+                    bmchanges = sorted(tr.changes['bookmarks'].items())
+                    for name, (old, new) in bmchanges:
+                        args = tr.hookargs.copy()
+                        args.update(bookmarks.preparehookargs(name, old, new))
+                        repo.hook('txnclose-bookmark', throw=False,
+                                  txnname=desc, **pycompat.strkwargs(args))
+
+                repo.hook('txnclose', throw=False, txnname=desc,
+                          **pycompat.strkwargs(hookargs))
+            reporef()._afterlock(hookfunc)
         tr.addfinalize('txnclose-hook', txnclosehook)
         tr.addpostclose('warms-cache', self._buildcacheupdater(tr))
         def txnaborthook(tr2):

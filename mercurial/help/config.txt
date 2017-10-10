@@ -994,6 +994,18 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   after the lock is released. See :hg:`help config.hooks.pretxnclose` for
   details about available variables.
 
+``txnclose-bookmark``
+  Run after any bookmark change has been committed. At this point, the
+  transaction can no longer be rolled back. The hook will run after the lock
+  is released.
+  The name of the bookmark will be available in ``$HG_BOOKMARK``, the new
+  bookmark location will be available in ``$HG_NODE`` while the previous
+  location will be available in ``$HG_OLDNODE``. In case of a bookmark
+  creation ``$HG_OLDNODE`` will be empty. In case of deletion ``$HG_NODE``
+  will be empty. In addition, the reason for the transaction opening will be
+  in ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
+  ``HG_TXNID``.
+
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
   for details about available variables.

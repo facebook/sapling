@@ -1,5 +1,8 @@
+
   $ hg init repo
   $ cd repo
+
+  $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'
 
 no bookmarks
 
@@ -12,7 +15,8 @@ no bookmarks
 
 bookmark rev -1
 
-  $ hg bookmark X
+  $ hg bookmark X --config "$TESTHOOK"
+  test-hook-bookmark: X:   -> 0000000000000000000000000000000000000000
 
 list bookmarks
 
@@ -27,7 +31,8 @@ list bookmarks with color
 
   $ echo a > a
   $ hg add a
-  $ hg commit -m 0
+  $ hg commit -m 0 --config "$TESTHOOK"
+  test-hook-bookmark: X:  0000000000000000000000000000000000000000 -> f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 bookmark X moved to rev 0
 
@@ -47,7 +52,8 @@ look up bookmark
 
 second bookmark for rev 0, command should work even with ui.strict on
 
-  $ hg --config ui.strict=1 bookmark X2
+  $ hg --config ui.strict=1 bookmark X2 --config "$TESTHOOK"
+  test-hook-bookmark: X2:   -> f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 bookmark rev -1 again
 
@@ -62,7 +68,8 @@ list bookmarks
 
   $ echo b > b
   $ hg add b
-  $ hg commit -m 1
+  $ hg commit -m 1 --config "$TESTHOOK"
+  test-hook-bookmark: X2:  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac -> 925d80f479bb026b0fb3deb27503780b13f74123
 
   $ hg bookmarks -Tjson
   [
@@ -194,14 +201,17 @@ force rename to existent bookmark
 rename bookmark using .
 
   $ hg book rename-me
-  $ hg book -m . renamed
+  $ hg book -m . renamed --config "$TESTHOOK"
+  test-hook-bookmark: rename-me:  db815d6d32e69058eadefc8cffbad37675707975 -> 
+  test-hook-bookmark: renamed:   -> db815d6d32e69058eadefc8cffbad37675707975
   $ hg bookmark
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         0:f7b1eb17ad24
    * renamed                   2:db815d6d32e6
   $ hg up -q Y
-  $ hg book -d renamed
+  $ hg book -d renamed --config "$TESTHOOK"
+  test-hook-bookmark: renamed:  db815d6d32e69058eadefc8cffbad37675707975 -> 
 
 rename bookmark using . with no active bookmark
 
@@ -354,11 +364,13 @@ bookmark with integer name
   [255]
 
 bookmark with a name that matches a node id
-  $ hg bookmark 925d80f479bb db815d6d32e6
+  $ hg bookmark 925d80f479bb db815d6d32e6 --config "$TESTHOOK"
   bookmark 925d80f479bb matches a changeset hash
   (did you leave a -r out of an 'hg bookmark' command?)
   bookmark db815d6d32e6 matches a changeset hash
   (did you leave a -r out of an 'hg bookmark' command?)
+  test-hook-bookmark: 925d80f479bb:   -> db815d6d32e69058eadefc8cffbad37675707975
+  test-hook-bookmark: db815d6d32e6:   -> db815d6d32e69058eadefc8cffbad37675707975
   $ hg bookmark -d 925d80f479bb
   $ hg bookmark -d db815d6d32e6
 
@@ -406,7 +418,8 @@ incompatible options
 
 force bookmark with existing name
 
-  $ hg bookmark -f X2
+  $ hg bookmark -f X2 --config "$TESTHOOK"
+  test-hook-bookmark: X2:  925d80f479bb026b0fb3deb27503780b13f74123 -> db815d6d32e69058eadefc8cffbad37675707975
 
 force bookmark back to where it was, should deactivate it
 
