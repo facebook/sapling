@@ -78,7 +78,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // We manually call open() here rather than using the folly::File()
   // constructor just so we can emit a slightly more helpful message on error.
   const char* devName = "/dev/fuse";
-  int fd = folly::openNoInt(devName, O_RDWR);
+  int fd = folly::openNoInt(devName, O_RDWR | O_CLOEXEC);
   if (fd < 0) {
     if (errno == ENODEV || errno == ENOENT) {
       throwSystemError(
