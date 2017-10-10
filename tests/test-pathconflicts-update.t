@@ -59,8 +59,8 @@ Update - local symlink conflicts with remote directory:
   a/b: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark dir)
-  $ readlink a/b.orig
-  x
+  $ readlink.py a/b.orig
+  a/b.orig -> x
   $ rm a/b.orig
 
 Update - local directory conflicts with remote file
@@ -94,8 +94,8 @@ Update - local directory conflicts with remote symlink
   a/b: replacing untracked files in directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark link)
-  $ readlink a/b
-  c
+  $ readlink.py a/b
+  a/b -> c
   $ test -d a/b.orig
   $ rm -rf a/b.orig
 
