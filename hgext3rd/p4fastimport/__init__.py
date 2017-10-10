@@ -138,9 +138,9 @@ def create(tr, ui, repo, importset, filelogs):
             'localname': fi.relpath,
         })
 
-def getfilelist(ui, client, startcl, endcl):
+def getfilelist(ui, p4filelist):
     filelist = set()
-    for fileinfo in p4.parse_filelist(client, startcl=startcl, endcl=endcl):
+    for fileinfo in p4filelist:
         if fileinfo['action'] in p4.ACTION_ARCHIVE:
             pass
         elif fileinfo['action'] in p4.SUPPORTED_ACTIONS:
@@ -246,7 +246,7 @@ def p4fastimport(ui, repo, client, **opts):
     # 2. Get a list of files that we will have to import from the depot with
     # it's full path in the depot.
     ui.note(_('loading list of files.\n'))
-    filelist = getfilelist(ui, client, startcl, endcl)
+    filelist = getfilelist(ui, p4.parse_filelist(client, startcl, endcl))
     ui.note(_('%d files to import.\n') % len(filelist))
 
     importset = importer.ImportSet(repo, client, changelists,
@@ -365,7 +365,7 @@ def p4syncimport(ui, repo, client, **opts):
     basepath = opts.get('path')
     startcl, endcl = startcl, startcl
     ui.note(_('loading list of files.\n'))
-    filelist = getfilelist(ui, client, startcl, endcl)
+    filelist = getfilelist(ui, p4.parse_filelist(client, startcl, endcl))
     ui.note(_('%d files to import.\n') % len(filelist))
 
     importset = importer.ImportSet(repo, client, changelists,
