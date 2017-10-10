@@ -4,10 +4,14 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
+#![allow(deprecated)]
+
 extern crate futures;
 
-use std::sync::Arc;
 use std::error;
+use std::sync::Arc;
 
 use futures::Future;
 
@@ -119,8 +123,7 @@ impl<K, Vi, Vo, E, GB, PB> Blobstore
     for Arc<
         Blobstore<Key = K, ValueIn = Vi, ValueOut = Vo, Error = E, GetBlob = GB, PutBlob = PB>
             + Sync,
-    >
-where
+    > where
     K: Send + 'static,
     Vi: Send + 'static,
     Vo: AsRef<[u8]> + Send + 'static,

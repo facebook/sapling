@@ -4,13 +4,17 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
+#![allow(deprecated)]
+
 extern crate clap;
-extern crate tokio_uds;
 #[macro_use]
 extern crate error_chain;
+extern crate tokio_uds;
 
-extern crate futures;
 extern crate bytes;
+extern crate futures;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_proto;
@@ -41,9 +45,7 @@ fn main() {
                 .arg(Arg::from_usage(
                     "-E, --errorlog [FILE] 'name of error log file to write to'",
                 ))
-                .arg(
-                    Arg::from_usage("-p, --port <PORT> 'port to listen on'").default_value("8000"),
-                )
+                .arg(Arg::from_usage("-p, --port <PORT> 'port to listen on'").default_value("8000"))
                 .arg(Arg::from_usage(
                     "-a, --address [ADDR] 'address to listen on'",
                 ))

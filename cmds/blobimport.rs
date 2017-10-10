@@ -4,6 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
+#![allow(deprecated)]
 #![feature(conservative_impl_trait)]
 
 extern crate clap;
@@ -30,8 +33,6 @@ extern crate rocksblob;
 
 extern crate rocksdb;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 
 extern crate bincode;
 
@@ -65,7 +66,7 @@ use blobrepo::{BlobChangeset, RawNodeBlob};
 
 use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{hash, Blob, BlobHash, Changeset, NodeHash, Parents, Type};
+use mercurial_types::{Blob, BlobHash, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -120,27 +121,26 @@ where
         .ok_or("missing blob data".into())
         .map(Bytes::from)
         .into_future();
-    bytes
-        .and_then(move |bytes| {
-            let nodeblob = RawNodeBlob {
-                parents: parents,
-                blob: BlobHash::from(bytes.as_ref()),
-            };
-            // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
-            // blobs.
-            let nodekey = format!("node-{}.bincode", entry_hash);
-            let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-            let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
-                .expect("bincode serialize failed");
+    bytes.and_then(move |bytes| {
+        let nodeblob = RawNodeBlob {
+            parents: parents,
+            blob: BlobHash::from(bytes.as_ref()),
+        };
+        // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
+        // blobs.
+        let nodekey = format!("node-{}.bincode", entry_hash);
+        let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
+        let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
+            .expect("bincode serialize failed");
 
-            // TODO: blobstore.putv?
-            let node = blobstore
-                .put(nodekey, Bytes::from(nodeblob))
-                .map_err(Into::into);
-            let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
+        // TODO: blobstore.putv?
+        let node = blobstore
+            .put(nodekey, Bytes::from(nodeblob))
+            .map_err(Into::into);
+        let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
 
-            node.join(blob).map(|_| ())
-        })
+        node.join(blob).map(|_| ())
+    })
 }
 
 // Copy a single manifest entry into the blobstore
@@ -455,8 +455,10 @@ fn main() {
         .arg(
             Arg::with_name("postpone-compaction")
                 .long("postpone-compaction")
-                .help("disable rocksdb auto compaction for the time of blobimporting and run
-                       it afterwards. This option is used only for rocksdb blobstore."),
+                .help(
+                    "disable rocksdb auto compaction for the time of blobimporting and run
+                       it afterwards. This option is used only for rocksdb blobstore.",
+                ),
         )
         .args_from_usage("<INPUT>                 'input revlog repo'")
         .args_from_usage("<OUTPUT>                'output blobstore RepoCtx'")
