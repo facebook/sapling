@@ -11,8 +11,6 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 // Tokio/IO
 extern crate bytes;

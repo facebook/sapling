@@ -13,15 +13,15 @@ use std::collections::{HashMap, HashSet};
 use slog::Logger;
 
 use bytes::{Bytes, BytesMut};
+use futures::future::{self, Future};
+use futures::stream::Stream;
 use tokio_service::Service;
-use futures::stream::{BoxStream, Stream};
-use futures::future::{self, BoxFuture, Future};
 
-use futures_ext::futures_ordered;
+use futures_ext::{futures_ordered, BoxFuture, BoxStream, FutureExt};
 use mercurial_types::NodeHash;
 
-use errors::*;
 use {BranchRes, GetbundleArgs, Request, Response};
+use errors::*;
 use sshproto;
 
 pub struct HgService<H> {
@@ -57,136 +57,99 @@ impl<H: HgCommands> HgService<H> {
         let hgcmds = &self.commands;
 
         match req {
-            Request::Batch { cmds } => {
-                self.batch(cmds)
-                    .map(Response::Batch)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Between { pairs } => {
-                hgcmds
-                    .between(pairs)
-                    .map(Response::Between)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Branchmap => {
-                hgcmds
-                    .branchmap()
-                    .map(Response::Branchmap)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Branches { nodes } => {
-                hgcmds
-                    .branches(nodes)
-                    .map(Response::Branches)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Clonebundles => {
-                hgcmds
-                    .clonebundles()
-                    .map(Response::Clonebundles)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Capabilities => {
-                hgcmds
-                    .capabilities()
-                    .map(Response::Capabilities)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Changegroup { roots } => {
-                hgcmds
-                    .changegroup(roots)
-                    .map(|_| Response::Changegroup)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Changegroupsubset { bases, heads } => {
-                hgcmds
-                    .changegroupsubset(bases, heads)
-                    .map(|_| Response::Changegroupsubset)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Debugwireargs { one, two, all_args } => {
-                self.debugwireargs(one, two, all_args)
-                    .map(Response::Debugwireargs)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Getbundle(args) => {
-                hgcmds
-                    .getbundle(args)
-                    .map(Response::Getbundle)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Heads => {
-                hgcmds
-                    .heads()
-                    .map(Response::Heads)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Hello => {
-                hgcmds
-                    .hello()
-                    .map(Response::Hello)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Listkeys { namespace } => {
-                hgcmds
-                    .listkeys(namespace)
-                    .map(Response::Listkeys)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Lookup { key } => {
-                hgcmds
-                    .lookup(key)
-                    .map(Response::Lookup)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Known { nodes } => {
-                hgcmds
-                    .known(nodes)
-                    .map(Response::Known)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
+            Request::Batch { cmds } => self.batch(cmds)
+                .map(Response::Batch)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Between { pairs } => hgcmds
+                .between(pairs)
+                .map(Response::Between)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Branchmap => hgcmds
+                .branchmap()
+                .map(Response::Branchmap)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Branches { nodes } => hgcmds
+                .branches(nodes)
+                .map(Response::Branches)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Clonebundles => hgcmds
+                .clonebundles()
+                .map(Response::Clonebundles)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Capabilities => hgcmds
+                .capabilities()
+                .map(Response::Capabilities)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Changegroup { roots } => hgcmds
+                .changegroup(roots)
+                .map(|_| Response::Changegroup)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Changegroupsubset { bases, heads } => hgcmds
+                .changegroupsubset(bases, heads)
+                .map(|_| Response::Changegroupsubset)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Debugwireargs { one, two, all_args } => self.debugwireargs(one, two, all_args)
+                .map(Response::Debugwireargs)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Getbundle(args) => hgcmds
+                .getbundle(args)
+                .map(Response::Getbundle)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Heads => hgcmds
+                .heads()
+                .map(Response::Heads)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Hello => hgcmds
+                .hello()
+                .map(Response::Hello)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Listkeys { namespace } => hgcmds
+                .listkeys(namespace)
+                .map(Response::Listkeys)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Lookup { key } => hgcmds
+                .lookup(key)
+                .map(Response::Lookup)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Known { nodes } => hgcmds
+                .known(nodes)
+                .map(Response::Known)
+                .map_err(self::Error::into)
+                .boxify(),
             Request::Pushkey {
                 namespace,
                 key,
                 old,
                 new,
-            } => {
-                hgcmds
-                    .pushkey(namespace, key, old, new)
-                    .map(|_| Response::Pushkey)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Streamout => {
-                hgcmds
-                    .stream_out()
-                    .map(|_| Response::Streamout)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            Request::Unbundle { heads } => {
-                hgcmds
-                    .unbundle(heads)
-                    .map(|_| Response::Unbundle)
-                    .map_err(self::Error::into)
-                    .boxed()
-            }
-            //_ => unimplemented!()
+            } => hgcmds
+                .pushkey(namespace, key, old, new)
+                .map(|_| Response::Pushkey)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Streamout => hgcmds
+                .stream_out()
+                .map(|_| Response::Streamout)
+                .map_err(self::Error::into)
+                .boxify(),
+            Request::Unbundle { heads } => hgcmds
+                .unbundle(heads)
+                .map(|_| Response::Unbundle)
+                .map_err(self::Error::into)
+                .boxify(), //_ => unimplemented!()
         }
     }
 
@@ -206,9 +169,9 @@ impl<H: HgCommands> HgService<H> {
             let mut full_cmd = BytesMut::from([cmd.0, cmd.1].join(&b'\n'));
             let parsed = match sshproto::request::parse_batch(&mut full_cmd) {
                 // TODO: collect all parsing errors, not just the first one?
-                Err(err) => return future::err(err).boxed(),
+                Err(err) => return future::err(err).boxify(),
                 Ok(None) => {
-                    return future::err(ErrorKind::BatchInvalid(full_cmd.to_vec()).into()).boxed();
+                    return future::err(ErrorKind::BatchInvalid(full_cmd.to_vec()).into()).boxify();
                 }
                 Ok(Some(cmd)) => cmd,
             };
@@ -229,7 +192,7 @@ impl<H: HgCommands> HgService<H> {
         let encoded_futures = response_futures
             .into_iter()
             .map(|cmd| cmd.map(|res| sshproto::response::encode_cmd(&res)));
-        futures_ordered(encoded_futures).collect().boxed()
+        futures_ordered(encoded_futures).collect().boxify()
     }
 
     // @wireprotocommand('debugwireargs', 'one two *')
@@ -254,7 +217,7 @@ impl<H: HgCommands> HgService<H> {
         // default value "None" is used.
         out.extend_from_slice(NONE);
 
-        future::ok(out.into()).boxed()
+        future::ok(out.into()).boxify()
     }
 }
 
@@ -288,7 +251,7 @@ where
     S: Into<String>,
     T: Send + 'static,
 {
-    future::err(ErrorKind::Unimplemented(op.into()).into()).boxed()
+    future::err(ErrorKind::Unimplemented(op.into()).into()).boxify()
 }
 
 // Async response from an Hg command
@@ -406,7 +369,7 @@ mod test {
             let mut res = HashMap::new();
             res.insert("capabilities".into(), vec!["something".into()]);
 
-            future::ok(res).boxed()
+            future::ok(res).boxify()
         }
     }
 
