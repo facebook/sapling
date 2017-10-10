@@ -25,7 +25,7 @@ Populate the Depot
   edit //depot/Main/a#2
   Change 2 submitted.
 
-Sync import
+Fast Import
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
@@ -60,35 +60,54 @@ Sync import
   //depot/Main/c#1 - opened for add
   //depot/Main/d/e#1 - opened for add
   //depot/Main/d/f/g#1 - opened for add
+  $ p4 delete Main/a
+  //depot/Main/a#2 - opened for delete
   $ p4 submit -d third
   Submitting change 3.
-  Locking 4 files ...
+  Locking 5 files ...
+  delete //depot/Main/a#3
   edit //depot/Main/b#2
   add //depot/Main/c#1
   add //depot/Main/d/e#1
   add //depot/Main/d/f/g#1
   Change 3 submitted.
+
+Sync Import
+
+  $ cd $hgwd
   $ cd $hgwd
   $ hg p4syncimport --bookmark master --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 3, node: * (glob)
-  loading changelist numbers.
-  1 changelists to import.
-  loading list of files.
-  4 files to import.
-  reading filelog * (glob)
-  reading filelog * (glob)
-  reading filelog * (glob)
-  reading filelog * (glob)
+  Latest change list number 3
   running a sync import.
   writing filelog: 861f64b39056, p1 1e88685f5dde, linkrev 2, 4 bytes, src: *, path: Main/b (glob)
   writing filelog: 149da44f2a4e, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/c (glob)
   writing filelog: 6b67ccefd5ce, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/d/e (glob)
-  writing filelog: 0973eb1b2ecc, p1 000000000000, linkrev 2, 2 bytes, *: p4, path: Main/d/f/g (glob)
-  changelist 3: writing manifest. node: 2f8836be616d p1: 5c8695bebd8f p2: 000000000000 linkrev: 2
-  changelist 3: writing changelog: third
+  writing filelog: 0973eb1b2ecc, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/d/f/g (glob)
+  changelist 3: writing manifest. node: f0ca72fbd536 p1: 5c8695bebd8f p2: 000000000000 linkrev: 2
+  changelist 3: writing changelog: p4fastimport synchronizing client view
   writing bookmark
   updating the branch cache
-  1 revision(s), 4 file(s) imported.
+  1 revision, 4 file(s) imported.
+
+Sync Import without New Changes
+
+  $ hg p4syncimport --bookmark master --debug -P $P4ROOT hg-p4-import
+  incremental import from changelist: 4, node: * (glob)
+  Latest change list number 3
+  running a sync import.
+  writing filelog: 0a738da2fcb2, p1 861f64b39056, linkrev 3, 4 bytes, src: *, path: Main/b (glob)
+  writing filelog: 825765709d02, p1 149da44f2a4e, linkrev 3, 2 bytes, src: *, path: Main/c (glob)
+  writing filelog: c3bd1155d122, p1 6b67ccefd5ce, linkrev 3, 2 bytes, src: *, path: Main/d/e (glob)
+  writing filelog: 7fd4bac0fb3a, p1 0973eb1b2ecc, linkrev 3, 2 bytes, src: *, path: Main/d/f/g (glob)
+  changelist 3: writing manifest. node: c11fdd72fcbf p1: f0ca72fbd536 p2: 000000000000 linkrev: 3
+  changelist 3: writing changelog: p4fastimport synchronizing client view
+  writing bookmark
+  updating the branch cache
+  1 revision, 4 file(s) imported.
+
+Fast Import after Sync Import
+
   $ hg p4fastimport --bookmark master --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 4, node: * (glob)
   loading changelist numbers.
@@ -101,14 +120,13 @@ Verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  5 files, 3 changesets, 7 total revisions
+  5 files, 4 changesets, 11 total revisions
 
   $ hg update master
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master)
 
   $ hg manifest -r master
-  Main/a
   Main/b
   Main/c
   Main/d/e

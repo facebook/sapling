@@ -22,6 +22,9 @@ KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
                 "Date|Change|File|" + \
                 "Revision|Author).*?\$"
 
+#TODO: make p4 user configurable
+P4_ADMIN_USER = 'p4admin'
+
 def relpath(client, depotfile):
     where = p4.parse_where(client, depotfile)
     filename = where['clientFile'].replace('//%s/' % client, '')
@@ -147,7 +150,48 @@ class ChangeManifestImporter(object):
                 user=username, date=date,
                 extra={'p4changelist': cl})
 
-class BlobChangeManifestImporter(ChangeManifestImporter):
+class SyncChangeManifestImporter(ChangeManifestImporter):
+    def __init__(self, ui, repo, client, cl, p1ctx):
+        self._ui = ui
+        self._repo = repo
+        self._client = client
+        self._cl = cl
+        self._p1ctx = p1ctx
+
+    def creategen(self, tr, fileinfo):
+        mrevlog = self._repo.manifestlog._revlog
+        clog = self._repo.changelog
+        cp1 = self._p1ctx.node()
+        cp2 = nullid
+        p1 = self._repo[cp1]
+        mp1 = p1.manifestnode()
+        mp2 = nullid
+        mf = manifest.manifestdict()
+        changed = []
+
+        for info in fileinfo.values():
+            localname = info['localname']
+            baserev = info['baserev']
+            mf[localname] = self._repo.file(localname).node(baserev)
+            changed.append(localname)
+        linkrev = len(self._repo)
+        oldmp1 = mp1
+        mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
+                                  linkrev, mp1, mp2)
+
+        self._ui.debug('changelist %d: writing manifest. '
+            'node: %s p1: %s p2: %s linkrev: %d\n' % (
+            self._cl, short(mp1), short(oldmp1), short(mp2), linkrev))
+
+        desc = 'p4fastimport synchronizing client view'
+        username = P4_ADMIN_USER
+        self._ui.debug('changelist %d: writing changelog: %s\n' % (
+            self._cl, desc))
+        cp1 = self.writechangelog(
+                clog, mp1, changed, desc, tr, cp1, cp2,
+                username, None, self._cl)
+        yield self._cl, cp1
+
     def writechangelog(
             self, clog, mp1, changed, desc, tr, cp1, cp2, username, date, cl):
         return clog.add(
@@ -378,61 +422,65 @@ class FileImporter(object):
         newlen = len(hgfilelog)
         return fileflags, largefiles, origlen, newlen
 
-class BlobFileImporter(FileImporter):
+class SyncFileImporter(FileImporter):
+    def __init__(self, ui, repo, client, cl, p4filelog):
+        self._ui = ui
+        self._repo = repo
+        self._client = client
+        self._cl = cl
+        self._p4filelog = p4filelog
+
+    @util.propertycache
+    def relpath(self):
+        return relpath(self._client, self._p4filelog.depotfile)
+
     def create(self, tr):
         assert tr is not None
-        p4fi = P4FileImporter(self._p4filelog)
-        revs = set()
-        for c in self._importset.changelists:
-            if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
-                revs.add(c)
 
         fileflags = collections.defaultdict(dict)
-        lastlinkrev = 0
-
-        hgfilelog = self.hgfilelog()
-        origlen = len(hgfilelog)
-        largefiles = []
         lfsext = self.findlfs()
 
-        for c in sorted(revs):
-            linkrev = self._importset.linkrev(c.cl)
-            fparent1, fparent2 = nullid, nullid
+        linkrev = len(self._repo)
+        fparent1, fparent2 = nullid, nullid
+        localfile = self.relpath
+        hgfilelog = self._repo.file(localfile)
+        if len(hgfilelog) > 0:
+            fparent1 = hgfilelog.tip()
 
-            assert linkrev >= lastlinkrev
-            lastlinkrev = linkrev
+        # Only read files from p4 for a sync commit
+        text, src = p4.get_file(self._p4filelog.depotfile, clnum=self._cl), 'p4'
+        if text is None:
+            raise error.Abort('error generating file content %d %s' % (
+                self._cl, localfile))
 
-            if len(hgfilelog) > 0:
-                fparent1 = hgfilelog.tip()
+        meta = {}
+        if self._p4filelog.isexec(self._cl):
+            fileflags[self._cl] = 'x'
+        else:
+            fileflags[self._cl] = ''
 
-            text = None
-            # Only read files from p4 for a blob commit
-            text, src = p4fi.content(c.cl), 'p4'
-            if text is None:
-                raise error.Abort('error generating file content %d %s' % (
-                    c.cl, self.relpath))
+        if self._p4filelog.issymlink(self._cl):
+            fileflags[self._cl] = 'l'
+        else:
+            fileflags[self._cl] = ''
 
-            meta = {}
-            fileflags[c.cl] = ' '
-            if self._p4filelog.isexec(c.cl):
-                fileflags[c.cl] = 'x'
-            if self._p4filelog.issymlink(c.cl):
-                fileflags[c.cl] = 'l'
-            if self._p4filelog.iskeyworded(c.cl):
-                text = re.sub(KEYWORD_REGEX, r'$\1$', text)
+        if self._p4filelog.iskeyworded(self._cl):
+            text = re.sub(KEYWORD_REGEX, r'$\1$', text)
 
-            node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
-            self._ui.debug(
-                'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
-                'path: %s\n' % (short(node), short(fparent1), linkrev,
-                    len(text), src, self.relpath))
+        origlen = len(hgfilelog)
+        node = hgfilelog.add(text, meta, tr, linkrev, fparent1, fparent2)
+        self._ui.debug(
+            'writing filelog: %s, p1 %s, linkrev %d, %d bytes, src: %s, '
+            'path: %s\n' % (short(node), short(fparent1), linkrev,
+                len(text), src, self.relpath))
 
-            if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
-                lfspointer = lfsext.pointer.deserialize(
-                        hgfilelog.revision(node, raw=True))
-                oid = lfspointer.oid()
-                largefiles.append((c.cl, self.depotfile, oid))
-                self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
+        largefiles = []
+        if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
+            lfspointer = lfsext.pointer.deserialize(
+                    hgfilelog.revision(node, raw=True))
+            oid = lfspointer.oid()
+            largefiles.append((self._cl, self._p4filelog.depotfile, oid))
+            self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
 
         newlen = len(hgfilelog)
         return fileflags, largefiles, origlen, newlen

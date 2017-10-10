@@ -37,7 +37,7 @@ populate the depot
   edit //depot/Main/largefile#2
   Change 2 submitted.
 
-Blob Commit
+Sync Commit
 
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
@@ -75,19 +75,18 @@ Blob Commit
   $ cd $hgwd
   $ hg p4syncimport --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 3, node: * (glob)
-  loading changelist numbers.
-  1 changelists to import.
-  loading list of files.
-  1 files to import.
-  reading filelog * (glob)
+  Latest change list number 3
   running a sync import.
+  writing filelog: fc4d9d827df8, p1 a80d06849b33, linkrev 2, 4 bytes, src: *, path: Main/a (glob)
   writing filelog: cf38a89d2b54, p1 000000000000, linkrev 2, 23 bytes, src: *, path: Main/anotherlargefile (glob)
   largefile: Main/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c
-  changelist 3: writing manifest. node: edf0e5bc6eac p1: c14352bb3510 p2: 000000000000 linkrev: 2
-  changelist 3: writing changelog: third
+  writing filelog: fa4df9fc788c, p1 9f14f96519e1, linkrev 2, 88 bytes, src: *, path: Main/largefile (glob)
+  largefile: Main/largefile, oid: b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c
+  changelist 3: writing manifest. node: a6a6dbeefd0a p1: c14352bb3510 p2: 000000000000 linkrev: 2
+  changelist 3: writing changelog: p4fastimport synchronizing client view
   writing lfs metadata to sqlite
   updating the branch cache
-  1 revision(s), 1 file(s) imported.
+  1 revision, 3 file(s) imported.
 
 Verify
 (waiting for https://patchwork.mercurial-scm.org/patch/20582/)
@@ -98,7 +97,7 @@ Verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  3 files, 3 changesets, 5 total revisions
+  3 files, 3 changesets, 7 total revisions
 
   $ test -d .hg/store/lfs/objects
   [1]
@@ -106,6 +105,7 @@ Verify
   1|1|*|37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9|//depot/Main/largefile (glob)
   2|2|*|b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c|//depot/Main/largefile (glob)
   3|3|*|9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c|//depot/Main/anotherlargefile (glob)
+  4|3|*|b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c|//depot/Main/largefile (glob)
 
 End Test
 

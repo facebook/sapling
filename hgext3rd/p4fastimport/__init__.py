@@ -346,37 +346,22 @@ def p4syncimport(ui, repo, client, **opts):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
 
     if len(repo) == 0:
-        raise error.Abort(_('p4 blob commit does not support empty repo yet.'))
+        raise error.Abort(_('p4 sync commit does not support empty repo yet.'))
 
-    p1ctx, startcl, __ = startfrom(ui, repo, opts)
+    p1ctx, __, __ = startfrom(ui, repo, opts)
 
     # Fail if the specified client does not exist
     if not p4.exists_client(client):
         raise error.Abort(_('p4 client %s does not exist.') % client)
 
-    # Return all the changelists touching files in a given client view.
-    ui.note(_('loading changelist numbers.\n'))
-    changelists = sorted(p4.parse_changes(
-        client, startcl=startcl, endcl=startcl))
-    ui.note(_('%d changelists to import.\n') % len(changelists))
-    if len(changelists) == 0:
-        return
     # Get a list of files that we will have to import
-    basepath = opts.get('path')
-    startcl, endcl = startcl, startcl
-    ui.note(_('loading list of files.\n'))
-    filelist = getfilelist(ui, p4.parse_filelist(client, startcl, endcl))
-    ui.note(_('%d files to import.\n') % len(filelist))
+    latestcl = p4.get_latest_cl(client)
+    if latestcl is None:
+        raise error.Abort(_('Cannot find latest p4 changelist number.'))
 
-    importset = importer.ImportSet(repo, client, changelists,
-            filelist, basepath)
-    p4filelogs = []
-    for i, f in enumerate(importset.filelogs()):
-        ui.debug('reading filelog %s\n' % f.depotfile)
-        ui.progress(_('reading filelog'), i, unit=_('filelogs'),
-                total=len(filelist))
-        p4filelogs.append(f)
-    ui.progress(_('reading filelog'), None)
+    ui.note(_('Latest change list number %s\n') % latestcl)
+    p4filelogs = p4.get_filelogs_at_cl(client, latestcl)
+    p4filelogs = sorted(p4filelogs)
 
     # sync import.
     with repo.wlock(), repo.lock():
@@ -384,12 +369,12 @@ def p4syncimport(ui, repo, client, **opts):
         count = 0
         fileinfo = {}
         largefileslist = []
-        p4filelogs = sorted(p4filelogs)
         tr = repo.transaction('syncimport')
         try:
             for p4fl in p4filelogs:
-                bfi = importer.BlobFileImporter(ui, repo, importset, p4fl)
-                # Create filelog.
+                bfi = importer.SyncFileImporter(
+                        ui, repo, client, latestcl, p4fl)
+                # Create hg filelog
                 fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
                 fileinfo[p4fl.depotfile] = {
                     'flags': fileflags,
@@ -399,8 +384,8 @@ def p4syncimport(ui, repo, client, **opts):
                 largefileslist.extend(largefiles)
                 count += 1
             # Generate manifest and changelog
-            clog = importer.BlobChangeManifestImporter(ui, repo, importset,
-                    p1ctx=p1ctx)
+            clog = importer.SyncChangeManifestImporter(
+                     ui, repo, client, latestcl, p1ctx=p1ctx)
             revisions = []
             for cl, hgnode in clog.creategen(tr, fileinfo):
                 revisions.append((cl, hex(hgnode)))
@@ -411,12 +396,11 @@ def p4syncimport(ui, repo, client, **opts):
 
             if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
                 ui.note(_('writing lfs metadata to sqlite\n'))
-                writelfsmetadata(largefiles, revisions,
+                writelfsmetadata(largefileslist, revisions,
                     ui.config('p4fastimport', 'lfsmetadata', None))
 
             tr.close()
-            ui.note(_('%d revision(s), %d file(s) imported.\n') % (
-                len(changelists), count))
+            ui.note(_('1 revision, %d file(s) imported.\n') % count)
         finally:
             tr.release()
 
