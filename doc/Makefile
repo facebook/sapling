@@ -18,7 +18,7 @@ man: $(MAN)
 html: $(HTML)
 
 common.txt $(SOURCES) $(SOURCES:%.txt=%.gendoc.txt): $(GENDOC)
-	${PYTHON} gendoc.py $(basename $@) > $@.tmp
+	${PYTHON} gendoc.py "$(basename $@)" > $@.tmp
 	mv $@.tmp $@
 
 %: %.txt %.gendoc.txt common.txt
@@ -39,8 +39,8 @@ MANIFEST: man html
 install: man
 	for i in $(MAN) ; do \
 	  subdir=`echo $$i | sed -n 's/^.*\.\([0-9]\)$$/man\1/p'` ; \
-	  mkdir -p $(DESTDIR)$(MANDIR)/$$subdir ; \
-	  $(INSTALL) $$i $(DESTDIR)$(MANDIR)/$$subdir ; \
+	  mkdir -p "$(DESTDIR)$(MANDIR)"/$$subdir ; \
+	  $(INSTALL) $$i "$(DESTDIR)$(MANDIR)"/$$subdir ; \
 	done
 
 clean:
