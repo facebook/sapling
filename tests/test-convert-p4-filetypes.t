@@ -746,10 +746,10 @@ revision 1
   $Header$$Header$Header$
 
 crazy_symlink
-  $ readlink crazy_symlink+k
-  target_$Header: //depot/test-mercurial-import/crazy_symlink+k#1 $
-  $ readlink dst/crazy_symlink+k
-  target_$Header$
+  $ readlink.py crazy_symlink+k
+  crazy_symlink+k -> target_$Header: //depot/test-mercurial-import/crazy_symlink+k#1 $
+  $ readlink.py dst/crazy_symlink+k
+  dst/crazy_symlink+k -> target_$Header$
 
 exit trap:
   stopping the p4 server
