@@ -5,11 +5,14 @@ cpp_unittest(
     srcs = glob(["*Test.cpp"]),
     deps = [
         ":test_lib",
+        "@/eden/fs/utils:io",
         "@/eden/fs/utils:path",
         "@/eden/fs/utils:utils",
         "@/folly:exception",
         "@/folly:exception_wrapper",
+        "@/folly:file",
         "@/folly/experimental:test_util",
+        "@/folly/io/async:async",
     ],
     external_deps = [
         "boost",

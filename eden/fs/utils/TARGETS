@@ -4,9 +4,15 @@ PATH_SRCS = ["PathFuncs.cpp"]
 
 PATH_HEADERS = ["PathFuncs.h"]
 
-IO_SRCS = ["ControlMsg.cpp"]
+IO_SRCS = [
+    "ControlMsg.cpp",
+    "IoFuture.cpp",
+]
 
-IO_HEADERS = ["ControlMsg.h"]
+IO_HEADERS = [
+    "ControlMsg.h",
+    "IoFuture.h",
+]
 
 cpp_library(
     name = "utils",
@@ -63,6 +69,9 @@ cpp_library(
     headers = IO_HEADERS,
     deps = [
         "@/folly:conv",
+        "@/folly:portability",
+        "@/folly/futures:core",
+        "@/folly/io/async:async",
     ],
     external_deps = [
         "glog",
