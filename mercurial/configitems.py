@@ -412,6 +412,10 @@ coreconfigitem('experimental', 'treemanifest',
 coreconfigitem('experimental', 'updatecheck',
     default=None,
 )
+coreconfigitem('extensions', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('format', 'aggressivemergedeltas',
     default=False,
 )
