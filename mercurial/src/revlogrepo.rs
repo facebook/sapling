@@ -109,7 +109,7 @@ pub struct RevlogRepo {
     requirements: HashSet<Required>, // requirements
     changelog: Revlog,               // changes
     manifest: Revlog,                // manifest
-    inner: Arc<RwLock<RevlogInner>>,  // Inner parts
+    inner: Arc<RwLock<RevlogInner>>, // Inner parts
 }
 
 #[derive(Debug)]
@@ -120,8 +120,8 @@ struct RevlogInner {
 
 impl PartialEq<Self> for RevlogRepo {
     fn eq(&self, other: &Self) -> bool {
-        self.basepath == other.basepath && self.requirements == other.requirements &&
-            Arc::ptr_eq(&self.inner, &other.inner)
+        self.basepath == other.basepath && self.requirements == other.requirements
+            && Arc::ptr_eq(&self.inner, &other.inner)
     }
 }
 impl Eq for RevlogRepo {}

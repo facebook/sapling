@@ -37,11 +37,11 @@ mod errors {
 }
 
 use std::collections::HashMap;
+use std::error;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read};
-use std::path::PathBuf;
 use std::marker::PhantomData;
-use std::error;
+use std::path::PathBuf;
 
 use ascii::AsciiStr;
 use futures::future::{self, FutureResult};
@@ -208,22 +208,34 @@ mod tests {
     fn test_invalid() {
         let reader = Cursor::new(&b"111\n"[..]);
         let bookmarks = StockBookmarks::<Error>::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidBookmarkLine(_));
+        assert_matches!(
+            bookmarks.unwrap_err().kind(),
+            &ErrorKind::InvalidBookmarkLine(_)
+        );
 
         // no space or bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111\n"[..]);
         let bookmarks = StockBookmarks::<Error>::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidBookmarkLine(_));
+        assert_matches!(
+            bookmarks.unwrap_err().kind(),
+            &ErrorKind::InvalidBookmarkLine(_)
+        );
 
         // no bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111 \n"[..]);
         let bookmarks = StockBookmarks::<Error>::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidBookmarkLine(_));
+        assert_matches!(
+            bookmarks.unwrap_err().kind(),
+            &ErrorKind::InvalidBookmarkLine(_)
+        );
 
         // no space after hash
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111ab\n"[..]);
         let bookmarks = StockBookmarks::<Error>::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidBookmarkLine(_));
+        assert_matches!(
+            bookmarks.unwrap_err().kind(),
+            &ErrorKind::InvalidBookmarkLine(_)
+        );
 
         // short hash
         let reader = Cursor::new(&b"111111111111111111111111111111111111111  1ab\n"[..]);

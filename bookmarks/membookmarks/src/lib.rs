@@ -77,24 +77,20 @@ where
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {
-            Entry::Occupied(mut entry) => {
-                if *version == entry.get().1 {
-                    let new = version_next();
-                    entry.insert((value.clone(), new));
-                    return ok(Some(new));
-                } else {
-                    ok(None)
-                }
-            }
-            Entry::Vacant(entry) => {
-                if *version == Version::absent() {
-                    let new = version_next();
-                    entry.insert((value.clone(), new));
-                    return ok(Some(new));
-                } else {
-                    ok(None)
-                }
-            }
+            Entry::Occupied(mut entry) => if *version == entry.get().1 {
+                let new = version_next();
+                entry.insert((value.clone(), new));
+                return ok(Some(new));
+            } else {
+                ok(None)
+            },
+            Entry::Vacant(entry) => if *version == Version::absent() {
+                let new = version_next();
+                entry.insert((value.clone(), new));
+                return ok(Some(new));
+            } else {
+                ok(None)
+            },
         }
     }
 
@@ -102,21 +98,17 @@ where
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {
-            Entry::Occupied(entry) => {
-                if *version == entry.get().1 {
-                    entry.remove();
-                    ok(Some(Version::absent()))
-                } else {
-                    ok(None)
-                }
-            }
-            Entry::Vacant(_) => {
-                if *version == Version::absent() {
-                    ok(Some(Version::absent()))
-                } else {
-                    ok(None)
-                }
-            }
+            Entry::Occupied(entry) => if *version == entry.get().1 {
+                entry.remove();
+                ok(Some(Version::absent()))
+            } else {
+                ok(None)
+            },
+            Entry::Vacant(_) => if *version == Version::absent() {
+                ok(Some(Version::absent()))
+            } else {
+                ok(None)
+            },
         }
     }
 }
