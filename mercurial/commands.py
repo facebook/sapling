@@ -4719,28 +4719,23 @@ def status(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-      The -t/--terse option abbreviates the output by showing directory name
-      if all the files in it share the same status. The option expects a value
-      which can be a string formed by using 'm', 'a', 'r', 'd', 'u', 'i', 'c'
-      where, 'm' stands for 'modified', 'a' for 'added', 'r' for 'removed',
-      'd' for 'deleted', 'u' for 'unknown', 'i' for 'ignored' and 'c' for clean.
+      The -t/--terse option abbreviates the output by showing only the directory
+      name if all the files in it share the same status. The option takes an
+      argument indicating the statuses to abbreviate: 'm' for 'modified', 'a'
+      for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'
+      for 'ignored' and 'c' for clean.
 
-      It terses the output of only those status which are passed. The ignored
-      files are not considered while tersing until 'i' is there in --terse value
-      or the --ignored option is used.
+      It abbreviates only those statuses which are passed. Note that ignored
+      files are not displayed with '--terse i' unless the -i/--ignored option is
+      also used.
 
-      --verbose option shows more context about the state of the repo
-      like the repository is in unfinised merge, shelve, rebase state etc.
-      You can have this behaviour turned on by default by following config:
+      The -v/--verbose option shows information when the repository is in an
+      unfinished merge, shelve, rebase state etc. You can have this behavior
+      turned on by default by enabling the ``commands.status.verbose`` option.
 
-      [commands]
-      status.verbose = true
-
-      You can also skip some states like bisect by adding following in
-      configuration file.
-
-      [commands]
-      status.skipstates = bisect
+      You can skip displaying some of these states by setting
+      ``commands.status.skipstates`` to one or more of: 'bisect', 'graft',
+      'histedit', 'merge', 'rebase', or 'unshelve'.
 
       Examples:
 
@@ -4762,7 +4757,13 @@ def status(ui, repo, *pats, **opts):
 
           hg status -an0
 
+      - show more information about the repository status, abbreviating
+        added, removed, modified, deleted, and untracked paths::
+
+          hg status -v -t mardu
+
     Returns 0 on success.
+
     """
 
     opts = pycompat.byteskwargs(opts)
