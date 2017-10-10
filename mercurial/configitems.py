@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import functools
+import re
 
 from . import (
     encoding,
@@ -33,20 +34,56 @@ class configitem(object):
     :section: the official config section where to find this item,
        :name: the official name within the section,
     :default: default value for this item,
-    :alias: optional list of tuples as alternatives.
+    :alias: optional list of tuples as alternatives,
+    :generic: this is a generic definition, match name using regular expression.
     """
 
-    def __init__(self, section, name, default=None, alias=()):
+    def __init__(self, section, name, default=None, alias=(),
+                 generic=False, priority=0):
         self.section = section
         self.name = name
         self.default = default
         self.alias = list(alias)
+        self.generic = generic
+        self.priority = priority
+        self._re = None
+        if generic:
+            self._re = re.compile(self.name)
+
+class itemregister(dict):
+    """A specialized dictionary that can handle wild-card selection"""
+
+    def __init__(self):
+        super(itemregister, self).__init__()
+        self._generics = set()
+
+    def update(self, other):
+        super(itemregister, self).update(other)
+        self._generics.update(other._generics)
+
+    def __setitem__(self, key, item):
+        super(itemregister, self).__setitem__(key, item)
+        if item.generic:
+            self._generics.add(item)
+
+    def get(self, key):
+        if key in self:
+            return self[key]
+
+        # search for a matching generic item
+        generics = sorted(self._generics, key=(lambda x: (x.priority, x.name)))
+        for item in generics:
+            if item._re.match(key):
+                return item
+
+        # fallback to dict get
+        return super(itemregister, self).get(key)
 
 coreitems = {}
 
 def _register(configtable, *args, **kwargs):
     item = configitem(*args, **kwargs)
-    section = configtable.setdefault(item.section, {})
+    section = configtable.setdefault(item.section, itemregister())
     if item.name in section:
         msg = "duplicated config item registration for '%s.%s'"
         raise error.ProgrammingError(msg % (item.section, item.name))
