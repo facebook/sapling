@@ -7,11 +7,9 @@
 #![deny(warnings)]
 
 extern crate futures;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 
 extern crate futures_ext;
+extern crate storage_types;
 
 use std::error;
 use std::marker::PhantomData;
@@ -21,27 +19,7 @@ use futures::{Future, Stream};
 
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-/// Versions are used to ensure consistency of state across all users of the bookmark store.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct Version(Option<u64>);
-
-impl Version {
-    pub fn absent() -> Self {
-        Version::default()
-    }
-}
-
-impl From<u64> for Version {
-    fn from(v: u64) -> Self {
-        Version(Some(v))
-    }
-}
-
-impl Default for Version {
-    fn default() -> Self {
-        Version(None)
-    }
-}
+use storage_types::Version;
 
 /// Trait representing read-only operations on a bookmark store, which maintains a global mapping
 /// of names to commit identifiers. Consistency is maintained using versioning.

@@ -21,6 +21,7 @@ extern crate serde;
 extern crate tempdir;
 
 extern crate futures_ext;
+extern crate storage_types;
 
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
@@ -43,8 +44,9 @@ use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use bookmarks::{Bookmarks, BookmarksMut, Version};
+use bookmarks::{Bookmarks, BookmarksMut};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use storage_types::{version_random, Version};
 
 mod errors {
     error_chain!{
@@ -59,10 +61,6 @@ mod errors {
 pub use errors::*;
 
 static PREFIX: &'static str = "bookmark:";
-
-fn version_random() -> Version {
-    Version::from(rand::random::<u64>())
-}
 
 /// A basic file-based persistent bookmark store.
 ///

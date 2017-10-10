@@ -17,6 +17,7 @@ extern crate futures_ext;
 
 extern crate bookmarks;
 extern crate mercurial_types;
+extern crate storage_types;
 
 mod errors {
     error_chain! {
@@ -48,8 +49,9 @@ use futures::future::{self, FutureResult};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
-use bookmarks::{Bookmarks, Version};
+use bookmarks::Bookmarks;
 use mercurial_types::NodeHash;
+use storage_types::Version;
 
 pub use errors::*;
 

@@ -18,10 +18,11 @@ use futures::future::{self, BoxFuture};
 use futures::stream::{self, BoxStream};
 
 use asyncmemo::{Asyncmemo, Filler};
-use bookmarks::{Bookmarks, BoxedBookmarks, Version};
+use bookmarks::{Bookmarks, BoxedBookmarks};
 use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash,
                       Repo, NULL_HASH};
 use stockbookmarks::StockBookmarks;
+use storage_types::Version;
 
 pub use changeset::RevlogChangeset;
 use errors::*;

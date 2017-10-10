@@ -25,9 +25,6 @@ extern crate error_chain;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 
-extern crate bookmarks;
-extern crate futures_ext;
-
 extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
@@ -35,6 +32,10 @@ extern crate heapsize_derive;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+
+extern crate bookmarks;
+extern crate futures_ext;
+extern crate storage_types;
 
 pub mod bdiff;
 pub mod delta;

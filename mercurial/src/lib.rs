@@ -38,6 +38,7 @@ extern crate asyncmemo;
 extern crate bookmarks;
 extern crate mercurial_types;
 extern crate stockbookmarks;
+extern crate storage_types;
 
 pub mod revlog;
 pub mod manifest;

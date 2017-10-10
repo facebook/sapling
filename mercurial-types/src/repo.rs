@@ -11,9 +11,11 @@ use std::sync::Arc;
 use futures::future::Future;
 use futures::stream::Stream;
 
-use bookmarks::{self, Bookmarks, Version};
-use changeset::Changeset;
+use bookmarks::{self, Bookmarks};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use storage_types::Version;
+
+use changeset::Changeset;
 use manifest::{BoxManifest, Manifest};
 use nodehash::NodeHash;
 

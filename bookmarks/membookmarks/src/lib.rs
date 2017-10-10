@@ -9,6 +9,7 @@
 extern crate bookmarks;
 extern crate futures;
 extern crate futures_ext;
+extern crate storage_types;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -18,8 +19,9 @@ use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 use futures::future::{ok, FutureResult};
 use futures::stream::iter_ok;
 
-use bookmarks::{Bookmarks, BookmarksMut, Version};
+use bookmarks::{Bookmarks, BookmarksMut};
 use futures_ext::{BoxStream, StreamExt};
+use storage_types::Version;
 
 static VERSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
