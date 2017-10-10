@@ -161,6 +161,59 @@ def hash(text, p1, p2):
     s.update(text)
     return s.digest()
 
+def _slicechunk(revlog, revs):
+    """slice revs to reduce the amount of unrelated data to be read from disk.
+
+    ``revs`` is sliced into groups that should be read in one time.
+    Assume that revs are sorted.
+    """
+    start = revlog.start
+    length = revlog.length
+
+    chunkqueue = collections.deque()
+    chunkqueue.append((revs, 0))
+
+    while chunkqueue:
+        revs, depth = chunkqueue.popleft()
+
+        startbyte = start(revs[0])
+        endbyte = start(revs[-1]) + length(revs[-1])
+        deltachainspan = endbyte - startbyte
+
+        if len(revs) <= 1:
+            yield revs
+            continue
+
+        # Find where is the largest hole (this is where we would split) and
+        # sum up the lengths of useful data to compute the density of the span
+        textlen = 0
+        prevend = None
+        largesthole = 0
+        idxlargesthole = -1
+        for i, rev in enumerate(revs):
+            revstart = start(rev)
+            revlen = length(rev)
+
+            if prevend is not None:
+                hole = revstart - prevend
+                if hole > largesthole:
+                    largesthole = hole
+                    idxlargesthole = i
+
+            textlen += revlen
+            prevend = revstart + revlen
+
+        density = textlen / float(deltachainspan) if deltachainspan > 0 else 1.0
+
+        if density > revlog._srdensitythreshold:
+            yield revs
+            continue
+
+        # Add the left and right parts so that they will be sliced
+        # recursively too
+        chunkqueue.append((revs[:idxlargesthole], depth + 1))
+        chunkqueue.append((revs[idxlargesthole:], depth + 1))
+
 # index v0:
 #  4 bytes: offset
 #  4 bytes: compressed length
@@ -305,6 +358,8 @@ class revlog(object):
         self._nodepos = None
         self._compengine = 'zlib'
         self._maxdeltachainspan = -1
+        self._withsparseread = False
+        self._srdensitythreshold = 0.25
 
         mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
@@ -331,6 +386,9 @@ class revlog(object):
                 self._maxdeltachainspan = opts['maxdeltachainspan']
             if mmaplargeindex and 'mmapindexthreshold' in opts:
                 mmapindexthreshold = opts['mmapindexthreshold']
+            self._withsparseread = bool(opts.get('with-sparse-read', False))
+            if 'sparse-read-density-threshold' in opts:
+                self._srdensitythreshold = opts['sparse-read-density-threshold']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -1327,26 +1385,32 @@ class revlog(object):
         l = []
         ladd = l.append
 
-        firstrev = revs[0]
-        # Skip trailing revisions with empty diff
-        for lastrev in revs[::-1]:
-            if length(lastrev) != 0:
-                break
+        if not self._withsparseread:
+            slicedchunks = (revs,)
+        else:
+            slicedchunks = _slicechunk(self, revs)
 
-        try:
-            offset, data = self._getsegmentforrevs(firstrev, lastrev, df=df)
-        except OverflowError:
-            # issue4215 - we can't cache a run of chunks greater than
-            # 2G on Windows
-            return [self._chunk(rev, df=df) for rev in revs]
+        for revschunk in slicedchunks:
+            firstrev = revschunk[0]
+            # Skip trailing revisions with empty diff
+            for lastrev in revschunk[::-1]:
+                if length(lastrev) != 0:
+                    break
 
-        decomp = self.decompress
-        for rev in revs:
-            chunkstart = start(rev)
-            if inline:
-                chunkstart += (rev + 1) * iosize
-            chunklength = length(rev)
-            ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
+            try:
+                offset, data = self._getsegmentforrevs(firstrev, lastrev, df=df)
+            except OverflowError:
+                # issue4215 - we can't cache a run of chunks greater than
+                # 2G on Windows
+                return [self._chunk(rev, df=df) for rev in revschunk]
+
+            decomp = self.decompress
+            for rev in revschunk:
+                chunkstart = start(rev)
+                if inline:
+                    chunkstart += (rev + 1) * iosize
+                chunklength = length(rev)
+                ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
 
         return l
 

@@ -411,6 +411,12 @@ coreconfigitem('experimental', 'revlogv2',
 coreconfigitem('experimental', 'spacemovesdown',
     default=False,
 )
+coreconfigitem('experimental', 'sparse-read',
+    default=False,
+)
+coreconfigitem('experimental', 'sparse-read.density-threshold',
+    default=0.25,
+)
 coreconfigitem('experimental', 'treemanifest',
     default=False,
 )
