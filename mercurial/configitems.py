@@ -160,6 +160,10 @@ coreconfigitem('chgserver', 'skiphash',
 coreconfigitem('cmdserver', 'log',
     default=None,
 )
+coreconfigitem('color', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('color', 'mode',
     default='auto',
 )
