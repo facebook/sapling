@@ -80,8 +80,8 @@ Cause a symlink to be backed up that points to a valid location from the backup 
   b: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
-  $ readlink .hg/origbackups/b
-  ../../../sym-link-target
+  $ readlink.py .hg/origbackups/b
+  .hg/origbackups/b -> ../../../sym-link-target
 
 Perform an update that causes b/c to be backed up again - it should not go into the target dir
 
