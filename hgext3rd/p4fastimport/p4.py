@@ -128,6 +128,18 @@ def parse_filelist(client, startcl=None, endcl=None):
         if c:
             yield d
 
+def parse_filelist_at_cl(client, cl=None):
+    cmd = 'p4 --client %s -G files //%s/...@%d' %(
+            util.shellquote(client),
+            util.shellquote(client),
+            cl
+            )
+    stdout = util.popen(cmd, mode='rb')
+    for d in loaditer(stdout):
+        c = d.get('depotFile', None)
+        if c:
+            yield d
+
 def parse_where(client, depotname):
     # TODO: investigate if we replace this with exactly one call to
     # where //clientame/...
@@ -160,6 +172,16 @@ def get_file(path, rev=None, clnum=None):
         content = stdout.read()
         return content
     return helper()
+
+def get_latest_cl(client):
+    cmd = 'p4 --client %s -G changes -m 1 -s submitted' % (
+            util.shellquote(client))
+    stdout = util.popen(cmd, mode='rb')
+    parsed = marshal.load(stdout)
+    cl = parsed.get('change')
+    if cl:
+        return int(cl)
+    return None
 
 def parse_cl(clnum):
     """Returns a description of a change given by the clnum. CLnum can be an
@@ -257,7 +279,7 @@ def parse_filelog(filelist, client, changelists):
             yield cl.cl, json.dumps(fstat)
 
 def parse_filelogs(ui, client, changelists, filelist):
-    # we can probably optimize this by using fstat only in the case-inensitive
+    # we can probably optimize this by using fstat only in the case-insensitive
     # case and only for conflicts.
     filelogs = collections.defaultdict(dict)
     worker = runworker(ui, parse_filelog, (filelist, client), changelists)
@@ -270,6 +292,33 @@ def parse_filelogs(ui, client, changelists, filelist):
             }
     for p4filename, filelog in filelogs.iteritems():
         yield P4Filelog(p4filename, filelog)
+
+def get_filelogs_at_cl(client, clnum):
+    cmd = 'p4 --client %s -G fstat -T ' \
+         '"depotFile,headAction,headType,headRev" ' \
+         '"//%s/..."@%d' % (
+         util.shellquote(client),
+         util.shellquote(client),
+         clnum
+         )
+    stdout = util.popen(cmd, mode='rb')
+    try:
+        result = []
+        for d in loaditer(stdout):
+            if d.get('depotFile'):
+                headaction = d['headAction']
+                if headaction in ACTION_ARCHIVE or headaction in ACTION_DELETE:
+                    continue
+                depotfile = d['depotFile']
+                filelog = {}
+                filelog[clnum] = {
+                    'action': d['headAction'],
+                    'type': d['headType'],
+                }
+                result.append(P4Filelog(depotfile, filelog))
+        return result
+    except Exception:
+        raise P4Exception(stdout)
 
 class P4Filelog(object):
     def __init__(self, depotfile, data):
