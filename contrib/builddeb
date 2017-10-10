@@ -73,7 +73,7 @@ if [ "$BUILD" ]; then
         exit 1
     fi
 
-    cp -r $PWD/contrib/debian debian
+    cp -r "$PWD"/contrib/debian debian
 
     sed -i.tmp "s/__VERSION__/$debver/" $changelog
     sed -i.tmp "s/__DATE__/$(date --rfc-2822)/" $changelog
