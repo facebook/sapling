@@ -121,8 +121,8 @@ Merge - local directory conflicts with remote file or link
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg mv a/b~2ea68033e3be a/b.old
-  $ readlink a/b.old
-  c
+  $ readlink.py a/b.old
+  a/b.old -> c
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg commit -m "merge link (rename link)"
