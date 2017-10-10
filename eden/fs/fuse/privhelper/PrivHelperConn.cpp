@@ -22,6 +22,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "eden/fs/utils/ControlMsg.h"
 
 using folly::io::Appender;
 using folly::io::Cursor;
@@ -183,20 +184,10 @@ void PrivHelperConn::sendMsg(const Message* msg, int fd) {
   //
   // SCM_RIGHTS allows us to send an array of file descriptors if we wanted to,
   // but we currently only ever need to send one.
-  constexpr auto cmsgPayloadSize = sizeof(int);
-  std::array<char, CMSG_SPACE(cmsgPayloadSize)> ctrlBuf;
-
   if (fd >= 0) {
-    mh.msg_control = ctrlBuf.data();
-    mh.msg_controllen = ctrlBuf.size();
-
-    auto cmsg = CMSG_FIRSTHDR(&mh);
-    cmsg->cmsg_level = SOL_SOCKET;
-    cmsg->cmsg_type = SCM_RIGHTS;
-    cmsg->cmsg_len = CMSG_LEN(cmsgPayloadSize);
-    memcpy(CMSG_DATA(cmsg), &fd, sizeof(fd));
-
-    mh.msg_controllen = cmsg->cmsg_len;
+    ControlMsgBuffer cmsg(sizeof(int), SOL_SOCKET, SCM_RIGHTS);
+    *cmsg.getData<int>() = fd;
+    cmsg.addToMsg(&mh);
   }
 
   // Finally send the message
@@ -225,17 +216,17 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
   vec[0].iov_base = msg;
   vec[0].iov_len = sizeof(*msg);
 
-  constexpr auto cmsgPayloadSize = sizeof(int);
-  std::array<char, CMSG_SPACE(cmsgPayloadSize)> ctrlBuf;
   struct msghdr mh = {
       .msg_name = nullptr,
       .msg_namelen = 0,
       .msg_iov = vec.data(),
       .msg_iovlen = vec.size(),
-      .msg_control = ctrlBuf.data(),
-      .msg_controllen = ctrlBuf.size(),
+      .msg_control = nullptr,
+      .msg_controllen = 0,
       .msg_flags = 0,
   };
+  ControlMsgBuffer cmsgBuffer(sizeof(int), SOL_SOCKET, SCM_RIGHTS);
+  cmsgBuffer.addToMsg(&mh);
 
   ssize_t bytesRead;
   while (true) {
@@ -276,26 +267,14 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
 
   // Pull any file descriptor(s) out of the control message data
   folly::File recvdFile;
-  for (auto cmsg = CMSG_FIRSTHDR(&mh); cmsg != nullptr;
-       cmsg = CMSG_NXTHDR(&mh, cmsg)) {
-    if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
-      continue;
-    }
-    if (cmsg->cmsg_len < CMSG_LEN(sizeof(int))) {
-      XLOG(ERR) << "privhelper control data is too short for a "
-                   "file descriptor";
-      continue;
-    }
-    // Technically the buffer could contain a full array of FDs here,
-    // but our code only ever sends a single one at a time, so we don't
-    // bother to check for an array of more than one.
-    int fd;
-    memcpy(&fd, CMSG_DATA(cmsg), sizeof(fd));
-    recvdFile = folly::File(fd, true);
+  if (CMSG_FIRSTHDR(&mh) != nullptr) {
+    auto recvCmsg =
+        ControlMsg::fromMsg(mh, SOL_SOCKET, SCM_RIGHTS, sizeof(int));
 
-    // We could potentially break here, but continue around the loop just in
-    // case there are more SCM_RIGHTS buffers.  We don't expect there to
-    // ever be more than one, but it is nice to double check.
+    // The SCM_RIGHTS cmsg structure can contain a full array of FDs,
+    // but our code only ever sends one at a time.
+    DCHECK_EQ(recvCmsg.getDataLength(), sizeof(int));
+    recvdFile = folly::File(*recvCmsg.getData<int>(), true);
   }
 
   if (f != nullptr) {
@@ -442,5 +421,5 @@ void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
 PrivHelperError::PrivHelperError(StringPiece remoteExType, StringPiece msg)
     : message_(folly::to<string>(remoteExType, ": ", msg)) {}
 }
-}
-} // facebook::eden::fusell
+} // namespace eden
+} // namespace facebook

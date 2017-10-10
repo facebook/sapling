@@ -4,15 +4,19 @@ PATH_SRCS = ["PathFuncs.cpp"]
 
 PATH_HEADERS = ["PathFuncs.h"]
 
+IO_SRCS = ["ControlMsg.cpp"]
+
+IO_HEADERS = ["ControlMsg.h"]
+
 cpp_library(
     name = "utils",
     srcs = glob(
         ["*.cpp"],
-        excludes = PATH_SRCS,
+        excludes = PATH_SRCS + IO_SRCS,
     ),
     headers = glob(
         ["*.h"],
-        excludes = PATH_HEADERS,
+        excludes = PATH_HEADERS + IO_HEADERS,
     ),
     deps = [
         ":path",
@@ -50,5 +54,17 @@ cpp_library(
     ],
     external_deps = [
         "boost",
+    ],
+)
+
+cpp_library(
+    name = "io",
+    srcs = IO_SRCS,
+    headers = IO_HEADERS,
+    deps = [
+        "@/folly:conv",
+    ],
+    external_deps = [
+        "glog",
     ],
 )
