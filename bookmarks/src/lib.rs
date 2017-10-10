@@ -4,17 +4,22 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 extern crate futures;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate futures_ext;
+
 use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use futures::{BoxFuture, Future, Stream};
-use futures::stream::BoxStream;
+use futures::{Future, Stream};
+
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 /// Versions are used to ensure consistency of state across all users of the bookmark store.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -116,11 +121,11 @@ where
     type Keys = BoxStream<Vec<u8>, E>;
 
     fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
-        self.inner.get(key).map_err(self.cvt_err).boxed()
+        self.inner.get(key).map_err(self.cvt_err).boxify()
     }
 
     fn keys(&self) -> Self::Keys {
-        self.inner.keys().map_err(self.cvt_err).boxed()
+        self.inner.keys().map_err(self.cvt_err).boxify()
     }
 }
 
