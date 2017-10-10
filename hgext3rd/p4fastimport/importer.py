@@ -22,6 +22,11 @@ KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
                 "Date|Change|File|" + \
                 "Revision|Author).*?\$"
 
+def relpath(client, depotfile):
+    where = p4.parse_where(client, depotfile)
+    filename = where['clientFile'].replace('//%s/' % client, '')
+    return p4.decodefilename(filename)
+
 class ImportSet(object):
     def __init__(self, repo, client, changelists, filelist, storagepath,
             isbranchpoint=False):
@@ -277,10 +282,7 @@ class FileImporter(object):
 
     @util.propertycache
     def relpath(self):
-        client = self._importset.client
-        where = p4.parse_where(client, self.depotfile)
-        filename = where['clientFile'].replace('//%s/' % client, '')
-        return p4.decodefilename(filename)
+        return relpath(self._importset.client, self.depotfile)
 
     @property
     def depotfile(self):
