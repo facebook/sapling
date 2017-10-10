@@ -8,53 +8,38 @@
 
 extern crate bookmarks;
 
-extern crate bincode;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
-extern crate nix;
 extern crate percent_encoding;
-extern crate rand;
 extern crate serde;
 #[cfg(test)]
 extern crate tempdir;
 
+extern crate filekv;
 extern crate futures_ext;
 extern crate storage_types;
 
-use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, SeekFrom};
-use std::io::prelude::*;
-use std::marker::PhantomData;
-use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use bincode::{deserialize, serialize, Infinite};
-use futures::{Async, Poll};
-use futures::future::{poll_fn, Future, IntoFuture};
-use futures::stream::{self, Stream};
+use futures::{Future, Stream};
 use futures_cpupool::CpuPool;
-use nix::fcntl::{self, FlockArg};
-use nix::sys::stat;
 use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use bookmarks::{Bookmarks, BookmarksMut};
+use filekv::FileKV;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use storage_types::{version_random, Version};
+use storage_types::Version;
 
 mod errors {
-    error_chain!{
-        foreign_links {
-            Bincode(::bincode::Error);
-            De(::serde::de::value::Error);
-            Io(::std::io::Error);
-            Nix(::nix::Error);
+    error_chain! {
+        links {
+            FileKV(::filekv::Error, ::filekv::ErrorKind);
         }
     }
 }
@@ -68,51 +53,45 @@ static PREFIX: &'static str = "bookmark:";
 /// to a thread pool to avoid blocking the main thread. File accesses between these threads
 /// are synchronized by a global map of per-path locks.
 pub struct FileBookmarks<V> {
-    base: PathBuf,
-    pool: Arc<CpuPool>,
-    locks: Mutex<HashMap<String, Arc<Mutex<PathBuf>>>>,
-    _marker: PhantomData<V>,
+    kv: FileKV<V>,
 }
 
-impl<V> FileBookmarks<V> {
+impl<V> FileBookmarks<V>
+where
+    V: Send + Clone + Serialize + DeserializeOwned + 'static,
+{
+    #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::open_with_pool(path, Arc::new(CpuPool::new_num_cpus()))
-    }
-
-    pub fn open_with_pool<P: AsRef<Path>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
-        if !path.as_ref().is_dir() {
-            bail!("'{}' is not a directory", path.as_ref().to_string_lossy());
-        }
-
         Ok(FileBookmarks {
-            base: path.as_ref().to_path_buf(),
-            pool: pool,
-            locks: Mutex::new(HashMap::new()),
-            _marker: PhantomData,
+            kv: FileKV::open(path, PREFIX)?,
         })
     }
 
+    #[inline]
+    pub fn open_with_pool<P: AsRef<Path>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
+        Ok(FileBookmarks {
+            kv: FileKV::open_with_pool(path, PREFIX, pool)?,
+        })
+    }
+
+    #[inline]
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::create_with_pool(path, Arc::new(CpuPool::new_num_cpus()))
+        Ok(FileBookmarks {
+            kv: FileKV::create(path, PREFIX)?,
+        })
     }
 
+    #[inline]
     pub fn create_with_pool<P: AsRef<Path>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
-        let path = path.as_ref();
-        fs::create_dir_all(path)?;
-        Self::open_with_pool(path, pool)
+        Ok(FileBookmarks {
+            kv: FileKV::create_with_pool(path, PREFIX, pool)?,
+        })
     }
+}
 
-    /// Return a Mutex protecting the path to the file corresponding to the given key.
-    /// Ensures that file accesses across multiple threads in the pool are syncrhonized.
-    fn get_path_mutex(&self, key: &AsRef<[u8]>) -> Result<Arc<Mutex<PathBuf>>> {
-        let key_string = percent_encode(key.as_ref(), DEFAULT_ENCODE_SET).to_string();
-        let mut map = self.locks.lock().expect("Lock poisoned");
-        let mutex = map.entry(key_string.clone()).or_insert_with(|| {
-            let path = self.base.join(format!("{}{}", PREFIX, key_string));
-            Arc::new(Mutex::new(path))
-        });
-        Ok((*mutex).clone())
-    }
+#[inline]
+fn encode_key(key: &AsRef<[u8]>) -> String {
+    percent_encode(key.as_ref(), DEFAULT_ENCODE_SET).to_string()
 }
 
 impl<V> Bookmarks for FileBookmarks<V>
@@ -125,42 +104,17 @@ where
     type Get = BoxFuture<Option<(Self::Value, Version)>, Self::Error>;
     type Keys = BoxStream<Vec<u8>, Self::Error>;
 
+    #[inline]
     fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
-        let pool = self.pool.clone();
-        self.get_path_mutex(key)
-            .into_future()
-            .and_then(move |mutex| {
-                let future = poll_fn(move || poll_get::<V>(&mutex));
-                pool.spawn(future)
-            })
-            .boxify()
+        self.kv.get(encode_key(key)).from_err().boxify()
     }
 
     fn keys(&self) -> Self::Keys {
-        // XXX: This traversal of the directory entries is unsynchronized and depends on
-        // platform-specific behavior with respect to the underlying directory entries.
-        // As a result, concurrent writes from other threads may produce strange results here.
-        let names = fs::read_dir(&self.base).map(|entries| {
-            entries
-                .map(|result| {
-                    result
-                        .map_err(From::from)
-                        .map(|entry| entry.file_name().to_string_lossy().into_owned())
-                })
-                .filter(|result| match result {
-                    &Ok(ref name) => name.starts_with(PREFIX),
-                    &Err(_) => true,
-                })
-                .map(|result| {
-                    result.and_then(|name| {
-                        Ok(percent_decode(&name[PREFIX.len()..].as_bytes()).collect())
-                    })
-                })
-        });
-        match names {
-            Ok(v) => stream::iter_ok(v).and_then(|x| x).boxify(),
-            Err(e) => stream::once(Err(e.into())).boxify(),
-        }
+        self.kv
+            .keys()
+            .and_then(|name| Ok(percent_decode(&name[..].as_bytes()).collect()))
+            .from_err()
+            .boxify()
     }
 }
 
@@ -170,177 +124,19 @@ where
 {
     type Set = BoxFuture<Option<Version>, Self::Error>;
 
+    #[inline]
     fn set(&self, key: &AsRef<[u8]>, value: &Self::Value, version: &Version) -> Self::Set {
-        let pool = self.pool.clone();
-        let value = value.clone();
-        let version = version.clone();
-        self.get_path_mutex(key)
-            .into_future()
-            .and_then(move |mutex| {
-                let future = poll_fn(move || poll_set(&mutex, &value, &version));
-                pool.spawn(future)
-            })
+        self.kv
+            .set(encode_key(key), value, version)
+            .from_err()
             .boxify()
     }
 
+    #[inline]
     fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
-        let pool = self.pool.clone();
-        let version = version.clone();
-        self.get_path_mutex(key)
-            .into_future()
-            .and_then(move |mutex| {
-                let future = poll_fn(move || poll_delete(&mutex, &version));
-                pool.spawn(future)
-            })
-            .boxify()
+        self.kv.delete(encode_key(key), version).from_err().boxify()
     }
 }
-
-/// Synchronous implementation of the get operation for the bookmark store. Intended to
-/// be used in conjunction with poll_fn() and a CpuPool to dispatch it onto a thread pool.
-fn poll_get<V>(path_mutex: &Arc<Mutex<PathBuf>>) -> Poll<Option<(V, Version)>, Error>
-where
-    V: DeserializeOwned,
-{
-    let path = path_mutex.lock().expect("Lock poisoned");
-
-    let result = match File::open(&*path) {
-        Ok(mut file) => {
-            // Block until we get an advisory lock on this file.
-            let fd = file.as_raw_fd();
-            fcntl::flock(fd, FlockArg::LockShared)?;
-
-            // Ensure file wasn't deleted between opening and locking.
-            if stat::fstat(fd)?.st_nlink > 0 {
-                let mut buf = Vec::new();
-                let _ = file.read_to_end(&mut buf)?;
-                Ok(Some(deserialize(&buf)?))
-            } else {
-                Ok(None)
-            }
-        }
-        Err(e) => {
-            // Return None instead of an Error if the file doesn't exist.
-            match e.kind() {
-                io::ErrorKind::NotFound => Ok(None),
-                _ => Err(e.into()),
-            }
-        }
-    };
-
-    result.map(Async::Ready)
-}
-
-/// Synchronous implementation of the set operation for the bookmark store. Intended to
-/// be used in conjunction with poll_fn() and a CpuPool to dispatch it onto a thread pool.
-fn poll_set<V>(
-    path_mutex: &Arc<Mutex<PathBuf>>,
-    value: &V,
-    version: &Version,
-) -> Poll<Option<Version>, Error>
-where
-    V: Serialize,
-{
-    let path = path_mutex.lock().expect("Lock poisoned");
-    let mut options = OpenOptions::new();
-    options.read(true).write(true);
-
-    // If we expect the file to not exist, disallow opening an existing file.
-    if *version == Version::absent() {
-        options.create_new(true);
-    }
-
-    let result = match options.open(&*path) {
-        Ok(mut file) => {
-            // Block until we get an advisory lock on this file.
-            let fd = file.as_raw_fd();
-            fcntl::flock(fd, FlockArg::LockExclusive)?;
-
-            // Read version.
-            let file_version = if *version == Version::absent() {
-                Version::absent()
-            } else {
-                let mut buf = Vec::new();
-                let _ = file.read_to_end(&mut buf)?;
-                deserialize::<(String, Version)>(&buf)?.1
-            };
-
-            // Write out new value if versions match.
-            if file_version == *version {
-                let new_version = version_random();
-                let out = serialize(&(value, new_version), Infinite)?;
-                file.seek(SeekFrom::Start(0))?;
-                file.set_len(0)?;
-                file.write_all(&out)?;
-                Ok(Some(new_version))
-            } else {
-                Ok(None)
-            }
-        }
-        Err(e) => {
-            // We can only get EEXIST if the version was specified as absent but
-            // the file exists. This is a version mismatch, so return None accordingly.
-            match e.kind() {
-                io::ErrorKind::AlreadyExists => Ok(None),
-                _ => Err(e.into()),
-            }
-        }
-    };
-
-    result.map(Async::Ready)
-}
-
-/// Synchronous implementation of the delete operation for the bookmark store. Intended to
-/// be used in conjunction with poll_fn() and a CpuPool to dispatch it onto a thread pool.
-fn poll_delete(
-    path_mutex: &Arc<Mutex<PathBuf>>,
-    version: &Version,
-) -> Poll<Option<Version>, Error> {
-    let path = path_mutex.lock().expect("Lock poisoned");
-
-    let result = match File::open(&*path) {
-        Ok(mut file) => {
-            // Block until we get an advisory lock on this file.
-            let fd = file.as_raw_fd();
-            fcntl::flock(fd, FlockArg::LockExclusive)?;
-
-            // Read version.
-            let mut buf = Vec::new();
-            let _ = file.read_to_end(&mut buf)?;
-            let file_version = deserialize::<(String, Version)>(&buf)?.1;
-
-            // Unlink files if version matches, reporting success if the file
-            // has already been deleted by another thread or process.
-            if file_version == *version {
-                fs::remove_file(&*path).or_else(|e| match e.kind() {
-                    io::ErrorKind::NotFound => Ok(()),
-                    _ => Err(e),
-                })?;
-                Ok(Some(Version::absent()))
-            } else {
-                Ok(None)
-            }
-        }
-        Err(e) => {
-            // Check for absent version if the file doesn't exist.
-            match e.kind() {
-                io::ErrorKind::NotFound => {
-                    if *version == Version::absent() {
-                        // Report successful deletion of non-existent bookmark.
-                        Ok(Some(Version::absent()))
-                    } else {
-                        // Version mismatch.
-                        Ok(None)
-                    }
-                }
-                _ => Err(e.into()),
-            }
-        }
-    };
-
-    result.map(Async::Ready)
-}
-
 
 #[cfg(test)]
 mod test {
