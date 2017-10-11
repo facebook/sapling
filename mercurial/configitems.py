@@ -739,6 +739,9 @@ coreconfigitem('web', 'deny_push',
 coreconfigitem('web', 'guessmime',
     default=False,
 )
+coreconfigitem('web', 'hidden',
+    default=None,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
