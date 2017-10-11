@@ -113,7 +113,7 @@ class requestcontext(object):
         self.maxchanges = self.configint('web', 'maxchanges', 10)
         self.stripecount = self.configint('web', 'stripes')
         self.maxshortchanges = self.configint('web', 'maxshortchanges')
-        self.maxfiles = self.configint('web', 'maxfiles', 10)
+        self.maxfiles = self.configint('web', 'maxfiles')
         self.allowpull = self.configbool('web', 'allowpull', True)
 
         # we use untrusted=False to prevent a repo owner from using

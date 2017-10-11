@@ -730,6 +730,9 @@ coreconfigitem('web', 'errorlog',
 coreconfigitem('web', 'ipv6',
     default=False,
 )
+coreconfigitem('web', 'maxfiles',
+    default=10,
+)
 coreconfigitem('web', 'maxshortchanges',
     default=60,
 )
