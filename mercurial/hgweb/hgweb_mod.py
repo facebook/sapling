@@ -110,7 +110,7 @@ class requestcontext(object):
 
         self.archivespecs = archivespecs
 
-        self.maxchanges = self.configint('web', 'maxchanges', 10)
+        self.maxchanges = self.configint('web', 'maxchanges')
         self.stripecount = self.configint('web', 'stripes')
         self.maxshortchanges = self.configint('web', 'maxshortchanges')
         self.maxfiles = self.configint('web', 'maxfiles')
