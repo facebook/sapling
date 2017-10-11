@@ -170,6 +170,9 @@ configitem('notify', 'domain',
 configitem('notify', 'fromauthor',
     default=None,
 )
+configitem('notify', 'incoming',
+    default=None,
+)
 configitem('notify', 'maxdiff',
     default=300,
 )
