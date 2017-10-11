@@ -63,6 +63,7 @@ class Client(object):
             'actAsUser': self._actas,
             'authToken': token,
             'authSignature': hashlib.sha1(sig.encode('utf-8')).hexdigest(),
+            'caller': 'hg',
         }
         req_data = util.urlreq.urlencode(
             {
