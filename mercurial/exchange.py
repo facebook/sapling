@@ -531,7 +531,7 @@ def _pushdiscoveryphase(pushop):
     if (pushop.ui.configbool('ui', '_usedassubrepo')
         and remotephases    # server supports phases
         and not pushop.outgoing.missing # no changesets to be pushed
-        and publishing):
+        and remotephases.get('publishing', False)):
         # When:
         # - this is a subrepo push
         # - and remote support phase
@@ -541,7 +541,9 @@ def _pushdiscoveryphase(pushop):
         # We drop the possible phase synchronisation done by
         # courtesy to publish changesets possibly locally draft
         # on the remote.
-        remotephases = {'publishing': 'True'}
+        pushop.outdatedphases = []
+        pushop.fallbackoutdatedphases = []
+        return
     ana = phases.analyzeremotephases(pushop.repo,
                                      pushop.fallbackheads,
                                      remotephases)
