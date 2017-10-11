@@ -71,7 +71,7 @@ configitem('blackbox', 'logsource',
     default=False,
 )
 configitem('blackbox', 'track',
-    default=['*'],
+    default=lambda: ['*'],
 )
 
 lastui = None
