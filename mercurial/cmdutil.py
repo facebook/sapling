@@ -462,59 +462,64 @@ class dirnode(object):
         if status not in self.statuses:
             self.statuses.add(status)
 
-def _addfilestotersed(path, files, tersedict):
-    """ adds files to the their respective status list in the final tersed list
+    def _addfilestotersed(self, tersedict):
+        """
+        adds files to the their respective status list in the final tersed list
 
-    path is the path of parent directory of the file
-    files is a list of tuple where each tuple is (filename, status)
-    tersedict is a dictonary which contains each status abbreviation as key and
-    list of files and tersed dirs in that status as value
-    """
-    for f, st in files:
-        tersedict[st].append(os.path.join(path, f))
+        path is the path of parent directory of the file
+        files is a list of tuple where each tuple is (filename, status)
+        tersedict is a dictonary which contains each status abbreviation as key and
+        list of files and tersed dirs in that status as value
+        """
+        for f, st in self.files:
+            tersedict[st].append(os.path.join(self.path, f))
 
-def _processtersestatus(subdir, tersedict, terseargs):
-    """a recursive function which process status for a certain directory.
+    def _processtersestatus(self, tersedict, terseargs):
+        """
+        a recursive function which process status for a certain directory.
 
-    subdir is an oject of dirnode class defined below. each object of dirnode
-    class has a set of statuses which files in that directory has. This ease our
-    check whether we can terse that directory or not.
+        self is an oject of dirnode class defined below. each object of dirnode
+        class has a set of statuses which files in that directory has. This ease
+        our check whether we can terse that directory or not.
 
-    tersedict is a dictonary which contains each status abbreviation as key and
-    list of files and tersed dirs in that status as value. In each function call
-    we are passing the same dict and adding files and dirs to it.
+        tersedict is a dictonary which contains each status abbreviation as key
+        and list of files and tersed dirs in that status as value. In each
+        function call we are passing the same dict and adding files and dirs
+        to it.
 
-    terseargs is the string of arguments passed by the user with `--terse` flag.
+        terseargs is the string of arguments passed by the user with `--terse`
+        flag.
 
-    Following are the cases which can happen:
+        Following are the cases which can happen:
 
-    1) All the files in the directory (including all the files in its
-    subdirectories) share the same status and the user has asked us to terse
-    that status. -> we add the directory name to status list and return
+        1) All the files in the directory (including all the files in its
+        subdirectories) share the same status and the user has asked us to terse
+        that status. -> we add the directory name to status list and return
 
-    2) If '1)' does not happen, we do following:
+        2) If '1)' does not happen, we do following:
 
-            a) Add all the files which are in this directory (only the ones in
-                this directory, not the subdirs) to their respective status list
+                a) Add all the files which are in this directory (only the ones in
+                    this directory, not the subdirs) to their respective status list
 
-            b) Recurse the function on all the subdirectories of this directory
-    """
+                b) Recurse the function on all the subdirectories of this
+                   directory
+        """
 
-    if len(subdir.statuses) == 1:
-        onlyst = subdir.statuses.pop()
+        if len(self.statuses) == 1:
+            onlyst = self.statuses.pop()
 
-        # Making sure we terse only when the status abbreviation is passed as
-        # terse argument
-        if onlyst in terseargs:
-            tersedict[onlyst].append(subdir.path + pycompat.ossep)
-            return
+            # Making sure we terse only when the status abbreviation is
+            # passed as terse argument
+            if onlyst in terseargs:
+                tersedict[onlyst].append(self.path + pycompat.ossep)
+                return
 
-    # add the files to status list
-    _addfilestotersed(subdir.path, subdir.files, tersedict)
+        # add the files to status list
+        self._addfilestotersed(tersedict)
 
-    #recurse on the subdirs
-    for dirobj in subdir.subdirs.values():
-        _processtersestatus(dirobj, tersedict, terseargs)
+        #recurse on the subdirs
+        for dirobj in self.subdirs.values():
+            dirobj._processtersestatus(tersedict, terseargs)
 
 def tersedir(statuslist, terseargs):
     """
@@ -553,11 +558,11 @@ def tersedir(statuslist, terseargs):
         tersedict[attrname[0]] = []
 
     # we won't be tersing the root dir, so add files in it
-    _addfilestotersed(rootobj.path, rootobj.files, tersedict)
+    rootobj._addfilestotersed(tersedict)
 
     # process each sub-directory and build tersedict
     for subdir in rootobj.subdirs.values():
-        _processtersestatus(subdir, tersedict, terseargs)
+        subdir._processtersestatus(tersedict, terseargs)
 
     tersedlist = []
     for st in allst:
