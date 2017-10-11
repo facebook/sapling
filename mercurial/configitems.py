@@ -206,6 +206,9 @@ coreconfigitem('email', 'from',
 coreconfigitem('email', 'method',
     default='smtp',
 )
+coreconfigitem('email', 'reply-to',
+    default=None,
+)
 coreconfigitem('experimental', 'allowdivergence',
     default=False,
 )
