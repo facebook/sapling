@@ -712,6 +712,9 @@ coreconfigitem('ui', 'verbose',
 coreconfigitem('verify', 'skipflags',
     default=None,
 )
+coreconfigitem('web', 'allowbz2',
+    default=None,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
