@@ -371,6 +371,9 @@ coreconfigitem('http_proxy', 'user',
 coreconfigitem('logtoprocess', 'commandexception',
     default=None,
 )
+coreconfigitem('logtoprocess', 'commandfinish',
+    default=None,
+)
 coreconfigitem('merge', 'checkunknown',
     default='abort',
 )
