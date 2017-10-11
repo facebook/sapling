@@ -502,8 +502,10 @@ def listphases(repo):
     # Use ordered dictionary so behavior is deterministic.
     keys = util.sortdict()
     value = '%i' % draft
+    cl = repo.unfiltered().changelog
     for root in repo._phasecache.phaseroots[draft]:
-        keys[hex(root)] = value
+        if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
+            keys[hex(root)] = value
 
     if repo.publishing():
         # Add an extra data to let remote know we are a publishing
