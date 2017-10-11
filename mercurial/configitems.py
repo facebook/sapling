@@ -742,6 +742,9 @@ coreconfigitem('web', 'guessmime',
 coreconfigitem('web', 'hidden',
     default=None,
 )
+coreconfigitem('web', 'labels',
+    default=list,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
