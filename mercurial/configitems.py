@@ -374,6 +374,9 @@ coreconfigitem('logtoprocess', 'commandexception',
 coreconfigitem('logtoprocess', 'commandfinish',
     default=None,
 )
+coreconfigitem('logtoprocess', 'command',
+    default=None,
+)
 coreconfigitem('merge', 'checkunknown',
     default='abort',
 )
