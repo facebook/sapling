@@ -745,6 +745,9 @@ coreconfigitem('web', 'hidden',
 coreconfigitem('web', 'labels',
     default=list,
 )
+coreconfigitem('web', 'logoimg',
+    default='hglogo.png',
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )

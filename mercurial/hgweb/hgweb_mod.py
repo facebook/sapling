@@ -169,7 +169,7 @@ class requestcontext(object):
         port = port != default_port and (':' + port) or ''
         urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
         logourl = self.config('web', 'logourl', 'https://mercurial-scm.org/')
-        logoimg = self.config('web', 'logoimg', 'hglogo.png')
+        logoimg = self.config('web', 'logoimg')
         staticurl = self.config('web', 'staticurl') or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
