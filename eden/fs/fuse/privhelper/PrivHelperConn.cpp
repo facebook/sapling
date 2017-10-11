@@ -184,8 +184,8 @@ void PrivHelperConn::sendMsg(const Message* msg, int fd) {
   //
   // SCM_RIGHTS allows us to send an array of file descriptors if we wanted to,
   // but we currently only ever need to send one.
+  ControlMsgBuffer cmsg(sizeof(int), SOL_SOCKET, SCM_RIGHTS);
   if (fd >= 0) {
-    ControlMsgBuffer cmsg(sizeof(int), SOL_SOCKET, SCM_RIGHTS);
     *cmsg.getData<int>() = fd;
     cmsg.addToMsg(&mh);
   }
