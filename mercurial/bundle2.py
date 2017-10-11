@@ -370,14 +370,10 @@ class partiterator(object):
         if not self.iterator:
             return
 
-        if exc:
-            # If exiting or interrupted, do not attempt to seek the stream in
-            # the finally block below. This makes abort faster.
-            if (self.current and
-                not isinstance(exc, (SystemExit, KeyboardInterrupt))):
-                # consume the part content to not corrupt the stream.
-                self.current.seek(0, 2)
-
+        # Only gracefully abort in a normal exception situation. User aborts
+        # like Ctrl+C throw a KeyboardInterrupt which is not a base Exception,
+        # and should not gracefully cleanup.
+        if isinstance(exc, Exception):
             # Any exceptions seeking to the end of the bundle at this point are
             # almost certainly related to the underlying stream being bad.
             # And, chances are that the exception we're handling is related to
@@ -385,6 +381,10 @@ class partiterator(object):
             # re-raise the original error.
             seekerror = False
             try:
+                if self.current:
+                    # consume the part content to not corrupt the stream.
+                    self.current.seek(0, 2)
+
                 for part in self.iterator:
                     # consume the bundle content
                     part.seek(0, 2)
