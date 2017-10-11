@@ -340,6 +340,8 @@ class pushoperation(object):
         self.pushbranchmap = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
+        # summary of the remote phase situation
+        self.remotephases = None
         # phases changes that must be pushed along side the changesets
         self.outdatedphases = None
         # phases changes that must be pushed if changeset push fails
@@ -527,7 +529,6 @@ def _pushdiscoveryphase(pushop):
     outgoing = pushop.outgoing
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys('phases')
-    publishing = remotephases.get('publishing', False)
     if (pushop.ui.configbool('ui', '_usedassubrepo')
         and remotephases    # server supports phases
         and not pushop.outgoing.missing # no changesets to be pushed
@@ -544,12 +545,14 @@ def _pushdiscoveryphase(pushop):
         pushop.outdatedphases = []
         pushop.fallbackoutdatedphases = []
         return
-    ana = phases.analyzeremotephases(pushop.repo,
-                                     pushop.fallbackheads,
-                                     remotephases)
-    pheads, droots = ana
+
+    pushop.remotephases = phases.remotephasessummary(pushop.repo,
+                                                     pushop.fallbackheads,
+                                                     remotephases)
+    droots = pushop.remotephases.draftroots
+
     extracond = ''
-    if not publishing:
+    if not pushop.remotephases.publishing:
         extracond = ' and public()'
     revset = 'heads((%%ln::%%ln) %s)' % extracond
     # Get the list of all revs draft on remote by public here.

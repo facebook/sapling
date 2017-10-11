@@ -604,6 +604,27 @@ def analyzeremotephases(repo, subset, roots):
     publicheads = newheads(repo, subset, draftroots)
     return publicheads, draftroots
 
+class remotephasessummary(object):
+    """summarize phase information on the remote side
+
+    :publishing: True is the remote is publishing
+    :publicheads: list of remote public phase heads (nodes)
+    :draftheads: list of remote draft phase heads (nodes)
+    :draftroots: list of remote draft phase root (nodes)
+    """
+
+    def __init__(self, repo, remotesubset, remoteroots):
+        unfi = repo.unfiltered()
+        self._allremoteroots = remoteroots
+
+        self.publishing = remoteroots.get('publishing', False)
+
+        ana = analyzeremotephases(repo, remotesubset, remoteroots)
+        self.publicheads, self.draftroots = ana
+        # Get the list of all "heads" revs draft on remote
+        dheads = unfi.set('heads(%ln::%ln)', self.draftroots, remotesubset)
+        self.draftheads = [c.node() for c in dheads]
+
 def newheads(repo, heads, roots):
     """compute new head of a subset minus another
 
