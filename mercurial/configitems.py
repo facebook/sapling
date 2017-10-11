@@ -520,6 +520,10 @@ coreconfigitem('paths', 'default',
 coreconfigitem('paths', 'default-push',
     default=None,
 )
+coreconfigitem('paths', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('phases', 'checksubrepos',
     default='follow',
 )
