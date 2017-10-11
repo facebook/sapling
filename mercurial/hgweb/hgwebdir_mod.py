@@ -491,7 +491,7 @@ class hgwebdir(object):
             if self.motd is not None:
                 yield self.motd
             else:
-                yield config('web', 'motd', '')
+                yield config('web', 'motd')
 
         def config(section, name, default=uimod._unset, untrusted=True):
             return self.ui.config(section, name, default, untrusted)

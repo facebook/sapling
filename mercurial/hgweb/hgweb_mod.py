@@ -177,7 +177,7 @@ class requestcontext(object):
         # some functions for the templater
 
         def motd(**map):
-            yield self.config('web', 'motd', '')
+            yield self.config('web', 'motd')
 
         # figure out which style to use
 

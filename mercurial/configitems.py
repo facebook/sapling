@@ -730,6 +730,9 @@ coreconfigitem('web', 'errorlog',
 coreconfigitem('web', 'ipv6',
     default=False,
 )
+coreconfigitem('web', 'motd',
+    default='',
+)
 coreconfigitem('web', 'name',
     default=dynamicdefault,
 )
