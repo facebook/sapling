@@ -112,7 +112,7 @@ class requestcontext(object):
 
         self.maxchanges = self.configint('web', 'maxchanges', 10)
         self.stripecount = self.configint('web', 'stripes')
-        self.maxshortchanges = self.configint('web', 'maxshortchanges', 60)
+        self.maxshortchanges = self.configint('web', 'maxshortchanges')
         self.maxfiles = self.configint('web', 'maxfiles', 10)
         self.allowpull = self.configbool('web', 'allowpull', True)
 
