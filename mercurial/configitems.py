@@ -632,6 +632,9 @@ coreconfigitem('ui', 'interactive',
 coreconfigitem('ui', 'interface',
     default=None,
 )
+coreconfigitem('ui', 'interface.chunkselector',
+    default=None,
+)
 coreconfigitem('ui', 'logblockedtimes',
     default=False,
 )

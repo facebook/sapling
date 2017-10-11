@@ -1149,7 +1149,7 @@ class ui(object):
             defaultinterface = i
 
         choseninterface = defaultinterface
-        f = self.config("ui", "interface.%s" % feature, None)
+        f = self.config("ui", "interface.%s" % feature)
         if f in availableinterfaces:
             choseninterface = f
 
