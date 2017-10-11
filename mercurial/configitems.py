@@ -733,6 +733,9 @@ coreconfigitem('web', 'cache',
 coreconfigitem('web', 'contact',
     default=None,
 )
+coreconfigitem('web', 'deny_push',
+    default=list,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
