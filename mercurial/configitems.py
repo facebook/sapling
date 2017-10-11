@@ -454,6 +454,10 @@ coreconfigitem('hooks', '.*',
     default=dynamicdefault,
     generic=True,
 )
+coreconfigitem('hostfingerprints', '.*',
+    default=list,
+    generic=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )

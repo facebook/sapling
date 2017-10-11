@@ -200,7 +200,7 @@ def _hostsettings(ui, hostname):
         s['certfingerprints'].append((alg, fingerprint))
 
     # Fingerprints from [hostfingerprints] are always SHA-1.
-    for fingerprint in ui.configlist('hostfingerprints', hostname, []):
+    for fingerprint in ui.configlist('hostfingerprints', hostname):
         fingerprint = fingerprint.replace(':', '').lower()
         s['certfingerprints'].append(('sha1', fingerprint))
         s['legacyfingerprint'] = True
