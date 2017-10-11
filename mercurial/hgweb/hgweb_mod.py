@@ -191,7 +191,7 @@ class requestcontext(object):
         sessionvars = webutil.sessionvars(vars, start)
 
         if not self.reponame:
-            self.reponame = (self.config('web', 'name')
+            self.reponame = (self.config('web', 'name', '')
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
 
