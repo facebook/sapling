@@ -498,6 +498,10 @@ coreconfigitem('merge', 'followcopies',
 coreconfigitem('merge', 'preferancestor',
         default=lambda: ['*'],
 )
+coreconfigitem('pager', 'attend-.*',
+    default=dynamicdefault,
+    generic=True,
+)
 coreconfigitem('pager', 'ignore',
     default=list,
 )

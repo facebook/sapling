@@ -56,8 +56,8 @@ def uisetup(ui):
 
             for cmd in cmds:
                 var = 'attend-%s' % cmd
-                if ui.config('pager', var):
-                    usepager = ui.configbool('pager', var)
+                if ui.config('pager', var, None):
+                    usepager = ui.configbool('pager', var, True)
                     break
                 if (cmd in attend or
                      (cmd not in ignore and not attend)):
