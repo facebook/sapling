@@ -83,6 +83,9 @@ configitem('commands', 'rebase.requiredest',
 configitem('experimental', 'rebaseskipobsolete',
     default=True,
 )
+configitem('rebase', 'singletransaction',
+    default=False,
+)
 
 def _nothingtorebase():
     return 1
