@@ -66,6 +66,11 @@ b"""# example user config (see 'hg help config' for more info)
 # username = Jane Doe <jdoe@example.com>
 username =
 
+# We recommend enabling tweakdefaults to get slight improvements to
+# the UI over time. Make sure to set HGPLAIN in the environment when
+# writing scripts!
+# tweakdefaults = True
+
 # uncomment to disable color in command output
 # (see 'hg help color' for details)
 # color = never
