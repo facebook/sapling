@@ -36,6 +36,13 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('experimental', 'uncommitondirtywdir',
+    default=False,
+)
+
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -150,7 +157,7 @@ def uncommit(ui, repo, *pats, **opts):
         wctx = repo[None]
 
         if not pats and not repo.ui.configbool('experimental',
-                                                'uncommitondirtywdir', False):
+                                                'uncommitondirtywdir'):
             cmdutil.bailifchanged(repo)
         if wctx.parents()[0].node() == node.nullid:
             raise error.Abort(_("cannot uncommit null changeset"))
