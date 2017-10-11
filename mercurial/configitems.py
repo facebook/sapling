@@ -736,6 +736,9 @@ coreconfigitem('web', 'port',
 coreconfigitem('web', 'prefix',
     default='',
 )
+coreconfigitem('web', 'push_ssl',
+    default=True,
+)
 coreconfigitem('web', 'refreshinterval',
     default=20,
 )

@@ -69,7 +69,7 @@ def checkauthz(hgweb, req, op):
     # require ssl by default for pushing, auth info cannot be sniffed
     # and replayed
     scheme = req.env.get('wsgi.url_scheme')
-    if hgweb.configbool('web', 'push_ssl', True) and scheme != 'https':
+    if hgweb.configbool('web', 'push_ssl') and scheme != 'https':
         raise ErrorResponse(HTTP_FORBIDDEN, 'ssl required')
 
     deny = hgweb.configlist('web', 'deny_push')
