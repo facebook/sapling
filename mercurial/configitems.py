@@ -194,6 +194,9 @@ coreconfigitem('diff', 'noprefix',
 coreconfigitem('email', 'bcc',
     default=None,
 )
+coreconfigitem('email', 'cc',
+    default=None,
+)
 coreconfigitem('email', 'charsets',
     default=list,
 )
