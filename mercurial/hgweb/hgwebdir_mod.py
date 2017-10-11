@@ -510,7 +510,7 @@ class hgwebdir(object):
 
         start = url[-1] == '?' and '&' or '?'
         sessionvars = webutil.sessionvars(vars, start)
-        logourl = config('web', 'logourl', 'https://mercurial-scm.org/')
+        logourl = config('web', 'logourl')
         logoimg = config('web', 'logoimg')
         staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):

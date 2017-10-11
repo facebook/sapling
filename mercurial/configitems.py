@@ -748,6 +748,9 @@ coreconfigitem('web', 'labels',
 coreconfigitem('web', 'logoimg',
     default='hglogo.png',
 )
+coreconfigitem('web', 'logourl',
+    default='https://mercurial-scm.org/',
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
