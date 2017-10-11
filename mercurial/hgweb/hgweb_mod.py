@@ -482,8 +482,8 @@ def getwebview(repo):
 
     The option has been around undocumented since Mercurial 2.5, but no
     user ever asked about it. So we better keep it undocumented for now."""
-    viewconfig = repo.ui.config('web', 'view', 'served',
-                                untrusted=True)
+    # experimental config: web.view
+    viewconfig = repo.ui.config('web', 'view', untrusted=True)
     if viewconfig == 'all':
         return repo.unfiltered()
     elif viewconfig in repoview.filtertable:

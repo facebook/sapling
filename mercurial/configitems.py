@@ -748,6 +748,9 @@ coreconfigitem('web', 'style',
 coreconfigitem('web', 'templates',
     default=None,
 )
+coreconfigitem('web', 'view',
+    default='served',
+)
 coreconfigitem('worker', 'backgroundclose',
     default=dynamicdefault,
 )
