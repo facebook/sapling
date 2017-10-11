@@ -718,6 +718,9 @@ coreconfigitem('web', 'allowbz2',
 coreconfigitem('web', 'allowgz',
     default=None,
 )
+coreconfigitem('web', 'allowpull',
+    default=True,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
