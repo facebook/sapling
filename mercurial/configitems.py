@@ -721,6 +721,9 @@ coreconfigitem('web', 'allowgz',
 coreconfigitem('web', 'allowpull',
     default=True,
 )
+coreconfigitem('web', 'allow_push',
+    default=list,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
