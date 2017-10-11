@@ -727,6 +727,9 @@ coreconfigitem('web', 'allow_push',
 coreconfigitem('web', 'allowzip',
     default=None,
 )
+coreconfigitem('web', 'cache',
+    default=True,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )

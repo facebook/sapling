@@ -436,7 +436,7 @@ class hgweb(object):
 
             # Don't enable caching if using a CSP nonce because then it wouldn't
             # be a nonce.
-            if rctx.configbool('web', 'cache', True) and not rctx.nonce:
+            if rctx.configbool('web', 'cache') and not rctx.nonce:
                 caching(self, req) # sets ETag header or raises NOT_MODIFIED
             if cmd not in webcommands.__all__:
                 msg = 'no such method: %s' % cmd
