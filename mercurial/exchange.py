@@ -735,6 +735,31 @@ def _pushb2ctxcheckheads(pushop, bundler):
                 data = iter(sorted(affected))
                 bundler.newpart('check:updated-heads', data=data)
 
+def _pushing(pushop):
+    """return True if we are pushing anything"""
+    return bool(pushop.outgoing.missing
+                or pushop.outdatedphases
+                or pushop.outobsmarkers
+                or pushop.outbookmarks)
+
+@b2partsgenerator('check-phases')
+def _pushb2checkphases(pushop, bundler):
+    """insert phase move checking"""
+    if not _pushing(pushop) or pushop.force:
+        return
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    hasphaseheads = 'heads' in b2caps.get('phases', ())
+    if pushop.remotephases is not None and hasphaseheads:
+        # check that the remote phase has not changed
+        checks = [[] for p in phases.allphases]
+        checks[phases.public].extend(pushop.remotephases.publicheads)
+        checks[phases.draft].extend(pushop.remotephases.draftroots)
+        if any(checks):
+            for nodes in checks:
+                nodes.sort()
+            checkdata = phases.binaryencode(checks)
+            bundler.newpart('check:phases', data=checkdata)
+
 @b2partsgenerator('changeset')
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
