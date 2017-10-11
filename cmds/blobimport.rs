@@ -5,8 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-// TODO: (sid0) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 #![feature(conservative_impl_trait)]
 
 extern crate clap;
@@ -15,6 +13,8 @@ extern crate error_chain;
 extern crate futures;
 #[macro_use]
 extern crate slog;
+#[macro_use]
+extern crate slog_glog_fmt;
 extern crate slog_term;
 extern crate tokio_core;
 
@@ -37,22 +37,21 @@ extern crate serde;
 extern crate bincode;
 
 use std::error;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use bytes::Bytes;
 
 use futures::{Future, IntoFuture, Stream};
-use futures::future::BoxFuture;
-use futures_ext::StreamExt;
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use tokio_core::reactor::{Core, Remote};
 
 use futures_cpupool::CpuPool;
 
 use clap::{App, Arg};
-use slog::{Drain, Level, LevelFilter, Logger};
+use slog::{Drain, Level, Logger};
+use slog_glog_fmt::default_drain as glog_drain;
 
 use blobstore::Blobstore;
 use fileblob::Fileblob;
@@ -107,6 +106,8 @@ error_chain! {
         Io(::std::io::Error);
     }
 }
+
+impl_kv_error!(Error);
 
 fn put_manifest_entry(
     blobstore: BBlobstore,
@@ -187,15 +188,15 @@ fn get_stream_of_manifest_entries(
 
     match linkrev {
         Ok(linkrev) => if linkrev != cs_rev {
-            return futures::stream::empty().boxed();
+            return futures::stream::empty().boxify();
         },
         Err(e) => {
-            return futures::stream::once(Err(e)).boxed();
+            return futures::stream::once(Err(e)).boxify();
         }
     }
 
     match entry.get_type() {
-        Type::File | Type::Executable | Type::Symlink => futures::stream::once(Ok(entry)).boxed(),
+        Type::File | Type::Executable | Type::Symlink => futures::stream::once(Ok(entry)).boxify(),
         Type::Tree => entry
             .get_content()
             .and_then(|content| match content {
@@ -209,7 +210,7 @@ fn get_stream_of_manifest_entries(
             .map_err(Error::from)
             .flatten()
             .chain(futures::stream::once(Ok(entry)))
-            .boxed(),
+            .boxify(),
     }
 }
 
@@ -243,63 +244,62 @@ where
             })
     };
 
-    let manifest = {
-        revlog_repo
-            .get_changeset_by_nodeid(&csid)
-            .join(revlog_repo.get_changelog_revlog_entry_by_nodeid(&csid))
-            .from_err()
-            .and_then(move |(cs, entry)| {
-                let mfid = *cs.manifestid();
-                let linkrev = entry.linkrev;
+    let manifest = revlog_repo
+        .get_changeset_by_nodeid(&csid)
+        .join(revlog_repo.get_changelog_revlog_entry_by_nodeid(&csid))
+        .from_err()
+        .and_then(move |(cs, entry)| {
+            let mfid = *cs.manifestid();
+            let linkrev = entry.linkrev;
 
-                // fetch the blob for the (root) manifest
-                revlog_repo
-                    .get_manifest_blob_by_nodeid(&mfid)
-                    .from_err()
-                    .and_then(move |blob| {
-                        let putmf = put_manifest_entry(
-                            blobstore.clone(),
-                            mfid,
-                            blob.as_blob().clone(),
-                            blob.parents().clone(),
-                        );
+            // fetch the blob for the (root) manifest
+            revlog_repo
+                .get_manifest_blob_by_nodeid(&mfid)
+                .from_err()
+                .and_then(move |blob| {
+                    let putmf = put_manifest_entry(
+                        blobstore.clone(),
+                        mfid,
+                        blob.as_blob().clone(),
+                        blob.parents().clone(),
+                    );
 
-                        // Get the listing of entries and fetch each of those
-                        let files = RevlogManifest::new(revlog_repo.clone(), blob)
-                            .map_err(|err| {
-                                Error::with_chain(Error::from(err), "Parsing manifest to get list")
-                            })
-                            .map(|mf| mf.list().map_err(Error::from))
-                            .map(|entry_stream| {
-                                entry_stream
-                                    .map({
-                                        let revlog_repo = revlog_repo.clone();
-                                        move |entry| {
-                                            get_stream_of_manifest_entries(
-                                                entry,
-                                                revlog_repo.clone(),
-                                                linkrev.clone(),
-                                            )
-                                        }
-                                    })
-                                    .flatten()
-                                    .for_each(
-                                        move |entry| copy_manifest_entry(entry, blobstore.clone()),
-                                    )
-                            })
-                            .into_future()
-                            .flatten();
+                    // Get the listing of entries and fetch each of those
+                    let files = RevlogManifest::new(revlog_repo.clone(), blob)
+                        .map_err(|err| {
+                            Error::with_chain(Error::from(err), "Parsing manifest to get list")
+                        })
+                        .map(|mf| mf.list().map_err(Error::from))
+                        .map(|entry_stream| {
+                            entry_stream
+                                .map({
+                                    let revlog_repo = revlog_repo.clone();
+                                    move |entry| {
+                                        get_stream_of_manifest_entries(
+                                            entry,
+                                            revlog_repo.clone(),
+                                            linkrev.clone(),
+                                        )
+                                    }
+                                })
+                                .flatten()
+                                .for_each(
+                                    move |entry| copy_manifest_entry(entry, blobstore.clone()),
+                                )
+                        })
+                        .into_future()
+                        .flatten();
 
-                        _assert_sized(&files);
-                        let files = files.boxed(); // Huh? No idea why this is needed to avoid an error below.
+                    _assert_sized(&files);
+                    // Huh? No idea why this is needed to avoid an error below.
+                    let files = files.boxify();
 
-                        putmf.join(files)
-                    })
-            })
-            .map_err(move |err| {
-                Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
-            })
-    };
+                    putmf.join(files)
+                })
+        })
+        .map_err(move |err| {
+            Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
+        });
 
     _assert_sized(&put);
     _assert_sized(&manifest);
@@ -352,7 +352,7 @@ where
         })
         .buffer_unordered(100);
 
-    let convert = changesets.merge(heads).for_each(|_| Ok(()));
+    let convert = changesets.select(heads).for_each(|_| Ok(()));
 
     core.run(convert)?;
 
@@ -470,10 +470,7 @@ fn main() {
         Level::Info
     };
 
-    // TODO: switch to TermDecorator, which supports color
-    let drain = slog_term::PlainSyncDecorator::new(io::stdout());
-    let drain = slog_term::FullFormat::new(drain).build();
-    let drain = LevelFilter::new(drain, level).fuse();
+    let drain = glog_drain().filter_level(level).fuse();
     let root_log = slog::Logger::root(drain, o![]);
 
     let input = matches.value_of("INPUT").unwrap();
@@ -489,12 +486,7 @@ fn main() {
     let postpone_compaction = matches.is_present("postpone-compaction");
 
     if let Err(ref e) = run(input, output, blobtype, &root_log, postpone_compaction) {
-        error!(root_log, "Failed: {}", e);
-
-        for e in e.iter().skip(1) {
-            error!(root_log, "caused by: {}", e);
-        }
-
+        error!(root_log, "Blobimport failed"; e);
         std::process::exit(1);
     }
 
