@@ -591,6 +591,9 @@ coreconfigitem('progress', 'disable',
 coreconfigitem('progress', 'estimateinterval',
     default=60.0,
 )
+coreconfigitem('progress', 'format',
+    default=lambda: ['topic', 'bar', 'number', 'estimate'],
+)
 coreconfigitem('progress', 'refresh',
     default=0.1,
 )

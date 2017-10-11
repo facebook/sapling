@@ -101,9 +101,7 @@ class progbar(object):
         self.changedelay = max(3 * self.refresh,
                                float(self.ui.config(
                                    'progress', 'changedelay')))
-        self.order = self.ui.configlist(
-            'progress', 'format',
-            default=['topic', 'bar', 'number', 'estimate'])
+        self.order = self.ui.configlist('progress', 'format')
         self.estimateinterval = self.ui.configwith(
             float, 'progress', 'estimateinterval')
 
