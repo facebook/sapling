@@ -17,7 +17,7 @@ Go back in the current repo (fb-hgext)
   $ cd $TESTDIR/..
   $ unset BYPASS
 
-  $ for node in `hg log --rev 'not public() and ::.' --template '{node|short}\n'`; do
+  $ for node in `hg log --rev 'not public() and ::. and not desc("# no-check-commit")' --template '{node|short}\n'`; do
   >    hg export $node | $RUNTESTDIR/../contrib/check-commit > ${TESTTMP}/check-commit.out
   >    if [ $? -ne 0 ]; then
   >        echo "Revision $node does not comply with rules"
