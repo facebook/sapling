@@ -37,6 +37,9 @@ configitem('convert', 'cvsps.cache',
 configitem('convert', 'cvsps.fuzz',
     default=60,
 )
+configitem('convert', 'cvsps.logencoding',
+    default=None,
+)
 configitem('convert', 'cvsps.mergefrom',
     default=None,
 )
