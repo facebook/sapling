@@ -62,6 +62,36 @@ def getitemregister(configtable):
 
 coreconfigitem = getitemregister(coreitems)
 
+coreconfigitem('annotate', 'nodates',
+    default=None,
+)
+coreconfigitem('annotate', 'showfunc',
+    default=None,
+)
+coreconfigitem('annotate', 'unified',
+    default=None,
+)
+coreconfigitem('annotate', 'git',
+    default=None,
+)
+coreconfigitem('annotate', 'ignorews',
+    default=None,
+)
+coreconfigitem('annotate', 'ignorewsamount',
+    default=None,
+)
+coreconfigitem('annotate', 'ignoreblanklines',
+    default=None,
+)
+coreconfigitem('annotate', 'ignorewseol',
+    default=None,
+)
+coreconfigitem('annotate', 'nobinary',
+    default=None,
+)
+coreconfigitem('annotate', 'noprefix',
+    default=None,
+)
 coreconfigitem('auth', 'cookiefile',
     default=None,
 )
