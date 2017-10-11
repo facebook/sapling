@@ -383,6 +383,9 @@ coreconfigitem('merge', 'preferancestor',
 coreconfigitem('pager', 'ignore',
     default=list,
 )
+coreconfigitem('pager', 'pager',
+    default=dynamicdefault,
+)
 coreconfigitem('patch', 'eol',
     default='strict',
 )
