@@ -70,6 +70,9 @@ configitem('blackbox', 'maxsize',
 configitem('blackbox', 'logsource',
     default=False,
 )
+configitem('blackbox', 'maxfiles',
+    default=7,
+)
 configitem('blackbox', 'track',
     default=lambda: ['*'],
 )
@@ -102,7 +105,7 @@ def _openlogfile(ui, vfs):
         else:
             if st.st_size >= maxsize:
                 path = vfs.join(name)
-                maxfiles = ui.configint('blackbox', 'maxfiles', 7)
+                maxfiles = ui.configint('blackbox', 'maxfiles')
                 for i in xrange(maxfiles - 1, 1, -1):
                     rotate(oldpath='%s.%d' % (path, i - 1),
                            newpath='%s.%d' % (path, i))
