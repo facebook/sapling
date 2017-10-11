@@ -212,6 +212,9 @@ coreconfigitem('email', 'reply-to',
 coreconfigitem('experimental', 'allowdivergence',
     default=False,
 )
+coreconfigitem('experimental', 'archivemetatemplate',
+    default=dynamicdefault,
+)
 coreconfigitem('experimental', 'bundle-phases',
     default=False,
 )
