@@ -93,7 +93,7 @@ def log(web, req, tmpl):
 
 @webcommand('rawfile')
 def rawfile(web, req, tmpl):
-    guessmime = web.configbool('web', 'guessmime', False)
+    guessmime = web.configbool('web', 'guessmime')
 
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:

@@ -736,6 +736,9 @@ coreconfigitem('web', 'contact',
 coreconfigitem('web', 'deny_push',
     default=list,
 )
+coreconfigitem('web', 'guessmime',
+    default=False,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
