@@ -37,6 +37,7 @@ extern crate serde;
 extern crate bincode;
 
 use std::error;
+use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -359,7 +360,7 @@ where
     Ok(())
 }
 
-fn run<In, Out>(
+fn run<In: Debug, Out: Debug>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
@@ -374,9 +375,12 @@ where
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
     let repo = open_repo(&input)?;
+    info!(logger, "Opening blobstore: {:?}", output);
     let blobstore = open_blobstore(&output, blobtype, &core.remote(), postpone_compaction)?;
+    info!(logger, "Opening headstore: {:?}", output);
     let headstore = open_headstore(&output, &cpupool)?;
 
+    info!(logger, "Converting: {:?}", input);
     convert(repo, blobstore, headstore, core, cpupool, logger)
 }
 
