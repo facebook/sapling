@@ -715,6 +715,9 @@ coreconfigitem('verify', 'skipflags',
 coreconfigitem('web', 'allowbz2',
     default=None,
 )
+coreconfigitem('web', 'allowgz',
+    default=None,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
