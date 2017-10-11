@@ -460,6 +460,9 @@ coreconfigitem('hostsecurity', 'ciphers',
 coreconfigitem('hostsecurity', 'disabletls10warning',
     default=False,
 )
+coreconfigitem('hostsecurity', 'minimumprotocol',
+    default=dynamicdefault,
+)
 coreconfigitem('http_proxy', 'always',
     default=False,
 )
