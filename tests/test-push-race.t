@@ -22,18 +22,29 @@ A set of extension and shell functions ensures this scheduling.
   > from mercurial import (
   >     exchange,
   >     extensions,
+  >     registrar,
+  > )
+  > 
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > 
+  > configitem('delaypush', 'ready-path',
+  >     default=None,
+  > )
+  > configitem('delaypush', 'release-path',
+  >     default=None,
   > )
   > 
   > def delaypush(orig, pushop):
   >     # notify we are done preparing
   >     ui = pushop.repo.ui
-  >     readypath = ui.config('delaypush', 'ready-path', None)
+  >     readypath = ui.config('delaypush', 'ready-path')
   >     if readypath is not None:
   >         with open(readypath, 'w') as r:
   >             r.write('foo')
   >         ui.status('wrote ready: %s\n' % readypath)
   >     # now wait for the other process to be done
-  >     watchpath = ui.config('delaypush', 'release-path', None)
+  >     watchpath = ui.config('delaypush', 'release-path')
   >     if watchpath is not None:
   >         ui.status('waiting on: %s\n' % watchpath)
   >         limit = 100
