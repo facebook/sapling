@@ -380,6 +380,9 @@ coreconfigitem('logtoprocess', 'command',
 coreconfigitem('logtoprocess', 'develwarn',
     default=None,
 )
+coreconfigitem('logtoprocess', 'uiblocked',
+    default=None,
+)
 coreconfigitem('merge', 'checkunknown',
     default='abort',
 )
