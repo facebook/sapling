@@ -730,6 +730,9 @@ coreconfigitem('web', 'allowzip',
 coreconfigitem('web', 'cache',
     default=True,
 )
+coreconfigitem('web', 'contact',
+    default=None,
+)
 coreconfigitem('web', 'accesslog',
     default='-',
 )
