@@ -595,11 +595,11 @@ def bundle1allowed(repo, action):
     gd = 'generaldelta' in repo.requirements
 
     if gd:
-        v = ui.configbool('server', 'bundle1gd.%s' % action, None)
+        v = ui.configbool('server', 'bundle1gd.%s' % action)
         if v is not None:
             return v
 
-    v = ui.configbool('server', 'bundle1.%s' % action, None)
+    v = ui.configbool('server', 'bundle1.%s' % action)
     if v is not None:
         return v
 

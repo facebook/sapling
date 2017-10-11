@@ -500,6 +500,18 @@ coreconfigitem('server', 'bundle1',
 coreconfigitem('server', 'bundle1gd',
     default=None,
 )
+coreconfigitem('server', 'bundle1.pull',
+    default=None,
+)
+coreconfigitem('server', 'bundle1gd.pull',
+    default=None,
+)
+coreconfigitem('server', 'bundle1.push',
+    default=None,
+)
+coreconfigitem('server', 'bundle1gd.push',
+    default=None,
+)
 coreconfigitem('server', 'compressionengines',
     default=list,
 )
