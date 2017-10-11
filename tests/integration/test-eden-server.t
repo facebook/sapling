@@ -84,36 +84,36 @@ Add commit with a directory
   $ cd ..
   $ mkdir $TESTTMP/blobrepo
 #if files
-  $ blobimport --blobstore files repo $TESTTMP/blobrepo 2> out.txt
+  $ blobimport --blobstore files repo $TESTTMP/blobrepo -d 2> out.txt
   $ grep changeset < out.txt
-  I* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
-  I* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  I* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  I* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  I* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
-  I* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
+  D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  D* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  D* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  D* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  D* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
-  $ grep head < out.txt | sort -k 6
-  I* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  I* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
-  I* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  $ grep "head " < out.txt | sort -k 6
+  D* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  D* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  D* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
 
 #else
-  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction 2> out.txt
+  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction -d 2> out.txt
   $ grep changeset < out.txt
-  I* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
-  I* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
-  I* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  I* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  I* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
-  I* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
+  D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
+  D* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  D* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  D* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
+  D* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
-  $ grep head < out.txt | sort -k 6
-  I* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
-  I* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
-  I* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
+  $ grep "head " < out.txt | sort -k 6
+  D* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
+  D* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  D* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
   $ grep compaction < out.txt
   I* compaction started (glob)
   I* compaction finished (glob)

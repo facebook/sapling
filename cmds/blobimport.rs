@@ -26,10 +26,15 @@ extern crate fileheads;
 extern crate futures_cpupool;
 extern crate futures_ext;
 extern crate heads;
+#[macro_use]
+extern crate lazy_static;
 extern crate manifoldblob;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
+extern crate services;
+#[macro_use]
+extern crate stats;
 
 extern crate rocksdb;
 extern crate serde;
@@ -40,6 +45,7 @@ use std::error;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::thread;
 
 use bytes::Bytes;
 
@@ -50,7 +56,7 @@ use tokio_core::reactor::{Core, Remote};
 
 use futures_cpupool::CpuPool;
 
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches};
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
 
@@ -68,6 +74,14 @@ use mercurial::{RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial_types::{Blob, BlobHash, Changeset, NodeHash, Parents, Type};
 use mercurial_types::manifest::{Entry, Manifest};
+
+use stats::Timeseries;
+
+define_stats! {
+    prefix = "blobimport";
+    changesets: timeseries(RATE, SUM),
+    heads: timeseries(RATE, SUM),
+}
 
 #[derive(Debug, Eq, PartialEq)]
 enum BlobstoreType {
@@ -331,7 +345,8 @@ where
             let blobstore = blobstore.clone();
             let revlog = revlog.clone();
             move |(seq, csid)| {
-                info!(logger, "{}: changeset {}", seq, csid);
+                debug!(logger, "{}: changeset {}", seq, csid);
+                STATS::changesets.add_value(1);
                 copy_changeset(revlog.clone(), blobstore.clone(), csid)
             }
         }) // Stream<Future<()>>
@@ -343,7 +358,8 @@ where
         .map_err(Error::from)
         .map_err(|err| Error::with_chain(err, "Failed get heads"))
         .map(|h| {
-            info!(logger, "head {}", h);
+            debug!(logger, "head {}", h);
+            STATS::heads.add_value(1);
             headstore
                 .add(&format!("{}", h))
                 .map_err(Into::into)
@@ -360,7 +376,7 @@ where
     Ok(())
 }
 
-fn run<In: Debug, Out: Debug>(
+fn run_blobimport<In: Debug, Out: Debug>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
@@ -442,11 +458,22 @@ fn open_blobstore<P: AsRef<Path>>(
     Ok(blobstore)
 }
 
-fn main() {
-    let matches = App::new("revlog to blob importer")
+fn setup_app<'a, 'b>() -> App<'a, 'b> {
+    App::new("revlog to blob importer")
         .version("0.0.0")
         .about("make blobs")
-        .args_from_usage("[debug] -d, --debug     'print debug level output'")
+        .args_from_usage(
+            r#"
+            <INPUT>                  'input revlog repo'
+            <OUTPUT>                 'output blobstore RepoCtx'
+
+            -p, --port [PORT]        'if provided the thrift server will start on this port'
+
+            --postpone-compaction    '(rocksdb only) postpone auto compaction while importing'
+
+            -d, --debug              'print debug level output'
+        "#,
+        )
         .arg(
             Arg::with_name("blobstore")
                 .long("blobstore")
@@ -456,50 +483,89 @@ fn main() {
                 .required(true)
                 .help("blobstore type"),
         )
-        .arg(
-            Arg::with_name("postpone-compaction")
-                .long("postpone-compaction")
-                .help(
-                    "disable rocksdb auto compaction for the time of blobimporting and run
-                       it afterwards. This option is used only for rocksdb blobstore.",
-                ),
-        )
-        .args_from_usage("<INPUT>                 'input revlog repo'")
-        .args_from_usage("<OUTPUT>                'output blobstore RepoCtx'")
-        .get_matches();
+}
 
-    let level = if matches.is_present("debug") {
-        Level::Debug
-    } else {
-        Level::Info
+fn start_thrift_service<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<()> {
+    let port = match matches.value_of("port") {
+        None => return Ok(()),
+        Some(port) => port.parse().expect("Failed to parse port as number"),
     };
 
-    let drain = glog_drain().filter_level(level).fuse();
-    let root_log = slog::Logger::root(drain, o![]);
+    info!(logger, "Initializing thrift server on port {}", port);
 
-    let input = matches.value_of("INPUT").unwrap();
-    let output = matches.value_of("OUTPUT").unwrap();
+    thread::Builder::new()
+        .name("thrift_service".to_owned())
+        .spawn(move || {
+            services::run_service_framework(
+                "mononoke_server",
+                port,
+                0, // Disables separate status http server
+            ).expect("failure while running thrift service framework")
+        })
+        .map(|_| ()) // detaches the thread
+        .map_err(Error::from)
+}
 
-    let blobtype = match matches.value_of("blobstore").unwrap() {
-        "files" => BlobstoreType::Files,
-        "rocksdb" => BlobstoreType::Rocksdb,
-        "manifold" => BlobstoreType::Manifold,
-        bad => panic!("unexpected blobstore type {}", bad),
+fn start_stats() -> Result<()> {
+    thread::Builder::new()
+        .name("stats_aggregation".to_owned())
+        .spawn(move || {
+            let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+            let scheduler = stats::schedule_stats_aggregation(&core.handle())
+                .expect("failed to create stats aggregation scheduler");
+            core.run(scheduler).expect("stats scheduler failed");
+            // stats scheduler shouldn't finish successfully
+            unreachable!()
+        })?; // thread detached
+    Ok(())
+}
+
+fn main() {
+    let matches = setup_app().get_matches();
+
+    let root_log = {
+        let level = if matches.is_present("debug") {
+            Level::Debug
+        } else {
+            Level::Info
+        };
+
+        let drain = glog_drain().filter_level(level).fuse();
+        slog::Logger::root(drain, o![])
     };
 
-    let postpone_compaction = matches.is_present("postpone-compaction");
+    fn run<'a>(root_log: &Logger, matches: ArgMatches<'a>) -> Result<()> {
+        start_thrift_service(&root_log, &matches)?;
+        start_stats()?;
 
-    if let Err(ref e) = run(input, output, blobtype, &root_log, postpone_compaction) {
-        error!(root_log, "Blobimport failed"; e);
-        std::process::exit(1);
+        let input = matches.value_of("INPUT").unwrap();
+        let output = matches.value_of("OUTPUT").unwrap();
+
+        let blobtype = match matches.value_of("blobstore").unwrap() {
+            "files" => BlobstoreType::Files,
+            "rocksdb" => BlobstoreType::Rocksdb,
+            "manifold" => BlobstoreType::Manifold,
+            bad => panic!("unexpected blobstore type {}", bad),
+        };
+
+        let postpone_compaction = matches.is_present("postpone-compaction");
+
+        run_blobimport(input, output, blobtype, &root_log, postpone_compaction)?;
+
+        if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
+            let options = rocksdb::Options::new().create_if_missing(false);
+            let rocksdb = rocksdb::Db::open(Path::new(output).join("blobs"), options)
+                .expect("can't open rocksdb");
+            info!(root_log, "compaction started");
+            rocksdb.compact_range(&[], &[]);
+            info!(root_log, "compaction finished");
+        }
+
+        Ok(())
     }
 
-    if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
-        let options = rocksdb::Options::new().create_if_missing(false);
-        let rocksdb = rocksdb::Db::open(Path::new(output).join("blobs"), options)
-            .expect("can't open rocksdb");
-        info!(root_log, "compaction started");
-        rocksdb.compact_range(&[], &[]);
-        info!(root_log, "compaction finished");
+    if let Err(e) = run(&root_log, matches) {
+        error!(root_log, "Blobimport failed"; e);
+        std::process::exit(1);
     }
 }
