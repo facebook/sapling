@@ -157,6 +157,7 @@ from .i18n import _
 from . import (
     changegroup,
     error,
+    node as nodemod,
     obsolete,
     phases,
     pushkey,
@@ -1748,6 +1749,27 @@ def handlecheckupdatedheads(op, inpart):
         if h not in currentheads:
             raise error.PushRaced('repository changed while pushing - '
                                   'please try again')
+
+@parthandler('check:phases')
+def handlecheckphases(op, inpart):
+    """check that phase boundaries of the repository did not change
+
+    This is used to detect a push race.
+    """
+    phasetonodes = phases.binarydecode(inpart)
+    unfi = op.repo.unfiltered()
+    cl = unfi.changelog
+    phasecache = unfi._phasecache
+    msg = ('repository changed while pushing - please try again '
+           '(%s is %s expected %s)')
+    for expectedphase, nodes in enumerate(phasetonodes):
+        for n in nodes:
+            actualphase = phasecache.phase(unfi, cl.rev(n))
+            if actualphase != expectedphase:
+                finalmsg = msg % (nodemod.short(n),
+                                  phases.phasenames[actualphase],
+                                  phases.phasenames[expectedphase])
+                raise error.PushRaced(finalmsg)
 
 @parthandler('output')
 def handleoutput(op, inpart):
