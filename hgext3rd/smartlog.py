@@ -659,7 +659,7 @@ def _smartlog(ui, repo, *pats, **opts):
     # Print it!
     overrides = {}
     if ui.config('experimental', 'graphstyle.grandparent', '2.') == '|':
-        overrides[('experimental', 'graphstyle.grandparent', '2.')] = '2.'
+        overrides[('experimental', 'graphstyle.grandparent')] = '2.'
     with ui.configoverride(overrides, 'smartlog'):
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
