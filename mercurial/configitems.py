@@ -761,10 +761,10 @@ coreconfigitem('verify', 'skipflags',
     default=None,
 )
 coreconfigitem('web', 'allowbz2',
-    default=None,
+    default=False,
 )
 coreconfigitem('web', 'allowgz',
-    default=None,
+    default=False,
 )
 coreconfigitem('web', 'allowpull',
     default=True,
@@ -773,7 +773,7 @@ coreconfigitem('web', 'allow_push',
     default=list,
 )
 coreconfigitem('web', 'allowzip',
-    default=None,
+    default=False,
 )
 coreconfigitem('web', 'cache',
     default=True,
@@ -788,7 +788,7 @@ coreconfigitem('web', 'guessmime',
     default=False,
 )
 coreconfigitem('web', 'hidden',
-    default=None,
+    default=False,
 )
 coreconfigitem('web', 'labels',
     default=list,
