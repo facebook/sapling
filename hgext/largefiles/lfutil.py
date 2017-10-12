@@ -12,7 +12,6 @@ from __future__ import absolute_import
 import copy
 import hashlib
 import os
-import platform
 import stat
 
 from mercurial.i18n import _
@@ -80,7 +79,7 @@ def _usercachedir(ui):
                         encoding.environ.get('APPDATA'))
         if appdata:
             return os.path.join(appdata, longname)
-    elif platform.system() == 'Darwin':
+    elif pycompat.sysplatform == 'darwin':
         home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
