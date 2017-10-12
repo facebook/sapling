@@ -90,21 +90,42 @@ Sync Import
   updating the branch cache
   1 revision, 4 file(s) imported.
 
+Verify
+
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  5 files, 3 changesets, 7 total revisions
+
+  $ hg update master
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master)
+
 Sync Import without New Changes
 
   $ hg p4syncimport --bookmark master --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 4, node: * (glob)
   Latest change list number 3
   running a sync import.
-  writing filelog: 0a738da2fcb2, p1 861f64b39056, linkrev 3, 4 bytes, src: *, path: Main/b (glob)
-  writing filelog: 825765709d02, p1 149da44f2a4e, linkrev 3, 2 bytes, src: *, path: Main/c (glob)
-  writing filelog: c3bd1155d122, p1 6b67ccefd5ce, linkrev 3, 2 bytes, src: *, path: Main/d/e (glob)
-  writing filelog: 7fd4bac0fb3a, p1 0973eb1b2ecc, linkrev 3, 2 bytes, src: *, path: Main/d/f/g (glob)
-  changelist 3: writing manifest. node: c11fdd72fcbf p1: f0ca72fbd536 p2: 000000000000 linkrev: 3
+  changelist 3: writing manifest. node: 2037a8409eae p1: f0ca72fbd536 p2: 000000000000 linkrev: 3
   changelist 3: writing changelog: p4fastimport synchronizing client view
   writing bookmark
   updating the branch cache
-  1 revision, 4 file(s) imported.
+  1 revision, 0 file(s) imported.
+
+Verify
+
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  5 files, 4 changesets, 7 total revisions
+
+  $ hg update master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Fast Import after Sync Import
 
@@ -120,17 +141,10 @@ Verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  5 files, 4 changesets, 11 total revisions
+  5 files, 4 changesets, 7 total revisions
 
   $ hg update master
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark master)
-
-  $ hg manifest -r master
-  Main/b
-  Main/c
-  Main/d/e
-  Main/d/f/g
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 End Test
   stopping the p4 server

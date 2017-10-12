@@ -175,7 +175,7 @@ class SyncChangeManifestImporter(ChangeManifestImporter):
         self._cl = cl
         self._p1ctx = p1ctx
 
-    def creategen(self, tr, fileinfo):
+    def creategen(self, tr, fileinfo, reusefilelogs):
         mrevlog = self._repo.manifestlog._revlog
         clog = self._repo.changelog
         cp1 = self._p1ctx.node()
@@ -184,6 +184,7 @@ class SyncChangeManifestImporter(ChangeManifestImporter):
         mp1 = p1.manifestnode()
         mp2 = nullid
         mf = manifest.manifestdict()
+        p1mf = p1.manifest().copy()
         changed = []
 
         for info in fileinfo.values():
@@ -191,6 +192,9 @@ class SyncChangeManifestImporter(ChangeManifestImporter):
             baserev = info['baserev']
             mf[localname] = self._repo.file(localname).node(baserev)
             changed.append(localname)
+        for localfile in reusefilelogs:
+            mf[localfile] = p1mf[localfile]
+
         linkrev = len(self._repo)
         oldmp1 = mp1
         mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
@@ -440,16 +444,20 @@ class FileImporter(object):
         return fileflags, largefiles, origlen, newlen
 
 class SyncFileImporter(FileImporter):
-    def __init__(self, ui, repo, client, cl, p4filelog):
+    def __init__(self, ui, repo, client, cl, p4filelog, localfile=None):
         self._ui = ui
         self._repo = repo
         self._client = client
         self._cl = cl
         self._p4filelog = p4filelog
+        self._localfile = localfile
 
     @util.propertycache
     def relpath(self):
-        return relpath(self._client, self._p4filelog.depotfile)
+        if self._localfile:
+            return self._localfile
+        else:
+            return relpath(self._client, self._p4filelog.depotfile)
 
     def create(self, tr):
         assert tr is not None

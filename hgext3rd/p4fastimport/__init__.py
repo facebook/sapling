@@ -348,7 +348,7 @@ def p4syncimport(ui, repo, client, **opts):
     if len(repo) == 0:
         raise error.Abort(_('p4 sync commit does not support empty repo yet.'))
 
-    p1ctx, __, __ = startfrom(ui, repo, opts)
+    p1ctx, startcl, __ = startfrom(ui, repo, opts)
 
     # Fail if the specified client does not exist
     if not p4.exists_client(client):
@@ -362,6 +362,8 @@ def p4syncimport(ui, repo, client, **opts):
     ui.note(_('Latest change list number %s\n') % latestcl)
     p4filelogs = p4.get_filelogs_at_cl(client, latestcl)
     p4filelogs = sorted(p4filelogs)
+    newp4filelogs, reusep4filelogs = importer.get_filelogs_to_sync(
+            client, repo, p1ctx, startcl - 1, p4filelogs)
 
     # sync import.
     with repo.wlock(), repo.lock():
@@ -371,9 +373,9 @@ def p4syncimport(ui, repo, client, **opts):
         largefileslist = []
         tr = repo.transaction('syncimport')
         try:
-            for p4fl in p4filelogs:
+            for p4fl, localname in newp4filelogs:
                 bfi = importer.SyncFileImporter(
-                        ui, repo, client, latestcl, p4fl)
+                        ui, repo, client, latestcl, p4fl, localfile=localname)
                 # Create hg filelog
                 fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
                 fileinfo[p4fl.depotfile] = {
@@ -387,7 +389,7 @@ def p4syncimport(ui, repo, client, **opts):
             clog = importer.SyncChangeManifestImporter(
                      ui, repo, client, latestcl, p1ctx=p1ctx)
             revisions = []
-            for cl, hgnode in clog.creategen(tr, fileinfo):
+            for cl, hgnode in clog.creategen(tr, fileinfo, reusep4filelogs):
                 revisions.append((cl, hex(hgnode)))
 
             if opts.get('bookmark'):
