@@ -462,19 +462,17 @@ class dirnode(object):
         if status not in self.statuses:
             self.statuses.add(status)
 
-    def _addfilestotersed(self, tersedict):
+    def iterfilepaths(self):
         """
         adds files to the their respective status list in the final tersed list
 
         path is the path of parent directory of the file
         files is a list of tuple where each tuple is (filename, status)
-        tersedict is a dictonary which contains each status abbreviation as key and
-        list of files and tersed dirs in that status as value
         """
         for f, st in self.files:
-            tersedict[st].append(os.path.join(self.path, f))
+            yield st, os.path.join(self.path, f)
 
-    def _processtersestatus(self, tersedict, terseargs):
+    def tersewalk(self, terseargs):
         """
         a recursive function which process status for a certain directory.
 
@@ -494,12 +492,12 @@ class dirnode(object):
 
         1) All the files in the directory (including all the files in its
         subdirectories) share the same status and the user has asked us to terse
-        that status. -> we add the directory name to status list and return
+        that status. -> yield (status, dirpath)
 
         2) If '1)' does not happen, we do following:
 
-                a) Add all the files which are in this directory (only the ones in
-                    this directory, not the subdirs) to their respective status list
+                a) Yield (status, filepath)  for all the files which are in this
+                    directory (only the ones in this directory, not the subdirs)
 
                 b) Recurse the function on all the subdirectories of this
                    directory
@@ -511,15 +509,17 @@ class dirnode(object):
             # Making sure we terse only when the status abbreviation is
             # passed as terse argument
             if onlyst in terseargs:
-                tersedict[onlyst].append(self.path + pycompat.ossep)
+                yield onlyst, self.path + pycompat.ossep
                 return
 
         # add the files to status list
-        self._addfilestotersed(tersedict)
+        for st, fpath in self.iterfilepaths():
+            yield st, fpath
 
         #recurse on the subdirs
         for dirobj in self.subdirs.values():
-            dirobj._processtersestatus(tersedict, terseargs)
+            for st, fpath in dirobj.tersewalk(terseargs):
+                yield st, fpath
 
 def tersedir(statuslist, terseargs):
     """
@@ -536,7 +536,7 @@ def tersedir(statuslist, terseargs):
 
     tersedict (defined in the function) is a dictionary which has one word key
     for each status and a list of files and dir in that status as the respective
-    value. The dictionary is passed to other helper functions which builds it.
+    value.
     """
     # the order matters here as that is used to produce final list
     allst = ('m', 'a', 'r', 'd', 'u', 'i', 'c')
@@ -558,11 +558,13 @@ def tersedir(statuslist, terseargs):
         tersedict[attrname[0]] = []
 
     # we won't be tersing the root dir, so add files in it
-    rootobj._addfilestotersed(tersedict)
+    for st, fpath in rootobj.iterfilepaths():
+        tersedict[st].append(fpath)
 
     # process each sub-directory and build tersedict
     for subdir in rootobj.subdirs.values():
-        subdir._processtersestatus(tersedict, terseargs)
+        for st, f in subdir.tersewalk(terseargs):
+            tersedict[st].append(f)
 
     tersedlist = []
     for st in allst:
