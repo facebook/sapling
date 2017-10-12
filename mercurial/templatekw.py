@@ -377,14 +377,13 @@ def showchildren(**args):
 # Deprecated, but kept alive for help generation a purpose.
 @templatekeyword('currentbookmark')
 def showcurrentbookmark(**args):
-    """String. The active bookmark, if it is
-    associated with the changeset (DEPRECATED)"""
+    """String. The active bookmark, if it is associated with the changeset.
+    (DEPRECATED)"""
     return showactivebookmark(**args)
 
 @templatekeyword('activebookmark')
 def showactivebookmark(**args):
-    """String. The active bookmark, if it is
-    associated with the changeset"""
+    """String. The active bookmark, if it is associated with the changeset."""
     active = args[r'repo']._activebookmark
     if active and active in args[r'ctx'].bookmarks():
         return active
@@ -505,8 +504,8 @@ def showfiles(**args):
 
 @templatekeyword('graphnode')
 def showgraphnode(repo, ctx, **args):
-    """String. The character representing the changeset node in
-    an ASCII revision graph"""
+    """String. The character representing the changeset node in an ASCII
+    revision graph."""
     wpnodes = repo.dirstate.parents()
     if wpnodes[1] == nullid:
         wpnodes = wpnodes[:1]
@@ -671,8 +670,7 @@ def showpeerurls(repo, **args):
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):
-    """Returns the list if the closest visible successors
-    """
+    """Returns the list if the closest visible successors."""
     predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
     predecessors = map(hex, predecessors)
 
@@ -682,10 +680,9 @@ def showpredecessors(repo, ctx, **args):
 
 @templatekeyword("successorssets")
 def showsuccessorssets(repo, ctx, **args):
-    """Returns a string of sets of successors for a changectx
-
-    Format used is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and
-    ctx2 while also diverged into ctx3"""
+    """Returns a string of sets of successors for a changectx. Format used
+    is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and ctx2
+    while also diverged into ctx3."""
     if not ctx.obsolete():
         return ''
     args = pycompat.byteskwargs(args)
@@ -714,11 +711,9 @@ def showsuccessorssets(repo, ctx, **args):
 
 @templatekeyword("succsandmarkers")
 def showsuccsandmarkers(repo, ctx, **args):
-    """Returns a list of dict for each final successor of ctx.
-
-    The dict contains successors node id in "successors" keys and the list of
-    obs-markers from ctx to the set of successors in "markers"
-
+    """Returns a list of dict for each final successor of ctx. The dict
+    contains successors node id in "successors" keys and the list of
+    obs-markers from ctx to the set of successors in "markers".
     (EXPERIMENTAL)
     """
 
@@ -863,7 +858,6 @@ def showtermwidth(repo, ctx, templ, **args):
 @templatekeyword('troubles')
 def showtroubles(repo, **args):
     """List of strings. Evolution troubles affecting the changeset.
-
     (DEPRECATED)
     """
     msg = ("'troubles' is deprecated, "
@@ -875,7 +869,6 @@ def showtroubles(repo, **args):
 @templatekeyword('instabilities')
 def showinstabilities(**args):
     """List of strings. Evolution instabilities affecting the changeset.
-
     (EXPERIMENTAL)
     """
     args = pycompat.byteskwargs(args)
