@@ -648,8 +648,7 @@ def shownode(repo, ctx, templ, **args):
 
 @templatekeyword('obsolete')
 def showobsolete(repo, ctx, templ, **args):
-    """String. Whether the changeset is obsolete.
-    """
+    """String. Whether the changeset is obsolete. (EXPERIMENTAL)"""
     if ctx.obsolete():
         return 'obsolete'
     return ''
@@ -670,7 +669,7 @@ def showpeerurls(repo, **args):
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):
-    """Returns the list if the closest visible successors."""
+    """Returns the list if the closest visible successors. (EXPERIMENTAL)"""
     predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
     predecessors = map(hex, predecessors)
 
@@ -682,7 +681,7 @@ def showpredecessors(repo, ctx, **args):
 def showsuccessorssets(repo, ctx, **args):
     """Returns a string of sets of successors for a changectx. Format used
     is: [ctx1, ctx2], [ctx3] if ctx has been splitted into ctx1 and ctx2
-    while also diverged into ctx3."""
+    while also diverged into ctx3. (EXPERIMENTAL)"""
     if not ctx.obsolete():
         return ''
     args = pycompat.byteskwargs(args)
