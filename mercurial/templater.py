@@ -797,10 +797,14 @@ def ifcontains(context, mapping, args):
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
     haystack = evalfuncarg(context, mapping, args[1])
-    needle = evalastype(context, mapping, args[0],
-                        getattr(haystack, 'keytype', None) or bytes)
+    try:
+        needle = evalastype(context, mapping, args[0],
+                            getattr(haystack, 'keytype', None) or bytes)
+        found = (needle in haystack)
+    except error.ParseError:
+        found = False
 
-    if needle in haystack:
+    if found:
         yield evalrawexp(context, mapping, args[2])
     elif len(args) == 4:
         yield evalrawexp(context, mapping, args[3])
