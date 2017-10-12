@@ -294,6 +294,7 @@ One with >200 heads, which used to use up all of the sample:
   adding manifests
   adding file changes
   added 1340 changesets with 0 changes to 0 files (+259 heads)
+  new changesets 1ea73414a91b:1c51e2c80832
   updating to branch a
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone -b b . b
@@ -301,6 +302,7 @@ One with >200 heads, which used to use up all of the sample:
   adding manifests
   adding file changes
   added 304 changesets with 0 changes to 0 files
+  new changesets 1ea73414a91b:513314ca8b3a
   updating to branch b
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

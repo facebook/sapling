@@ -223,6 +223,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 264128213d29
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ rm .hg/strip-backup/*
   $ hg log --graph
@@ -1114,6 +1115,7 @@ test stripping a working directory parent doesn't switch named branches
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets 35358f982181:4cf5e92caec2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg strip -k -r 35358f982181

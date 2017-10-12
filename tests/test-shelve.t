@@ -1088,6 +1088,7 @@ no general delta
   adding manifests
   adding file changes
   added 5 changesets with 8 changes to 6 files
+  new changesets cc01e2b0c59f:33f7f61e6c5e
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle1
@@ -1108,6 +1109,7 @@ with general delta
   adding manifests
   adding file changes
   added 5 changesets with 8 changes to 6 files
+  new changesets cc01e2b0c59f:33f7f61e6c5e
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle2

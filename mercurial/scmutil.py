@@ -1200,6 +1200,11 @@ _reportobsoletedsource = [
     'unbundle',
 ]
 
+_reportnewcssource = [
+    'pull',
+    'unbundle',
+]
+
 def registersummarycallback(repo, otr, txnname=''):
     """register a callback to issue a summary after the transaction is closed
     """
@@ -1226,3 +1231,34 @@ def registersummarycallback(repo, otr, txnname=''):
             if obsoleted:
                 repo.ui.status(_('obsoleted %i changesets\n')
                                % len(obsoleted))
+
+    if txmatch(_reportnewcssource):
+        @reportsummary
+        def reportnewcs(repo, tr):
+            """Report the range of new revisions pulled/unbundled."""
+            newrevs = list(tr.changes.get('revs', set()))
+            if not newrevs:
+                return
+
+            # Compute the bounds of new revisions' range, excluding obsoletes.
+            unfi = repo.unfiltered()
+            minrev, maxrev = None, None
+            newrevs.sort()
+            for r in newrevs:
+                if not unfi[r].obsolete():
+                    minrev = repo[r]
+                    break
+            for r in reversed(newrevs):
+                if not unfi[r].obsolete():
+                    maxrev = repo[r]
+                    break
+
+            if minrev is None or maxrev is None:
+                # Got only obsoletes.
+                return
+
+            if minrev == maxrev:
+                revrange = minrev
+            else:
+                revrange = '%s:%s' % (minrev, maxrev)
+            repo.ui.status(_('new changesets %s\n') % revrange)

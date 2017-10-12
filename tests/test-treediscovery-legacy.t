@@ -155,6 +155,7 @@ Local is empty:
   adding manifests
   adding file changes
   added 12 changesets with 24 changes to 2 files
+  new changesets d57206cc072a:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -171,6 +172,7 @@ Local is subset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets d57206cc072a:d8f638ac69e9
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cp $HGRCPATH-nocap $HGRCPATH
@@ -200,6 +202,7 @@ Local is subset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets a7892891da29:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -258,6 +261,7 @@ Local is superset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets d57206cc072a:d8f638ac69e9
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tstart subset2

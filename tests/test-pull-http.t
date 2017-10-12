@@ -23,6 +23,7 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets cb9a9f314b8b:ba677d0156c1
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat test3/.hg/hgrc

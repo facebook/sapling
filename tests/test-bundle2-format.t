@@ -835,6 +835,7 @@ Support for changegroup
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+3 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg log -G

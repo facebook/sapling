@@ -57,6 +57,7 @@ Test setup
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets d73caddc5533:821fb21d0dd2
   (run 'hg update' to get a working copy)
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

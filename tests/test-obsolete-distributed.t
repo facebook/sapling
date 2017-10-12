@@ -151,6 +151,7 @@ client side: pull from the server
   added 1 changesets with 1 changes to 1 files (+1 heads)
   1 new obsolescence markers
   obsoleted 1 changesets
+  new changesets 391a2bf12b1b
   (run 'hg heads' to see heads)
   $ hg log -G
   o  4:391a2bf12b1b c_B1
@@ -277,6 +278,7 @@ Bob pulls from Alice and rewrites them
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets d33b0a3a6464:ef908e42ce65
   (run 'hg update' to get a working copy)
   $ hg up 'desc("c_A")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -323,6 +325,7 @@ Celeste pulls from Bob and rewrites them again
   adding file changes
   added 2 changesets with 2 changes to 2 files
   3 new obsolescence markers
+  new changesets 5b5708a437f2:956063ac4557
   (run 'hg update' to get a working copy)
   $ hg up 'desc("c_A")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -392,6 +395,7 @@ from the server (note: could be from Celeste directly)
   added 2 changesets with 0 changes to 2 files (+1 heads)
   6 new obsolescence markers
   obsoleted 2 changesets
+  new changesets 9866d64649a5:77ae25d99ff0
   (run 'hg heads' to see heads)
   $ hg debugobsolete
   3cf8de21cc2282186857d2266eb6b1f9cb85ecf3 77ae25d99ff07889e181126b1171b94bec8e5227 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'celeste'}

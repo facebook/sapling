@@ -112,6 +112,7 @@ test generic hooks
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets ab228980c14d:07f3376c1e65
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_NODE_LAST=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
@@ -362,6 +363,7 @@ outgoing hooks can see env vars
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
+  new changesets 539e4b31b6dc
   (run 'hg update' to get a working copy)
   $ hg rollback
   repository tip rolled back to revision 3 (undo pull)
@@ -571,6 +573,7 @@ different between Python 2.6 and Python 2.7.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
+  new changesets 539e4b31b6dc
   (run 'hg update' to get a working copy)
 
 post- python hooks that fail to *run* don't cause an abort

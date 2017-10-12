@@ -365,6 +365,7 @@ Try to pull markers
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
   5 new obsolescence markers
+  new changesets 1f0dee641bb7:6f9641995072
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -470,6 +471,7 @@ On pull
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
   5 new obsolescence markers
+  new changesets 1f0dee641bb7:6f9641995072
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   1339133913391339133913391339133913391339 ca819180edb99ed25ceafb3e9584ac287e240b00 0 (Thu Jan 01 00:22:19 1970 +0000) {'user': 'test'}
@@ -786,6 +788,7 @@ check hgweb does not explode
   adding manifests
   adding file changes
   added 62 changesets with 63 changes to 9 files (+60 heads)
+  new changesets 50c51b361e60:c15e9edfca13
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ for node in `hg log -r 'desc(babar_)' --template '{node}\n'`;
   > do
@@ -1140,6 +1143,7 @@ Test bundle overlay onto hidden revision
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 4b34ecfb0d56:44526ebb0f98
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../other-bundleoverlay
@@ -1397,6 +1401,7 @@ Testing that strip remove markers:
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
+  new changesets e016b03fd86f:b0551702f918
   (run 'hg update' to get a working copy)
   $ hg debugobsolete | sort
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}

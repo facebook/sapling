@@ -961,6 +961,7 @@ Test clone at revision
   adding manifests
   adding file changes
   added 4 changesets with 10 changes to 4 files
+  new changesets 30d30fe6a5be:9e8fbc4bce62
   updating to branch default
   getting changed largefiles
   2 largefiles updated, 0 removed
@@ -1089,6 +1090,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding manifests
   adding file changes
   added 2 changesets with 8 changes to 4 files
+  new changesets 30d30fe6a5be:ce8896473775
   updating to branch default
   getting changed largefiles
   2 largefiles updated, 0 removed
@@ -1102,6 +1104,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding manifests
   adding file changes
   added 6 changesets with 16 changes to 8 files
+  new changesets 51a0ae4d5864:daea875e9014
   (run 'hg update' to get a working copy)
   6 largefiles cached
 
@@ -1129,6 +1132,7 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
   adding manifests
   adding file changes
   added 6 changesets with 16 changes to 8 files
+  new changesets 51a0ae4d5864:daea875e9014
   calling hook changegroup.lfiles: hgext.largefiles.reposetup.checkrequireslfiles
   (run 'hg update' to get a working copy)
   pulling largefiles for revision 7
@@ -1201,6 +1205,7 @@ rebased or not.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
+  new changesets a381d2c8c80e
   rebasing 8:f574fb32bb45 "modify normal file largefile in repo d"
   Invoking status precommit hook
   M sub/normal4
@@ -1258,6 +1263,7 @@ rebased or not.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
+  new changesets a381d2c8c80e
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg rebase
   rebasing 8:f574fb32bb45 "modify normal file largefile in repo d"
@@ -1663,6 +1669,7 @@ correctly.
   adding manifests
   adding file changes
   added 8 changesets with 24 changes to 10 files
+  new changesets 30d30fe6a5be:daea875e9014
   updating to branch default
   getting changed largefiles
   3 largefiles updated, 0 removed
@@ -1688,6 +1695,7 @@ correctly.
   adding manifests
   adding file changes
   added 2 changesets with 4 changes to 4 files (+1 heads)
+  new changesets a381d2c8c80e:598410d3eb9a
   (run 'hg heads' to see heads, 'hg merge' to merge)
   2 largefiles cached
   $ hg merge
@@ -1763,6 +1771,7 @@ Test that transplanting a largefile change works correctly.
   adding manifests
   adding file changes
   added 9 changesets with 26 changes to 10 files
+  new changesets 30d30fe6a5be:a381d2c8c80e
   updating to branch default
   getting changed largefiles
   3 largefiles updated, 0 removed
@@ -1775,6 +1784,7 @@ Test that transplanting a largefile change works correctly.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 598410d3eb9a
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b

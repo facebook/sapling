@@ -40,6 +40,7 @@ import bookmark by name
   adding remote bookmark X
   updating bookmark Y
   adding remote bookmark Z
+  new changesets 4e3505fd9583
   (run 'hg update' to get a working copy)
   $ hg bookmarks
      X                         0:4e3505fd9583
@@ -190,6 +191,7 @@ divergent bookmarks
   divergent bookmark @ stored as @foo
   divergent bookmark X stored as X@foo
   updating bookmark Z
+  new changesets 0d2164f0ce0d
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      @                         1:9b140be10808
@@ -343,6 +345,7 @@ race conditions
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
+  new changesets b0a5eff05604
   (run 'hg update' to get a working copy)
   $ hg book
    * @                         1:0d2164f0ce0d
@@ -392,6 +395,7 @@ Update a bookmark right after the initial lookup -B (issue4689)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
+  new changesets 35d1ef0a8d1b
   (run 'hg update' to get a working copy)
   $ hg book
      @                         1:0d2164f0ce0d
@@ -555,6 +559,7 @@ hgweb
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
   2 new obsolescence markers
+  new changesets 4e3505fd9583:c922c0139ca0
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
@@ -691,6 +696,7 @@ bookmark, not all outgoing changes:
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
   2 new obsolescence markers
+  new changesets 4e3505fd9583:c922c0139ca0
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd addmarks

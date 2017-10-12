@@ -23,6 +23,7 @@ test branch selection options
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 5b65ba7c951d
   updating to branch a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd branch2
@@ -101,6 +102,7 @@ clone branch b
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files (+1 heads)
+  new changesets 5b65ba7c951d:65511d0e2b55
   updating to branch b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R branch3 heads b
@@ -117,6 +119,7 @@ clone rev a branch b
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files (+1 heads)
+  new changesets 5b65ba7c951d:65511d0e2b55
   updating to branch a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R branch3 heads b

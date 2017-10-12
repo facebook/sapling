@@ -93,6 +93,7 @@ verify update will accept invalid legacy branch names
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
+  new changesets f0e4c7f04036:33c2ceb9310b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg update '"colon:test"'

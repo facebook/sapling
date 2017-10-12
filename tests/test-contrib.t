@@ -79,6 +79,7 @@ Rebuild fncache with clone --pull:
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets de1da620e7d8:46946d278c50
 
 Verify:
 

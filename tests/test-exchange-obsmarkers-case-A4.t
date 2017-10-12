@@ -117,6 +117,7 @@ Actual Test for first version
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
+  new changesets 28b51eb45704:06055a7959d4
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main

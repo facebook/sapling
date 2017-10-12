@@ -60,6 +60,7 @@ Specifying a revset that evaluates to null will abort
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 1c9246a22a0a
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg push ../a

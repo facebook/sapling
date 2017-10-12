@@ -125,6 +125,7 @@ A bundle to test this was made with:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets a2392c293916
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo 'expand $Id$' > a
@@ -260,6 +261,7 @@ Pull from bundle and trigger notify
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
+  new changesets a2392c293916:ef63ca68695b
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -918,6 +920,7 @@ Clone to test incoming
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
+  new changesets a2392c293916:ef63ca68695b
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd Test-a

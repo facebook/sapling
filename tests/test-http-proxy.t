@@ -39,6 +39,7 @@ url for proxy, pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd b-pull
@@ -58,6 +59,7 @@ host:port for proxy
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -69,6 +71,7 @@ proxy url with user name and password
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -80,6 +83,7 @@ url with user name and password
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -98,6 +102,7 @@ do not use the proxy if it is in the no list
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat proxy.log

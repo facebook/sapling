@@ -77,6 +77,7 @@ Create non-hardlinked clone r3:
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 40d85e9847f2:7069c422939c
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

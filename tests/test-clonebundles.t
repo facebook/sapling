@@ -28,6 +28,7 @@ Missing manifest should not result in server lookup
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
   $ cat server/access.log
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
@@ -45,6 +46,7 @@ Empty manifest file results in retrieval
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Manifest file with invalid URL aborts
 
@@ -89,6 +91,7 @@ We can override failure to fall back to regular clone
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Bundle with partial content works
 
@@ -127,6 +130,7 @@ changes. If this output changes, we could break old clients.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets aaff8d2ffbbf
 
 Incremental pull doesn't fetch bundle
 
@@ -135,6 +139,7 @@ Incremental pull doesn't fetch bundle
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 53245c60e682
 
   $ cd partial-clone
   $ hg pull
@@ -144,6 +149,7 @@ Incremental pull doesn't fetch bundle
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets aaff8d2ffbbf
   (run 'hg update' to get a working copy)
   $ cd ..
 
@@ -240,6 +246,7 @@ Automatic fallback when all entries are filtered
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 URLs requiring SNI are filtered in Python <2.7.9
 
@@ -337,6 +344,7 @@ Stream bundle spec with unknown requirements should be filtered out
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Set up manifest for testing preferences
 (Remember, the TYPE does not have to match reality - the URL is

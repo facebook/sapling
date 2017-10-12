@@ -33,6 +33,7 @@ one pull
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 02770d679fb8
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local
@@ -64,6 +65,7 @@ check for HTTP opener failures when cachefile does not exist
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 4ac2e3648604
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_NODE_LAST=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT/remote
   (run 'hg update' to get a working copy)
 
@@ -89,6 +91,7 @@ trying clone -r
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 02770d679fb8
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -110,6 +113,7 @@ test with "/" URI (issue747) and subrepo
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets a9ebfbe8e587
   updating to branch default
   cloning subrepo sub from static-http://localhost:$HGPORT/sub
   requesting all changes
@@ -117,6 +121,7 @@ test with "/" URI (issue747) and subrepo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets be090ea66256:322ea90975df
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local2
   $ hg verify
@@ -182,6 +187,7 @@ Clone with tags and branches works
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files (+1 heads)
+  new changesets 68986213bd44:0c325bd2b5a7
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -192,6 +198,7 @@ Clone a specific branch works
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 2 files
+  new changesets 68986213bd44:0c325bd2b5a7
   updating to branch mybranch
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -202,6 +209,7 @@ Clone a specific tag works
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 68986213bd44:4ee3fcef1c80
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

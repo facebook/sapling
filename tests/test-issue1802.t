@@ -43,6 +43,7 @@ Create extension that can disable exec checks:
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 2d8bcf2dda39
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg manifest -v -r tip

@@ -31,6 +31,7 @@ commit message and '--edit' is not specified)
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ HGEDITOR=cat hg --cwd b import ../exported-tip.patch
@@ -62,6 +63,7 @@ regardless of the commit message in the patch)
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ HGEDITOR=cat hg --config ui.patch="$PYTHON ../dummypatch.py" --cwd b import --edit ../exported-tip.patch
@@ -89,6 +91,7 @@ the commit message, regardless of '--edit')
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > $TESTTMP/editor.sh <<EOF
@@ -134,6 +137,7 @@ import of plain diff should be ok with message
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd b import -mpatch ../diffed-tip.patch
@@ -150,6 +154,7 @@ import of plain diff with specific date and user
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd b import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch
@@ -183,6 +188,7 @@ specified, regardless of '--edit')
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ HGEDITOR=cat hg --cwd b import --no-commit --edit ../diffed-tip.patch
@@ -204,6 +210,7 @@ import of malformed plain diff should fail
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/1,1/foo/' < diffed-tip.patch > broken.patch
@@ -224,6 +231,7 @@ used to hide a bug.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd dir
@@ -240,6 +248,7 @@ import from stdin
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd b import - < exported-tip.patch
@@ -266,6 +275,7 @@ override commit message
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd b import -m 'override' - < exported-tip.patch
@@ -292,6 +302,7 @@ plain diff in email, subject, message body
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ $PYTHON mkmsg.py diffed-tip.patch msg.patch
@@ -310,6 +321,7 @@ plain diff in email, no subject, message body
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ grep -v '^Subject:' msg.patch | hg --cwd b import -
@@ -324,6 +336,7 @@ plain diff in email, subject, no message body
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ grep -v '^email ' msg.patch | hg --cwd b import -
@@ -338,6 +351,7 @@ plain diff in email, no subject, no message body, should fail
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ egrep -v '^(Subject|email)' msg.patch | hg --cwd b import -
@@ -354,6 +368,7 @@ hg export in email, should use patch header
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ $PYTHON mkmsg.py exported-tip.patch msg.patch
@@ -385,6 +400,7 @@ plain diff in email, [PATCH] subject, message body with subject
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ $PYTHON mkmsg2.py diffed-tip.patch msg.patch
@@ -653,6 +669,7 @@ hg import in a subdirectory
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 80971e65b431
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd a export tip > tmp

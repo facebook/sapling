@@ -20,6 +20,7 @@ Create repo a:
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -641,6 +642,7 @@ Rebase, collapse and copies
   adding manifests
   adding file changes
   added 4 changesets with 11 changes to 7 files (+1 heads)
+  new changesets f447d5abf5ea:338e84e2e558
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -q tip
   $ hg tglog

@@ -669,6 +669,7 @@ Cloning should pull down hgtags fnodes mappings and write the cache file
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 2 files
+  new changesets 96ee1d7354c4:40f0358cb314
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

@@ -18,6 +18,7 @@
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -420,6 +421,7 @@ All destination are B
   adding manifests
   adding file changes
   added 9 changesets with 9 changes to 9 files (+2 heads)
+  new changesets 9ae2ed22e576:479ddb54a924
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg tglog
   o  8: 'I'

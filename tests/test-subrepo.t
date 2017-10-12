@@ -708,6 +708,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 925c17564ef8
   (run 'hg update' to get a working copy)
 
 should pull t
@@ -737,6 +738,7 @@ should pull t
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 52c0adc0515a
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "925c17564ef8: 13"
   2 other heads for branch "default"
@@ -1053,6 +1055,7 @@ Create repo without default path, pull top repo, and see what happens on update
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 2 files
+  new changesets 19487b456929:be5eb94e7215
   (run 'hg update' to get a working copy)
   $ hg -R issue1852b update
   abort: default path for subrepository not found (in subrepository "sub/repo") (glob)
@@ -1079,6 +1082,7 @@ Try the same, but with pull -u
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 19487b456929
   cloning subrepo sub/repo from issue1852a/sub/repo (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -1140,6 +1144,7 @@ Check that merge of a new subrepo doesn't write the uncommitted state to
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets c82b79fdcc5b
    subrepository sub/repo diverged (local revision: f42d5c7504a8, remote revision: 46cd4aac504c)
   (M)erge, keep (l)ocal [working copy] or keep (r)emote [destination]? m
   pulling subrepo sub/repo from $TESTTMP/issue1852a/sub/repo (glob)
@@ -1148,6 +1153,7 @@ Check that merge of a new subrepo doesn't write the uncommitted state to
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 46cd4aac504c
    subrepository sources for sub/repo differ (glob)
   use (l)ocal source (f42d5c7504a8) or (r)emote source (46cd4aac504c)? l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

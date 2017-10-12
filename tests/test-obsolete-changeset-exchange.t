@@ -71,6 +71,7 @@ marker to obsolete him)
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
+  new changesets f89bcc95eba5
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 check that bundle is not affected
@@ -123,6 +124,7 @@ initial repo with server and client matching
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets 96ee1d7354c4:6a29ed9c68de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -168,5 +170,6 @@ client only pulls down 1 changeset
   bundle2-input-part: total payload size 24
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
+  new changesets bec0734cd68e
   updating the branch cache
   (run 'hg heads' to see heads, 'hg merge' to merge)

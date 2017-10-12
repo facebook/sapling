@@ -54,6 +54,7 @@ Now b has one revision to be pulled from a:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 77ae9631bcca
   rebasing 2:ff8d69a621f9 "L1"
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
 
@@ -143,6 +144,7 @@ Invoke pull --rebase and nothing to rebase:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 77ae9631bcca
   nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark norebase
@@ -210,6 +212,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 31cd3a05214e:770a61882ace
   rebasing 3:ff8d69a621f9 "L1"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
   $ hg tglog
@@ -252,6 +255,7 @@ pull --rebase works with bundle2 turned on
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 00e3b7781125
   rebasing 5:518d153c0ba3 "L1"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg (glob)
   $ hg tglog
@@ -304,6 +308,7 @@ pull --rebase only update if there is nothing to rebase
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 88dd24261747
   rebasing 6:0d0727eb7ce0 "L1"
   rebasing 7:c1f58876e3bf "L2"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg (glob)
@@ -345,6 +350,7 @@ pull --rebase update (no rebase) use proper update:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 65bc164c1d9b
   nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "65bc164c1d9b: R6"
@@ -394,6 +400,7 @@ pre-existing heads.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 39c381359968
   nothing to rebase
 
 There is two local heads and we pull a third one.
@@ -420,6 +427,7 @@ The second local head should not confuse the `hg pull rebase`.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets f7d3e42052f9
   rebasing 7:864e0a2d2614 "L1"
   rebasing 8:6dc0ea5dcf55 "L2"
   saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg (glob)

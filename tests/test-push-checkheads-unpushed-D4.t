@@ -73,6 +73,7 @@ Test setup
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets d73caddc5533:0f88766e02d6
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

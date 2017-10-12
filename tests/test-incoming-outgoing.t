@@ -329,12 +329,14 @@ test the resulting bundles
   adding manifests
   adding file changes
   added 9 changesets with 9 changes to 1 files
+  new changesets 00a43fa82f62:e4feb4ac9035
   (run 'hg update' to get a working copy)
   $ hg -R temp2 unbundle test2.hg
   adding changesets
   adding manifests
   adding file changes
   added 9 changesets with 9 changes to 1 files
+  new changesets 00a43fa82f62:e4feb4ac9035
   (run 'hg update' to get a working copy)
   $ hg -R temp tip
   changeset:   8:e4feb4ac9035

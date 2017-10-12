@@ -1214,6 +1214,7 @@ Incoming and outgoing:
   adding manifests
   adding file changes
   added 31 changesets with 31 changes to 1 files
+  new changesets e6eb3150255d:621d83e11f67
   $ cd repo2
 
   $ hg incoming --graph ../repo

@@ -19,6 +19,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 495a0ec48aaf:50e089d141b7
   (run 'hg update' to get a working copy)
   $ hg up branchA
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -47,6 +48,7 @@ A new branch is there
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files (+1 heads)
+  new changesets 9f878dea0b96:5be59ce5067b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Develop both branches:
@@ -72,6 +74,7 @@ Should succeed, no new heads:
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 7c8fe7e20c32:453e93fa00a5
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Add a head on other branch:
@@ -102,6 +105,7 @@ Should succeed because there is only one head on our branch:
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files (+1 heads)
+  new changesets da3a8a0161c6:b61cab8fe4e8
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ../t
@@ -132,6 +136,7 @@ Should succeed because there is only one head on our branch:
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files (+1 heads)
+  new changesets 0c4d148ae29e:ecfc3f4a6fd9
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "d740e1a584e7: a5.2"
   1 other heads for branch "branchA"
@@ -164,6 +169,7 @@ Pull branchC from tt
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 7d8ffa4c0b22
   (run 'hg heads' to see heads)
 
 Make changes on default and branchC on tt
@@ -176,6 +182,7 @@ Make changes on default and branchC on tt
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 2b94b54b6b5f
   (run 'hg heads' to see heads)
   $ hg up -C default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -211,6 +218,7 @@ Pull from tt
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+2 heads)
+  new changesets eed40c14b407:e634733b0309
   (run 'hg heads .' to see heads, 'hg merge' to merge)
 
   $ cd ..

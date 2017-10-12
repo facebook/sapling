@@ -85,6 +85,7 @@ unbundle with unrelated source
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets cb9a9f314b8b:ba677d0156c1
   (run 'hg update' to get a working copy)
   $ hg --cwd a rollback
   repository tip rolled back to revision -1 (undo unbundle)
@@ -97,6 +98,7 @@ unbundle with correct source
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets cb9a9f314b8b:ba677d0156c1
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit

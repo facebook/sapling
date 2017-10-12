@@ -188,6 +188,7 @@ pull (minimal config)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 0647d048b600
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -241,6 +242,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 0647d048b600
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -283,6 +285,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 0647d048b600
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -328,6 +331,7 @@ test merge
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  new changesets 0a184ce6067f:6a0cf76b2701
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -383,6 +387,7 @@ non-ascii content and truncation of multi-byte subject
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 7ea05ad269dc
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 8bit
@@ -425,6 +430,7 @@ long lines
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets a323cae54f6e
   notify: sending 2 subscribers 1 changes
   (run 'hg update' to get a working copy)
   $ $PYTHON $TESTTMP/filter.py < b/mbox
@@ -494,6 +500,7 @@ long lines
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets b7cf10b2bdec
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
@@ -523,6 +530,7 @@ from different branch
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 5a07df312a79
   MIME-Version: 1.0
   Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit

@@ -22,6 +22,7 @@ Test for changeset ba7c74081861
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets e3c9b40284e1:772b37f1ca37
   (run 'hg update' to get a working copy)
   $ hg update
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

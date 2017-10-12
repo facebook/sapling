@@ -104,6 +104,7 @@ are also available as siblings of 'main'.
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 7f491f53a367
   updating to branch default
   abort: HTTP Error 404: Not Found
   [255]

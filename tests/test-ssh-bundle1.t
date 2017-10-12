@@ -102,6 +102,7 @@ clone remote via pull
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets 1160648e36ce:ad076bfb429d
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -313,6 +314,7 @@ clone bookmarks
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
+  new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R local-bookmarks bookmarks
@@ -400,6 +402,7 @@ Test hg-ssh in read-only mode:
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
+  new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

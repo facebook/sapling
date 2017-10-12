@@ -60,6 +60,7 @@ clone and pull to break links
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 008c0c271c47
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone

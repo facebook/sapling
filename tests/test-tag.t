@@ -624,6 +624,7 @@ check that we can merge tags that differ in rank
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 3 files (+1 heads)
+  new changesets 9aa4e1292a27:b325cc5b642c
   hook: tag changes detected
   hook: +A 929bca7b18d067cbf3844c3896319a940059d748 t2
   hook: +A 9aa4e1292a27a248f8d07339bed9931d54907be7 t4

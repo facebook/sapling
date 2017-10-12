@@ -30,6 +30,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 30aff43faee1
   (run 'hg update' to get a working copy)
 
   $ hg verify

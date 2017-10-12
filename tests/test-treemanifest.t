@@ -232,6 +232,7 @@ Create clone with tree manifests enabled
   adding manifests
   adding file changes
   added 2 changesets with 14 changes to 11 files
+  new changesets 5b02a3e8db7e:581ef6037d8b
   updating to branch default
   11 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-mixed
@@ -342,6 +343,7 @@ Stripping and recovering changes should work
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 51cfd7b1e13b
   (run 'hg update' to get a working copy)
   $ hg --config extensions.strip= strip tip
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/*-backup.hg (glob)
@@ -654,6 +656,7 @@ We can clone even with the knob turned off and we'll get a treemanifest repo.
   adding manifests
   adding file changes
   added 4 changesets with 18 changes to 8 files
+  new changesets 775704be6f52:523e5c631710
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
 No server errors.
@@ -700,6 +703,7 @@ Create clones using old repo formats to use in later tests
   adding manifests
   adding file changes
   added 4 changesets with 18 changes to 8 files
+  new changesets 775704be6f52:523e5c631710
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd deeprepo-basicstore
@@ -716,6 +720,7 @@ Create clones using old repo formats to use in later tests
   adding manifests
   adding file changes
   added 4 changesets with 18 changes to 8 files
+  new changesets 775704be6f52:523e5c631710
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd deeprepo-encodedstore
@@ -845,6 +850,7 @@ other branch
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 2 files
+  new changesets d84f4c419457:09ab742f3b0f
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd grafted-dir-repo-clone
@@ -855,6 +861,7 @@ other branch
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 73699489fb7c
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Committing a empty commit does not duplicate root treemanifest

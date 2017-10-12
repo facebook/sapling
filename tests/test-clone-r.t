@@ -89,6 +89,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets f9ee2f85a263
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -102,6 +103,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets f9ee2f85a263:34c2bf6b0626
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -115,6 +117,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets f9ee2f85a263:e38ba6f5b7e0
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -128,6 +131,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
+  new changesets f9ee2f85a263:eebf5a27f8ca
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -141,6 +145,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets f9ee2f85a263:095197eb4973
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -154,6 +159,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets f9ee2f85a263:1bb50a9436a7
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -167,6 +173,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 5 changes to 2 files
+  new changesets f9ee2f85a263:7373c1169842
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -180,6 +187,7 @@
   adding manifests
   adding file changes
   added 5 changesets with 6 changes to 3 files
+  new changesets f9ee2f85a263:a6a34bfa0076
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -193,6 +201,7 @@
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 2 files
+  new changesets f9ee2f85a263:aa35859c02ea
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checking changesets
@@ -209,6 +218,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 3 files (+1 heads)
+  new changesets 095197eb4973:a6a34bfa0076
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg verify
   checking changesets
@@ -237,6 +247,7 @@
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 3 files
+  new changesets f9ee2f85a263:7100abb79635
   updating to branch foobar
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

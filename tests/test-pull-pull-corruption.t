@@ -18,6 +18,7 @@ create one repo with a shorter history
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 495a0ec48aaf
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd source2
@@ -49,6 +50,7 @@ start a pull...
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets ca3c05af513e
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ cat pull.out
   pulling from ../source1
@@ -57,6 +59,7 @@ start a pull...
   adding manifests
   adding file changes
   added 10 changesets with 10 changes to 1 files
+  new changesets 495a0ec48aaf:1e7b6c812ca8
   (run 'hg update' to get a working copy)
 
 see the result

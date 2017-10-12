@@ -55,6 +55,7 @@ try to clone via stream, should use pull instead
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -74,6 +75,7 @@ try to clone via stream but missing requirements, so should use pull instead
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -85,6 +87,7 @@ clone via pull
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg verify -R copy-pull
@@ -107,6 +110,7 @@ clone over http with --update
   adding manifests
   adding file changes
   added 2 changesets with 5 changes to 5 files
+  new changesets 8b6053c928fe:5fed3813f7f5
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -R updated
@@ -124,6 +128,7 @@ incoming via HTTP
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd partial
@@ -149,6 +154,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 5fed3813f7f5
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/
   (run 'hg update' to get a working copy)
   $ cd ..
@@ -227,6 +233,7 @@ test http authentication
   adding manifests
   adding file changes
   added 2 changesets with 5 changes to 5 files
+  new changesets 8b6053c928fe:5fed3813f7f5
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -325,6 +332,7 @@ clone of serve with repo in root and unserved subrepo (issue2970)
   adding manifests
   adding file changes
   added 3 changesets with 7 changes to 7 files
+  new changesets 8b6053c928fe:56f9bc90cce6
   updating to branch default
   abort: HTTP Error 404: Not Found
   [255]
@@ -334,6 +342,7 @@ clone of serve with repo in root and unserved subrepo (issue2970)
   adding manifests
   adding file changes
   added 3 changesets with 7 changes to 7 files
+  new changesets 8b6053c928fe:56f9bc90cce6
   updating to branch default
   abort: HTTP Error 404: Not Found
   [255]
@@ -381,6 +390,7 @@ disable pull-based clones
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R test-partial-clone
@@ -390,6 +400,7 @@ disable pull-based clones
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
+  new changesets 5fed3813f7f5:56f9bc90cce6
   (run 'hg update' to get a working copy)
 
 corrupt cookies file should yield a warning

@@ -137,6 +137,7 @@ Actual Test (explicit push version)
   adding file changes
   added 3 changesets with 3 changes to 3 files
   1 new obsolescence markers
+  new changesets 28b51eb45704:1d0f3cd25300
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main

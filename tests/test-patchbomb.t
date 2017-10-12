@@ -3053,6 +3053,7 @@ node missing at public
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  new changesets 8580ff50825a:2f9fa9b998c5
   updating to branch test
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'publicurl=$TESTTMP/t3' >> $HGRCPATH

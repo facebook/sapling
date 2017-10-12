@@ -166,6 +166,7 @@ Testing applied patches, push and --force
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 07f494440405
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a >> a

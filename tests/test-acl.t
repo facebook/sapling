@@ -67,6 +67,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 6675d58eff77
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -1416,6 +1417,7 @@ Branch acl tests setup
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 81fbf4469322:fb35475503ef
   (run 'hg heads' to see heads)
 
 Create additional changeset on foobar branch
