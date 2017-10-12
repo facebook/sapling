@@ -60,3 +60,16 @@ No repo:
   [255]
 
 #endif
+
+#if rmcwd
+
+Current directory removed:
+
+  $ mkdir $TESTTMP/repo1
+  $ cd $TESTTMP/repo1
+  $ rm -rf $TESTTMP/repo1
+  $ HGDEMANDIMPORT=disable hg version -q
+  abort: error getting current working directory: * (glob)
+  [255]
+
+#endif

@@ -12,7 +12,6 @@ import base64
 import errno
 import mimetypes
 import os
-import uuid
 
 from .. import (
     encoding,
@@ -221,6 +220,23 @@ def cspvalues(ui):
     First value is ``None`` if CSP isn't enabled. Second value is ``None``
     if CSP isn't enabled or if the CSP header doesn't need a nonce.
     """
+    # Without demandimport, "import uuid" could have an immediate side-effect
+    # running "ldconfig" on Linux trying to find libuuid.
+    # With Python <= 2.7.12, that "ldconfig" is run via a shell and the shell
+    # may pollute the terminal with:
+    #
+    #   shell-init: error retrieving current directory: getcwd: cannot access
+    #   parent directories: No such file or directory
+    #
+    # Python >= 2.7.13 has fixed it by running "ldconfig" directly without a
+    # shell (hg changeset a09ae70f3489).
+    #
+    # Moved "import uuid" from here so it's executed after we know we have
+    # a sane cwd (i.e. after dispatch.py cwd check).
+    #
+    # We can move it back once we no longer need Python <= 2.7.12 support.
+    import uuid
+
     # Don't allow untrusted CSP setting since it be disable protections
     # from a trusted/global source.
     csp = ui.config('web', 'csp', untrusted=False)
