@@ -24,7 +24,15 @@
   $ cp .hg/hgrc .hg/hgrc-base
   > test_archtype() {
   >     echo "allow_archive = $1" >> .hg/hgrc
-  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >     test_archtype_run "$@"
+  > }
+  > test_archtype_deprecated() {
+  >     echo "allow$1 = True" >> .hg/hgrc
+  >     test_archtype_run "$@"
+  > }
+  > test_archtype_run() {
+  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log \
+  >         --config extensions.blackbox= --config blackbox.track=develwarn
   >     cat hg.pid >> $DAEMON_PIDS
   >     echo % $1 allowed should give 200
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$2" | head -n 1
@@ -33,6 +41,7 @@
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$4" | head -n 1
   >     killdaemons.py
   >     cat errors.log
+  >     hg blackbox --config extensions.blackbox= --config blackbox.track=
   >     cp .hg/hgrc-base .hg/hgrc
   > }
 
@@ -51,6 +60,27 @@ check http return codes
   403 Archive type not allowed: zip
   403 Archive type not allowed: gz
   $ test_archtype zip zip tar.gz tar.bz2
+  % zip allowed should give 200
+  200 Script output follows
+  % tar.gz and tar.bz2 disallowed should both give 403
+  403 Archive type not allowed: gz
+  403 Archive type not allowed: bz2
+
+check http return codes (with deprecated option)
+
+  $ test_archtype_deprecated gz tar.gz tar.bz2 zip
+  % gz allowed should give 200
+  200 Script output follows
+  % tar.bz2 and zip disallowed should both give 403
+  403 Archive type not allowed: bz2
+  403 Archive type not allowed: zip
+  $ test_archtype_deprecated bz2 tar.bz2 zip tar.gz
+  % bz2 allowed should give 200
+  200 Script output follows
+  % zip and tar.gz disallowed should both give 403
+  403 Archive type not allowed: zip
+  403 Archive type not allowed: gz
+  $ test_archtype_deprecated zip zip tar.gz tar.bz2
   % zip allowed should give 200
   200 Script output follows
   % tar.gz and tar.bz2 disallowed should both give 403

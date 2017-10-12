@@ -1113,7 +1113,7 @@ def archive(web, req, tmpl):
         raise ErrorResponse(HTTP_NOT_FOUND, msg)
 
     if not ((type_ in allowed or
-        web.configbool("web", "allow" + type_, False))):
+             web.configbool("web", "allow" + type_))):
         msg = 'Archive type not allowed: %s' % type_
         raise ErrorResponse(HTTP_FORBIDDEN, msg)
 
