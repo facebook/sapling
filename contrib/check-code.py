@@ -397,6 +397,18 @@ pyfilters = [
           (?P=quote))""", reppython),
 ]
 
+# non-filter patterns
+pynfpats = [
+    [
+    (r'pycompat\.osname\s*[=!]=\s*[\'"]nt[\'"]', "use pycompat.iswindows"),
+    (r'pycompat\.osname\s*[=!]=\s*[\'"]posix[\'"]', "use pycompat.isposix"),
+    (r'pycompat\.sysplatform\s*[!=]=\s*[\'"]darwin[\'"]',
+     "use pycompat.isdarwin"),
+    ],
+    # warnings
+    [],
+]
+
 # extension non-filter patterns
 pyextnfpats = [
     [(r'^"""\n?[A-Z]', "don't capitalize docstring title")],
@@ -513,6 +525,7 @@ py3pats = [
 
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('python', r'.*\.(py|cgi)$', r'^#!.*python', [], pynfpats),
     ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
     ('python 3', r'.*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py',
      '', pyfilters, py3pats),
