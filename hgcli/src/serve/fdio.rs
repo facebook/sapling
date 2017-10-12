@@ -14,9 +14,10 @@ use std::thread;
 use std::io::{self, Read, Write};
 
 use bytes::Bytes;
-use futures::sync::mpsc::{Receiver, Sender, channel};
-use futures::stream::BoxStream;
 use futures::{Future, Sink, Stream};
+use futures::sync::mpsc::{channel, Receiver, Sender};
+use futures_ext::{StreamExt, BoxStream};
+
 
 const BUFSZ: usize = 8192;
 const NUMBUFS: usize = 2;
@@ -80,7 +81,7 @@ where
                 // Send the result. This synchronously waits for the send to complete.
                 tx = match tx.send(r).wait() {
                     Ok(tx) => tx,
-                    Err(_) => break,    // send failed - probably the Receiver was closed
+                    Err(_) => break, // send failed - probably the Receiver was closed
                 };
 
                 // We're done
@@ -148,7 +149,7 @@ pub fn stdin() -> BoxStream<Bytes, io::Error> {
     Reader::new(io::stdin())
         .source(NUMBUFS, BUFSZ)
         .then(Result::unwrap)
-        .boxed()
+        .boxify()
 }
 
 /// Helper to produce an async sink for stdout
