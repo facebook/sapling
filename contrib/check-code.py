@@ -362,6 +362,7 @@ pypats = [
     (r'\.next\(\)', "don't use .next(), use next(...)"),
     (r'([a-z]*).revision\(\1\.node\(',
      "don't convert rev to node before passing to revision(nodeorrev)"),
+    (r'platform\.system\(\)', "don't use platform.system(), use pycompat"),
 
     # rules depending on implementation of repquote()
     (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',
