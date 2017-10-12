@@ -30,6 +30,23 @@ def relpath(client, depotfile):
     filename = where['clientFile'].replace('//%s/' % client, '')
     return p4.decodefilename(filename)
 
+def get_filelogs_to_sync(client, repo, p1ctx, cl, p4filelogs):
+    latestcl = p4.get_latest_cl(client)
+    if latestcl > cl or latestcl is None:
+        p4filelogslist = [(p4fl, None) for p4fl in p4filelogs]
+        return p4filelogslist, []
+    p1 = repo[p1ctx.node()]
+    hgfilelogs = p1.manifest().copy()
+    addedp4filelogs = []
+    reusep4filelogs = []
+    for p4fl in p4filelogs:
+        localname = relpath(client, p4fl.depotfile)
+        if localname in hgfilelogs:
+            reusep4filelogs.append(localname)
+        else:
+            addedp4filelogs.append((p4fl, localname))
+    return addedp4filelogs, reusep4filelogs
+
 class ImportSet(object):
     def __init__(self, repo, client, changelists, filelist, storagepath,
             isbranchpoint=False):
