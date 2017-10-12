@@ -37,7 +37,6 @@ extern crate services;
 extern crate stats;
 
 extern crate rocksdb;
-extern crate serde;
 
 extern crate bincode;
 
