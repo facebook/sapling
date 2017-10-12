@@ -74,9 +74,9 @@ or a raw string prefix, ``r'...'``.
 
 The dot operator can be used as a shorthand for accessing a sub item:
 
-- ``expr.member`` is roughly equivalent to ``expr % "{member}"`` if ``expr``
+- ``expr.member`` is roughly equivalent to ``expr % '{member}'`` if ``expr``
   returns a non-list/dict. The returned value is not stringified.
-- ``dict.key`` is identical to ``get(dict, "key")``.
+- ``dict.key`` is identical to ``get(dict, 'key')``.
 
 Aliases
 =======
