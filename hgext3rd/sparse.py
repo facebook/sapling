@@ -348,6 +348,8 @@ def _setupdiff(ui):
     # wrap workingfilectx's data function to return the data for files
     # outside the sparse checkout by fetching from the working copy parent.
     def workingfilectxdata(orig, self):
+        if not util.safehasattr(self.repo(), 'sparsematch'):
+            return orig(self)
         sparsematch = self.repo().sparsematch()
         if sparsematch(self._path):
             return orig(self)

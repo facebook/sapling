@@ -32,6 +32,10 @@ Now create a shared working copy that is not sparse.
 Make sure "hg diff" works in the non-sparse working directory.
 
   $ echo z >> file1
-  $ hg diff |& grep -E 'Unknown exception|AttributeError'
-  ** Unknown exception encountered with possibly-broken third-party extension sparse
-  AttributeError: 'localrepository' object has no attribute 'sparsematch'
+  $ hg diff
+  diff -r 1f02e070b36e file1
+  --- a/file1	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file1	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   a
+  +z
