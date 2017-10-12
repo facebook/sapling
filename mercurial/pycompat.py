@@ -314,3 +314,5 @@ else:
     stringio = cStringIO.StringIO
     maplist = map
     rawinput = raw_input
+
+isjython = sysplatform.startswith('java')
