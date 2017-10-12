@@ -83,7 +83,7 @@ def _usercachedir(ui):
         home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
-    elif pycompat.osname == 'posix':
+    elif pycompat.isposix:
         path = encoding.environ.get('XDG_CACHE_HOME')
         if path:
             return os.path.join(path, longname)

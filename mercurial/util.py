@@ -313,7 +313,7 @@ except NameError:
             return memoryview(sliceable)[offset:offset + length]
         return memoryview(sliceable)[offset:]
 
-closefds = pycompat.osname == 'posix'
+closefds = pycompat.isposix
 
 _chunksize = 4096
 
