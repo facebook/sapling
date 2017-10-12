@@ -587,7 +587,7 @@ def main():
     args = parser.parse_args()
     config_overrides = parse_config_options(parser, args.config)
 
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
     # We always want to be able to access commits being created by pending
