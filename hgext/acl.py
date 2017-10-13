@@ -198,6 +198,7 @@ import getpass
 from mercurial.i18n import _
 from mercurial import (
     error,
+    extensions,
     match,
     registrar,
     util,
@@ -307,7 +308,23 @@ def buildmatch(ui, repo, user, key):
         return match.match(repo.root, '', pats)
     return util.never
 
+def ensureenabled(ui):
+    """make sure the extension is enabled when used as hook
+
+    When acl is used through hooks, the extension is never formally loaded and
+    enabled. This has some side effect, for example the config declaration is
+    never loaded. This function ensure the extension is enabled when running
+    hooks.
+    """
+    if 'acl' in ui._knownconfig:
+        return
+    ui.setconfig('extensions', 'acl', '', source='internal')
+    extensions.loadall(ui, ['acl'])
+
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
+
+    ensureenabled(ui)
+
     if hooktype not in ['pretxnchangegroup', 'pretxncommit']:
         raise error.Abort(_('config error - hook type "%s" cannot stop '
                            'incoming changesets nor commits') % hooktype)
