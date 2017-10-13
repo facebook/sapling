@@ -109,6 +109,9 @@ configitem('patchbomb', 'bundletype',
 configitem('patchbomb', 'bcc',
     default=None,
 )
+configitem('patchbomb', 'cc',
+    default=None,
+)
 configitem('patchbomb', 'confirm',
     default=False,
 )
