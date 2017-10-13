@@ -136,6 +136,10 @@ configitem('largefiles', 'minsize',
 configitem('largefiles', 'patterns',
     default=list,
 )
+configitem('largefiles', 'usercache',
+    default=None,
+)
+
 reposetup = reposetup.reposetup
 
 def featuresetup(ui, supported):

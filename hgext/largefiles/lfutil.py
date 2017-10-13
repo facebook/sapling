@@ -71,7 +71,7 @@ def usercachepath(ui, hash):
 
 def _usercachedir(ui):
     '''Return the location of the "global" largefiles cache.'''
-    path = ui.configpath(longname, 'usercache', None)
+    path = ui.configpath(longname, 'usercache')
     if path:
         return path
     if pycompat.iswindows:
