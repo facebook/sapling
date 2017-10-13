@@ -487,6 +487,11 @@ coreconfigitem('hostsecurity', '.*:fingerprints$',
     default=list,
     generic=True,
 )
+coreconfigitem('hostsecurity', '.*:verifycertsfile$',
+    default=None,
+    generic=True,
+)
+
 coreconfigitem('http_proxy', 'always',
     default=False,
 )
