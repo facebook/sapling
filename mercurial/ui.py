@@ -53,6 +53,8 @@ rollback = False
 [commands]
 # Make `hg status` emit cwd-relative paths by default.
 status.relative = yes
+# Refuse to perform an `hg update` that would cause a file content merge
+update.check = noconflict
 
 [diff]
 git = 1
