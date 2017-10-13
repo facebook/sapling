@@ -1,6 +1,8 @@
 #ifndef _HG_BDIFF_H_
 #define _HG_BDIFF_H_
 
+#include "compat.h"
+
 struct bdiff_line {
 	int hash, n, e;
 	ssize_t len;
