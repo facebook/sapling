@@ -107,8 +107,10 @@ command.
 from __future__ import absolute_import
 
 from mercurial import (
+    configitems,
     hg,
     localrepo,
+    registrar,
 )
 
 from . import (
@@ -125,6 +127,12 @@ from . import (
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('largefiles', 'minsize',
+    default=configitems.dynamicdefault,
+)
 reposetup = reposetup.reposetup
 
 def featuresetup(ui, supported):
