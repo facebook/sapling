@@ -9,7 +9,7 @@
 # node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
     make cleanbutpackages
-    make local || make local PURE=--pure
+    make local PURE=--pure
     HG="$PWD/hg"
 
     "$HG" version > /dev/null || { echo 'abort: hg version failed!'; exit 1 ; }
