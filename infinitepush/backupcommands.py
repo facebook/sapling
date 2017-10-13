@@ -787,6 +787,7 @@ def _deletebackupstate(repo):
     return repo.vfs.tryunlink(_backupstatefile)
 
 def _readlocalbackupstate(ui, repo):
+    repo = _getsrcrepo(repo)
     if not _localbackupstateexists(repo):
         return backupstate()
 
