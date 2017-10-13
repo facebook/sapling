@@ -93,6 +93,11 @@ configitem('extdiff', r'opts\..*',
     generic=True,
 )
 
+configitem('diff-tools', r'.*\.diffargs$',
+    default=None,
+    generic=True,
+)
+
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
