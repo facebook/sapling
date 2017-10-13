@@ -808,6 +808,14 @@ cases.
   $ cat > $TESTTMP/failafterfinalize.py <<EOF
   > # extension to abort transaction after finalization forcibly
   > from mercurial import commands, error, extensions, lock as lockmod
+  > from mercurial import registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > configitem('failafterfinalize', 'fail',
+  >     default=None,
+  > )
   > def fail(tr):
   >     raise error.Abort('fail after finalization')
   > def reposetup(ui, repo):
