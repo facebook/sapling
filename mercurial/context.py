@@ -2098,6 +2098,9 @@ class overlayworkingfilectx(workingfilectx):
         self._parent = parent
         self._path = path
 
+    def cmp(self, fctx):
+        return self.data() != fctx.data()
+
     def ctx(self):
         return self._parent
 
