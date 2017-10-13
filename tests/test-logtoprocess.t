@@ -12,6 +12,11 @@ Test if logtoprocess correctly captures command-related log calls.
   > from mercurial import registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > configitem('logtoprocess', 'foo',
+  >     default=None,
+  > )
   > @command(b'foo', [])
   > def foo(ui, repo):
   >     ui.log('foo', 'a message: %(bar)s\n', bar='spam')
