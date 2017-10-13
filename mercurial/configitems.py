@@ -475,6 +475,10 @@ coreconfigitem('hostsecurity', 'disabletls10warning',
 coreconfigitem('hostsecurity', 'minimumprotocol',
     default=dynamicdefault,
 )
+coreconfigitem('hostsecurity', '.*:minimumprotocol$',
+    default=dynamicdefault,
+    generic=True,
+)
 coreconfigitem('http_proxy', 'always',
     default=False,
 )
