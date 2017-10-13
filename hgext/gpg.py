@@ -39,6 +39,10 @@ configitem('gpg', 'cmd',
 configitem('gpg', 'key',
     default=None,
 )
+configitem('gpg', '.*',
+    default=None,
+    generic=True,
+)
 
 class gpg(object):
     def __init__(self, path, key=None):
@@ -216,7 +220,7 @@ def sigcheck(ui, repo, rev):
 def keystr(ui, key):
     """associate a string to a key (username, comment)"""
     keyid, user, fingerprint = key
-    comment = ui.config("gpg", fingerprint, None)
+    comment = ui.config("gpg", fingerprint)
     if comment:
         return "%s (%s)" % (user, comment)
     else:
