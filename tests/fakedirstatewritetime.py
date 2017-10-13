@@ -12,7 +12,15 @@ from mercurial import (
     dirstate,
     extensions,
     policy,
+    registrar,
     util,
+)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fakedirstatewritetime', 'fakenow',
+    default=None,
 )
 
 parsers = policy.importmod(r'parsers')
