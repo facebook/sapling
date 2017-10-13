@@ -228,6 +228,8 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     _fixpager(ui)
+    # Allow uncommit on dirty working directory
+    repo.ui.setconfig('experimental', 'uncommitondirtywdir', True)
 
 def tweakorder():
     """
