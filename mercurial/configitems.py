@@ -962,6 +962,9 @@ coreconfigitem('web', 'push_ssl',
 coreconfigitem('web', 'refreshinterval',
     default=20,
 )
+coreconfigitem('web', 'staticurl',
+    default=None,
+)
 coreconfigitem('web', 'stripes',
     default=1,
 )
