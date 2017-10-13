@@ -185,6 +185,9 @@ configitem('notify', 'mbox',
 configitem('notify', 'merge',
     default=True,
 )
+configitem('notify', 'outgoing',
+    default=None,
+)
 configitem('notify', 'sources',
     default='serve',
 )
