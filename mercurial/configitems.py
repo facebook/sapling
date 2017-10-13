@@ -1085,3 +1085,16 @@ coreconfigitem('worker', 'backgroundclosethreadcount',
 coreconfigitem('worker', 'numcpus',
     default=None,
 )
+
+# Rebase related configuration moved to core because other extension are doing
+# strange things. For example, shelve import the extensions to reuse some bit
+# without formally loading it.
+coreconfigitem('commands', 'rebase.requiredest',
+            default=False,
+)
+coreconfigitem('experimental', 'rebaseskipobsolete',
+    default=True,
+)
+coreconfigitem('rebase', 'singletransaction',
+    default=False,
+)

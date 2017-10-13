@@ -73,20 +73,6 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem('commands', 'rebase.requiredest',
-            default=False,
-)
-
-configitem('experimental', 'rebaseskipobsolete',
-    default=True,
-)
-configitem('rebase', 'singletransaction',
-    default=False,
-)
-
 def _nothingtorebase():
     return 1
 
