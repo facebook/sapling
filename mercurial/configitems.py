@@ -479,6 +479,10 @@ coreconfigitem('hostsecurity', '.*:minimumprotocol$',
     default=dynamicdefault,
     generic=True,
 )
+coreconfigitem('hostsecurity', '.*:ciphers$',
+    default=dynamicdefault,
+    generic=True,
+)
 coreconfigitem('http_proxy', 'always',
     default=False,
 )
