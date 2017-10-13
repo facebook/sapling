@@ -446,6 +446,10 @@ coreconfigitem('format', 'usegeneraldelta',
 coreconfigitem('format', 'usestore',
     default=True,
 )
+coreconfigitem('hooks', '.*',
+    default=dynamicdefault,
+    generic=True,
+)
 coreconfigitem('hostsecurity', 'ciphers',
     default=None,
 )
