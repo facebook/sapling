@@ -420,6 +420,10 @@ coreconfigitem('extensions', '.*',
     default=None,
     generic=True,
 )
+coreconfigitem('extdata', '.*',
+    default=None,
+    generic=True,
+)
 coreconfigitem('format', 'aggressivemergedeltas',
     default=False,
 )
