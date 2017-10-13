@@ -461,9 +461,18 @@ Setting up
   > from mercurial import bundle2
   > from mercurial import exchange
   > from mercurial import extensions
+  > from mercurial import registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > 
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > configitem('failpush', 'reason',
+  >     default=None,
+  > )
   > 
   > def _pushbundle2failpart(pushop, bundler):
-  >     reason = pushop.ui.config('failpush', 'reason', None)
+  >     reason = pushop.ui.config('failpush', 'reason')
   >     part = None
   >     if reason == 'abort':
   >         bundler.newpart('test:abort')
