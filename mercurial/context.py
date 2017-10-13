@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import filecmp
 import os
 import re
 import stat
@@ -2554,11 +2555,17 @@ class arbitraryfilectx(object):
     """Allows you to use filectx-like functions on a file in an arbitrary
     location on disk, possibly not in the working directory.
     """
-    def __init__(self, path):
+    def __init__(self, path, repo=None):
+        # Repo is optional because contrib/simplemerge uses this class.
+        self._repo = repo
         self._path = path
 
-    def cmp(self, otherfilectx):
-        return self.data() != otherfilectx.data()
+    def cmp(self, fctx):
+        if isinstance(fctx, workingfilectx) and self._repo:
+            # Add a fast-path for merge if both sides are disk-backed.
+            # Note that filecmp uses the opposite return values as cmp.
+            return not filecmp.cmp(self.path(), self._repo.wjoin(fctx.path()))
+        return self.data() != fctx.data()
 
     def path(self):
         return self._path
