@@ -606,9 +606,24 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
     from . import context
     a = _workingpath(repo, fcd)
     back = scmutil.origpath(ui, repo, a)
-    if premerge:
-        util.copyfile(a, back)
-    return context.arbitraryfilectx(back, repo=repo)
+    inworkingdir = (back.startswith(repo.wvfs.base) and not
+        back.startswith(repo.vfs.base))
+
+    if isinstance(fcd, context.overlayworkingfilectx) and inworkingdir:
+        # If the backup file is to be in the working directory, and we're
+        # merging in-memory, we must redirect the backup to the memory context
+        # so we don't disturb the working directory.
+        relpath = back[len(repo.wvfs.base) + 1:]
+        wctx[relpath].write(fcd.data(), fcd.flags())
+        return wctx[relpath]
+    else:
+        # Otherwise, write to wherever the user specified the backups should go.
+        #
+        # A arbitraryfilectx is returned, so we can run the same functions on
+        # the backup context regardless of where it lives.
+        if premerge:
+            util.copyfile(a, back)
+        return context.arbitraryfilectx(back, repo=repo)
 
 def _maketempfiles(repo, fco, fca):
     """Writes out `fco` and `fca` as temporary files, so an external merge
