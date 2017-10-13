@@ -13,6 +13,7 @@ import os
 
 class HisteditCommand:
     '''Utility to facilitate running `hg histedit` from an integration test.'''
+
     def __init__(self):
         self._actions = []
 
@@ -28,9 +29,18 @@ class HisteditCommand:
     def stop(self, commit_hash: str) -> None:
         self._actions.append('stop %s\n' % commit_hash)
 
-    def run(self, test_base: HgExtensionTestBase) -> None:
+    def run(self, test_base: HgExtensionTestBase, ancestor: str = None) -> None:
         commands_file = os.path.join(test_base.tmp_dir, 'histedit_commands.txt')
         with open(commands_file, 'w') as f:
             [f.write(action) for action in self._actions]
 
-        test_base.hg('histedit', '--commands', commands_file)
+        args = [
+            'histedit',
+            '--config',
+            'ui.origbackuppath=.hg/origbackups',
+            '--commands',
+            commands_file,
+        ]
+        if ancestor is not None:
+            args.append(ancestor)
+        test_base.hg(*args)

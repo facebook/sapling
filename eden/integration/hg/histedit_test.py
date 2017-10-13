@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+from textwrap import dedent
 
 from .lib.hg_extension_test_base import hg_test
 from .lib.histedit_command import HisteditCommand
@@ -131,11 +132,57 @@ class HisteditTest:
         histedit.roll(self._commit3)
         histedit.run(self)
 
-        self.assertEqual(
-            ['first commit'], self.repo.log('{desc}')
-        )
+        self.assertEqual(['first commit'], self.repo.log('{desc}'))
         self.assert_status_empty()
         self.assertSetEqual(
             set(['.eden', '.hg', 'first', 'second', 'third']),
             set(os.listdir(self.repo.get_canonical_root()))
         )
+
+    def test_abort_after_merge_conflict(self):
+        self.write_file('will_have_confict.txt', 'original\n')
+        self.hg('add', 'will_have_confict.txt')
+        commit4 = self.repo.commit('commit4')
+        self.write_file('will_have_confict.txt', '1\n')
+        commit5 = self.repo.commit('commit5')
+        self.write_file('will_have_confict.txt', '2\n')
+        commit6 = self.repo.commit('commit6')
+
+        histedit = HisteditCommand()
+        histedit.pick(commit4)
+        histedit.pick(commit6)
+        histedit.pick(commit5)
+        original_commits = self.repo.log()
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            histedit.run(self, ancestor=commit4)
+        expected_msg = (
+            ('Fix up the change (pick %s)\n' % commit6[:12]) +
+            '  (hg histedit --continue to resume)'
+        )
+        self.assertIn(expected_msg, str(context.exception))
+        self.assert_status({
+            'will_have_confict.txt': 'M',
+        })
+        expected_contents_with_conflict_markers = dedent(
+            '''\
+        <<<<<<< local
+        original
+        =======
+        2
+        >>>>>>> histedit
+        '''
+        )
+        self.assertEqual(
+            expected_contents_with_conflict_markers,
+            self.read_file('will_have_confict.txt')
+        )
+
+        self.hg('histedit', '--abort')
+        self.assertEqual('2\n', self.read_file('will_have_confict.txt'))
+        self.assertListEqual(
+            original_commits,
+            self.repo.log(),
+            msg='The original commit hashes should be restored by the abort.'
+        )
+        self.assert_status_empty()
