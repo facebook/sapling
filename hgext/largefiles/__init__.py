@@ -133,6 +133,9 @@ configitem = registrar.configitem(configtable)
 configitem('largefiles', 'minsize',
     default=configitems.dynamicdefault,
 )
+configitem('largefiles', 'patterns',
+    default=list,
+)
 reposetup = reposetup.reposetup
 
 def featuresetup(ui, supported):
