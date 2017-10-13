@@ -316,3 +316,7 @@ else:
     rawinput = raw_input
 
 isjython = sysplatform.startswith('java')
+
+isdarwin = sysplatform == 'darwin'
+isposix = osname == 'posix'
+iswindows = osname == 'nt'
