@@ -248,34 +248,34 @@ coreconfigitem('devel', 'user.obsmarker',
     default=None,
 )
 coreconfigitem('diff', 'nodates',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'showfunc',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'unified',
     default=None,
 )
 coreconfigitem('diff', 'git',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'ignorews',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'ignorewsamount',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'ignoreblanklines',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'ignorewseol',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'nobinary',
-    default=None,
+    default=False,
 )
 coreconfigitem('diff', 'noprefix',
-    default=None,
+    default=False,
 )
 coreconfigitem('email', 'bcc',
     default=None,
