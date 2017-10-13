@@ -532,9 +532,6 @@ coreconfigitem('experimental', 'mergedriver',
 coreconfigitem('experimental', 'obsmarkers-exchange-debug',
     default=False,
 )
-coreconfigitem('experimental', 'rebase.multidest',
-    default=False,
-)
 coreconfigitem('experimental', 'remotenames',
     default=False,
 )

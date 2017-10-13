@@ -115,7 +115,6 @@ Setup rebase with multiple destinations
   > [extensions]
   > maprevset=$TESTTMP/maprevset.py
   > [experimental]
-  > rebase.multidest=true
   > evolution=true
   > EOF
 

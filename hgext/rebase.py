@@ -643,6 +643,11 @@ def rebase(ui, repo, **opts):
       4. If you do not specify any of ``--rev``, ``source``, or ``--base``,
          rebase will use ``--base .`` as above.
 
+    If ``--source`` or ``--rev`` is used, special names ``SRC`` and ``ALLSRC``
+    can be used in ``--dest``. Destination would be calculated per source
+    revision with ``SRC`` substituted by that single source revision and
+    ``ALLSRC`` substituted by all source revisions.
+
     Rebase will destroy original changesets unless you use ``--keep``.
     It will also move your bookmarks (even if you do).
 
@@ -690,6 +695,12 @@ def rebase(ui, repo, **opts):
       - move a named branch while preserving its name::
 
           hg rebase -r "branch(featureX)" -d 1.3 --keepbranches
+
+      - stabilize orphaned changesets so history looks linear::
+
+          hg rebase -r 'orphan()-obsolete()'\
+ -d 'first(max((successors(max(roots(ALLSRC) & ::SRC)^)-obsolete())::) +\
+ max(::((roots(ALLSRC) & ::SRC)^)-obsolete()))'
 
     Configuration Options:
 
@@ -884,8 +895,6 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
             # fast path: try to resolve dest without SRC alias
             dest = scmutil.revsingle(repo, destf, localalias=alias)
         except error.RepoLookupError:
-            if not ui.configbool('experimental', 'rebase.multidest'):
-                raise
             # multi-dest path: resolve dest for each SRC separately
             destmap = {}
             for r in rebaseset:
