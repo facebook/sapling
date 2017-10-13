@@ -244,8 +244,22 @@ def parseeol(ui, repo, nodes):
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return None
 
+def ensureenabled(ui):
+    """make sure the extension is enabled when used as hook
+
+    When eol is used through hooks, the extension is never formally loaded and
+    enabled. This has some side effect, for example the config declaration is
+    never loaded. This function ensure the extension is enabled when running
+    hooks.
+    """
+    if 'eol' in ui._knownconfig:
+        return
+    ui.setconfig('extensions', 'eol', '', source='internal')
+    extensions.loadall(ui, ['eol'])
+
 def _checkhook(ui, repo, node, headsonly):
     # Get revisions to check and touched files at the same time
+    ensureenabled(ui)
     files = set()
     revs = set()
     for rev in xrange(repo[node].rev(), len(repo)):
