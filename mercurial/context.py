@@ -622,6 +622,9 @@ class changectx(basectx):
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, 'visible')
 
+    def isinmemory(self):
+        return False
+
     def children(self):
         """return contexts for each child changeset"""
         c = self._repo.changelog.children(self._node)
@@ -1401,6 +1404,9 @@ class committablectx(basectx):
     def extra(self):
         return self._extra
 
+    def isinmemory(self):
+        return False
+
     def tags(self):
         return []
 
@@ -1977,6 +1983,9 @@ class overlayworkingctx(workingctx):
                                              self._path)
         else:
             return self._wrappedctx[path].data()
+
+    def isinmemory(self):
+        return True
 
     def filedate(self, path):
         if self.isdirty(path):
