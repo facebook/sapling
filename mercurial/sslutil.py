@@ -186,8 +186,7 @@ def _hostsettings(ui, hostname):
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
-    fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname,
-                                 [])
+    fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname)
     for fingerprint in fingerprints:
         if not (fingerprint.startswith(('sha1:', 'sha256:', 'sha512:'))):
             raise error.Abort(_('invalid fingerprint for %s: %s') % (

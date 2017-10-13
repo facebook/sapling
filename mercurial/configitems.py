@@ -483,6 +483,10 @@ coreconfigitem('hostsecurity', '.*:ciphers$',
     default=dynamicdefault,
     generic=True,
 )
+coreconfigitem('hostsecurity', '.*:fingerprints$',
+    default=list,
+    generic=True,
+)
 coreconfigitem('http_proxy', 'always',
     default=False,
 )
