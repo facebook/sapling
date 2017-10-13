@@ -158,6 +158,9 @@ testedwith = 'ships-with-hg-core'
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('notify', 'changegroup',
+    default=None,
+)
 configitem('notify', 'config',
     default=None,
 )
