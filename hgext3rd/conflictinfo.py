@@ -89,28 +89,35 @@ def _resolve(orig, ui, repo, *pats, **opts):
         matcher = scmutil.match(repo[None], pats, opts)
         workingctx = repo[None]
 
-        paths = []
-        for file in mergestate:
-            if not matcher(file):
+        fileconflicts = []
+        pathconflicts = []
+        for path in mergestate:
+            if not matcher(path):
                 continue
 
-            val = _summarizeconflicts(mergestate, file, workingctx)
-            if val is not None:
-                paths.append(val)
+            info = _summarizefileconflicts(mergestate, path, workingctx)
+            if info is not None:
+                fileconflicts.append(info)
+
+            info = _summarizepathconflicts(mergestate, path)
+            if info is not None:
+                pathconflicts.append(info)
 
         formatter.startitem()
-        formatter.write('conflicts', '%s\n', paths)
+        formatter.write('conflicts', '%s\n', fileconflicts)
+        formatter.write('pathconflicts', '%s\n', pathconflicts)
         formatter.write('command', '%s\n', _findconflictcommand(repo))
         formatter.end()
         return 0
 
     return orig(ui, repo, *pats, **opts)
 
-# To become merge.summarizeconflicts().
-def _summarizeconflicts(self, path, workingctx):
+# To become merge.summarizefileconflicts().
+def _summarizefileconflicts(self, path, workingctx):
     # 'd' = driver-resolved
-    # 'r' = removed
-    if self[path] in 'rd':
+    # 'r' = marked resolved
+    # 'pr', 'pu' = path conflicts
+    if self[path] in ('d', 'r', 'pr', 'pu'):
         return None
 
     stateentry = self._state[path]
@@ -129,6 +136,21 @@ def _summarizeconflicts(self, path, workingctx):
                                  changeid=ancestorctx)
 
     return _summarize(self._repo, workingctx, otherctx, basectx)
+
+# To become merge.summarizepathconflicts().
+def _summarizepathconflicts(self, path):
+    # 'pu' = unresolved path conflict
+    if self[path] != 'pu':
+        return None
+
+    stateentry = self._state[path]
+    frename = stateentry[1]
+    forigin = stateentry[2]
+    return {
+        'path': path,
+        'fileorigin': 'local' if forigin == 'l' else 'remote',
+        'renamedto': frename,
+    }
 
 # To become filemerge.summarize().
 def _summarize(repo, workingfilectx, otherctx, basectx):
