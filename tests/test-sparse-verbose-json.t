@@ -4,7 +4,7 @@ test sparse with --verbose and -T json
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
   > strip=
   > EOF
 

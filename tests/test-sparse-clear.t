@@ -4,7 +4,7 @@ test sparse
   $ cd myrepo
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
   > purge=
   > strip=
   > rebase=

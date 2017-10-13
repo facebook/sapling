@@ -148,7 +148,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   dirstate_size: 1
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
   > EOF
   $ cat >> profile_base << EOF
   > [include]
