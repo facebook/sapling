@@ -46,7 +46,7 @@ def systemrcpath():
 def userrcpath():
     if pycompat.sysplatform == 'plan9':
         return [encoding.environ['home'] + '/lib/hgrc']
-    elif pycompat.sysplatform == 'darwin':
+    elif pycompat.isdarwin:
         return [os.path.expanduser('~/.hgrc')]
     else:
         confighome = encoding.environ.get('XDG_CONFIG_HOME')

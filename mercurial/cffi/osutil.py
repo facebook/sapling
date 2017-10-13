@@ -16,7 +16,7 @@ from .. import (
     pycompat,
 )
 
-if pycompat.sysplatform == 'darwin':
+if pycompat.isdarwin:
     from . import _osutil
 
     ffi = _osutil.ffi

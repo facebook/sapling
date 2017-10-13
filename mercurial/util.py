@@ -1561,7 +1561,7 @@ def splitpath(path):
 
 def gui():
     '''Are we running in a GUI?'''
-    if pycompat.sysplatform == 'darwin':
+    if pycompat.isdarwin:
         if 'SSH_CONNECTION' in encoding.environ:
             # handle SSH access to a box where the user is logged in
             return False

@@ -332,7 +332,7 @@ normcasespec = encoding.normcasespecs.lower
 # fallback normcase function for non-ASCII strings
 normcasefallback = normcase
 
-if pycompat.sysplatform == 'darwin':
+if pycompat.isdarwin:
 
     def normcase(path):
         '''

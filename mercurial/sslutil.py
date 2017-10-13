@@ -677,8 +677,8 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if (pycompat.sysplatform != 'darwin' or
-                        util.mainfrozen() or not pycompat.sysexecutable):
+    if (not pycompat.isdarwin or util.mainfrozen() or
+        not pycompat.sysexecutable):
         return False
     exe = os.path.realpath(pycompat.sysexecutable).lower()
     return (exe.startswith('/usr/bin/python') or
@@ -736,7 +736,7 @@ def _defaultcacerts(ui):
 
     # The Apple OpenSSL trick isn't available to us. If Python isn't able to
     # load system certs, we're out of luck.
-    if pycompat.sysplatform == 'darwin':
+    if pycompat.isdarwin:
         # FUTURE Consider looking for Homebrew or MacPorts installed certs
         # files. Also consider exporting the keychain certs to a file during
         # Mercurial install.

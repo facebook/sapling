@@ -603,7 +603,7 @@ def wrapdirstate(orig, self):
 def extsetup(ui):
     extensions.wrapfilecache(
         localrepo.localrepository, 'dirstate', wrapdirstate)
-    if pycompat.sysplatform == 'darwin':
+    if pycompat.isdarwin:
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 

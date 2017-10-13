@@ -79,7 +79,7 @@ def _usercachedir(ui):
                         encoding.environ.get('APPDATA'))
         if appdata:
             return os.path.join(appdata, longname)
-    elif pycompat.sysplatform == 'darwin':
+    elif pycompat.isdarwin:
         home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
