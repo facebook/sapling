@@ -6,7 +6,15 @@ from __future__ import absolute_import
 from mercurial import (
     extensions,
     patch as patchmod,
+    registrar,
     util,
+)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fakepatchtime', 'fakenow',
+    default=None,
 )
 
 def internalpatch(orig, ui, repo, patchobj, strip,
