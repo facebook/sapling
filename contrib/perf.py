@@ -150,6 +150,9 @@ try:
     configitem('perf', 'stub',
         default=mercurial.configitems.dynamicdefault,
     )
+    configitem('perf', 'parentscount',
+        default=mercurial.configitems.dynamicdefault,
+    )
 except (ImportError, AttributeError):
     pass
 
