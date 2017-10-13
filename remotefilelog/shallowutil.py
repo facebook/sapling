@@ -457,7 +457,11 @@ def mkstickygroupdir(ui, path):
             path = os.path.dirname(path)
 
         for path in reversed(missingdirs):
-            os.mkdir(path)
+            try:
+                os.mkdir(path)
+            except OSError as ex:
+                if ex.errno != errno.EEXIST:
+                    raise
 
         for path in missingdirs:
             setstickygroupdir(path, gid, ui.warn)
