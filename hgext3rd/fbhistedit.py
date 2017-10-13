@@ -141,6 +141,20 @@ def defineactions():
             super(executerelative, self).__init__(state, command)
             self.cwd = pycompat.getcwd()
 
+    @histedit.action(['graft', 'g'],
+                     _('graft a commit from elsewhere'))
+    class graft(histedit.histeditaction):
+        def _verifynodeconstraints(self, prev, expected, seen):
+            if self.node in expected:
+                msg = _('%s "%s" changeset was an edited list candidate')
+                raise error.ParseError(
+                    msg % (self.verb, node.short(self.node)),
+                    hint=_('graft must only use unlisted changesets'))
+
+        def continueclean(self):
+            ctx, replacement = super(graft, self).continueclean()
+            return ctx, []
+
     return stop, execute, executerelative
 
 def extsetup(ui):
