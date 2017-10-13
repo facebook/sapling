@@ -218,6 +218,26 @@ configitem = registrar.configitem(configtable)
 configitem('acl', 'config',
     default=None,
 )
+configitem('acl.groups', '.*',
+    default=None,
+    generic=True,
+)
+configitem('acl.deny.branches', '.*',
+    default=None,
+    generic=True,
+)
+configitem('acl.allow.branches', '.*',
+    default=None,
+    generic=True,
+)
+configitem('acl.deny', '.*',
+    default=None,
+    generic=True,
+)
+configitem('acl.allow', '.*',
+    default=None,
+    generic=True,
+)
 configitem('acl', 'sources',
     default=lambda: ['serve'],
 )
