@@ -106,6 +106,9 @@ configitem = registrar.configitem(configtable)
 configitem('patchbomb', 'bundletype',
     default=None,
 )
+configitem('patchbomb', 'bcc',
+    default=None,
+)
 configitem('patchbomb', 'confirm',
     default=False,
 )
