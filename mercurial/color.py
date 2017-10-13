@@ -210,7 +210,7 @@ def _modesetup(ui):
         mode = ui.config('color', 'pagermode', mode)
 
     realmode = mode
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         from . import win32
 
         term = encoding.environ.get('TERM')
@@ -379,7 +379,7 @@ def colorlabel(ui, msg, label):
     return msg
 
 w32effects = None
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     import ctypes
 
     _kernel32 = ctypes.windll.kernel32

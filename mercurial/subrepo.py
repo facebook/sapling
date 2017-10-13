@@ -1347,7 +1347,7 @@ class gitsubrepo(abstractsubrepo):
             if e.errno != errno.ENOENT:
                 raise error.Abort(genericerror % (
                     self._path, encoding.strtolocal(e.strerror)))
-            elif pycompat.osname == 'nt':
+            elif pycompat.iswindows:
                 try:
                     self._gitexecutable = 'git.cmd'
                     out, err = self._gitnodir(['--version'])

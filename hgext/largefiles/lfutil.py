@@ -74,7 +74,7 @@ def _usercachedir(ui):
     path = ui.configpath(longname, 'usercache', None)
     if path:
         return path
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         appdata = encoding.environ.get('LOCALAPPDATA',\
                         encoding.environ.get('APPDATA'))
         if appdata:

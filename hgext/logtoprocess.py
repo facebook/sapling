@@ -51,7 +51,7 @@ from mercurial import (
 testedwith = 'ships-with-hg-core'
 
 def uisetup(ui):
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         # no fork on Windows, but we can create a detached process
         # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
         # No stdlib constant exists for this value

@@ -103,7 +103,7 @@ def geturl(path):
         pass
     if os.path.isdir(path):
         path = os.path.normpath(os.path.abspath(path))
-        if pycompat.osname == 'nt':
+        if pycompat.iswindows:
             path = '/' + util.normpath(path)
         # Module URL is later compared with the repository URL returned
         # by svn API, which is UTF-8.
@@ -254,7 +254,7 @@ def issvnurl(ui, url):
     try:
         proto, path = url.split('://', 1)
         if proto == 'file':
-            if (pycompat.osname == 'nt' and path[:1] == '/'
+            if (pycompat.iswindows and path[:1] == '/'
                   and path[1:2].isalpha() and path[2:6].lower() == '%3a/'):
                 path = path[:2] + ':/' + path[6:]
             path = urlreq.url2pathname(path)

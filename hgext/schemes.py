@@ -116,7 +116,7 @@ def extsetup(ui):
     schemes.update(dict(ui.configitems('schemes')))
     t = templater.engine(lambda x: x)
     for scheme, url in schemes.items():
-        if (pycompat.osname == 'nt' and len(scheme) == 1 and scheme.isalpha()
+        if (pycompat.iswindows and len(scheme) == 1 and scheme.isalpha()
             and os.path.exists('%s:\\' % scheme)):
             raise error.Abort(_('custom scheme %s:// conflicts with drive '
                                'letter %s:\\\n') % (scheme, scheme.upper()))

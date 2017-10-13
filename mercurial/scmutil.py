@@ -41,7 +41,7 @@ from . import (
     vfs,
 )
 
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     from . import scmwindows as scmplatform
 else:
     from . import scmposix as scmplatform
@@ -291,7 +291,7 @@ def checkportabilityalert(ui):
     val = ui.config('ui', 'portablefilenames')
     lval = val.lower()
     bval = util.parsebool(val)
-    abort = pycompat.osname == 'nt' or lval == 'abort'
+    abort = pycompat.iswindows or lval == 'abort'
     warn = bval or lval == 'warn'
     if bval is None and not (warn or abort or lval == 'ignore'):
         raise error.ConfigError(

@@ -1041,7 +1041,7 @@ class ui(object):
         # gracefully and tell the user about their broken pager.
         shell = any(c in command for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
 
-        if pycompat.osname == 'nt' and not shell:
+        if pycompat.iswindows and not shell:
             # Window's built-in `more` cannot be invoked with shell=False, but
             # its `more.com` can.  Hide this implementation detail from the
             # user so we can also get sane bad PAGER behavior.  MSYS has

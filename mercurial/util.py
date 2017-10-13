@@ -92,7 +92,7 @@ def isatty(fp):
 if isatty(stdout):
     stdout = os.fdopen(stdout.fileno(), pycompat.sysstr('wb'), 1)
 
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     from . import windows as platform
     stdout = platform.winstdout(stdout)
 else:
@@ -1348,7 +1348,7 @@ def checkwinfilename(path):
             return _("filename ends with '%s', which is not allowed "
                      "on Windows") % t
 
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     checkosfilename = checkwinfilename
     timer = time.clock
 else:
@@ -1572,7 +1572,7 @@ def gui():
             # pure build; use a safe default
             return True
     else:
-        return pycompat.osname == "nt" or encoding.environ.get("DISPLAY")
+        return pycompat.iswindows or encoding.environ.get("DISPLAY")
 
 def mktempcopy(name, emptyok=False, createmode=None):
     """Create a temporary file with the same contents from name

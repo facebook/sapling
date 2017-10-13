@@ -2072,7 +2072,7 @@ def debugssl(ui, repo, source=None, **opts):
     If the update succeeds, retry the original operation.  Otherwise, the cause
     of the SSL error is likely another issue.
     '''
-    if pycompat.osname != 'nt':
+    if not pycompat.iswindows:
         raise error.Abort(_('certificate chain building is only possible on '
                             'Windows'))
 

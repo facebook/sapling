@@ -543,7 +543,7 @@ class backgroundfilecloser(object):
 
         # Only Windows/NTFS has slow file closing. So only enable by default
         # on that platform. But allow to be enabled elsewhere for testing.
-        defaultenabled = pycompat.osname == 'nt'
+        defaultenabled = pycompat.iswindows
         enabled = ui.configbool('worker', 'backgroundclose', defaultenabled)
 
         if not enabled:

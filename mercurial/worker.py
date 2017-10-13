@@ -203,7 +203,7 @@ def _posixexitstatus(code):
     elif os.WIFSIGNALED(code):
         return -os.WTERMSIG(code)
 
-if pycompat.osname != 'nt':
+if not pycompat.iswindows:
     _platformworker = _posixworker
     _exitstatus = _posixexitstatus
 

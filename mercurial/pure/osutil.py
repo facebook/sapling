@@ -64,7 +64,7 @@ def listdir(path, stat=False, skip=None):
             result.append((fn, _mode_to_kind(st.st_mode)))
     return result
 
-if pycompat.osname != 'nt':
+if not pycompat.iswindows:
     posixfile = open
 
     _SCM_RIGHTS = 0x01
