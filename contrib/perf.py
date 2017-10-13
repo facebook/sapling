@@ -140,17 +140,21 @@ else:
         return decorator
 
 try:
-    import registrar
+    import mercurial.registrar
+    import mercurial.configitems
     configtable = {}
-    configitem = registrar.configitem(configtable)
+    configitem = mercurial.registrar.configitem(configtable)
+    configitem('perf', 'presleep',
+        default=mercurial.configitems.dynamicdefault,
+    )
     configitem('perf', 'stub',
-        default=False,
+        default=mercurial.configitems.dynamicdefault,
     )
 except (ImportError, AttributeError):
     pass
 
 def getlen(ui):
-    if ui.configbool("perf", "stub"):
+    if ui.configbool("perf", "stub", False):
         return lambda x: 1
     return len
 
@@ -213,7 +217,7 @@ def gettimer(ui, opts=None):
 
     # stub function, runs code only once instead of in a loop
     # experimental config: perf.stub
-    if ui.configbool("perf", "stub"):
+    if ui.configbool("perf", "stub", False):
         return functools.partial(stub_timer, fm), fm
     return functools.partial(_timer, fm), fm
 
