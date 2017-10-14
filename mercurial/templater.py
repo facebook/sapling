@@ -1344,6 +1344,7 @@ def _readmapfile(mapfile):
 
     cache = {}
     tmap = {}
+    aliases = []
 
     val = conf.get('templates', '__base__')
     if val and val[0] not in "'\"":
@@ -1362,7 +1363,7 @@ def _readmapfile(mapfile):
                     path = p3
                     break
 
-        cache, tmap = _readmapfile(path)
+        cache, tmap, aliases = _readmapfile(path)
 
     for key, val in conf['templates'].items():
         if not val:
@@ -1378,7 +1379,8 @@ def _readmapfile(mapfile):
             if ':' in val[1]:
                 val = val[1].split(':', 1)
             tmap[key] = val[0], os.path.join(base, val[1])
-    return cache, tmap
+    aliases.extend(conf['templatealias'].items())
+    return cache, tmap, aliases
 
 class TemplateNotFound(error.Abort):
     pass
@@ -1412,9 +1414,10 @@ class templater(object):
                     minchunk=1024, maxchunk=65536):
         """Create templater from the specified map file"""
         t = cls(filters, defaults, cache, [], minchunk, maxchunk)
-        cache, tmap = _readmapfile(mapfile)
+        cache, tmap, aliases = _readmapfile(mapfile)
         t.cache.update(cache)
         t.map = tmap
+        t._aliases = aliases
         return t
 
     def __contains__(self, key):

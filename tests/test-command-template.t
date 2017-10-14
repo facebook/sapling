@@ -259,11 +259,13 @@ Test templates and style maps in files:
   $ hg log -l1 -T./map-simple
   8
 
- a map file may have [templates] section:
+ a map file may have [templates] and [templatealias] sections:
 
   $ cat <<'EOF' > map-simple
   > [templates]
-  > changeset = "{rev}\n"
+  > changeset = "{a}\n"
+  > [templatealias]
+  > a = rev
   > EOF
   $ hg log -l1 -T./map-simple
   8
@@ -276,6 +278,8 @@ Test templates and style maps in files:
   > foo = "{changeset}"
   > EOF
   $ HGRCPATH=./myhgrc hg log -l1 -Tfoo
+  8
+  $ HGRCPATH=./myhgrc hg log -l1 -T'{a}\n'
   8
 
 Test template map inheritance

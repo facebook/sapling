@@ -418,8 +418,8 @@ def lookuptemplate(ui, topic, tmpl):
 
     A map file defines a stand-alone template environment. If a map file
     selected, all templates defined in the file will be loaded, and the
-    template matching the given topic will be rendered. No aliases will be
-    loaded from user config.
+    template matching the given topic will be rendered. Aliases won't be
+    loaded from user config, but from the map file.
 
     If no map file selected, all templates in [templates] section will be
     available as well as aliases in [templatealias].
