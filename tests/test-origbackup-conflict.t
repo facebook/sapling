@@ -75,13 +75,19 @@ Cause a symlink to be backed up that points to a valid location from the backup 
 
   $ hg up -q 0
   $ mkdir ../sym-link-target
+#if symlink
   $ ln -s ../../../sym-link-target b
+#else
+  $ touch b
+#endif
   $ hg up b1
   b: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
+#if symlink
   $ readlink.py .hg/origbackups/b
   .hg/origbackups/b -> ../../../sym-link-target
+#endif
 
 Perform an update that causes b/c to be backed up again - it should not go into the target dir
 
@@ -111,7 +117,8 @@ Incorrectly configure origbackuppath to be under a file
   b/c: replacing untracked file
   getting b/c
   creating directory: $TESTTMP/repo/.hg/badorigbackups/b
-  abort: Not a directory: '$TESTTMP/repo/.hg/badorigbackups/b'
+  abort: The system cannot find the path specified: '$TESTTMP/repo/.hg/badorigbackups/b' (glob) (windows !)
+  abort: Not a directory: '$TESTTMP/repo/.hg/badorigbackups/b' (no-windows !)
   [255]
   $ cat .hg/badorigbackups
   data

@@ -15,7 +15,11 @@
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir a
+#if symlink
   $ ln -s c a/b
+#else
+  $ touch a/b
+#endif
   $ hg add a/b
   $ hg commit -m "link"
   created new head
@@ -50,7 +54,11 @@ Update - local symlink conflicts with remote directory:
 
   $ hg up -q 0
   $ mkdir a
+#if symlink
   $ ln -s x a/b
+#else
+  $ touch a/b
+#endif
   $ hg up dir
   a/b: untracked file conflicts with directory
   abort: untracked files in working directory differ from files in requested revision
@@ -59,8 +67,10 @@ Update - local symlink conflicts with remote directory:
   a/b: replacing untracked file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark dir)
+#if symlink
   $ readlink.py a/b.orig
   a/b.orig -> x
+#endif
   $ rm a/b.orig
 
 Update - local directory conflicts with remote file
@@ -94,8 +104,10 @@ Update - local directory conflicts with remote symlink
   a/b: replacing untracked files in directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark link)
+#if symlink
   $ readlink.py a/b
   a/b -> c
+#endif
   $ test -d a/b.orig
   $ rm -rf a/b.orig
 
