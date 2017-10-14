@@ -3,6 +3,8 @@
 #   piggyback on existing values so color works.
 # * Obsolescence isn't considered for node labels. See _cset_labels in
 #   map-cmdline.default.
+
+[templates]
 showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, nodelen)}\n'
 
 showwork = '{cset_shortnode}{namespaces % cset_namespace} {cset_shortdesc}'

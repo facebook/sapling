@@ -1,5 +1,6 @@
 %include map-cmdline.default
 
+[templates]
 # Override base templates
 changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{summary}{lfiles}\n'
 changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{description}{lfiles}\n'

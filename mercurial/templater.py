@@ -1340,12 +1340,12 @@ def _readmapfile(mapfile):
 
     base = os.path.dirname(mapfile)
     conf = config.config(includepaths=templatepaths())
-    conf.read(mapfile)
+    conf.read(mapfile, remap={'': 'templates'})
 
     cache = {}
     tmap = {}
 
-    val = conf.get('', '__base__')
+    val = conf.get('templates', '__base__')
     if val and val[0] not in "'\"":
         # treat as a pointer to a base class for this style
         path = util.normpath(os.path.join(base, val))
@@ -1364,13 +1364,14 @@ def _readmapfile(mapfile):
 
         cache, tmap = _readmapfile(path)
 
-    for key, val in conf[''].items():
+    for key, val in conf['templates'].items():
         if not val:
-            raise error.ParseError(_('missing value'), conf.source('', key))
+            raise error.ParseError(_('missing value'),
+                                   conf.source('templates', key))
         if val[0] in "'\"":
             if val[0] != val[-1]:
                 raise error.ParseError(_('unmatched quotes'),
-                                       conf.source('', key))
+                                       conf.source('templates', key))
             cache[key] = unquotestring(val)
         elif key != '__base__':
             val = 'default', val

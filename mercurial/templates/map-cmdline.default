@@ -1,5 +1,7 @@
 # Base templates. Due to name clashes with existing keywords, we have
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
+
+[templates]
 changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{summary}\n'
 changeset_quiet = '{lnode}'
 changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lfiles}{lfile_copies_switch}{description}\n'

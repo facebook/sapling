@@ -1,3 +1,4 @@
+[templates]
 header = '{date|shortdate}  {author|person}  <{author|email}>\n\n'
 header_verbose = ''
 changeset = '\t* {files|stringify|fill68|tabindent}{desc|fill68|tabindent|strip}\n\t[{node|short}]{tags}{branches}\n\n'

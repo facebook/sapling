@@ -259,6 +259,25 @@ Test templates and style maps in files:
   $ hg log -l1 -T./map-simple
   8
 
+ a map file may have [templates] section:
+
+  $ cat <<'EOF' > map-simple
+  > [templates]
+  > changeset = "{rev}\n"
+  > EOF
+  $ hg log -l1 -T./map-simple
+  8
+
+ so it can be included in hgrc
+
+  $ cat <<'EOF' > myhgrc
+  > %include map-simple
+  > [templates]
+  > foo = "{changeset}"
+  > EOF
+  $ HGRCPATH=./myhgrc hg log -l1 -Tfoo
+  8
+
 Test template map inheritance
 
   $ echo "__base__ = map-cmdline.default" > map-simple

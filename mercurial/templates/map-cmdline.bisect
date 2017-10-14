@@ -1,5 +1,6 @@
 %include map-cmdline.default
 
+[templates]
 changeset = '{cset}{lbisect}{branches}{bookmarks}{tags}{parents}{user}{ldate}{summary}\n'
 changeset_quiet = '{lshortbisect} {rev}:{node|short}\n'
 changeset_verbose = '{cset}{lbisect}{branches}{bookmarks}{tags}{parents}{user}{ldate}{lfiles}{lfile_copies_switch}{description}\n'
