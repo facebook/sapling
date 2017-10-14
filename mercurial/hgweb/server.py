@@ -115,6 +115,7 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         self.do_POST()
 
     def do_hgweb(self):
+        self.sent_headers = False
         path, query = _splitURI(self.path)
 
         env = {}
@@ -167,7 +168,6 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
 
         self.saved_status = None
         self.saved_headers = []
-        self.sent_headers = False
         self.length = None
         self._chunked = None
         for chunk in self.server.application(env, self._start_response):
