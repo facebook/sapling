@@ -19,7 +19,7 @@
 Should respect config to disable dirty update
   $ hg co -qC 0
   $ echo 2 > foo
-  $ hg --config experimental.updatecheck=abort pull -u ../tt
+  $ hg --config commands.update.check=abort pull -u ../tt
   pulling from ../tt
   searching for changes
   adding changesets

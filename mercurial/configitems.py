@@ -179,6 +179,9 @@ coreconfigitem('commands', 'status.skipstates',
 coreconfigitem('commands', 'status.verbose',
     default=False,
 )
+coreconfigitem('commands', 'update.check',
+    default=None,
+)
 coreconfigitem('commands', 'update.requiredest',
     default=False,
 )
@@ -409,6 +412,7 @@ coreconfigitem('experimental', 'spacemovesdown',
 coreconfigitem('experimental', 'treemanifest',
     default=False,
 )
+# Deprecated, remove after 4.4 release
 coreconfigitem('experimental', 'updatecheck',
     default=None,
 )
