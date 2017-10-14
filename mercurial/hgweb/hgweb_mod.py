@@ -165,9 +165,9 @@ class requestcontext(object):
             proto = 'http'
             default_port = '80'
 
-        port = req.env['SERVER_PORT']
-        port = port != default_port and (':' + port) or ''
-        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
+        port = req.env[r'SERVER_PORT']
+        port = port != default_port and (r':' + port) or r''
+        urlbase = r'%s://%s%s' % (proto, req.env[r'SERVER_NAME'], port)
         logourl = self.config('web', 'logourl')
         logoimg = self.config('web', 'logoimg')
         staticurl = self.config('web', 'staticurl') or req.url + 'static/'
@@ -341,27 +341,27 @@ class hgweb(object):
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
 
-        req.url = req.env['SCRIPT_NAME']
+        req.url = req.env[r'SCRIPT_NAME']
         if not req.url.endswith('/'):
             req.url += '/'
         if req.env.get('REPO_NAME'):
-            req.url += req.env['REPO_NAME'] + '/'
+            req.url += req.env[r'REPO_NAME'] + r'/'
 
-        if 'PATH_INFO' in req.env:
-            parts = req.env['PATH_INFO'].strip('/').split('/')
-            repo_parts = req.env.get('REPO_NAME', '').split('/')
+        if r'PATH_INFO' in req.env:
+            parts = req.env[r'PATH_INFO'].strip('/').split('/')
+            repo_parts = req.env.get(r'REPO_NAME', r'').split(r'/')
             if parts[:len(repo_parts)] == repo_parts:
                 parts = parts[len(repo_parts):]
             query = '/'.join(parts)
         else:
-            query = req.env['QUERY_STRING'].partition('&')[0]
-            query = query.partition(';')[0]
+            query = req.env[r'QUERY_STRING'].partition(r'&')[0]
+            query = query.partition(r';')[0]
 
         # process this if it's a protocol request
         # protocol bits don't need to create any URLs
         # and the clients always use the old URL structure
 
-        cmd = req.form.get('cmd', [''])[0]
+        cmd = pycompat.sysbytes(req.form.get(r'cmd', [r''])[0])
         if protocol.iscmd(cmd):
             try:
                 if query:
@@ -386,8 +386,7 @@ class hgweb(object):
         # translate user-visible url structure to internal structure
 
         args = query.split('/', 2)
-        if 'cmd' not in req.form and args and args[0]:
-
+        if r'cmd' not in req.form and args and args[0]:
             cmd = args.pop(0)
             style = cmd.rfind('-')
             if style != -1:
@@ -396,7 +395,7 @@ class hgweb(object):
 
             # avoid accepting e.g. style parameter as command
             if util.safehasattr(webcommands, cmd):
-                req.form['cmd'] = [cmd]
+                req.form[r'cmd'] = [cmd]
 
             if cmd == 'static':
                 req.form['file'] = ['/'.join(args)]
@@ -431,8 +430,8 @@ class hgweb(object):
                 self.check_perm(rctx, req, None)
 
             if cmd == '':
-                req.form['cmd'] = [tmpl.cache['default']]
-                cmd = req.form['cmd'][0]
+                req.form[r'cmd'] = [tmpl.cache['default']]
+                cmd = req.form[r'cmd'][0]
 
             # Don't enable caching if using a CSP nonce because then it wouldn't
             # be a nonce.
@@ -441,7 +440,7 @@ class hgweb(object):
             if cmd not in webcommands.__all__:
                 msg = 'no such method: %s' % cmd
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
-            elif cmd == 'file' and 'raw' in req.form.get('style', []):
+            elif cmd == 'file' and r'raw' in req.form.get(r'style', []):
                 rctx.ctype = ctype
                 content = webcommands.rawfile(rctx, req, tmpl)
             else:

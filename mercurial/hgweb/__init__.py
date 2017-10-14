@@ -14,6 +14,7 @@ from ..i18n import _
 
 from .. import (
     error,
+    pycompat,
     util,
 )
 
@@ -61,25 +62,26 @@ class httpservice(object):
         else:
             prefix = ''
 
-        port = ':%d' % self.httpd.port
-        if port == ':80':
-            port = ''
+        port = r':%d' % self.httpd.port
+        if port == r':80':
+            port = r''
 
         bindaddr = self.httpd.addr
-        if bindaddr == '0.0.0.0':
-            bindaddr = '*'
-        elif ':' in bindaddr: # IPv6
-            bindaddr = '[%s]' % bindaddr
+        if bindaddr == r'0.0.0.0':
+            bindaddr = r'*'
+        elif r':' in bindaddr: # IPv6
+            bindaddr = r'[%s]' % bindaddr
 
         fqaddr = self.httpd.fqaddr
-        if ':' in fqaddr:
-            fqaddr = '[%s]' % fqaddr
+        if r':' in fqaddr:
+            fqaddr = r'[%s]' % fqaddr
         if self.opts['port']:
             write = self.ui.status
         else:
             write = self.ui.write
         write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
-              (fqaddr, port, prefix, bindaddr, self.httpd.port))
+              (pycompat.sysbytes(fqaddr), pycompat.sysbytes(port),
+               prefix, pycompat.sysbytes(bindaddr), self.httpd.port))
         self.ui.flush()  # avoid buffering of status message
 
     def run(self):
