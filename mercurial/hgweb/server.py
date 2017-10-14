@@ -130,11 +130,12 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         if query:
             env[r'QUERY_STRING'] = query
 
-        if self.headers.typeheader is None:
-            env[r'CONTENT_TYPE'] = self.headers.type
-        else:
-            env[r'CONTENT_TYPE'] = self.headers.typeheader
-        length = self.headers.getheader('content-length')
+        if True:
+            if self.headers.typeheader is None:
+                env[r'CONTENT_TYPE'] = self.headers.type
+            else:
+                env[r'CONTENT_TYPE'] = self.headers.typeheader
+            length = self.headers.getheader('content-length')
         if length:
             env[r'CONTENT_LENGTH'] = length
         for header in [h for h in self.headers.keys()
