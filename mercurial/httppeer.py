@@ -311,9 +311,9 @@ class httppeer(wireproto.wirepeer):
                 self.ui.warn(_('real URL is %s\n') % resp_url)
         self._url = resp_url
         try:
-            proto = resp.getheader('content-type')
+            proto = pycompat.bytesurl(resp.getheader(r'content-type', r''))
         except AttributeError:
-            proto = resp.headers.get('content-type', '')
+            proto = pycompat.bytesurl(resp.headers.get(r'content-type', r''))
 
         safeurl = util.hidepassword(self._url)
         if proto.startswith('application/hg-error'):
