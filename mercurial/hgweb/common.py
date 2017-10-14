@@ -166,7 +166,7 @@ def staticfile(directory, fname, req):
             break
     try:
         os.stat(path)
-        ct = mimetypes.guess_type(path)[0] or "text/plain"
+        ct = mimetypes.guess_type(pycompat.fsdecode(path))[0] or "text/plain"
         with open(path, 'rb') as fh:
             data = fh.read()
 
