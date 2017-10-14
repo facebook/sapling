@@ -93,14 +93,14 @@ class wsgirequest(object):
         if not isinstance(type, str):
             type = pycompat.sysstr(type)
         if self._start_response is not None:
-            self.headers.append(('Content-Type', type))
+            self.headers.append((r'Content-Type', type))
             if filename:
                 filename = (filename.rpartition('/')[-1]
                             .replace('\\', '\\\\').replace('"', '\\"'))
                 self.headers.append(('Content-Disposition',
                                      'inline; filename="%s"' % filename))
             if body is not None:
-                self.headers.append(('Content-Length', str(len(body))))
+                self.headers.append((r'Content-Length', str(len(body))))
 
             for k, v in self.headers:
                 if not isinstance(v, str):
