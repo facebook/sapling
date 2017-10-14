@@ -963,7 +963,7 @@ test the obsolete labels
   
 
   $ hg log -T default -r 'phasedivergent()' --color=debug
-  [log.changeset changeset.draft changeset.unstable instability.orphaninstability.phase-divergent|changeset:   7:50c51b361e60]
+  [log.changeset changeset.draft changeset.unstable instability.orphan instability.phase-divergent|changeset:   7:50c51b361e60]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
   [log.instability|instability: orphan, phase-divergent]

@@ -82,5 +82,6 @@ labelcset(expr) = label(separate(" ",
                                  "changeset.{phase}",
                                  if(obsolete, "changeset.obsolete"),
                                  if(instabilities, "changeset.unstable"),
-                                 instabilities % "instability.{instability}"),
+                                 join(instabilities
+                                      % "instability.{instability}", " ")),
                         expr)
