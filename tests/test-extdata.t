@@ -88,7 +88,8 @@ we don't fix up relative file URLs, but we do run shell commands in repo root
   $ mkdir sub
   $ cd sub
   $ hg log -qr "extdata(filedata)"
-  abort: error: No such file or directory
+  abort: error: The system cannot find the file specified (windows !)
+  abort: error: No such file or directory (no-windows !)
   [255]
   $ hg log -qr "extdata(shelldata)"
   2:f6ed99a58333
