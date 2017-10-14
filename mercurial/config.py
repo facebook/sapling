@@ -118,6 +118,9 @@ class config(object):
         line = 0
         cont = False
 
+        if remap:
+            section = remap.get(section, section)
+
         for l in data.splitlines(True):
             line += 1
             if line == 1 and l.startswith('\xef\xbb\xbf'):
