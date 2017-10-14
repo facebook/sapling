@@ -110,6 +110,7 @@ attack back/test where back symlinks to ..
 #else
 ('back' will be a file and cause some other system specific error)
   $ hg update -Cr2
+  back: is both a file and a directory
   abort: * (glob)
   [255]
 #endif
