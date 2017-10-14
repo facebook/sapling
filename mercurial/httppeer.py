@@ -283,7 +283,7 @@ class httppeer(wireproto.wirepeer):
         if varyheaders:
             headers['Vary'] = ','.join(varyheaders)
 
-        req = self._requestbuilder(cu, data, headers)
+        req = self._requestbuilder(pycompat.strurl(cu), data, headers)
 
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
