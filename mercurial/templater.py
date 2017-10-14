@@ -1240,6 +1240,11 @@ def _flatten(thing):
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, bytes):
         yield thing
+    elif isinstance(thing, str):
+        # We can only hit this on Python 3, and it's here to guard
+        # against infinite recursion.
+        raise error.ProgrammingError('Mercurial IO including templates is done'
+                                     ' with bytes, not strings')
     elif thing is None:
         pass
     elif not util.safehasattr(thing, '__iter__'):
