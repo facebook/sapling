@@ -17,6 +17,7 @@ import traceback
 from ..i18n import _
 
 from .. import (
+    encoding,
     error,
     pycompat,
     util,
@@ -67,9 +68,10 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
         httpservermod.basehttprequesthandler.__init__(self, *args, **kargs)
 
     def _log_any(self, fp, format, *args):
-        fp.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                       self.log_date_time_string(),
-                                       format % args))
+        fp.write(pycompat.sysbytes(
+            r"%s - - [%s] %s" % (self.client_address[0],
+                                 self.log_date_time_string(),
+                                 format % args)) + '\n')
         fp.flush()
 
     def log_error(self, format, *args):
@@ -78,14 +80,14 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
     def log_message(self, format, *args):
         self._log_any(self.server.accesslog, format, *args)
 
-    def log_request(self, code='-', size='-'):
+    def log_request(self, code=r'-', size=r'-'):
         xheaders = []
         if util.safehasattr(self, 'headers'):
             xheaders = [h for h in self.headers.items()
-                        if h[0].startswith('x-')]
-        self.log_message('"%s" %s %s%s',
+                        if h[0].startswith(r'x-')]
+        self.log_message(r'"%s" %s %s%s',
                          self.requestline, str(code), str(size),
-                         ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+                         r''.join([r' %s:%s' % h for h in sorted(xheaders)]))
 
     def do_write(self):
         try:
@@ -101,9 +103,13 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
             self._done()
-            tb = "".join(traceback.format_exception(*sys.exc_info()))
-            self.log_error("Exception happened during processing "
-                           "request '%s':\n%s", self.path, tb)
+            tb = r"".join(traceback.format_exception(*sys.exc_info()))
+            # We need a native-string newline to poke in the log
+            # message, because we won't get a newline when using an
+            # r-string. This is the easy way out.
+            newline = chr(10)
+            self.log_error(r"Exception happened during processing "
+                           r"request '%s':%s%s", self.path, newline, tb)
 
     def do_GET(self):
         self.do_POST()
@@ -331,4 +337,4 @@ def create_server(ui, app):
         return cls(ui, app, (address, port), handler)
     except socket.error as inst:
         raise error.Abort(_("cannot start server at '%s:%d': %s")
-                         % (address, port, inst.args[1]))
+                          % (address, port, encoding.strtolocal(inst.args[1])))
