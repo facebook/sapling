@@ -409,9 +409,8 @@ pathsep = pycompat.ossep
 
 class dirnode(object):
     """
-    represents a directory in user working copy
-
-    stores information which is required for purpose of tersing the status
+    Represent a directory in user working copy with information required for
+    the purpose of tersing its status.
 
     path is the path to the directory
 
@@ -431,16 +430,16 @@ class dirnode(object):
         self.subdirs = {}
 
     def _addfileindir(self, filename, status):
-        """ adds a file in this directory as the direct child """
+        """Add a file in this directory as a direct child."""
         self.files.append((filename, status))
 
     def addfile(self, filename, status):
         """
-        adds a file which is present in this directory to its direct parent
-        dirnode object
+        Add a file to this directory or to its direct parent directory.
 
-        if the file is not direct child of this directory, we traverse to the
-        directory of which this file is a direct child of and add the file there
+        If the file is not direct child of this directory, we traverse to the
+        directory of which this file is a direct child of and add the file
+        there.
         """
 
         # the filename contains a path separator, it means it's not the direct
@@ -463,27 +462,14 @@ class dirnode(object):
             self.statuses.add(status)
 
     def iterfilepaths(self):
-        """
-        adds files to the their respective status list in the final tersed list
-
-        path is the path of parent directory of the file
-        files is a list of tuple where each tuple is (filename, status)
-        """
+        """Yield (status, path) for files directly under this directory."""
         for f, st in self.files:
             yield st, os.path.join(self.path, f)
 
     def tersewalk(self, terseargs):
         """
-        a recursive function which process status for a certain directory.
-
-        self is an oject of dirnode class defined below. each object of dirnode
-        class has a set of statuses which files in that directory has. This ease
-        our check whether we can terse that directory or not.
-
-        tersedict is a dictonary which contains each status abbreviation as key
-        and list of files and tersed dirs in that status as value. In each
-        function call we are passing the same dict and adding files and dirs
-        to it.
+        Yield (status, path) obtained by processing the status of this
+        dirnode.
 
         terseargs is the string of arguments passed by the user with `--terse`
         flag.
@@ -494,7 +480,7 @@ class dirnode(object):
         subdirectories) share the same status and the user has asked us to terse
         that status. -> yield (status, dirpath)
 
-        2) If '1)' does not happen, we do following:
+        2) Otherwise, we do following:
 
                 a) Yield (status, filepath)  for all the files which are in this
                     directory (only the ones in this directory, not the subdirs)
@@ -523,7 +509,7 @@ class dirnode(object):
 
 def tersedir(statuslist, terseargs):
     """
-    terses the status if all the files in a directory shares the same status
+    Terse the status if all the files in a directory shares the same status.
 
     statuslist is scmutil.status() object which contains a list of files for
     each status.
@@ -533,10 +519,6 @@ def tersedir(statuslist, terseargs):
     The function makes a tree of objects of dirnode class, and at each node it
     stores the information required to know whether we can terse a certain
     directory or not.
-
-    tersedict (defined in the function) is a dictionary which has one word key
-    for each status and a list of files and dir in that status as the respective
-    value.
     """
     # the order matters here as that is used to produce final list
     allst = ('m', 'a', 'r', 'd', 'u', 'i', 'c')
