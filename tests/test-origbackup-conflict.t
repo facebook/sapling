@@ -29,7 +29,7 @@ Peform an update that causes b/c to be backed up
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b
+  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ test -f .hg/origbackups/b/c
@@ -51,7 +51,7 @@ Perform an update that causes b to be backed up - it should replace the backup b
   resolving manifests
   b: replacing untracked file
   getting b
-  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/b
+  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/b (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
   $ test -f .hg/origbackups/b
@@ -65,8 +65,8 @@ Perform an update the causes b/c to be backed up again - it should replace the b
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b
-  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b
+  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
+  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ test -d .hg/origbackups/b
@@ -98,8 +98,8 @@ Perform an update that causes b/c to be backed up again - it should not go into 
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b
-  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b
+  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
+  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ cat .hg/origbackups/b/c
@@ -116,7 +116,7 @@ Incorrectly configure origbackuppath to be under a file
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/badorigbackups/b
+  creating directory: $TESTTMP/repo/.hg/badorigbackups/b (glob)
   abort: The system cannot find the path specified: '$TESTTMP/repo/.hg/badorigbackups/b' (glob) (windows !)
   abort: Not a directory: '$TESTTMP/repo/.hg/badorigbackups/b' (no-windows !)
   [255]
