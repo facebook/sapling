@@ -180,7 +180,7 @@ def _slicechunk(revlog, revs):
         endbyte = start(revs[-1]) + length(revs[-1])
         deltachainspan = endbyte - startbyte
 
-        if len(revs) <= 1:
+        if deltachainspan <= revlog._srminblocksize or len(revs) <= 1:
             yield revs
             continue
 
@@ -360,6 +360,7 @@ class revlog(object):
         self._maxdeltachainspan = -1
         self._withsparseread = False
         self._srdensitythreshold = 0.25
+        self._srminblocksize = 262144
 
         mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
@@ -389,6 +390,8 @@ class revlog(object):
             self._withsparseread = bool(opts.get('with-sparse-read', False))
             if 'sparse-read-density-threshold' in opts:
                 self._srdensitythreshold = opts['sparse-read-density-threshold']
+            if 'sparse-read-min-block-size' in opts:
+                self._srminblocksize = opts['sparse-read-min-block-size']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
