@@ -34,7 +34,9 @@ class batcher(object):
     def __getattr__(self, name):
         def call(*args, **opts):
             resref = future()
-            self.calls.append((name, args, opts, resref,))
+            # Please don't invent non-ascii method names, or you will
+            # give core hg a very sad time.
+            self.calls.append((name.encode('ascii'), args, opts, resref,))
             return resref
         return call
     def submit(self):
