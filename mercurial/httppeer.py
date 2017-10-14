@@ -303,7 +303,7 @@ class httppeer(wireproto.wirepeer):
         _wraphttpresponse(resp)
 
         # record the url we got redirected to
-        resp_url = resp.geturl()
+        resp_url = pycompat.bytesurl(resp.geturl())
         if resp_url.endswith(qs):
             resp_url = resp_url[:-len(qs)]
         if self._url.rstrip('/') != resp_url.rstrip('/'):
