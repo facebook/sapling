@@ -112,7 +112,7 @@ class remoteiterbatcher(peer.iterbatcher):
 
         for command, args, opts, finalfuture in self.calls:
             mtd = getattr(self._remote, command)
-            batchable = mtd.batchable(mtd.im_self, *args, **opts)
+            batchable = mtd.batchable(mtd.__self__, *args, **opts)
 
             commandargs, fremote = next(batchable)
             assert fremote
