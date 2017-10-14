@@ -49,6 +49,8 @@ tool itself by doctest
   $ $PYTHON check-translation.py --doctest
   $ cd $TESTTMP
 
+#if gettext
+
 Check i18n cache isn't reused after encoding change:
 
   $ cat > $TESTTMP/encodingchange.py << EOF
@@ -68,3 +70,5 @@ Check i18n cache isn't reused after encoding change:
   (\xe5\xae\x9f\xe9\xa8\x93\xe7\x9a\x84\xe5\xae\x9f\xe8\xa3\x85) (esc)
   (?????)
   (\xe5\xae\x9f\xe9\xa8\x93\xe7\x9a\x84\xe5\xae\x9f\xe8\xa3\x85) (esc)
+
+#endif
