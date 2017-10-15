@@ -156,6 +156,7 @@ import sys
 
 from .i18n import _
 from . import (
+    bookmarks,
     changegroup,
     error,
     node as nodemod,
@@ -1786,6 +1787,34 @@ def handlereplychangegroup(op, inpart):
     ret = int(inpart.params['return'])
     replyto = int(inpart.params['in-reply-to'])
     op.records.add('changegroup', {'return': ret}, replyto)
+
+@parthandler('check:bookmarks')
+def handlecheckbookmarks(op, inpart):
+    """check location of bookmarks
+
+    This part is to be used to detect push race regarding bookmark, it
+    contains binary encoded (bookmark, node) tuple. If the local state does
+    not marks the one in the part, a PushRaced exception is raised
+    """
+    bookdata = bookmarks.binarydecode(inpart)
+
+    msgstandard = ('repository changed while pushing - please try again '
+                   '(bookmark "%s" move from %s to %s)')
+    msgmissing = ('repository changed while pushing - please try again '
+                  '(bookmark "%s" is missing, expected %s)')
+    msgexist = ('repository changed while pushing - please try again '
+                '(bookmark "%s" set on %s, expected missing)')
+    for book, node in bookdata:
+        currentnode = op.repo._bookmarks.get(book)
+        if currentnode != node:
+            if node is None:
+                finalmsg = msgexist % (book, nodemod.short(currentnode))
+            elif currentnode is None:
+                finalmsg = msgmissing % (book, nodemod.short(node))
+            else:
+                finalmsg = msgstandard % (book, nodemod.short(node),
+                                          nodemod.short(currentnode))
+            raise error.PushRaced(finalmsg)
 
 @parthandler('check:heads')
 def handlecheckheads(op, inpart):
