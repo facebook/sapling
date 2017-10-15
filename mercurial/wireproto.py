@@ -313,6 +313,7 @@ class wirepeer(repository.legacypeer):
         return self._callstream('stream_out')
 
     def getbundle(self, source, **kwargs):
+        kwargs = pycompat.byteskwargs(kwargs)
         self.requirecap('getbundle', _('look up remote changes'))
         opts = {}
         bundlecaps = kwargs.get('bundlecaps')
@@ -337,7 +338,7 @@ class wirepeer(repository.legacypeer):
                 raise KeyError('unknown getbundle option type %s'
                                % keytype)
             opts[key] = value
-        f = self._callcompressable("getbundle", **opts)
+        f = self._callcompressable("getbundle", **pycompat.strkwargs(opts))
         if any((cap.startswith('HG2') for cap in bundlecaps)):
             return bundle2.getunbundler(self.ui, f)
         else:
@@ -444,7 +445,7 @@ class wirepeer(repository.legacypeer):
         yield unescapearg(''.join(work))
 
     def _submitone(self, op, args):
-        return self._call(op, **args)
+        return self._call(op, **pycompat.strkwargs(args))
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
         # don't pass optional arguments left at their default value
