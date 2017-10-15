@@ -218,7 +218,12 @@ def similaritycheck(incoming_str, existingnotes):
     """
     Returns false when note fragment can be merged to existing notes.
     """
-    import fuzzywuzzy.fuzz as fuzz
+    try:
+        import fuzzywuzzy.fuzz as fuzz
+        fuzz.token_set_ratio
+    except ImportError:
+        return True
+
     merge = True
     for bullet in existingnotes:
         score = fuzz.token_set_ratio(incoming_str, bullet)
