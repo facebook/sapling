@@ -148,7 +148,7 @@ class revlogbaseddag(basedag):
                     if (r is not None
                         and r != nullrev
                         and r not in rl.filteredrevs)]
-        return map(self._internalize, ids)
+        return [self._internalize(i) for i in ids]
 
 
 class revlogdag(revlogbaseddag):
