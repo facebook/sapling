@@ -907,7 +907,7 @@ def lookup(repo, proto, key):
     except Exception as inst:
         r = str(inst)
         success = 0
-    return "%s %s\n" % (success, r)
+    return "%d %s\n" % (success, r)
 
 @wireprotocommand('known', 'nodes *')
 def known(repo, proto, nodes, others):
