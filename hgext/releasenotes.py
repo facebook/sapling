@@ -577,6 +577,7 @@ def releasenotes(ui, repo, file_=None, **opts):
     incoming = parsenotesfromrevisions(repo, sections.names(), revs)
 
     if file_ is None:
+        ui.pager('releasenotes')
         return ui.write(serializenotes(sections, incoming))
 
     try:
