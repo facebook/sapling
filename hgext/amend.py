@@ -33,6 +33,7 @@ command = registrar.command(cmdtable)
       _('mark new/missing files as added/removed before committing')),
      ('e', 'edit', None, _('invoke editor on commit messages')),
      ('i', 'interactive', None, _('use interactive mode')),
+     ('n', 'note', '', _('store a note on the amend')),
     ] + cmdutil.walkopts + cmdutil.commitopts + cmdutil.commitopts2,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
