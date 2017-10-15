@@ -194,9 +194,9 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
             self._chunked = (not self.close_connection and
                              self.request_version == "HTTP/1.1")
             if self._chunked:
-                self.send_header('Transfer-Encoding', 'chunked')
+                self.send_header(r'Transfer-Encoding', r'chunked')
             else:
-                self.send_header('Connection', 'close')
+                self.send_header(r'Connection', r'close')
         self.end_headers()
         self.sent_headers = True
 
