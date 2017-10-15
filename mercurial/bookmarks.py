@@ -8,12 +8,14 @@
 from __future__ import absolute_import
 
 import errno
+import struct
 
 from .i18n import _
 from .node import (
     bin,
     hex,
     short,
+    wdirid,
 )
 from . import (
     encoding,
@@ -549,6 +551,60 @@ def unhexlifybookmarks(marks):
     for name, node in marks.items():
         binremotemarks[name] = bin(node)
     return binremotemarks
+
+_binaryentry = struct.Struct('>20sH')
+
+def binaryencode(bookmarks):
+    """encode a '(bookmark, node)' iterable into a binary stream
+
+    the binary format is:
+
+        <node><bookmark-length><bookmark-name>
+
+    :node: is a 20 bytes binary node,
+    :bookmark-length: an unsigned short,
+    :bookmark-name: the name of the bookmark (of length <bookmark-length>)
+
+    wdirid (all bits set) will be used as a special value for "missing"
+    """
+    binarydata = []
+    for book, node in bookmarks:
+        if not node: # None or ''
+            node = wdirid
+        binarydata.append(_binaryentry.pack(node, len(book)))
+        binarydata.append(book)
+    return ''.join(binarydata)
+
+def binarydecode(stream):
+    """decode a binary stream into an '(bookmark, node)' iterable
+
+    the binary format is:
+
+        <node><bookmark-length><bookmark-name>
+
+    :node: is a 20 bytes binary node,
+    :bookmark-length: an unsigned short,
+    :bookmark-name: the name of the bookmark (of length <bookmark-length>))
+
+    wdirid (all bits set) will be used as a special value for "missing"
+    """
+    entrysize = _binaryentry.size
+    books = []
+    while True:
+        entry = stream.read(entrysize)
+        if len(entry) < entrysize:
+            if entry:
+                raise error.Abort(_('bad bookmark stream'))
+            break
+        node, length = _binaryentry.unpack(entry)
+        bookmark = stream.read(length)
+        if len(bookmark) < length:
+            if entry:
+                raise error.Abort(_('bad bookmark stream'))
+        if node == wdirid:
+            node = None
+        books.append((bookmark, node))
+    return books
 
 def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     ui.debug("checking for updated bookmarks\n")
