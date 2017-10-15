@@ -153,7 +153,7 @@ future = peer.future
 
 def decodelist(l, sep=' '):
     if l:
-        return map(bin, l.split(sep))
+        return [bin(v) for v in  l.split(sep)]
     return []
 
 def encodelist(l, sep=' '):
