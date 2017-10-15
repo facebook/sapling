@@ -897,8 +897,10 @@ def _pushb2bookmarks(pushop, bundler):
     if 'bookmarks' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
-    if 'pushkey' not in b2caps:
-        return
+    if 'pushkey' in b2caps:
+        return _pushb2bookmarkspushkey(pushop, bundler)
+
+def _pushb2bookmarkspushkey(pushop, bundler):
     pushop.stepsdone.add('bookmarks')
     part2book = []
     enc = pushkey.encode
