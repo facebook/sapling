@@ -3152,7 +3152,10 @@ def amend(ui, repo, old, extra, pats, opts):
         # Reroute the working copy parent to the new changeset
         repo.setparents(newid, nullid)
         mapping = {old.node(): (newid,)}
-        scmutil.cleanupnodes(repo, mapping, 'amend')
+        obsmetadata = None
+        if opts.get('note'):
+            obsmetadata = {'note': opts['note']}
+        scmutil.cleanupnodes(repo, mapping, 'amend', metadata=obsmetadata)
 
         # Fixing the dirstate because localrepo.commitctx does not update
         # it. This is rather convenient because we did not need to update
