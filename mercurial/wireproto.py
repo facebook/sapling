@@ -325,7 +325,8 @@ class wirepeer(repository.legacypeer):
                 continue
             keytype = gboptsmap.get(key)
             if keytype is None:
-                assert False, 'unexpected'
+                raise error.ProgrammingError(
+                    'Unexpectedly None keytype for key %s' % key)
             elif keytype == 'nodes':
                 value = encodelist(value)
             elif keytype in ('csv', 'scsv'):
