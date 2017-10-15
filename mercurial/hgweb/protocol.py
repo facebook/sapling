@@ -30,15 +30,18 @@ HGTYPE2 = 'application/mercurial-0.2'
 HGERRTYPE = 'application/hg-error'
 
 def decodevaluefromheaders(req, headerprefix):
-    """Decode a long value from multiple HTTP request headers."""
+    """Decode a long value from multiple HTTP request headers.
+
+    Returns the value as a bytes, not a str.
+    """
     chunks = []
     i = 1
+    prefix = headerprefix.upper().replace(r'-', r'_')
     while True:
-        v = req.env.get('HTTP_%s_%d' % (
-            headerprefix.upper().replace('-', '_'), i))
+        v = req.env.get(r'HTTP_%s_%d' % (prefix, i))
         if v is None:
             break
-        chunks.append(v)
+        chunks.append(pycompat.bytesurl(v))
         i += 1
 
     return ''.join(chunks)
