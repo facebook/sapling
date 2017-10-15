@@ -613,7 +613,7 @@ class _containsnode(object):
     def __contains__(self, node):
         return self._revcontains(self._torev(node))
 
-def cleanupnodes(repo, replacements, operation, moves=None):
+def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
@@ -625,6 +625,9 @@ def cleanupnodes(repo, replacements, operation, moves=None):
 
     replacements is {oldnode: [newnode]} or a iterable of nodes if they do not
     have replacements. operation is a string, like "rebase".
+
+    metadata is dictionary containing metadata to be stored in obsmarker if
+    obsolescence is enabled.
     """
     if not replacements and not moves:
         return
@@ -695,7 +698,8 @@ def cleanupnodes(repo, replacements, operation, moves=None):
                     for n, s in sorted(replacements.items(), key=sortfunc)
                     if s or not isobs(n)]
             if rels:
-                obsolete.createmarkers(repo, rels, operation=operation)
+                obsolete.createmarkers(repo, rels, operation=operation,
+                                       metadata=metadata)
         else:
             from . import repair # avoid import cycle
             tostrip = list(replacements)
