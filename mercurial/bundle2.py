@@ -1976,6 +1976,21 @@ def handlepushkey(op, inpart):
                 kwargs[key] = inpart.params[key]
         raise error.PushkeyFailed(partid=str(inpart.id), **kwargs)
 
+@parthandler('bookmarks')
+def handlebookmark(op, inpart):
+    """transmit bookmark information
+
+    The part contains binary encoded bookmark information. The bookmark
+    information is applied as is to the unbundling repository. Make sure a
+    'check:bookmarks' part is issued earlier to check for race condition in
+    such update.
+
+    This behavior is suitable for pushing. Semantic adjustment will be needed
+    for pull.
+    """
+    changes = bookmarks.binarydecode(inpart)
+    op.repo._bookmarks.applychanges(op.repo, op.gettransaction(), changes)
+
 @parthandler('phase-heads')
 def handlephases(op, inpart):
     """apply phases from bundle part to repo"""
