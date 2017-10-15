@@ -39,16 +39,24 @@ def encodevalueinheaders(value, header, limit):
     ``header-<N>`` where ``<N>`` is an integer starting at 1. Each header
     name + value will be at most ``limit`` bytes long.
 
-    Returns an iterable of 2-tuples consisting of header names and values.
+    Returns an iterable of 2-tuples consisting of header names and
+    values as native strings.
     """
-    fmt = header + '-%s'
-    valuelen = limit - len(fmt % '000') - len(': \r\n')
+    # HTTP Headers are ASCII. Python 3 requires them to be unicodes,
+    # not bytes. This function always takes bytes in as arguments.
+    fmt = pycompat.strurl(header) + r'-%s'
+    # Note: it is *NOT* a bug that the last bit here is a bytestring
+    # and not a unicode: we're just getting the encoded length anyway,
+    # and using an r-string to make it portable between Python 2 and 3
+    # doesn't work because then the \r is a literal backslash-r
+    # instead of a carriage return.
+    valuelen = limit - len(fmt % r'000') - len(': \r\n')
     result = []
 
     n = 0
     for i in xrange(0, len(value), valuelen):
         n += 1
-        result.append((fmt % str(n), value[i:i + valuelen]))
+        result.append((fmt % str(n), pycompat.strurl(value[i:i + valuelen])))
 
     return result
 
