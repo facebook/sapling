@@ -24,6 +24,7 @@ from mercurial import (
     config,
     error,
     minirst,
+    node,
     registrar,
     scmutil,
     util,
@@ -325,9 +326,8 @@ def parsenotesfromrevisions(repo, directives, revs):
 
             # TODO consider using title as paragraph for more concise notes.
             if not paragraphs:
-                raise error.Abort(_('could not find content for release note '
-                                    '%s') % directive)
-
+                repo.ui.warn(_("error parsing releasenotes for revision: "
+                               "'%s'\n") % node.hex(ctx.node()))
             if title:
                 notes.addtitleditem(directive, title, paragraphs)
             else:
