@@ -16,6 +16,7 @@ from .common import (
 
 from .. import (
     error,
+    pycompat,
     util,
     wireproto,
 )
@@ -65,6 +66,9 @@ class webproto(wireproto.abstractserverproto):
         return [data[k] for k in keys]
     def _args(self):
         args = self.req.form.copy()
+        if pycompat.ispy3:
+            args = {k.encode('ascii'): [v.encode('ascii') for v in vs]
+                    for k, vs in args.items()}
         postlen = int(self.req.env.get('HTTP_X_HGARGS_POST', 0))
         if postlen:
             args.update(cgi.parse_qs(
