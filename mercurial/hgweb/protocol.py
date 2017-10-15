@@ -69,13 +69,13 @@ class webproto(wireproto.abstractserverproto):
         if pycompat.ispy3:
             args = {k.encode('ascii'): [v.encode('ascii') for v in vs]
                     for k, vs in args.items()}
-        postlen = int(self.req.env.get('HTTP_X_HGARGS_POST', 0))
+        postlen = int(self.req.env.get(r'HTTP_X_HGARGS_POST', 0))
         if postlen:
             args.update(cgi.parse_qs(
                 self.req.read(postlen), keep_blank_values=True))
             return args
 
-        argvalue = decodevaluefromheaders(self.req, 'X-HgArg')
+        argvalue = decodevaluefromheaders(self.req, r'X-HgArg')
         args.update(cgi.parse_qs(argvalue, keep_blank_values=True))
         return args
     def getfile(self, fp):
@@ -115,7 +115,7 @@ class webproto(wireproto.abstractserverproto):
 
         # Determine the response media type and compression engine based
         # on the request parameters.
-        protocaps = decodevaluefromheaders(self.req, 'X-HgProto').split(' ')
+        protocaps = decodevaluefromheaders(self.req, r'X-HgProto').split(' ')
 
         if '0.2' in protocaps:
             # Default as defined by wire protocol spec.
