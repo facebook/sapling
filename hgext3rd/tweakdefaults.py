@@ -750,8 +750,12 @@ def _rebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
-def cleanupnodeswrapper(orig, repo, mapping, *args, **kwargs):
-    if repo.ui.configbool('tweakdefaults', 'showupdated', False):
+# set of commands which define their own formatter and prints the hash changes
+formattercommands = set()
+
+def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
+    if (repo.ui.configbool('tweakdefaults', 'showupdated', False) and
+        operation not in formattercommands):
         maxoutput = 10
         oldnodes = sorted(mapping.keys())
         for i in range(0, min(len(oldnodes), maxoutput)):
@@ -763,7 +767,7 @@ def cleanupnodeswrapper(orig, repo, mapping, *args, **kwargs):
             lastoldnode = oldnodes[-1]
             lastnewnodes = mapping[lastoldnode]
             _printupdatednode(repo, lastoldnode, lastnewnodes)
-    return orig(repo, mapping, *args, **kwargs)
+    return orig(repo, mapping, operation, *args, **kwargs)
 
 def _printupdatednode(repo, oldnode, newnodes):
     # oldnode was not updated if newnodes is an iterable
