@@ -363,6 +363,8 @@ Test warning on config option access and registration
   >     repo.ui.config('test', 'some', 'foo')
   >     repo.ui.config('test', 'dynamic', 'some-required-default')
   >     repo.ui.config('test', 'dynamic')
+  >     repo.ui.config('test', 'unregistered')
+  >     repo.ui.config('unregistered', 'unregistered')
   > EOF
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
@@ -372,5 +374,7 @@ Test warning on config option access and registration
   devel-warn: specifying a default value for a registered config item: 'ui.interactive' 'None' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a default value for a registered config item: 'test.some' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: config item requires an explicit default value: 'test.dynamic' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: accessing unregistered config item: 'test.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: accessing unregistered config item: 'unregistered.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..

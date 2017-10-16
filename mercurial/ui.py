@@ -477,6 +477,10 @@ class ui(object):
 
         if item is not None:
             alternates.extend(item.alias)
+        else:
+            msg = ("accessing unregistered config item: '%s.%s'")
+            msg %= (section, name)
+            self.develwarn(msg, 2, 'warn-config-unknown')
 
         if default is _unset:
             if item is None:

@@ -249,6 +249,9 @@ coreconfigitem('devel', 'warn-config-default',
 coreconfigitem('devel', 'user.obsmarker',
     default=None,
 )
+coreconfigitem('devel', 'warn-config-unknown',
+    default=None,
+)
 coreconfigitem('diff', 'nodates',
     default=False,
 )

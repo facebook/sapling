@@ -6,6 +6,15 @@ from mercurial import (
 )
 
 testui = uimod.ui.load()
+
+# disable the configuration registration warning
+#
+# the purpose of this test is to check the old behavior, not to validate the
+# behavior from registered item. so we silent warning related to unregisted
+# config.
+testui.setconfig('devel', 'warn-config-unknown', False, 'test')
+testui.setconfig('devel', 'all-warnings', False, 'test')
+
 parsed = dispatch._parseconfig(testui, [
     'values.string=string value',
     'values.bool1=true',

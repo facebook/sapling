@@ -67,6 +67,13 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
                                      trusted))
 
     u = uimod.ui.load()
+    # disable the configuration registration warning
+    #
+    # the purpose of this test is to check the old behavior, not to validate the
+    # behavior from registered item. so we silent warning related to unregisted
+    # config.
+    u.setconfig('devel', 'warn-config-unknown', False, 'test')
+    u.setconfig('devel', 'all-warnings', False, 'test')
     u.setconfig('ui', 'debug', str(bool(debug)))
     u.setconfig('ui', 'report_untrusted', str(bool(report)))
     u.readconfig('.hg/hgrc')
@@ -157,6 +164,13 @@ print(u.config('foobar', 'baz'))
 print()
 print("# read trusted, untrusted, new ui, trusted")
 u = uimod.ui.load()
+# disable the configuration registration warning
+#
+# the purpose of this test is to check the old behavior, not to validate the
+# behavior from registered item. so we silent warning related to unregisted
+# config.
+u.setconfig('devel', 'warn-config-unknown', False, 'test')
+u.setconfig('devel', 'all-warnings', False, 'test')
 u.setconfig('ui', 'debug', 'on')
 u.readconfig(filename)
 u2 = u.copy()
