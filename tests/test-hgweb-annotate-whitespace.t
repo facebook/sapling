@@ -76,7 +76,7 @@ Need to use printf to avoid check-code complaining about trailing whitespace.
 
   $ hg serve -p $HGPORT -d --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg --config annotate.ignorews=true serve -p $HGPORT1 -d --pid-file hg.pid
+  $ hg serve --config annotate.ignorews=true -p $HGPORT1 -d --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
