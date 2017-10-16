@@ -1427,8 +1427,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
 
+    # When merging in-memory, we can't support worker processes, so set the
+    # per-item cost at 0 in that case.
+    cost = 0 if wctx.isinmemory() else 0.001
+
     # remove in parallel (must come before resolving path conflicts and getting)
-    prog = worker.worker(repo.ui, 0.001, batchremove, (repo, wctx),
+    prog = worker.worker(repo.ui, cost, batchremove, (repo, wctx),
                          actions['r'])
     for i, item in prog:
         z += i
@@ -1452,7 +1456,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     wctx.flushall()
 
     # get in parallel
-    prog = worker.worker(repo.ui, 0.001, batchget, (repo, mctx, wctx),
+    prog = worker.worker(repo.ui, cost, batchget, (repo, mctx, wctx),
                          actions['g'])
     for i, item in prog:
         z += i
