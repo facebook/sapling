@@ -181,6 +181,8 @@ coreconfigitem('commands', 'status.verbose',
 )
 coreconfigitem('commands', 'update.check',
     default=None,
+    # Deprecated, remove after 4.4 release
+    alias=[('experimental', 'updatecheck')]
 )
 coreconfigitem('commands', 'update.requiredest',
     default=False,
@@ -411,10 +413,6 @@ coreconfigitem('experimental', 'spacemovesdown',
 )
 coreconfigitem('experimental', 'treemanifest',
     default=False,
-)
-# Deprecated, remove after 4.4 release
-coreconfigitem('experimental', 'updatecheck',
-    default=None,
 )
 coreconfigitem('extensions', '.*',
     default=None,

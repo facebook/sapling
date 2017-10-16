@@ -758,9 +758,6 @@ def updatetotally(ui, repo, checkout, brev, clean=False, updatecheck=None):
     """
     if updatecheck is None:
         updatecheck = ui.config('commands', 'update.check')
-        if updatecheck is None:
-            # pre-4.4 compat on the old spelling of this config item
-            updatecheck = ui.config('experimental', 'updatecheck')
         if updatecheck not in ('abort', 'none', 'linear', 'noconflict'):
             # If not configured, or invalid value configured
             updatecheck = 'linear'
