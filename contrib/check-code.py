@@ -429,7 +429,6 @@ txtpats = [
 cpats = [
   [
     (r'//', "don't use //-style comments"),
-    (r'^  ', "don't use spaces to indent"),
     (r'\S\t', "don't use tabs except for indent"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
     (r'.{81}', "line too long"),
