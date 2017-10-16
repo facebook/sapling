@@ -1991,7 +1991,7 @@ static PyGetSetDef index_getset[] = {
 };
 
 static PyTypeObject indexType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"parsers.index",           /* tp_name */
 	sizeof(indexObject),       /* tp_basicsize */
 	0,                         /* tp_itemsize */

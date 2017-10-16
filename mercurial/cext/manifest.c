@@ -262,7 +262,7 @@ done:
 #endif
 
 static PyTypeObject lazymanifestEntriesIterator = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"parsers.lazymanifest.entriesiterator", /*tp_name */
 	sizeof(lmIter),                  /*tp_basicsize */
 	0,                               /*tp_itemsize */
@@ -310,7 +310,7 @@ static PyObject *lmiter_iterkeysnext(PyObject *o)
 #endif
 
 static PyTypeObject lazymanifestKeysIterator = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"parsers.lazymanifest.keysiterator", /*tp_name */
 	sizeof(lmIter),                  /*tp_basicsize */
 	0,                               /*tp_itemsize */
@@ -890,7 +890,7 @@ static PyMethodDef lazymanifest_methods[] = {
 #endif
 
 static PyTypeObject lazymanifestType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"parsers.lazymanifest",                           /* tp_name */
 	sizeof(lazymanifest),                             /* tp_basicsize */
 	0,                                                /* tp_itemsize */

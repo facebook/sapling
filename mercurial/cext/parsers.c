@@ -195,7 +195,7 @@ static PySequenceMethods dirstate_tuple_sq = {
 };
 
 PyTypeObject dirstateTupleType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"dirstate_tuple",          /* tp_name */
 	sizeof(dirstateTupleObject),/* tp_basicsize */
 	0,                         /* tp_itemsize */

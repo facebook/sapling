@@ -121,7 +121,7 @@ static void listdir_stat_dealloc(PyObject *o)
 }
 
 static PyTypeObject listdir_stat_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"osutil.stat",             /*tp_name*/
 	sizeof(struct listdir_stat), /*tp_basicsize*/
 	0,                         /*tp_itemsize*/
