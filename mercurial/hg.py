@@ -255,6 +255,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None,
     r = repository(ui, destwvfs.base)
     postshare(srcrepo, r, bookmarks=bookmarks, defaultpath=defaultpath)
     _postshareupdate(r, update, checkout=checkout)
+    return r
 
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.

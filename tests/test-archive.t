@@ -18,6 +18,57 @@
   $ echo "subrepo = subrepo" > .hgsub
   $ hg add .hgsub
   $ hg ci -m "add subrepo"
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > share =
+  > EOF
+
+hg subrepos are shared when the parent repo is shared
+
+  $ cd ..
+  $ hg share test shared1
+  updating working directory
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat shared1/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+
+hg subrepos are shared into existence on demand if the parent was shared
+
+  $ hg clone -qr 1 test clone1
+  $ hg share clone1 share2
+  updating working directory
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone1 -q pull
+  $ hg -R share2 update tip
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat share2/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $ echo 'mod' > share2/subrepo/sub
+  $ hg -R share2 ci -Sqm 'subrepo mod'
+  $ hg -R clone1 update -C tip
+  cloning subrepo subrepo from $TESTTMP/test/subrepo
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ rm -rf clone1
+
+  $ hg clone -qr 1 test clone1
+  $ hg share clone1 shared3
+  updating working directory
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone1 -q pull
+  $ hg -R shared3 archive --config ui.archivemeta=False -r tip -S archive
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  $ cat shared3/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $ diff -r archive test
+  Only in test: .hg
+  Only in test/subrepo: .hg
+  [1]
+  $ rm -rf archive
+
+  $ cd test
   $ echo "[web]" >> .hg/hgrc
   $ echo "name = test-archive" >> .hg/hgrc
   $ echo "archivesubrepos = True" >> .hg/hgrc

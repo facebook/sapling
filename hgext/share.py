@@ -100,8 +100,9 @@ def share(ui, source, dest=None, noupdate=False, bookmarks=False,
        the broken clone to reset it to a changeset that still exists.
     """
 
-    return hg.share(ui, source, dest=dest, update=not noupdate,
-                    bookmarks=bookmarks, relative=relative)
+    hg.share(ui, source, dest=dest, update=not noupdate,
+             bookmarks=bookmarks, relative=relative)
+    return 0
 
 @command('unshare', [], '')
 def unshare(ui, repo):

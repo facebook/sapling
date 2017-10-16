@@ -857,21 +857,32 @@ class hgsubrepo(abstractsubrepo):
 
     def _get(self, state):
         source, revision, kind = state
+        parentrepo = self._repo._subparent
+
         if revision in self._repo.unfiltered():
-            return True
+            # Allow shared subrepos tracked at null to setup the sharedpath
+            if len(self._repo) != 0 or not parentrepo.shared():
+                return True
         self._repo._subsource = source
         srcurl = _abssource(self._repo)
         other = hg.peer(self._repo, {}, srcurl)
         if len(self._repo) == 0:
-            self.ui.status(_('cloning subrepo %s from %s\n')
-                           % (subrelpath(self), srcurl))
-            parentrepo = self._repo._subparent
             # use self._repo.vfs instead of self.wvfs to remove .hg only
             self._repo.vfs.rmtree()
-            other, cloned = hg.clone(self._repo._subparent.baseui, {},
-                                     other, self._repo.root,
-                                     update=False)
-            self._repo = cloned.local()
+            if parentrepo.shared():
+                self.ui.status(_('sharing subrepo %s from %s\n')
+                               % (subrelpath(self), srcurl))
+                shared = hg.share(self._repo._subparent.baseui,
+                                  other, self._repo.root,
+                                  update=False, bookmarks=False)
+                self._repo = shared.local()
+            else:
+                self.ui.status(_('cloning subrepo %s from %s\n')
+                               % (subrelpath(self), srcurl))
+                other, cloned = hg.clone(self._repo._subparent.baseui, {},
+                                         other, self._repo.root,
+                                         update=False)
+                self._repo = cloned.local()
             self._initrepo(parentrepo, source, create=True)
             self._cachestorehash(srcurl)
         else:

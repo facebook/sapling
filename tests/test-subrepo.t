@@ -1181,10 +1181,32 @@ subrepository:
 Check that share works with subrepo
   $ hg --config extensions.share= share . ../shared
   updating working directory
-  cloning subrepo subrepo-2 from $TESTTMP/subrepo-status/subrepo-2
+  sharing subrepo subrepo-1 from $TESTTMP/subrepo-status/subrepo-1
+  sharing subrepo subrepo-2 from $TESTTMP/subrepo-status/subrepo-2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ test -f ../shared/subrepo-1/.hg/sharedpath
-  [1]
+  $ find ../shared/* | sort
+  ../shared/subrepo-1
+  ../shared/subrepo-1/.hg
+  ../shared/subrepo-1/.hg/cache
+  ../shared/subrepo-1/.hg/cache/storehash
+  ../shared/subrepo-1/.hg/cache/storehash/* (glob)
+  ../shared/subrepo-1/.hg/hgrc
+  ../shared/subrepo-1/.hg/requires
+  ../shared/subrepo-1/.hg/sharedpath
+  ../shared/subrepo-2
+  ../shared/subrepo-2/.hg
+  ../shared/subrepo-2/.hg/branch
+  ../shared/subrepo-2/.hg/cache
+  ../shared/subrepo-2/.hg/cache/checkisexec (execbit !)
+  ../shared/subrepo-2/.hg/cache/checklink (symlink !)
+  ../shared/subrepo-2/.hg/cache/checklink-target (symlink !)
+  ../shared/subrepo-2/.hg/cache/storehash
+  ../shared/subrepo-2/.hg/cache/storehash/* (glob)
+  ../shared/subrepo-2/.hg/dirstate
+  ../shared/subrepo-2/.hg/hgrc
+  ../shared/subrepo-2/.hg/requires
+  ../shared/subrepo-2/.hg/sharedpath
+  ../shared/subrepo-2/file
   $ hg -R ../shared in
   abort: repository default not found!
   [255]
