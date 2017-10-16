@@ -33,6 +33,12 @@ from mercurial import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+try:
+    import fuzzywuzzy.fuzz as fuzz
+    fuzz.token_set_ratio
+except ImportError:
+    fuzz = None
+
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -219,10 +225,8 @@ def similaritycheck(incoming_str, existingnotes):
     """
     Returns false when note fragment can be merged to existing notes.
     """
-    try:
-        import fuzzywuzzy.fuzz as fuzz
-        fuzz.token_set_ratio
-    except ImportError:
+    # fuzzywuzzy not present
+    if not fuzz:
         return True
 
     merge = True
