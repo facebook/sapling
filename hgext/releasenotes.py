@@ -100,6 +100,10 @@ class parsedreleasenotes(object):
 
         This is used to combine multiple sources of release notes together.
         """
+        if not fuzz:
+            ui.warn(_("module 'fuzzywuzzy' not found, merging of similar "
+                      "releasenotes is disabled\n"))
+
         for section in other:
             existingnotes = converttitled(self.titledforsection(section)) + \
                 convertnontitled(self.nontitledforsection(section))
