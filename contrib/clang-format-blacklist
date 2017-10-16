@@ -17,7 +17,6 @@ mercurial/cext/dirs.c
 mercurial/cext/manifest.c
 mercurial/cext/mpatch.c
 mercurial/cext/osutil.c
-mercurial/cext/parsers.c
 mercurial/cext/pathencode.c
 mercurial/cext/revlog.c
 # Vendored code that we should never format:

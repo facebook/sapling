@@ -48,10 +48,8 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 	char *str, *start, *end;
 	int len;
 
-	if (!PyArg_ParseTuple(args, "O!O!s#:parse_manifest",
-			      &PyDict_Type, &mfdict,
-			      &PyDict_Type, &fdict,
-			      &str, &len))
+	if (!PyArg_ParseTuple(args, "O!O!s#:parse_manifest", &PyDict_Type,
+	                      &mfdict, &PyDict_Type, &fdict, &str, &len))
 		goto quit;
 
 	start = str;
@@ -65,14 +63,14 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 		zero = memchr(start, '\0', end - start);
 		if (!zero) {
 			PyErr_SetString(PyExc_ValueError,
-					"manifest entry has no separator");
+			                "manifest entry has no separator");
 			goto quit;
 		}
 
 		newline = memchr(zero + 1, '\n', end - (zero + 1));
 		if (!newline) {
 			PyErr_SetString(PyExc_ValueError,
-					"manifest contains trailing garbage");
+			                "manifest contains trailing garbage");
 			goto quit;
 		}
 
@@ -88,8 +86,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 			goto bail;
 
 		if (nlen > 40) {
-			flags = PyBytes_FromStringAndSize(zero + 41,
-							   nlen - 40);
+			flags = PyBytes_FromStringAndSize(zero + 41, nlen - 40);
 			if (!flags)
 				goto bail;
 
@@ -120,10 +117,10 @@ quit:
 }
 
 static inline dirstateTupleObject *make_dirstate_tuple(char state, int mode,
-						       int size, int mtime)
+                                                       int size, int mtime)
 {
-	dirstateTupleObject *t = PyObject_New(dirstateTupleObject,
-					      &dirstateTupleType);
+	dirstateTupleObject *t =
+	    PyObject_New(dirstateTupleObject, &dirstateTupleType);
 	if (!t)
 		return NULL;
 	t->state = state;
@@ -134,7 +131,7 @@ static inline dirstateTupleObject *make_dirstate_tuple(char state, int mode,
 }
 
 static PyObject *dirstate_tuple_new(PyTypeObject *subtype, PyObject *args,
-				    PyObject *kwds)
+                                    PyObject *kwds)
 {
 	/* We do all the initialization here and not a tp_init function because
 	 * dirstate_tuple is immutable. */
@@ -184,55 +181,55 @@ static PyObject *dirstate_tuple_item(PyObject *o, Py_ssize_t i)
 }
 
 static PySequenceMethods dirstate_tuple_sq = {
-	dirstate_tuple_length,     /* sq_length */
-	0,                         /* sq_concat */
-	0,                         /* sq_repeat */
-	dirstate_tuple_item,       /* sq_item */
-	0,                         /* sq_ass_item */
-	0,                         /* sq_contains */
-	0,                         /* sq_inplace_concat */
-	0                          /* sq_inplace_repeat */
+    dirstate_tuple_length, /* sq_length */
+    0,                     /* sq_concat */
+    0,                     /* sq_repeat */
+    dirstate_tuple_item,   /* sq_item */
+    0,                     /* sq_ass_item */
+    0,                     /* sq_contains */
+    0,                     /* sq_inplace_concat */
+    0                      /* sq_inplace_repeat */
 };
 
 PyTypeObject dirstateTupleType = {
-	PyVarObject_HEAD_INIT(NULL, 0) /* header */
-	"dirstate_tuple",          /* tp_name */
-	sizeof(dirstateTupleObject),/* tp_basicsize */
-	0,                         /* tp_itemsize */
-	(destructor)dirstate_tuple_dealloc, /* tp_dealloc */
-	0,                         /* tp_print */
-	0,                         /* tp_getattr */
-	0,                         /* tp_setattr */
-	0,                         /* tp_compare */
-	0,                         /* tp_repr */
-	0,                         /* tp_as_number */
-	&dirstate_tuple_sq,        /* tp_as_sequence */
-	0,                         /* tp_as_mapping */
-	0,                         /* tp_hash  */
-	0,                         /* tp_call */
-	0,                         /* tp_str */
-	0,                         /* tp_getattro */
-	0,                         /* tp_setattro */
-	0,                         /* tp_as_buffer */
-	Py_TPFLAGS_DEFAULT,        /* tp_flags */
-	"dirstate tuple",          /* tp_doc */
-	0,                         /* tp_traverse */
-	0,                         /* tp_clear */
-	0,                         /* tp_richcompare */
-	0,                         /* tp_weaklistoffset */
-	0,                         /* tp_iter */
-	0,                         /* tp_iternext */
-	0,                         /* tp_methods */
-	0,                         /* tp_members */
-	0,                         /* tp_getset */
-	0,                         /* tp_base */
-	0,                         /* tp_dict */
-	0,                         /* tp_descr_get */
-	0,                         /* tp_descr_set */
-	0,                         /* tp_dictoffset */
-	0,                         /* tp_init */
-	0,                         /* tp_alloc */
-	dirstate_tuple_new,        /* tp_new */
+    PyVarObject_HEAD_INIT(NULL, 0)      /* header */
+    "dirstate_tuple",                   /* tp_name */
+    sizeof(dirstateTupleObject),        /* tp_basicsize */
+    0,                                  /* tp_itemsize */
+    (destructor)dirstate_tuple_dealloc, /* tp_dealloc */
+    0,                                  /* tp_print */
+    0,                                  /* tp_getattr */
+    0,                                  /* tp_setattr */
+    0,                                  /* tp_compare */
+    0,                                  /* tp_repr */
+    0,                                  /* tp_as_number */
+    &dirstate_tuple_sq,                 /* tp_as_sequence */
+    0,                                  /* tp_as_mapping */
+    0,                                  /* tp_hash  */
+    0,                                  /* tp_call */
+    0,                                  /* tp_str */
+    0,                                  /* tp_getattro */
+    0,                                  /* tp_setattro */
+    0,                                  /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,                 /* tp_flags */
+    "dirstate tuple",                   /* tp_doc */
+    0,                                  /* tp_traverse */
+    0,                                  /* tp_clear */
+    0,                                  /* tp_richcompare */
+    0,                                  /* tp_weaklistoffset */
+    0,                                  /* tp_iter */
+    0,                                  /* tp_iternext */
+    0,                                  /* tp_methods */
+    0,                                  /* tp_members */
+    0,                                  /* tp_getset */
+    0,                                  /* tp_base */
+    0,                                  /* tp_dict */
+    0,                                  /* tp_descr_get */
+    0,                                  /* tp_descr_set */
+    0,                                  /* tp_dictoffset */
+    0,                                  /* tp_init */
+    0,                                  /* tp_alloc */
+    dirstate_tuple_new,                 /* tp_new */
 };
 
 static PyObject *parse_dirstate(PyObject *self, PyObject *args)
@@ -244,18 +241,16 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	unsigned int flen, len, pos = 40;
 	int readlen;
 
-	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
-			      &PyDict_Type, &dmap,
-			      &PyDict_Type, &cmap,
-			      &str, &readlen))
+	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate", &PyDict_Type,
+	                      &dmap, &PyDict_Type, &cmap, &str, &readlen))
 		goto quit;
 
 	len = readlen;
 
 	/* read parents */
 	if (len < 40) {
-		PyErr_SetString(
-			PyExc_ValueError, "too little data for parents");
+		PyErr_SetString(PyExc_ValueError,
+		                "too little data for parents");
 		goto quit;
 	}
 
@@ -267,7 +262,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	while (pos >= 40 && pos < len) {
 		if (pos + 17 > len) {
 			PyErr_SetString(PyExc_ValueError,
-					"overflow in dirstate");
+			                "overflow in dirstate");
 			goto quit;
 		}
 		cur = str + pos;
@@ -280,17 +275,18 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		pos += 17;
 		cur += 17;
 		if (flen > len - pos) {
-			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
+			PyErr_SetString(PyExc_ValueError,
+			                "overflow in dirstate");
 			goto quit;
 		}
 
-		entry = (PyObject *)make_dirstate_tuple(state, mode, size,
-							mtime);
+		entry =
+		    (PyObject *)make_dirstate_tuple(state, mode, size, mtime);
 		cpos = memchr(cur, 0, flen);
 		if (cpos) {
 			fname = PyBytes_FromStringAndSize(cur, cpos - cur);
-			cname = PyBytes_FromStringAndSize(cpos + 1,
-							   flen - (cpos - cur) - 1);
+			cname = PyBytes_FromStringAndSize(
+			    cpos + 1, flen - (cpos - cur) - 1);
 			if (!fname || !cname ||
 			    PyDict_SetItem(cmap, fname, cname) == -1 ||
 			    PyDict_SetItem(dmap, fname, entry) == -1)
@@ -298,8 +294,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 			Py_DECREF(cname);
 		} else {
 			fname = PyBytes_FromStringAndSize(cur, flen);
-			if (!fname ||
-			    PyDict_SetItem(dmap, fname, entry) == -1)
+			if (!fname || PyDict_SetItem(dmap, fname, entry) == -1)
 				goto quit;
 		}
 		Py_DECREF(fname);
@@ -320,15 +315,14 @@ quit:
 
 /*
  * Build a set of non-normal and other parent entries from the dirstate dmap
-*/
+ */
 static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args)
 {
 	PyObject *dmap, *fname, *v;
 	PyObject *nonnset = NULL, *otherpset = NULL, *result = NULL;
 	Py_ssize_t pos;
 
-	if (!PyArg_ParseTuple(args, "O!:nonnormalentries",
-			      &PyDict_Type, &dmap))
+	if (!PyArg_ParseTuple(args, "O!:nonnormalentries", &PyDict_Type, &dmap))
 		goto bail;
 
 	nonnset = PySet_New(NULL);
@@ -344,7 +338,7 @@ static PyObject *nonnormalotherparententries(PyObject *self, PyObject *args)
 		dirstateTupleObject *t;
 		if (!dirstate_tuple_check(v)) {
 			PyErr_SetString(PyExc_TypeError,
-					"expected a dirstate tuple");
+			                "expected a dirstate tuple");
 			goto bail;
 		}
 		t = (dirstateTupleObject *)v;
@@ -386,9 +380,8 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	char *p, *s;
 	int now;
 
-	if (!PyArg_ParseTuple(args, "O!O!Oi:pack_dirstate",
-			      &PyDict_Type, &map, &PyDict_Type, &copymap,
-			      &pl, &now))
+	if (!PyArg_ParseTuple(args, "O!O!Oi:pack_dirstate", &PyDict_Type, &map,
+	                      &PyDict_Type, &copymap, &pl, &now))
 		return NULL;
 
 	if (!PySequence_Check(pl) || PySequence_Size(pl) != 2) {
@@ -408,7 +401,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		if (c) {
 			if (!PyBytes_Check(c)) {
 				PyErr_SetString(PyExc_TypeError,
-						"expected string key");
+				                "expected string key");
 				goto bail;
 			}
 			nbytes += PyBytes_GET_SIZE(c) + 1;
@@ -436,7 +429,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	memcpy(p, s, l);
 	p += 20;
 
-	for (pos = 0; PyDict_Next(map, &pos, &k, &v); ) {
+	for (pos = 0; PyDict_Next(map, &pos, &k, &v);) {
 		dirstateTupleObject *tuple;
 		char state;
 		int mode, size, mtime;
@@ -446,7 +439,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 
 		if (!dirstate_tuple_check(v)) {
 			PyErr_SetString(PyExc_TypeError,
-					"expected a dirstate tuple");
+			                "expected a dirstate tuple");
 			goto bail;
 		}
 		tuple = (dirstateTupleObject *)v;
@@ -460,7 +453,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 			 * this. */
 			mtime = -1;
 			mtime_unset = (PyObject *)make_dirstate_tuple(
-				state, mode, size, mtime);
+			    state, mode, size, mtime);
 			if (!mtime_unset)
 				goto bail;
 			if (PyDict_SetItem(map, k, mtime_unset) == -1)
@@ -491,7 +484,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	pos = p - PyBytes_AS_STRING(packobj);
 	if (pos != nbytes) {
 		PyErr_Format(PyExc_SystemError, "bad dirstate size: %ld != %ld",
-                             (long)pos, (long)nbytes);
+		             (long)pos, (long)nbytes);
 		goto bail;
 	}
 
@@ -507,8 +500,8 @@ bail:
 #define USING_SHA_256 2
 #define FM1_HEADER_SIZE (4 + 8 + 2 + 2 + 1 + 1 + 1)
 
-static PyObject *readshas(
-	const char *source, unsigned char num, Py_ssize_t hashwidth)
+static PyObject *readshas(const char *source, unsigned char num,
+                          Py_ssize_t hashwidth)
 {
 	int i;
 	PyObject *list = PyTuple_New(num);
@@ -528,7 +521,7 @@ static PyObject *readshas(
 }
 
 static PyObject *fm1readmarker(const char *databegin, const char *dataend,
-			       uint32_t *msize)
+                               uint32_t *msize)
 {
 	const char *data = databegin;
 	const char *meta;
@@ -567,7 +560,7 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 	if (databegin + *msize > dataend) {
 		goto overflow;
 	}
-	dataend = databegin + *msize;  /* narrow down to marker size */
+	dataend = databegin + *msize; /* narrow down to marker size */
 
 	if (data + hashwidth > dataend) {
 		goto overflow;
@@ -631,9 +624,9 @@ static PyObject *fm1readmarker(const char *databegin, const char *dataend,
 		PyTuple_SET_ITEM(tmp, 1, right);
 		PyTuple_SET_ITEM(metadata, i, tmp);
 	}
-	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags,
-			    metadata, mtime, (int)tz * 60, parents);
-	goto bail;  /* return successfully */
+	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags, metadata, mtime,
+	                    (int)tz * 60, parents);
+	goto bail; /* return successfully */
 
 overflow:
 	PyErr_SetString(PyExc_ValueError, "overflow in obsstore");
@@ -644,7 +637,6 @@ bail:
 	Py_XDECREF(parents);
 	return ret;
 }
-
 
 static PyObject *fm1readmarkers(PyObject *self, PyObject *args)
 {
@@ -691,29 +683,28 @@ PyObject *lowerencode(PyObject *self, PyObject *args);
 PyObject *parse_index2(PyObject *self, PyObject *args);
 
 static PyMethodDef methods[] = {
-	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
-	{"nonnormalotherparententries", nonnormalotherparententries, METH_VARARGS,
-	"create a set containing non-normal and other parent entries of given "
-	"dirstate\n"},
-	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
-	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
-	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
-	{"isasciistr", isasciistr, METH_VARARGS, "check if an ASCII string\n"},
-	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
-	{"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
-	{"dict_new_presized", dict_new_presized, METH_VARARGS,
-	 "construct a dict with an expected size\n"},
-	{"make_file_foldmap", make_file_foldmap, METH_VARARGS,
-	 "make file foldmap\n"},
-	{"jsonescapeu8fast", jsonescapeu8fast, METH_VARARGS,
-	 "escape a UTF-8 byte string to JSON (fast path)\n"},
-	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
-	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
-	{"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
-	{"fm1readmarkers", fm1readmarkers, METH_VARARGS,
-			"parse v1 obsolete markers\n"},
-	{NULL, NULL}
-};
+    {"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
+    {"nonnormalotherparententries", nonnormalotherparententries, METH_VARARGS,
+     "create a set containing non-normal and other parent entries of given "
+     "dirstate\n"},
+    {"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
+    {"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
+    {"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
+    {"isasciistr", isasciistr, METH_VARARGS, "check if an ASCII string\n"},
+    {"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
+    {"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
+    {"dict_new_presized", dict_new_presized, METH_VARARGS,
+     "construct a dict with an expected size\n"},
+    {"make_file_foldmap", make_file_foldmap, METH_VARARGS,
+     "make file foldmap\n"},
+    {"jsonescapeu8fast", jsonescapeu8fast, METH_VARARGS,
+     "escape a UTF-8 byte string to JSON (fast path)\n"},
+    {"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
+    {"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
+    {"lowerencode", lowerencode, METH_VARARGS, "lower-encode a path\n"},
+    {"fm1readmarkers", fm1readmarkers, METH_VARARGS,
+     "parse v1 obsolete markers\n"},
+    {NULL, NULL}};
 
 void dirs_module_init(PyObject *mod);
 void manifest_module_init(PyObject *mod);
@@ -743,7 +734,7 @@ static void module_init(PyObject *mod)
 		return;
 	Py_INCREF(&dirstateTupleType);
 	PyModule_AddObject(mod, "dirstatetuple",
-			   (PyObject *)&dirstateTupleType);
+	                   (PyObject *)&dirstateTupleType);
 }
 
 static int check_python_version(void)
@@ -762,24 +753,23 @@ static int check_python_version(void)
 	 * should only occur in unusual circumstances (e.g. if sys.hexversion
 	 * is manually set to an invalid value). */
 	if ((hexversion == -1) || (hexversion >> 16 != PY_VERSION_HEX >> 16)) {
-		PyErr_Format(PyExc_ImportError, "%s: The Mercurial extension "
-			"modules were compiled with Python " PY_VERSION ", but "
-			"Mercurial is currently using Python with sys.hexversion=%ld: "
-			"Python %s\n at: %s", versionerrortext, hexversion,
-			Py_GetVersion(), Py_GetProgramFullPath());
+		PyErr_Format(PyExc_ImportError,
+		             "%s: The Mercurial extension "
+		             "modules were compiled with Python " PY_VERSION
+		             ", but "
+		             "Mercurial is currently using Python with "
+		             "sys.hexversion=%ld: "
+		             "Python %s\n at: %s",
+		             versionerrortext, hexversion, Py_GetVersion(),
+		             Py_GetProgramFullPath());
 		return -1;
 	}
 	return 0;
 }
 
 #ifdef IS_PY3K
-static struct PyModuleDef parsers_module = {
-	PyModuleDef_HEAD_INIT,
-	"parsers",
-	parsers_doc,
-	-1,
-	methods
-};
+static struct PyModuleDef parsers_module = {PyModuleDef_HEAD_INIT, "parsers",
+                                            parsers_doc, -1, methods};
 
 PyMODINIT_FUNC PyInit_parsers(void)
 {
