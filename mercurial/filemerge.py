@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import filecmp
 import os
 import re
 import tempfile
@@ -226,9 +225,9 @@ def _eoltype(data):
         return '\n'
     return None # unknown
 
-def _matcheol(file, origfile):
+def _matcheol(file, back):
     "Convert EOL markers in a file to match origfile"
-    tostyle = _eoltype(util.readfile(origfile))
+    tostyle = _eoltype(back.data()) # No repo.wread filters?
     if tostyle:
         data = util.readfile(file)
         style = _eoltype(data)
@@ -505,7 +504,9 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
         args = _toolstr(ui, tool, "args", '$local $base $other')
         if "$output" in args:
-            out, a = a, back # read input from backup, write to original
+            # read input from backup, write to original
+            out = a
+            a = repo.wvfs.join(back.path())
         replace = {'local': a, 'base': b, 'other': c, 'output': out}
         args = util.interpolate(r'\$', replace, args,
                                 lambda s: util.shellquote(util.localpath(s)))
@@ -588,10 +589,10 @@ def partextras(labels):
 def _restorebackup(fcd, back):
     # TODO: Add a workingfilectx.write(otherfilectx) path so we can use
     # util.copy here instead.
-    fcd.write(util.readfile(back), fcd.flags())
+    fcd.write(back.data(), fcd.flags())
 
-def _makebackup(repo, ui, fcd, premerge):
-    """Makes a backup of the local `fcd` file prior to merging.
+def _makebackup(repo, ui, wctx, fcd, premerge):
+    """Makes and returns a filectx-like object for ``fcd``'s backup file.
 
     In addition to preserving the user's pre-existing modifications to `fcd`
     (if any), the backup is used to undo certain premerges, confirm whether a
@@ -600,12 +601,14 @@ def _makebackup(repo, ui, fcd, premerge):
     """
     if fcd.isabsent():
         return None
-
+    # TODO: Break this import cycle somehow. (filectx -> ctx -> fileset ->
+    # merge -> filemerge). (I suspect the fileset import is the weakest link)
+    from . import context
     a = _workingpath(repo, fcd)
     back = scmutil.origpath(ui, repo, a)
     if premerge:
         util.copyfile(a, back)
-    return back
+    return context.arbitraryfilectx(back, repo=repo)
 
 def _maketempfiles(repo, fco, fca):
     """Writes out `fco` and `fca` as temporary files, so an external merge
@@ -691,7 +694,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
             ui.warn(onfailure % fd)
         return True, 1, False
 
-    back = _makebackup(repo, ui, fcd, premerge)
+    back = _makebackup(repo, ui, wctx, fcd, premerge)
     files = (None, None, None, back)
     r = 1
     try:
@@ -719,7 +722,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         return True, r, deleted
     finally:
         if not r and back is not None:
-            util.unlink(back)
+            back.remove()
 
 def _check(repo, r, ui, tool, fcd, files):
     fd = fcd.path()
@@ -741,7 +744,7 @@ def _check(repo, r, ui, tool, fcd, files):
     if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
                                   'changed' in
                                   _toollist(ui, tool, "check")):
-        if back is not None and filecmp.cmp(_workingpath(repo, fcd), back):
+        if back is not None and not fcd.cmp(back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
                                  "was merge successful (yn)?"
                                  "$$ &Yes $$ &No") % fd, 1):
