@@ -1242,20 +1242,11 @@ def registersummarycallback(repo, otr, txnname=''):
 
             # Compute the bounds of new revisions' range, excluding obsoletes.
             unfi = repo.unfiltered()
-            minrev, maxrev = None, None
-            newrevs.sort()
-            for r in newrevs:
-                if not unfi[r].obsolete():
-                    minrev = repo[r]
-                    break
-            for r in reversed(newrevs):
-                if not unfi[r].obsolete():
-                    maxrev = repo[r]
-                    break
-
-            if minrev is None or maxrev is None:
+            revs = unfi.revs('%ld and not obsolete()', newrevs)
+            if not revs:
                 # Got only obsoletes.
                 return
+            minrev, maxrev = repo[revs.min()], repo[revs.max()]
 
             if minrev == maxrev:
                 revrange = minrev
