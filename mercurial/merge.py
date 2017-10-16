@@ -2001,5 +2001,5 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
         repo.setparents(repo['.'].node(), pother)
         repo.dirstate.write(repo.currenttransaction())
         # fix up dirstate for copies and renames
-        copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
+        copies.duplicatecopies(repo, repo[None], ctx.rev(), pctx.rev())
     return stats

@@ -1935,6 +1935,11 @@ class workingfilectx(committablefilectx):
         self._repo.wwrite(self._path, data, flags,
                           backgroundclose=backgroundclose)
 
+    def markcopied(self, src):
+        """marks this file a copy of `src`"""
+        if self._repo.dirstate[self._path] in "nma":
+            self._repo.dirstate.copy(src, self._path)
+
     def clearunknown(self):
         """Removes conflicting items in the working directory so that
         ``write()`` can be called successfully.

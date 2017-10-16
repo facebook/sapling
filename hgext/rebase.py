@@ -977,10 +977,11 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest):
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
+    wctx = repo[None]
     stats = mergemod.update(repo, rev, True, True, base, collapse,
                             labels=['dest', 'source'])
     if collapse:
-        copies.duplicatecopies(repo, rev, dest)
+        copies.duplicatecopies(repo, wctx, rev, dest)
     else:
         # If we're not using --collapse, we need to
         # duplicate copies between the revision we're
@@ -988,7 +989,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest):
         # duplicate any copies that have already been
         # performed in the destination.
         p1rev = repo[rev].p1().rev()
-        copies.duplicatecopies(repo, rev, p1rev, skiprev=dest)
+        copies.duplicatecopies(repo, wctx, rev, p1rev, skiprev=dest)
     return stats
 
 def adjustdest(repo, rev, destmap, state, skipped):

@@ -842,7 +842,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
                         data['incompletediverge'][sf] = [of, f]
                     return
 
-def duplicatecopies(repo, rev, fromrev, skiprev=None):
+def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     '''reproduce copies from fromrev to rev in the dirstate
 
     If skiprev is specified, it's a revision that should be used to
@@ -863,5 +863,4 @@ def duplicatecopies(repo, rev, fromrev, skiprev=None):
         # actually be in the dirstate
         if dst in exclude:
             continue
-        if repo.dirstate[dst] in "nma":
-            repo.dirstate.copy(src, dst)
+        wctx[dst].markcopied(src)
