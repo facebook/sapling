@@ -954,6 +954,9 @@ coreconfigitem('web', 'allow_push',
 coreconfigitem('web', 'allowzip',
     default=False,
 )
+coreconfigitem('web', 'archivesubrepos',
+    default=False,
+)
 coreconfigitem('web', 'cache',
     default=True,
 )
