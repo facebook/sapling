@@ -98,26 +98,54 @@ createmarkersopt = 'createmarkers'
 allowunstableopt = 'allowunstable'
 exchangeopt = 'exchange'
 
+def _getoptionvalue(repo, option):
+    """Returns True if the given repository has the given obsolete option
+    enabled.
+    """
+    configkey = 'evolution.%s' % option
+    newconfig = repo.ui.configbool('experimental', configkey)
+
+    # Return the value only if defined
+    if newconfig is not None:
+        return newconfig
+
+    # Fallback on generic option
+    try:
+        return repo.ui.configbool('experimental', 'evolution')
+    except (error.ConfigError, AttributeError):
+        # Fallback on old-fashion config
+        # inconsistent config: experimental.evolution
+        result = set(repo.ui.configlist('experimental', 'evolution'))
+
+        if 'all' in result:
+            return True
+
+        # For migration purposes, temporarily return true if the config hasn't
+        # been set but _enabled is true.
+        if len(result) == 0 and _enabled:
+            return True
+
+        # Temporary hack for next check
+        newconfig = repo.ui.config('experimental', 'evolution.createmarkers')
+        if newconfig:
+            result.add('createmarkers')
+
+        return option in result
+
 def isenabled(repo, option):
     """Returns True if the given repository has the given obsolete option
     enabled.
     """
-    result = set(repo.ui.configlist('experimental', 'evolution'))
-    if 'all' in result:
-        return True
-
-    # For migration purposes, temporarily return true if the config hasn't been
-    # set but _enabled is true.
-    if len(result) == 0 and _enabled:
-        return True
+    createmarkersvalue = _getoptionvalue(repo, createmarkersopt)
+    unstabluevalue = _getoptionvalue(repo, allowunstableopt)
+    exchangevalue = _getoptionvalue(repo, exchangeopt)
 
     # createmarkers must be enabled if other options are enabled
-    if ((allowunstableopt in result or exchangeopt in result) and
-        not createmarkersopt in result):
+    if ((unstabluevalue or exchangevalue) and not createmarkersvalue):
         raise error.Abort(_("'createmarkers' obsolete option must be enabled "
-                           "if other obsolete options are enabled"))
+                            "if other obsolete options are enabled"))
 
-    return option in result
+    return _getoptionvalue(repo, option)
 
 ### obsolescence marker flag
 

@@ -349,6 +349,15 @@ coreconfigitem('experimental', 'evolution',
     default=list,
     alias=[('experimental', 'stabilization')],
 )
+coreconfigitem('experimental', 'evolution.allowunstable',
+    default=None,
+)
+coreconfigitem('experimental', 'evolution.createmarkers',
+    default=None,
+)
+coreconfigitem('experimental', 'evolution.exchange',
+    default=None,
+)
 coreconfigitem('experimental', 'evolution.bundle-obsmarker',
     default=False,
     alias=[('experimental', 'stabilization.bundle-obsmarker')],
