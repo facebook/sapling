@@ -16,7 +16,6 @@ from mercurial import (
     error,
     hg,
     lock as lockmod,
-    obsolete,
     phases,
     registrar,
     scmutil,
@@ -137,8 +136,8 @@ def fold(ui, repo, *revs, **opts):
                                                    commitopts=commitopts)
             phases.retractboundary(repo, tr, targetphase, [newid])
 
-            obsolete.createmarkers(repo, [(ctx, (repo[newid],))
-                                   for ctx in allctx], operation='fold')
+            replacements = {ctx.node(): (newid,) for ctx in allctx}
+            scmutil.cleanupnodes(repo, replacements, 'fold')
 
             ui.status(_('%i changesets folded\n') % len(revs))
             if repo['.'].rev() in revs:
