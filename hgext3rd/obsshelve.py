@@ -57,6 +57,10 @@ from hgext import (
     rebase,
 )
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem('obsshelve', 'maxbackups', default=10)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = 'ships-with-fb-hgext'
@@ -281,7 +285,7 @@ class shelvedstate(object):
 
 def cleanupoldbackups(repo):
     vfs = vfsmod.vfs(repo.vfs.join(backupdir))
-    maxbackups = repo.ui.configint('shelve', 'maxbackups')
+    maxbackups = repo.ui.configint('obsshelve', 'maxbackups')
     hgfiles = [f for f in vfs.listdir()
                if f.endswith('.' + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
@@ -906,7 +910,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
     After a successful unshelve, the shelved changes are stored in a
     backup directory. Only the N most recent backups are kept. N
-    defaults to 10 but can be overridden using the ``shelve.maxbackups``
+    defaults to 10 but can be overridden using the ``obsshelve.maxbackups``
     configuration option.
 
     .. container:: verbose

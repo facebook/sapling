@@ -8,7 +8,7 @@
   > [defaults]
   > diff = --nodates --git
   > qnew = --date '0 0'
-  > [shelve]
+  > [obsshelve]
   > maxbackups = 2
   > [experimental]
   > evolution=createmarkers
