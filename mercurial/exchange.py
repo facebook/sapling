@@ -537,7 +537,7 @@ def _pushdiscoveryphase(pushop):
         # - and remote support phase
         # - and no changeset are to be pushed
         # - and remote is publishing
-        # We may be in issue 3871 case!
+        # We may be in issue 3781 case!
         # We drop the possible phase synchronisation done by
         # courtesy to publish changesets possibly locally draft
         # on the remote.
