@@ -63,17 +63,26 @@ pub fn assert_node_sequence<I, R>(
 
             assert!(
                 node_generation == expected_generation,
-                "Did not receive expected node before change of generation"
+                "Did not receive expected node {:?} before change of generation from {:?} to {:?}",
+                expected,
+                node_generation,
+                expected_generation,
             );
 
             received_hashes.insert(hash);
         }
     }
 
-    assert!(received_hashes.is_empty(), "Too many nodes received");
-
     assert!(
-        nodestream.wait_stream().is_none(),
-        "Too many nodes received"
+        received_hashes.is_empty(),
+        "Too many nodes received: {:?}",
+        received_hashes
+    );
+
+    let next_node = nodestream.wait_stream();
+    assert!(
+        next_node.is_none(),
+        "Too many nodes received: {:?}",
+        next_node.unwrap()
     );
 }

@@ -8,6 +8,8 @@ extern crate asyncmemo;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+#[macro_use]
+extern crate maplit;
 extern crate mercurial_types;
 extern crate repoinfo;
 
@@ -34,6 +36,9 @@ pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + 'static;
 
 mod validation;
 pub use validation::ValidateNodeStream;
+
+mod ancestors;
+pub use ancestors::AncestorsNodeStream;
 
 #[cfg(test)]
 extern crate ascii;

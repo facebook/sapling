@@ -14,7 +14,9 @@ error_chain! {
         }
         GenerationFetchFailed {
             description("could not fetch node generation")
-            display("could not fetch node generation")
+        }
+        ParentsFetchFailed {
+            description("failed to fetch parent nodes")
         }
     }
 }
