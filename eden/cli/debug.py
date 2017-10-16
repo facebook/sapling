@@ -13,7 +13,7 @@ import json
 import os
 import stat
 import sys
-from typing import List, Tuple
+from typing import List, IO, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
 import facebook.hgdirstate.ttypes as hgdirstate
@@ -152,26 +152,6 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
     return file_type_str, perms
 
 
-def _print_inode_info(inode_info):
-    print('{}:'.format(escape_path(inode_info.path)))
-    print('  Inode number:  {}'.format(inode_info.inodeNumber))
-    print('  Ref count:     {}'.format(inode_info.refcount))
-    print('  Materialized?: {}'.format(inode_info.materialized))
-    print('  Object ID:     {}'.format(hash_str(inode_info.treeHash)))
-    print('  Entries ({} total):'.format(len(inode_info.entries)))
-    for entry in inode_info.entries:
-        if entry.loaded:
-            loaded_flag = 'L'
-        else:
-            loaded_flag = '-'
-
-        file_type_str, perms = _parse_mode(entry.mode)
-        line = '    {:9} {} {:4o} {} {:40} {}'.format(
-            entry.inodeNumber, file_type_str, perms, loaded_flag,
-            hash_str(entry.hash), escape_path(entry.name))
-        print(line)
-
-
 def do_hg_copy_map_get_all(args: argparse.Namespace):
     config = cmd_util.create_config(args)
     mount, _ = get_mount_path(args.path)
@@ -200,15 +180,37 @@ def do_hg_get_dirstate_tuple(args: argparse.Namespace):
 ''')
 
 
-def do_inode(args: argparse.Namespace):
+def do_inode(args: argparse.Namespace, out: IO[bytes] = None):
+    if out is None:
+        out = sys.stdout.buffer
     config = cmd_util.create_config(args)
     mount, rel_path = get_mount_path(args.path)
     with config.get_thrift_client() as client:
         results = client.debugInodeStatus(mount, rel_path)
 
-    print('{} loaded TreeInodes'.format(len(results)))
+    out.write(b'%d loaded TreeInodes\n' % len(results))
     for inode_info in results:
-        _print_inode_info(inode_info)
+        _print_inode_info(inode_info, out)
+
+
+def _print_inode_info(inode_info, out: IO[bytes]):
+    out.write(inode_info.path + b'\n')
+    out.write(b'  Inode number:  %d\n' % inode_info.inodeNumber)
+    out.write(b'  Ref count:     %d\n' % inode_info.refcount)
+    out.write(b'  Materialized?: %s\n' % str(inode_info.materialized).encode())
+    out.write(b'  Object ID:     %s\n' % hash_str(inode_info.treeHash).encode())
+    out.write(b'  Entries (%d total):\n' % len(inode_info.entries))
+    for entry in inode_info.entries:
+        if entry.loaded:
+            loaded_flag = 'L'
+        else:
+            loaded_flag = '-'
+
+        file_type_str, perms = _parse_mode(entry.mode)
+        line = '    {:9} {} {:4o} {} {:40} {}\n'.format(
+            entry.inodeNumber, file_type_str, perms, loaded_flag,
+            hash_str(entry.hash), escape_path(entry.name))
+        out.write(line.encode())
 
 
 def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:

@@ -12,6 +12,7 @@ from eden.thrift import EdenNotRunningError
 import errno
 import json
 import os
+import subprocess
 import sys
 
 from . import config as config_mod
@@ -211,8 +212,24 @@ def do_daemon(args):
 
 
 def do_rage(args):
-    rage = rage_mod.Rage(args)
-    rage.check_diagnostic_info()
+    rage_processor = None
+    config = create_config(args)
+    try:
+        rage_processor = config.get_config_value('rage.reporter')
+    except KeyError:
+        pass
+
+    if rage_processor:
+        proc = subprocess.Popen(['sh', '-c', rage_processor], stdin=subprocess.PIPE)
+        sink = proc.stdin
+    else:
+        proc = None
+        sink = sys.stdout.buffer
+
+    rage_mod.print_diagnostic_info(config, args, sink)
+    if proc:
+        sink.close()
+        proc.wait()
     return 0
 
 

@@ -418,7 +418,7 @@ by hand to make changes to the repository or remove it.''' % name)
                                     'healthy')
         return util.poll_until(check_health, timeout=5, timeout_ex=timeout_ex)
 
-    def get_log_path(self):
+    def get_log_path(self) -> str:
         return os.path.join(self._config_dir, 'logs', 'edenfs.log')
 
     def _build_eden_environment(self):
@@ -662,4 +662,3 @@ def _verify_mount_point(mount_point):
             ('%s must be a directory in order to mount a client at %s. ' +
              'If this is the correct location, run `mkdir -p %s` to create ' +
              'the directory.') % (parent_dir, mount_point, parent_dir))
-
