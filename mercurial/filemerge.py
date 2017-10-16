@@ -467,6 +467,12 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     a = _workingpath(repo, fcd)
     fd = fcd.path()
 
+    # Run ``flushall()`` to make any missing folders the following wwrite
+    # calls might be depending on.
+    from . import context
+    if isinstance(fcd, context.overlayworkingfilectx):
+        fcd.ctx().flushall()
+
     util.writefile(a + ".local", fcd.decodeddata())
     repo.wwrite(fd + ".other", fco.data(), fco.flags())
     repo.wwrite(fd + ".base", fca.data(), fca.flags())
