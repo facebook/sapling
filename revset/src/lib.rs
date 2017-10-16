@@ -38,7 +38,7 @@ mod validation;
 pub use validation::ValidateNodeStream;
 
 mod ancestors;
-pub use ancestors::AncestorsNodeStream;
+pub use ancestors::{common_ancestors, greatest_common_ancestor, AncestorsNodeStream};
 
 #[cfg(test)]
 extern crate ascii;

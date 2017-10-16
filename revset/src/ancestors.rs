@@ -19,6 +19,8 @@ use futures::stream::{iter_ok, Stream};
 use mercurial_types::{Changeset, NodeHash, Repo};
 use repoinfo::{Generation, RepoGenCache};
 
+use IntersectNodeStream;
+use NodeStream;
 use errors::*;
 
 pub struct AncestorsNodeStream<R>
@@ -134,6 +136,40 @@ where
                 .expect("Cannot create a generation without at least one node hash"),
         )))
     }
+}
+
+pub fn common_ancestors<I, R>(
+    repo: &Arc<R>,
+    repo_generation: RepoGenCache<R>,
+    nodes: I,
+) -> Box<NodeStream>
+where
+    I: IntoIterator<Item = NodeHash>,
+    R: Repo,
+{
+    let nodes_iter = nodes.into_iter().map({
+        let repo_generation = repo_generation.clone();
+        move |node| {
+            Box::new(AncestorsNodeStream::new(
+                repo,
+                repo_generation.clone(),
+                node,
+            )) as Box<NodeStream>
+        }
+    });
+    Box::new(IntersectNodeStream::new(repo, repo_generation, nodes_iter))
+}
+
+pub fn greatest_common_ancestor<I, R>(
+    repo: &Arc<R>,
+    repo_generation: RepoGenCache<R>,
+    nodes: I,
+) -> Box<NodeStream>
+where
+    I: IntoIterator<Item = NodeHash>,
+    R: Repo,
+{
+    Box::new(common_ancestors(repo, repo_generation, nodes).take(1))
 }
 
 #[cfg(test)]
@@ -268,5 +304,116 @@ mod test {
             ],
             nodestream,
         )
+    }
+
+    #[test]
+    fn no_common_ancestor() {
+        let repo = Arc::new(unshared_merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = greatest_common_ancestor(
+            &repo,
+            repo_generation.clone(),
+            vec![
+                string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
+                string_to_nodehash("1700524113b1a3b1806560341009684b4378660b"),
+            ],
+        );
+        assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+    }
+
+    #[test]
+    fn greatest_common_ancestor_different_branches() {
+        let repo = Arc::new(merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = greatest_common_ancestor(
+            &repo,
+            repo_generation.clone(),
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+            ],
+        );
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn greatest_common_ancestor_same_branch() {
+        let repo = Arc::new(merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = greatest_common_ancestor(
+            &repo,
+            repo_generation.clone(),
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+            ],
+        );
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn all_common_ancestors_different_branches() {
+        let repo = Arc::new(merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = common_ancestors(
+            &repo,
+            repo_generation.clone(),
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+            ],
+        );
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+            ],
+            nodestream,
+        );
+    }
+
+    #[test]
+    fn all_common_ancestors_same_branch() {
+        let repo = Arc::new(merge_uneven::getrepo());
+        let repo_generation = RepoGenCache::new(10);
+
+        let nodestream = common_ancestors(
+            &repo,
+            repo_generation.clone(),
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+            ],
+        );
+        assert_node_sequence(
+            repo_generation,
+            &repo,
+            vec![
+                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+            ],
+            nodestream,
+        );
     }
 }
