@@ -345,6 +345,18 @@ coreconfigitem('experimental', 'crecordtest',
 coreconfigitem('experimental', 'editortmpinhg',
     default=False,
 )
+coreconfigitem('experimental', 'evolution',
+    default=list,
+    alias=[('experimental', 'stabilization')],
+)
+coreconfigitem('experimental', 'evolution.bundle-obsmarker',
+    default=False,
+    alias=[('experimental', 'stabilization.bundle-obsmarker')],
+)
+coreconfigitem('experimental', 'evolution.track-operation',
+    default=True,
+    alias=[('experimental', 'stabilization.track-operation')]
+)
 coreconfigitem('experimental', 'maxdeltachainspan',
     default=-1,
 )
@@ -356,18 +368,6 @@ coreconfigitem('experimental', 'nonnormalparanoidcheck',
 )
 coreconfigitem('experimental', 'effect-flags',
     default=False,
-)
-coreconfigitem('experimental', 'stabilization',
-    default=list,
-    alias=[('experimental', 'evolution')],
-)
-coreconfigitem('experimental', 'stabilization.bundle-obsmarker',
-    default=False,
-    alias=[('experimental', 'evolution.bundle-obsmarker')],
-)
-coreconfigitem('experimental', 'stabilization.track-operation',
-    default=True,
-    alias=[('experimental', 'evolution.track-operation')]
 )
 coreconfigitem('experimental', 'exportableenviron',
     default=list,

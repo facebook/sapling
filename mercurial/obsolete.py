@@ -102,7 +102,7 @@ def isenabled(repo, option):
     """Returns True if the given repository has the given obsolete option
     enabled.
     """
-    result = set(repo.ui.configlist('experimental', 'stabilization'))
+    result = set(repo.ui.configlist('experimental', 'evolution'))
     if 'all' in result:
         return True
 
@@ -1043,7 +1043,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
 
     # Operation metadata handling
     useoperation = repo.ui.configbool('experimental',
-        'stabilization.track-operation')
+        'evolution.track-operation')
     if useoperation and operation:
         metadata['operation'] = operation
 
