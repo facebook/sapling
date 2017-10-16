@@ -587,6 +587,13 @@ void EdenServiceHandler::debugGetInodePath(
   info.path = relativePath ? relativePath->stringPiece().str() : "";
 }
 
+void EdenServiceHandler::debugSetLogLevel(
+    std::unique_ptr<std::string> category,
+    std::unique_ptr<std::string> level) {
+  auto levelValue = folly::stringToLogLevel(*level);
+  folly::Logger(*category).getCategory()->setLevel(levelValue);
+}
+
 int64_t EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path,

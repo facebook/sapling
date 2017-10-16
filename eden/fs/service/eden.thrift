@@ -494,6 +494,14 @@ service EdenService extends fb303.FacebookService {
   ) throws (1: EdenError ex)
 
   /**
+   * Sets the log level for a given category at runtime.
+   */
+  void debugSetLogLevel(
+    1: string category,
+    2: string level,
+  ) throws (1: EdenError ex)
+
+  /**
   * Unloads unused Inodes from a directory inside a mountPoint whose last
   * access time is older than the specified age.
   *

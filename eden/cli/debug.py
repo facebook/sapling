@@ -386,6 +386,13 @@ def do_flush_cache(args: argparse.Namespace):
         client.invalidateKernelInodeCache(mount, rel_path)
 
 
+def do_set_log_level(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+
+    with config.get_thrift_client() as client:
+        client.debugSetLogLevel(args.category, args.level)
+
+
 def setup_argparse(parser: argparse.ArgumentParser):
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -490,3 +497,17 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'path',
         help='Path to a directory/file inside an eden mount.')
     parser.set_defaults(func=do_flush_cache)
+
+    parser = subparsers.add_parser(
+        'set_log_level',
+        help='Set the log level for a given category in the edenfs daemon.')
+    parser.add_argument(
+        'category',
+        type=str,
+        help='Period-separated log category.')
+    parser.add_argument(
+        'level',
+        type=str,
+        help='Log level string as understood by stringToLogLevel.'
+    )
+    parser.set_defaults(func=do_set_log_level)
