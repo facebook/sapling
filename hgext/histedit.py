@@ -220,9 +220,6 @@ configitem = registrar.configitem(configtable)
 configitem('experimental', 'histedit.autoverb',
     default=False,
 )
-configitem('experimental', 'histeditng',
-    default=False,
-)
 configitem('histedit', 'defaultrev',
     default=configitems.dynamicdefault,
 )
