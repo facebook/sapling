@@ -102,12 +102,6 @@ Check --stat
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-  diff -r 000000000000 -r 852a8d467a01 x
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +show
-  
 
 
 
@@ -126,13 +120,6 @@ Check --stat
   
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  diff -r 852a8d467a01 -r b73358b94785 x
-  --- a/x	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +1,2 @@
-   show
-  +more
   
 
 
@@ -153,14 +140,6 @@ Check --stat
    x |  3 +--
    1 files changed, 1 insertions(+), 2 deletions(-)
   
-  diff -r b73358b94785 -r 3d74ea61c11c x
-  --- a/x	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,2 +1,1 @@
-  -show
-  -more
-  +remove
-  
 
 
 
@@ -175,12 +154,6 @@ Check --stat
   
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-  
-  diff -r 000000000000 -r 852a8d467a01 x
-  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -0,0 +1,1 @@
-  +show
   
 Check --unified and -U
 

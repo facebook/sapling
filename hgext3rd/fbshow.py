@@ -6,7 +6,27 @@
 # GNU General Public License version 2 or any later version.
 """show changesets in detail with full log message, patches etc
 
-For example, 'hg show --stat' prints something like:
+For example, 'hg show' prints something like
+
+  $ hg show
+  changeset:   1:b73358b94785
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       x
+  description:
+  longer
+
+
+  diff -r 852a8d467a01 -r b73358b94785 x
+  --- a/x	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   show
+  +more
+
+
+and 'hg show --stat' prints something like:
 
   $ hg show --stat
   changeset:   1:b73358b94785
@@ -20,13 +40,6 @@ For example, 'hg show --stat' prints something like:
 
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
-
-  diff -r 852a8d467a01 -r b73358b94785 x
-  --- a/x	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,1 +1,2 @@
-   show
-  +more
 """
 
 from mercurial.i18n import _
@@ -79,7 +92,7 @@ def show(ui, repo, *args, **opts):
             raise error.Abort(_("unknown revision %s") % args[0],
                               hint=h)
 
-    opts['patch'] = True
+    opts['patch'] = not opts['stat']
     opts['verbose'] = True
 
     # Copy tracking is slow when doing a git diff. Override hgrc, and rely on
