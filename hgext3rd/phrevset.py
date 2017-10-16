@@ -244,8 +244,14 @@ def revsetdiff(repo, subset, diffid):
 
         # verify all revisions exist in the current repo; if not, try to
         # find their counterpart by parsing the log
-        for idx, rev in enumerate(revs):
-            if rev not in repo:
+        results = set()
+        for rev in revs:
+            # TODO: This really should be searching in repo.unfiltered(),
+            # and then resolving successors if the commit was hidden.
+            try:
+                node = repo[rev.encode('utf-8')]
+                results.add(node.rev())
+            except error.RepoLookupError:
                 repo.ui.warn(_('Commit not found - doing a linear search\n'))
                 parsed_rev = finddiff(repo, diffid)
 
@@ -253,9 +259,12 @@ def revsetdiff(repo, subset, diffid):
                     raise error.Abort('Could not find diff '
                                        'D%s in changelog' % diffid)
 
-                revs[idx] = parsed_rev
+                results.add(parsed_rev)
 
-        return set(revs)
+        if not results:
+            raise error.Abort('Could not find local commit for D%s' % diffid)
+
+        return set(results)
 
     else:
         if not vcs:
