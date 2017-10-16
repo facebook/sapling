@@ -216,7 +216,7 @@ def similar(ui, existing, incoming_str):
 
 def similaritycheck(incoming_str, existingnotes):
     """
-    Returns true when note fragment can be merged to existing notes.
+    Returns false when note fragment can be merged to existing notes.
     """
     import fuzzywuzzy.fuzz as fuzz
     merge = True
