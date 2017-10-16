@@ -104,34 +104,34 @@ coreconfigitem('alias', '.*',
     generic=True,
 )
 coreconfigitem('annotate', 'nodates',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'showfunc',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'unified',
     default=None,
 )
 coreconfigitem('annotate', 'git',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'ignorews',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'ignorewsamount',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'ignoreblanklines',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'ignorewseol',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'nobinary',
-    default=None,
+    default=False,
 )
 coreconfigitem('annotate', 'noprefix',
-    default=None,
+    default=False,
 )
 coreconfigitem('auth', 'cookiefile',
     default=None,
