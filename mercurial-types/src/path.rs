@@ -48,6 +48,11 @@ impl MPathElement {
     pub fn extend(&mut self, toappend: &[u8]) {
         self.0.extend(toappend.iter());
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl From<MPathElement> for MPath {
@@ -122,6 +127,18 @@ impl MPath {
     pub fn to_vec(&self) -> Vec<u8> {
         let ret: Vec<_> = self.elements.iter().map(|e| e.0.as_ref()).collect();
         ret.join(&b'/')
+    }
+
+    /// The length of this path, including any slashes in it.
+    pub fn len(&self) -> usize {
+        if self.is_empty() {
+            0
+        } else {
+            // n elements means n-1 slashes
+            let slashes = self.elements.len() - 1;
+            let elem_len: usize = self.elements.iter().map(|elem| elem.len()).sum();
+            slashes + elem_len
+        }
     }
 
     #[inline]
@@ -497,6 +514,10 @@ mod test {
             let expected_len = joined.len();
             let path = MPath::new(joined).unwrap();
             elements == path.elements && path.to_vec().len() == expected_len
+        }
+
+        fn path_len(p: MPath) -> bool {
+            p.len() == p.to_vec().len()
         }
     }
 
