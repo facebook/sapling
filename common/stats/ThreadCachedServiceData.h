@@ -63,7 +63,7 @@ public:
     const std::string& key,
     int64_t value,
     stats::ExportType exportType) {}
-  int64_t setCounter(const std::string& key, int64_t value) {}
+  int64_t setCounter(const std::string& key, int64_t value) { return 0; }
   void clearCounter(const std::string& key) {}
 };
 
