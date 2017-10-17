@@ -516,21 +516,13 @@ See also issue5208 for detail about example case on Python 3.x.
 
 Make sure a broken uisetup doesn't globally break hg:
   $ cat > $TESTTMP/baduisetup.py <<EOF
-  > from mercurial import (
-  >     bdiff,
-  >     extensions,
-  > )
-  > 
-  > def blockswrapper(orig, *args, **kwargs):
-  >     return orig(*args, **kwargs)
-  > 
   > def uisetup(ui):
-  >     extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+  >     1/0
   > EOF
 
 Even though the extension fails during uisetup, hg is still basically usable:
   $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
+  *** failed to set up extension baduisetup: integer division or modulo by zero
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
@@ -542,18 +534,10 @@ Even though the extension fails during uisetup, hg is still basically usable:
   Traceback (most recent call last):
     File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
       uisetup(ui)
-    File "$TESTTMP/baduisetup.py", line 10, in uisetup
-      extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
-    File "*/mercurial/extensions.py", line *, in wrapfunction (glob)
-      origfn = getattr(container, funcname)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
-      self._load()
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
-      mod = _hgextimport(_origimport, head, globals, locals, None, level)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
-      return importfunc(name, globals, *args, **kwargs)
-  ImportError: No module named (mercurial\.)?bdiff (re)
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
+    File "$TESTTMP/baduisetup.py", line 2, in uisetup
+      1/0
+  ZeroDivisionError: integer division or modulo by zero
+  *** failed to set up extension baduisetup: integer division or modulo by zero
   Mercurial Distributed SCM (version *) (glob)
   (see https://mercurial-scm.org for more information)
   
