@@ -9,10 +9,13 @@ from __future__ import absolute_import
 
 import errno
 import os
-import platform
 import subprocess
 
-if platform.system() == 'Windows':
+from mercurial import (
+    pycompat,
+)
+
+if pycompat.iswindows:
     # no fork on Windows, but we can create a detached process
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
     # No stdlib constant exists for this value

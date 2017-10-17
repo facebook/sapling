@@ -7,7 +7,6 @@
 
 import errno
 import os
-import platform
 import socket
 import stat
 import subprocess
@@ -15,7 +14,10 @@ import sys
 import time
 import traceback
 
-from mercurial import error
+from mercurial import (
+    error,
+    pycompat,
+)
 
 class looselock(object):
     """A loose lock.  If the lock is held and the lockfile is recent, then we
@@ -141,7 +143,7 @@ class looselock(object):
 
 # This originated in hgext/logtoprocess.py, was copied to
 # remotefilelog/shallowutil.py, and now here.
-if platform.system() == 'Windows':
+if pycompat.iswindows:
     # no fork on Windows, but we can create a detached process
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
     # No stdlib constant exists for this value
