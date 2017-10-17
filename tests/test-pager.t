@@ -216,16 +216,6 @@ use shell=True in the subprocess call:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 8
   
-#else
-Currently, chg has its own runpager implementation, which does not show the
-"missing pager" message. The error message is globed out since the shell could
-print different message.
-  $ hg log --limit 3 --config pager.pager=this-command-better-never-exist
-  /bin/sh: this-command-better-never-exist: command not found (?)
-  * (glob) (?)
-  killed!
-  [255]
-
 #endif
 
 A complicated pager command gets worse behavior. Bonus points if you can
