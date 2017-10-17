@@ -102,6 +102,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets fed61014d323
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg rebase -d tip
@@ -133,6 +134,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  new changesets 19edf50f4de7
   (run 'hg update' to get a working copy)
 
   $ hg up
@@ -164,6 +166,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 19edf50f4de7
   (run 'hg update' to get a working copy)
 
   $ hg log -r 2 --stat

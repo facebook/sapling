@@ -51,6 +51,7 @@ Reset should recover from backup bundles (with correct phase)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 66ee28d0328c
   $ hg log -G -T '{node|short} {bookmarks} {phase}\n'
   @  66ee28d0328c foo draft
   |
@@ -117,6 +118,7 @@ Reset to bookmark with - in the name
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 66ee28d0328c
   $ hg book foo-bar -r ".^"
   $ hg reset foo-bar
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
@@ -130,6 +132,7 @@ Verify file status after reset
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 66ee28d0328c
   $ touch toberemoved
   $ hg commit -qAm 'add file for removal'
   $ echo z >> x

@@ -70,6 +70,7 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
+  new changesets 6b4b6f66ef8c
   (run 'hg update' to get a working copy)
   prefetching file contents
   $ sleep 0.5
@@ -98,6 +99,7 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
+  new changesets 6b4b6f66ef8c
   (run 'hg update' to get a working copy)
   prefetching file contents
   $ sleep 0.5

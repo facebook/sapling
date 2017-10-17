@@ -61,6 +61,7 @@
   adding file changes
   added 1 changesets with 0 changes to 0 files
   updating bookmark foo
+  new changesets 876b1317060d
   (run 'hg update' to get a working copy)
   prefetching file contents
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)

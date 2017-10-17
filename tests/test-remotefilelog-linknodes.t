@@ -136,6 +136,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 01979f9404f8:7200df4e0aca
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg update tip -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)

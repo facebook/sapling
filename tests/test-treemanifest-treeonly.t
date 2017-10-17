@@ -167,6 +167,7 @@ Test unbundling the original commit
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 779a137458d0
   (run 'hg heads .' to see heads, 'hg merge' to merge)
 # Verify the packs were brought back and the data is accessible
   $ ls_l .hg/store/packs/manifests | wc -l
@@ -197,6 +198,7 @@ Test pulling new commits from a hybrid server
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 2937cde31c19
   (run 'hg heads .' to see heads, 'hg merge' to merge)
 
   $ hg debugindex -m --config treemanifest.treeonly=False
@@ -317,6 +319,7 @@ Test bundling
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
+  new changesets 7ec3c5c54734:2f8e443c6ba8
   (run 'hg update' to get a working copy)
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y

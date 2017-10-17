@@ -37,6 +37,7 @@ Restore
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 89ecc969c0ac
   (run 'hg update' to get a working copy)
   $ hg log --graph -T '{desc}'
   o  firstcommit
@@ -72,6 +73,7 @@ Restore with ambiguous repo root
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets c1bfda8efb6e
   (run 'hg update' to get a working copy)
   $ hg log --graph -T '{desc}'
   o  secondcommit
@@ -93,6 +95,7 @@ Check bookmarks escaping
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 89ecc969c0ac
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      abook                     1:89ecc969c0ac
@@ -122,6 +125,7 @@ Create a repo with `/bookmarks/` in path
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets a2a9ae518b62
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg book
      abook                     1:89ecc969c0ac

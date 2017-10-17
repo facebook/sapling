@@ -33,6 +33,7 @@ Unbundling a shallow bundle
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  new changesets 66ee28d0328c:16db62c5946f
   (run 'hg update' to get a working copy)
 
 Unbundling a full bundle
@@ -46,6 +47,7 @@ Unbundling a full bundle
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 66ee28d0328c:16db62c5946f
   (run 'hg update' to get a working copy)
 
 Pulling from a shallow bundle
@@ -59,6 +61,7 @@ Pulling from a shallow bundle
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  new changesets 66ee28d0328c
   (run 'hg update' to get a working copy)
 
 Pulling from a full bundle

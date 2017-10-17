@@ -58,6 +58,7 @@ is not shallow.)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d34c38483be9
   (run 'hg update' to get a working copy)
 
   $ hg up

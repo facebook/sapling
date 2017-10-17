@@ -135,6 +135,7 @@ the remote
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 3 files
+  new changesets d446b1b2be43:461a5b25b3dc
   (run 'hg update' to get a working copy)
   obsoleted 3 changesets
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'

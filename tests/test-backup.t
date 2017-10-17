@@ -46,3 +46,4 @@ Test backups list and recover
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d2ae7f538514

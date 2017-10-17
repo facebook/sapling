@@ -123,6 +123,7 @@ More commits, prepared for the next test
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  new changesets 5b59ba03d68c:982515c3e88c
   (run 'hg update' to get a working copy)
 
 Update to tip to predownload the remotefilelog ancestor map
@@ -177,6 +178,7 @@ Fastannotate teaches remotefilelog to only prefetch the side branch
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 0 files (+1 heads)
+  new changesets d206b6c9326b:7e197120ae8c
   (run 'hg heads' to see heads)
 
   $ hg blame x -r 'side' --debug

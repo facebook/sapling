@@ -101,6 +101,7 @@ Test changing the delta heuristic
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 3903775176ed:0e067c57feba
   (run 'hg update' to get a working copy)
 
 Test file permissions

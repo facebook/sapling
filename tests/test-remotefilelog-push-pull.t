@@ -42,6 +42,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  new changesets d34c38483be9
   (run 'hg update' to get a working copy)
 
   $ hg up
@@ -70,6 +71,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  new changesets d34c38483be9:d7373980d475
   (run 'hg update' to get a working copy)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
@@ -84,6 +86,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  new changesets d34c38483be9:d7373980d475
   (run 'hg update' to get a working copy)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
@@ -168,6 +171,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 3a2e32c04641:cedeb4167c1f
   (run 'hg update' to get a working copy)
 
   $ cd ..
@@ -215,6 +219,7 @@ the server supports our custom getfiles method.
   adding manifests
   adding file changes
   added 5 changesets with 4 changes to 3 files (+2 heads)
+  new changesets cb9a9f314b8b:d8f06a4c6d38
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg up -q 5

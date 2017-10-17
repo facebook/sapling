@@ -87,6 +87,7 @@ Clone server one more time and pull scratch bookmark. Make sure it is remote
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 620472ff5c0c
   (run 'hg update' to get a working copy)
   $ hg book --remote
      default/scratch/mybranch  1:620472ff5c0c
@@ -146,6 +147,7 @@ Go back to client, make pull and make sure that we pulled remote branches
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+2 heads)
+  new changesets 64d557aa86fd:dc4b2ecb723b
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ cat .hg/remotenames | sort
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
@@ -201,6 +203,7 @@ Create new bookmark and try to pull it
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets 36667a3f76e4:2885148f6198
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   'scratch/branchtoupdateto1' found remotely
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -219,6 +222,7 @@ Create new bookmark and try to pull it
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files (+1 heads)
+  new changesets 1f558bd20eaa
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   'scratch/branchtoupdateto2' found remotely
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

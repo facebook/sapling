@@ -205,6 +205,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  new changesets 515a4dfd2e0c
   (run 'hg update' to get a working copy)
 
   $ hg update tip

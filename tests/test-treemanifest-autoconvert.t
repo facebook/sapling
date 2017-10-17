@@ -54,6 +54,7 @@ Test auto creating trees for merge commit
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
+  new changesets d32fd17cb041:92f4ca0e667c
   (run 'hg update' to get a working copy)
   $ hg manifest -r tip
   x

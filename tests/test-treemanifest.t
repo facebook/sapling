@@ -50,6 +50,7 @@ Test autocreatetrees
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  new changesets e4d61696a942
   (run 'hg update' to get a working copy)
   $ ls_l $CACHEDIR/master/packs/manifests
   -r--r--r--    1146 678f597a73b2b96f2e120c84ef8a84069a250266.dataidx
