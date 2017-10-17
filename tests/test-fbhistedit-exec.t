@@ -2,8 +2,9 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > histedit=
   > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > histedit=
+  > rebase=
   > EOF
 
   $ initrepo ()

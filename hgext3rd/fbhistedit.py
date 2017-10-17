@@ -167,21 +167,17 @@ def extsetup(ui):
     defineactions()
     _extend_histedit(ui)
 
-    if ui.config('experimental', 'histeditng'):
-        rebase = extensions.find('rebase')
-        extensions.wrapcommand(rebase.cmdtable, 'rebase', _rebase,
-                               synopsis=' [-i]')
-
-        aliases, entry = cmdutil.findcmd('rebase', rebase.cmdtable)
-        newentry = list(entry)
-        options = newentry[1]
-        # dirty hack because we need to change an existing switch
-        for idx, opt in enumerate(options):
-            if opt[0] == 'i':
-                del options[idx]
-        options.append(('i', 'interactive', False, 'interactive rebase'))
-        rebase.cmdtable['rebase'] = tuple(newentry)
-
+    rebase = extensions.find('rebase')
+    extensions.wrapcommand(rebase.cmdtable, 'rebase', _rebase, synopsis='[-i]')
+    aliases, entry = cmdutil.findcmd('rebase', rebase.cmdtable)
+    newentry = list(entry)
+    options = newentry[1]
+    # dirty hack because we need to change an existing switch
+    for idx, opt in enumerate(options):
+        if opt[0] == 'i':
+            del options[idx]
+    options.append(('i', 'interactive', False, 'interactive rebase'))
+    rebase.cmdtable['rebase'] = tuple(newentry)
 
 def _extend_histedit(ui):
     histedit = extensions.find('histedit')

@@ -1,12 +1,10 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH <<EOF
-  > [experimental]
-  > histeditng=True
   > [extensions]
-  > rebase=
-  > histedit=
   > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > histedit=
+  > rebase=
   > EOF
 
   $ initrepo ()
