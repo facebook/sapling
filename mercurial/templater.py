@@ -427,9 +427,10 @@ def runfilter(context, mapping, data):
         sym = findsymbolicname(arg)
         if sym:
             msg = (_("template filter '%s' is not compatible with keyword '%s'")
-                   % (filt.__name__.encode('ascii'), sym))
+                   % (pycompat.sysbytes(filt.__name__), sym))
         else:
-            msg = _("incompatible use of template filter '%s'") % filt.__name__
+            msg = (_("incompatible use of template filter '%s'")
+                   % pycompat.sysbytes(filt.__name__))
         raise error.Abort(msg)
 
 def buildmap(exp, context):
