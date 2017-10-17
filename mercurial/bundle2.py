@@ -1982,40 +1982,55 @@ def handlepushkey(op, inpart):
 def handlebookmark(op, inpart):
     """transmit bookmark information
 
-    The part contains binary encoded bookmark information. The bookmark
-    information is applied as is to the unbundling repository. Make sure a
-    'check:bookmarks' part is issued earlier to check for race condition in
-    such update.
+    The part contains binary encoded bookmark information.
 
-    This behavior is suitable for pushing. Semantic adjustment will be needed
-    for pull.
+    The exact behavior of this part can be controlled by the 'bookmarks' mode
+    on the bundle operation.
+
+    When mode is 'apply' (the default) the bookmark information is applied as
+    is to the unbundling repository. Make sure a 'check:bookmarks' part is
+    issued earlier to check for push races in such update. This behavior is
+    suitable for pushing.
+
+    When mode is 'records', the information is recorded into the 'bookmarks'
+    records of the bundle operation. This behavior is suitable for pulling.
     """
     changes = bookmarks.binarydecode(inpart)
 
-    tr = op.gettransaction()
-    bookstore = op.repo._bookmarks
-
     pushkeycompat = op.repo.ui.configbool('server', 'bookmarks-pushkey-compat')
-    if pushkeycompat:
-        allhooks = []
-        for book, node in changes:
-            hookargs = tr.hookargs.copy()
-            hookargs['pushkeycompat'] = '1'
-            hookargs['namespace'] = 'bookmark'
-            hookargs['key'] = book
-            hookargs['old'] = nodemod.hex(bookstore.get(book, ''))
-            hookargs['new'] = nodemod.hex(node if node is not None else '')
-            allhooks.append(hookargs)
-        for hookargs in allhooks:
-            op.repo.hook('prepushkey', throw=True, **hookargs)
+    bookmarksmode = op.modes.get('bookmarks', 'apply')
 
-    bookstore.applychanges(op.repo, tr, changes)
+    if bookmarksmode == 'apply':
+        tr = op.gettransaction()
+        bookstore = op.repo._bookmarks
+        if pushkeycompat:
+            allhooks = []
+            for book, node in changes:
+                hookargs = tr.hookargs.copy()
+                hookargs['pushkeycompat'] = '1'
+                hookargs['namespace'] = 'bookmark'
+                hookargs['key'] = book
+                hookargs['old'] = nodemod.hex(bookstore.get(book, ''))
+                hookargs['new'] = nodemod.hex(node if node is not None else '')
+                allhooks.append(hookargs)
 
-    if pushkeycompat:
-        def runhook():
             for hookargs in allhooks:
-                op.repo.hook('prepushkey', **hookargs)
-        op.repo._afterlock(runhook)
+                op.repo.hook('prepushkey', throw=True, **hookargs)
+
+        bookstore.applychanges(op.repo, op.gettransaction(), changes)
+
+        if pushkeycompat:
+            def runhook():
+                for hookargs in allhooks:
+                    op.repo.hook('prepushkey', **hookargs)
+            op.repo._afterlock(runhook)
+
+    elif bookmarksmode == 'records':
+        for book, node in changes:
+            record = {'bookmark': book, 'node': node}
+            op.records.add('bookmarks', record)
+    else:
+        raise error.ProgrammingError('unkown bookmark mode: %s' % bookmarksmode)
 
 @parthandler('phase-heads')
 def handlephases(op, inpart):
