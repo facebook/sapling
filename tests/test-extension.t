@@ -514,6 +514,8 @@ See also issue5208 for detail about example case on Python 3.x.
 
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.checkrelativity=$TESTTMP/checkrelativity.py checkrelativity)
 
+#endif
+
 Make sure a broken uisetup doesn't globally break hg:
   $ cat > $TESTTMP/baduisetup.py <<EOF
   > def uisetup(ui):
@@ -544,8 +546,6 @@ Even though the extension fails during uisetup, hg is still basically usable:
   Copyright (C) 2005-2017 Matt Mackall and others
   This is free software; see the source for copying conditions. There is NO
   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-#endif
 
   $ cd ..
 
