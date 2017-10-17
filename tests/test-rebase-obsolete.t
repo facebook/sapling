@@ -826,7 +826,7 @@ If a rebase is going to create divergence, it should abort
   orphan: 1 changesets
   $ hg rebase -s 10 -d 12
   abort: this rebase will cause divergences from: 121d9e3bc4c6
-  (to force the rebase please set experimental.allowdivergence=True)
+  (to force the rebase please set experimental.evolution.allowdivergence=True)
   [255]
   $ hg log -G
   @  14:73568ab6879d bar foo
@@ -845,9 +845,9 @@ If a rebase is going to create divergence, it should abort
   |
   o  0:4a2df7238c3b A
   
-With experimental.allowdivergence=True, rebase can create divergence
+With experimental.evolution.allowdivergence=True, rebase can create divergence
 
-  $ hg rebase -s 10 -d 12 --config experimental.allowdivergence=True
+  $ hg rebase -s 10 -d 12 --config experimental.evolution.allowdivergence=True
   rebasing 10:121d9e3bc4c6 "P"
   rebasing 14:73568ab6879d "bar foo" (tip)
   $ hg summary

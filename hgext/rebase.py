@@ -1061,7 +1061,7 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
     """
     # Obsolete node with successors not in dest leads to divergence
     divergenceok = ui.configbool('experimental',
-                                 'allowdivergence')
+                                 'evolution.allowdivergence')
     divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
 
     if divergencebasecandidates and not divergenceok:
@@ -1070,7 +1070,7 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped):
         msg = _("this rebase will cause "
                 "divergences from: %s")
         h = _("to force the rebase please set "
-              "experimental.allowdivergence=True")
+              "experimental.evolution.allowdivergence=True")
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
 
 def successorrevs(unfi, rev):

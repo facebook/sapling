@@ -1707,7 +1707,7 @@ have a definite end point.
 ``rebase``
 ----------
 
-``allowdivergence``
+``evolution.allowdivergence``
     Default to False, when True allow creating divergence when performing
     rebase of obsolete changesets.
 

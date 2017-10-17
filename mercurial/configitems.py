@@ -300,9 +300,6 @@ coreconfigitem('email', 'method',
 coreconfigitem('email', 'reply-to',
     default=None,
 )
-coreconfigitem('experimental', 'allowdivergence',
-    default=False,
-)
 coreconfigitem('experimental', 'archivemetatemplate',
     default=dynamicdefault,
 )
@@ -347,6 +344,10 @@ coreconfigitem('experimental', 'editortmpinhg',
 )
 coreconfigitem('experimental', 'evolution',
     default=list,
+)
+coreconfigitem('experimental', 'evolution.allowdivergence',
+    default=False,
+    alias=[('experimental', 'allowdivergence')]
 )
 coreconfigitem('experimental', 'evolution.allowunstable',
     default=None,
