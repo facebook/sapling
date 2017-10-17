@@ -897,8 +897,44 @@ def _pushb2bookmarks(pushop, bundler):
     if 'bookmarks' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
-    if 'pushkey' in b2caps:
+
+    legacy = pushop.repo.ui.configlist('devel', 'legacy.exchange')
+    legacybooks = 'bookmarks' in legacy
+
+    if not legacybooks and 'bookmarks' in b2caps:
+        return _pushb2bookmarkspart(pushop, bundler)
+    elif 'pushkey' in b2caps:
         return _pushb2bookmarkspushkey(pushop, bundler)
+
+def _bmaction(old, new):
+    """small utility for bookmark pushing"""
+    if not old:
+        return 'export'
+    elif not new:
+        return 'delete'
+    return 'update'
+
+def _pushb2bookmarkspart(pushop, bundler):
+    pushop.stepsdone.add('bookmarks')
+    if not pushop.outbookmarks:
+        return
+
+    allactions = []
+    data = []
+    for book, old, new in pushop.outbookmarks:
+        new = bin(new)
+        data.append((book, new))
+        allactions.append((book, _bmaction(old, new)))
+    checkdata = bookmod.binaryencode(data)
+    bundler.newpart('bookmarks', data=checkdata)
+
+    def handlereply(op):
+        ui = pushop.ui
+        # if success
+        for book, action in allactions:
+            ui.status(bookmsgmap[action][0] % book)
+
+    return handlereply
 
 def _pushb2bookmarkspushkey(pushop, bundler):
     pushop.stepsdone.add('bookmarks')

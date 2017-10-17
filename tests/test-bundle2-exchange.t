@@ -253,9 +253,6 @@ push
   remote: added 1 changesets with 0 changes to 0 files (-1 heads)
   remote: 1 new obsolescence markers
   remote: pre-close-tip:eea13746799a public book_eea1
-  remote: pushkey: lock state after "bookmarks"
-  remote: lock:  free
-  remote: wlock: free
   remote: postclose-tip:eea13746799a public book_eea1
   remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_NODE_LAST=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:$ID$ HG_TXNNAME=push HG_URL=file:$TESTTMP/other
   updating bookmark book_eea1
@@ -339,9 +336,6 @@ push over ssh
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   remote: pre-close-tip:5fddd98957c8 draft book_5fdd
-  remote: pushkey: lock state after "bookmarks"
-  remote: lock:  free
-  remote: wlock: free
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
   remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_NODE_LAST=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=remote:ssh:$LOCALIP
   updating bookmark book_5fdd
@@ -390,9 +384,6 @@ push over http
   remote: added 1 changesets with 1 changes to 1 files
   remote: 1 new obsolescence markers
   remote: pre-close-tip:32af7686d403 public book_32af
-  remote: pushkey: lock state after "bookmarks"
-  remote: lock:  free
-  remote: wlock: free
   remote: postclose-tip:32af7686d403 public book_32af
   remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=32af7686d403cf45b5d95f2d70cebea587ac806a HG_NODE_LAST=32af7686d403cf45b5d95f2d70cebea587ac806a HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=remote:http:$LOCALIP: (glob)
   updating bookmark book_32af
