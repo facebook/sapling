@@ -76,6 +76,8 @@ use mercurial_types::manifest::{Entry, Manifest};
 
 use stats::Timeseries;
 
+const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
+
 define_stats! {
     prefix = "blobimport";
     changesets: timeseries(RATE, SUM),
@@ -86,7 +88,7 @@ define_stats! {
 enum BlobstoreType {
     Files,
     Rocksdb,
-    Manifold,
+    Manifold(String),
 }
 
 type BBlobstore = Arc<
@@ -375,23 +377,25 @@ where
     Ok(())
 }
 
-fn run_blobimport<In: Debug, Out: Debug>(
+fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
     logger: &Logger,
     postpone_compaction: bool,
-) -> Result<()>
-where
-    In: AsRef<Path>,
-    Out: AsRef<Path>,
-{
+) -> Result<()> {
     let core = tokio_core::reactor::Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
     let repo = open_repo(&input)?;
-    info!(logger, "Opening blobstore: {:?}", output);
+
+    if let BlobstoreType::Manifold(ref bucket) = blobtype {
+        info!(logger, "Using ManifoldBlob with bucket: {:?}", bucket);
+    } else {
+        info!(logger, "Opening blobstore: {:?}", output);
+    }
     let blobstore = open_blobstore(&output, blobtype, &core.remote(), postpone_compaction)?;
+
     info!(logger, "Opening headstore: {:?}", output);
     let headstore = open_headstore(&output, &cpupool)?;
 
@@ -443,8 +447,8 @@ fn open_blobstore<P: AsRef<Path>>(
                 .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
                 .arced()
         }
-        BlobstoreType::Manifold => {
-            let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic("mononoke", remote);
+        BlobstoreType::Manifold(bucket) => {
+            let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic(bucket, remote);
             mb.arced()
         }
     };
@@ -481,6 +485,12 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .possible_values(&["files", "rocksdb", "manifold"])
                 .required(true)
                 .help("blobstore type"),
+        )
+        .arg(
+            Arg::with_name("bucket")
+                .long("bucket")
+                .takes_value(true)
+                .help("bucket to use for manifold blobstore"),
         )
 }
 
@@ -539,11 +549,14 @@ fn main() {
 
         let input = matches.value_of("INPUT").unwrap();
         let output = matches.value_of("OUTPUT").unwrap();
+        let bucket = matches
+            .value_of("bucket")
+            .unwrap_or(DEFAULT_MANIFOLD_BUCKET);
 
         let blobtype = match matches.value_of("blobstore").unwrap() {
             "files" => BlobstoreType::Files,
             "rocksdb" => BlobstoreType::Rocksdb,
-            "manifold" => BlobstoreType::Manifold,
+            "manifold" => BlobstoreType::Manifold(bucket.to_string()),
             bad => panic!("unexpected blobstore type {}", bad),
         };
 
