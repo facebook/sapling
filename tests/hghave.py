@@ -601,7 +601,8 @@ def has_debdeps():
 
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
-    return os.environ.get('HGDEMANDIMPORT') != 'disable'
+    # chg disables demandimport intentionally for performance wins.
+    return ((not has_chg()) and os.environ.get('HGDEMANDIMPORT') != 'disable')
 
 @check("py3k", "running with Python 3.x")
 def has_py3k():
