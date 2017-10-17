@@ -69,7 +69,8 @@ Current directory removed:
   $ cd $TESTTMP/repo1
   $ rm -rf $TESTTMP/repo1
   $ HGDEMANDIMPORT=disable hg version -q
-  abort: error getting current working directory: * (glob)
+  abort: error getting current working directory: * (glob) (no-chg !)
+  chg: abort: failed to getcwd (errno = *) (glob) (chg !)
   [255]
 
 #endif
