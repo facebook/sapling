@@ -77,7 +77,7 @@ Test keyword extension
   Change 4 submitted.
   //depot/test.c#2 - refreshing
   $ p4 files test.c
-  //depot/test.c#2 - edit change 4 (ktext)
+  //depot/test.c#2 - edit change 4 (*) (glob)
   $ p4 print -q //depot/test.c#2
   $Id: //depot/test.c#2 $
   $Header: //depot/test.c#2 $
