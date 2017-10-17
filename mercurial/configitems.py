@@ -347,7 +347,6 @@ coreconfigitem('experimental', 'editortmpinhg',
 )
 coreconfigitem('experimental', 'evolution',
     default=list,
-    alias=[('experimental', 'stabilization')],
 )
 coreconfigitem('experimental', 'evolution.allowunstable',
     default=None,
@@ -360,11 +359,9 @@ coreconfigitem('experimental', 'evolution.exchange',
 )
 coreconfigitem('experimental', 'evolution.bundle-obsmarker',
     default=False,
-    alias=[('experimental', 'stabilization.bundle-obsmarker')],
 )
 coreconfigitem('experimental', 'evolution.track-operation',
     default=True,
-    alias=[('experimental', 'stabilization.track-operation')]
 )
 coreconfigitem('experimental', 'maxdeltachainspan',
     default=-1,
