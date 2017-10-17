@@ -8,6 +8,9 @@
 #
 # node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
+    export HGRCPATH=
+    export HGPLAIN=
+
     make cleanbutpackages
     make local PURE=--pure
     HG="$PWD/hg"
