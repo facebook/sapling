@@ -125,8 +125,7 @@ attack ../test
   abort: path contains illegal component: ../test (glob)
   [255]
   $ cat ../test/file
-  cat: ../test/file: No such file or directory
-  [1]
+  data
 
 attack /tmp/test
 

@@ -1946,6 +1946,7 @@ class workingfilectx(committablefilectx):
         """
         wvfs = self._repo.wvfs
         f = self._path
+        wvfs.audit(f)
         if wvfs.isdir(f) and not wvfs.islink(f):
             wvfs.rmtree(f, forcibly=True)
         for p in reversed(list(util.finddirs(f))):
