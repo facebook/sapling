@@ -21,6 +21,7 @@ import os
 
 from mercurial.i18n import _
 from mercurial.node import (
+    hex,
     nullid,
     nullrev,
     short,
@@ -501,6 +502,8 @@ class rebaseruntime(object):
 
     def _finishrebase(self):
         repo, ui, opts = self.repo, self.ui, self.opts
+        fm = ui.formatter('rebase', opts)
+        fm.startitem()
         if self.collapsef and not self.keepopen:
             p1, p2, _base = defineparents(repo, min(self.state), self.destmap,
                                           self.state, self.skipped,
@@ -551,7 +554,7 @@ class rebaseruntime(object):
             if self.collapsef:
                 collapsedas = newnode
         clearrebased(ui, repo, self.destmap, self.state, self.skipped,
-                     collapsedas, self.keepf)
+                     collapsedas, self.keepf, fm=fm)
 
         clearstatus(repo)
         clearcollapsemsg(repo)
@@ -561,6 +564,7 @@ class rebaseruntime(object):
         if self.skipped:
             skippedlen = len(self.skipped)
             ui.note(_("%d revisions have been skipped\n") % skippedlen)
+        fm.end()
 
         if (self.activebookmark and self.activebookmark in repo._bookmarks and
             repo['.'].node() == repo._bookmarks[self.activebookmark]):
@@ -1517,7 +1521,7 @@ def buildstate(repo, destmap, collapse):
     return originalwd, destmap, state
 
 def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
-                 keepf=False):
+                 keepf=False, fm=None):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
@@ -1541,6 +1545,10 @@ def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
                     succs = (newnode,)
                 replacements[oldnode] = succs
     scmutil.cleanupnodes(repo, replacements, 'rebase', moves)
+    if fm:
+        nodechanges = {hex(oldn): [hex(n) for n in newn]
+                       for oldn, newn in replacements.iteritems()}
+        fm.data(nodechanges=nodechanges)
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
