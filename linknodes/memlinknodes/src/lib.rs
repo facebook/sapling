@@ -7,16 +7,11 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
 extern crate futures;
 
 extern crate futures_ext;
 extern crate linknodes;
 extern crate mercurial_types;
-#[cfg(test)]
-extern crate mercurial_types_mocks;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -94,48 +89,4 @@ where
     };
 
     map.get(&k)
-}
-
-#[cfg(test)]
-mod test {
-    use futures::Future;
-
-    use super::*;
-    use mercurial_types_mocks::nodehash::*;
-
-    #[test]
-    fn test_add_and_get() {
-        let linknodes = MemLinknodes::new();
-        let path = MPath::new("abc").unwrap();
-        linknodes.add(&path, &NULL_HASH, &ONES_HASH).wait().unwrap();
-        linknodes.add(&path, &AS_HASH, &TWOS_HASH).wait().unwrap();
-
-        // This will error out because this combination already exists.
-        assert_matches!(
-            linknodes
-                .add(&path, &NULL_HASH, &THREES_HASH)
-                .wait()
-                .unwrap_err()
-                .kind(),
-            &LinknodeErrorKind::AlreadyExists(ref p, ref h, ref old, ref new)
-            if p == &path && *h == NULL_HASH && *old == Some(ONES_HASH) && *new == THREES_HASH
-        );
-
-        assert_eq!(linknodes.get(&path, &NULL_HASH).wait().unwrap(), ONES_HASH);
-        assert_eq!(linknodes.get(&path, &AS_HASH).wait().unwrap(), TWOS_HASH);
-    }
-
-    #[test]
-    fn test_not_found() {
-        let linknodes = MemLinknodes::new();
-        let path = MPath::new("abc").unwrap();
-        assert_matches!(
-            linknodes
-                .get(&path, &NULL_HASH)
-                .wait()
-                .unwrap_err()
-                .kind(),
-            &LinknodeErrorKind::NotFound(ref p, ref h) if p == &path && *h == NULL_HASH
-        );
-    }
 }
