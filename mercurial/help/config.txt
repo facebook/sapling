@@ -1723,6 +1723,14 @@ Alias definitions for revsets. See :hg:`help revsets` for details.
 
 Controls generic server settings.
 
+``bookmarks-pushkey-compat``
+    Trigger pushkey hook when being pushed bookmark updates. This config exist
+    for compatibility purpose (default to True)
+
+    If you use ``pushkey`` and ``pre-pushkey`` hooks to control bookmark
+    movement we recommend you migrate them to ``txnclose-bookmark`` and
+    ``pretxnclose-bookmark``.
+
 ``compressionengines``
     List of compression engines and their relative priority to advertise
     to clients.

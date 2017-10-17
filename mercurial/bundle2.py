@@ -1989,7 +1989,31 @@ def handlebookmark(op, inpart):
     for pull.
     """
     changes = bookmarks.binarydecode(inpart)
-    op.repo._bookmarks.applychanges(op.repo, op.gettransaction(), changes)
+
+    tr = op.gettransaction()
+    bookstore = op.repo._bookmarks
+
+    pushkeycompat = op.repo.ui.configbool('server', 'bookmarks-pushkey-compat')
+    if pushkeycompat:
+        allhooks = []
+        for book, node in changes:
+            hookargs = tr.hookargs.copy()
+            hookargs['pushkeycompat'] = '1'
+            hookargs['namespace'] = 'bookmark'
+            hookargs['key'] = book
+            hookargs['old'] = nodemod.hex(bookstore.get(book, ''))
+            hookargs['new'] = nodemod.hex(node if node is not None else '')
+            allhooks.append(hookargs)
+        for hookargs in allhooks:
+            op.repo.hook('prepushkey', throw=True, **hookargs)
+
+    bookstore.applychanges(op.repo, tr, changes)
+
+    if pushkeycompat:
+        def runhook():
+            for hookargs in allhooks:
+                op.repo.hook('prepushkey', **hookargs)
+        op.repo._afterlock(runhook)
 
 @parthandler('phase-heads')
 def handlephases(op, inpart):

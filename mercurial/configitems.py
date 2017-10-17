@@ -841,6 +841,9 @@ coreconfigitem('progress', 'width',
 coreconfigitem('push', 'pushvars.server',
     default=False,
 )
+coreconfigitem('server', 'bookmarks-pushkey-compat',
+    default=True,
+)
 coreconfigitem('server', 'bundle1',
     default=True,
 )
