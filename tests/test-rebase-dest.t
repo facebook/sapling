@@ -116,7 +116,7 @@ Setup rebase with multiple destinations
   > maprevset=$TESTTMP/maprevset.py
   > [experimental]
   > rebase.multidest=true
-  > stabilization=all
+  > evolution=true
   > EOF
 
   $ rebasewithdag() {

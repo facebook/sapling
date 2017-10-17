@@ -968,7 +968,7 @@ Testing rebase being called inside another transaction
   > [extensions]
   > wraprebase=$TESTTMP/wraprebase.py
   > [experimental]
-  > stabilization=all
+  > evolution=true
   > EOF
 
   $ hg debugdrawdag <<'EOS'

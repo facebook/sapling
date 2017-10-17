@@ -397,7 +397,7 @@ Test rebase with obsstore turned on and off (issue5606)
   $ hg update E -q
   $ echo 3 > B
   $ hg commit --amend -m E -A B -q
-  $ hg rebase -r B+D -d . --config experimental.stabilization=all
+  $ hg rebase -r B+D -d . --config experimental.evolution=true
   rebasing 1:112478962961 "B" (B)
   merging B
   warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
@@ -408,7 +408,7 @@ Test rebase with obsstore turned on and off (issue5606)
   $ hg resolve -m
   (no more unresolved files)
   continue: hg rebase --continue
-  $ hg rebase --continue --config experimental.stabilization=none
+  $ hg rebase --continue --config experimental.evolution=none
   rebasing 1:112478962961 "B" (B)
   rebasing 3:f585351a92f8 "D" (D)
   warning: orphaned descendants detected, not stripping 112478962961

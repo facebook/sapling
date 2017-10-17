@@ -1280,7 +1280,7 @@ we have reusable code here
   $ cd $TESTTMP/scmutilcleanup.obsstore
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > stabilization=all
+  > evolution=true
   > stabilization.track-operation=1
   > EOF
 
@@ -1322,7 +1322,7 @@ Test that obsmarkers are restored even when not using generaldelta
   $ cd issue5678
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > evolution=all
+  > evolution=true
   > EOF
   $ echo a > a
   $ hg ci -Aqm a

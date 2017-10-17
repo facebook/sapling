@@ -10,7 +10,7 @@ Global setup
   > [phases]
   > publish=False
   > [experimental]
-  > stabilization=all
+  > evolution=true
   > [templates]
   > obsfatesuccessors = "{if(successors, " as ")}{join(successors, ", ")}"
   > obsfateverb = "{obsfateverb(successors)}"

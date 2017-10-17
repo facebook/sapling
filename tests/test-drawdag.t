@@ -2,7 +2,7 @@
   > [extensions]
   > drawdag=$TESTDIR/drawdag.py
   > [experimental]
-  > stabilization=all
+  > evolution=true
   > EOF
 
   $ reinit () {

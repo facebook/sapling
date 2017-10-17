@@ -735,7 +735,7 @@ Even when the chain include missing node
   |
   o  0:4a2df7238c3b A
   
-  $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.stabilization=all
+  $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
   $ hg rebase -d 6 -r "4::"
   rebasing 4:ff2c4d47b71d "C"
@@ -763,7 +763,7 @@ should display a friendly error message
   $ hg add nonrelevant
   $ hg commit -m nonrelevant
   created new head
-  $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.stabilization=all
+  $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
   $ hg rebase -r . -d 10
   note: not rebasing 11:f44da1f4954c "nonrelevant" (tip), it has no successor
@@ -886,7 +886,7 @@ Create the changes that we will rebase
   $ printf "dummy" > L
   $ hg add L
   $ hg commit -m "dummy change"
-  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 18 -T '{node}'` --config experimental.stabilization=all
+  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 18 -T '{node}'` --config experimental.evolution=true
   obsoleted 1 changesets
 
   $ hg log -G -r 16::
@@ -1205,7 +1205,7 @@ Test that bookmark is moved and working dir is updated when all changesets have
 equivalents in destination
   $ hg init rbsrepo && cd rbsrepo
   $ echo "[experimental]" > .hg/hgrc
-  $ echo "stabilization=all" >> .hg/hgrc
+  $ echo "evolution=true" >> .hg/hgrc
   $ echo "rebaseskipobsolete=on" >> .hg/hgrc
   $ echo root > root && hg ci -Am root
   adding root
