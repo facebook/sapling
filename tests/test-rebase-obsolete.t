@@ -1225,7 +1225,7 @@ equivalents in destination
   $ hg up 2 && hg log -r .  # working dir is at rev 2 again
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   2:1e9a3c00cbe9 b (no-eol)
-  $ hg rebase -r 2 -d 3 --config experimental.stabilization.track-operation=1
+  $ hg rebase -r 2 -d 3 --config experimental.evolution.track-operation=1
   note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b" (tip)
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped

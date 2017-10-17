@@ -1281,7 +1281,7 @@ we have reusable code here
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
   > evolution=true
-  > stabilization.track-operation=1
+  > evolution.track-operation=1
   > EOF
 
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py

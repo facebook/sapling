@@ -1442,7 +1442,7 @@ only a subset of those are displayed (because of --rev option)
   $ echo d > d
   $ hg ci -Am d
   adding d
-  $ hg ci --amend -m dd --config experimental.stabilization.track-operation=1
+  $ hg ci --amend -m dd --config experimental.evolution.track-operation=1
   $ hg debugobsolete --index --rev "3+7"
   1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 \(.*\) {'operation': 'amend', 'user': 'test'} (re)
