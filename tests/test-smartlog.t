@@ -518,7 +518,7 @@ Make sure public commits that are descendants of master are not drawn
   |
 
 Make sure the template keywords are documented correctly
-  $ hg help templates | grep -A1 successor | grep -v predecessors
+  $ hg help templates | egrep -A2 '(amend|fold|histedit|rebase|singlepublic|split|undo)'successor
       amendsuccessors
                     Return all of the node's successors created as a result of
                     amend
@@ -542,10 +542,6 @@ Make sure the template keywords are documented correctly
       splitsuccessors
                     Return all of the node's successors created as a result of
                     split
-  --
-      successorssets
-                    Returns a string of sets of successors for a changectx
-  
   --
       undosuccessors
                     Return all of the node's successors created as a result of
