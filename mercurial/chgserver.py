@@ -73,6 +73,10 @@ _configsections = [
     'extensions',
 ]
 
+_configsectionitems = [
+    ('commands', 'show.aliasprefix'), # show.py reads it in extsetup
+]
+
 # sensitive environment variables affecting confighash
 _envre = re.compile(r'''\A(?:
                     CHGHG
@@ -101,6 +105,8 @@ def _confighash(ui):
     sectionitems = []
     for section in _configsections:
         sectionitems.append(ui.configitems(section))
+    for section, item in _configsectionitems:
+        sectionitems.append(ui.config(section, item))
     sectionhash = _hashlist(sectionitems)
     envitems = [(k, v) for k, v in encoding.environ.iteritems()
                 if _envre.match(k)]
