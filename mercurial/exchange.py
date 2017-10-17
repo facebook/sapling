@@ -1469,12 +1469,26 @@ def _pullbundle2(pullop):
         kwargs['phases'] = True
         pullop.stepsdone.add('phases')
 
+    bookmarksrequested = False
+    legacybookmark = 'bookmarks' in ui.configlist('devel', 'legacy.exchange')
+    hasbinarybook = 'bookmarks' in pullop.remotebundle2caps
+
+    if pullop.remotebookmarks is not None:
+        pullop.stepsdone.add('request-bookmarks')
+
+    if ('request-bookmarks' not in pullop.stepsdone
+        and pullop.remotebookmarks is None
+        and not legacybookmark and hasbinarybook):
+        kwargs['bookmarks'] = True
+        bookmarksrequested = True
+
     if 'listkeys' in pullop.remotebundle2caps:
         if 'phases' not in pullop.stepsdone:
             kwargs['listkeys'] = ['phases']
-        if pullop.remotebookmarks is None:
+        if 'request-bookmarks' not in pullop.stepsdone:
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
+            pullop.stepsdone.add('request-bookmarks')
             kwargs.setdefault('listkeys', []).append('bookmarks')
 
     # If this is a full pull / clone and the server supports the clone bundles
@@ -1502,7 +1516,9 @@ def _pullbundle2(pullop):
     _pullbundle2extraprepare(pullop, kwargs)
     bundle = pullop.remote.getbundle('pull', **pycompat.strkwargs(kwargs))
     try:
-        op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
+        op = bundle2.bundleoperation(pullop.repo, pullop.gettransaction)
+        op.modes['bookmarks'] = 'records'
+        bundle2.processbundle(pullop.repo, bundle, op=op)
     except bundle2.AbortFromPart as exc:
         pullop.repo.ui.status(_('remote: abort: %s\n') % exc)
         raise error.Abort(_('pull failed on remote'), hint=exc.hint)
@@ -1518,9 +1534,15 @@ def _pullbundle2(pullop):
             _pullapplyphases(pullop, value)
 
     # processing bookmark update
-    for namespace, value in op.records['listkeys']:
-        if namespace == 'bookmarks':
-            pullop.remotebookmarks = bookmod.unhexlifybookmarks(value)
+    if bookmarksrequested:
+        books = {}
+        for record in op.records['bookmarks']:
+            books[record['bookmark']] = record["node"]
+        pullop.remotebookmarks = books
+    else:
+        for namespace, value in op.records['listkeys']:
+            if namespace == 'bookmarks':
+                pullop.remotebookmarks = bookmod.unhexlifybookmarks(value)
 
     # bookmark data were either already there or pulled in the bundle
     if pullop.remotebookmarks is not None:
