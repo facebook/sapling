@@ -49,8 +49,12 @@ impl Linknodes for MemLinknodes {
         let mut linknodes = self.linknodes.lock().unwrap();
         match linknodes.entry((path.clone(), *node)) {
             Entry::Occupied(occupied) => err(
-                LinknodeErrorKind::AlreadyExists(path.clone(), *node, *occupied.get(), *linknode)
-                    .into(),
+                LinknodeErrorKind::AlreadyExists(
+                    path.clone(),
+                    *node,
+                    Some(*occupied.get()),
+                    *linknode,
+                ).into(),
             ),
             Entry::Vacant(vacant) => {
                 vacant.insert(*linknode);
@@ -114,7 +118,7 @@ mod test {
                 .unwrap_err()
                 .kind(),
             &LinknodeErrorKind::AlreadyExists(ref p, ref h, ref old, ref new)
-            if p == &path && *h == NULL_HASH && *old == ONES_HASH && *new == THREES_HASH
+            if p == &path && *h == NULL_HASH && *old == Some(ONES_HASH) && *new == THREES_HASH
         );
 
         assert_eq!(linknodes.get(&path, &NULL_HASH).wait().unwrap(), ONES_HASH);

@@ -17,7 +17,20 @@ use futures::Future;
 use mercurial_types::{MPath, NodeHash};
 
 mod errors {
+    use std::fmt;
+
     use mercurial_types::{MPath, NodeHash};
+
+    struct OptionNodeHash<'a>(&'a Option<NodeHash>);
+
+    impl<'a> fmt::Display for OptionNodeHash<'a> {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match *self.0 {
+                Some(nodehash) => nodehash.fmt(fmt),
+                None => write!(fmt, "(unknown)"),
+            }
+        }
+    }
 
     error_chain! {
         errors {
@@ -28,7 +41,7 @@ mod errors {
             AlreadyExists(
                 path: MPath,
                 node: NodeHash,
-                old_linknode: NodeHash,
+                old_linknode: Option<NodeHash>,
                 new_linknode: NodeHash
             ) {
                 description("linknode already exists")
@@ -36,7 +49,7 @@ mod errors {
                     "linknode already exists for path {}, node {} (linknodes: existing {}, new {})",
                     path,
                     node,
-                    old_linknode,
+                    OptionNodeHash(old_linknode),
                     new_linknode
                 )
             }
