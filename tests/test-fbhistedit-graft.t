@@ -2,8 +2,9 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > histedit=
   > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > histedit=
+  > rebase=
   > [alias]
   > tglog = log -G --template "{rev}:{node}:{phase} '{desc}'\n"
   > EOF
