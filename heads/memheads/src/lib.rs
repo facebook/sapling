@@ -64,39 +64,3 @@ impl<T: Hash + Eq + Clone + Send + 'static> Heads for MemHeads<T> {
         iter_ok::<_, !>(heads).boxify()
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use futures::Future;
-    use futures::Stream;
-
-    #[test]
-    fn test_heads() {
-        let heads = MemHeads::new();
-        let empty: Vec<&str> = Vec::new();
-        assert_eq!(heads.heads().collect().wait().unwrap(), empty);
-
-        assert!(!heads.is_head(&"foo").wait().unwrap());
-        assert!(!heads.is_head(&"bar").wait().unwrap());
-        assert!(!heads.is_head(&"baz").wait().unwrap());
-
-        heads.add(&"foo").wait().unwrap();
-        heads.add(&"bar").wait().unwrap();
-
-        assert!(heads.is_head(&"foo").wait().unwrap());
-        assert!(heads.is_head(&"bar").wait().unwrap());
-        assert!(!heads.is_head(&"baz").wait().unwrap());
-
-        let mut result = heads.heads().collect().wait().unwrap();
-        result.sort();
-
-        assert_eq!(result, vec!["bar", "foo"]);
-
-        heads.remove(&"foo").wait().unwrap();
-        heads.remove(&"bar").wait().unwrap();
-        heads.remove(&"baz").wait().unwrap(); // Removing non-existent head should not panic.
-
-        assert_eq!(heads.heads().collect().wait().unwrap(), empty);
-    }
-}

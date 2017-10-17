@@ -14,8 +14,6 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate futures_ext;
 #[cfg(test)]
-extern crate mercurial_types;
-#[cfg(test)]
 extern crate tempdir;
 
 use std::error;
@@ -180,82 +178,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::{Future, Stream};
-    use mercurial_types::NodeHash;
-    use mercurial_types::hash::Sha1;
-    use std::str::FromStr;
     use tempdir::TempDir;
-
-    #[test]
-    fn basic() {
-        let tmp = TempDir::new("filebookmarks_heads_basic").unwrap();
-        let heads = FileHeads::open(tmp.path()).unwrap();
-        let empty: Vec<String> = Vec::new();
-        assert_eq!(heads.heads().collect().wait().unwrap(), empty);
-
-        let foo = "foo".to_string();
-        let bar = "bar".to_string();
-        let baz = "baz".to_string();
-
-        assert!(!heads.is_head(&foo).wait().unwrap());
-        assert!(!heads.is_head(&bar).wait().unwrap());
-        assert!(!heads.is_head(&baz).wait().unwrap());
-
-        heads.add(&foo).wait().unwrap();
-        heads.add(&bar).wait().unwrap();
-
-        assert!(heads.is_head(&foo).wait().unwrap());
-        assert!(heads.is_head(&bar).wait().unwrap());
-        assert!(!heads.is_head(&baz).wait().unwrap());
-
-        let mut result = heads.heads().collect().wait().unwrap();
-        result.sort();
-
-        assert_eq!(result, vec![bar.clone(), foo.clone()]);
-
-        heads.remove(&foo).wait().unwrap();
-        heads.remove(&bar).wait().unwrap();
-        heads.remove(&baz).wait().unwrap(); // Removing non-existent head should not panic.
-
-        assert_eq!(heads.heads().collect().wait().unwrap(), empty);
-    }
-
-    #[test]
-    fn persistence() {
-        let tmp = TempDir::new("filebookmarks_heads_persistence").unwrap();
-        let foo = "foo".to_string();
-        let bar = "bar".to_string();
-
-        {
-            let heads = FileHeads::open(tmp.path()).unwrap();
-            heads.add(&foo).wait().unwrap();
-            heads.add(&bar).wait().unwrap();
-        }
-
-        let heads = FileHeads::<String>::open(&tmp.path()).unwrap();
-        let mut result = heads.heads().collect().wait().unwrap();
-        result.sort();
-        assert_eq!(result, vec![bar.clone(), foo.clone()]);
-    }
 
     #[test]
     fn invalid_dir() {
         let tmp = TempDir::new("filebookmarks_heads_invalid_dir").unwrap();
         let heads = FileHeads::<String>::open(tmp.path().join("does_not_exist"));
         assert!(heads.is_err());
-    }
-
-    #[test]
-    fn savenodehash() {
-        let tmp = TempDir::new("filebookmarks_heads_nod").unwrap();
-        {
-            let h = (0..40).map(|_| "a").collect::<String>();
-            let head = NodeHash::new(Sha1::from_str(h.as_str()).unwrap());
-            let heads = FileHeads::<NodeHash>::open(tmp.path()).unwrap();
-            heads.add(&head).wait().unwrap();
-            let mut result = heads.heads().collect().wait().unwrap();
-            result.sort();
-            assert_eq!(result, vec![head]);
-        }
     }
 }
