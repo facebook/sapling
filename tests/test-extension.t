@@ -42,11 +42,13 @@ Test basic extension support
   uisetup called
   reposetup called for a
   ui == repo.ui
+  reposetup called for a (chg !)
+  ui == repo.ui (chg !)
   Foo
 
   $ cd ..
   $ hg clone a b
-  uisetup called
+  uisetup called (no-chg !)
   reposetup called for a
   ui == repo.ui
   reposetup called for b
@@ -55,7 +57,7 @@ Test basic extension support
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg bar
-  uisetup called
+  uisetup called (no-chg !)
   Bar
   $ echo 'foobar = !' >> $HGRCPATH
 
@@ -67,6 +69,8 @@ module/__init__.py-style
   uisetup called
   reposetup called for a
   ui == repo.ui
+  reposetup called for a (chg !)
+  ui == repo.ui (chg !)
   Foo
   $ echo 'barfoo = !' >> $HGRCPATH
 
@@ -1525,6 +1529,7 @@ Commands handling multiple repositories at a time should invoke only
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> src/.hg/hgrc
   $ hg -R src status
   reposetup() for $TESTTMP/reposetup-test/src (glob)
+  reposetup() for $TESTTMP/reposetup-test/src (glob) (chg !)
 
   $ hg clone -U src clone-dst1
   reposetup() for $TESTTMP/reposetup-test/src (glob)
