@@ -1663,7 +1663,9 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('t')
                 else:
                     if not self._options.nodiff:
-                        formatted = '\nERROR: %s output changed\n' % test
+                        self.stream.write('\n')
+                        # Exclude the '\n' from highlighting to lex correctly
+                        formatted = 'ERROR: %s output changed\n' % test
                         self.stream.write(highlightmsg(formatted, self.color))
                     self.stream.write('!')
 
