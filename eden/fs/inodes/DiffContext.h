@@ -27,8 +27,8 @@ class ObjectStore;
  */
 class DiffContext {
  public:
-  DiffContext(InodeDiffCallback* cb, bool listIgn, ObjectStore* os)
-      : callback{cb}, store{os}, listIgnored{listIgn} {
+  DiffContext(InodeDiffCallback* cb, bool listIgnored, ObjectStore* os)
+      : callback{cb}, store{os}, listIgnored{listIgnored} {
     // TODO: Load the system-wide ignore settings and user-specific
     // ignore settings into rootIgnore_.
   }

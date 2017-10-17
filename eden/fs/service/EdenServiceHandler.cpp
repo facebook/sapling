@@ -280,6 +280,10 @@ void EdenServiceHandler::getFilesChangedSince(
     for (auto& path : merged->removedFilesInOverlay) {
       out.removedPaths.emplace_back(path.stringPiece().str());
     }
+
+    for (auto& path : merged->uncleanPaths) {
+      out.uncleanPaths.emplace_back(path.stringPiece().str());
+    }
   }
 }
 

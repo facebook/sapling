@@ -55,6 +55,8 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
 
   result->toSequence = current->toSequence;
   result->toTime = current->toTime;
+  result->fromHash = fromHash;
+  result->toHash = toHash;
 
   while (current) {
     if (current->toSequence < limitSequence) {
@@ -64,6 +66,11 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
     // Capture the lower bound.
     result->fromSequence = current->fromSequence;
     result->fromTime = current->fromTime;
+    result->fromHash = current->fromHash;
+
+    // Merge the unclean status list
+    result->uncleanPaths.insert(
+        current->uncleanPaths.begin(), current->uncleanPaths.end());
 
     // process created files.
     for (auto& created : current->createdFilesInOverlay) {

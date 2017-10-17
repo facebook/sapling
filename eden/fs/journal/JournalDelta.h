@@ -24,6 +24,10 @@ class JournalDelta {
   enum Removed { REMOVED };
   enum Renamed { RENAME };
   JournalDelta() = default;
+  JournalDelta(JournalDelta&&) = default;
+  JournalDelta& operator=(JournalDelta&&) = default;
+  JournalDelta(const JournalDelta&) = delete;
+  JournalDelta& operator=(const JournalDelta&) = delete;
   JournalDelta(std::initializer_list<RelativePath> overlayFileNames);
   JournalDelta(RelativePathPiece fileName, Created);
   JournalDelta(RelativePathPiece fileName, Removed);
@@ -52,6 +56,9 @@ class JournalDelta {
   std::unordered_set<RelativePath> createdFilesInOverlay;
   /** The set of files that were removed in the overlay in this update */
   std::unordered_set<RelativePath> removedFilesInOverlay;
+  /** The set of files that had differing status across a checkout or
+   * some other operation that changes the snapshot hash */
+  std::unordered_set<RelativePath> uncleanPaths;
 
   /** Merge the deltas running back from this delta for all deltas
    * whose toSequence is >= limitSequence.

@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -55,6 +56,81 @@ DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
 namespace facebook {
 namespace eden {
+
+namespace {
+/** Helper for computing unclean paths when changing parents
+ *
+ * This InodeDiffCallback instance is used to compute the set
+ * of unclean files before and after actions that change the
+ * current commit hash of the mount point.
+ */
+class JournalDiffCallback : public InodeDiffCallback {
+ public:
+  explicit JournalDiffCallback()
+      : data_{folly::in_place, make_unique<JournalDelta>()} {}
+
+  void ignoredFile(RelativePathPiece) override {}
+
+  void untrackedFile(RelativePathPiece) override {}
+
+  void removedFile(
+      RelativePathPiece path,
+      const TreeEntry& /* sourceControlEntry */) override {
+    data_.wlock()->journalDelta->uncleanPaths.insert(path.copy());
+  }
+
+  void modifiedFile(
+      RelativePathPiece path,
+      const TreeEntry& /* sourceControlEntry */) override {
+    data_.wlock()->journalDelta->uncleanPaths.insert(path.copy());
+  }
+
+  void diffError(RelativePathPiece path, const folly::exception_wrapper& ew)
+      override {
+    // TODO: figure out what we should do to notify the user, if anything.
+    // perhaps we should just add this path to the list of unclean files?
+    XLOG(WARNING) << "error computing journal diff data for " << path << ": "
+                  << folly::exceptionStr(ew);
+  }
+
+  FOLLY_NODISCARD Future<folly::Unit> performDiff(
+      ObjectStore* objectStore,
+      TreeInodePtr rootInode,
+      std::shared_ptr<const Tree> rootTree) {
+    auto diffContext =
+        make_unique<DiffContext>(this, /* listIgnored = */ false, objectStore);
+
+    auto rawContext = diffContext.get();
+
+    return rootInode
+        ->diff(
+            rawContext,
+            RelativePathPiece{},
+            std::move(rootTree),
+            diffContext->getToplevelIgnore(),
+            false)
+        .ensure([diffContext = std::move(diffContext)]() {});
+  }
+
+  /** moves the JournalDelta information out of this diff callback instance,
+   * rendering it invalid */
+  std::unique_ptr<JournalDelta> stealJournalDelta() {
+    std::unique_ptr<JournalDelta> result;
+    std::swap(result, data_.wlock()->journalDelta);
+
+    return result;
+  }
+
+ private:
+  struct Data {
+    explicit Data(unique_ptr<JournalDelta>&& journalDelta)
+        : journalDelta(std::move(journalDelta)) {}
+
+    unique_ptr<JournalDelta> journalDelta;
+  };
+  folly::Synchronized<Data> data_;
+};
+} // namespace
 
 static constexpr folly::StringPiece kEdenStracePrefix = "eden.strace.";
 
@@ -371,22 +447,31 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
 
-  return folly::collect(fromTreeFuture, toTreeFuture)
-      .then(
-          [this, ctx](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
-                          treeResults) {
-            auto& fromTree = std::get<0>(treeResults);
-            auto& toTree = std::get<1>(treeResults);
+  auto journalDiffCallback = std::make_shared<JournalDiffCallback>();
 
-            ctx->start(this->acquireRenameLock());
-            return this->getRootInode()
-                ->checkout(ctx.get(), fromTree, toTree)
-                .then([toTree]() mutable { return toTree; });
-          })
-      .then([this](std::shared_ptr<const Tree> toTree) {
-        return dirstate_->onSnapshotChanged(toTree.get());
+  return folly::collect(fromTreeFuture, toTreeFuture)
+      .then([this, ctx, journalDiffCallback](
+                std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
+                    treeResults) {
+        auto& fromTree = std::get<0>(treeResults);
+        auto& toTree = std::get<1>(treeResults);
+
+        return journalDiffCallback
+            ->performDiff(getObjectStore(), getRootInode(), fromTree)
+            .then([this, ctx, fromTree, toTree]() {
+              ctx->start(this->acquireRenameLock());
+              return this->getRootInode()
+                  ->checkout(ctx.get(), fromTree, toTree)
+                  .then([toTree]() mutable { return toTree; });
+            });
       })
-      .then([this, ctx, oldParents, snapshotHash]() {
+      .then([this](std::shared_ptr<const Tree> toTree) {
+        return dirstate_->onSnapshotChanged(toTree.get()).then([toTree] {
+          return toTree;
+        });
+      })
+      .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
+                std::shared_ptr<const Tree> toTree) {
         // Save the new snapshot hash
         XLOG(DBG1) << "updating snapshot for " << this->getPath() << " from "
                    << oldParents << " to " << snapshotHash;
@@ -394,17 +479,22 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         auto conflicts = ctx->finish(snapshotHash);
 
         // Write a journal entry
-        // TODO: We don't include any file changes for now.  We'll need to
-        // figure out the desired data to pass to watchman.  We intentionally
-        // don't want to give it the full list of files that logically
-        // changed--we intentionally don't process files that were changed but
-        // have never been accessed.
-        auto journalDelta = make_unique<JournalDelta>();
-        journalDelta->fromHash = oldParents.parent1();
-        journalDelta->toHash = snapshotHash;
-        journal_.wlock()->addDelta(std::move(journalDelta));
+        return journalDiffCallback
+            ->performDiff(getObjectStore(), getRootInode(), std::move(toTree))
+            .then([this,
+                   conflicts,
+                   journalDiffCallback,
+                   oldParents,
+                   snapshotHash]() {
 
-        return conflicts;
+              auto journalDelta = journalDiffCallback->stealJournalDelta();
+
+              journalDelta->fromHash = oldParents.parent1();
+              journalDelta->toHash = snapshotHash;
+              journal_.wlock()->addDelta(std::move(journalDelta));
+
+              return conflicts;
+            });
       });
 }
 
@@ -449,20 +539,16 @@ Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
       .then([this](std::shared_ptr<const Tree> rootTree) {
         return dirstate_->onSnapshotChanged(rootTree.get());
       })
-      .then([
-        this,
-        parents,
-        oldParents,
-        parentsLock = std::move(parentsLock)
-      ]() {
-        this->config_->setParentCommits(parents);
-        parentsLock->parents.setParents(parents);
+      .then(
+          [this, oldParents, parents, parentsLock = std::move(parentsLock)]() {
+            this->config_->setParentCommits(parents);
+            parentsLock->parents.setParents(parents);
 
-        auto journalDelta = make_unique<JournalDelta>();
-        journalDelta->fromHash = oldParents.parent1();
-        journalDelta->toHash = parents.parent1();
-        journal_.wlock()->addDelta(std::move(journalDelta));
-      });
+            auto journalDelta = make_unique<JournalDelta>();
+            journalDelta->fromHash = oldParents.parent1();
+            journalDelta->toHash = parents.parent1();
+            journal_.wlock()->addDelta(std::move(journalDelta));
+          });
 }
 
 struct timespec EdenMount::getLastCheckoutTime() {

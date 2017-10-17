@@ -96,6 +96,15 @@ struct FileDelta {
   3: list<string> changedPaths
   4: list<string> createdPaths
   5: list<string> removedPaths
+  /** When fromPosition.snapshotHash != toPosition.snapshotHash this holds
+   * the union of the set of files whose StatusCode differed from the
+   * committed fromPosition hash before the hash changed, and the set of
+   * files whose StatusCode differed from the committed toPosition hash
+   * after the hash was changed.  This list of files represents files
+   * whose state may have changed as part of an update operation, but
+   * in ways that may not be able to be extracted solely by performing
+   * source control diff operations on the from/to hashes. */
+  6: list<string> uncleanPaths
 }
 
 enum StatusCode {

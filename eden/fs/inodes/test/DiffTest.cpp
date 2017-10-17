@@ -169,7 +169,6 @@ class DiffTest {
 
   DiffResults resetCommitAndDiff(
       FakeTreeBuilder& builder,
-      bool readyImmediately,
       bool loadInodes);
 
   void checkNoChanges() {
@@ -181,7 +180,7 @@ class DiffTest {
     EXPECT_THAT(result.getModified(), UnorderedElementsAre());
   }
 
-  void testResetFileModified(bool readyImmediately, bool loadInodes);
+  void testResetFileModified(bool loadInodes);
 
   FakeTreeBuilder& getBuilder() {
     return builder_;
@@ -205,37 +204,15 @@ class DiffTest {
  *   updates the current commit ID.)
  * - Calls EdenMount::diff(), waits for it to complete, and returns the
  *   results.
- *
- * If the readyImmediately parameter is true, all of the necessary source
- * control objects will be marked ready in the object store before starting the
- * diff operation.  Therefore the diff operation should complete immediately.
- * If readyImmediately is false, the diff operation will be started with the
- * source control objects not ready yet.  They will be made ready after the
- * diff starts, to test diff behavior when future objects do not complete
- * immediately.  This lets us test both the cases where the entire diff()
- * operation completes immediately (before diff() returns) and when it blocks
- * and only gets completed later, after diff() returns.
  */
 DiffResults DiffTest::resetCommitAndDiff(
     FakeTreeBuilder& builder,
-    bool readyImmediately,
     bool loadInodes) {
   if (loadInodes) {
-    if (!readyImmediately) {
-      // loadAllInodes() cannot succeed if the underlying Trees and Blobs are
-      // not ready.
-      throw std::invalid_argument(
-          "readyImmediately=false and loadInodes=true "
-          "is an invalid combination");
-    }
     mount_.loadAllInodes();
   }
-  mount_.resetCommit(builder, readyImmediately);
+  mount_.resetCommit(builder, /* setReady = */ true);
   auto df = diffFuture();
-  if (!readyImmediately) {
-    EXPECT_FALSE(df.isReady());
-    builder.setAllReady();
-  }
   return EXPECT_FUTURE_RESULT(df);
 }
 
@@ -468,15 +445,14 @@ TEST(DiffTest, pathOrdering) {
  * materialized, but are nonetheless different than the current commit.
  */
 
-void testResetFileModified(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetFileModified(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   auto b2 = t.getBuilder().clone();
   b2.replaceFile("src/1.txt", "This file has been updated.\n");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
   EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
@@ -486,20 +462,18 @@ void testResetFileModified(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetFileModified) {
-  testResetFileModified(true, true);
-  testResetFileModified(true, false);
-  testResetFileModified(false, false);
+  testResetFileModified(true);
+  testResetFileModified(false);
 }
 
-void testResetFileModeChanged(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetFileModeChanged(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   auto b2 = t.getBuilder().clone();
   b2.replaceFile("src/1.txt", "This is src/1.txt.\n", 0755);
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
   EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
@@ -509,14 +483,12 @@ void testResetFileModeChanged(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetFileModeChanged) {
-  testResetFileModeChanged(true, true);
-  testResetFileModeChanged(true, false);
-  testResetFileModeChanged(false, false);
+  testResetFileModeChanged(true);
+  testResetFileModeChanged(false);
 }
 
-void testResetFileRemoved(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetFileRemoved(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with a new file added.
@@ -525,7 +497,7 @@ void testResetFileRemoved(bool readyImmediately, bool loadInodes) {
   auto b2 = t.getBuilder().clone();
   b2.setFile("src/notpresent.txt", "never present in the working directory");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
   EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
@@ -536,14 +508,12 @@ void testResetFileRemoved(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetFileRemoved) {
-  testResetFileRemoved(true, true);
-  testResetFileRemoved(true, false);
-  testResetFileRemoved(false, false);
+  testResetFileRemoved(true);
+  testResetFileRemoved(false);
 }
 
-void testResetFileAdded(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetFileAdded(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with a file removed.
@@ -552,7 +522,7 @@ void testResetFileAdded(bool readyImmediately, bool loadInodes) {
   auto b2 = t.getBuilder().clone();
   b2.removeFile("src/1.txt");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
       result.getUntracked(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
@@ -562,14 +532,12 @@ void testResetFileAdded(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetFileAdded) {
-  testResetFileAdded(true, true);
-  testResetFileAdded(true, false);
-  testResetFileAdded(false, false);
+  testResetFileAdded(true);
+  testResetFileAdded(false);
 }
 
-void testResetDirectoryRemoved(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetDirectoryRemoved(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with a new directory added.
@@ -582,7 +550,7 @@ void testResetDirectoryRemoved(bool readyImmediately, bool loadInodes) {
   b2.setFile("src/extradir/sub/xyz.txt", "xyz");
   b2.setFile("src/extradir/a/b/c/d/e.txt", "test");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
   EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
@@ -598,14 +566,12 @@ void testResetDirectoryRemoved(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetDirectoryRemoved) {
-  testResetDirectoryRemoved(true, true);
-  testResetDirectoryRemoved(true, false);
-  testResetDirectoryRemoved(false, false);
+  testResetDirectoryRemoved(true);
+  testResetDirectoryRemoved(false);
 }
 
-void testResetDirectoryAdded(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetDirectoryAdded(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with a directory removed.
@@ -615,7 +581,7 @@ void testResetDirectoryAdded(bool readyImmediately, bool loadInodes) {
   b2.removeFile("src/a/b/3.txt");
   b2.removeFile("src/a/b/c/4.txt");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
       result.getUntracked(),
@@ -627,14 +593,12 @@ void testResetDirectoryAdded(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetDirectoryAdded) {
-  testResetDirectoryAdded(true, true);
-  testResetDirectoryAdded(true, false);
-  testResetDirectoryAdded(false, false);
+  testResetDirectoryAdded(true);
+  testResetDirectoryAdded(false);
 }
 
-void testResetReplaceDirWithFile(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetReplaceDirWithFile(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with 2.txt replaced by a directory added.
@@ -648,7 +612,7 @@ void testResetReplaceDirWithFile(bool readyImmediately, bool loadInodes) {
   b2.setFile("src/2.txt/sub/xyz.txt", "xyz");
   b2.setFile("src/2.txt/a/b/c/d/e.txt", "test");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
       result.getUntracked(), UnorderedElementsAre(RelativePath{"src/2.txt"}));
@@ -665,14 +629,12 @@ void testResetReplaceDirWithFile(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetReplaceDirWithFile) {
-  testResetReplaceDirWithFile(true, true);
-  testResetReplaceDirWithFile(true, false);
-  testResetReplaceDirWithFile(false, false);
+  testResetReplaceDirWithFile(true);
+  testResetReplaceDirWithFile(false);
 }
 
-void testResetReplaceFileWithDir(bool readyImmediately, bool loadInodes) {
-  SCOPED_TRACE(folly::to<string>(
-      "readyImmediately=", readyImmediately, " loadInodes=", loadInodes));
+void testResetReplaceFileWithDir(bool loadInodes) {
+  SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
   DiffTest t;
   // Create a commit with a directory removed and replaced with a file.
@@ -683,7 +645,7 @@ void testResetReplaceFileWithDir(bool readyImmediately, bool loadInodes) {
   b2.removeFile("src/a/b/c/4.txt");
   b2.replaceFile("src/a", "a is now a file");
 
-  auto result = t.resetCommitAndDiff(b2, readyImmediately, loadInodes);
+  auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(
       result.getUntracked(),
@@ -695,9 +657,8 @@ void testResetReplaceFileWithDir(bool readyImmediately, bool loadInodes) {
 }
 
 TEST(DiffTest, resetReplaceFileWithDir) {
-  testResetReplaceFileWithDir(true, true);
-  testResetReplaceFileWithDir(true, false);
-  testResetReplaceFileWithDir(false, false);
+  testResetReplaceFileWithDir(true);
+  testResetReplaceFileWithDir(false);
 }
 
 // Test with a .gitignore file in the top-level directory
