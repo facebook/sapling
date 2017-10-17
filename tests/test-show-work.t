@@ -234,6 +234,20 @@ Extra namespaces are rendered
   o  6a75 (r1) commit 2
   o  97fc (r0) commit 1
 
+Obsolescence information appears in labels.
+
+  $ cat >> .hg/hgrc << EOF
+  > [experimental]
+  > evolution=createmarkers
+  > EOF
+  $ hg debugobsolete `hg log -r 'desc("commit 2")' -T "{node}"`
+  obsoleted 1 changesets
+  $ hg show work --color=debug
+  @  [log.changeset changeset.draft changeset.unstable instability.orphan|32f3] [log.description|commit 3]
+  x  [log.changeset changeset.draft changeset.obsolete|6a75] [log.description|commit 2]
+  |
+  ~
+
   $ cd ..
 
 Prefix collision on hashes increases shortest node length
