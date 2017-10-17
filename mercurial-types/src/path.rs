@@ -216,11 +216,14 @@ impl Arbitrary for MPath {
         //
         // TODO: do we really want a uniform distribution over component chars
         // here?
+        //
+        // TODO: this can generate zero-length paths. Consider having separate
+        // types for possibly-zero-length and non-zero-length paths.
         let size_sqrt = cmp::max((size as f64).sqrt() as usize, 2);
 
         let mut path = Vec::new();
 
-        for i in 0..g.gen_range(1, size_sqrt) {
+        for i in 0..g.gen_range(0, size_sqrt) {
             if i > 0 {
                 path.push(b'/');
             }
