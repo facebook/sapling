@@ -132,7 +132,7 @@ RECEIVEDNODE_RECORD = 'receivednodes'
 BASENODESEARCHMAX = 25000
 
 def treeenabled(ui):
-    return ui.config('extensions', 'treemanifest', None) not in (None, '!')
+    return ui.config('extensions', 'treemanifest') not in (None, '!')
 
 def uisetup(ui):
     extensions.wrapfunction(changegroup.cg1unpacker, '_unpackmanifests',
