@@ -2562,11 +2562,7 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
       }
 
       if (ent->getInode()) {
-        // We generally don't expect any inodes to be loaded already
-        XLOG(WARNING)
-            << "found already-loaded inode for materialized child "
-            << ent->getInode()->getLogPath()
-            << " when performing initial loading of materialized inodes";
+        // Already loaded, most likely via prefetch
         continue;
       }
 
