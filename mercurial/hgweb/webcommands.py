@@ -31,6 +31,7 @@ from .. import (
     encoding,
     error,
     graphmod,
+    pycompat,
     revset,
     revsetlang,
     scmutil,
@@ -1247,7 +1248,7 @@ def graph(web, req, tmpl):
         for (id, type, ctx, vtx, edges) in tree:
             if type != graphmod.CHANGESET:
                 continue
-            node = str(ctx)
+            node = pycompat.bytestr(ctx)
             age = encodestr(templatefilters.age(ctx.date()))
             desc = templatefilters.firstline(encodestr(ctx.description()))
             desc = url.escape(templatefilters.nonempty(desc))
@@ -1303,7 +1304,7 @@ def graph(web, req, tmpl):
                 canvasheight=canvasheight, bg_height=bg_height,
                 # {jsdata} will be passed to |json, so it must be in utf-8
                 jsdata=lambda **x: graphdata(True, encoding.fromlocal),
-                nodes=lambda **x: graphdata(False, str),
+                nodes=lambda **x: graphdata(False, pycompat.bytestr),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
