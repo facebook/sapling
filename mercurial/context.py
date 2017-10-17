@@ -2570,9 +2570,13 @@ class arbitraryfilectx(object):
         self._path = path
 
     def cmp(self, fctx):
-        if isinstance(fctx, workingfilectx) and self._repo:
+        # filecmp follows symlinks whereas `cmp` should not, so skip the fast
+        # path if either side is a symlink.
+        symlinks = ('l' in self.flags() or 'l' in fctx.flags())
+        if not symlinks and isinstance(fctx, workingfilectx) and self._repo:
             # Add a fast-path for merge if both sides are disk-backed.
-            # Note that filecmp uses the opposite return values as cmp.
+            # Note that filecmp uses the opposite return values (True if same)
+            # from our cmp functions (True if different).
             return not filecmp.cmp(self.path(), self._repo.wjoin(fctx.path()))
         return self.data() != fctx.data()
 
