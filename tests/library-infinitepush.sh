@@ -61,8 +61,8 @@ EOF
 }
 
 createdb() {
-mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" <<EOF
+mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT <<EOF
 DROP TABLE IF EXISTS nodestobundle;
 DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
@@ -86,6 +86,11 @@ fi
 [[ -z $DBPASS && -n $PASSWORD ]] && DBPASS="$PASSWORD"
 [[ -z $DBUSER && -n $USER ]] && DBUSER="$USER"
 [[ -z $DBNAME ]] && DBNAME="testdb_hg_$$_$TIME"
+if [[ -z $DBPASS ]]; then
+    DBPASSOPT=''
+else
+    DBPASSOPT='-p'"$DBPASS"
+fi
 
 echo "sqlhost=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS" >> .hg/hgrc
 

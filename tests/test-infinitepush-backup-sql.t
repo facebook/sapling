@@ -31,7 +31,7 @@
   remote:     67145f466344  initialcommit
   remote:     5ea4271ca0f0  commitwithbookmark
   finished in \d+\.(\d+)? seconds (re)
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e 'SELECT bookmark, node, reponame from bookmarkstonode'
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'SELECT bookmark, node, reponame from bookmarkstonode'
   bookmark	node	reponame
   infinitepush/backups/test/.*\$TESTTMP/client/bookmarks/abook	5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	babar (re)
   infinitepush/backups/test/.*\$TESTTMP/client/heads/5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	babar (re)
@@ -53,7 +53,7 @@ Go to client, delete backup state and run pushbackup. Make sure that it doesn't 
   remote:     67145f466344  initialcommit
   remote:     5ea4271ca0f0  commitwithbookmark
   finished in \d+\.(\d+)? seconds (re)
-  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e 'SELECT bookmark, node, reponame from bookmarkstonode'
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'SELECT bookmark, node, reponame from bookmarkstonode'
   bookmark	node	reponame
   infinitepush/backups/test/.*\$TESTTMP/client/bookmarks/abook	5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	babar (re)
   infinitepush/backups/test/.*\$TESTTMP/client/heads/5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	babar (re)
