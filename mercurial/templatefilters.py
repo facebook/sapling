@@ -13,6 +13,7 @@ import time
 
 from . import (
     encoding,
+    error,
     hbisect,
     node,
     pycompat,
@@ -233,6 +234,13 @@ def json(obj, paranoid=True):
         return pycompat.bytestr(obj)
     elif isinstance(obj, bytes):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
+    elif isinstance(obj, str):
+        # This branch is unreachable on Python 2, because bytes == str
+        # and we'll return in the next-earlier block in the elif
+        # ladder. On Python 3, this helps us catch bugs before they
+        # hurt someone.
+        raise error.ProgrammingError(
+            'Mercurial only does output with bytes on Python 3: %r' % obj)
     elif util.safehasattr(obj, 'keys'):
         out = ['"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid),
                              json(v, paranoid))
