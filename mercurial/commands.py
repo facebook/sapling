@@ -3234,6 +3234,9 @@ def locate(ui, repo, *pats, **opts):
     ('k', 'keyword', [],
      _('do case-insensitive search for a given text'), _('TEXT')),
     ('r', 'rev', [], _('show the specified revision or revset'), _('REV')),
+    ('L', 'line-range', [],
+     _('follow line range of specified file (EXPERIMENTAL)'),
+     _('FILE,RANGE')),
     ('', 'removed', None, _('include revisions where files were removed')),
     ('m', 'only-merges', None, _('show only merges (DEPRECATED)')),
     ('u', 'user', [], _('revisions committed by user'), _('USER')),
@@ -3275,6 +3278,14 @@ def log(ui, repo, *pats, **opts):
     Paths in the DAG are represented with '|', '/' and so forth. ':' in place
     of a '|' indicates one or more revisions in a path are omitted.
 
+    .. container:: verbose
+
+       Use -L/--line-range FILE,M-N options to follow the history of lines
+       from M to N in FILE. With -p/--patch only diff hunks affecting
+       specified line range will be shown. This option requires --follow;
+       it can be specified multiple times. Currently, this option is not
+       compatible with --graph. This option is experimental.
+
     .. note::
 
        :hg:`log --patch` may generate unexpected diff output for merge
@@ -3287,6 +3298,14 @@ def log(ui, repo, *pats, **opts):
        For performance reasons, :hg:`log FILE` may omit duplicate changes
        made on branches and will not show removals or mode changes. To
        see all such changes, use the --removed switch.
+
+    .. container:: verbose
+
+       .. note::
+
+          The history resulting from -L/--line-range options depends on diff
+          options; for instance if white-spaces are ignored, respective changes
+          with only white-spaces in specified line range will not be listed.
 
     .. container:: verbose
 
@@ -3336,6 +3355,15 @@ def log(ui, repo, *pats, **opts):
 
           hg log -r "last(tagged())::" --template "{desc|firstline}\\n"
 
+      - changesets touching lines 13 to 23 for file.c::
+
+          hg log -L file.c,13-23
+
+      - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of
+        main.c with patch::
+
+          hg log -L file.c,13-23 -L main.c,2-6 -p
+
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     See :hg:`help revisions` for more about specifying and ordering
@@ -3350,14 +3378,38 @@ def log(ui, repo, *pats, **opts):
 
     """
     opts = pycompat.byteskwargs(opts)
+    linerange = opts.get('line_range')
+
+    if linerange and not opts.get('follow'):
+        raise error.Abort(_('--line-range requires --follow'))
+
     if opts.get('follow') and opts.get('rev'):
         opts['rev'] = [revsetlang.formatspec('reverse(::%lr)', opts.get('rev'))]
         del opts['follow']
 
     if opts.get('graph'):
+        if linerange:
+            raise error.Abort(_('graph not supported with line range patterns'))
         return cmdutil.graphlog(ui, repo, pats, opts)
 
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
+    hunksfilter = None
+
+    if linerange:
+        revs, lrfilematcher, hunksfilter = cmdutil.getloglinerangerevs(
+            repo, revs, opts)
+
+        if filematcher is not None and lrfilematcher is not None:
+            basefilematcher = filematcher
+
+            def filematcher(rev):
+                files = (basefilematcher(rev).files()
+                         + lrfilematcher(rev).files())
+                return scmutil.matchfiles(repo, files)
+
+        elif filematcher is None:
+            filematcher = lrfilematcher
+
     limit = cmdutil.loglimit(opts)
     count = 0
 
@@ -3385,7 +3437,12 @@ def log(ui, repo, *pats, **opts):
             revmatchfn = filematcher(ctx.rev())
         else:
             revmatchfn = None
-        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
+        if hunksfilter:
+            revhunksfilter = hunksfilter(rev)
+        else:
+            revhunksfilter = None
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn,
+                       hunksfilterfn=revhunksfilter)
         if displayer.flush(ctx):
             count += 1
 

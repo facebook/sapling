@@ -26,12 +26,14 @@ from . import (
     changelog,
     copies,
     crecord as crecordmod,
+    dagop,
     dirstateguard,
     encoding,
     error,
     formatter,
     graphmod,
     match as matchmod,
+    mdiff,
     obsolete,
     patch,
     pathutil,
@@ -2584,6 +2586,87 @@ def getlogrevs(repo, pats, opts):
         revs = smartset.baseset(limitedrevs)
 
     return revs, expr, filematcher
+
+def _parselinerangelogopt(repo, opts):
+    """Parse --line-range log option and return a list of tuples (filename,
+    (fromline, toline)).
+    """
+    linerangebyfname = []
+    for pat in opts.get('line_range', []):
+        try:
+            pat, linerange = pat.rsplit(',', 1)
+        except ValueError:
+            raise error.Abort(_('malformatted line-range pattern %s') % pat)
+        try:
+            fromline, toline = map(int, linerange.split('-'))
+        except ValueError:
+            raise error.Abort(_("invalid line range for %s") % pat)
+        msg = _("line range pattern '%s' must match exactly one file") % pat
+        fname = scmutil.parsefollowlinespattern(repo, None, pat, msg)
+        linerangebyfname.append(
+            (fname, util.processlinerange(fromline, toline)))
+    return linerangebyfname
+
+def getloglinerangerevs(repo, userrevs, opts):
+    """Return (revs, filematcher, hunksfilter).
+
+    "revs" are revisions obtained by processing "line-range" log options and
+    walking block ancestors of each specified file/line-range.
+
+    "filematcher(rev) -> match" is a factory function returning a match object
+    for a given revision for file patterns specified in --line-range option.
+    If neither --stat nor --patch options are passed, "filematcher" is None.
+
+    "hunksfilter(rev) -> filterfn(fctx, hunks)" is a factory function
+    returning a hunks filtering function.
+    If neither --stat nor --patch options are passed, "filterhunks" is None.
+    """
+    wctx = repo[None]
+
+    # Two-levels map of "rev -> file ctx -> [line range]".
+    linerangesbyrev = {}
+    for fname, (fromline, toline) in _parselinerangelogopt(repo, opts):
+        fctx = wctx.filectx(fname)
+        for fctx, linerange in dagop.blockancestors(fctx, fromline, toline):
+            rev = fctx.introrev()
+            if rev not in userrevs:
+                continue
+            linerangesbyrev.setdefault(
+                rev, {}).setdefault(
+                    fctx.path(), []).append(linerange)
+
+    filematcher = None
+    hunksfilter = None
+    if opts.get('patch') or opts.get('stat'):
+
+        def nofilterhunksfn(fctx, hunks):
+            return hunks
+
+        def hunksfilter(rev):
+            fctxlineranges = linerangesbyrev.get(rev)
+            if fctxlineranges is None:
+                return nofilterhunksfn
+
+            def filterfn(fctx, hunks):
+                lineranges = fctxlineranges.get(fctx.path())
+                if lineranges is not None:
+                    for hr, lines in hunks:
+                        if any(mdiff.hunkinrange(hr[2:], lr)
+                               for lr in lineranges):
+                            yield hr, lines
+                else:
+                    for hunk in hunks:
+                        yield hunk
+
+            return filterfn
+
+        def filematcher(rev):
+            files = list(linerangesbyrev.get(rev, []))
+            return scmutil.matchfiles(repo, files)
+
+    revs = sorted(linerangesbyrev, reverse=True)
+
+    return revs, filematcher, hunksfilter
 
 def _graphnodeformatter(ui, displayer):
     spec = ui.config('ui', 'graphnodetemplate')
