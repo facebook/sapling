@@ -51,6 +51,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  new changesets 6cee5c8f3e5b:5b35a0d5bd4d
   (run 'hg update' to get a working copy)
 
   $ hg pull beta | $FILTERPWD
@@ -60,6 +61,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets 5ae9f075bc64:a43aa1e4a27c
   (run 'hg update' to get a working copy)
 
   $ hg co -C default
