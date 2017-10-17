@@ -119,9 +119,14 @@ attack ../test
 
   $ hg manifest -r3
   ../test
+  $ mkdir ../test
+  $ echo data > ../test/file
   $ hg update -Cr3
   abort: path contains illegal component: ../test (glob)
   [255]
+  $ cat ../test/file
+  cat: ../test/file: No such file or directory
+  [1]
 
 attack /tmp/test
 
