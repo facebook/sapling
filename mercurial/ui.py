@@ -183,6 +183,9 @@ def _catchterm(*args):
 # retrieving configuration value.
 _unset = object()
 
+# _reqexithandlers: callbacks run at the end of a request
+_reqexithandlers = []
+
 class ui(object):
     def __init__(self, src=None):
         """Create a fresh new ui object if no src given
@@ -193,8 +196,6 @@ class ui(object):
         """
         # _buffers: used for temporary capture of output
         self._buffers = []
-        # _exithandlers: callbacks run at the end of a request
-        self._exithandlers = []
         # 3-tuple describing how each buffer in the stack behaves.
         # Values are (capture stderr, capture subprocesses, apply labels).
         self._bufferstates = []
@@ -220,7 +221,6 @@ class ui(object):
         self._styles = {}
 
         if src:
-            self._exithandlers = src._exithandlers
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
@@ -1097,6 +1097,10 @@ class ui(object):
             pager.wait()
 
         return True
+
+    @property
+    def _exithandlers(self):
+        return _reqexithandlers
 
     def atexit(self, func, *args, **kwargs):
         '''register a function to run after dispatching a request
