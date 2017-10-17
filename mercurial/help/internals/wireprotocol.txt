@@ -731,6 +731,8 @@ cg
 cbattempted
    Boolean indicating whether the client attempted to use the *clone bundles*
    feature before performing this request.
+bookmarks
+   Boolean indicating whether bookmark data is requested.
 phases
    Boolean indicating whether phases data is requested.
 

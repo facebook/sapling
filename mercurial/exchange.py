@@ -1755,6 +1755,19 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         if 'treemanifest' in repo.requirements:
             part.addparam('treemanifest', '1')
 
+@getbundle2partsgenerator('bookmarks')
+def _getbundlebookmarkpart(bundler, repo, source, bundlecaps=None,
+                              b2caps=None, **kwargs):
+    """add a bookmark part to the requested bundle"""
+    if not kwargs.get('bookmarks', False):
+        return
+    if 'bookmarks' not in b2caps:
+        raise ValueError(_('no common bookmarks exchange method'))
+    books  = bookmod.listbinbookmarks(repo)
+    data = bookmod.binaryencode(books)
+    if data:
+        bundler.newpart('bookmarks', data=data)
+
 @getbundle2partsgenerator('listkeys')
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
                             b2caps=None, **kwargs):

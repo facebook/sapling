@@ -205,6 +205,7 @@ def encodebatchcmds(req):
 # :scsv:  list of comma-separated values return as set
 # :plain: string with no transformation needed.
 gboptsmap = {'heads':  'nodes',
+             'bookmarks': 'boolean',
              'common': 'nodes',
              'obsmarkers': 'boolean',
              'phases': 'boolean',
