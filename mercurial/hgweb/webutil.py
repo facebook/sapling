@@ -30,6 +30,7 @@ from .. import (
     mdiff,
     patch,
     pathutil,
+    pycompat,
     templatefilters,
     ui as uimod,
     util,
@@ -589,7 +590,10 @@ class sessionvars(object):
     def __iter__(self):
         separator = self.start
         for key, value in sorted(self.vars.iteritems()):
-            yield {'name': key, 'value': str(value), 'separator': separator}
+            yield {'name': key,
+                   'value': pycompat.bytestr(value),
+                   'separator': separator,
+            }
             separator = '&'
 
 class wsgiui(uimod.ui):
