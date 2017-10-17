@@ -21,6 +21,10 @@ error_chain! {
             description("changegroup2 decode error")
             display("changegroup2 decode error: {}", msg)
         }
+        Cg2Encode(msg: String) {
+            description("changegroup2 encode error")
+            display("changegroup2 encode error: {}", msg)
+        }
         Bundle2Encode(msg: String) {
             description("bundle2 encode error")
             display("{}", msg)

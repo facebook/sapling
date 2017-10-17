@@ -45,7 +45,7 @@ where
             Some(CgChunk(section, delta_chunk)) => {
                 let mut builder = ChunkBuilder::new();
                 if self.last_seen != section {
-                    builder.encode_section(&section);
+                    builder.encode_section(&section)?;
                     self.last_seen = section;
                 }
                 builder.encode_delta_chunk(delta_chunk);
@@ -65,6 +65,7 @@ fn empty_cg_chunk() -> Chunk {
     Chunk::new(vec![0, 0, 0, 0]).expect("Chunk::new should not fail for a 4-byte chunk")
 }
 
+#[derive(Debug)]
 struct ChunkBuilder {
     inner: Vec<u8>,
     len_offset: usize,
@@ -81,7 +82,7 @@ impl ChunkBuilder {
 
     /// Encode the beginning of a section. This should always happen before any
     /// delta chunks are encoded.
-    pub fn encode_section(&mut self, section: &Section) -> &mut Self {
+    pub fn encode_section(&mut self, section: &Section) -> Result<&mut Self> {
         assert_eq!(
             self.inner.len(),
             4,
@@ -91,14 +92,20 @@ impl ChunkBuilder {
         // need to do anything there.
         // TODO: will need to encode tree manifests here as well
         if let &Section::Filelog(ref f) = section {
+            let f_vec = f.to_vec();
+            if f_vec.len() == 0 {
+                bail!(ErrorKind::Cg2Encode(
+                    "attempted to encode a zero-length path".into()
+                ));
+            }
             // Note that the filename length must include the four bytes for itself.
-            BigEndian::write_i32(&mut self.inner[0..], (f.to_vec().len() + 4) as i32);
-            self.inner.put_slice(f.to_vec().as_slice());
+            BigEndian::write_i32(&mut self.inner[0..], (f_vec.len() + 4) as i32);
+            self.inner.put_slice(f_vec.as_slice());
             // Add four more bytes for the start of the section.
             self.len_offset = self.inner.len();
             self.inner.put_slice(&[0, 0, 0, 0]);
         }
-        self
+        Ok(self)
     }
 
     pub fn encode_delta_chunk(&mut self, chunk: CgDeltaChunk) -> &mut Self {
@@ -124,5 +131,21 @@ impl ChunkBuilder {
         let mut inner = self.inner;
         BigEndian::write_i32(&mut inner[self.len_offset..], len as i32);
         Chunk::new(inner)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use mercurial_types::MPath;
+
+    #[test]
+    fn test_empty_filelog_path() {
+        let mut builder = ChunkBuilder::new();
+        let section = Section::Filelog(MPath::new("").unwrap());
+        assert_matches!(
+            builder.encode_section(&section),
+            Err(Error(ErrorKind::Cg2Encode(_), _))
+        );
     }
 }
