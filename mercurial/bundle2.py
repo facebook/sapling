@@ -301,6 +301,8 @@ class bundleoperation(object):
         self.captureoutput = captureoutput
         self.hookargs = {}
         self._gettransaction = transactiongetter
+        # carries value that can modify part behavior
+        self.modes = {}
 
     def gettransaction(self):
         transaction = self._gettransaction()
