@@ -18,7 +18,7 @@ Config setup
   > evolution=true
   > 
   > # include obsmarkers in bundle
-  > stabilization.bundle-obsmarker = yes
+  > evolution.bundle-obsmarker = yes
   > 
   > [extensions]
   > # needed for some tests
