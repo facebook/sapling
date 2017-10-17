@@ -3973,12 +3973,13 @@ def pull(ui, repo, source="default", **opts):
             # not ending up with the name of the bookmark because of a race
             # condition on the server. (See issue 4689 for details)
             remotebookmarks = other.listkeys('bookmarks')
+            remotebookmarks = bookmarks.unhexlifybookmarks(remotebookmarks)
             pullopargs['remotebookmarks'] = remotebookmarks
             for b in opts['bookmark']:
                 b = repo._bookmarks.expandname(b)
                 if b not in remotebookmarks:
                     raise error.Abort(_('remote bookmark %s not found!') % b)
-                revs.append(remotebookmarks[b])
+                revs.append(hex(remotebookmarks[b]))
 
         if revs:
             try:

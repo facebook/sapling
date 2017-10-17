@@ -1348,7 +1348,8 @@ def _pullbookmarkbundle1(pullop):
         # all known bundle2 servers now support listkeys, but lets be nice with
         # new implementation.
         return
-    pullop.remotebookmarks = pullop.remote.listkeys('bookmarks')
+    books = pullop.remote.listkeys('bookmarks')
+    pullop.remotebookmarks = bookmod.unhexlifybookmarks(books)
 
 
 @pulldiscovery('changegroup')
@@ -1459,7 +1460,7 @@ def _pullbundle2(pullop):
     # processing bookmark update
     for namespace, value in op.records['listkeys']:
         if namespace == 'bookmarks':
-            pullop.remotebookmarks = value
+            pullop.remotebookmarks = bookmod.unhexlifybookmarks(value)
 
     # bookmark data were either already there or pulled in the bundle
     if pullop.remotebookmarks is not None:
@@ -1552,7 +1553,6 @@ def _pullbookmarks(pullop):
     pullop.stepsdone.add('bookmarks')
     repo = pullop.repo
     remotebookmarks = pullop.remotebookmarks
-    remotebookmarks = bookmod.unhexlifybookmarks(remotebookmarks)
     bookmod.updatefromremote(repo.ui, repo, remotebookmarks,
                              pullop.remote.url(),
                              pullop.gettransaction,
