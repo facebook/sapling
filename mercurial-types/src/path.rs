@@ -84,7 +84,7 @@ impl MPath {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
-            bail!(ErrorKind::InvalidPath("paths cannot contain '\\0'".into()))
+            bail!(ErrorKind::InvalidPath(p.to_vec(), "paths cannot contain '\\0'".into()))
         }
         Ok(())
     }

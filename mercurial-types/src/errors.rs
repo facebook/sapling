@@ -11,9 +11,9 @@ error_chain! {
             description("invalid sha-1 input")
             display("invalid sha-1 input: {}", msg)
         }
-        InvalidPath(msg: String) {
+        InvalidPath(path: Vec<u8>, msg: String) {
             description("invalid path")
-            display("invalid path: {}", msg)
+            display("invalid path '{}': {}", String::from_utf8_lossy(&path[..]), msg)
         }
         InvalidFragmentList(msg: String) {
             description("invalid fragment list")
