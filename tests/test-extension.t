@@ -524,15 +524,6 @@ Make sure a broken uisetup doesn't globally break hg:
 
 Even though the extension fails during uisetup, hg is still basically usable:
   $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version
-  *** failed to set up extension baduisetup: integer division or modulo by zero
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version --traceback
   Traceback (most recent call last):
     File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
       uisetup(ui)

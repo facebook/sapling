@@ -182,7 +182,7 @@ def _runuisetup(name, ui):
         try:
             uisetup(ui)
         except Exception as inst:
-            ui.traceback()
+            ui.traceback(force=True)
             msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False
@@ -203,7 +203,7 @@ def _runextsetup(name, ui):
                     raise
                 extsetup() # old extsetup with no ui argument
         except Exception as inst:
-            ui.traceback()
+            ui.traceback(force=True)
             msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False

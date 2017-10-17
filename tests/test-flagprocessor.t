@@ -162,8 +162,18 @@
   > duplicate=$TESTDIR/flagprocessorext.py
   > EOF
   $ hg debugrebuilddirstate
+  Traceback (most recent call last):
+    File "*/mercurial/extensions.py", line *, in _runextsetup (glob)
+      extsetup(ui)
+    File "*/tests/flagprocessorext.py", line *, in extsetup (glob)
+      validatehash,
+    File "*/mercurial/revlog.py", line *, in addflagprocessor (glob)
+      raise error.Abort(msg)
+  Abort: cannot register multiple processors on flag '0x8'.
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
   $ hg st 2>&1 | egrep 'cannot register multiple processors|flagprocessorext'
+    File "*/tests/flagprocessorext.py", line *, in extsetup (glob)
+  Abort: cannot register multiple processors on flag '0x8'.
   *** failed to set up extension duplicate: cannot register multiple processors on flag '0x8'.
     File "*/tests/flagprocessorext.py", line *, in b64decode (glob)
 
