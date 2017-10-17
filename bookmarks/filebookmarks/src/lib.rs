@@ -14,8 +14,6 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate percent_encoding;
 extern crate serde;
-#[cfg(test)]
-extern crate tempdir;
 
 extern crate filekv;
 extern crate futures_ext;
@@ -135,100 +133,5 @@ where
     #[inline]
     fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
         self.kv.delete(encode_key(key), version).from_err().boxify()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use futures::{Future, Stream};
-    use tempdir::TempDir;
-
-    #[test]
-    fn basic() {
-        let tmp = TempDir::new("filebookmarks_heads_basic").unwrap();
-        let bookmarks = FileBookmarks::open(tmp.path()).unwrap();
-
-        let foo = "foo".to_string();
-        let one = "1".to_string();
-        let two = "2".to_string();
-        let three = "3".to_string();
-
-        assert_eq!(bookmarks.get(&foo).wait().unwrap(), None);
-
-        let absent = Version::absent();
-        let foo_v1 = bookmarks.set(&foo, &one, &absent).wait().unwrap().unwrap();
-        assert_eq!(
-            bookmarks.get(&foo).wait().unwrap(),
-            Some((one.clone(), foo_v1))
-        );
-
-        let foo_v2 = bookmarks.set(&foo, &two, &foo_v1).wait().unwrap().unwrap();
-
-        // Should fail due to version mismatch.
-        assert_eq!(bookmarks.set(&foo, &three, &foo_v1).wait().unwrap(), None);
-
-        assert_eq!(
-            bookmarks.delete(&foo, &foo_v2).wait().unwrap().unwrap(),
-            absent
-        );
-        assert_eq!(bookmarks.get(&foo).wait().unwrap(), None);
-
-        // Even though bookmark doesn't exist, this should fail with a version mismatch.
-        assert_eq!(bookmarks.delete(&foo, &foo_v2).wait().unwrap(), None);
-
-        // Deleting it with the absent version should work.
-        assert_eq!(
-            bookmarks.delete(&foo, &absent).wait().unwrap().unwrap(),
-            absent
-        );
-    }
-
-    #[test]
-    fn persistence() {
-        let tmp = TempDir::new("filebookmarks_heads_persistence").unwrap();
-        let foo = "foo".to_string();
-        let bar = "bar".to_string();
-
-        let version;
-        {
-            let bookmarks = FileBookmarks::open(tmp.path()).unwrap();
-            version = bookmarks.create(&foo, &bar).wait().unwrap().unwrap();
-        }
-
-        let bookmarks = FileBookmarks::open(tmp.path()).unwrap();
-        assert_eq!(bookmarks.get(&foo).wait().unwrap(), Some((bar, version)));
-    }
-
-    #[test]
-    fn list() {
-        let tmp = TempDir::new("filebookmarks_heads_basic").unwrap();
-        let bookmarks = FileBookmarks::open(tmp.path()).unwrap();
-
-        let one = b"1";
-        let two = b"2";
-        let three = b"3";
-
-        let _ = bookmarks
-            .create(&one, &"foo".to_string())
-            .wait()
-            .unwrap()
-            .unwrap();
-        let _ = bookmarks
-            .create(&two, &"bar".to_string())
-            .wait()
-            .unwrap()
-            .unwrap();
-        let _ = bookmarks
-            .create(&three, &"baz".to_string())
-            .wait()
-            .unwrap()
-            .unwrap();
-
-        let mut result = bookmarks.keys().collect().wait().unwrap();
-        result.sort();
-
-        let expected = vec![one, two, three];
-        assert_eq!(result, expected);
     }
 }
