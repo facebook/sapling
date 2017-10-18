@@ -17,6 +17,7 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
+#include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/ClientConfig.h"
@@ -37,18 +38,21 @@ DEFINE_bool(debug, false, "run fuse in debug mode");
 DEFINE_int32(num_eden_threads, 12, "the number of eden CPU worker threads");
 
 DEFINE_string(thrift_address, "", "The address for the thrift server socket");
-DEFINE_int32(thrift_num_workers, 2, "The number of thrift worker threads");
-DEFINE_int32(thrift_max_conns, 100, "Maximum number of thrift connections");
+DEFINE_int32(
+    thrift_num_workers,
+    std::thread::hardware_concurrency(),
+    "The number of thrift worker threads");
+DEFINE_int32(thrift_max_conns, 0, "Maximum number of thrift connections");
 DEFINE_int32(
     thrift_max_requests,
-    1000,
+    apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
     "Maximum number of active thrift requests");
-DEFINE_bool(thrift_enable_codel, true, "Enable Codel queuing timeout");
-DEFINE_int32(thrift_queue_len, 100, "Maximum number of unprocessed messages");
+DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
 DEFINE_int32(
-    thrift_min_compress_bytes,
-    200,
-    "Minimum response compression size");
+    thrift_queue_len,
+    0xffffffff,
+    "Maximum number of unprocessed messages");
+DEFINE_int32(thrift_min_compress_bytes, 0, "Minimum response compression size");
 DEFINE_int64(unload_interval_hours, 0, "Frequency of unloading inodes");
 DEFINE_int64(
     start_delay_minutes,
@@ -61,9 +65,9 @@ DEFINE_int64(
 
 using apache::thrift::ThriftServer;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
+using folly::makeFuture;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -74,7 +78,7 @@ folly::SocketAddress getThriftAddress(
     StringPiece argument,
     StringPiece edenDir);
 std::string getPathToUnixDomainSocket(StringPiece edenDir);
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -432,8 +436,8 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
 
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
-  edenMount->shutdown()
-      .then([unmountPromise = std::move(unmountPromise)]() mutable {
+  edenMount->shutdown().then(
+      [unmountPromise = std::move(unmountPromise)]() mutable {
         unmountPromise.setValue();
       });
 }
@@ -582,8 +586,8 @@ void EdenServer::flushStatsNow() const {
     stats.aggregate();
   }
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook
 
 namespace {
 

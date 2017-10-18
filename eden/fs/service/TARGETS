@@ -55,6 +55,7 @@ cpp_library(
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
         "@/folly/init:init",
+        "@/thrift/lib/cpp/concurrency:thread_manager",
         "@/thrift/lib/cpp2:server",
     ],
     external_deps = [
