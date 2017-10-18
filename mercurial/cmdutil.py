@@ -526,7 +526,7 @@ def tersedir(statuslist, terseargs):
     allst = ('m', 'a', 'r', 'd', 'u', 'i', 'c')
 
     # checking the argument validity
-    for s in terseargs:
+    for s in pycompat.bytestr(terseargs):
         if s not in allst:
             raise error.Abort(_("'%s' not recognized") % s)
 
@@ -537,9 +537,10 @@ def tersedir(statuslist, terseargs):
 
     tersedict = {}
     for attrname in pstatus:
+        statuschar = attrname[0:1]
         for f in getattr(statuslist, attrname):
-            rootobj.addfile(f, attrname[0])
-        tersedict[attrname[0]] = []
+            rootobj.addfile(f, statuschar)
+        tersedict[statuschar] = []
 
     # we won't be tersing the root dir, so add files in it
     for st, fpath in rootobj.iterfilepaths():
