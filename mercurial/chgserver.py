@@ -108,8 +108,13 @@ def _confighash(ui):
     for section, item in _configsectionitems:
         sectionitems.append(ui.config(section, item))
     sectionhash = _hashlist(sectionitems)
+    # If $CHGHG is set, the change to $HG should not trigger a new chg server
+    if 'CHGHG' in encoding.environ:
+        ignored = {'HG'}
+    else:
+        ignored = set()
     envitems = [(k, v) for k, v in encoding.environ.iteritems()
-                if _envre.match(k)]
+                if _envre.match(k) and k not in ignored]
     envhash = _hashlist(sorted(envitems))
     return sectionhash[:6] + envhash[:6]
 
