@@ -74,6 +74,17 @@ class itemregister(dict):
         # search for a matching generic item
         generics = sorted(self._generics, key=(lambda x: (x.priority, x.name)))
         for item in generics:
+            # we use 'match' instead of 'search' to make the matching simpler
+            # for people unfamiliar with regular expression. Having the match
+            # rooted to the start of the string will produce less surprising
+            # result for user writing simple regex for sub-attribute.
+            #
+            # For example using "color\..*" match produces an unsurprising
+            # result, while using search could suddenly match apparently
+            # unrelated configuration that happens to contains "color."
+            # anywhere. This is a tradeoff where we favor requiring ".*" on
+            # some match to avoid the need to prefix most pattern with "^".
+            # The "^" seems more error prone.
             if item._re.match(key):
                 return item
 
