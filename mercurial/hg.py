@@ -257,6 +257,35 @@ def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None,
     _postshareupdate(r, update, checkout=checkout)
     return r
 
+def unshare(ui, repo):
+    """convert a shared repository to a normal one
+
+    Copy the store data to the repo and remove the sharedpath data.
+    """
+
+    destlock = lock = None
+    lock = repo.lock()
+    try:
+        # we use locks here because if we race with commit, we
+        # can end up with extra data in the cloned revlogs that's
+        # not pointed to by changesets, thus causing verify to
+        # fail
+
+        destlock = copystore(ui, repo, repo.path)
+
+        sharefile = repo.vfs.join('sharedpath')
+        util.rename(sharefile, sharefile + '.old')
+
+        repo.requirements.discard('shared')
+        repo.requirements.discard('relshared')
+        repo._writerequirements()
+    finally:
+        destlock and destlock.release()
+        lock and lock.release()
+
+    # update store, spath, svfs and sjoin of repo
+    repo.unfiltered().__init__(repo.baseui, repo.root)
+
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
 
