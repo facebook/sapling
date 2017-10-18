@@ -417,12 +417,20 @@ where
             let receiverstream = stream::iter_ok::<_, ()>(recv);
             let mut core = Core::new().expect("cannot create core in iothread");
             let blobstore = open_blobstore(output, blobtype, &core.remote(), postpone_compaction)?;
+            // Filter only manifest entries, because changeset entries should be unique
+            let mut inserted_manifest_entries = std::collections::HashSet::new();
             let stream = receiverstream
                 .map(move |sender_helper| match sender_helper {
                     BlobstoreEntry::Changeset(bcs) => {
                         bcs.save(blobstore.clone()).from_err().boxify()
                     }
-                    BlobstoreEntry::ManifestEntry((key, value)) => blobstore.put(key, value),
+                    BlobstoreEntry::ManifestEntry((key, value)) => {
+                        if inserted_manifest_entries.insert(key.clone()) {
+                            blobstore.put(key, value)
+                        } else {
+                            Ok(()).into_future().boxify()
+                        }
+                    },
                 })
                 .map_err(|_| Error::from("error happened"))
                 .buffer_unordered(channel_size);
