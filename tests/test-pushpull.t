@@ -39,6 +39,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d34c38483be9
   (run 'hg update' to get a working copy)
   $ hg log --template '{rev} {desc}\n'
   1 y
@@ -85,6 +86,7 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark foo
+  new changesets d47967ce72a5
   (run 'hg update' to get a working copy)
   $ hg log -l 1 --template '{rev} {bookmarks}\n'
   2 foo
