@@ -130,16 +130,16 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   // points that we originally mounted.  (The processUnmountMsg() call checks
   // to ensure that the path requested matches one that we know about.)
   //
-  // MNT_DETACH asks Linux to remove this mount even if it is still "busy"--if
+  // MNT_FORCE asks Linux to remove this mount even if it is still "busy"--if
   // there are other processes with open file handles, or in case we failed to
   // unmount some of the bind mounts contained inside it for some reason.
   // This helps ensure that the unmount actually succeeds.
-  // This is the same behavior as "umount --lazy"
+  // This is the same behavior as "umount --force".
   //
   // In the future we might want to add an option for callers to request
-  // an unforced unmount (without passing in MNT_DETACH).  However for now we
+  // an unforced unmount (without passing in MNT_FORCE).  However for now we
   // always do forced unmount.
-  int umountFlags = UMOUNT_NOFOLLOW | MNT_DETACH;
+  int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE;
   auto rc = umount2(mountPath, umountFlags);
   if (rc != 0) {
     int errnum = errno;
