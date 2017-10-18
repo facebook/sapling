@@ -849,6 +849,39 @@ Renames are followed.
   +3
   +4
   
+
+Binary files work but without diff hunks filtering.
+(Checking w/ and w/o diff.git option.)
+
+  >>> open('binary', 'w').write('this\nis\na\nbinary\0')
+  $ hg add binary
+  $ hg ci -m 'add a binary file' --quiet
+  $ hg log -f -L binary,1-2 -p
+  changeset:   10:c96381c229df
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a binary file
+  
+  diff --git a/dir/binary b/dir/binary
+  new file mode 100644
+  index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..c2e1fbed209fe919b3f189a6a31950e9adf61e45
+  GIT binary patch
+  literal 17
+  Wc$_QA$SmdpqC~Ew%)G>+N(KNlNClYy
+  
+  
+  $ hg log -f -L binary,1-2 -p --config diff.git=false
+  changeset:   10:c96381c229df
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a binary file
+  
+  diff -r 6af29c3a778f -r c96381c229df dir/binary
+  Binary file dir/binary has changed
+  
+
 Option --follow is required.
 
   $ hg log -L foo,5-7

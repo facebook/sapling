@@ -2652,6 +2652,9 @@ def getloglinerangerevs(repo, userrevs, opts):
                 lineranges = fctxlineranges.get(fctx.path())
                 if lineranges is not None:
                     for hr, lines in hunks:
+                        if hr is None: # binary
+                            yield hr, lines
+                            continue
                         if any(mdiff.hunkinrange(hr[2:], lr)
                                for lr in lineranges):
                             yield hr, lines
