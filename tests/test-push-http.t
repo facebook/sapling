@@ -70,8 +70,8 @@ expect success
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  1 -> 0
-  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> 0
+  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  draft -> public
+  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> public
   remote: changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:http:$LOCALIP: (glob)
   % serve errors
   $ hg rollback
@@ -88,8 +88,8 @@ expect success, server lacks the httpheader capability
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  1 -> 0
-  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> 0
+  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  draft -> public
+  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> public
   remote: changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:http:$LOCALIP: (glob)
   % serve errors
   $ hg rollback
@@ -106,8 +106,8 @@ expect success, server lacks the unbundlehash capability
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  1 -> 0
-  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> 0
+  remote: phase-move: cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b:  draft -> public
+  remote: phase-move: ba677d0156c1196c1a699fa53f390dcfc3ce3872:   -> public
   remote: changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:http:$LOCALIP: (glob)
   % serve errors
   $ hg rollback

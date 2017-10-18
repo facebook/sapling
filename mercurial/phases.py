@@ -660,7 +660,7 @@ def preparehookargs(node, old, new):
     if old is None:
         old = ''
     else:
-        old = '%s' % old
+        old = phasenames[old]
     return {'node': node,
             'oldphase': old,
-            'phase': '%s' % new}
+            'phase': phasenames[new]}
