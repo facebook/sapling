@@ -1,0 +1,32 @@
+cpp_library(
+    name = "mononoke",
+    srcs = glob(
+        ["*.cpp"],
+    ),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/model:model",
+        "@/eden/fs/model/git:git",
+        "@/eden/fs/store:store",
+        "@/eden/fs/utils:path",
+        "@/eden/fs/utils:utils",
+        "@/folly:array",
+        "@/folly:bits",
+        "@/folly:conv",
+        "@/folly:file_util",
+        "@/folly:range",
+        "@/folly:subprocess",
+        "@/folly:synchronized",
+        "@/folly/experimental:env_util",
+        "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
+        "@/proxygen/lib/http:client",
+        "@/scm/hgext:datapack",
+    ],
+    external_deps = [
+        "gflags",
+        "glog",
+        ("boost", None, "boost_filesystem"),
+    ],
+)
