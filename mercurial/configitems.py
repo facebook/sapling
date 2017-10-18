@@ -444,7 +444,7 @@ coreconfigitem('experimental', 'sparse-read',
 coreconfigitem('experimental', 'sparse-read.density-threshold',
     default=0.25,
 )
-coreconfigitem('experimental', 'sparse-read.min-block-size',
+coreconfigitem('experimental', 'sparse-read.min-gap-size',
     default='256K',
 )
 coreconfigitem('experimental', 'treemanifest',

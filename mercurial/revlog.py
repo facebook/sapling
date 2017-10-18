@@ -196,7 +196,8 @@ def _slicechunk(revlog, revs):
 
         if prevend is not None:
             gapsize = revstart - prevend
-            if gapsize:
+            # only consider holes that are large enough
+            if gapsize > revlog._srmingapsize:
                 heapq.heappush(gapsheap, (-gapsize, i))
 
         prevend = revstart + revlen
@@ -371,7 +372,7 @@ class revlog(object):
         self._maxdeltachainspan = -1
         self._withsparseread = False
         self._srdensitythreshold = 0.25
-        self._srminblocksize = 262144
+        self._srmingapsize = 262144
 
         mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
@@ -401,8 +402,8 @@ class revlog(object):
             self._withsparseread = bool(opts.get('with-sparse-read', False))
             if 'sparse-read-density-threshold' in opts:
                 self._srdensitythreshold = opts['sparse-read-density-threshold']
-            if 'sparse-read-min-block-size' in opts:
-                self._srminblocksize = opts['sparse-read-min-block-size']
+            if 'sparse-read-min-gap-size' in opts:
+                self._srmingapsize = opts['sparse-read-min-gap-size']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '

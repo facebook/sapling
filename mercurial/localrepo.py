@@ -611,11 +611,11 @@ class localrepository(object):
         withsparseread = self.ui.configbool('experimental', 'sparse-read')
         srdensitythres = float(self.ui.config('experimental',
                                               'sparse-read.density-threshold'))
-        srminblocksize = self.ui.configbytes('experimental',
-                                             'sparse-read.min-block-size')
+        srmingapsize = self.ui.configbytes('experimental',
+                                           'sparse-read.min-gap-size')
         self.svfs.options['with-sparse-read'] = withsparseread
         self.svfs.options['sparse-read-density-threshold'] = srdensitythres
-        self.svfs.options['sparse-read-min-block-size'] = srminblocksize
+        self.svfs.options['sparse-read-min-gap-size'] = srmingapsize
 
         for r in self.requirements:
             if r.startswith('exp-compression-'):
