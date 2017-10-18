@@ -9,15 +9,18 @@ use std::sync::Arc;
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
+use bytes::Bytes;
 use fileblob::Fileblob;
 use filebookmarks::FileBookmarks;
 use fileheads::FileHeads;
 use heads::Heads;
+use manifoldblob::ManifoldBlob;
 use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use mercurial_types::NodeHash;
 use rocksblob::Rocksblob;
+use tokio_core::reactor::Remote;
 
 use errors::*;
 
@@ -142,5 +145,31 @@ impl MemBlobState {
             bookmarks: Arc::new(bookmarks),
             blobstore,
         }
+    }
+}
+
+impl_blob_state! {
+    ManifoldBlobState {
+        heads: FileHeads<NodeHash>,
+        bookmarks: Arc<FileBookmarks<NodeHash>>,
+        blobstore: ManifoldBlob<String, Bytes>,
+    }
+}
+
+impl ManifoldBlobState {
+    pub fn new(path: &Path, remote: &Remote) -> Result<Self> {
+        let heads = FileHeads::open(path.join("heads"))
+            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
+        let bookmarks = Arc::new(
+            FileBookmarks::open(path.join("books"))
+                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
+        );
+        // TODO(stash): is new_may_panic is the best option?
+        let blobstore = ManifoldBlob::new_may_panic("mononoke", remote);
+        Ok(ManifoldBlobState {
+            heads,
+            bookmarks,
+            blobstore,
+        })
     }
 }

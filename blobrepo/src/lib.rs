@@ -12,6 +12,7 @@ extern crate error_chain;
 extern crate futures;
 
 extern crate bincode;
+extern crate bytes;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -27,12 +28,14 @@ extern crate filebookmarks;
 extern crate fileheads;
 extern crate futures_ext;
 extern crate heads;
+extern crate manifoldblob;
 extern crate memblob;
 extern crate membookmarks;
 extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
+extern crate tokio_core;
 
 mod repo;
 mod changeset;
@@ -47,7 +50,7 @@ pub use errors::*;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
-pub use state::{BlobState, FilesBlobState, MemBlobState, RocksBlobState};
+pub use state::{BlobState, FilesBlobState, ManifoldBlobState, MemBlobState, RocksBlobState};
 //
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 
