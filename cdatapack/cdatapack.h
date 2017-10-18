@@ -63,8 +63,6 @@ typedef enum {
 typedef struct _datapack_handle_t {
   datapack_handle_status_t status;
 
-  int indexfd;
-  int datafd;
   void* index_mmap;
   void* data_mmap;
   off_t index_file_sz;

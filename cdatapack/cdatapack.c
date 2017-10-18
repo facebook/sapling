@@ -163,6 +163,8 @@ bool find(
 datapack_handle_t *open_datapack(
     char *indexfp, size_t indexfp_sz,
     char *datafp, size_t datafp_sz) {
+  int indexfd = -1;
+  int datafd = -1;
   datapack_handle_t *handle = NULL;
   char *buffer = NULL;
 
@@ -185,39 +187,43 @@ datapack_handle_t *open_datapack(
 
   memcpy(buffer, indexfp, indexfp_sz);
   buffer[indexfp_sz] = '\0';
-  handle->indexfd = open(buffer, O_RDONLY);
-  if (handle->indexfd < 0) {
+  indexfd = open(buffer, O_RDONLY);
+  if (indexfd < 0) {
     handle->status = DATAPACK_HANDLE_IO_ERROR;
     goto error_cleanup;
   }
 
-  handle->index_file_sz = lseek(handle->indexfd, 0, SEEK_END);
-  lseek(handle->indexfd, 0, SEEK_SET);
+  handle->index_file_sz = lseek(indexfd, 0, SEEK_END);
+  lseek(indexfd, 0, SEEK_SET);
 
   memcpy(buffer, datafp, datafp_sz);
   buffer[datafp_sz] = '\0';
-  handle->datafd = open(buffer, O_RDONLY);
-  if (handle->datafd < 0) {
+  datafd = open(buffer, O_RDONLY);
+  if (datafd < 0) {
     handle->status = DATAPACK_HANDLE_IO_ERROR;
     goto error_cleanup;
   }
 
-  handle->data_file_sz = lseek(handle->datafd, 0, SEEK_END);
-  lseek(handle->datafd, 0, SEEK_SET);
+  handle->data_file_sz = lseek(datafd, 0, SEEK_END);
+  lseek(datafd, 0, SEEK_SET);
 
   handle->index_mmap = mmap(NULL, (size_t) handle->index_file_sz, PROT_READ,
-      MAP_PRIVATE, handle->indexfd, (off_t) 0);
+      MAP_PRIVATE, indexfd, (off_t) 0);
   if (handle->index_mmap == MAP_FAILED) {
     handle->status = DATAPACK_HANDLE_MMAP_ERROR;
     goto error_cleanup;
   }
+  close(indexfd);
+  indexfd = -1;
 
   handle->data_mmap = mmap(NULL, (size_t) handle->data_file_sz, PROT_READ,
-      MAP_PRIVATE, handle->datafd, (off_t) 0);
+      MAP_PRIVATE, datafd, (off_t) 0);
   if (handle->data_mmap == MAP_FAILED) {
     handle->status = DATAPACK_HANDLE_MMAP_ERROR;
     goto error_cleanup;
   }
+  close(datafd);
+  datafd = -1;
 
   // read the headers and ensure that the file length is at least somewhat
   // sane.
@@ -330,12 +336,12 @@ error_cleanup:
     munmap(handle->data_mmap, (size_t) handle->data_file_sz);
   }
 
-  if (handle && handle->indexfd != 0) {
-    close(handle->indexfd);
+  if (indexfd != -1) {
+    close(indexfd);
   }
 
-  if (handle && handle->datafd != 0) {
-    close(handle->datafd);
+  if (datafd != -1) {
+    close(datafd);
   }
 
   if (handle != NULL) {
@@ -352,8 +358,6 @@ success_cleanup:
 void close_datapack(datapack_handle_t *handle) {
   munmap(handle->index_mmap, (size_t) handle->index_file_sz);
   munmap(handle->data_mmap, (size_t) handle->data_file_sz);
-  close(handle->indexfd);
-  close(handle->datafd);
   free(handle->fanout_table);
   free(handle);
 }
