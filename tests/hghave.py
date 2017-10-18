@@ -442,7 +442,7 @@ def has_pylint():
 @check("clang-format", "clang-format C code formatter")
 def has_clang_format():
     return matchoutput("clang-format --help",
-                       r"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code.")
+                       br"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code.")
 
 @check("pygments", "Pygments source highlighting library")
 def has_pygments():
