@@ -107,7 +107,7 @@ class JournalDiffCallback : public InodeDiffCallback {
             rawContext,
             RelativePathPiece{},
             std::move(rootTree),
-            diffContext->getToplevelIgnore(),
+            rawContext->getToplevelIgnore(),
             false)
         .ensure([diffContext = std::move(diffContext)]() {});
   }
