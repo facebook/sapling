@@ -11,6 +11,7 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
@@ -546,6 +547,12 @@ void EdenServer::acquireEdenLock() {
         "another instance of Eden appears to be running for " +
         edenDir_.stringPiece().str());
   }
+
+  // Write the PID (with a newline) to the lockfile.
+  int fd = lockFile_.fd();
+  folly::ftruncateNoInt(fd, /* len */ 0);
+  auto pidContents = folly::to<std::string>(getpid(), "\n");
+  folly::writeNoInt(fd, pidContents.data(), pidContents.size());
 }
 
 AbsolutePath EdenServer::getSocketPath() const {

@@ -26,6 +26,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
+from typing import Optional
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -38,6 +39,7 @@ CONFIG_DOT_D = 'config.d'
 USER_CONFIG = '.edenrc'
 
 # These paths are relative to the user's client directory.
+LOCK_FILE = 'lock'
 CLIENTS_DIR = 'clients'
 STORAGE_DIR = 'storage'
 ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
@@ -290,7 +292,7 @@ by hand to make changes to the repository or remove it.''' % name)
             # Delete the now empty mount point
             os.rmdir(path)
 
-    def check_health(self):
+    def check_health(self) -> 'HealthStatus':
         '''
         Get the status of the edenfs daemon.
 
@@ -303,8 +305,12 @@ by hand to make changes to the repository or remove it.''' % name)
                 pid = client.getPid()
                 status = client.getStatus()
         except eden.thrift.EdenNotRunningError:
-            return HealthStatus(fb_status.DEAD, pid=None,
-                                detail='edenfs not running')
+            # It is possible that the edenfs process is running, but the Thrift
+            # server is not running. This could be during the startup, shutdown,
+            # or takeover of the edenfs process. As a backup to requesting the
+            # PID from the Thrift server, we read it from the lockfile and try
+            # to deduce the current status of Eden.
+            return self._check_health_using_lockfile()
         except thrift.Thrift.TException as ex:
             detail = 'error talking to edenfs: ' + str(ex)
             return HealthStatus(status, pid, detail)
@@ -313,6 +319,46 @@ by hand to make changes to the repository or remove it.''' % name)
         detail = 'edenfs running (pid {}); status is {}'.format(
             pid, status_name)
         return HealthStatus(status, pid, detail)
+
+    def _check_health_using_lockfile(self) -> 'HealthStatus':
+        '''Make a best-effort to produce a HealthStatus based on the PID in the
+        Eden lockfile.
+        '''
+        lockfile = os.path.join(self._config_dir, LOCK_FILE)
+        try:
+            with open(lockfile, 'r') as f:
+                lockfile_contents = f.read()
+            pid = lockfile_contents.rstrip()
+            int(pid)  # Throw if this does not parse as an integer.
+        except BaseException:
+            # If we cannot read the PID from the lockfile for any reason, return
+            # DEAD.
+            return self._create_dead_health_status()
+
+        try:
+            stdout = subprocess.check_output(['ps', '-p', pid, '-o', 'comm='])
+        except subprocess.CalledProcessError:
+            # If there is no process with the specified id, return DEAD.
+            return self._create_dead_health_status()
+
+        # Use heuristics to determine that the PID in the lockfile is associated
+        # with an edenfs process as it is possible that edenfs is no longer
+        # running and the PID in the lockfile has been assigned to a new process
+        # unrelated to Eden.
+        comm = stdout.rstrip().decode('utf8')
+        # Note that the command may be just "edenfs" rather than a path, but it
+        # works out fine either way.
+        if os.path.basename(comm) == 'edenfs':
+            return HealthStatus(fb_status.STOPPED, int(pid),
+                                'Eden\'s Thrift server does not appear to be '
+                                'running, but the process is still alive ('
+                                'PID=%s).' % pid)
+        else:
+            return self._create_dead_health_status()
+
+    def _create_dead_health_status(self) -> 'HealthStatus':
+        return HealthStatus(fb_status.DEAD, pid=None,
+                            detail='edenfs not running')
 
     def spawn(self,
               daemon_binary,
@@ -533,7 +579,7 @@ by hand to make changes to the repository or remove it.''' % name)
 
 
 class HealthStatus(object):
-    def __init__(self, status, pid, detail):
+    def __init__(self, status: fb_status, pid: Optional[int], detail: str) -> None:
         self.status = status
         self.pid = pid  # The process ID, or None if not running
         self.detail = detail  # a human-readable message
