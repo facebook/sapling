@@ -67,8 +67,9 @@ class itemregister(dict):
             self._generics.add(item)
 
     def get(self, key):
-        if key in self:
-            return self[key]
+        baseitem = super(itemregister, self).get(key)
+        if baseitem is not None and not baseitem.generic:
+            return baseitem
 
         # search for a matching generic item
         generics = sorted(self._generics, key=(lambda x: (x.priority, x.name)))
@@ -76,8 +77,7 @@ class itemregister(dict):
             if item._re.match(key):
                 return item
 
-        # fallback to dict get
-        return super(itemregister, self).get(key)
+        return None
 
 coreitems = {}
 
