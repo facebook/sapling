@@ -31,6 +31,8 @@ use revlog::{self, Revlog, RevlogIter};
 
 type FutureResult<T> = future::FutureResult<T, Error>;
 
+const LOGS_CAPACITY: usize = 1000000;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Required {
     Store,
@@ -239,6 +241,11 @@ impl RevlogRepo {
         }
         let mut inner = self.inner.write().expect("poisoned lock");
 
+        // We may have memory issues if we are keeping too many revlogs in memory.
+        // Let's clear them when we have too much
+        if inner.treelogcache.len() > LOGS_CAPACITY {
+            inner.treelogcache.clear();
+        }
         match inner.treelogcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
@@ -261,10 +268,11 @@ impl RevlogRepo {
         }
         let mut inner = self.inner.write().expect("poisoned lock");
 
-        self.get_file_revlog_inner(&mut inner, path)
-    }
-
-    fn get_file_revlog_inner(&self, inner: &mut RevlogInner, path: &MPath) -> Result<Revlog> {
+        // We may have memory issues if we are keeping too many revlogs in memory.
+        // Let's clear them when we have too much
+        if inner.filelogcache.len() > LOGS_CAPACITY {
+            inner.filelogcache.clear();
+        }
         match inner.filelogcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
