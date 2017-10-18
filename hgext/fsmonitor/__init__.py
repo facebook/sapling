@@ -274,7 +274,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     matchfn = match.matchfn
     matchalways = match.always()
     dmap = self._map._map
-    nonnormalset = getattr(self, '_nonnormalset', None)
+    nonnormalset = self._map.nonnormalset
 
     copymap = self._map.copymap
     getkind = stat.S_IFMT
@@ -404,7 +404,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     visit = set((f for f in notefiles if (f not in results and matchfn(f)
                                           and (f in dmap or not ignore(f)))))
 
-    if nonnormalset is not None and not fresh_instance:
+    if not fresh_instance:
         if matchalways:
             visit.update(f for f in nonnormalset if f not in results)
             visit.update(f for f in copymap if f not in results)
@@ -415,15 +415,11 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
                          if f not in results and matchfn(f))
     else:
         if matchalways:
-            visit.update(f for f, st in dmap.iteritems()
-                         if (f not in results and
-                             (st[2] < 0 or st[0] != 'n' or fresh_instance)))
+            visit.update(f for f, st in dmap.iteritems() if f not in results)
             visit.update(f for f in copymap if f not in results)
         else:
             visit.update(f for f, st in dmap.iteritems()
-                         if (f not in results and
-                             (st[2] < 0 or st[0] != 'n' or fresh_instance)
-                             and matchfn(f)))
+                         if f not in results and matchfn(f))
             visit.update(f for f in copymap
                          if f not in results and matchfn(f))
 
