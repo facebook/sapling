@@ -51,6 +51,24 @@ hg subrepos are shared into existence on demand if the parent was shared
   $ hg -R clone1 update -C tip
   cloning subrepo subrepo from $TESTTMP/test/subrepo
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ find share2 | egrep 'sharedpath|00.+\.i' | sort
+  share2/.hg/sharedpath
+  share2/subrepo/.hg/sharedpath
+  $ hg -R share2 unshare
+  unsharing subrepo 'subrepo'
+  $ find share2 | egrep 'sharedpath|00.+\.i' | sort
+  share2/.hg/00changelog.i
+  share2/.hg/sharedpath.old
+  share2/.hg/store/00changelog.i
+  share2/.hg/store/00manifest.i
+  share2/subrepo/.hg/00changelog.i
+  share2/subrepo/.hg/sharedpath.old
+  share2/subrepo/.hg/store/00changelog.i
+  share2/subrepo/.hg/store/00manifest.i
+  $ hg -R share2/subrepo log -r tip -T compact
+  1[tip]   559dcc9bfa65   1970-01-01 00:00 +0000   test
+    subrepo mod
+  
   $ rm -rf clone1
 
   $ hg clone -qr 1 test clone1

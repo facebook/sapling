@@ -286,6 +286,13 @@ def unshare(ui, repo):
     # update store, spath, svfs and sjoin of repo
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
+    # TODO: figure out how to access subrepos that exist, but were previously
+    #       removed from .hgsub
+    c = repo['.']
+    subs = c.substate
+    for s in sorted(subs):
+        c.sub(s).unshare()
+
 def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
     """Called after a new shared repo is created.
 

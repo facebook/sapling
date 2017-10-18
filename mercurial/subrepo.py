@@ -621,6 +621,11 @@ class abstractsubrepo(object):
     def shortid(self, revid):
         return revid
 
+    def unshare(self):
+        '''
+        convert this repository from shared to normal storage.
+        '''
+
     def verify(self):
         '''verify the integrity of the repository.  Return 0 on success or
         warning, 1 on any error.
@@ -1082,6 +1087,24 @@ class hgsubrepo(abstractsubrepo):
 
     def shortid(self, revid):
         return revid[:12]
+
+    @annotatesubrepoerror
+    def unshare(self):
+        # subrepo inherently violates our import layering rules
+        # because it wants to make repo objects from deep inside the stack
+        # so we manually delay the circular imports to not break
+        # scripts that don't use our demand-loading
+        global hg
+        from . import hg as h
+        hg = h
+
+        # Nothing prevents a user from sharing in a repo, and then making that a
+        # subrepo.  Alternately, the previous unshare attempt may have failed
+        # part way through.  So recurse whether or not this layer is shared.
+        if self._repo.shared():
+            self.ui.status(_("unsharing subrepo '%s'\n") % self._relpath)
+
+        hg.unshare(self.ui, self._repo)
 
     def verify(self):
         try:
