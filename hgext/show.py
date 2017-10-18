@@ -52,12 +52,6 @@ testedwith = 'ships-with-hg-core'
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem('commands', 'show.aliasprefix',
-    default=list,
-)
-
 revsetpredicate = registrar.revsetpredicate()
 
 class showcmdfunc(registrar._funcregistrarbase):

@@ -181,6 +181,9 @@ coreconfigitem('color', 'mode',
 coreconfigitem('color', 'pagermode',
     default=dynamicdefault,
 )
+coreconfigitem('commands', 'show.aliasprefix',
+    default=list,
+)
 coreconfigitem('commands', 'status.relative',
     default=False,
 )
