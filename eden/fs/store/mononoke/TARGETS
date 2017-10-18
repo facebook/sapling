@@ -14,6 +14,7 @@ cpp_library(
         "@/folly:bits",
         "@/folly:conv",
         "@/folly:file_util",
+        "@/folly:json",
         "@/folly:range",
         "@/folly:subprocess",
         "@/folly:synchronized",

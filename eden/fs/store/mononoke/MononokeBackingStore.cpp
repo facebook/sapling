@@ -15,10 +15,13 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/json.h>
 #include <proxygen/lib/http/HTTPConnector.h>
 #include <proxygen/lib/http/session/HTTPUpstreamSession.h>
 #include <proxygen/lib/utils/URL.h>
 
+using folly::Future;
+using folly::IOBuf;
 using folly::makeFuture;
 using folly::make_exception_wrapper;
 using proxygen::ErrorCode;
@@ -27,6 +30,7 @@ using proxygen::HTTPHeaders;
 using proxygen::HTTPMessage;
 using proxygen::HTTPTransaction;
 using proxygen::UpgradeProtocol;
+using proxygen::URL;
 
 namespace facebook {
 namespace eden {
@@ -35,22 +39,17 @@ namespace {
 using IOBufPromise = folly::Promise<std::unique_ptr<folly::IOBuf>>;
 
 // Callback that processes response for getblob request.
-// Url format: /REPONAME/blob/HASH/
-class GetBlobCallback : public proxygen::HTTPConnector::Callback,
-                        public proxygen::HTTPTransaction::Handler {
+class MononokeCallback : public proxygen::HTTPConnector::Callback,
+                         public proxygen::HTTPTransaction::Handler {
  public:
-  GetBlobCallback(
-      const Hash& hash,
-      IOBufPromise&& promise,
-      const std::string& repo)
-      : promise_(std::move(promise)), hash_(hash), repo_(repo) {}
+  MononokeCallback(const proxygen::URL& url, IOBufPromise&& promise)
+      : promise_(std::move(promise)), url_(url) {}
 
   virtual void connectSuccess(proxygen::HTTPUpstreamSession* session) override {
     auto txn = session->newTransaction(this);
     HTTPMessage message;
     message.setMethod(proxygen::HTTPMethod::GET);
-    proxygen::URL url(folly::sformat("/{}/blob/{}/", repo_, hash_.toString()));
-    message.setURL(url.makeRelativeURL());
+    message.setURL(url_.makeRelativeURL());
     txn->sendHeaders(message);
     txn->sendEOM();
     session->closeWhenIdle();
@@ -133,6 +132,7 @@ class GetBlobCallback : public proxygen::HTTPConnector::Callback,
   }
 
   IOBufPromise promise_;
+  proxygen::URL url_;
   Hash hash_;
   std::string repo_;
   uint16_t status_code_{0};
@@ -152,18 +152,68 @@ MononokeBackingStore::MononokeBackingStore(
 MononokeBackingStore::~MononokeBackingStore() {}
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
-    const Hash& /* id */) {
+    const Hash& id) {
+  URL url(folly::sformat("/{}/treenode/{}/", repo_, id.toString()));
+  auto future = sendRequest(url);
+
+  return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+    auto s = buf->moveToFbString();
+    auto parsed = folly::parseJson(s);
+    if (!parsed.isArray()) {
+      throw std::runtime_error("malformed json: should be array");
+    }
+
+    std::vector<TreeEntry> entries;
+    for (auto i = parsed.begin(); i != parsed.end(); ++i) {
+      auto path_elem = i->at("path").asString();
+      auto hash = Hash(i->at("hash").asString());
+      auto str_type = i->at("type").asString();
+      FileType file_type;
+      uint8_t owner_permissions = 0b110;
+      if (str_type == "File") {
+        file_type = FileType::REGULAR_FILE;
+      } else if (str_type == "Tree") {
+        file_type = FileType::DIRECTORY;
+        owner_permissions = 0b111;
+      } else if (str_type == "Executable") {
+        file_type = FileType::REGULAR_FILE;
+        owner_permissions = 0b111;
+      } else if (str_type == "Symlink") {
+        file_type = FileType::SYMLINK;
+        owner_permissions = 0b111;
+      } else {
+        throw std::runtime_error("unknown file type");
+      }
+      entries.push_back(
+          TreeEntry(hash, path_elem, file_type, owner_permissions));
+    }
+    return makeFuture(std::make_unique<Tree>(std::move(entries), id));
+  });
+}
+
+folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
+    const Hash& id) {
+  URL url(folly::sformat("/{}/blob/{}/", repo_, id.toString()));
+  auto future = sendRequest(url);
+
+  return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+    return makeFuture(std::make_unique<Blob>(id, *buf));
+  });
+}
+
+folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
+    const Hash& /* commitID */) {
   throw std::runtime_error("not implemented");
 }
 
 // TODO(stash): make the call async
-folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
-    const Hash& id) {
+Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
+    const URL& url) {
   folly::EventBase evb;
 
   IOBufPromise promise;
   auto future = promise.getFuture();
-  GetBlobCallback callback(id, std::move(promise), repo_);
+  MononokeCallback callback(url, std::move(promise));
 
   folly::HHWheelTimer::UniquePtr timer{folly::HHWheelTimer::newTimer(
       &evb,
@@ -176,15 +226,8 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
   const folly::AsyncSocket::OptionMap opts{{{SOL_SOCKET, SO_REUSEADDR}, 1}};
   connector.connect(&evb, this->sa_, timeout_, opts);
   evb.loop();
-
-  return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
-    return makeFuture(std::make_unique<Blob>(id, *buf));
-  });
+  return future;
 }
 
-folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
-    const Hash& commitID) {
-  throw std::runtime_error("not implemented");
-}
 } // namespace eden
 } // namespace facebook

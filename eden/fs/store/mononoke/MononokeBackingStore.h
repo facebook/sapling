@@ -14,6 +14,15 @@
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
+#include <folly/futures/Future.h>
+
+namespace folly {
+class IOBuf;
+} // namespace folly
+
+namespace proxygen {
+class URL;
+} // namespace proxygen
 
 namespace facebook {
 namespace eden {
@@ -43,6 +52,9 @@ class MononokeBackingStore : public BackingStore {
   // Forbidden copy constructor and assignment operator
   MononokeBackingStore(MononokeBackingStore const&) = delete;
   MononokeBackingStore& operator=(MononokeBackingStore const&) = delete;
+
+  folly::Future<std::unique_ptr<folly::IOBuf>> sendRequest(
+      const proxygen::URL& url);
 
   folly::SocketAddress sa_;
   std::string repo_;
