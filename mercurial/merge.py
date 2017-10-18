@@ -25,6 +25,7 @@ from .node import (
 from . import (
     copies,
     error,
+    extensions,
     filemerge,
     match as matchmod,
     obsutil,
@@ -1942,6 +1943,38 @@ def update(repo, node, branchmerge, force, ancestor=None,
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
             repo.vfs.write('updatestate', p2.hex())
+
+        # Advertise fsmonitor when its presence could be useful.
+        #
+        # We only advertise when performing an update from an empty working
+        # directory. This typically only occurs during initial clone.
+        #
+        # We give users a mechanism to disable the warning in case it is
+        # annoying.
+        #
+        # We only allow on Linux and MacOS because that's where fsmonitor is
+        # considered stable.
+        fsmonitorwarning = repo.ui.configbool('fsmonitor', 'warn_when_unused')
+        fsmonitorthreshold = repo.ui.configint('fsmonitor',
+                                               'warn_update_file_count')
+        try:
+            extensions.find('fsmonitor')
+            fsmonitorenabled = repo.ui.config('fsmonitor', 'mode') != 'off'
+            # We intentionally don't look at whether fsmonitor has disabled
+            # itself because a) fsmonitor may have already printed a warning
+            # b) we only care about the config state here.
+        except KeyError:
+            fsmonitorenabled = False
+
+        if (fsmonitorwarning
+                and not fsmonitorenabled
+                and p1.node() == nullid
+                and len(actions['g']) >= fsmonitorthreshold
+                and pycompat.sysplatform.startswith(('linux', 'darwin'))):
+            repo.ui.warn(
+                _('(warning: large working directory being used without '
+                  'fsmonitor enabled; enable fsmonitor to improve performance; '
+                  'see "hg help -e fsmonitor")\n'))
 
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
         wc.flushall()

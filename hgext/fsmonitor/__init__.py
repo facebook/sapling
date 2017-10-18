@@ -18,6 +18,9 @@ fsmonitor requires no configuration -- it will tell Watchman about your
 repository as necessary. You'll need to install Watchman from
 https://facebook.github.io/watchman/ and make sure it is in your PATH.
 
+fsmonitor is incompatible with the largefiles and eol extensions, and
+will disable itself if any of those are active.
+
 The following configuration options exist:
 
 ::
@@ -58,9 +61,22 @@ false. You may wish to set this to true if you have a very fast filesystem
 that can outpace the IPC overhead of getting the result data for the full repo
 from Watchman. Defaults to false.
 
-fsmonitor is incompatible with the largefiles and eol extensions, and
-will disable itself if any of those are active.
+::
 
+    [fsmonitor]
+    warn_when_unused = (boolean)
+
+Whether to print a warning during certain operations when fsmonitor would be
+beneficial to performance but isn't enabled.
+
+::
+
+    [fsmonitor]
+    warn_update_file_count = (integer)
+
+If ``warn_when_unused`` is set and fsmonitor isn't enabled, a warning will
+be printed during working directory updates if this many files will be
+created.
 '''
 
 # Platforms Supported

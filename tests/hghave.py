@@ -559,6 +559,11 @@ def has_osxpackaging():
     except ImportError:
         return False
 
+@check('linuxormacos', 'Linux or MacOS')
+def has_linuxormacos():
+    # This isn't a perfect test for MacOS. But it is sufficient for our needs.
+    return sys.platform.startswith(('linux', 'darwin'))
+
 @check("docker", "docker support")
 def has_docker():
     pat = br'A self-sufficient runtime for'

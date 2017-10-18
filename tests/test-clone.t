@@ -1177,3 +1177,80 @@ SEC: check for unsafe ssh url
 We should not have created a file named owned - if it exists, the
 attack succeeded.
   $ if test -f owned; then echo 'you got owned'; fi
+
+Cloning without fsmonitor enabled does not print a warning for small repos
+
+  $ hg clone a fsmonitor-default
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Lower the warning threshold to simulate a large repo
+
+  $ cat >> $HGRCPATH << EOF
+  > [fsmonitor]
+  > warn_update_file_count = 2
+  > EOF
+
+We should see a warning about no fsmonitor on supported platforms
+
+#if linuxormacos no-fsmonitor
+  $ hg clone a nofsmonitor
+  updating to bookmark @ on branch stable
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#else
+  $ hg clone a nofsmonitor
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+We should not see warning about fsmonitor when it is enabled
+
+#if fsmonitor
+  $ hg clone a fsmonitor-enabled
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+We can disable the fsmonitor warning
+
+  $ hg --config fsmonitor.warn_when_unused=false clone a fsmonitor-disable-warning
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Loaded fsmonitor but disabled in config should still print warning
+
+#if linuxormacos fsmonitor
+  $ hg --config fsmonitor.mode=off clone a fsmonitor-mode-off
+  updating to bookmark @ on branch stable
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (fsmonitor !)
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+Warning not printed if working directory isn't empty
+
+  $ hg -q clone a fsmonitor-update
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (?)
+  $ cd fsmonitor-update
+  $ hg up acb14030fe0a
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark @)
+  $ hg up cf0fe1914066
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+`hg update` from null revision also prints
+
+  $ hg up null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+
+#if linuxormacos no-fsmonitor
+  $ hg up cf0fe1914066
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#else
+  $ hg up cf0fe1914066
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+  $ cd ..
+

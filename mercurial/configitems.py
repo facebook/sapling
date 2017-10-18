@@ -488,6 +488,12 @@ coreconfigitem('format', 'usegeneraldelta',
 coreconfigitem('format', 'usestore',
     default=True,
 )
+coreconfigitem('fsmonitor', 'warn_when_unused',
+    default=True,
+)
+coreconfigitem('fsmonitor', 'warn_update_file_count',
+    default=50000,
+)
 coreconfigitem('hooks', '.*',
     default=dynamicdefault,
     generic=True,
