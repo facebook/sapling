@@ -44,11 +44,12 @@ use std::error;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 
 use bytes::Bytes;
 
-use futures::{Future, IntoFuture, Stream};
+use futures::{stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use tokio_core::reactor::{Core, Remote};
@@ -125,8 +126,13 @@ error_chain! {
 
 impl_kv_error!(Error);
 
+enum BlobstoreEntry {
+    ManifestEntry((String, Bytes)),
+    Changeset(BlobChangeset),
+}
+
 fn put_manifest_entry(
-    blobstore: BBlobstore,
+    sender: SyncSender<BlobstoreEntry>,
     entry_hash: NodeHash,
     blob: Blob<Vec<u8>>,
     parents: Parents,
@@ -150,13 +156,13 @@ where
         let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
             .expect("bincode serialize failed");
 
-        // TODO: blobstore.putv?
-        let node = blobstore
-            .put(nodekey, Bytes::from(nodeblob))
-            .map_err(Into::into);
-        let blob = blobstore.put(blobkey, bytes).map_err(Into::into);
+        let res1 = sender.send(BlobstoreEntry::ManifestEntry(
+            (nodekey, Bytes::from(nodeblob)),
+        ));
+        let res2 = sender.send(BlobstoreEntry::ManifestEntry((blobkey, bytes)));
 
-        node.join(blob).map(|_| ())
+        res1.and(res2)
+            .map_err(|err| Error::from(format!("{}", err)))
     })
 }
 
@@ -164,7 +170,7 @@ where
 // TODO: #[async]
 fn copy_manifest_entry<E>(
     entry: Box<Entry<Error = E>>,
-    blobstore: BBlobstore,
+    sender: SyncSender<BlobstoreEntry>,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: From<E>,
@@ -177,7 +183,7 @@ where
     blobfuture
         .join(entry.get_parents().map_err(Error::from))
         .and_then(move |(blob, parents)| {
-            put_manifest_entry(blobstore, hash, blob, parents)
+            put_manifest_entry(sender, hash, blob, parents)
         })
 }
 
@@ -240,14 +246,14 @@ fn get_stream_of_manifest_entries(
 /// against a set of entries that have already been copied, and any remaining are actually copied.
 fn copy_changeset(
     revlog_repo: RevlogRepo,
-    blobstore: BBlobstore,
+    sender: SyncSender<BlobstoreEntry>,
     csid: NodeHash,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
 {
     let put = {
-        let blobstore = blobstore.clone();
+        let sender = sender.clone();
         let csid = csid;
 
         revlog_repo
@@ -255,8 +261,9 @@ where
             .from_err()
             .and_then(move |cs| {
                 let bcs = BlobChangeset::new(&csid, cs);
-
-                bcs.save(blobstore).map_err(Into::into)
+                sender
+                    .send(BlobstoreEntry::Changeset(bcs))
+                    .map_err(|e| Error::from(e.to_string()))
             })
     };
 
@@ -274,7 +281,7 @@ where
                 .from_err()
                 .and_then(move |blob| {
                     let putmf = put_manifest_entry(
-                        blobstore.clone(),
+                        sender.clone(),
                         mfid,
                         blob.as_blob().clone(),
                         blob.parents().clone(),
@@ -299,9 +306,7 @@ where
                                     }
                                 })
                                 .flatten()
-                                .for_each(
-                                    move |entry| copy_manifest_entry(entry, blobstore.clone()),
-                                )
+                                .for_each(move |entry| copy_manifest_entry(entry, sender.clone()))
                         })
                         .into_future()
                         .flatten();
@@ -325,7 +330,7 @@ where
 
 fn convert<H>(
     revlog: RevlogRepo,
-    blobstore: BBlobstore,
+    sender: SyncSender<BlobstoreEntry>,
     headstore: H,
     core: Core,
     cpupool: Arc<CpuPool>,
@@ -343,12 +348,12 @@ where
         .map_err(Error::from)
         .enumerate()
         .map({
-            let blobstore = blobstore.clone();
             let revlog = revlog.clone();
+            let sender = sender.clone();
             move |(seq, csid)| {
                 debug!(logger, "{}: changeset {}", seq, csid);
                 STATS::changesets.add_value(1);
-                copy_changeset(revlog.clone(), blobstore.clone(), csid)
+                copy_changeset(revlog.clone(), sender.clone(), csid)
             }
         }) // Stream<Future<()>>
         .map(|copy| cpupool.spawn(copy))
@@ -374,6 +379,7 @@ where
 
     core.run(convert)?;
 
+    info!(logger, "parsed everything, waiting for io");
     Ok(())
 }
 
@@ -383,24 +389,53 @@ fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
     blobtype: BlobstoreType,
     logger: &Logger,
     postpone_compaction: bool,
-) -> Result<()> {
-    let core = tokio_core::reactor::Core::new()?;
+    channel_size: usize,
+) -> Result<()>
+where
+    In: AsRef<Path>,
+    Out: AsRef<Path>,
+{
+    let core = Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
-    let repo = open_repo(&input)?;
+    info!(logger, "Opening headstore: {:?}", output);
+    let headstore = open_headstore(&output, &cpupool)?;
 
     if let BlobstoreType::Manifold(ref bucket) = blobtype {
         info!(logger, "Using ManifoldBlob with bucket: {:?}", bucket);
     } else {
         info!(logger, "Opening blobstore: {:?}", output);
     }
-    let blobstore = open_blobstore(&output, blobtype, &core.remote(), postpone_compaction)?;
+    let output = output.as_ref().to_path_buf();
 
-    info!(logger, "Opening headstore: {:?}", output);
-    let headstore = open_headstore(&output, &cpupool)?;
+    let (sender, recv) = sync_channel::<BlobstoreEntry>(channel_size);
+    // Separate thread that does all blobstore operations. Other worker threads send parsed revlog
+    // data to this thread.
+    let iothread = thread::Builder::new()
+        .name("iothread".to_owned())
+        .spawn(move || {
+            let receiverstream = stream::iter_ok::<_, ()>(recv);
+            let mut core = Core::new().expect("cannot create core in iothread");
+            let blobstore = open_blobstore(output, blobtype, &core.remote(), postpone_compaction)?;
+            let stream = receiverstream
+                .map(move |sender_helper| match sender_helper {
+                    BlobstoreEntry::Changeset(bcs) => {
+                        bcs.save(blobstore.clone()).from_err().boxify()
+                    }
+                    BlobstoreEntry::ManifestEntry((key, value)) => blobstore.put(key, value),
+                })
+                .map_err(|_| Error::from("error happened"))
+                .buffer_unordered(channel_size);
+            core.run(stream.for_each(|_| Ok(())))
+        })
+        .expect("cannot start iothread");
+
+    let repo = open_repo(&input)?;
 
     info!(logger, "Converting: {:?}", input);
-    convert(repo, blobstore, headstore, core, cpupool, logger)
+    let res = convert(repo, sender, headstore, core, cpupool, logger);
+    iothread.join().expect("failed to join io thread")?;
+    res
 }
 
 fn open_repo<P: AsRef<Path>>(input: P) -> Result<RevlogRepo> {
@@ -424,13 +459,12 @@ fn open_headstore<P: AsRef<Path>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileH
     Ok(headstore)
 }
 
-fn open_blobstore<P: AsRef<Path>>(
-    output: P,
+fn open_blobstore(
+    mut output: PathBuf,
     ty: BlobstoreType,
     remote: &Remote,
     postpone_compaction: bool,
 ) -> Result<BBlobstore> {
-    let mut output = PathBuf::from(output.as_ref());
     output.push("blobs");
 
     let blobstore = match ty {
@@ -475,6 +509,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --postpone-compaction    '(rocksdb only) postpone auto compaction while importing'
 
             -d, --debug              'print debug level output'
+            --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
         "#,
         )
         .arg(
@@ -519,7 +554,7 @@ fn start_stats() -> Result<()> {
     thread::Builder::new()
         .name("stats_aggregation".to_owned())
         .spawn(move || {
-            let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+            let mut core = Core::new().expect("failed to create tokio core");
             let scheduler = stats::schedule_stats_aggregation(&core.handle())
                 .expect("failed to create stats aggregation scheduler");
             core.run(scheduler).expect("stats scheduler failed");
@@ -562,7 +597,21 @@ fn main() {
 
         let postpone_compaction = matches.is_present("postpone-compaction");
 
-        run_blobimport(input, output, blobtype, &root_log, postpone_compaction)?;
+        let channel_size: usize = matches
+            .value_of("channel-size")
+            .map(|size| {
+                size.parse().expect("channel-size must be positive integer")
+            })
+            .unwrap_or(1000);
+
+        run_blobimport(
+            input,
+            output,
+            blobtype,
+            &root_log,
+            postpone_compaction,
+            channel_size,
+        )?;
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
             let options = rocksdb::Options::new().create_if_missing(false);
