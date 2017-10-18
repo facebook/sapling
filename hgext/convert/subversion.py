@@ -352,8 +352,10 @@ class svn_source(converter_source):
                 raise error.Abort(_('svn: revision %s is not an integer') %
                                  revs[0])
 
-        self.trunkname = self.ui.config('convert', 'svn.trunk',
-                                        'trunk').strip('/')
+        trunkcfg = self.ui.config('convert', 'svn.trunk')
+        if trunkcfg is None:
+            trunkcfg = 'trunk'
+        self.trunkname = trunkcfg.strip('/')
         self.startrev = self.ui.config('convert', 'svn.startrev')
         try:
             self.startrev = int(self.startrev)

@@ -112,6 +112,15 @@ configitem('convert', 'skiptags',
 configitem('convert', 'svn.debugsvnlog',
     default=True,
 )
+configitem('convert', 'svn.trunk',
+    default=None,
+)
+configitem('convert', 'svn.tags',
+    default=None,
+)
+configitem('convert', 'svn.branches',
+    default=None,
+)
 configitem('convert', 'svn.startrev',
     default=0,
 )
