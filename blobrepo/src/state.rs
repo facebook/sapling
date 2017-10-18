@@ -149,14 +149,14 @@ impl MemBlobState {
 }
 
 impl_blob_state! {
-    ManifoldBlobState {
+    TestManifoldBlobState {
         heads: FileHeads<NodeHash>,
         bookmarks: Arc<FileBookmarks<NodeHash>>,
         blobstore: ManifoldBlob<String, Bytes>,
     }
 }
 
-impl ManifoldBlobState {
+impl TestManifoldBlobState {
     pub fn new(path: &Path, remote: &Remote) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
@@ -164,9 +164,8 @@ impl ManifoldBlobState {
             FileBookmarks::open(path.join("books"))
                 .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
         );
-        // TODO(stash): is new_may_panic is the best option?
         let blobstore = ManifoldBlob::new_may_panic("mononoke", remote);
-        Ok(ManifoldBlobState {
+        Ok(TestManifoldBlobState {
             heads,
             bookmarks,
             blobstore,

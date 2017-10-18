@@ -31,6 +31,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate tokio_core;
 
 use std::collections::HashMap;
 use std::error;
@@ -40,10 +41,12 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
+use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState};
+use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState, TestManifoldBlobState};
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
+use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use hyper::StatusCode;
@@ -318,7 +321,7 @@ fn main() {
                 .long("repotype")
                 .short("T")
                 .takes_value(true)
-                .possible_values(&["files", "rocksdb"])
+                .possible_values(&["files", "rocksdb", "manifold"])
                 .required(true)
                 .help("repo type"),
         )
@@ -347,6 +350,30 @@ fn main() {
             reponame,
             RocksBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
         ),
+        "manifold" => {
+            let (sender, receiver) = oneshot::channel();
+            // manifold requires a separate detached thread to do the IO, that's why we create a
+            // separate thread to handle it.
+            std::thread::spawn(move || {
+                let mut core = Core::new().expect("cannot create core for manifold");
+                sender
+                    .send(core.remote())
+                    .expect("cannot send remote handle for manifold");
+                loop {
+                    // loop infinitely; it will be stopped when the whole server is stopped
+                    core.turn(None);
+                }
+            });
+            let remote = receiver
+                .wait()
+                .expect("cannot get remote handle for manifold");
+            start_server(
+                addr,
+                reponame,
+                TestManifoldBlobState::new(&blobrepo_folder, &remote)
+                    .expect("couldn't open blob state"),
+            )
+        }
         bad => panic!("unknown blobrepo type {:?}", bad),
     };
 }

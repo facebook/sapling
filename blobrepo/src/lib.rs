@@ -16,6 +16,7 @@ extern crate bytes;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate tokio_core;
 
 extern crate heapsize;
 #[macro_use]
@@ -35,7 +36,6 @@ extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
-extern crate tokio_core;
 
 mod repo;
 mod changeset;
@@ -50,7 +50,7 @@ pub use errors::*;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
-pub use state::{BlobState, FilesBlobState, ManifoldBlobState, MemBlobState, RocksBlobState};
+pub use state::{BlobState, FilesBlobState, MemBlobState, RocksBlobState, TestManifoldBlobState};
 //
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 
