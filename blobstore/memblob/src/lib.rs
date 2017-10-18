@@ -27,7 +27,9 @@ pub struct Memblob {
 
 impl Memblob {
     pub fn new() -> Self {
-        Memblob { hash: Arc::new(Mutex::new(HashMap::new())) }
+        Memblob {
+            hash: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 }
 
@@ -50,32 +52,5 @@ impl Blobstore for Memblob {
         let inner = self.hash.lock().expect("lock poison");
 
         Ok(inner.get(k).map(Clone::clone)).into_future()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use futures::Future;
-
-    #[test]
-    fn roundtrip() {
-        let mb = Memblob::new();
-
-        let res = mb.put("hello".into(), vec![1, 2, 3, 4, 5]);
-        assert!(res.wait().is_ok());
-
-        let Ok(v) = mb.get(&"hello".into()).wait();
-        assert_eq!(v, Some(vec![1, 2, 3, 4, 5]));
-    }
-
-    #[test]
-    fn missing() {
-        let mb = Memblob::new();
-
-        match mb.get(&"hello".into()).wait() {
-            Ok(None) => (),
-            Ok(v) => panic!("Unexpected success {:?}", v),
-        }
     }
 }

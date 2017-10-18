@@ -4,13 +4,12 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
 extern crate url;
-
-#[cfg(test)]
-extern crate tempdir;
 
 extern crate blobstore;
 extern crate futures_ext;
@@ -27,9 +26,6 @@ use futures_ext::{BoxFuture, FutureExt};
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
 use blobstore::Blobstore;
-
-#[cfg(test)]
-mod test;
 
 const PREFIX: &str = "blob";
 

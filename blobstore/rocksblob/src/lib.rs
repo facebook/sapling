@@ -4,19 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![deny(warnings)]
+
+extern crate bytes;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
-extern crate bytes;
 
-extern crate rocksdb;
 extern crate blobstore;
+extern crate rocksdb;
 
-#[cfg(test)]
-extern crate tempdir;
-
-use std::path::Path;
 use std::marker::PhantomData;
+use std::path::Path;
 
 use bytes::Bytes;
 
@@ -25,9 +24,6 @@ use futures::{Async, Future, Poll};
 use rocksdb::{Db, ReadOptions, WriteOptions};
 
 use blobstore::Blobstore;
-
-#[cfg(test)]
-mod test;
 
 mod errors;
 
