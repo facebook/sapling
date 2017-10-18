@@ -162,6 +162,12 @@ configitem('fsmonitor', 'timeout',
 configitem('fsmonitor', 'blacklistusers',
     default=list,
 )
+configitem('experimental', 'fsmonitor.transaction_notify',
+    default=False,
+)
+configitem('experimental', 'fsmonitor.wc_change_notify',
+    default=False,
+)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
