@@ -17,6 +17,7 @@ import binascii
 import collections
 import errno
 import hashlib
+import heapq
 import os
 import struct
 import zlib
@@ -170,49 +171,59 @@ def _slicechunk(revlog, revs):
     start = revlog.start
     length = revlog.length
 
-    chunkqueue = collections.deque()
-    chunkqueue.append((revs, 0))
+    if len(revs) <= 1:
+        yield revs
+        return
 
-    while chunkqueue:
-        revs, depth = chunkqueue.popleft()
+    startbyte = start(revs[0])
+    endbyte = start(revs[-1]) + length(revs[-1])
+    readdata = deltachainspan = endbyte - startbyte
 
-        startbyte = start(revs[0])
-        endbyte = start(revs[-1]) + length(revs[-1])
-        deltachainspan = endbyte - startbyte
+    chainpayload = sum(length(r) for r in revs)
 
-        if deltachainspan <= revlog._srminblocksize or len(revs) <= 1:
-            yield revs
-            continue
+    if deltachainspan:
+        density = chainpayload / float(deltachainspan)
+    else:
+        density = 1.0
 
-        # Find where is the largest hole (this is where we would split) and
-        # sum up the lengths of useful data to compute the density of the span
-        textlen = 0
-        prevend = None
-        largesthole = 0
-        idxlargesthole = -1
-        for i, rev in enumerate(revs):
-            revstart = start(rev)
-            revlen = length(rev)
+    # Store the gaps in a heap to have them sorted by decreasing size
+    gapsheap = []
+    heapq.heapify(gapsheap)
+    prevend = None
+    for i, rev in enumerate(revs):
+        revstart = start(rev)
+        revlen = length(rev)
 
-            if prevend is not None:
-                hole = revstart - prevend
-                if hole > largesthole:
-                    largesthole = hole
-                    idxlargesthole = i
+        if prevend is not None:
+            gapsize = revstart - prevend
+            if gapsize:
+                heapq.heappush(gapsheap, (-gapsize, i))
 
-            textlen += revlen
-            prevend = revstart + revlen
+        prevend = revstart + revlen
 
-        density = textlen / float(deltachainspan) if deltachainspan > 0 else 1.0
+    # Collect the indices of the largest holes until the density is acceptable
+    indicesheap = []
+    heapq.heapify(indicesheap)
+    while gapsheap and density < revlog._srdensitythreshold:
+        oppgapsize, gapidx = heapq.heappop(gapsheap)
 
-        if density > revlog._srdensitythreshold:
-            yield revs
-            continue
+        heapq.heappush(indicesheap, gapidx)
 
-        # Add the left and right parts so that they will be sliced
-        # recursively too
-        chunkqueue.append((revs[:idxlargesthole], depth + 1))
-        chunkqueue.append((revs[idxlargesthole:], depth + 1))
+        # the gap sizes are stored as negatives to be sorted decreasingly
+        # by the heap
+        readdata -= (-oppgapsize)
+        if readdata > 0:
+            density = chainpayload / float(readdata)
+        else:
+            density = 1.0
+
+    # Cut the revs at collected indices
+    previdx = 0
+    while indicesheap:
+        idx = heapq.heappop(indicesheap)
+        yield revs[previdx:idx]
+        previdx = idx
+    yield revs[previdx:]
 
 # index v0:
 #  4 bytes: offset
