@@ -12,6 +12,7 @@ from eden.thrift import EdenNotRunningError
 import errno
 import json
 import os
+import signal
 import subprocess
 import sys
 
@@ -265,9 +266,16 @@ def _ensure_dot_eden_folder_exists(config):
     return db
 
 
+SHUTDOWN_EXIT_CODE_NORMAL = 0
+SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN = 0
+SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR = 2
+SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
+SHUTDOWN_EXIT_CODE_EPERM_ERROR_SENDING_SIGKILL = 4
+SHUTDOWN_EXIT_CODE_SIGKILL_FAILED_TO_KILL_EDENFS = 5
+
+
 def do_shutdown(args):
     config = create_config(args)
-    client = None
     try:
         with config.get_thrift_client() as client:
             pid = client.getPid()
@@ -275,13 +283,13 @@ def do_shutdown(args):
             client.shutdown()
     except EdenNotRunningError:
         print_stderr('error: edenfs is not running')
-        return 1
+        return SHUTDOWN_EXIT_CODE_NOT_RUNNING_ERROR
 
     if args.timeout == 0:
-        print('Sent shutdown request to edenfs.')
-        return 0
+        print_stderr('Sent async shutdown request to edenfs.')
+        return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
-    # Wait until the process exits.
+    # Wait until the process exits on its own.
     def eden_exited():
         try:
             os.kill(pid, 0)
@@ -291,19 +299,49 @@ def do_shutdown(args):
                 return True
             # EPERM is okay (and means the process is still running),
             # anything else is unexpected
-            if ex.errno != errno.EPERM:
+            elif ex.errno != errno.EPERM:
                 raise
         # Still running
         return None
 
     try:
         util.poll_until(eden_exited, timeout=args.timeout)
-        print('edenfs exited')
-        return 0
+        print_stderr('edenfs exited cleanly.')
+        return SHUTDOWN_EXIT_CODE_NORMAL
     except util.TimeoutError:
-        print_stderr('error: sent shutdown request, but edenfs did not exit '
-                     'within {} seconds', args.timeout)
-        return 1
+        pass
+
+    # client.shutdown() failed to terminate Eden within the specified timeout.
+    # Take a more aggressive approach by sending SIGKILL.
+    print_stderr(
+        'error: sent shutdown request, but edenfs did not exit '
+        'within {} seconds. Attempting SIGKILL.', args.timeout
+    )
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError as ex:
+        if ex.errno == errno.ESRCH:
+            print_stderr('{} exited before SIGKILL was received.', pid)
+            return SHUTDOWN_EXIT_CODE_NORMAL
+        elif ex.errno == errno.EPERM:
+            print_stderr(
+                'Received EPERM when sending SIGKILL. '
+                'Perhaps we failed to drop root privileges properly?')
+            return SHUTDOWN_EXIT_CODE_EPERM_ERROR_SENDING_SIGKILL
+        else:
+            raise
+
+    sigkill_timeout_seconds = 5
+    try:
+        util.poll_until(eden_exited, timeout=sigkill_timeout_seconds)
+        print_stderr('Process {} was killed after sending SIGKILL.', pid)
+        return SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
+    except util.TimeoutError:
+        print_stderr(
+            'Process {} did not terminate within {} seconds of '
+            'sending SIGKILL.', pid, sigkill_timeout_seconds
+        )
+        return SHUTDOWN_EXIT_CODE_SIGKILL_FAILED_TO_KILL_EDENFS
 
 
 def create_parser():
@@ -409,8 +447,10 @@ def create_parser():
         'shutdown', help='Shutdown the daemon')
     shutdown_parser.add_argument(
         '-t', '--timeout', type=float, default=15.0,
-        help='Wait up to TIMEOUT seconds for the daemon to exit.  '
-        '(default=%(default)s).  If timeout is 0, then do not wait at all.')
+        help='Wait up to TIMEOUT seconds for the daemon to exit '
+        '(default=%(default)s). If it does not exit within the timeout, then '
+        'SIGKILL will be sent. If timeout is 0, then do not wait at all '
+        'and do not send SIGKILL.')
     shutdown_parser.set_defaults(func=do_shutdown)
 
     mount_parser = subparsers.add_parser(
