@@ -92,6 +92,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping ctreemanifest/manifest_ptr.h it has no-che?k-code (glob)
   Skipping ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
   Skipping ctreemanifest/treemanifest.h it has no-che?k-code (glob)
+  phabricator/conduit.py:15:
+   > import urllib3
+   don't use urllib, use util.urlreq/util.urlerr
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
   tests/test-rage.t:10:
    >   $ echo "rpmbin = /bin/rpm" >> .hg/hgrc

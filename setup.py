@@ -425,6 +425,8 @@ requires = []
 requireslz4 = ['remotefilelog', 'cdatapack']
 if any(c for c in components if c in requireslz4):
     requires.append('lz4')
+if 'phabricator' in components:
+    requires.append('urllib3')
 
 py_modules = []
 for module in availablepymodules:

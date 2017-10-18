@@ -4,16 +4,19 @@
 # It's different from fbconduit in that this is an authenticated
 # conduit client.
 
-import hashlib
+from __future__ import absolute_import
 
 import contextlib
+import hashlib
 import json
 import os
 import time
+
+import urllib3
+
 from mercurial import util
-import arcconfig
-import urlgrabber
-from urlgrabber.grabber import URLGrabError
+
+from . import arcconfig
 
 urlreq = util.urlreq
 
@@ -65,28 +68,25 @@ class Client(object):
             'authSignature': hashlib.sha1(sig.encode('utf-8')).hexdigest(),
             'caller': 'hg',
         }
-        req_data = util.urlreq.urlencode(
-            {
+        req_data = {
                 'params': json.dumps(args),
                 'output': 'json',
-            }
-        )
-        # Uses urlgrabber, http://urlgrabber.baseurl.org/, as a convenient
-        # high-level access tool because it is readily available on FB
-        # infastructure and fast (based on pycurl) requests could be used if
-        # packaged for both corp and prod environments.
+        }
         headers = (
             ('Connection', 'Keep-Alive'),
-            ('Content-Type', 'application/x-www-form-urlencoded'),
         )
         url = self._url + method
+
+        if self._connection is None:
+            self._connection = urllib3.PoolManager()
         try:
-            response = urlgrabber.urlopen(url, headers=headers, data=req_data)
-        except URLGrabError as ex:
+            response = self._connection.request(
+                'POST', url, headers=headers, fields=req_data)
+        except urllib3.exceptions.HTTPError as ex:
             raise Client(ex.errno, str(ex))
 
         try:
-            response = json.load(response)
+            response = json.loads(response.data)
         except ValueError:
             # Can't decode the data, not valid JSON (html error page perhaps?)
             raise ClientError(-1, 'did not receive a valid JSON response')
