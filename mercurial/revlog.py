@@ -162,6 +162,20 @@ def hash(text, p1, p2):
     s.update(text)
     return s.digest()
 
+def _trimchunk(revlog, revs, startidx, endidx=None):
+    """returns revs[startidx:endidx] without empty trailing revs
+    """
+    length = revlog.length
+
+    if endidx is None:
+        endidx = len(revs)
+
+    # Trim empty revs at the end, but never the very first revision of a chain
+    while endidx > 1 and endidx > startidx and length(revs[endidx - 1]) == 0:
+        endidx -= 1
+
+    return revs[startidx:endidx]
+
 def _slicechunk(revlog, revs):
     """slice revs to reduce the amount of unrelated data to be read from disk.
 
@@ -194,6 +208,10 @@ def _slicechunk(revlog, revs):
         revstart = start(rev)
         revlen = length(rev)
 
+        # Skip empty revisions to form larger holes
+        if revlen == 0:
+            continue
+
         if prevend is not None:
             gapsize = revstart - prevend
             # only consider holes that are large enough
@@ -222,9 +240,16 @@ def _slicechunk(revlog, revs):
     previdx = 0
     while indicesheap:
         idx = heapq.heappop(indicesheap)
-        yield revs[previdx:idx]
+
+        chunk = _trimchunk(revlog, revs, previdx, idx)
+        if chunk:
+            yield chunk
+
         previdx = idx
-    yield revs[previdx:]
+
+    chunk = _trimchunk(revlog, revs, previdx)
+    if chunk:
+        yield chunk
 
 # index v0:
 #  4 bytes: offset
