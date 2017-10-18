@@ -102,14 +102,6 @@ class LocalStore {
   folly::Optional<BlobMetadata> getBlobMetadata(const Hash& id) const;
 
   /**
-   * Get the SHA-1 hash of the blob contents for the specified blob.
-   *
-   * Returns folly::none if this key is not present in the store, or throws an
-   * exception on error.
-   */
-  folly::Optional<Hash> getSha1ForBlob(const Hash& id) const;
-
-  /**
    * Compute the serialized version of the tree.
    * Returns the key and the (not coalesced) serialized data.
    * This does not modify the contents of the store; it is the method

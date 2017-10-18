@@ -117,11 +117,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
       });
 }
 
-Hash ObjectStore::getSha1ForBlob(const Hash& id) const {
-  auto metadata = getBlobMetadata(id).get();
-  return metadata.sha1;
-}
-
 Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
   auto localData = localStore_->getBlobMetadata(id);
   if (localData.hasValue()) {

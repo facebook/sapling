@@ -39,16 +39,6 @@ class ObjectStore : public IObjectStore {
   ~ObjectStore() override;
 
   /**
-   * Get a Tree by commit ID.
-   *
-   * This throws std::domain_error if the specified blob ID does not exist, or
-   * possibly other exceptions on error.
-   *
-   * TODO: This API will be deprecated in favor of getBlobMetadata()
-   */
-  Hash getSha1ForBlob(const Hash& id) const override;
-
-  /**
    * Get a Tree by ID.
    *
    * This returns a Future object that will produce the Tree when it is ready.

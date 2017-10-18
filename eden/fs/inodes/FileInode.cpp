@@ -341,7 +341,9 @@ Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
 
   if (state->hash.hasValue()) {
     // If a file is not materialized it should have a hash value.
-    return getObjectStore()->getSha1ForBlob(state->hash.value());
+    return getObjectStore()
+        ->getBlobMetadata(state->hash.value())
+        .then([](const BlobMetadata& metadata) { return metadata.sha1; });
   } else if (state->file) {
     // If the file is materialized.
     if (state->sha1Valid) {
@@ -631,7 +633,9 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     state->file = Overlay::openFile(
         filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
 
-    sha1 = getObjectStore()->getSha1ForBlob(state->hash.value());
+    // TODO: Fetch the metadata with the non-blocking Future APIs.  See the TODO
+    // comment from the getObjectStore()->getBlob() call above.
+    sha1 = getObjectStore()->getBlobMetadata(state->hash.value()).get().sha1;
   }
 
   // Copy and apply the sha1 to the new file.  This saves us from

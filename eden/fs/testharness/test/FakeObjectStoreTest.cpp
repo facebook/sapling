@@ -63,8 +63,6 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   auto buf2 = IOBuf();
   Blob blob2(blobHash, buf2);
   auto expectedSha1 = Hash::sha1(&buf1);
-  auto foundSha1 = store.getSha1ForBlob(blob2.getHash());
-  EXPECT_EQ(expectedSha1, foundSha1);
   auto metadataFuture = store.getBlobMetadata(blob2.getHash());
   ASSERT_TRUE(metadataFuture.isReady());
   auto metadata = metadataFuture.get();
@@ -78,5 +76,5 @@ TEST(FakeObjectStore, getMissingObjectThrows) {
   EXPECT_THROW(store.getTree(hash).get(), std::domain_error);
   EXPECT_THROW(store.getBlob(hash).get(), std::domain_error);
   EXPECT_THROW(store.getTreeForCommit(hash).get(), std::domain_error);
-  EXPECT_THROW(store.getSha1ForBlob(hash), std::domain_error);
+  EXPECT_THROW(store.getBlobMetadata(hash).get(), std::domain_error);
 }

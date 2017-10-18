@@ -85,10 +85,6 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getTreeForCommit(
   return makeFuture(make_shared<Tree>(iter->second));
 }
 
-Hash FakeObjectStore::getSha1ForBlob(const Hash& id) const {
-  return getBlobMetadata(id).get().sha1;
-}
-
 Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
   auto iter = blobMetadata_.find(id);
   if (iter == blobMetadata_.end()) {

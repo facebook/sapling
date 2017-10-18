@@ -219,14 +219,6 @@ Optional<BlobMetadata> LocalStore::getBlobMetadata(const Hash& id) const {
   return SerializedBlobMetadata::parse(id, result);
 }
 
-Optional<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
-  auto metadata = getBlobMetadata(id);
-  if (!metadata) {
-    return folly::none;
-  }
-  return metadata.value().sha1;
-}
-
 std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
   GitTreeSerializer serializer;
   for (auto& entry : tree->getTreeEntries()) {

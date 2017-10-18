@@ -33,8 +33,6 @@ class FakeObjectStore : public IObjectStore {
   void addBlob(Blob&& blob);
   void setTreeForCommit(const Hash& commitID, Tree&& tree);
 
-  Hash getSha1ForBlob(const Hash& id) const override;
-
   folly::Future<std::shared_ptr<const Tree>> getTree(
       const Hash& id) const override;
   folly::Future<std::shared_ptr<const Blob>> getBlob(

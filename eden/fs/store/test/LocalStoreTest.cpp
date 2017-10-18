@@ -61,7 +61,6 @@ TEST_F(LocalStoreTest, testReadAndWriteBlob) {
   EXPECT_EQ(
       contents, outBlob->getContents().clone()->moveToFbString().toStdString());
 
-  EXPECT_EQ(sha1, store_->getSha1ForBlob(hash));
   auto retreivedMetadata = store_->getBlobMetadata(hash);
   ASSERT_TRUE(retreivedMetadata.hasValue());
   EXPECT_EQ(sha1, retreivedMetadata.value().sha1);

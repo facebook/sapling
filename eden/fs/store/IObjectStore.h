@@ -28,18 +28,6 @@ class IObjectStore {
  public:
   virtual ~IObjectStore() {}
 
-  /**
-   * Return the SHA1 hash of the blob contents.
-   *
-   * (Note that this is different than the Hash identifying the blob.  The
-   * hash identifying the blob may be computed using a separate mechanism, and
-   * may not be the same as the SHA1-hash of its contents.)
-   *
-   * TODO: This blocking API will eventually be deprecated in favor of
-   * getBlobMetadata()
-   */
-  virtual Hash getSha1ForBlob(const Hash& id) const = 0;
-
   /*
    * Object access APIs.
    */
