@@ -822,7 +822,7 @@ def obsfateprinter(successors, markers, ui):
     # Date
     dates = markersdates(markers)
 
-    if verbose:
+    if dates and verbose:
         min_date = min(dates)
         max_date = max(dates)
 
