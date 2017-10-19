@@ -6,13 +6,14 @@
 
 
 use std::cmp;
-use std::convert::From;
+use std::convert::{From, TryFrom};
 use std::ffi::OsStr;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
 use std::iter::{once, Once};
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
+use std::result;
 use std::slice::Iter;
 use std::str;
 
@@ -207,6 +208,22 @@ impl<'a> IntoIterator for &'a MPathElement {
 impl<'a> From<&'a MPath> for Vec<u8> {
     fn from(path: &MPath) -> Self {
         path.to_vec()
+    }
+}
+
+impl<P: AsRef<[u8]>> TryFrom<P> for MPath {
+    type Error = Error;
+
+    fn try_from(value: P) -> Result<Self> {
+        MPath::new(value)
+    }
+}
+
+impl TryFrom<MPath> for MPath {
+    type Error = !;
+
+    fn try_from(value: MPath) -> result::Result<Self, !> {
+        Ok(value)
     }
 }
 

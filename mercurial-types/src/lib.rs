@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 #![feature(never_type)]
+#![feature(try_from)]
 
 extern crate ascii;
 extern crate itertools;
