@@ -82,6 +82,8 @@ hg subrepos are shared into existence on demand if the parent was shared
   $TESTTMP/test/subrepo/.hg (no-eol) (glob)
   $ diff -r archive test
   Only in test: .hg
+  Common subdirectories: archive/baz and test/baz (?)
+  Common subdirectories: archive/subrepo and test/subrepo (?)
   Only in test/subrepo: .hg
   [1]
   $ rm -rf archive
