@@ -81,7 +81,7 @@ class Client(object):
             self._connection = urllib3.PoolManager()
         try:
             response = self._connection.request(
-                'POST', url, headers=headers, fields=req_data)
+                'POST', url, headers=headers, fields=req_data, timeout=timeout)
         except urllib3.exceptions.HTTPError as ex:
             errno = -1
             if ex.args and util.safehasattr(ex.args[0], 'errno'):
