@@ -3383,6 +3383,11 @@ def log(ui, repo, *pats, **opts):
     if linerange and not opts.get('follow'):
         raise error.Abort(_('--line-range requires --follow'))
 
+    if linerange and pats:
+        raise error.Abort(
+            _('FILE arguments are not compatible with --line-range option')
+        )
+
     if opts.get('follow') and opts.get('rev'):
         opts['rev'] = [revsetlang.formatspec('reverse(::%lr)', opts.get('rev'))]
         del opts['follow']

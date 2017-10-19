@@ -288,64 +288,11 @@ With some white-space diff option, respective revisions are skipped.
   +4
   
 
-Regular file patterns are allowed with -L and their diff shows all lines.
+Regular file patterns are not allowed.
 
   $ hg log -f -L foo,5:7 -p bar
-  changeset:   5:cfdf972b3971
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
-  
-  diff --git a/bar b/bar
-  --- a/bar
-  +++ b/bar
-  @@ -1,4 +1,4 @@
-  -a
-  +a+
-   b
-   c
-   d
-  diff --git a/foo b/foo
-  --- a/foo
-  +++ b/foo
-  @@ -4,7 +4,7 @@
-   0
-    1
-   2+
-  -3
-  +3+
-   4
-   5
-   6
-  
-  changeset:   2:63a884426fd0
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     2 -> 2+; added bar
-  
-  diff --git a/bar b/bar
-  new file mode 100644
-  --- /dev/null
-  +++ b/bar
-  @@ -0,0 +1,5 @@
-  +a
-  +b
-  +c
-  +d
-  +e
-  diff --git a/foo b/foo
-  --- a/foo
-  +++ b/foo
-  @@ -3,6 +3,6 @@
-   0
-   0
-   1
-  -2
-  +2+
-   3
-   4
-  
+  abort: FILE arguments are not compatible with --line-range option
+  [255]
 
 Option --rev acts as a restriction.
 
