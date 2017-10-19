@@ -34,6 +34,7 @@ const MAXSTOREPATHLEN: usize = 120;
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Serialize)]
 pub struct MPathElement(Vec<u8>);
 
 impl MPathElement {
@@ -67,6 +68,7 @@ impl From<MPathElement> for MPath {
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Serialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
 }
@@ -84,7 +86,10 @@ impl MPath {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
-            bail!(ErrorKind::InvalidPath(p.to_vec(), "paths cannot contain '\\0'".into()))
+            bail!(ErrorKind::InvalidPath(
+                p.to_vec(),
+                "paths cannot contain '\\0'".into()
+            ))
         }
         Ok(())
     }
