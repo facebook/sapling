@@ -1006,7 +1006,8 @@ coreconfigitem('web', 'allowbz2',
 coreconfigitem('web', 'allowgz',
     default=False,
 )
-coreconfigitem('web', 'allowpull',
+coreconfigitem('web', 'allow-pull',
+    alias=[('web', 'allowpull')],
     default=True,
 )
 coreconfigitem('web', 'allow_push',

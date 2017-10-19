@@ -2287,7 +2287,7 @@ The full set of options is:
     revisions.
     (default: False)
 
-``allowpull``
+``allow-pull``
     Whether to allow pulling from the repository. (default: True)
 
 ``allow_push``

@@ -114,7 +114,7 @@ class requestcontext(object):
         self.stripecount = self.configint('web', 'stripes')
         self.maxshortchanges = self.configint('web', 'maxshortchanges')
         self.maxfiles = self.configint('web', 'maxfiles')
-        self.allowpull = self.configbool('web', 'allowpull')
+        self.allowpull = self.configbool('web', 'allow-pull')
 
         # we use untrusted=False to prevent a repo owner from using
         # web.templates in .hg/hgrc to get access to any file readable
