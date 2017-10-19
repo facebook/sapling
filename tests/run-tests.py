@@ -2510,6 +2510,16 @@ class TestRunner(object):
             else:
                 args = os.listdir(b'.')
 
+        expanded_args = []
+        for arg in args:
+            if os.path.isdir(arg):
+                if not arg.endswith(b'/'):
+                    arg += b'/'
+                expanded_args.extend([arg + a for a in os.listdir(arg)])
+            else:
+                expanded_args.append(arg)
+        args = expanded_args
+
         tests = []
         for t in args:
             if not (os.path.basename(t).startswith(b'test-')

@@ -1261,6 +1261,24 @@ support for running a test outside the current directory
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 
+support for automatically discovering test if arg is a folder
+  $ mkdir tmp && cd tmp
+
+  $ cat > test-uno.t << EOF
+  >   $ echo line
+  >   line
+  > EOF
+
+  $ cp test-uno.t test-dos.t
+  $ cd ..
+  $ cp -R tmp tmpp
+  $ cp tmp/test-uno.t test-solo.t
+
+  $ $PYTHON $TESTDIR/run-tests.py tmp/ test-solo.t tmpp
+  .....
+  # Ran 5 tests, 0 skipped, 0 failed.
+  $ rm -rf tmp tmpp
+
 support for running run-tests.py from another directory
   $ mkdir tmp && cd tmp
   $ cat > useful-file.sh << EOF
