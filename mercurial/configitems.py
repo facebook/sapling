@@ -369,6 +369,10 @@ coreconfigitem('experimental', 'evolution.allowunstable',
 coreconfigitem('experimental', 'evolution.createmarkers',
     default=None,
 )
+coreconfigitem('experimental', 'evolution.effect-flags',
+    default=False,
+    alias=[('experimental', 'effect-flags')]
+)
 coreconfigitem('experimental', 'evolution.exchange',
     default=None,
 )
@@ -385,9 +389,6 @@ coreconfigitem('experimental', 'mmapindexthreshold',
     default=None,
 )
 coreconfigitem('experimental', 'nonnormalparanoidcheck',
-    default=False,
-)
-coreconfigitem('experimental', 'effect-flags',
     default=False,
 )
 coreconfigitem('experimental', 'exportableenviron',

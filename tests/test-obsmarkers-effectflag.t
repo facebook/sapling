@@ -13,7 +13,7 @@ Global setup
   > rebase =
   > [experimental]
   > evolution = all
-  > effect-flags = 1
+  > evolution.effect-flags = 1
   > EOF
 
   $ hg init $TESTTMP/effect-flags
