@@ -6,7 +6,7 @@
 
 
 use std::cmp;
-use std::convert::{From, TryFrom};
+use std::convert::{From, TryFrom, TryInto};
 use std::ffi::OsStr;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
@@ -16,6 +16,8 @@ use std::path::PathBuf;
 use std::result;
 use std::slice::Iter;
 use std::str;
+
+use bincode;
 
 use hash::Sha1;
 use quickcheck::{Arbitrary, Gen};
@@ -28,6 +30,79 @@ lazy_static! {
 }
 
 const MAXSTOREPATHLEN: usize = 120;
+
+/// A path or filename within Mercurial, with information about whether
+/// it's the root of the repo, a directory or a file.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf)]
+#[derive(Serialize)]
+pub enum RepoPath {
+    // Do not create a RepoPath directly! Go through the constructors instead -- they verify MPath
+    // properties.
+    RootPath,
+    DirectoryPath(MPath),
+    FilePath(MPath),
+}
+
+impl RepoPath {
+    #[inline]
+    pub fn root() -> Self {
+        RepoPath::RootPath
+    }
+
+    pub fn dir<P>(path: P) -> Result<Self>
+    where
+        P: TryInto<MPath>,
+        Error: From<P::Error>,
+    {
+        let path = path.try_into()?;
+        if path.is_empty() {
+            Err(
+                ErrorKind::InvalidMPath(path, "RepoPath does not support empty MPaths".into())
+                    .into(),
+            )
+        } else {
+            Ok(RepoPath::DirectoryPath(path))
+        }
+    }
+
+    pub fn file<P>(path: P) -> Result<Self>
+    where
+        P: TryInto<MPath>,
+        Error: From<P::Error>,
+    {
+        let path = path.try_into()?;
+        if path.is_empty() {
+            Err(
+                ErrorKind::InvalidMPath(path, "RepoPath does not support empty MPaths".into())
+                    .into(),
+            )
+        } else {
+            Ok(RepoPath::FilePath(path))
+        }
+    }
+
+    /// Serialize this RepoPath into a string. This shouldn't (yet) be considered stable if the
+    /// definition of RepoPath changes.
+    pub fn serialize(&self) -> Vec<u8> {
+        bincode::serialize(self, bincode::Infinite).expect("serialize for RepoPath cannot fail")
+    }
+
+    /// Serialize this RepoPath into a writer. This shouldn't (yet) be considered stable if the
+    /// definition of RepoPath changes.
+    pub fn serialize_into<W: Write>(&self, writer: &mut W) -> Result<()> {
+        Ok(bincode::serialize_into(writer, self, bincode::Infinite)?)
+    }
+}
+
+impl Display for RepoPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            RepoPath::RootPath => write!(f, "root"),
+            RepoPath::DirectoryPath(ref path) => write!(f, "directory {}", path),
+            RepoPath::FilePath(ref path) => write!(f, "file {}", path),
+        }
+    }
+}
 
 /// An element of a path or filename within Mercurial.
 ///
@@ -548,6 +623,30 @@ mod test {
         let path = MPath::new(b"1234abc");
         assert!(MPath::new(b"1234abc").is_ok());
         assert_eq!(path.unwrap().to_vec().len(), 7);
+    }
+
+    #[test]
+    fn repo_path_make() {
+        let path = MPath::new(b"abc").unwrap();
+        assert_eq!(
+            RepoPath::dir(path.clone()).unwrap(),
+            RepoPath::dir("abc").unwrap()
+        );
+        assert_ne!(RepoPath::dir(path).unwrap(), RepoPath::file("abc").unwrap());
+    }
+
+    #[test]
+    fn repo_path_empty() {
+        let path = MPath::new("").unwrap();
+        assert_matches!(
+            RepoPath::file(path),
+            Err(Error(ErrorKind::InvalidMPath(_, _), _))
+        );
+
+        assert_matches!(
+            RepoPath::dir(b""),
+            Err(Error(ErrorKind::InvalidMPath(_, _), _))
+        );
     }
 
     #[test]

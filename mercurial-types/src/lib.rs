@@ -10,6 +10,10 @@
 #![feature(try_from)]
 
 extern crate ascii;
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+extern crate bincode;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
@@ -59,7 +63,7 @@ pub use delta::Delta;
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{NodeHash, NULL_HASH};
-pub use path::{fsencode, MPath, MPathElement};
+pub use path::{fsencode, MPath, MPathElement, RepoPath};
 pub use repo::{BoxRepo, Repo};
 pub use utils::percent_encode;
 
