@@ -751,8 +751,9 @@ def successorsandmarkers(repo, ctx):
 
     return values
 
-def successorsetverb(successorset):
-    """ Return the verb summarizing the successorset
+def obsfateverb(successorset, markers):
+    """ Return the verb summarizing the successorset and potentially using
+    information from the markers
     """
     if not successorset:
         verb = 'pruned'
@@ -795,7 +796,7 @@ def obsfateprinter(successors, markers, ui):
     line = []
 
     # Verb
-    line.append(successorsetverb(successors))
+    line.append(obsfateverb(successors, markers))
 
     # Operations
     operations = markersoperations(markers)

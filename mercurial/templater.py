@@ -1005,17 +1005,18 @@ def obsfateusers(context, mapping, args):
                 "obsmakers")
         raise error.ParseError(msg)
 
-@templatefunc('obsfateverb(successors)')
+@templatefunc('obsfateverb(successors, markers)')
 def obsfateverb(context, mapping, args):
     """Compute obsfate related information based on successors (EXPERIMENTAL)"""
-    if len(args) != 1:
+    if len(args) != 2:
         # i18n: "obsfateverb" is a keyword
-        raise error.ParseError(_("obsfateverb expects one arguments"))
+        raise error.ParseError(_("obsfateverb expects two arguments"))
 
     successors = evalfuncarg(context, mapping, args[0])
+    markers = evalfuncarg(context, mapping, args[1])
 
     try:
-        return obsutil.successorsetverb(successors)
+        return obsutil.obsfateverb(successors, markers)
     except TypeError:
         # i18n: "obsfateverb" is a keyword
         errmsg = _("obsfateverb first argument should be countable")

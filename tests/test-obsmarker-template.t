@@ -13,7 +13,7 @@ Global setup
   > evolution=true
   > [templates]
   > obsfatesuccessors = "{if(successors, " as ")}{join(successors, ", ")}"
-  > obsfateverb = "{obsfateverb(successors)}"
+  > obsfateverb = "{obsfateverb(successors, markers)}"
   > obsfateoperations = "{if(obsfateoperations(markers), " using {join(obsfateoperations(markers), ", ")}")}"
   > obsfateusers = "{if(obsfateusers(markers), " by {join(obsfateusers(markers), ", ")}")}"
   > obsfatedate = "{if(obsfatedate(markers), "{ifeq(min(obsfatedate(markers)), max(obsfatedate(markers)), " (at {min(obsfatedate(markers))|isodate})", " (between {min(obsfatedate(markers))|isodate} and {max(obsfatedate(markers))|isodate})")}")}"
