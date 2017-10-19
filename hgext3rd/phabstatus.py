@@ -71,11 +71,12 @@ def getdiffstatus(repo, *diffid):
     if not diffid:
         return []
     timeout = repo.ui.configint('ssl', 'timeout', 5)
+    ca_certs = repo.ui.configpath('web', 'cacerts')
 
     try:
         resp = conduit.call_conduit('differential.querydiffhashes',
                 {'revisionIDs': diffid},
-                timeout=timeout)
+                timeout=timeout, ca_certs=ca_certs)
 
     except conduit.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '

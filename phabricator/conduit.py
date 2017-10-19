@@ -30,12 +30,14 @@ class ClientError(Exception):
         self.code = code
 
 class Client(object):
-    def __init__(self, url=None, user=None, cert=None, act_as=None):
+    def __init__(self, url=None, user=None, cert=None, act_as=None,
+                 ca_certs=None):
         self._url = url or DEFAULT_URL
         self._user = user
         self._cert = cert
         self._actas = act_as or self._user
         self._connection = None
+        self._ca_certs = ca_certs
 
     def apply_arcconfig(self, config):
         self._url = config.get('conduit_uri', DEFAULT_URL)
@@ -78,7 +80,7 @@ class Client(object):
         url = self._url + method
 
         if self._connection is None:
-            self._connection = urllib3.PoolManager()
+            self._connection = urllib3.PoolManager(ca_certs=self._ca_certs)
         try:
             response = self._connection.request(
                 'POST', url, headers=headers, fields=req_data, timeout=timeout)
@@ -139,11 +141,11 @@ if 'HG_ARC_CONDUIT_MOCK' in os.environ:
 class ClientCache(object):
     def __init__(self):
         self.max_idle_seconds = 10
-        self.client = None
-        self.lastuse = None
+        self.client = {}
+        self.lastuse = {}
 
     @contextlib.contextmanager
-    def getclient(self):
+    def getclient(self, ca_certs=None):
         # Use the existing client if we have one and it hasn't been idle too
         # long.
         #
@@ -151,29 +153,27 @@ class ClientCache(object):
         # server might have closed our connection while we were idle.  (We
         # could potentially check the socket for readability, but that might
         # still race with the server currently closing our socket.)
-        if (self.client is not None and
-                time.time() <= (self.lastuse + self.max_idle_seconds)):
-            client = self.client
-
-            # Reset self.client to None while we are using it.
-            # If our caller throws an exception during the yield this ensures
-            # that we do not continue to use this client later.
-            self.client = None
-            self.lastuse = None
+        client = self.client.get(ca_certs),
+        lastuse = self.lastuse.get(ca_certs, 0)
+        if client and time.time() <= (lastuse + self.max_idle_seconds):
+            # Remove self.client for this ca_certs config while we are using
+            # it. If our caller throws an exception during the yield this
+            # ensures that we do not continue to use this client later.
+            del self.client.pop[ca_certs], self.lastuse[ca_certs]
         else:
             # We have to make a new connection
-            client = Client()
+            client = Client(ca_certs=ca_certs)
             client.apply_arcconfig(arcconfig.load_for_path(os.getcwd()))
 
         yield client
 
         # Our caller used this client successfully and did not throw an
         # exception.  Store it to use again next time getclient() is called.
-        self.lastuse = time.time()
-        self.client = client
+        self.lastuse[ca_certs] = time.time()
+        self.client[ca_certs] = client
 
 _clientcache = ClientCache()
 
-def call_conduit(method, args, timeout=DEFAULT_TIMEOUT):
-    with _clientcache.getclient() as client:
+def call_conduit(method, args, ca_certs=None, timeout=DEFAULT_TIMEOUT):
+    with _clientcache.getclient(ca_certs=ca_certs) as client:
         return client.call(method, args, timeout=timeout)

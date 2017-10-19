@@ -246,6 +246,7 @@ def rage(ui, repo, *pats, **opts):
         return
 
     timeout = ui.configint('ssl', 'timeout', 5)
+    ca_certs = repo.ui.configpath('web', 'cacerts')
 
     pasteurl = None
 
@@ -254,7 +255,7 @@ def rage(ui, repo, *pats, **opts):
             'content': msg,
             'title': 'hg rage for %s' % _failsafe(lambda: repo.root),
             'language': 'hgrage'
-        }, timeout=timeout)
+        }, timeout=timeout, ca_certs=ca_certs)
         pasteurl = resp.get('uri')
     except arcconfig.ArcConfigError:
         ui.warn(_('arcconfig configuration problem.\n'))
