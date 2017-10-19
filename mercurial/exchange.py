@@ -813,9 +813,9 @@ def _pushb2phases(pushop, bundler):
     hasphaseheads = 'heads' in b2caps.get('phases', ())
 
     if hasphaseheads and not legacyphase:
-        _pushb2phaseheads(pushop, bundler)
+        return _pushb2phaseheads(pushop, bundler)
     elif haspushkey:
-        _pushb2phasespushkey(pushop, bundler)
+        return _pushb2phasespushkey(pushop, bundler)
 
 def _pushb2phaseheads(pushop, bundler):
     """push phase information through a bundle2 - binary part"""
