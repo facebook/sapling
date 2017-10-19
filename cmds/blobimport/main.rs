@@ -40,6 +40,8 @@ extern crate rocksdb;
 
 extern crate bincode;
 
+mod errors;
+
 use std::error;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -77,6 +79,8 @@ use mercurial_types::manifest::{Entry, Manifest};
 
 use stats::Timeseries;
 
+pub use errors::*;
+
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
 
 define_stats! {
@@ -109,22 +113,6 @@ fn _assert_send<T: Send>(_: &T) {}
 fn _assert_sized<T: Sized>(_: &T) {}
 fn _assert_static<T: 'static>(_: &T) {}
 fn _assert_blobstore<T: Blobstore>(_: &T) {}
-
-error_chain! {
-    links {
-        Blobrepo(::blobrepo::Error, ::blobrepo::ErrorKind);
-        Mercurial(::mercurial::Error, ::mercurial::ErrorKind);
-        Rocksblob(::rocksblob::Error, ::rocksblob::ErrorKind);
-        FileHeads(::fileheads::Error, ::fileheads::ErrorKind);
-        Fileblob(::fileblob::Error, ::fileblob::ErrorKind);
-        Manifold(::manifoldblob::Error, ::manifoldblob::ErrorKind);
-    }
-    foreign_links {
-        Io(::std::io::Error);
-    }
-}
-
-impl_kv_error!(Error);
 
 enum BlobstoreEntry {
     ManifestEntry((String, Bytes)),
