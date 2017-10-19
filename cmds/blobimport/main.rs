@@ -162,7 +162,15 @@ where
     let repo = open_repo(&input)?;
 
     info!(logger, "Converting: {:?}", input);
-    let res = convert::convert(repo, sender, headstore, core, cpupool, logger);
+    let convert_context = convert::ConvertContext {
+        repo,
+        sender,
+        headstore,
+        core,
+        cpupool,
+        logger: logger.clone(),
+    };
+    let res = convert_context.convert();
     iothread.join().expect("failed to join io thread")?;
     res
 }
