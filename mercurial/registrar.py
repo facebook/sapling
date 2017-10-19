@@ -148,13 +148,13 @@ class command(_funcregistrarbase):
     recoverablewrite = "recoverable"
     readonly = "readonly"
 
+    possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
+
     def _doregister(self, func, name, options=(), synopsis=None,
                     norepo=False, optionalrepo=False, inferrepo=False,
                     cmdtype=unrecoverablewrite):
 
-        possiblecmdtypes = set([self.unrecoverablewrite, self.recoverablewrite,
-                                self.readonly])
-        if cmdtype not in possiblecmdtypes:
+        if cmdtype not in self.possiblecmdtypes:
             raise error.ProgrammingError(_("unknown cmdtype value '%s' for "
                                             "'%s' command") % (cmdtype, name))
         func.norepo = norepo
