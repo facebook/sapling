@@ -79,10 +79,10 @@ cpp_library(
         "@/wangle:wangle",
     ],
     external_deps = [
+        ("boost", None, "boost_filesystem"),
         "boost",
         "gflags",
         "glog",
-        ("boost", None, "boost_filesystem"),
         ("openssl", None, "crypto"),
     ],
 )
