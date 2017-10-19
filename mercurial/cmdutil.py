@@ -2599,7 +2599,7 @@ def _parselinerangelogopt(repo, opts):
         except ValueError:
             raise error.Abort(_('malformatted line-range pattern %s') % pat)
         try:
-            fromline, toline = map(int, linerange.split('-'))
+            fromline, toline = map(int, linerange.split(':'))
         except ValueError:
             raise error.Abort(_("invalid line range for %s") % pat)
         msg = _("line range pattern '%s' must match exactly one file") % pat

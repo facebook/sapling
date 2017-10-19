@@ -101,7 +101,7 @@ Add some changes with two diff hunks
   -11+
   +11-
 
-  $ hg log -f -L foo,5-7 -p
+  $ hg log -f -L foo,5:7 -p
   changeset:   5:cfdf972b3971
   tag:         tip
   user:        test
@@ -175,12 +175,12 @@ Add some changes with two diff hunks
 
 With --template.
 
-  $ hg log -f -L foo,5-7 -T '{rev}:{node|short} {desc|firstline}\n'
+  $ hg log -f -L foo,5:7 -T '{rev}:{node|short} {desc|firstline}\n'
   5:cfdf972b3971 foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
   4:eaec41c1a0c9 11 -> 11+; leading space before "1"
   2:63a884426fd0 2 -> 2+; added bar
   0:5ae1f82b9a00 init
-  $ hg log -f -L foo,5-7 -T json
+  $ hg log -f -L foo,5:7 -T json
   [
    {
     "rev": 5,
@@ -234,7 +234,7 @@ With --template.
 
 With some white-space diff option, respective revisions are skipped.
 
-  $ hg log -f -L foo,5-7 -p --config diff.ignorews=true
+  $ hg log -f -L foo,5:7 -p --config diff.ignorews=true
   changeset:   5:cfdf972b3971
   tag:         tip
   user:        test
@@ -290,7 +290,7 @@ With some white-space diff option, respective revisions are skipped.
 
 Regular file patterns are allowed with -L and their diff shows all lines.
 
-  $ hg log -f -L foo,5-7 -p bar
+  $ hg log -f -L foo,5:7 -p bar
   changeset:   5:cfdf972b3971
   tag:         tip
   user:        test
@@ -349,7 +349,7 @@ Regular file patterns are allowed with -L and their diff shows all lines.
 
 Option --rev acts as a restriction.
 
-  $ hg log -f -L foo,5-7 -p -r 'desc(2)'
+  $ hg log -f -L foo,5:7 -p -r 'desc(2)'
   changeset:   2:63a884426fd0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -387,7 +387,7 @@ Option --rev acts as a restriction.
 With several -L patterns, changes touching any files in their respective line
 range are show.
 
-  $ hg log -f -L foo,5-7 -L bar,1-2 -p
+  $ hg log -f -L foo,5:7 -L bar,1:2 -p
   changeset:   5:cfdf972b3971
   tag:         tip
   user:        test
@@ -481,7 +481,7 @@ range are show.
 Multiple -L options with the same file yields changes touching any of
 specified line ranges.
 
-  $ hg log -f -L foo,5-7 -L foo,14-15 -p
+  $ hg log -f -L foo,5:7 -L foo,14:15 -p
   changeset:   5:cfdf972b3971
   tag:         tip
   user:        test
@@ -617,7 +617,7 @@ A file with a comma in its name.
   > p
   > EOF
   $ hg ci -m 'azerty'
-  $ hg log -f -L ba,z,1-2 -p
+  $ hg log -f -L ba,z,1:2 -p
   changeset:   8:52373265138b
   tag:         tip
   user:        test
@@ -658,7 +658,7 @@ Exact prefix kinds work in -L options.
 
   $ mkdir dir
   $ cd dir
-  $ hg log -f -L path:foo,5-7 -p
+  $ hg log -f -L path:foo,5:7 -p
   changeset:   5:cfdf972b3971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -758,7 +758,7 @@ Renames are followed.
   -11-
   +1+0
   +1+1-
-  $ hg log -f -L relpath:baz,5-7 -p
+  $ hg log -f -L relpath:baz,5:7 -p
   changeset:   9:6af29c3a778f
   tag:         tip
   user:        test
@@ -856,7 +856,7 @@ Binary files work but without diff hunks filtering.
   >>> open('binary', 'w').write('this\nis\na\nbinary\0')
   $ hg add binary
   $ hg ci -m 'add a binary file' --quiet
-  $ hg log -f -L binary,1-2 -p
+  $ hg log -f -L binary,1:2 -p
   changeset:   10:c96381c229df
   tag:         tip
   user:        test
@@ -871,7 +871,7 @@ Binary files work but without diff hunks filtering.
   Wc$_QA$SmdpqC~Ew%)G>+N(KNlNClYy
   
   
-  $ hg log -f -L binary,1-2 -p --config diff.git=false
+  $ hg log -f -L binary,1:2 -p --config diff.git=false
   changeset:   10:c96381c229df
   tag:         tip
   user:        test
@@ -884,19 +884,19 @@ Binary files work but without diff hunks filtering.
 
 Option --follow is required.
 
-  $ hg log -L foo,5-7
+  $ hg log -L foo,5:7
   abort: --line-range requires --follow
   [255]
 
 Non-exact pattern kinds are not allowed.
 
   $ cd ..
-  $ hg log -f -L glob:*a*,1-2
+  $ hg log -f -L glob:*a*,1:2
   hg: parse error: line range pattern 'glob:*a*' must match exactly one file
   [255]
 
 Graph log does work yet.
 
-  $ hg log -f -L dir/baz,5-7 --graph
+  $ hg log -f -L dir/baz,5:7 --graph
   abort: graph not supported with line range patterns
   [255]

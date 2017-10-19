@@ -3280,7 +3280,7 @@ def log(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-       Use -L/--line-range FILE,M-N options to follow the history of lines
+       Use -L/--line-range FILE,M:N options to follow the history of lines
        from M to N in FILE. With -p/--patch only diff hunks affecting
        specified line range will be shown. This option requires --follow;
        it can be specified multiple times. Currently, this option is not
@@ -3357,12 +3357,12 @@ def log(ui, repo, *pats, **opts):
 
       - changesets touching lines 13 to 23 for file.c::
 
-          hg log -L file.c,13-23
+          hg log -L file.c,13:23
 
       - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of
         main.c with patch::
 
-          hg log -L file.c,13-23 -L main.c,2-6 -p
+          hg log -L file.c,13:23 -L main.c,2:6 -p
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
