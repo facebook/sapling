@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-from .i18n import _
 from . import (
     configitems,
     error,
@@ -155,8 +154,8 @@ class command(_funcregistrarbase):
                     cmdtype=unrecoverablewrite):
 
         if cmdtype not in self.possiblecmdtypes:
-            raise error.ProgrammingError(_("unknown cmdtype value '%s' for "
-                                            "'%s' command") % (cmdtype, name))
+            raise error.ProgrammingError("unknown cmdtype value '%s' for "
+                                         "'%s' command" % (cmdtype, name))
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
