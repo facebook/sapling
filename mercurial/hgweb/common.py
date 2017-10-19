@@ -75,7 +75,7 @@ def checkauthz(hgweb, req, op):
     if deny and (not user or ismember(hgweb.repo.ui, user, deny)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 
-    allow = hgweb.configlist('web', 'allow_push')
+    allow = hgweb.configlist('web', 'allow-push')
     if not (allow and ismember(hgweb.repo.ui, user, allow)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 

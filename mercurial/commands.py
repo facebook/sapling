@@ -4695,7 +4695,7 @@ def serve(ui, repo, **opts):
 
     Please note that the server does not implement access control.
     This means that, by default, anybody can read from the server and
-    nobody can write to it by default. Set the ``web.allow_push``
+    nobody can write to it by default. Set the ``web.allow-push``
     option to ``*`` to allow everybody to push to the server. You
     should use a real web server if you need to authenticate users.
 

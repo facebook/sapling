@@ -2260,7 +2260,7 @@ For a quick setup in a trusted environment, e.g., a private LAN, where
 you want it to accept pushes from anybody, you can use the following
 command line::
 
-    $ hg --config web.allow_push=* --config web.push_ssl=False serve
+    $ hg --config web.allow-push=* --config web.push_ssl=False serve
 
 Note that this will allow anybody to push anything to the server and
 that this should not be used for public servers.
@@ -2290,13 +2290,13 @@ The full set of options is:
 ``allow-pull``
     Whether to allow pulling from the repository. (default: True)
 
-``allow_push``
+``allow-push``
     Whether to allow pushing to the repository. If empty or not set,
     pushing is not allowed. If the special value ``*``, any remote
     user can push, including unauthenticated users. Otherwise, the
     remote user must have been authenticated, and the authenticated
     user name must be present in this list. The contents of the
-    allow_push list are examined after the deny_push list.
+    allow-push list are examined after the deny_push list.
 
 ``allow_read``
     If the user has not already been denied repository access due to
@@ -2390,7 +2390,7 @@ The full set of options is:
     push is not denied. If the special value ``*``, all remote users are
     denied push. Otherwise, unauthenticated users are all denied, and
     any authenticated user name present in this list is also denied. The
-    contents of the deny_push list are examined before the allow_push list.
+    contents of the deny_push list are examined before the allow-push list.
 
 ``deny_read``
     Whether to deny reading/viewing of the repository. If this list is

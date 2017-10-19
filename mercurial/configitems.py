@@ -1010,7 +1010,8 @@ coreconfigitem('web', 'allow-pull',
     alias=[('web', 'allowpull')],
     default=True,
 )
-coreconfigitem('web', 'allow_push',
+coreconfigitem('web', 'allow-push',
+    alias=[('web', 'allow_push')],
     default=list,
 )
 coreconfigitem('web', 'allowzip',
