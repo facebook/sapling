@@ -10,8 +10,8 @@
 #pragma once
 #include <boost/operators.hpp>
 #include <folly/Format.h>
-#include <folly/Hash.h>
 #include <folly/String.h>
+#include <folly/hash/Hash.h>
 #include <type_traits>
 
 namespace facebook {
