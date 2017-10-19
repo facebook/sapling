@@ -33,12 +33,12 @@ cpp_library(
         "@/folly:string",
         "@/folly:synchronized",
         "@/folly:thread_local",
+        "@/folly/executors:global_executor",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
         "@/folly/io/async:request_context",
         "@/folly/stats:timeseries_histogram",
-        "@/wangle:wangle",
     ],
     external_deps = [
         ("fuse", None, "fuse"),
