@@ -25,18 +25,24 @@ use tempdir::TempDir;
 use filelinknodes::FileLinknodes;
 use linknodes::{ErrorKind, Linknodes};
 use memlinknodes::MemLinknodes;
-use mercurial_types::MPath;
+use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::*;
 
 fn add_and_get<L: Linknodes>(linknodes: L) {
-    let path = MPath::new("abc").unwrap();
-    linknodes.add(&path, &NULL_HASH, &ONES_HASH).wait().unwrap();
-    linknodes.add(&path, &AS_HASH, &TWOS_HASH).wait().unwrap();
+    let path = RepoPath::file("abc").unwrap();
+    linknodes
+        .add(path.clone(), &NULL_HASH, &ONES_HASH)
+        .wait()
+        .unwrap();
+    linknodes
+        .add(path.clone(), &AS_HASH, &TWOS_HASH)
+        .wait()
+        .unwrap();
 
     // This will error out because this combination already exists.
     assert_matches!(
         linknodes
-            .add(&path, &NULL_HASH, &THREES_HASH)
+            .add(path.clone(), &NULL_HASH, &THREES_HASH)
             .wait()
             .unwrap_err()
             .kind(),
@@ -45,15 +51,18 @@ fn add_and_get<L: Linknodes>(linknodes: L) {
         *new == THREES_HASH
     );
 
-    assert_eq!(linknodes.get(&path, &NULL_HASH).wait().unwrap(), ONES_HASH);
-    assert_eq!(linknodes.get(&path, &AS_HASH).wait().unwrap(), TWOS_HASH);
+    assert_eq!(
+        linknodes.get(path.clone(), &NULL_HASH).wait().unwrap(),
+        ONES_HASH
+    );
+    assert_eq!(linknodes.get(path, &AS_HASH).wait().unwrap(), TWOS_HASH);
 }
 
 fn not_found<L: Linknodes>(linknodes: L) {
-    let path = MPath::new("abc").unwrap();
+    let path = RepoPath::dir("abc").unwrap();
     assert_matches!(
         linknodes
-            .get(&path, &NULL_HASH)
+            .get(path.clone(), &NULL_HASH)
             .wait()
             .unwrap_err()
             .kind(),
@@ -66,14 +75,17 @@ where
     F: FnMut() -> L,
     L: Linknodes,
 {
-    let path = MPath::new("abc").unwrap();
+    let path = RepoPath::root();
     {
         let linknodes = new_linknodes();
-        linknodes.add(&path, &NULL_HASH, &ONES_HASH).wait().unwrap();
+        linknodes
+            .add(path.clone(), &NULL_HASH, &ONES_HASH)
+            .wait()
+            .unwrap();
     }
 
     let linknodes = new_linknodes();
-    assert_eq!(linknodes.get(&path, &NULL_HASH).wait().unwrap(), ONES_HASH);
+    assert_eq!(linknodes.get(path, &NULL_HASH).wait().unwrap(), ONES_HASH);
 }
 
 macro_rules! linknodes_test_impl {

@@ -25,7 +25,7 @@ use futures_cpupool::CpuPool;
 use filekv::FileKV;
 use futures_ext::{BoxFuture, FutureExt};
 use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, Linknodes, ResultExt};
-use mercurial_types::{MPath, NodeHash};
+use mercurial_types::{NodeHash, RepoPath};
 use mercurial_types::hash::Sha1;
 
 static PREFIX: &str = "linknode:";
@@ -67,9 +67,9 @@ impl FileLinknodes {
     }
 }
 
-fn hash(path: &MPath, node: &NodeHash) -> Sha1 {
+fn hash(path: &RepoPath, node: &NodeHash) -> Sha1 {
     // compute the hash of path + null byte + node
-    let mut buf = path.to_vec();
+    let mut buf = path.serialize();
     buf.push(0);
     buf.extend_from_slice(node.as_ref());
     buf.as_slice().into()
@@ -79,8 +79,7 @@ impl Linknodes for FileLinknodes {
     type Get = BoxFuture<NodeHash, LinknodeError>;
     type Effect = BoxFuture<(), LinknodeError>;
 
-    fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
-        let path = path.clone();
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
         let node = *node;
         let linknode = *linknode;
         self.kv
@@ -101,8 +100,7 @@ impl Linknodes for FileLinknodes {
             .boxify()
     }
 
-    fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get {
-        let path = path.clone();
+    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
         let node = *node;
         self.kv
             .get(hash(&path, &node).to_hex())

@@ -12,16 +12,15 @@ extern crate futures;
 
 extern crate mercurial_types;
 
+use std::fmt;
 use std::sync::Arc;
 
 use futures::Future;
 
-use mercurial_types::{MPath, NodeHash};
+use mercurial_types::{NodeHash, RepoPath};
 
 mod errors {
-    use std::fmt;
-
-    use mercurial_types::{MPath, NodeHash};
+    use super::*;
 
     struct OptionNodeHash<'a>(&'a Option<NodeHash>);
 
@@ -36,19 +35,19 @@ mod errors {
 
     error_chain! {
         errors {
-            NotFound(path: MPath, node: NodeHash) {
+            NotFound(path: RepoPath, node: NodeHash) {
                 description("linknode not found")
-                display("linknode not found for path {}, node {}", path, node)
+                display("linknode not found for {}, node {}", path, node)
             }
             AlreadyExists(
-                path: MPath,
+                path: RepoPath,
                 node: NodeHash,
                 old_linknode: Option<NodeHash>,
                 new_linknode: NodeHash
             ) {
                 description("linknode already exists")
                 display(
-                    "linknode already exists for path {}, node {} (linknodes: existing {}, new {})",
+                    "linknode already exists for {}, node {} (linknodes: existing {}, new {})",
                     path,
                     node,
                     OptionNodeHash(old_linknode),
@@ -77,8 +76,8 @@ pub trait Linknodes: Send + 'static {
     type Get: Future<Item = NodeHash, Error = Error> + Send + 'static;
     type Effect: Future<Item = (), Error = Error> + Send + 'static;
 
-    fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect;
-    fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get;
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect;
+    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get;
 }
 
 impl<L> Linknodes for Arc<L>
@@ -89,12 +88,12 @@ where
     type Effect = L::Effect;
 
     #[inline]
-    fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get {
+    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
         (**self).get(path, node)
     }
 
     #[inline]
-    fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
         (**self).add(path, node, linknode)
     }
 }

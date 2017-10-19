@@ -22,10 +22,10 @@ use std::sync::Mutex;
 
 use futures::future::{err, ok, FutureResult};
 use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, Linknodes};
-use mercurial_types::{MPath, NodeHash};
+use mercurial_types::{NodeHash, RepoPath};
 
 pub struct MemLinknodes {
-    linknodes: Mutex<HashMap<(MPath, NodeHash), NodeHash>>,
+    linknodes: Mutex<HashMap<(RepoPath, NodeHash), NodeHash>>,
 }
 
 impl MemLinknodes {
@@ -40,16 +40,12 @@ impl Linknodes for MemLinknodes {
     type Get = FutureResult<NodeHash, LinknodeError>;
     type Effect = FutureResult<(), LinknodeError>;
 
-    fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
         let mut linknodes = self.linknodes.lock().unwrap();
         match linknodes.entry((path.clone(), *node)) {
             Entry::Occupied(occupied) => err(
-                LinknodeErrorKind::AlreadyExists(
-                    path.clone(),
-                    *node,
-                    Some(*occupied.get()),
-                    *linknode,
-                ).into(),
+                LinknodeErrorKind::AlreadyExists(path, *node, Some(*occupied.get()), *linknode)
+                    .into(),
             ),
             Entry::Vacant(vacant) => {
                 vacant.insert(*linknode);
@@ -58,9 +54,9 @@ impl Linknodes for MemLinknodes {
         }
     }
 
-    fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get {
+    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
         let linknodes = self.linknodes.lock().unwrap();
-        match get_pair(&linknodes, path, node) {
+        match get_pair(&linknodes, &path, node) {
             Some(node) => ok(*node),
             None => err(LinknodeErrorKind::NotFound(path.clone(), *node).into()),
         }
