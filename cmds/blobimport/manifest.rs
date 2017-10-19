@@ -20,7 +20,7 @@ use mercurial_types::{self, Blob, BlobHash, Entry, NodeHash, Parents, Type};
 use BlobstoreEntry;
 use errors::*;
 
-pub(crate) fn put_manifest_entry(
+pub(crate) fn put_entry(
     sender: SyncSender<BlobstoreEntry>,
     entry_hash: NodeHash,
     blob: Blob<Vec<u8>>,
@@ -57,7 +57,7 @@ where
 
 // Copy a single manifest entry into the blobstore
 // TODO: #[async]
-pub(crate) fn copy_manifest_entry<E>(
+pub(crate) fn copy_entry<E>(
     entry: Box<Entry<Error = E>>,
     sender: SyncSender<BlobstoreEntry>,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
@@ -72,11 +72,11 @@ where
     blobfuture
         .join(entry.get_parents().map_err(Error::from))
         .and_then(move |(blob, parents)| {
-            put_manifest_entry(sender, hash, blob, parents)
+            put_entry(sender, hash, blob, parents)
         })
 }
 
-pub(crate) fn get_stream_of_manifest_entries(
+pub(crate) fn get_entry_stream(
     entry: Box<Entry<Error = mercurial::Error>>,
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
@@ -116,7 +116,7 @@ pub(crate) fn get_stream_of_manifest_entries(
             })
             .flatten_stream()
             .map(move |entry| {
-                get_stream_of_manifest_entries(entry, revlog_repo.clone(), cs_rev.clone())
+                get_entry_stream(entry, revlog_repo.clone(), cs_rev.clone())
             })
             .map_err(Error::from)
             .flatten()

@@ -22,7 +22,7 @@ use stats::Timeseries;
 use BlobstoreEntry;
 use STATS;
 use errors::*;
-use manifest::{copy_manifest_entry, get_stream_of_manifest_entries, put_manifest_entry};
+use manifest;
 
 pub(crate) fn convert<H>(
     revlog: RevlogRepo,
@@ -123,7 +123,7 @@ where
                 .get_manifest_blob_by_nodeid(&mfid)
                 .from_err()
                 .and_then(move |blob| {
-                    let putmf = put_manifest_entry(
+                    let putmf = manifest::put_entry(
                         sender.clone(),
                         mfid,
                         blob.as_blob().clone(),
@@ -141,7 +141,7 @@ where
                                 .map({
                                     let revlog_repo = revlog_repo.clone();
                                     move |entry| {
-                                        get_stream_of_manifest_entries(
+                                        manifest::get_entry_stream(
                                             entry,
                                             revlog_repo.clone(),
                                             linkrev.clone(),
@@ -149,7 +149,7 @@ where
                                     }
                                 })
                                 .flatten()
-                                .for_each(move |entry| copy_manifest_entry(entry, sender.clone()))
+                                .for_each(move |entry| manifest::copy_entry(entry, sender.clone()))
                         })
                         .into_future()
                         .flatten();
