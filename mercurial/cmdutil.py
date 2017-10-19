@@ -2627,6 +2627,9 @@ def getloglinerangerevs(repo, userrevs, opts):
     # Two-levels map of "rev -> file ctx -> [line range]".
     linerangesbyrev = {}
     for fname, (fromline, toline) in _parselinerangelogopt(repo, opts):
+        if fname not in wctx:
+            raise error.Abort(_('cannot follow file not in parent '
+                                'revision: "%s"') % fname)
         fctx = wctx.filectx(fname)
         for fctx, linerange in dagop.blockancestors(fctx, fromline, toline):
             rev = fctx.introrev()
