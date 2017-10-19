@@ -83,7 +83,10 @@ class Client(object):
             response = self._connection.request(
                 'POST', url, headers=headers, fields=req_data)
         except urllib3.exceptions.HTTPError as ex:
-            raise Client(ex.errno, str(ex))
+            errno = -1
+            if ex.args and util.safehasattr(ex.args[0], 'errno'):
+                errno = ex.args[0].errno
+            raise ClientError(errno, str(ex))
 
         try:
             response = json.loads(response.data)
