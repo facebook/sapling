@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-# Copyright 2004-present Facebook. All Rights Reserved.
+# Copyright (c) 2004-present, Facebook, Inc.
+# All Rights Reserved.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
 
 """Runner for Mononoke/Mercurial integration tests."""
 
@@ -18,7 +22,7 @@ from .third_party import hg_run_tests
 TESTDIR_PATH = 'scm/mononoke/tests/integration'
 
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
-MONONOKE_EDEN_SERVER_TARGET = '//scm/mononoke/eden-server:eden_server'
+MONONOKE_EDEN_SERVER_TARGET = '//scm/mononoke/eden_server:eden_server'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
 MONONOKE_SERVER_TARGET = '//scm/mononoke/server:server'
