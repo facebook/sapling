@@ -16,6 +16,7 @@ use blobrepo::BlobChangeset;
 use futures_ext::{FutureExt, StreamExt};
 use heads::Heads;
 use mercurial::{RevlogManifest, RevlogRepo};
+use mercurial::revlog::RevIdx;
 use mercurial_types::{Changeset, Manifest, NodeHash};
 use stats::Timeseries;
 
@@ -126,48 +127,7 @@ where
             let mfid = *cs.manifestid();
             let linkrev = entry.linkrev;
 
-            // fetch the blob for the (root) manifest
-            revlog_repo
-                .get_manifest_blob_by_nodeid(&mfid)
-                .from_err()
-                .and_then(move |blob| {
-                    let putmf = manifest::put_entry(
-                        sender.clone(),
-                        mfid,
-                        blob.as_blob().clone(),
-                        blob.parents().clone(),
-                    );
-
-                    // Get the listing of entries and fetch each of those
-                    let files = RevlogManifest::new(revlog_repo.clone(), blob)
-                        .map_err(|err| {
-                            Error::with_chain(Error::from(err), "Parsing manifest to get list")
-                        })
-                        .map(|mf| mf.list().map_err(Error::from))
-                        .map(|entry_stream| {
-                            entry_stream
-                                .map({
-                                    let revlog_repo = revlog_repo.clone();
-                                    move |entry| {
-                                        manifest::get_entry_stream(
-                                            entry,
-                                            revlog_repo.clone(),
-                                            linkrev.clone(),
-                                        )
-                                    }
-                                })
-                                .flatten()
-                                .for_each(move |entry| manifest::copy_entry(entry, sender.clone()))
-                        })
-                        .into_future()
-                        .flatten();
-
-                    _assert_sized(&files);
-                    // Huh? No idea why this is needed to avoid an error below.
-                    let files = files.boxify();
-
-                    putmf.join(files)
-                })
+            put_blobs(revlog_repo, sender, mfid, linkrev)
         })
         .map_err(move |err| {
             Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
@@ -177,6 +137,58 @@ where
     _assert_sized(&manifest);
 
     put.join(manifest).map(|_| ())
+}
+
+/// Copy manifest and filelog entries into the blob store.
+///
+/// See the help for copy_changeset for a full description.
+fn put_blobs(
+    revlog_repo: RevlogRepo,
+    sender: SyncSender<BlobstoreEntry>,
+    mfid: NodeHash,
+    linkrev: RevIdx,
+) -> impl Future<Item = (), Error = Error> + Send + 'static {
+    revlog_repo
+        .get_manifest_blob_by_nodeid(&mfid)
+        .from_err()
+        .and_then(move |blob| {
+            let putmf = manifest::put_entry(
+                sender.clone(),
+                mfid,
+                blob.as_blob().clone(),
+                blob.parents().clone(),
+            );
+
+            // Get the listing of entries and fetch each of those
+            let files = RevlogManifest::new(revlog_repo.clone(), blob)
+                .map_err(|err| {
+                    Error::with_chain(Error::from(err), "Parsing manifest to get list")
+                })
+                .map(|mf| mf.list().map_err(Error::from))
+                .map(|entry_stream| {
+                    entry_stream
+                        .map({
+                            let revlog_repo = revlog_repo.clone();
+                            move |entry| {
+                                manifest::get_entry_stream(
+                                    entry,
+                                    revlog_repo.clone(),
+                                    linkrev.clone(),
+                                )
+                            }
+                        })
+                        .flatten()
+                        .for_each(move |entry| manifest::copy_entry(entry, sender.clone()))
+                })
+                .into_future()
+                .flatten();
+
+            _assert_sized(&files);
+            // Huh? No idea why this is needed to avoid an error below.
+            let files = files.boxify();
+
+            putmf.join(files).map(|_| ())
+        })
 }
 
 fn _assert_sized<T: Sized>(_: &T) {}
