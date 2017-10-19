@@ -12,6 +12,8 @@ extern crate futures;
 
 extern crate mercurial_types;
 
+use std::sync::Arc;
+
 use futures::Future;
 
 use mercurial_types::{MPath, NodeHash};
@@ -77,4 +79,22 @@ pub trait Linknodes: Send + 'static {
 
     fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect;
     fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get;
+}
+
+impl<L> Linknodes for Arc<L>
+where
+    L: Linknodes + Sync,
+{
+    type Get = L::Get;
+    type Effect = L::Effect;
+
+    #[inline]
+    fn get(&self, path: &MPath, node: &NodeHash) -> Self::Get {
+        (**self).get(path, node)
+    }
+
+    #[inline]
+    fn add(&self, path: &MPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+        (**self).add(path, node, linknode)
+    }
 }
