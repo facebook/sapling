@@ -535,7 +535,7 @@ changelog and manifest would have invalid node:
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  obsfate:     pruned
+  obsolete:    pruned
   summary:     .
   
   changeset:   0:eff892de26ec

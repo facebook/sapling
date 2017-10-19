@@ -1728,7 +1728,7 @@ class changeset_printer(object):
         if obsfate:
             for obsfateline in obsfate:
                 # i18n: column positioning for "hg log"
-                self.ui.write(_("obsfate:     %s\n") % obsfateline,
+                self.ui.write(_("obsolete:    %s\n") % obsfateline,
                               label='log.obsfate')
 
     def _exthook(self, ctx):
