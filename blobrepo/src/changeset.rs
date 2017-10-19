@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 
 use bincode;
 use futures::future::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
 
@@ -48,7 +47,10 @@ impl BlobChangeset {
         }
     }
 
-    pub fn load<B>(blobstore: &B, nodeid: &NodeHash) -> BoxFuture<Option<Self>, Error>
+    pub fn load<B>(
+        blobstore: &B,
+        nodeid: &NodeHash,
+    ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static
     where
         B: Blobstore<Key = String>,
     {
@@ -72,10 +74,9 @@ impl BlobChangeset {
                     Ok(Some(cs))
                 }
             })
-            .boxify()
     }
 
-    pub fn save<B>(&self, blobstore: B) -> BoxFuture<(), Error>
+    pub fn save<B>(&self, blobstore: B) -> impl Future<Item = (), Error = Error> + Send + 'static
     where
         B: Blobstore<Key = String> + Send + 'static,
         B::Error: Send + 'static,
@@ -100,7 +101,6 @@ impl BlobChangeset {
             .into_future()
             .and_then(move |blob| blobstore.put(key, blob.into())
                                 .map_err(blobstore_err))
-            .boxify()
     }
 }
 

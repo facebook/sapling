@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 #[macro_use]
 extern crate error_chain;
