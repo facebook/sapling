@@ -45,6 +45,7 @@ repo as "default" path in .hg/hgrc.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets eb85d9124f3f:26c18ce05e4e
   (run 'hg update' to get a working copy)
 
 Update working directory to "tip", which requires largefile("large"),
@@ -86,6 +87,7 @@ Verify that largefiles from pulled branchheads are fetched, also to an empty rep
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets eb85d9124f3f
   (run 'hg update' to get a working copy)
 
 #if unix-permissions
@@ -94,9 +96,11 @@ Portable way to print file permissions:
 
   $ cat > ls-l.py <<EOF
   > #!$PYTHON
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > path = sys.argv[1]
-  > print '%03o' % (os.lstat(path).st_mode & 0777)
+  > print('%03o' % (os.lstat(path).st_mode & 0o777))
   > EOF
   $ chmod +x ls-l.py
 

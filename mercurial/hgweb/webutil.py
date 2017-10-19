@@ -30,6 +30,7 @@ from .. import (
     mdiff,
     patch,
     pathutil,
+    pycompat,
     templatefilters,
     ui as uimod,
     util,
@@ -170,9 +171,20 @@ class _siblings(object):
     def __len__(self):
         return len(self.siblings)
 
-def annotate(fctx, ui):
+def difffeatureopts(req, ui, section):
     diffopts = patch.difffeatureopts(ui, untrusted=True,
-                                     section='annotate', whitespace=True)
+                                     section=section, whitespace=True)
+
+    for k in ('ignorews', 'ignorewsamount', 'ignorewseol', 'ignoreblanklines'):
+        v = req.form.get(k, [None])[0]
+        if v is not None:
+            v = util.parsebool(v)
+            setattr(diffopts, k, v if v is not None else True)
+
+    return diffopts
+
+def annotate(req, fctx, ui):
+    diffopts = difffeatureopts(req, ui, 'annotate')
     return fctx.annotate(follow=True, linenumber=True, diffopts=diffopts)
 
 def parents(ctx, hide=None):
@@ -406,7 +418,7 @@ def changesetentry(web, req, tmpl, ctx):
     if basectx is None:
         basectx = ctx.p1()
 
-    style = web.config('web', 'style', 'paper')
+    style = web.config('web', 'style')
     if 'style' in req.form:
         style = req.form['style'][0]
 
@@ -467,7 +479,7 @@ def diffs(web, tmpl, ctx, basectx, files, style, linerange=None,
     parity = paritygen(web.stripecount)
 
     diffhunks = patch.diffhunks(repo, node1, node2, m, opts=diffopts)
-    for blockno, (header, hunks) in enumerate(diffhunks, 1):
+    for blockno, (fctx1, fctx2, header, hunks) in enumerate(diffhunks, 1):
         if style != 'raw':
             header = header[1:]
         lines = [h + '\n' for h in header]
@@ -578,7 +590,10 @@ class sessionvars(object):
     def __iter__(self):
         separator = self.start
         for key, value in sorted(self.vars.iteritems()):
-            yield {'name': key, 'value': str(value), 'separator': separator}
+            yield {'name': key,
+                   'value': pycompat.bytestr(value),
+                   'separator': separator,
+            }
             separator = '&'
 
 class wsgiui(uimod.ui):

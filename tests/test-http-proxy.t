@@ -14,7 +14,7 @@
 
 url for proxy, stream
 
-  $ http_proxy=http://localhost:$HGPORT1/ hg --config http_proxy.always=True clone --uncompressed http://localhost:$HGPORT/ b
+  $ http_proxy=http://localhost:$HGPORT1/ hg --config http_proxy.always=True clone --stream http://localhost:$HGPORT/ b
   streaming all changes
   3 files to transfer, 303 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
@@ -39,6 +39,7 @@ url for proxy, pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd b-pull
@@ -58,6 +59,7 @@ host:port for proxy
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -69,6 +71,7 @@ proxy url with user name and password
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -80,6 +83,7 @@ url with user name and password
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -98,6 +102,7 @@ do not use the proxy if it is in the no list
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 83180e7845de
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat proxy.log
@@ -105,16 +110,16 @@ do not use the proxy if it is in the no list
   * - - [*] "GET http://localhost:$HGPORT/?cmd=branchmap HTTP/1.1" - - x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=stream_out HTTP/1.1" - - x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D83180e7845de420a1bb46896fd5fe05294f8d629 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=0&common=83180e7845de420a1bb46896fd5fe05294f8d629&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=0&common=83180e7845de420a1bb46896fd5fe05294f8d629&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=batch HTTP/1.1" - - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=getbundle HTTP/1.1" - - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=83180e7845de420a1bb46896fd5fe05294f8d629&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)

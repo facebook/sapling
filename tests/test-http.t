@@ -31,7 +31,7 @@ Test server address cannot be reused
 
 clone via stream
 
-  $ hg clone --uncompressed http://localhost:$HGPORT/ copy 2>&1
+  $ hg clone --stream http://localhost:$HGPORT/ copy 2>&1
   streaming all changes
   6 files to transfer, 606 bytes of data
   transferred * bytes in * seconds (*/sec) (glob)
@@ -48,13 +48,14 @@ clone via stream
 
 try to clone via stream, should use pull instead
 
-  $ hg clone --uncompressed http://localhost:$HGPORT1/ copy2
+  $ hg clone --stream http://localhost:$HGPORT1/ copy2
   warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -66,7 +67,7 @@ try to clone via stream but missing requirements, so should use pull instead
   >     localrepo.localrepository.supportedformats.remove('generaldelta')
   > EOF
 
-  $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --uncompressed http://localhost:$HGPORT/ copy3
+  $ hg clone --config extensions.rsf=$TESTTMP/removesupportedformat.py --stream http://localhost:$HGPORT/ copy3
   warning: stream clone requested but client is missing requirements: generaldelta
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes
@@ -74,6 +75,7 @@ try to clone via stream but missing requirements, so should use pull instead
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -85,6 +87,7 @@ clone via pull
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg verify -R copy-pull
@@ -107,6 +110,7 @@ clone over http with --update
   adding manifests
   adding file changes
   added 2 changesets with 5 changes to 5 files
+  new changesets 8b6053c928fe:5fed3813f7f5
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -R updated
@@ -124,6 +128,7 @@ incoming via HTTP
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd partial
@@ -149,6 +154,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 5fed3813f7f5
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/
   (run 'hg update' to get a working copy)
   $ cd ..
@@ -227,6 +233,7 @@ test http authentication
   adding manifests
   adding file changes
   added 2 changesets with 5 changes to 5 files
+  new changesets 8b6053c928fe:5fed3813f7f5
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -284,11 +291,11 @@ test http authentication
   "GET /?cmd=stream_out HTTP/1.1" 401 - x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   "GET /?cmd=stream_out HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D5fed3813f7f5e1824344fdc9cf8f63bb662c292d x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=0&common=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=0&common=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  "GET /?cmd=getbundle HTTP/1.1" 401 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  "GET /?cmd=getbundle HTTP/1.1" 401 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=5fed3813f7f5e1824344fdc9cf8f63bb662c292d&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=lookup HTTP/1.1" 200 - x-hgarg-1:key=tip x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
   "GET /?cmd=listkeys HTTP/1.1" 401 - x-hgarg-1:namespace=namespaces x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
@@ -325,6 +332,7 @@ clone of serve with repo in root and unserved subrepo (issue2970)
   adding manifests
   adding file changes
   added 3 changesets with 7 changes to 7 files
+  new changesets 8b6053c928fe:56f9bc90cce6
   updating to branch default
   abort: HTTP Error 404: Not Found
   [255]
@@ -334,6 +342,7 @@ clone of serve with repo in root and unserved subrepo (issue2970)
   adding manifests
   adding file changes
   added 3 changesets with 7 changes to 7 files
+  new changesets 8b6053c928fe:56f9bc90cce6
   updating to branch default
   abort: HTTP Error 404: Not Found
   [255]
@@ -345,7 +354,7 @@ check error log
 check abort error reporting while pulling/cloning
 
   $ $RUNTESTDIR/killdaemons.py
-  $ hg -R test serve -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
+  $ hg serve -R test -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
   $ cat hg3.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ abort-clone
   requesting all changes
@@ -356,7 +365,7 @@ check abort error reporting while pulling/cloning
 
 disable pull-based clones
 
-  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
+  $ hg serve -R test -p $HGPORT1 -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
   $ cat hg4.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT1/ disable-pull-clone
   requesting all changes
@@ -367,7 +376,7 @@ disable pull-based clones
 
 ... but keep stream clones working
 
-  $ hg clone --uncompressed --noupdate http://localhost:$HGPORT1/ test-stream-clone
+  $ hg clone --stream --noupdate http://localhost:$HGPORT1/ test-stream-clone
   streaming all changes
   * files to transfer, * of data (glob)
   transferred * in * seconds (*/sec) (glob)
@@ -381,6 +390,7 @@ disable pull-based clones
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R test-partial-clone
@@ -390,6 +400,7 @@ disable pull-based clones
   adding manifests
   adding file changes
   added 2 changesets with 3 changes to 3 files
+  new changesets 5fed3813f7f5:56f9bc90cce6
   (run 'hg update' to get a working copy)
 
 corrupt cookies file should yield a warning

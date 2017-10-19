@@ -55,17 +55,9 @@ class bundlerevlog(revlog.revlog):
         self.bundle = bundle
         n = len(self)
         self.repotiprev = n - 1
-        chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
-        getchunk = lambda: bundle.deltachunk(chain)
-        for chunkdata in iter(getchunk, {}):
-            node = chunkdata['node']
-            p1 = chunkdata['p1']
-            p2 = chunkdata['p2']
-            cs = chunkdata['cs']
-            deltabase = chunkdata['deltabase']
-            delta = chunkdata['delta']
-            flags = chunkdata['flags']
+        for deltadata in bundle.deltaiter():
+            node, p1, p2, cs, deltabase, delta, flags = deltadata
 
             size = len(delta)
             start = bundle.tell() - size
@@ -73,7 +65,6 @@ class bundlerevlog(revlog.revlog):
             link = linkmapper(cs)
             if node in self.nodemap:
                 # this can happen if two branches make the same change
-                chain = node
                 self.bundlerevs.add(self.nodemap[node])
                 continue
 
@@ -93,7 +84,6 @@ class bundlerevlog(revlog.revlog):
             self.index.insert(-1, e)
             self.nodemap[node] = n
             self.bundlerevs.add(n)
-            chain = node
             n += 1
 
     def _chunk(self, rev):
@@ -164,7 +154,7 @@ class bundlerevlog(revlog.revlog):
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         raise NotImplementedError
-    def addgroup(self, revs, linkmapper, transaction):
+    def addgroup(self, deltas, transaction, addrevisioncb=None):
         raise NotImplementedError
     def strip(self, rev, minlink):
         raise NotImplementedError
@@ -264,24 +254,6 @@ def _getfilestarts(bundle):
 
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
-        def _writetempbundle(read, suffix, header=''):
-            """Write a temporary file to disk
-
-            This is closure because we need to make sure this tracked by
-            self.tempfile for cleanup purposes."""
-            fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
-                                            suffix=".hg10un")
-            self.tempfile = temp
-
-            with os.fdopen(fdtemp, pycompat.sysstr('wb')) as fptemp:
-                fptemp.write(header)
-                while True:
-                    chunk = read(2**18)
-                    if not chunk:
-                        break
-                    fptemp.write(chunk)
-
-            return self.vfs.open(self.tempfile, mode="rb")
         self._tempparent = None
         try:
             localrepo.localrepository.__init__(self, ui, path)
@@ -301,30 +273,22 @@ class bundlerepository(localrepo.localrepository):
         self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
 
         if isinstance(self.bundle, bundle2.unbundle20):
-            cgstream = None
+            hadchangegroup = False
             for part in self.bundle.iterparts():
                 if part.type == 'changegroup':
-                    if cgstream is not None:
+                    if hadchangegroup:
                         raise NotImplementedError("can't process "
                                                   "multiple changegroups")
-                    cgstream = part
-                    version = part.params.get('version', '01')
-                    legalcgvers = changegroup.supportedincomingversions(self)
-                    if version not in legalcgvers:
-                        msg = _('Unsupported changegroup version: %s')
-                        raise error.Abort(msg % version)
-                    if self.bundle.compressed():
-                        cgstream = _writetempbundle(part.read,
-                                                    ".cg%sun" % version)
+                    hadchangegroup = True
 
-            if cgstream is None:
-                raise error.Abort(_('No changegroups found'))
-            cgstream.seek(0)
+                self._handlebundle2part(part)
 
-            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
+            if not hadchangegroup:
+                raise error.Abort(_("No changegroups found"))
 
         elif self.bundle.compressed():
-            f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')
+            f = self._writetempbundle(self.bundle.read, '.hg10un',
+                                      header='HG10UN')
             self.bundlefile = self.bundle = exchange.readbundle(ui, f,
                                                                 bundlename,
                                                                 self.vfs)
@@ -335,6 +299,37 @@ class bundlerepository(localrepo.localrepository):
         self.firstnewrev = self.changelog.repotiprev + 1
         phases.retractboundary(self, None, phases.draft,
                                [ctx.node() for ctx in self[self.firstnewrev:]])
+
+    def _handlebundle2part(self, part):
+        if part.type == 'changegroup':
+            cgstream = part
+            version = part.params.get('version', '01')
+            legalcgvers = changegroup.supportedincomingversions(self)
+            if version not in legalcgvers:
+                msg = _('Unsupported changegroup version: %s')
+                raise error.Abort(msg % version)
+            if self.bundle.compressed():
+                cgstream = self._writetempbundle(part.read,
+                                                 ".cg%sun" % version)
+
+            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
+
+    def _writetempbundle(self, readfn, suffix, header=''):
+        """Write a temporary file to disk
+        """
+        fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
+                                        suffix=".hg10un")
+        self.tempfile = temp
+
+        with os.fdopen(fdtemp, pycompat.sysstr('wb')) as fptemp:
+            fptemp.write(header)
+            while True:
+                chunk = readfn(2**18)
+                if not chunk:
+                    break
+                fptemp.write(chunk)
+
+        return self.vfs.open(self.tempfile, mode="rb")
 
     @localrepo.unfilteredpropertycache
     def _phasecache(self):

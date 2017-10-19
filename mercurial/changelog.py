@@ -7,13 +7,14 @@
 
 from __future__ import absolute_import
 
-import collections
-
 from .i18n import _
 from .node import (
     bin,
     hex,
     nullid,
+)
+from .thirdparty import (
+    attr,
 )
 
 from . import (
@@ -27,8 +28,9 @@ _defaultextra = {'branch': 'default'}
 
 def _string_escape(text):
     """
-    >>> d = {'nl': chr(10), 'bs': chr(92), 'cr': chr(13), 'nul': chr(0)}
-    >>> s = "ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
+    >>> from .pycompat import bytechr as chr
+    >>> d = {b'nl': chr(10), b'bs': chr(92), b'cr': chr(13), b'nul': chr(0)}
+    >>> s = b"ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
     >>> s
     'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
     >>> res = _string_escape(s)
@@ -41,12 +43,13 @@ def _string_escape(text):
 
 def decodeextra(text):
     """
-    >>> sorted(decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'})
-    ...                    ).iteritems())
+    >>> from .pycompat import bytechr as chr
+    >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
+    ...                    ).items())
     [('baz', '\\x002'), ('branch', 'default'), ('foo', 'bar')]
-    >>> sorted(decodeextra(encodeextra({'foo': 'bar',
-    ...                                 'baz': chr(92) + chr(0) + '2'})
-    ...                    ).iteritems())
+    >>> sorted(decodeextra(encodeextra({b'foo': b'bar',
+    ...                                 b'baz': chr(92) + chr(0) + b'2'})
+    ...                    ).items())
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """
     extra = _defaultextra.copy()
@@ -140,10 +143,16 @@ def _delayopener(opener, target, buf):
         return appender(opener, name, mode, buf)
     return _delay
 
-_changelogrevision = collections.namedtuple(u'changelogrevision',
-                                            (u'manifest', u'user', u'date',
-                                             u'files', u'description',
-                                             u'extra'))
+@attr.s
+class _changelogrevision(object):
+    # Extensions might modify _defaultextra, so let the constructor below pass
+    # it in
+    extra = attr.ib()
+    manifest = attr.ib(default=nullid)
+    user = attr.ib(default='')
+    date = attr.ib(default=(0, 0))
+    files = attr.ib(default=attr.Factory(list))
+    description = attr.ib(default='')
 
 class changelogrevision(object):
     """Holds results of a parsed changelog revision.
@@ -160,14 +169,7 @@ class changelogrevision(object):
 
     def __new__(cls, text):
         if not text:
-            return _changelogrevision(
-                manifest=nullid,
-                user='',
-                date=(0, 0),
-                files=[],
-                description='',
-                extra=_defaultextra,
-            )
+            return _changelogrevision(extra=_defaultextra)
 
         self = super(changelogrevision, cls).__new__(cls)
         # We could return here and implement the following as an __init__.
@@ -275,7 +277,7 @@ class changelog(revlog.revlog):
 
         datafile = '00changelog.d'
         revlog.revlog.__init__(self, opener, indexfile, datafile=datafile,
-                               checkambig=True)
+                               checkambig=True, mmaplargeindex=True)
 
         if self._initempty:
             # changelogs don't benefit from generaldelta

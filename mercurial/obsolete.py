@@ -20,12 +20,12 @@ facilitate conflict resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
-The old obsoleted changeset is called a "precursor" and possible
+The old obsoleted changeset is called a "predecessor" and possible
 replacements are called "successors". Markers that used changeset X as
-a precursor are called "successor markers of X" because they hold
+a predecessor are called "successor markers of X" because they hold
 information about the successors of X. Markers that use changeset Y as
-a successors are call "precursor markers of Y" because they hold
-information about the precursors of Y.
+a successors are call "predecessor markers of Y" because they hold
+information about the predecessors of Y.
 
 Examples:
 
@@ -98,26 +98,54 @@ createmarkersopt = 'createmarkers'
 allowunstableopt = 'allowunstable'
 exchangeopt = 'exchange'
 
+def _getoptionvalue(repo, option):
+    """Returns True if the given repository has the given obsolete option
+    enabled.
+    """
+    configkey = 'evolution.%s' % option
+    newconfig = repo.ui.configbool('experimental', configkey)
+
+    # Return the value only if defined
+    if newconfig is not None:
+        return newconfig
+
+    # Fallback on generic option
+    try:
+        return repo.ui.configbool('experimental', 'evolution')
+    except (error.ConfigError, AttributeError):
+        # Fallback on old-fashion config
+        # inconsistent config: experimental.evolution
+        result = set(repo.ui.configlist('experimental', 'evolution'))
+
+        if 'all' in result:
+            return True
+
+        # For migration purposes, temporarily return true if the config hasn't
+        # been set but _enabled is true.
+        if len(result) == 0 and _enabled:
+            return True
+
+        # Temporary hack for next check
+        newconfig = repo.ui.config('experimental', 'evolution.createmarkers')
+        if newconfig:
+            result.add('createmarkers')
+
+        return option in result
+
 def isenabled(repo, option):
     """Returns True if the given repository has the given obsolete option
     enabled.
     """
-    result = set(repo.ui.configlist('experimental', 'evolution'))
-    if 'all' in result:
-        return True
-
-    # For migration purposes, temporarily return true if the config hasn't been
-    # set but _enabled is true.
-    if len(result) == 0 and _enabled:
-        return True
+    createmarkersvalue = _getoptionvalue(repo, createmarkersopt)
+    unstabluevalue = _getoptionvalue(repo, allowunstableopt)
+    exchangevalue = _getoptionvalue(repo, exchangeopt)
 
     # createmarkers must be enabled if other options are enabled
-    if ((allowunstableopt in result or exchangeopt in result) and
-        not createmarkersopt in result):
+    if ((unstabluevalue or exchangevalue) and not createmarkersvalue):
         raise error.Abort(_("'createmarkers' obsolete option must be enabled "
-                           "if other obsolete options are enabled"))
+                            "if other obsolete options are enabled"))
 
-    return option in result
+    return _getoptionvalue(repo, option)
 
 ### obsolescence marker flag
 
@@ -294,11 +322,11 @@ def _fm0decodemeta(data):
 #
 # - uint8: number of metadata entries M
 #
-# - 20 or 32 bytes: precursor changeset identifier.
+# - 20 or 32 bytes: predecessor changeset identifier.
 #
 # - N*(20 or 32) bytes: successors changesets identifiers.
 #
-# - P*(20 or 32) bytes: parents of the precursors changesets.
+# - P*(20 or 32) bytes: parents of the predecessors changesets.
 #
 # - M*(uint8, uint8): size of all metadata entries (key and value)
 #
@@ -314,7 +342,7 @@ _fm1parentnone = 3
 _fm1parentshift = 14
 _fm1parentmask = (_fm1parentnone << _fm1parentshift)
 _fm1metapair = 'BB'
-_fm1metapairsize = _calcsize('BB')
+_fm1metapairsize = _calcsize(_fm1metapair)
 
 def _fm1purereadmarkers(data, off, stop):
     # make some global constants local for performance
@@ -416,6 +444,14 @@ def _fm1encodeonemarker(marker):
     for key, value in metadata:
         lk = len(key)
         lv = len(value)
+        if lk > 255:
+            msg = ('obsstore metadata key cannot be longer than 255 bytes'
+                   ' (key "%s" is %u bytes)') % (key, lk)
+            raise error.ProgrammingError(msg)
+        if lv > 255:
+            msg = ('obsstore metadata value cannot be longer than 255 bytes'
+                   ' (value "%s" for key "%s" is %u bytes)') % (value, key, lv)
+            raise error.ProgrammingError(msg)
         data.append(lk)
         data.append(lv)
         totalsize += lk + lv
@@ -470,11 +506,18 @@ def _addsuccessors(successors, markers):
     for mark in markers:
         successors.setdefault(mark[0], set()).add(mark)
 
+def _addprecursors(*args, **kwargs):
+    msg = ("'obsolete._addprecursors' is deprecated, "
+           "use 'obsolete._addpredecessors'")
+    util.nouideprecwarn(msg, '4.4')
+
+    return _addpredecessors(*args, **kwargs)
+
 @util.nogc
-def _addprecursors(precursors, markers):
+def _addpredecessors(predecessors, markers):
     for mark in markers:
         for suc in mark[1]:
-            precursors.setdefault(suc, set()).add(mark)
+            predecessors.setdefault(suc, set()).add(mark)
 
 @util.nogc
 def _addchildren(children, markers):
@@ -499,18 +542,18 @@ class obsstore(object):
     """Store obsolete markers
 
     Markers can be accessed with two mappings:
-    - precursors[x] -> set(markers on precursors edges of x)
+    - predecessors[x] -> set(markers on predecessors edges of x)
     - successors[x] -> set(markers on successors edges of x)
-    - children[x]   -> set(markers on precursors edges of children(x)
+    - children[x]   -> set(markers on predecessors edges of children(x)
     """
 
     fields = ('prec', 'succs', 'flag', 'meta', 'date', 'parents')
-    # prec:    nodeid, precursor changesets
+    # prec:    nodeid, predecessors changesets
     # succs:   tuple of nodeid, successor changesets (0-N length)
     # flag:    integer, flag field carrying modifier for the markers (see doc)
     # meta:    binary blob, encoded metadata dictionary
     # date:    (float, int) tuple, date of marker creation
-    # parents: (tuple of nodeid) or None, parents of precursors
+    # parents: (tuple of nodeid) or None, parents of predecessors
     #          None is used when no data has been recorded
 
     def __init__(self, svfs, defaultformat=_fm1version, readonly=False):
@@ -535,7 +578,6 @@ class obsstore(object):
                     raise
                 # just build an empty _all list if no obsstore exists, which
                 # avoids further stat() syscalls
-                pass
         return bool(self._all)
 
     __bool__ = __nonzero__
@@ -583,7 +625,7 @@ class obsstore(object):
 
         metadata = tuple(sorted(metadata.iteritems()))
 
-        marker = (str(prec), tuple(succs), int(flag), metadata, date, parents)
+        marker = (bytes(prec), tuple(succs), int(flag), metadata, date, parents)
         return bool(self.add(transaction, [marker]))
 
     def add(self, transaction, markers):
@@ -658,11 +700,19 @@ class obsstore(object):
         _addsuccessors(successors, self._all)
         return successors
 
-    @propertycache
+    @property
     def precursors(self):
-        precursors = {}
-        _addprecursors(precursors, self._all)
-        return precursors
+        msg = ("'obsstore.precursors' is deprecated, "
+               "use 'obsstore.predecessors'")
+        util.nouideprecwarn(msg, '4.4')
+
+        return self.predecessors
+
+    @propertycache
+    def predecessors(self):
+        predecessors = {}
+        _addpredecessors(predecessors, self._all)
+        return predecessors
 
     @propertycache
     def children(self):
@@ -679,8 +729,8 @@ class obsstore(object):
         self._all.extend(markers)
         if self._cached('successors'):
             _addsuccessors(self.successors, markers)
-        if self._cached('precursors'):
-            _addprecursors(self.precursors, markers)
+        if self._cached('predecessors'):
+            _addpredecessors(self.predecessors, markers)
         if self._cached('children'):
             _addchildren(self.children, markers)
         _checkinvalidmarkers(markers)
@@ -692,14 +742,15 @@ class obsstore(object):
 
         - marker that use this changeset as successor
         - prune marker of direct children on this changeset
-        - recursive application of the two rules on precursors of these markers
+        - recursive application of the two rules on predecessors of these
+          markers
 
         It is a set so you cannot rely on order."""
 
         pendingnodes = set(nodes)
         seenmarkers = set()
         seennodes = set(pendingnodes)
-        precursorsmarkers = self.precursors
+        precursorsmarkers = self.predecessors
         succsmarkers = self.successors
         children = self.children
         while pendingnodes:
@@ -892,6 +943,14 @@ def _computeobsoleteset(repo):
 
 @cachefor('unstable')
 def _computeunstableset(repo):
+    msg = ("'unstable' volatile set is deprecated, "
+           "use 'orphan'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computeorphanset(repo)
+
+@cachefor('orphan')
+def _computeorphanset(repo):
     """the set of non obsolete revisions with obsolete parents"""
     pfunc = repo.changelog.parentrevs
     mutable = _mutablerevs(repo)
@@ -910,7 +969,7 @@ def _computeunstableset(repo):
 @cachefor('suspended')
 def _computesuspendedset(repo):
     """the set of obsolete parents with non obsolete descendants"""
-    suspended = repo.changelog.ancestors(getrevs(repo, 'unstable'))
+    suspended = repo.changelog.ancestors(getrevs(repo, 'orphan'))
     return set(r for r in getrevs(repo, 'obsolete') if r in suspended)
 
 @cachefor('extinct')
@@ -918,9 +977,16 @@ def _computeextinctset(repo):
     """the set of obsolete parents without non obsolete descendants"""
     return getrevs(repo, 'obsolete') - getrevs(repo, 'suspended')
 
-
 @cachefor('bumped')
 def _computebumpedset(repo):
+    msg = ("'bumped' volatile set is deprecated, "
+           "use 'phasedivergent'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computephasedivergentset(repo)
+
+@cachefor('phasedivergent')
+def _computephasedivergentset(repo):
     """the set of revs trying to obsolete public revisions"""
     bumped = set()
     # util function (avoid attribute lookup in the loop)
@@ -932,25 +998,33 @@ def _computebumpedset(repo):
         rev = ctx.rev()
         # We only evaluate mutable, non-obsolete revision
         node = ctx.node()
-        # (future) A cache of precursors may worth if split is very common
-        for pnode in obsutil.allprecursors(repo.obsstore, [node],
+        # (future) A cache of predecessors may worth if split is very common
+        for pnode in obsutil.allpredecessors(repo.obsstore, [node],
                                    ignoreflags=bumpedfix):
             prev = torev(pnode) # unfiltered! but so is phasecache
             if (prev is not None) and (phase(repo, prev) <= public):
-                # we have a public precursor
+                # we have a public predecessor
                 bumped.add(rev)
                 break # Next draft!
     return bumped
 
 @cachefor('divergent')
 def _computedivergentset(repo):
+    msg = ("'divergent' volatile set is deprecated, "
+           "use 'contentdivergent'")
+    repo.ui.deprecwarn(msg, '4.4')
+
+    return _computecontentdivergentset(repo)
+
+@cachefor('contentdivergent')
+def _computecontentdivergentset(repo):
     """the set of rev that compete to be the final successors of some revision.
     """
     divergent = set()
     obsstore = repo.obsstore
     newermap = {}
     for ctx in repo.set('(not public()) - obsolete()'):
-        mark = obsstore.precursors.get(ctx.node(), ())
+        mark = obsstore.predecessors.get(ctx.node(), ())
         toprocess = set(mark)
         seen = set()
         while toprocess:
@@ -964,7 +1038,7 @@ def _computedivergentset(repo):
             if len(newer) > 1:
                 divergent.add(ctx.rev())
                 break
-            toprocess.update(obsstore.precursors.get(prec, ()))
+            toprocess.update(obsstore.predecessors.get(prec, ()))
     return divergent
 
 
@@ -989,11 +1063,22 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     if metadata is None:
         metadata = {}
     if 'user' not in metadata:
-        metadata['user'] = repo.ui.username()
+        develuser = repo.ui.config('devel', 'user.obsmarker')
+        if develuser:
+            metadata['user'] = develuser
+        else:
+            metadata['user'] = repo.ui.username()
+
+    # Operation metadata handling
     useoperation = repo.ui.configbool('experimental',
         'evolution.track-operation')
     if useoperation and operation:
         metadata['operation'] = operation
+
+    # Effect flag metadata handling
+    saveeffectflag = repo.ui.configbool('experimental',
+                                        'evolution.effect-flags')
+
     tr = repo.transaction('add-obsolescence-marker')
     try:
         markerargs = []
@@ -1016,6 +1101,13 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
             if nprec in nsucs:
                 raise error.Abort(_("changeset %s cannot obsolete itself")
                                   % prec)
+
+            # Effect flag can be different by relation
+            if saveeffectflag:
+                # The effect flag is saved in a versioned field name for future
+                # evolution
+                effectflag = obsutil.geteffectflag(rel)
+                localmetadata[obsutil.EFFECTFLAGFIELD] = "%d" % effectflag
 
             # Creating the marker causes the hidden cache to become invalid,
             # which causes recomputation when we ask for prec.parents() above.

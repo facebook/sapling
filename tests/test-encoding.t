@@ -10,6 +10,7 @@ we need a repo with some legacy latin-1 changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 1e78a93102a3:0e5b7e3f9c4a
   (run 'hg update' to get a working copy)
   $ hg co
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

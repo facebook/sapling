@@ -119,6 +119,7 @@ Actual Test (explicit push)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   2 new obsolescence markers
+  new changesets e5ea8f9c7314
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main
@@ -166,6 +167,7 @@ Actual Test (bare push)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   2 new obsolescence markers
+  new changesets e5ea8f9c7314
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main

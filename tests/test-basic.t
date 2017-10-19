@@ -31,12 +31,22 @@ Writes to stdio succeed and fail appropriately
   $ hg status >/dev/full
   abort: No space left on device
   [255]
+#endif
 
+#if devfull no-chg
   $ hg status >/dev/full 2>&1
   [1]
 
   $ hg status ENOENT 2>/dev/full
   [1]
+#endif
+
+#if devfull chg
+  $ hg status >/dev/full 2>&1
+  [255]
+
+  $ hg status ENOENT 2>/dev/full
+  [255]
 #endif
 
   $ hg commit -m test

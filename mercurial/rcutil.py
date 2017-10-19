@@ -15,7 +15,7 @@ from . import (
     util,
 )
 
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     from . import scmwindows as scmplatform
 else:
     from . import scmposix as scmplatform

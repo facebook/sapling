@@ -47,6 +47,7 @@ Clone main from hgweb
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets fdfeeb3e979e
   updating to branch default
   cloning subrepo sub from http://localhost:$HGPORT/sub
   requesting all changes
@@ -54,6 +55,7 @@ Clone main from hgweb
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 863c1745b441
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Checking cloned repo ids
@@ -80,6 +82,7 @@ subrepo paths with ssh urls
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets fdfeeb3e979e
   updating to branch default
   cloning subrepo sub from ssh://user@dummy/sub
   requesting all changes
@@ -87,6 +90,7 @@ subrepo paths with ssh urls
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 863c1745b441
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R sshclone push -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/`pwd`/cloned

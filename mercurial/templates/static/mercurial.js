@@ -434,6 +434,56 @@ function ajaxScrollInit(urlFormat,
     scrollHandler();
 }
 
+function renderDiffOptsForm() {
+    // We use URLSearchParams for query string manipulation. Old browsers don't
+    // support this API.
+    if (!("URLSearchParams" in window)) {
+        return;
+    }
+
+    var form = document.getElementById("diffopts-form");
+
+    var KEYS = [
+        "ignorews",
+        "ignorewsamount",
+        "ignorewseol",
+        "ignoreblanklines",
+    ];
+
+    var urlParams = new URLSearchParams(window.location.search);
+
+    function updateAndRefresh(e) {
+        var checkbox = e.target;
+        var name = checkbox.id.substr(0, checkbox.id.indexOf("-"));
+        urlParams.set(name, checkbox.checked ? "1" : "0");
+        window.location.search = urlParams.toString();
+    }
+
+    var allChecked = form.getAttribute("data-ignorews") == "1";
+
+    for (var i = 0; i < KEYS.length; i++) {
+        var key = KEYS[i];
+
+        var checkbox = document.getElementById(key + "-checkbox");
+        if (!checkbox) {
+            continue;
+        }
+
+        currentValue = form.getAttribute("data-" + key);
+        checkbox.checked = currentValue != "0";
+
+        // ignorews implies ignorewsamount and ignorewseol.
+        if (allChecked && (key == "ignorewsamount" || key == "ignorewseol")) {
+            checkbox.checked = true;
+            checkbox.disabled = true;
+        }
+
+        checkbox.addEventListener("change", updateAndRefresh, false);
+    }
+
+    form.style.display = 'block';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
    process_dates();
 }, false);

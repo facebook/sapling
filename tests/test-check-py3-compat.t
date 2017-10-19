@@ -19,9 +19,7 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  i18n/check-translation.py not using absolute_import
   setup.py not using absolute_import
-  tests/test-demandimport.py not using absolute_import
 
 #if py3exe
   $ testrepohg files 'set:(**.py) - grep(pygments)' \

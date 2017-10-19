@@ -31,7 +31,9 @@ Add a merge with one parent in the same branch
 Miss perl... sometimes
 
   $ cat > filter.py <<EOF
-  > import sys, re
+  > from __future__ import absolute_import
+  > import re
+  > import sys
   > 
   > r = re.compile(r'^(?:\d+|pulling from)')
   > sys.stdout.writelines([l for l in sys.stdin if r.search(l)])

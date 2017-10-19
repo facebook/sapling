@@ -19,7 +19,7 @@ testlockname = 'testlock'
 # work around http://bugs.python.org/issue1515
 if types.MethodType not in copy._deepcopy_dispatch:
     def _deepcopy_method(x, memo):
-        return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)
+        return type(x)(x.__func__, copy.deepcopy(x.__self__, memo), x.im_class)
     copy._deepcopy_dispatch[types.MethodType] = _deepcopy_method
 
 class lockwrapper(lock.lock):

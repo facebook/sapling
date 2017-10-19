@@ -53,6 +53,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 3 changes to 3 files
+  new changesets 5fcb73622933:d15a0c284984
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -61,6 +62,7 @@
   adding manifests
   adding file changes
   added 4 changesets with 3 changes to 3 files
+  new changesets 5fcb73622933:1ec3c74fc0e0
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -115,6 +117,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 1ec3c74fc0e0
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg -R c pull a
@@ -124,4 +127,5 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets d15a0c284984
   (run 'hg heads' to see heads, 'hg merge' to merge)

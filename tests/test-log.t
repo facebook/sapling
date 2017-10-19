@@ -15,6 +15,8 @@ Log on empty repository: checking consistency
   $ hg log -r null -q
   -1:000000000000
 
+  $ cd ..
+
 The g is crafted to have 2 filelog topological heads in a linear
 changeset graph
 
@@ -1700,7 +1702,7 @@ enable obsolete to test hidden feature
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
   $ hg log --template='{rev}:{node}\n'
@@ -1793,7 +1795,7 @@ test -u/-k for problematic encoding
   $ cd problematicencoding
 
   $ $PYTHON > setup.sh <<EOF
-  > print u'''
+  > print(u'''
   > echo a > text
   > hg add text
   > hg --encoding utf-8 commit -u '\u30A2' -m none
@@ -1803,13 +1805,13 @@ test -u/-k for problematic encoding
   > hg --encoding utf-8 commit -u none -m '\u30A2'
   > echo d > text
   > hg --encoding utf-8 commit -u none -m '\u30C2'
-  > '''.encode('utf-8')
+  > '''.encode('utf-8'))
   > EOF
   $ sh < setup.sh
 
 test in problematic encoding
   $ $PYTHON > test.sh <<EOF
-  > print u'''
+  > print(u'''
   > hg --encoding cp932 log --template '{rev}\\n' -u '\u30A2'
   > echo ====
   > hg --encoding cp932 log --template '{rev}\\n' -u '\u30C2'
@@ -1817,7 +1819,7 @@ test in problematic encoding
   > hg --encoding cp932 log --template '{rev}\\n' -k '\u30A2'
   > echo ====
   > hg --encoding cp932 log --template '{rev}\\n' -k '\u30C2'
-  > '''.encode('cp932')
+  > '''.encode('cp932'))
   > EOF
   $ sh < test.sh
   0
@@ -2027,7 +2029,8 @@ Check that adding an arbitrary name shows up in log automatically
 
   $ cat > ../names.py <<EOF
   > """A small extension to test adding arbitrary names to a repo"""
-  > from mercurial.namespaces import namespace
+  > from __future__ import absolute_import
+  > from mercurial import namespaces
   > 
   > def reposetup(ui, repo):
   >     foo = {'foo': repo[0].node()}
@@ -2035,9 +2038,10 @@ Check that adding an arbitrary name shows up in log automatically
   >     namemap = lambda r, name: foo.get(name)
   >     nodemap = lambda r, node: [name for name, n in foo.iteritems()
   >                                if n == node]
-  >     ns = namespace("bars", templatename="bar", logname="barlog",
-  >                    colorname="barcolor", listnames=names, namemap=namemap,
-  >                    nodemap=nodemap)
+  >     ns = namespaces.namespace(
+  >         "bars", templatename="bar", logname="barlog",
+  >         colorname="barcolor", listnames=names, namemap=namemap,
+  >         nodemap=nodemap)
   > 
   >     repo.names.addnamespace(ns)
   > EOF
@@ -2280,7 +2284,7 @@ Even when the file revision is missing from some head:
   $ hg init issue4490
   $ cd issue4490
   $ echo '[experimental]' >> .hg/hgrc
-  $ echo 'evolution=createmarkers' >> .hg/hgrc
+  $ echo 'evolution.createmarkers=True' >> .hg/hgrc
   $ echo a > a
   $ hg ci -Am0
   adding a
@@ -2298,14 +2302,14 @@ Even when the file revision is missing from some head:
   $ hg up 'head() and not .'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
-  o  changeset:   4:db815d6d32e6
+  o  changeset:   3:db815d6d32e6
   |  tag:         tip
   |  parent:      0:f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
   |
-  | @  changeset:   3:9bc8ce7f9356
+  | @  changeset:   2:9bc8ce7f9356
   |/   parent:      0:f7b1eb17ad24
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2317,14 +2321,14 @@ Even when the file revision is missing from some head:
      summary:     0
   
   $ hg log -f -G b
-  @  changeset:   3:9bc8ce7f9356
+  @  changeset:   2:9bc8ce7f9356
   |  parent:      0:f7b1eb17ad24
   ~  user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     1
   
   $ hg log -G b
-  @  changeset:   3:9bc8ce7f9356
+  @  changeset:   2:9bc8ce7f9356
   |  parent:      0:f7b1eb17ad24
   ~  user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

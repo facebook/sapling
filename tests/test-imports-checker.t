@@ -125,7 +125,19 @@ Run additional tests for the import checker
   > from mercurial.node import hex
   > EOF
 
-  $ $PYTHON "$import_checker" testpackage*/*.py testpackage/subpackage/*.py
+# Shadowing a stdlib module to test "relative import of stdlib module" is
+# allowed if the module is also being checked
+
+  $ mkdir email
+  $ touch email/__init__.py
+  $ touch email/errors.py
+  $ cat > email/utils.py << EOF
+  > from __future__ import absolute_import
+  > from . import errors
+  > EOF
+
+  $ $PYTHON "$import_checker" testpackage*/*.py testpackage/subpackage/*.py \
+  >   email/*.py
   testpackage/importalias.py:2: ui module must be "as" aliased to uimod
   testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
   testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted

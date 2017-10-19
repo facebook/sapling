@@ -1,5 +1,8 @@
+
   $ hg init repo
   $ cd repo
+
+  $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'
 
 no bookmarks
 
@@ -12,7 +15,8 @@ no bookmarks
 
 bookmark rev -1
 
-  $ hg bookmark X
+  $ hg bookmark X --config "$TESTHOOK"
+  test-hook-bookmark: X:   -> 0000000000000000000000000000000000000000
 
 list bookmarks
 
@@ -27,7 +31,8 @@ list bookmarks with color
 
   $ echo a > a
   $ hg add a
-  $ hg commit -m 0
+  $ hg commit -m 0 --config "$TESTHOOK"
+  test-hook-bookmark: X:  0000000000000000000000000000000000000000 -> f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 bookmark X moved to rev 0
 
@@ -47,7 +52,8 @@ look up bookmark
 
 second bookmark for rev 0, command should work even with ui.strict on
 
-  $ hg --config ui.strict=1 bookmark X2
+  $ hg --config ui.strict=1 bookmark X2 --config "$TESTHOOK"
+  test-hook-bookmark: X2:   -> f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 bookmark rev -1 again
 
@@ -62,7 +68,8 @@ list bookmarks
 
   $ echo b > b
   $ hg add b
-  $ hg commit -m 1
+  $ hg commit -m 1 --config "$TESTHOOK"
+  test-hook-bookmark: X2:  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac -> 925d80f479bb026b0fb3deb27503780b13f74123
 
   $ hg bookmarks -Tjson
   [
@@ -191,6 +198,51 @@ force rename to existent bookmark
 
   $ hg bookmark -f -m X Y
 
+rename bookmark using .
+
+  $ hg book rename-me
+  $ hg book -m . renamed --config "$TESTHOOK"
+  test-hook-bookmark: rename-me:  db815d6d32e69058eadefc8cffbad37675707975 -> 
+  test-hook-bookmark: renamed:   -> db815d6d32e69058eadefc8cffbad37675707975
+  $ hg bookmark
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+   * renamed                   2:db815d6d32e6
+  $ hg up -q Y
+  $ hg book -d renamed --config "$TESTHOOK"
+  test-hook-bookmark: renamed:  db815d6d32e69058eadefc8cffbad37675707975 -> 
+
+rename bookmark using . with no active bookmark
+
+  $ hg book rename-me
+  $ hg book -i rename-me
+  $ hg book -m . renamed
+  abort: no active bookmark
+  [255]
+  $ hg up -q Y
+  $ hg book -d rename-me
+
+delete bookmark using .
+
+  $ hg book delete-me
+  $ hg book -d .
+  $ hg bookmark
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+  $ hg up -q Y
+
+delete bookmark using . with no active bookmark
+
+  $ hg book delete-me
+  $ hg book -i delete-me
+  $ hg book -d .
+  abort: no active bookmark
+  [255]
+  $ hg up -q Y
+  $ hg book -d delete-me
+
 list bookmarks
 
   $ hg bookmark
@@ -312,11 +364,13 @@ bookmark with integer name
   [255]
 
 bookmark with a name that matches a node id
-  $ hg bookmark 925d80f479bb db815d6d32e6
+  $ hg bookmark 925d80f479bb db815d6d32e6 --config "$TESTHOOK"
   bookmark 925d80f479bb matches a changeset hash
   (did you leave a -r out of an 'hg bookmark' command?)
   bookmark db815d6d32e6 matches a changeset hash
   (did you leave a -r out of an 'hg bookmark' command?)
+  test-hook-bookmark: 925d80f479bb:   -> db815d6d32e69058eadefc8cffbad37675707975
+  test-hook-bookmark: db815d6d32e6:   -> db815d6d32e69058eadefc8cffbad37675707975
   $ hg bookmark -d 925d80f479bb
   $ hg bookmark -d db815d6d32e6
 
@@ -364,7 +418,8 @@ incompatible options
 
 force bookmark with existing name
 
-  $ hg bookmark -f X2
+  $ hg bookmark -f X2 --config "$TESTHOOK"
+  test-hook-bookmark: X2:  925d80f479bb026b0fb3deb27503780b13f74123 -> db815d6d32e69058eadefc8cffbad37675707975
 
 force bookmark back to where it was, should deactivate it
 
@@ -508,6 +563,7 @@ test clone with pull protocol
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
+  new changesets f7b1eb17ad24:db815d6d32e6
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
@@ -545,6 +601,7 @@ test clone with a specific revision
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets f7b1eb17ad24:925d80f479bb
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-rev bookmarks
@@ -585,6 +642,7 @@ create bundle with two heads
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets 125c9a1d6df6:9ba5f110a0b3
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 update to active bookmark if it's not the parent
@@ -632,6 +690,7 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
+  new changesets 125c9a1d6df6:9ba5f110a0b3
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 (# tests strange but with --date crashing when bookmark have to move)
@@ -657,6 +716,7 @@ pull --update works the same as pull && update
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
+  new changesets 125c9a1d6df6:9ba5f110a0b3
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -681,6 +741,7 @@ We warn about divergent during bare update to the active bookmark
   added 2 changesets with 2 changes to 2 files (+1 heads)
   updating bookmark Y
   updating bookmark Z
+  new changesets 125c9a1d6df6:9ba5f110a0b3
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
   updating to active bookmark Y
@@ -865,6 +926,7 @@ case)
   adding remote bookmark foo
   adding remote bookmark four
   adding remote bookmark should-end-on-two
+  new changesets 5fb12f0f2d51
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
   3:125c9a1d6df6
@@ -888,6 +950,7 @@ updates the working directory and current active bookmark)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   divergent bookmark Z stored as Z@default
+  new changesets 81dcce76aa0b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Y
   $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
@@ -906,8 +969,10 @@ ensure changelog is written before bookmarks
   $ echo a > a
 
   $ cat > $TESTTMP/pausefinalize.py <<EOF
+  > from __future__ import absolute_import
+  > import os
+  > import time
   > from mercurial import extensions, localrepo
-  > import os, time
   > def transaction(orig, self, desc, report=None):
   >    tr = orig(self, desc, report)
   >    def sleep(*args, **kwargs):
@@ -997,4 +1062,100 @@ repositories visible to an external hook.
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
+  [255]
+
+Check pretxnclose-bookmark can abort a transaction
+--------------------------------------------------
+
+add hooks:
+
+* to prevent NEW bookmark on a non-public changeset
+* to prevent non-forward move of NEW bookmark
+
+  $ cat << EOF >> .hg/hgrc
+  > [hooks]
+  > pretxnclose-bookmark.force-public  = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "\$HG_NODE" -T '{phase}' | grep public > /dev/null)
+  > pretxnclose-bookmark.force-forward = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "max(\$HG_OLDNODE::\$HG_NODE)" -T 'MATCH' | grep MATCH > /dev/null)
+  > EOF
+
+  $ hg log -G -T phases
+  @  changeset:   6:81dcce76aa0b
+  |  tag:         tip
+  |  phase:       draft
+  |  parent:      4:125c9a1d6df6
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     xx
+  |
+  | o  changeset:   5:5fb12f0f2d51
+  | |  branch:      test
+  | |  bookmark:    Z
+  | |  phase:       draft
+  | |  parent:      3:9ba5f110a0b3
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     yy
+  | |
+  o |  changeset:   4:125c9a1d6df6
+  | |  bookmark:    Y
+  | |  bookmark:    Z@2
+  | |  phase:       public
+  | |  parent:      2:db815d6d32e6
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     x
+  | |
+  | o  changeset:   3:9ba5f110a0b3
+  |/   branch:      test
+  |    bookmark:    foo
+  |    bookmark:    four
+  |    phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     y
+  |
+  o  changeset:   2:db815d6d32e6
+  |  bookmark:    foo@2
+  |  bookmark:    should-end-on-two
+  |  bookmark:    x  y
+  |  phase:       public
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  | o  changeset:   1:925d80f479bb
+  |/   bookmark:    X2
+  |    bookmark:    Z@1
+  |    phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:f7b1eb17ad24
+     bookmark:    foo@1
+     phase:       public
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+
+attempt to create on a default changeset
+
+  $ hg bookmark -r 81dcce76aa0b NEW
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-bookmark.force-public hook exited with status 1
+  [255]
+
+create on a public changeset
+
+  $ hg bookmark -r 9ba5f110a0b3 NEW
+
+move to the other branch
+
+  $ hg bookmark -f -r 125c9a1d6df6 NEW
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-bookmark.force-forward hook exited with status 1
   [255]

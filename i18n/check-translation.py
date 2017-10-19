@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 #
 # check-translation.py - check Mercurial specific translation problems
+from __future__ import absolute_import
+
+import re
 
 import polib
-import re
 
 scanners = []
 checkers = []
@@ -51,7 +53,7 @@ def promptchoice(pe):
     ...     msgstr='prompt  missing &sep$$missing  amp$$followed by none&')
     >>> match(promptchoice, pe)
     True
-    >>> for e in promptchoice(pe): print e
+    >>> for e in promptchoice(pe): print(e)
     number of choices differs between msgid and msgstr
     msgstr has invalid choice missing '&'
     msgstr has invalid '&' followed by none
@@ -88,19 +90,19 @@ def deprecated(pe):
     ...     msgstr= 'something (DEPRECATED)')
     >>> match(deprecated, pe)
     True
-    >>> for e in deprecated(pe): print e
+    >>> for e in deprecated(pe): print(e)
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED)',
     ...     msgstr= 'something (DETACERPED)')
     >>> match(deprecated, pe)
     True
-    >>> for e in deprecated(pe): print e
+    >>> for e in deprecated(pe): print(e)
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED)',
     ...     msgstr= 'something')
     >>> match(deprecated, pe)
     True
-    >>> for e in deprecated(pe): print e
+    >>> for e in deprecated(pe): print(e)
     msgstr inconsistently translated (DEPRECATED)
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED, foo bar)',
@@ -124,16 +126,16 @@ def taildoublecolons(pe):
     >>> pe = polib.POEntry(
     ...     msgid ='ends with ::',
     ...     msgstr='ends with ::')
-    >>> for e in taildoublecolons(pe): print e
+    >>> for e in taildoublecolons(pe): print(e)
     >>> pe = polib.POEntry(
     ...     msgid ='ends with ::',
     ...     msgstr='ends without double-colons')
-    >>> for e in taildoublecolons(pe): print e
+    >>> for e in taildoublecolons(pe): print(e)
     tail '::'-ness differs between msgid and msgstr
     >>> pe = polib.POEntry(
     ...     msgid ='ends without double-colons',
     ...     msgstr='ends with ::')
-    >>> for e in taildoublecolons(pe): print e
+    >>> for e in taildoublecolons(pe): print(e)
     tail '::'-ness differs between msgid and msgstr
     """
     if pe.msgid.endswith('::') != pe.msgstr.endswith('::'):
@@ -149,7 +151,7 @@ def indentation(pe):
     >>> pe = polib.POEntry(
     ...     msgid ='    indented text',
     ...     msgstr='  narrowed indentation')
-    >>> for e in indentation(pe): print e
+    >>> for e in indentation(pe): print(e)
     initial indentation width differs betweeen msgid and msgstr
     """
     idindent = len(pe.msgid) - len(pe.msgid.lstrip())

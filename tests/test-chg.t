@@ -48,7 +48,7 @@ by default, system() should be redirected to the client:
   $ touch foo
   $ CHGDEBUG= HGEDITOR=cat chg ci -Am channeled --edit 2>&1 \
   > | egrep "HG:|run 'cat"
-  chg: debug: run 'cat "*"' at '$TESTTMP/editor' (glob)
+  chg: debug: * run 'cat "*"' at '$TESTTMP/editor' (glob)
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
   HG: Leave message empty to abort commit.
   HG: --
@@ -115,7 +115,9 @@ chg waits for pager if runcommand raises
   > EOF
 
   $ cat > $TESTTMP/fakepager.py <<EOF
-  > import sys, time
+  > from __future__ import absolute_import
+  > import sys
+  > import time
   > for line in iter(sys.stdin.readline, ''):
   >     if 'crash' in line: # only interested in lines containing 'crash'
   >         # if chg exits when pager is sleeping (incorrectly), the output
@@ -163,16 +165,16 @@ isolate socket directory for stable result:
 warm up server:
 
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
+  chg: debug: * start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 new server should be started if extension modified:
 
   $ sleep 1
   $ touch dummyext.py
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
-  chg: debug: instruction: unlink $TESTTMP/extreload/chgsock/server-* (glob)
-  chg: debug: instruction: reconnect
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
+  chg: debug: * instruction: unlink $TESTTMP/extreload/chgsock/server-* (glob)
+  chg: debug: * instruction: reconnect (glob)
+  chg: debug: * start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 old server will shut down, while new server should still be reachable:
 
@@ -194,7 +196,7 @@ since no server is reachable from socket file, new server should be started:
 (this test makes sure that old server shut down automatically)
 
   $ CHGDEBUG= chg log 2>&1 | egrep 'instruction|start'
-  chg: debug: start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
+  chg: debug: * start cmdserver at $TESTTMP/extreload/chgsock/server.* (glob)
 
 shut down servers and restore environment:
 

@@ -112,6 +112,7 @@ test generic hooks
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets ab228980c14d:07f3376c1e65
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_NODE_LAST=07f3376c1e655977439df2a814e3cc14b27abac2 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=ab228980c14deea8b9555d91c9581127383e40fd HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/a
@@ -263,7 +264,6 @@ listkeys hook
   pulling from ../a
   listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
-  listkeys hook: HG_HOOKNAME=listkeys HG_HOOKTYPE=listkeys HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
   adding remote bookmark bar
   $ cd ../a
 
@@ -363,6 +363,7 @@ outgoing hooks can see env vars
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
+  new changesets 539e4b31b6dc
   (run 'hg update' to get a working copy)
   $ hg rollback
   repository tip rolled back to revision 3 (undo pull)
@@ -409,24 +410,23 @@ preoutgoing hook can prevent outgoing changes for local clones
   $ cd "$TESTTMP/b"
 
   $ cat > hooktests.py <<EOF
+  > from __future__ import print_function
   > from mercurial import error
   > 
   > uncallable = 0
   > 
-  > def printargs(args):
-  >     args.pop('ui', None)
-  >     args.pop('repo', None)
+  > def printargs(ui, args):
   >     a = list(args.items())
   >     a.sort()
-  >     print 'hook args:'
+  >     ui.write('hook args:\n')
   >     for k, v in a:
-  >        print ' ', k, v
+  >        ui.write('  %s %s\n' % (k, v))
   > 
-  > def passhook(**args):
-  >     printargs(args)
+  > def passhook(ui, repo, **args):
+  >     printargs(ui, args)
   > 
-  > def failhook(**args):
-  >     printargs(args)
+  > def failhook(ui, repo, **args):
+  >     printargs(ui, args)
   >     return True
   > 
   > class LocalException(Exception):
@@ -445,7 +445,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     ui.note('verbose output from hook\n')
   > 
   > def printtags(ui, repo, **args):
-  >     print sorted(repo.tags())
+  >     ui.write('%s\n' % sorted(repo.tags()))
   > 
   > class container:
   >     unreachable = 1
@@ -573,6 +573,7 @@ different between Python 2.6 and Python 2.7.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark quux
+  new changesets 539e4b31b6dc
   (run 'hg update' to get a working copy)
 
 post- python hooks that fail to *run* don't cause an abort
@@ -629,8 +630,8 @@ make sure --traceback works
   $ cd c
 
   $ cat > hookext.py <<EOF
-  > def autohook(**args):
-  >     print "Automatically installed hook"
+  > def autohook(ui, **args):
+  >     ui.write('Automatically installed hook\n')
   > 
   > def reposetup(ui, repo):
   >     repo.ui.setconfig("hooks", "commit.auto", autohook)
@@ -666,8 +667,8 @@ test python hook configured with python:[file]:[hook] syntax
 
   $ cd hooks
   $ cat > testhooks.py <<EOF
-  > def testhook(**args):
-  >     print 'hook works'
+  > def testhook(ui, **args):
+  >     ui.write('hook works\n')
   > EOF
   $ echo '[hooks]' > ../repo/.hg/hgrc
   $ echo "pre-commit.test = python:`pwd`/testhooks.py:testhook" >> ../repo/.hg/hgrc

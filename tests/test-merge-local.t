@@ -110,7 +110,7 @@ Local merge with conflicts:
 
 Are orig files from the last commit where we want them?
   $ ls .hg/origbackups
-  zzz2_merge_bad.orig
+  zzz2_merge_bad
 
   $ hg diff --nodates | grep "^[+-][^<>]"
   --- a/zzz1_merge_ok

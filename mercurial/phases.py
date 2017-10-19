@@ -103,6 +103,7 @@ Note: old client behave as a publishing server with draft only content
 from __future__ import absolute_import
 
 import errno
+import struct
 
 from .i18n import _
 from .node import (
@@ -118,6 +119,8 @@ from . import (
     txnutil,
     util,
 )
+
+_fphasesentry = struct.Struct('>i20s')
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
@@ -153,6 +156,34 @@ def _readroots(repo, phasedefaults=None):
                 roots = f(repo, roots)
         dirty = True
     return roots, dirty
+
+def binaryencode(phasemapping):
+    """encode a 'phase -> nodes' mapping into a binary stream
+
+    Since phases are integer the mapping is actually a python list:
+    [[PUBLIC_HEADS], [DRAFTS_HEADS], [SECRET_HEADS]]
+    """
+    binarydata = []
+    for phase, nodes in enumerate(phasemapping):
+        for head in nodes:
+            binarydata.append(_fphasesentry.pack(phase, head))
+    return ''.join(binarydata)
+
+def binarydecode(stream):
+    """decode a binary stream into a 'phase -> nodes' mapping
+
+    Since phases are integer the mapping is actually a python list."""
+    headsbyphase = [[] for i in allphases]
+    entrysize = _fphasesentry.size
+    while True:
+        entry = stream.read(entrysize)
+        if len(entry) < entrysize:
+            if entry:
+                raise error.Abort(_('bad phase-heads stream'))
+            break
+        phase, node = _fphasesentry.unpack(entry)
+        headsbyphase[phase].append(node)
+    return headsbyphase
 
 def _trackphasechange(data, rev, old, new):
     """add a phase move the <data> dictionnary
@@ -471,8 +502,10 @@ def listphases(repo):
     # Use ordered dictionary so behavior is deterministic.
     keys = util.sortdict()
     value = '%i' % draft
+    cl = repo.unfiltered().changelog
     for root in repo._phasecache.phaseroots[draft]:
-        keys[hex(root)] = value
+        if repo._phasecache.phase(repo, cl.rev(root)) <= draft:
+            keys[hex(root)] = value
 
     if repo.publishing():
         # Add an extra data to let remote know we are a publishing
@@ -527,11 +560,18 @@ def subsetphaseheads(repo, subset):
         headsbyphase[phase] = [cl.node(r) for r in repo.revs(revset, subset)]
     return headsbyphase
 
-def updatephases(repo, tr, headsbyphase):
+def updatephases(repo, trgetter, headsbyphase):
     """Updates the repo with the given phase heads"""
     # Now advance phase boundaries of all but secret phase
+    #
+    # run the update (and fetch transaction) only if there are actually things
+    # to update. This avoid creating empty transaction during no-op operation.
+
     for phase in allphases[:-1]:
-        advanceboundary(repo, tr, phase, headsbyphase[phase])
+        revset = '%%ln - %s()' % phasenames[phase]
+        heads = [c.node() for c in repo.set(revset, headsbyphase[phase])]
+        if heads:
+            advanceboundary(repo, trgetter(), phase, heads)
 
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict
@@ -564,6 +604,27 @@ def analyzeremotephases(repo, subset, roots):
     publicheads = newheads(repo, subset, draftroots)
     return publicheads, draftroots
 
+class remotephasessummary(object):
+    """summarize phase information on the remote side
+
+    :publishing: True is the remote is publishing
+    :publicheads: list of remote public phase heads (nodes)
+    :draftheads: list of remote draft phase heads (nodes)
+    :draftroots: list of remote draft phase root (nodes)
+    """
+
+    def __init__(self, repo, remotesubset, remoteroots):
+        unfi = repo.unfiltered()
+        self._allremoteroots = remoteroots
+
+        self.publishing = remoteroots.get('publishing', False)
+
+        ana = analyzeremotephases(repo, remotesubset, remoteroots)
+        self.publicheads, self.draftroots = ana
+        # Get the list of all "heads" revs draft on remote
+        dheads = unfi.set('heads(%ln::%ln)', self.draftroots, remotesubset)
+        self.draftheads = [c.node() for c in dheads]
+
 def newheads(repo, heads, roots):
     """compute new head of a subset minus another
 
@@ -581,7 +642,7 @@ def newcommitphase(ui):
     Handle all possible values for the phases.new-commit options.
 
     """
-    v = ui.config('phases', 'new-commit', draft)
+    v = ui.config('phases', 'new-commit')
     try:
         return phasenames.index(v)
     except ValueError:
@@ -594,3 +655,12 @@ def newcommitphase(ui):
 def hassecret(repo):
     """utility function that check if a repo have any secret changeset."""
     return bool(repo._phasecache.phaseroots[2])
+
+def preparehookargs(node, old, new):
+    if old is None:
+        old = ''
+    else:
+        old = phasenames[old]
+    return {'node': node,
+            'oldphase': old,
+            'phase': phasenames[new]}

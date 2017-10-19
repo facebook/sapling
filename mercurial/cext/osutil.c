@@ -9,15 +9,15 @@
 
 #define _ATFILE_SOURCE
 #include <Python.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <io.h>
+#include <windows.h>
 #else
 #include <dirent.h>
 #include <sys/socket.h>
@@ -121,7 +121,7 @@ static void listdir_stat_dealloc(PyObject *o)
 }
 
 static PyTypeObject listdir_stat_type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"osutil.stat",             /*tp_name*/
 	sizeof(struct listdir_stat), /*tp_basicsize*/
 	0,                         /*tp_itemsize*/

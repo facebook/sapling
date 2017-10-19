@@ -2,7 +2,9 @@
   $ echo 'strip =' >> $HGRCPATH
 
   $ cat >findbranch.py <<EOF
-  > import re, sys
+  > from __future__ import absolute_import
+  > import re
+  > import sys
   > 
   > head_re = re.compile('^#(?:(?:\\s+([A-Za-z][A-Za-z0-9_]*)(?:\\s.*)?)|(?:\\s*))$')
   > 

@@ -12,12 +12,18 @@ import sys
 # to work when run from a virtualenv.  The modules were chosen empirically
 # so that the return value matches the return value without virtualenv.
 if True: # disable lexical sorting checks
-    import BaseHTTPServer
+    try:
+        import BaseHTTPServer as basehttpserver
+    except ImportError:
+        basehttpserver = None
     import zlib
 
 # Whitelist of modules that symbols can be directly imported from.
 allowsymbolimports = (
     '__future__',
+    'bzrlib',
+    'hgclient',
+    'mercurial',
     'mercurial.hgweb.common',
     'mercurial.hgweb.request',
     'mercurial.i18n',
@@ -29,6 +35,8 @@ allowsymbolimports = (
     'mercurial.pure.mpatch',
     'mercurial.pure.osutil',
     'mercurial.pure.parsers',
+    # third-party imports should be directly imported
+    'mercurial.thirdparty',
 )
 
 # Whitelist of symbols that can be directly imported.
@@ -144,6 +152,8 @@ def fromlocalfunc(modulename, localmods):
     >>> fromlocal2('bar', 2)
     ('foo.bar', 'foo.bar.__init__', True)
     """
+    if not isinstance(modulename, str):
+        modulename = modulename.decode('ascii')
     prefix = '.'.join(modulename.split('.')[:-1])
     if prefix:
         prefix += '.'
@@ -183,8 +193,9 @@ def populateextmods(localmods):
 def list_stdlib_modules():
     """List the modules present in the stdlib.
 
+    >>> py3 = sys.version_info[0] >= 3
     >>> mods = set(list_stdlib_modules())
-    >>> 'BaseHTTPServer' in mods
+    >>> 'BaseHTTPServer' in mods or py3
     True
 
     os.path isn't really a module, so it's missing:
@@ -201,7 +212,7 @@ def list_stdlib_modules():
     >>> 'collections' in mods
     True
 
-    >>> 'cStringIO' in mods
+    >>> 'cStringIO' in mods or py3
     True
 
     >>> 'cffi' in mods
@@ -213,7 +224,11 @@ def list_stdlib_modules():
     # consider them stdlib.
     for m in ['msvcrt', '_winreg']:
         yield m
+    yield '__builtin__'
     yield 'builtins' # python3 only
+    yield 'importlib.abc' # python3 only
+    yield 'importlib.machinery' # python3 only
+    yield 'importlib.util' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
     for m in 'cPickle', 'datetime': # in Python (not C) on PyPy
@@ -223,7 +238,9 @@ def list_stdlib_modules():
     stdlib_prefixes = {sys.prefix, sys.exec_prefix}
     # We need to supplement the list of prefixes for the search to work
     # when run from within a virtualenv.
-    for mod in (BaseHTTPServer, zlib):
+    for mod in (basehttpserver, zlib):
+        if mod is None:
+            continue
         try:
             # Not all module objects have a __file__ attribute.
             filename = mod.__file__
@@ -396,10 +413,13 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
       assign the symbol to a module-level variable. In addition, these imports
       must be performed before other local imports. This rule only
       applies to import statements outside of any blocks.
-    * Relative imports from the standard library are not allowed.
+    * Relative imports from the standard library are not allowed, unless that
+      library is also a local module.
     * Certain modules must be aliased to alternate names to avoid aliasing
       and readability problems. See `requirealias`.
     """
+    if not isinstance(module, str):
+        module = module.decode('ascii')
     topmodule = module.split('.')[0]
     fromlocal = fromlocalfunc(module, localmods)
 
@@ -476,7 +496,10 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
             # __future__ is special since it needs to come first and use
             # symbol import.
             if fullname != '__future__':
-                if not fullname or fullname in stdlib_modules:
+                if not fullname or (
+                    fullname in stdlib_modules
+                    and fullname not in localmods
+                    and fullname + '.__init__' not in localmods):
                     yield msg('relative import of stdlib module')
                 else:
                     seenlocal = fullname
@@ -610,22 +633,26 @@ def _cycle_sortkey(c):
 def embedded(f, modname, src):
     """Extract embedded python code
 
+    >>> def _forcestr(thing):
+    ...     if not isinstance(thing, str):
+    ...         return thing.decode('ascii')
+    ...     return thing
     >>> def test(fn, lines):
-    ...     for s, m, f, l in embedded(fn, "example", lines):
-    ...         print("%s %s %s" % (m, f, l))
-    ...         print(repr(s))
+    ...     for s, m, f, l in embedded(fn, b"example", lines):
+    ...         print("%s %s %d" % (_forcestr(m), _forcestr(f), l))
+    ...         print(repr(_forcestr(s)))
     >>> lines = [
-    ...   'comment',
-    ...   '  >>> from __future__ import print_function',
-    ...   "  >>> ' multiline",
-    ...   "  ... string'",
-    ...   '  ',
-    ...   'comment',
-    ...   '  $ cat > foo.py <<EOF',
-    ...   '  > from __future__ import print_function',
-    ...   '  > EOF',
+    ...   b'comment',
+    ...   b'  >>> from __future__ import print_function',
+    ...   b"  >>> ' multiline",
+    ...   b"  ... string'",
+    ...   b'  ',
+    ...   b'comment',
+    ...   b'  $ cat > foo.py <<EOF',
+    ...   b'  > from __future__ import print_function',
+    ...   b'  > EOF',
     ... ]
-    >>> test("example.t", lines)
+    >>> test(b"example.t", lines)
     example[2] doctest.py 2
     "from __future__ import print_function\\n' multiline\\nstring'\\n"
     example[7] foo.py 7
@@ -647,16 +674,16 @@ def embedded(f, modname, src):
             if not inlinepython:
                 # We've just entered a Python block.
                 inlinepython = n
-                t = 'doctest.py'
+                t = b'doctest.py'
             script.append(l[prefix:])
             continue
         if l.startswith(b'  ... '): # python inlines
             script.append(l[prefix:])
             continue
-        cat = re.search(r"\$ \s*cat\s*>\s*(\S+\.py)\s*<<\s*EOF", l)
+        cat = re.search(br"\$ \s*cat\s*>\s*(\S+\.py)\s*<<\s*EOF", l)
         if cat:
             if inlinepython:
-                yield ''.join(script), ("%s[%d]" %
+                yield b''.join(script), (b"%s[%d]" %
                        (modname, inlinepython)), t, inlinepython
                 script = []
                 inlinepython = 0
@@ -665,15 +692,18 @@ def embedded(f, modname, src):
             continue
         if shpython and l.startswith(b'  > '): # sh continuation
             if l == b'  > EOF\n':
-                yield ''.join(script), ("%s[%d]" %
+                yield b''.join(script), (b"%s[%d]" %
                        (modname, shpython)), t, shpython
                 script = []
                 shpython = 0
             else:
                 script.append(l[4:])
             continue
-        if inlinepython and l == b'  \n':
-            yield ''.join(script), ("%s[%d]" %
+        # If we have an empty line or a command for sh, we end the
+        # inline script.
+        if inlinepython and (l == b'  \n'
+                             or l.startswith(b'  $ ')):
+            yield b''.join(script), (b"%s[%d]" %
                    (modname, inlinepython)), t, inlinepython
             script = []
             inlinepython = 0
@@ -691,11 +721,11 @@ def sources(f, modname):
     """
     py = False
     if not f.endswith('.t'):
-        with open(f) as src:
+        with open(f, 'rb') as src:
             yield src.read(), modname, f, 0
             py = True
     if py or f.endswith('.t'):
-        with open(f) as src:
+        with open(f, 'rb') as src:
             for script, modname, t, line in embedded(f, modname, src):
                 yield script, modname, t, line
 
@@ -714,6 +744,9 @@ def main(argv):
         localmodpaths[modname] = source_path
     localmods = populateextmods(localmodpaths)
     for localmodname, source_path in sorted(localmodpaths.items()):
+        if not isinstance(localmodname, bytes):
+            # This is only safe because all hg's files are ascii
+            localmodname = localmodname.encode('ascii')
         for src, modname, name, line in sources(source_path, localmodname):
             try:
                 used_imports[modname] = sorted(

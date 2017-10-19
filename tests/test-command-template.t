@@ -41,62 +41,62 @@ Test division:
   $ hg debugtemplate -r0 -v '{5 / 2} {mod(5, 2)}\n'
   (template
     (/
-      ('integer', '5')
-      ('integer', '2'))
-    ('string', ' ')
+      (integer '5')
+      (integer '2'))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
-        ('integer', '5')
-        ('integer', '2')))
-    ('string', '\n'))
+        (integer '5')
+        (integer '2')))
+    (string '\n'))
   2 1
   $ hg debugtemplate -r0 -v '{5 / -2} {mod(5, -2)}\n'
   (template
     (/
-      ('integer', '5')
+      (integer '5')
       (negate
-        ('integer', '2')))
-    ('string', ' ')
+        (integer '2')))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
-        ('integer', '5')
+        (integer '5')
         (negate
-          ('integer', '2'))))
-    ('string', '\n'))
+          (integer '2'))))
+    (string '\n'))
   -3 -1
   $ hg debugtemplate -r0 -v '{-5 / 2} {mod(-5, 2)}\n'
   (template
     (/
       (negate
-        ('integer', '5'))
-      ('integer', '2'))
-    ('string', ' ')
+        (integer '5'))
+      (integer '2'))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
         (negate
-          ('integer', '5'))
-        ('integer', '2')))
-    ('string', '\n'))
+          (integer '5'))
+        (integer '2')))
+    (string '\n'))
   -3 1
   $ hg debugtemplate -r0 -v '{-5 / -2} {mod(-5, -2)}\n'
   (template
     (/
       (negate
-        ('integer', '5'))
+        (integer '5'))
       (negate
-        ('integer', '2')))
-    ('string', ' ')
+        (integer '2')))
+    (string ' ')
     (func
-      ('symbol', 'mod')
+      (symbol 'mod')
       (list
         (negate
-          ('integer', '5'))
+          (integer '5'))
         (negate
-          ('integer', '2'))))
-    ('string', '\n'))
+          (integer '2'))))
+    (string '\n'))
   2 -1
 
 Filters bind closer than arithmetic:
@@ -106,11 +106,11 @@ Filters bind closer than arithmetic:
     (-
       (|
         (func
-          ('symbol', 'revset')
-          ('string', '.'))
-        ('symbol', 'count'))
-      ('integer', '1'))
-    ('string', '\n'))
+          (symbol 'revset')
+          (string '.'))
+        (symbol 'count'))
+      (integer '1'))
+    (string '\n'))
   0
 
 But negate binds closer still:
@@ -118,31 +118,45 @@ But negate binds closer still:
   $ hg debugtemplate -r0 -v '{1-3|stringify}\n'
   (template
     (-
-      ('integer', '1')
+      (integer '1')
       (|
-        ('integer', '3')
-        ('symbol', 'stringify')))
-    ('string', '\n'))
+        (integer '3')
+        (symbol 'stringify')))
+    (string '\n'))
   hg: parse error: arithmetic only defined on integers
   [255]
   $ hg debugtemplate -r0 -v '{-3|stringify}\n'
   (template
     (|
       (negate
-        ('integer', '3'))
-      ('symbol', 'stringify'))
-    ('string', '\n'))
+        (integer '3'))
+      (symbol 'stringify'))
+    (string '\n'))
   -3
+
+Filters bind as close as map operator:
+
+  $ hg debugtemplate -r0 -v '{desc|splitlines % "{line}\n"}'
+  (template
+    (%
+      (|
+        (symbol 'desc')
+        (symbol 'splitlines'))
+      (template
+        (symbol 'line')
+        (string '\n'))))
+  line 1
+  line 2
 
 Keyword arguments:
 
   $ hg debugtemplate -r0 -v '{foo=bar|baz}'
   (template
     (keyvalue
-      ('symbol', 'foo')
+      (symbol 'foo')
       (|
-        ('symbol', 'bar')
-        ('symbol', 'baz'))))
+        (symbol 'bar')
+        (symbol 'baz'))))
   hg: parse error: can't use a key-value pair in this context
   [255]
 
@@ -243,6 +257,29 @@ Test templates and style maps in files:
 
   $ printf 'changeset = "{rev}\\n"\n' > map-simple
   $ hg log -l1 -T./map-simple
+  8
+
+ a map file may have [templates] and [templatealias] sections:
+
+  $ cat <<'EOF' > map-simple
+  > [templates]
+  > changeset = "{a}\n"
+  > [templatealias]
+  > a = rev
+  > EOF
+  $ hg log -l1 -T./map-simple
+  8
+
+ so it can be included in hgrc
+
+  $ cat <<'EOF' > myhgrc
+  > %include map-simple
+  > [templates]
+  > foo = "{changeset}"
+  > EOF
+  $ HGRCPATH=./myhgrc hg log -l1 -Tfoo
+  8
+  $ HGRCPATH=./myhgrc hg log -l1 -T'{a}\n'
   8
 
 Test template map inheritance
@@ -2166,9 +2203,10 @@ Age filter:
   $ cd unstable-hash
   $ hg log --template '{date|age}\n' > /dev/null || exit 1
 
-  >>> from datetime import datetime, timedelta
+  >>> from __future__ import absolute_import
+  >>> import datetime
   >>> fp = open('a', 'w')
-  >>> n = datetime.now() + timedelta(366 * 7)
+  >>> n = datetime.datetime.now() + datetime.timedelta(366 * 7)
   >>> fp.write('%d-%d-%d 00:00' % (n.year, n.month, n.day))
   >>> fp.close()
   $ hg add a
@@ -3104,6 +3142,88 @@ Test new-style inline templating:
   hg: parse error: None is not iterable
   [255]
 
+Test new-style inline templating of non-list/dict type:
+
+  $ hg log -R latesttag -r tip -T '{manifest}\n'
+  11:2bc6e9006ce2
+  $ hg log -R latesttag -r tip -T 'string length: {manifest|count}\n'
+  string length: 15
+  $ hg log -R latesttag -r tip -T '{manifest % "{rev}:{node}"}\n'
+  11:2bc6e9006ce29882383a22d39fd1f4e66dd3e2fc
+
+  $ hg log -R latesttag -r tip -T '{get(extras, "branch") % "{key}: {value}\n"}'
+  branch: default
+  $ hg log -R latesttag -r tip -T '{get(extras, "unknown") % "{key}\n"}'
+  hg: parse error: None is not iterable
+  [255]
+  $ hg log -R latesttag -r tip -T '{min(extras) % "{key}: {value}\n"}'
+  branch: default
+  $ hg log -R latesttag -l1 -T '{min(revset("0:9")) % "{rev}:{node|short}\n"}'
+  0:ce3cec86e6c2
+  $ hg log -R latesttag -l1 -T '{max(revset("0:9")) % "{rev}:{node|short}\n"}'
+  9:fbc7cd862e9c
+
+Test manifest/get() can be join()-ed as before, though it's silly:
+
+  $ hg log -R latesttag -r tip -T '{join(manifest, "")}\n'
+  11:2bc6e9006ce2
+  $ hg log -R latesttag -r tip -T '{join(get(extras, "branch"), "")}\n'
+  default
+
+Test min/max of integers
+
+  $ hg log -R latesttag -l1 -T '{min(revset("9:10"))}\n'
+  9
+  $ hg log -R latesttag -l1 -T '{max(revset("9:10"))}\n'
+  10
+
+Test dot operator precedence:
+
+  $ hg debugtemplate -R latesttag -r0 -v '{manifest.node|short}\n'
+  (template
+    (|
+      (.
+        (symbol 'manifest')
+        (symbol 'node'))
+      (symbol 'short'))
+    (string '\n'))
+  89f4071fec70
+
+ (the following examples are invalid, but seem natural in parsing POV)
+
+  $ hg debugtemplate -R latesttag -r0 -v '{foo|bar.baz}\n' 2> /dev/null
+  (template
+    (|
+      (symbol 'foo')
+      (.
+        (symbol 'bar')
+        (symbol 'baz')))
+    (string '\n'))
+  [255]
+  $ hg debugtemplate -R latesttag -r0 -v '{foo.bar()}\n' 2> /dev/null
+  (template
+    (.
+      (symbol 'foo')
+      (func
+        (symbol 'bar')
+        None))
+    (string '\n'))
+  [255]
+
+Test evaluation of dot operator:
+
+  $ hg log -R latesttag -l1 -T '{min(revset("0:9")).node}\n'
+  ce3cec86e6c26bd9bdfc590a6b92abc9680f1796
+  $ hg log -R latesttag -r0 -T '{extras.branch}\n'
+  default
+
+  $ hg log -R latesttag -l1 -T '{author.invalid}\n'
+  hg: parse error: keyword 'author' has no member
+  [255]
+  $ hg log -R latesttag -l1 -T '{min("abc").invalid}\n'
+  hg: parse error: 'a' has no member
+  [255]
+
 Test the sub function of templating for expansion:
 
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
@@ -3173,21 +3293,21 @@ Test integer literal:
   $ hg debugtemplate -v '{(0)}\n'
   (template
     (group
-      ('integer', '0'))
-    ('string', '\n'))
+      (integer '0'))
+    (string '\n'))
   0
   $ hg debugtemplate -v '{(123)}\n'
   (template
     (group
-      ('integer', '123'))
-    ('string', '\n'))
+      (integer '123'))
+    (string '\n'))
   123
   $ hg debugtemplate -v '{(-4)}\n'
   (template
     (group
       (negate
-        ('integer', '4')))
-    ('string', '\n'))
+        (integer '4')))
+    (string '\n'))
   -4
   $ hg debugtemplate '{(-)}\n'
   hg: parse error at 3: not a prefix: )
@@ -3200,25 +3320,25 @@ top-level integer literal is interpreted as symbol (i.e. variable name):
 
   $ hg debugtemplate -D 1=one -v '{1}\n'
   (template
-    ('integer', '1')
-    ('string', '\n'))
+    (integer '1')
+    (string '\n'))
   one
   $ hg debugtemplate -D 1=one -v '{if("t", "{1}")}\n'
   (template
     (func
-      ('symbol', 'if')
+      (symbol 'if')
       (list
-        ('string', 't')
+        (string 't')
         (template
-          ('integer', '1'))))
-    ('string', '\n'))
+          (integer '1'))))
+    (string '\n'))
   one
   $ hg debugtemplate -D 1=one -v '{1|stringify}\n'
   (template
     (|
-      ('integer', '1')
-      ('symbol', 'stringify'))
-    ('string', '\n'))
+      (integer '1')
+      (symbol 'stringify'))
+    (string '\n'))
   one
 
 unless explicit symbol is expected:
@@ -3234,27 +3354,27 @@ Test string literal:
 
   $ hg debugtemplate -Ra -r0 -v '{"string with no template fragment"}\n'
   (template
-    ('string', 'string with no template fragment')
-    ('string', '\n'))
+    (string 'string with no template fragment')
+    (string '\n'))
   string with no template fragment
   $ hg debugtemplate -Ra -r0 -v '{"template: {rev}"}\n'
   (template
     (template
-      ('string', 'template: ')
-      ('symbol', 'rev'))
-    ('string', '\n'))
+      (string 'template: ')
+      (symbol 'rev'))
+    (string '\n'))
   template: 0
   $ hg debugtemplate -Ra -r0 -v '{r"rawstring: {rev}"}\n'
   (template
-    ('string', 'rawstring: {rev}')
-    ('string', '\n'))
+    (string 'rawstring: {rev}')
+    (string '\n'))
   rawstring: {rev}
   $ hg debugtemplate -Ra -r0 -v '{files % r"rawstring: {file}"}\n'
   (template
     (%
-      ('symbol', 'files')
-      ('string', 'rawstring: {file}'))
-    ('string', '\n'))
+      (symbol 'files')
+      (string 'rawstring: {file}'))
+    (string '\n'))
   rawstring: {file}
 
 Test string escaping:
@@ -3664,7 +3784,7 @@ Test shortest(node) with the repo having short hash collision:
   $ cd hashcollision
   $ cat <<EOF >> .hg/hgrc
   > [experimental]
-  > evolution = createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ echo 0 > a
   $ hg ci -qAm 0
@@ -3850,6 +3970,9 @@ Test revset function
   2 match rev
   1 match rev
   0 not match rev
+
+  $ hg log -T '{ifcontains(desc, revset(":"), "", "type not match")}\n' -l1
+  type not match
 
   $ hg log --template '{rev} Parents: {revset("parents(%s)", rev)}\n'
   2 Parents: 1
@@ -4038,6 +4161,9 @@ Test namespaces dict
   branches:
    text.{rev}
   $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
+  bar
+  foo
+  $ hg log -r2 -T '{namespaces.bookmarks % "{bookmark}\n"}'
   bar
   foo
 
@@ -4241,49 +4367,49 @@ Templater supports aliases of symbol and func() styles:
 
   $ hg debugtemplate -vr0 '{rn} {utcdate(date)|isodate}\n'
   (template
-    ('symbol', 'rn')
-    ('string', ' ')
+    (symbol 'rn')
+    (string ' ')
     (|
       (func
-        ('symbol', 'utcdate')
-        ('symbol', 'date'))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+        (symbol 'utcdate')
+        (symbol 'date'))
+      (symbol 'isodate'))
+    (string '\n'))
   * expanded:
   (template
     (template
-      ('symbol', 'rev')
-      ('string', ':')
+      (symbol 'rev')
+      (string ':')
       (|
-        ('symbol', 'node')
-        ('symbol', 'short')))
-    ('string', ' ')
+        (symbol 'node')
+        (symbol 'short')))
+    (string ' ')
     (|
       (func
-        ('symbol', 'localdate')
+        (symbol 'localdate')
         (list
-          ('symbol', 'date')
-          ('string', 'UTC')))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+          (symbol 'date')
+          (string 'UTC')))
+      (symbol 'isodate'))
+    (string '\n'))
   0:1e4e1b8f71e0 1970-01-12 13:46 +0000
 
   $ hg debugtemplate -vr0 '{status("A", file_adds)}'
   (template
     (func
-      ('symbol', 'status')
+      (symbol 'status')
       (list
-        ('string', 'A')
-        ('symbol', 'file_adds'))))
+        (string 'A')
+        (symbol 'file_adds'))))
   * expanded:
   (template
     (%
-      ('symbol', 'file_adds')
+      (symbol 'file_adds')
       (template
-        ('string', 'A')
-        ('string', ' ')
-        ('symbol', 'file')
-        ('string', '\n'))))
+        (string 'A')
+        (string ' ')
+        (symbol 'file')
+        (string '\n'))))
   A a
 
 A unary function alias can be called as a filter:
@@ -4292,20 +4418,20 @@ A unary function alias can be called as a filter:
   (template
     (|
       (|
-        ('symbol', 'date')
-        ('symbol', 'utcdate'))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+        (symbol 'date')
+        (symbol 'utcdate'))
+      (symbol 'isodate'))
+    (string '\n'))
   * expanded:
   (template
     (|
       (func
-        ('symbol', 'localdate')
+        (symbol 'localdate')
         (list
-          ('symbol', 'date')
-          ('string', 'UTC')))
-      ('symbol', 'isodate'))
-    ('string', '\n'))
+          (symbol 'date')
+          (string 'UTC')))
+      (symbol 'isodate'))
+    (string '\n'))
   1970-01-12 13:46 +0000
 
 Aliases should be applied only to command arguments and templates in hgrc.
@@ -4340,7 +4466,7 @@ Unparsable alias:
 
   $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
   (template
-    ('symbol', 'bad'))
+    (symbol 'bad'))
   abort: bad definition of template alias "bad": at 2: not a prefix: end
   [255]
   $ hg log --config templatealias.bad='x(' -T '{bad}'
@@ -4416,3 +4542,155 @@ Test that template function in extension is registered as expected
   custom
 
   $ cd ..
+
+Test 'graphwidth' in 'hg log' on various topologies. The key here is that the
+printed graphwidths 3, 5, 7, etc. should all line up in their respective
+columns. We don't care about other aspects of the graph rendering here.
+
+  $ hg init graphwidth
+  $ cd graphwidth
+
+  $ wrappabletext="a a a a a a a a a a a a"
+
+  $ printf "first\n" > file
+  $ hg add file
+  $ hg commit -m "$wrappabletext"
+
+  $ printf "first\nsecond\n" > file
+  $ hg commit -m "$wrappabletext"
+
+  $ hg checkout 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf "third\nfirst\n" > file
+  $ hg commit -m "$wrappabletext"
+  created new head
+
+  $ hg merge
+  merging file
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  | @  5
+  |/
+  o  3
+  
+  $ hg commit -m "$wrappabletext"
+
+  $ hg log --graph -T "{graphwidth}"
+  @    5
+  |\
+  | o  5
+  | |
+  o |  5
+  |/
+  o  3
+  
+
+  $ hg checkout 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf "third\nfirst\nsecond\n" > file
+  $ hg commit -m "$wrappabletext"
+  created new head
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  | o    7
+  | |\
+  +---o  7
+  | |
+  | o  5
+  |/
+  o  3
+  
+
+  $ hg log --graph -T "{graphwidth}" -r 3
+  o    5
+  |\
+  ~ ~
+
+  $ hg log --graph -T "{graphwidth}" -r 1
+  o  3
+  |
+  ~
+
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m "$wrappabletext"
+
+  $ printf "seventh\n" >> file
+  $ hg commit -m "$wrappabletext"
+
+  $ hg log --graph -T "{graphwidth}"
+  @  3
+  |
+  o    5
+  |\
+  | o  5
+  | |
+  o |    7
+  |\ \
+  | o |  7
+  | |/
+  o /  5
+  |/
+  o  3
+  
+
+The point of graphwidth is to allow wrapping that accounts for the space taken
+by the graph.
+
+  $ COLUMNS=10 hg log --graph -T "{fill(desc, termwidth - graphwidth)}"
+  @  a a a a
+  |  a a a a
+  |  a a a a
+  o    a a a
+  |\   a a a
+  | |  a a a
+  | |  a a a
+  | o  a a a
+  | |  a a a
+  | |  a a a
+  | |  a a a
+  o |    a a
+  |\ \   a a
+  | | |  a a
+  | | |  a a
+  | | |  a a
+  | | |  a a
+  | o |  a a
+  | |/   a a
+  | |    a a
+  | |    a a
+  | |    a a
+  | |    a a
+  o |  a a a
+  |/   a a a
+  |    a a a
+  |    a a a
+  o  a a a a
+     a a a a
+     a a a a
+
+Something tricky happens when there are elided nodes; the next drawn row of
+edges can be more than one column wider, but the graph width only increases by
+one column. The remaining columns are added in between the nodes.
+
+  $ hg log --graph -T "{graphwidth}" -r "0|2|4|5"
+  o    5
+  |\
+  | \
+  | :\
+  o : :  7
+  :/ /
+  : o  5
+  :/
+  o  3
+  
+
+  $ cd ..
+

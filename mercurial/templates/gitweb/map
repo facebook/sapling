@@ -334,3 +334,18 @@ searchform = '
   </div>'
 searchhint = 'Find changesets by keywords (author, files, the commit message), revision
   number or hash, or <a href="{url|urlescape}help/revsets">revset expression</a>.'
+
+diffoptsform = '
+  <form id="diffopts-form"
+    data-ignorews="{if(get(diffopts, 'ignorews'), '1', '0')}"
+    data-ignorewsamount="{if(get(diffopts, 'ignorewsamount'), '1', '0')}"
+    data-ignorewseol="{if(get(diffopts, 'ignorewseol'), '1', '0')}"
+    data-ignoreblanklines="{if(get(diffopts, 'ignoreblanklines'), '1', '0')}">
+    <span>Ignore whitespace changes - </span>
+    <span>Everywhere:</span>
+    <input id="ignorews-checkbox" type="checkbox" />
+    <span>Within whitespace:</span>
+    <input id="ignorewsamount-checkbox" type="checkbox" />
+    <span>At end of lines:</span>
+    <input id="ignorewseol-checkbox" type="checkbox" />
+  </form>'

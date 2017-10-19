@@ -294,9 +294,21 @@ folded content is dropped during a merge. The folded commit should properly disa
   [1]
 There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
-  $ hg status
+
+  $ hg status -v
   M file
   ? file.orig
+  # The repository is in an unfinished *histedit* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     file
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg histedit --continue
+  # To abort:                   hg histedit --abort
+  
   $ hg resolve -l
   U file
   $ hg revert -r 'p1()' file
@@ -541,3 +553,36 @@ Editor should have run only once
   END
 
   $ cd ..
+
+Test rolling into a commit with multiple children (issue5498)
+
+  $ hg init roll
+  $ cd roll
+  $ echo a > a
+  $ hg commit -qAm aa
+  $ echo b > b
+  $ hg commit -qAm bb
+  $ hg up -q ".^"
+  $ echo c > c
+  $ hg commit -qAm cc
+  $ hg log -G -T '{node|short} {desc}'
+  @  5db65b93a12b cc
+  |
+  | o  301d76bdc3ae bb
+  |/
+  o  8f0162e483d0 aa
+  
+
+  $ hg histedit . --commands - << EOF
+  > r 5db65b93a12b
+  > EOF
+  hg: parse error: first changeset cannot use verb "roll"
+  [255]
+  $ hg log -G -T '{node|short} {desc}'
+  @  5db65b93a12b cc
+  |
+  | o  301d76bdc3ae bb
+  |/
+  o  8f0162e483d0 aa
+  
+

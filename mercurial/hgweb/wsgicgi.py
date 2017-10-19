@@ -24,28 +24,28 @@ def launch(application):
     util.setbinary(util.stdout)
 
     environ = dict(encoding.environ.iteritems())
-    environ.setdefault('PATH_INFO', '')
-    if environ.get('SERVER_SOFTWARE', '').startswith('Microsoft-IIS'):
+    environ.setdefault(r'PATH_INFO', '')
+    if environ.get(r'SERVER_SOFTWARE', r'').startswith(r'Microsoft-IIS'):
         # IIS includes script_name in PATH_INFO
-        scriptname = environ['SCRIPT_NAME']
-        if environ['PATH_INFO'].startswith(scriptname):
-            environ['PATH_INFO'] = environ['PATH_INFO'][len(scriptname):]
+        scriptname = environ[r'SCRIPT_NAME']
+        if environ[r'PATH_INFO'].startswith(scriptname):
+            environ[r'PATH_INFO'] = environ[r'PATH_INFO'][len(scriptname):]
 
     stdin = util.stdin
-    if environ.get('HTTP_EXPECT', '').lower() == '100-continue':
+    if environ.get(r'HTTP_EXPECT', r'').lower() == r'100-continue':
         stdin = common.continuereader(stdin, util.stdout.write)
 
-    environ['wsgi.input'] = stdin
-    environ['wsgi.errors'] = util.stderr
-    environ['wsgi.version'] = (1, 0)
-    environ['wsgi.multithread'] = False
-    environ['wsgi.multiprocess'] = True
-    environ['wsgi.run_once'] = True
+    environ[r'wsgi.input'] = stdin
+    environ[r'wsgi.errors'] = util.stderr
+    environ[r'wsgi.version'] = (1, 0)
+    environ[r'wsgi.multithread'] = False
+    environ[r'wsgi.multiprocess'] = True
+    environ[r'wsgi.run_once'] = True
 
-    if environ.get('HTTPS', 'off').lower() in ('on', '1', 'yes'):
-        environ['wsgi.url_scheme'] = 'https'
+    if environ.get(r'HTTPS', r'off').lower() in (r'on', r'1', r'yes'):
+        environ[r'wsgi.url_scheme'] = r'https'
     else:
-        environ['wsgi.url_scheme'] = 'http'
+        environ[r'wsgi.url_scheme'] = r'http'
 
     headers_set = []
     headers_sent = []
@@ -87,4 +87,4 @@ def launch(application):
         if not headers_sent:
             write('')   # send headers now if body was empty
     finally:
-        getattr(content, 'close', lambda : None)()
+        getattr(content, 'close', lambda: None)()

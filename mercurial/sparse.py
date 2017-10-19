@@ -17,6 +17,7 @@ from . import (
     error,
     match as matchmod,
     merge as mergemod,
+    pathutil,
     pycompat,
     scmutil,
     util,
@@ -485,7 +486,8 @@ def refreshwdir(repo, origstatus, origsparsematch, force=False):
                 dropped.append(file)
 
     # Apply changes to disk
-    typeactions = dict((m, []) for m in 'a f g am cd dc r dm dg m e k'.split())
+    typeactions = dict((m, [])
+                       for m in 'a f g am cd dc r dm dg m e k p pr'.split())
     for f, (m, args, msg) in actions.iteritems():
         if m not in typeactions:
             typeactions[m] = []
@@ -616,7 +618,7 @@ def importfromfiles(repo, opts, paths, force=False):
 
 def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
                  delete=False, enableprofile=False, disableprofile=False,
-                 force=False):
+                 force=False, usereporootpaths=False):
     """Perform a sparse config update.
 
     Only one of the actions may be performed.
@@ -636,10 +638,24 @@ def updateconfig(repo, pats, opts, include=False, exclude=False, reset=False,
             newexclude = set(oldexclude)
             newprofiles = set(oldprofiles)
 
-        if any(pat.startswith('/') for pat in pats):
-            repo.ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
-                         % ([pat for pat in pats if pat.startswith('/')]))
-        elif include:
+        if any(os.path.isabs(pat) for pat in pats):
+            raise error.Abort(_('paths cannot be absolute'))
+
+        if not usereporootpaths:
+            # let's treat paths as relative to cwd
+            root, cwd = repo.root, repo.getcwd()
+            abspats = []
+            for kindpat in pats:
+                kind, pat = matchmod._patsplit(kindpat, None)
+                if kind in matchmod.cwdrelativepatternkinds or kind is None:
+                    ap = (kind + ':' if kind else '') +\
+                            pathutil.canonpath(root, cwd, pat)
+                    abspats.append(ap)
+                else:
+                    abspats.append(kindpat)
+            pats = abspats
+
+        if include:
             newinclude.update(pats)
         elif exclude:
             newexclude.update(pats)

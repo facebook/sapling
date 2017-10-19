@@ -115,6 +115,9 @@ class ParseError(Hint, Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
     __bytes__ = _tobytes
 
+class PatchError(Exception):
+    __bytes__ = _tobytes
+
 class UnknownIdentifier(ParseError):
     """Exception raised when a {rev,file}set references an unknown identifier"""
 

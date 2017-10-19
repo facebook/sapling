@@ -7,9 +7,9 @@ Enable obsolete
 
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > logtemplate = {rev}:{node|short} {desc}\n
+  > logtemplate = {rev}:{node|short} {desc}{if(obsfate, " [{join(obsfate, "; ")}]")}\n
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > [extensions]
   > drawdag=$TESTDIR/drawdag.py
   > [alias]
@@ -66,7 +66,7 @@ A_1 have two direct and divergent successors A_1 and A_1
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba; rewritten as 3:392fd25390da]
   |/
   @  0:d20a80d4def3 base
   
@@ -80,7 +80,7 @@ A_1 have two direct and divergent successors A_1 and A_1
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
   $ hg debugsuccessorssets 'all()' --closest
@@ -107,7 +107,7 @@ check that mercurial refuse to push
   $ hg push ../other
   pushing to ../other
   searching for changes
-  abort: push includes divergent changeset: 392fd25390da!
+  abort: push includes content-divergent changeset: 392fd25390da!
   [255]
 
   $ cd ..
@@ -127,11 +127,11 @@ indirect divergence with known changeset
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
-  | x  3:392fd25390da A_2
+  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda]
   |/
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba; rewritten as 3:392fd25390da]
   |/
   o  0:d20a80d4def3 base
   
@@ -147,7 +147,7 @@ indirect divergence with known changeset
       01f36c5a8fda
   01f36c5a8fda
       01f36c5a8fda
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   4:01f36c5a8fda A_3
   $ hg debugsuccessorssets 'all()' --closest
@@ -185,7 +185,7 @@ indirect divergence with known changeset
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba; rewritten as 3:392fd25390da]
   |/
   @  0:d20a80d4def3 base
   
@@ -199,7 +199,7 @@ indirect divergence with known changeset
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
   $ hg debugsuccessorssets 'all()' --closest
@@ -259,11 +259,11 @@ divergence that converge again is not divergence anymore
   $ hg log -G --hidden
   @  4:01f36c5a8fda A_3
   |
-  | x  3:392fd25390da A_2
+  | x  3:392fd25390da A_2 [rewritten as 4:01f36c5a8fda]
   |/
-  | x  2:82623d38b9ba A_1
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda]
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [rewritten as 2:82623d38b9ba; rewritten as 3:392fd25390da]
   |/
   o  0:d20a80d4def3 base
   
@@ -278,7 +278,7 @@ divergence that converge again is not divergence anymore
       01f36c5a8fda
   01f36c5a8fda
       01f36c5a8fda
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   $ hg debugsuccessorssets 'all()' --closest
   d20a80d4def3
       d20a80d4def3
@@ -309,7 +309,7 @@ split is not divergences
   |
   | o  2:82623d38b9ba A_1
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da]
   |/
   @  0:d20a80d4def3 base
   
@@ -322,7 +322,7 @@ split is not divergences
       82623d38b9ba
   392fd25390da
       392fd25390da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   $ hg debugsuccessorssets 'all()' --closest
   d20a80d4def3
       d20a80d4def3
@@ -361,15 +361,15 @@ Even when subsequent rewriting happen
   $ hg log -G --hidden
   @  6:e442cfc57690 A_5
   |
-  | x  5:6a411f0d7a0a A_4
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a]
   |/
-  | x  2:82623d38b9ba A_1
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda]
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da]
   |/
   o  0:d20a80d4def3 base
   
@@ -410,7 +410,7 @@ Even when subsequent rewriting happen
       e442cfc57690
   e442cfc57690
       e442cfc57690
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
 
 Check more complex obsolescence graft (with divergence)
 
@@ -437,19 +437,19 @@ Check more complex obsolescence graft (with divergence)
   |/
   | o  8:7ae126973a96 A_7
   |/
-  | x  7:3750ebee865d B_0
+  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da]
   | |
-  | x  6:e442cfc57690 A_5
+  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a; split as 8:7ae126973a96, 9:14608b260df8]
   |/
-  | x  5:6a411f0d7a0a A_4
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a]
   |/
-  | x  2:82623d38b9ba A_1
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda]
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da]
   |/
   @  0:d20a80d4def3 base
   
@@ -515,7 +515,7 @@ Check more complex obsolescence graft (with divergence)
       14608b260df8
   bed64f5d2f5a
       bed64f5d2f5a
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
   4:01f36c5a8fda A_3
   8:7ae126973a96 A_7
   9:14608b260df8 A_8
@@ -535,25 +535,25 @@ fix the divergence
   $ hg log -G --hidden
   o  11:a139f71be9da A_A
   |
-  | x  10:bed64f5d2f5a A_9
+  | x  10:bed64f5d2f5a A_9 [rewritten as 11:a139f71be9da]
   |/
-  | x  9:14608b260df8 A_8
+  | x  9:14608b260df8 A_8 [rewritten as 11:a139f71be9da]
   |/
-  | x  8:7ae126973a96 A_7
+  | x  8:7ae126973a96 A_7 [rewritten as 11:a139f71be9da]
   |/
-  | x  7:3750ebee865d B_0
+  | x  7:3750ebee865d B_0 [rewritten as 3:392fd25390da]
   | |
-  | x  6:e442cfc57690 A_5
+  | x  6:e442cfc57690 A_5 [rewritten as 10:bed64f5d2f5a; split as 8:7ae126973a96, 9:14608b260df8]
   |/
-  | x  5:6a411f0d7a0a A_4
+  | x  5:6a411f0d7a0a A_4 [rewritten as 6:e442cfc57690]
   |/
   | o  4:01f36c5a8fda A_3
   |/
-  | x  3:392fd25390da A_2
+  | x  3:392fd25390da A_2 [rewritten as 5:6a411f0d7a0a]
   |/
-  | x  2:82623d38b9ba A_1
+  | x  2:82623d38b9ba A_1 [rewritten as 4:01f36c5a8fda]
   |/
-  | x  1:007dc284c1f8 A_0
+  | x  1:007dc284c1f8 A_0 [split as 2:82623d38b9ba, 3:392fd25390da]
   |/
   @  0:d20a80d4def3 base
   
@@ -614,7 +614,7 @@ fix the divergence
       a139f71be9da
   a139f71be9da
       a139f71be9da
-  $ hg log -r 'divergent()'
+  $ hg log -r 'contentdivergent()'
 
   $ cd ..
 
@@ -670,16 +670,16 @@ Use scmutil.cleanupnodes API to create divergence
 
   $ rm .hg/localtags
   $ hg cleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
-  $ hg log -G -T '{rev}:{node|short} {desc} {troubles}' -r 'sort(all(), topo)'
-  @  5:1a2a9b5b0030 B2 divergent
+  $ hg log -G -T '{rev}:{node|short} {desc} {instabilities}' -r 'sort(all(), topo)'
+  @  5:1a2a9b5b0030 B2 content-divergent
   |
-  | o  4:70d5a63ca112 B4 divergent
+  | o  4:70d5a63ca112 B4 content-divergent
   | |
   | o  1:48b9aae0607f Z
   |
   o  0:426bada5c675 A
   
   $ hg debugobsolete
-  a178212c3433c4e77b573f6011e29affb8aefa33 1a2a9b5b0030632400aa78e00388c20f99d3ec44 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  a178212c3433c4e77b573f6011e29affb8aefa33 ad6478fb94ecec98b86daae98722865d494ac561 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  ad6478fb94ecec98b86daae98722865d494ac561 70d5a63ca112acb3764bc1d7320ca90ea688d671 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  a178212c3433c4e77b573f6011e29affb8aefa33 1a2a9b5b0030632400aa78e00388c20f99d3ec44 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  a178212c3433c4e77b573f6011e29affb8aefa33 ad6478fb94ecec98b86daae98722865d494ac561 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'test', 'user': 'test'}
+  ad6478fb94ecec98b86daae98722865d494ac561 70d5a63ca112acb3764bc1d7320ca90ea688d671 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'test', 'user': 'test'}

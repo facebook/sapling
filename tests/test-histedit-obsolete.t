@@ -8,7 +8,8 @@ Enable obsolete
   > [phases]
   > publish=False
   > [experimental]
-  > evolution=createmarkers,allowunstable
+  > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > [extensions]
   > histedit=
   > rebase=
@@ -43,23 +44,22 @@ Test that histedit learns about obsolescence not stored in histedit state
   $ hg commit --amend b
   $ hg histedit --continue
   $ hg log -G
-  @  6:46abc7c4d873 b
+  @  5:46abc7c4d873 b
   |
-  o  5:49d44ab2be1b c
+  o  4:49d44ab2be1b c
   |
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
-  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
-  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
-  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
-  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
 
 With some node gone missing during the edit.
 
   $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
-  $ echo "pick `hg log -r 6 -T '{node|short}'`" >> plan
-  $ echo "edit `hg log -r 5 -T '{node|short}'`" >> plan
+  $ echo "pick `hg log -r 5 -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 4 -T '{node|short}'`" >> plan
   $ hg histedit -r 'all()' --commands plan
   Editing (49d44ab2be1b), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -73,21 +73,20 @@ With some node gone missing during the edit.
   $ hg --hidden --config extensions.strip= strip 'desc(XXXXXX)' --no-backup
   $ hg histedit --continue
   $ hg log -G
-  @  9:273c1f3b8626 c
+  @  8:273c1f3b8626 c
   |
-  o  8:aba7da937030 b2
+  o  7:aba7da937030 b2
   |
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
-  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
-  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
-  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
-  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
-  76f72745eac0643d16530e56e2f86e36e40631f1 2ca853e48edbd6453a0674dc0fe28a0974c51b9c 0 (*) {'user': 'test'} (glob)
-  2ca853e48edbd6453a0674dc0fe28a0974c51b9c aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (*) {'user': 'test'} (glob)
-  49d44ab2be1b67a79127568a67c9c99430633b48 273c1f3b86267ed3ec684bb13af1fa4d6ba56e02 0 (*) {'user': 'test'} (glob)
-  46abc7c4d8738e8563e577f7889e1b6db3da4199 aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (*) {'user': 'test'} (glob)
+  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  76f72745eac0643d16530e56e2f86e36e40631f1 2ca853e48edbd6453a0674dc0fe28a0974c51b9c 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  2ca853e48edbd6453a0674dc0fe28a0974c51b9c aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  49d44ab2be1b67a79127568a67c9c99430633b48 273c1f3b86267ed3ec684bb13af1fa4d6ba56e02 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  46abc7c4d8738e8563e577f7889e1b6db3da4199 aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
   $ cd ..
 
 Base setup for the rest of the testing
@@ -134,6 +133,7 @@ Base setup for the rest of the testing
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -170,13 +170,13 @@ Base setup for the rest of the testing
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
-  d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b} (*) {'user': 'test'} (glob)
-  177f92b773850b59254aa5e923436f921b55483b b346ab9a313db8537ecf96fca3ca3ca984ef3bd7 0 (*) {'user': 'test'} (glob)
-  055a42cdd88768532f9cf79daa407fc8d138de9b 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (*) {'user': 'test'} (glob)
-  e860deea161a2f77de56603b340ebbb4536308ae 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (*) {'user': 'test'} (glob)
-  652413bf663ef2a641cab26574e46d5f5a64a55a cacdfd884a9321ec4e1de275ef3949fa953a1f83 0 (*) {'user': 'test'} (glob)
-  96e494a2d553dd05902ba1cee1d94d4cb7b8faed 0 {b346ab9a313db8537ecf96fca3ca3ca984ef3bd7} (*) {'user': 'test'} (glob)
-  b558abc46d09c30f57ac31e85a8a3d64d2e906e4 0 {96e494a2d553dd05902ba1cee1d94d4cb7b8faed} (*) {'user': 'test'} (glob)
+  d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  177f92b773850b59254aa5e923436f921b55483b b346ab9a313db8537ecf96fca3ca3ca984ef3bd7 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  055a42cdd88768532f9cf79daa407fc8d138de9b 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  e860deea161a2f77de56603b340ebbb4536308ae 59d9f330561fd6c88b1a6b32f0e45034d88db784 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  652413bf663ef2a641cab26574e46d5f5a64a55a cacdfd884a9321ec4e1de275ef3949fa953a1f83 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  96e494a2d553dd05902ba1cee1d94d4cb7b8faed 0 {b346ab9a313db8537ecf96fca3ca3ca984ef3bd7} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
+  b558abc46d09c30f57ac31e85a8a3d64d2e906e4 0 {96e494a2d553dd05902ba1cee1d94d4cb7b8faed} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'histedit', 'user': 'test'}
 
 
 Ensure hidden revision does not prevent histedit
@@ -223,12 +223,12 @@ Test that rewriting leaving instability behind is allowed
   $ echo c >> c
   $ hg histedit --continue
 
-  $ hg log -r 'unstable()'
+  $ hg log -r 'orphan()'
   11:c13eb81022ca f (no-eol)
 
 stabilise
 
-  $ hg rebase  -r 'unstable()' -d .
+  $ hg rebase  -r 'orphan()' -d .
   rebasing 11:c13eb81022ca "f"
   $ hg up tip -q
 

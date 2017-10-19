@@ -95,8 +95,8 @@ bookmarks view shows bookmarks in an aligned table
   $ hg bookmark a-longer-bookmark
 
   $ hg show bookmarks
-  * a-longer-bookmark    7b570
-    book1                b757f
+  * a-longer-bookmark    7b57
+    book1                b757
 
 A custom bookmarks template works
 
@@ -112,13 +112,15 @@ bookmarks JSON works
     "active": true,
     "bookmark": "a-longer-bookmark",
     "longestbookmarklen": 17,
-    "node": "7b5709ab64cbc34da9b4367b64afff47f2c4ee83"
+    "node": "7b5709ab64cbc34da9b4367b64afff47f2c4ee83",
+    "nodelen": 4
    },
    {
     "active": false,
     "bookmark": "book1",
     "longestbookmarklen": 17,
-    "node": "b757f780b8ffd71267c6ccb32e0882d9d32a8cc0"
+    "node": "b757f780b8ffd71267c6ccb32e0882d9d32a8cc0",
+    "nodelen": 4
    }
   ]
 
@@ -136,19 +138,19 @@ commands.show.aliasprefix aliases values to `show <view>`
   (no bookmarks set)
 
   $ hg --config commands.show.aliasprefix=sh shwork
-  @  7b570 commit for book2
-  o  b757f commit for book1
-  o  ba592 initial
+  @  7b57 commit for book2
+  o  b757 commit for book1
+  o  ba59 initial
 
   $ hg --config commands.show.aliasprefix='s sh' swork
-  @  7b570 commit for book2
-  o  b757f commit for book1
-  o  ba592 initial
+  @  7b57 commit for book2
+  o  b757 commit for book1
+  o  ba59 initial
 
   $ hg --config commands.show.aliasprefix='s sh' shwork
-  @  7b570 commit for book2
-  o  b757f commit for book1
-  o  ba592 initial
+  @  7b57 commit for book2
+  o  b757 commit for book1
+  o  ba59 initial
 
 The aliases don't appear in `hg config`
 

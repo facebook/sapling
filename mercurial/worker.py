@@ -53,7 +53,7 @@ def _numworkers(ui):
             raise error.Abort(_('number of cpus must be an integer'))
     return min(max(countcpus(), 4), 32)
 
-if pycompat.osname == 'posix':
+if pycompat.isposix:
     _startupcost = 0.01
 else:
     _startupcost = 1e30
@@ -203,7 +203,7 @@ def _posixexitstatus(code):
     elif os.WIFSIGNALED(code):
         return -os.WTERMSIG(code)
 
-if pycompat.osname != 'nt':
+if not pycompat.iswindows:
     _platformworker = _posixworker
     _exitstatus = _posixexitstatus
 

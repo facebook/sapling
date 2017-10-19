@@ -76,13 +76,13 @@ class convert_cvs(converter_source):
             id = None
 
             cache = 'update'
-            if not self.ui.configbool('convert', 'cvsps.cache', True):
+            if not self.ui.configbool('convert', 'cvsps.cache'):
                 cache = None
             db = cvsps.createlog(self.ui, cache=cache)
             db = cvsps.createchangeset(self.ui, db,
-                fuzz=int(self.ui.config('convert', 'cvsps.fuzz', 60)),
-                mergeto=self.ui.config('convert', 'cvsps.mergeto', None),
-                mergefrom=self.ui.config('convert', 'cvsps.mergefrom', None))
+                fuzz=int(self.ui.config('convert', 'cvsps.fuzz')),
+                mergeto=self.ui.config('convert', 'cvsps.mergeto'),
+                mergefrom=self.ui.config('convert', 'cvsps.mergefrom'))
 
             for cs in db:
                 if maxrev and cs.id > maxrev:

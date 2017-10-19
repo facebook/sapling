@@ -825,7 +825,7 @@ class client(object):
             p = subprocess.Popen(cmd, **args)
 
         except OSError as e:
-            raise WatchmanError('"watchman" executable not in PATH (%s)', e)
+            raise WatchmanError('"watchman" executable not in PATH (%s)' % e)
 
         stdout, stderr = p.communicate()
         exitcode = p.poll()

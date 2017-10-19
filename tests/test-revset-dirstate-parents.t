@@ -14,19 +14,19 @@
 
   $ try 'p1()'
   (func
-    ('symbol', 'p1')
+    (symbol 'p1')
     None)
   * set:
   <baseset []>
   $ try 'p2()'
   (func
-    ('symbol', 'p2')
+    (symbol 'p2')
     None)
   * set:
   <baseset []>
   $ try 'parents()'
   (func
-    ('symbol', 'parents')
+    (symbol 'parents')
     None)
   * set:
   <baseset+ []>

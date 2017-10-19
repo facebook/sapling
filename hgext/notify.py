@@ -145,6 +145,7 @@ from mercurial import (
     error,
     mail,
     patch,
+    registrar,
     util,
 )
 
@@ -153,6 +154,58 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('notify', 'changegroup',
+    default=None,
+)
+configitem('notify', 'config',
+    default=None,
+)
+configitem('notify', 'diffstat',
+    default=True,
+)
+configitem('notify', 'domain',
+    default=None,
+)
+configitem('notify', 'fromauthor',
+    default=None,
+)
+configitem('notify', 'incoming',
+    default=None,
+)
+configitem('notify', 'maxdiff',
+    default=300,
+)
+configitem('notify', 'maxsubject',
+    default=67,
+)
+configitem('notify', 'mbox',
+    default=None,
+)
+configitem('notify', 'merge',
+    default=True,
+)
+configitem('notify', 'outgoing',
+    default=None,
+)
+configitem('notify', 'sources',
+    default='serve',
+)
+configitem('notify', 'strip',
+    default=0,
+)
+configitem('notify', 'style',
+    default=None,
+)
+configitem('notify', 'template',
+    default=None,
+)
+configitem('notify', 'test',
+    default=True,
+)
 
 # template for single changeset can include email headers.
 single_template = '''
@@ -187,14 +240,14 @@ class notifier(object):
         if cfg:
             self.ui.readconfig(cfg, sections=['usersubs', 'reposubs'])
         self.repo = repo
-        self.stripcount = int(self.ui.config('notify', 'strip', 0))
+        self.stripcount = int(self.ui.config('notify', 'strip'))
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
         self.mbox = self.ui.config('notify', 'mbox')
-        self.test = self.ui.configbool('notify', 'test', True)
+        self.test = self.ui.configbool('notify', 'test')
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
-        self.merge = self.ui.configbool('notify', 'merge', True)
+        self.merge = self.ui.configbool('notify', 'merge')
 
         mapfile = None
         template = (self.ui.config('notify', hooktype) or
@@ -265,7 +318,7 @@ class notifier(object):
 
     def skipsource(self, source):
         '''true if incoming changes from this source should be skipped.'''
-        ok_sources = self.ui.config('notify', 'sources', 'serve').split()
+        ok_sources = self.ui.config('notify', 'sources').split()
         return source not in ok_sources
 
     def send(self, ctx, count, data):
@@ -316,7 +369,7 @@ class notifier(object):
             else:
                 s = ctx.description().lstrip().split('\n', 1)[0].rstrip()
                 subject = '%s: %s' % (self.root, s)
-        maxsubject = int(self.ui.config('notify', 'maxsubject', 67))
+        maxsubject = int(self.ui.config('notify', 'maxsubject'))
         if maxsubject:
             subject = util.ellipsis(subject, maxsubject)
         msg['Subject'] = mail.headencode(self.ui, subject,
@@ -350,7 +403,7 @@ class notifier(object):
 
     def diff(self, ctx, ref=None):
 
-        maxdiff = int(self.ui.config('notify', 'maxdiff', 300))
+        maxdiff = int(self.ui.config('notify', 'maxdiff'))
         prev = ctx.p1().node()
         if ref:
             ref = ref.node()
@@ -360,7 +413,7 @@ class notifier(object):
                             opts=patch.diffallopts(self.ui))
         difflines = ''.join(chunks).splitlines()
 
-        if self.ui.configbool('notify', 'diffstat', True):
+        if self.ui.configbool('notify', 'diffstat'):
             s = patch.diffstat(difflines)
             # s may be nil, don't include the header if it is
             if s:

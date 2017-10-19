@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cgi
 import copy
 import mimetypes
 import os
@@ -32,12 +31,14 @@ from .. import (
     encoding,
     error,
     graphmod,
+    pycompat,
     revset,
     revsetlang,
     scmutil,
     smartset,
     templatefilters,
     templater,
+    url,
     util,
 )
 
@@ -93,7 +94,7 @@ def log(web, req, tmpl):
 
 @webcommand('rawfile')
 def rawfile(web, req, tmpl):
-    guessmime = web.configbool('web', 'guessmime', False)
+    guessmime = web.configbool('web', 'guessmime')
 
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     if not path:
@@ -719,8 +720,11 @@ def summary(web, req, tmpl):
     start = max(0, count - web.maxchanges)
     end = min(count, start + web.maxchanges)
 
+    desc = web.config("web", "description")
+    if not desc:
+        desc = 'unknown'
     return tmpl("summary",
-                desc=web.config("web", "description", "unknown"),
+                desc=desc,
                 owner=get_contact(web.config) or "unknown",
                 lastchange=tip.date(),
                 tags=tagentries,
@@ -759,7 +763,7 @@ def filediff(web, req, tmpl):
         ctx = fctx.changectx()
     basectx = ctx.p1()
 
-    style = web.config('web', 'style', 'paper')
+    style = web.config('web', 'style')
     if 'style' in req.form:
         style = req.form['style'][0]
 
@@ -860,6 +864,13 @@ def annotate(web, req, tmpl):
 
     Show changeset information for each line in a file.
 
+    The ``ignorews``, ``ignorewsamount``, ``ignorewseol``, and
+    ``ignoreblanklines`` query string arguments have the same meaning as
+    their ``[annotate]`` config equivalents. It uses the hgrc boolean
+    parsing logic to interpret the value. e.g. ``0`` and ``false`` are
+    false and ``1`` and ``true`` are true. If not defined, the server
+    default settings are used.
+
     The ``fileannotate`` template is rendered.
     """
     fctx = webutil.filectx(web.repo, req)
@@ -892,11 +903,12 @@ def annotate(web, req, tmpl):
                   or 'application/octet-stream')
             lines = [((fctx.filectx(fctx.filerev()), 1), '(binary:%s)' % mt)]
         else:
-            lines = webutil.annotate(fctx, web.repo.ui)
+            lines = webutil.annotate(req, fctx, web.repo.ui)
 
         previousrev = None
         blockparitygen = paritygen(1)
-        for lineno, ((f, targetline), l) in enumerate(lines):
+        for lineno, (aline, l) in enumerate(lines):
+            f = aline.fctx
             rev = f.rev()
             if rev != previousrev:
                 blockhead = True
@@ -914,12 +926,15 @@ def annotate(web, req, tmpl):
                    "file": f.path(),
                    "blockhead": blockhead,
                    "blockparity": blockparity,
-                   "targetline": targetline,
+                   "targetline": aline.lineno,
                    "line": l,
                    "lineno": lineno + 1,
                    "lineid": "l%d" % (lineno + 1),
                    "linenumber": "% 6d" % (lineno + 1),
                    "revdate": f.date()}
+
+    diffopts = webutil.difffeatureopts(req, web.repo.ui, 'annotate')
+    diffopts = {k: getattr(diffopts, k) for k in diffopts.defaults}
 
     return tmpl("fileannotate",
                 file=f,
@@ -929,6 +944,7 @@ def annotate(web, req, tmpl):
                 rename=webutil.renamelink(fctx),
                 permissions=fctx.manifest().flags(f),
                 ishead=int(ishead),
+                diffopts=diffopts,
                 **webutil.commonentry(web.repo, fctx))
 
 @webcommand('filelog')
@@ -996,7 +1012,7 @@ def filelog(web, req, tmpl):
     revs = fctx.filelog().revs(start, end - 1)
     entries = []
 
-    diffstyle = web.config('web', 'style', 'paper')
+    diffstyle = web.config('web', 'style')
     if 'style' in req.form:
         diffstyle = req.form['style'][0]
 
@@ -1098,7 +1114,7 @@ def archive(web, req, tmpl):
         raise ErrorResponse(HTTP_NOT_FOUND, msg)
 
     if not ((type_ in allowed or
-        web.configbool("web", "allow" + type_, False))):
+             web.configbool("web", "allow" + type_))):
         msg = 'Archive type not allowed: %s' % type_
         raise ErrorResponse(HTTP_FORBIDDEN, msg)
 
@@ -1111,13 +1127,13 @@ def archive(web, req, tmpl):
 
     ctx = webutil.changectx(web.repo, req)
     pats = []
-    matchfn = scmutil.match(ctx, [])
+    match = scmutil.match(ctx, [])
     file = req.form.get('file', None)
     if file:
         pats = ['path:' + file[0]]
-        matchfn = scmutil.match(ctx, pats, default='path')
+        match = scmutil.match(ctx, pats, default='path')
         if pats:
-            files = [f for f in ctx.manifest().keys() if matchfn(f)]
+            files = [f for f in ctx.manifest().keys() if match(f)]
             if not files:
                 raise ErrorResponse(HTTP_NOT_FOUND,
                     'file(s) not found: %s' % file[0])
@@ -1132,7 +1148,7 @@ def archive(web, req, tmpl):
     req.respond(HTTP_OK, mimetype)
 
     archival.archive(web.repo, req, cnode, artype, prefix=name,
-                     matchfn=matchfn,
+                     matchfn=match,
                      subrepos=web.configbool("web", "archivesubrepos"))
     return []
 
@@ -1232,12 +1248,12 @@ def graph(web, req, tmpl):
         for (id, type, ctx, vtx, edges) in tree:
             if type != graphmod.CHANGESET:
                 continue
-            node = str(ctx)
+            node = pycompat.bytestr(ctx)
             age = encodestr(templatefilters.age(ctx.date()))
             desc = templatefilters.firstline(encodestr(ctx.description()))
-            desc = cgi.escape(templatefilters.nonempty(desc))
-            user = cgi.escape(templatefilters.person(encodestr(ctx.user())))
-            branch = cgi.escape(encodestr(ctx.branch()))
+            desc = url.escape(templatefilters.nonempty(desc))
+            user = url.escape(templatefilters.person(encodestr(ctx.user())))
+            branch = url.escape(encodestr(ctx.branch()))
             try:
                 branchnode = web.repo.branchtip(branch)
             except error.RepoLookupError:
@@ -1246,8 +1262,8 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 data.append((node, vtx, edges, desc, user, age, branch,
-                             [cgi.escape(encodestr(x)) for x in ctx.tags()],
-                             [cgi.escape(encodestr(x))
+                             [url.escape(encodestr(x)) for x in ctx.tags()],
+                             [url.escape(encodestr(x))
                               for x in ctx.bookmarks()]))
             else:
                 edgedata = [{'col': edge[0], 'nextcol': edge[1],
@@ -1288,7 +1304,7 @@ def graph(web, req, tmpl):
                 canvasheight=canvasheight, bg_height=bg_height,
                 # {jsdata} will be passed to |json, so it must be in utf-8
                 jsdata=lambda **x: graphdata(True, encoding.fromlocal),
-                nodes=lambda **x: graphdata(False, str),
+                nodes=lambda **x: graphdata(False, pycompat.bytestr),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):

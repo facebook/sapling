@@ -326,7 +326,12 @@ verify that bookmarks are not written on failed transaction
 
   $ cat > failpullbookmarks.py << EOF
   > """A small extension that makes bookmark pulls fail, for testing"""
-  > from mercurial import extensions, exchange, error
+  > from __future__ import absolute_import
+  > from mercurial import (
+  >   error,
+  >   exchange,
+  >   extensions,
+  > )
   > def _pullbookmarks(orig, pullop):
   >     orig(pullop)
   >     raise error.HookAbort('forced failure by extension')

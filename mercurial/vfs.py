@@ -16,6 +16,7 @@ import threading
 
 from .i18n import _
 from . import (
+    encoding,
     error,
     pathutil,
     pycompat,
@@ -434,7 +435,8 @@ class vfs(abstractvfs):
                 os.symlink(src, linkname)
             except OSError as err:
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
-                              (src, err.strerror), linkname)
+                              (src, encoding.strtolocal(err.strerror)),
+                              linkname)
         else:
             self.write(dst, src)
 
@@ -541,7 +543,7 @@ class backgroundfilecloser(object):
 
         # Only Windows/NTFS has slow file closing. So only enable by default
         # on that platform. But allow to be enabled elsewhere for testing.
-        defaultenabled = pycompat.osname == 'nt'
+        defaultenabled = pycompat.iswindows
         enabled = ui.configbool('worker', 'backgroundclose', defaultenabled)
 
         if not enabled:

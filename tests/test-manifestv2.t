@@ -26,6 +26,7 @@ future commits.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 0fc9a4fafa44
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd new

@@ -2,6 +2,8 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > phasereport=$TESTDIR/testlib/ext-phase-report.py
+  > [hooks]
+  > txnclose-phase.test = echo "test-hook-close-phase: \$HG_NODE:  \$HG_OLDPHASE -> \$HG_PHASE"
   > EOF
 
   $ hglog() { hg log --template "{rev} {phaseidx} {desc}\n" $*; }
@@ -26,6 +28,7 @@ Cannot change null revision phase
 
   $ mkcommit A
   test-debug-phase: new rev 0:  x -> 1
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:   -> draft
 
 New commit are draft by default
 
@@ -36,6 +39,7 @@ Following commit are draft too
 
   $ mkcommit B
   test-debug-phase: new rev 1:  x -> 1
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:   -> draft
 
   $ hglog
   1 1 B
@@ -46,6 +50,8 @@ Draft commit are properly created over public one:
   $ hg phase --public .
   test-debug-phase: move rev 0: 1 -> 0
   test-debug-phase: move rev 1: 1 -> 0
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:  draft -> public
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:  draft -> public
   $ hg phase
   1: public
   $ hglog
@@ -54,8 +60,10 @@ Draft commit are properly created over public one:
 
   $ mkcommit C
   test-debug-phase: new rev 2:  x -> 1
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> draft
   $ mkcommit D
   test-debug-phase: new rev 3:  x -> 1
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> draft
 
   $ hglog
   3 1 D
@@ -67,6 +75,7 @@ Test creating changeset as secret
 
   $ mkcommit E --config phases.new-commit='secret'
   test-debug-phase: new rev 4:  x -> 2
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:   -> secret
   $ hglog
   4 2 E
   3 1 D
@@ -78,6 +87,7 @@ Test the secret property is inherited
 
   $ mkcommit H
   test-debug-phase: new rev 5:  x -> 2
+  test-hook-close-phase: a030c6be5127abc010fcbff1851536552e6951a8:   -> secret
   $ hglog
   5 2 H
   4 2 E
@@ -92,6 +102,7 @@ Even on merge
   $ mkcommit "B'"
   test-debug-phase: new rev 6:  x -> 1
   created new head
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> draft
   $ hglog
   6 1 B'
   5 2 H
@@ -108,6 +119,7 @@ Even on merge
   4: secret
   $ hg ci -m "merge B' and E"
   test-debug-phase: new rev 7:  x -> 2
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:   -> secret
 
   $ hglog
   7 2 merge B' and E
@@ -155,6 +167,11 @@ Test secret changeset are not pushed
   test-debug-phase: new rev 2:  x -> 1
   test-debug-phase: new rev 3:  x -> 1
   test-debug-phase: new rev 4:  x -> 1
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:   -> public
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:   -> public
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> draft
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> draft
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> draft
   $ hglog
   7 2 merge B' and E
   6 1 B'
@@ -181,6 +198,7 @@ visible shared between the initial repo and the push destination.
   $ hg up -q 4 # B'
   $ mkcommit Z --config phases.new-commit=secret
   test-debug-phase: new rev 5:  x -> 2
+  test-hook-close-phase: 2713879da13d6eea1ff22b442a5a87cb31a7ce6a:   -> secret
   $ hg phase .
   5: secret
 
@@ -192,6 +210,7 @@ head shadowed by the remote secret head.
   $ mkcommit I
   test-debug-phase: new rev 8:  x -> 1
   created new head
+  test-hook-close-phase: 6d6770faffce199f1fddd1cf87f6f026138cf061:   -> draft
   $ hg push ../push-dest
   pushing to ../push-dest
   searching for changes
@@ -200,6 +219,7 @@ head shadowed by the remote secret head.
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   test-debug-phase: new rev 6:  x -> 1
+  test-hook-close-phase: 6d6770faffce199f1fddd1cf87f6f026138cf061:   -> draft
 
 :note: The "(+1 heads)" is wrong as we do not had any visible head
 
@@ -247,11 +267,17 @@ Test secret changeset are not pull
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files (+1 heads)
+  new changesets 4a2df7238c3b:cf9fe039dfd6
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 0
   test-debug-phase: new rev 3:  x -> 0
   test-debug-phase: new rev 4:  x -> 0
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:   -> public
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:   -> public
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> public
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> public
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> public
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hglog
   4 0 B'
@@ -277,6 +303,11 @@ Test secret changeset are not cloned
   test-debug-phase: new rev 2:  x -> 0
   test-debug-phase: new rev 3:  x -> 0
   test-debug-phase: new rev 4:  x -> 0
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:   -> public
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:   -> public
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> public
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> public
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> public
   $ hglog -R clone-dest
   4 0 B'
   3 0 D
@@ -476,6 +507,7 @@ move changeset forward
 
   $ hg phase --public -r 2
   test-debug-phase: move rev 2: 1 -> 0
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:  draft -> public
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -500,6 +532,7 @@ move changeset backward
 
   $ hg phase --draft --force 2
   test-debug-phase: move rev 2: 0 -> 1
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:  public -> draft
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -523,6 +556,8 @@ move changeset forward and backward
   $ hg phase --draft --force 1::4
   test-debug-phase: move rev 1: 0 -> 1
   test-debug-phase: move rev 4: 2 -> 1
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:  public -> draft
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  secret -> draft
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\
@@ -549,8 +584,15 @@ test partial failure
   test-debug-phase: move rev 4: 1 -> 0
   test-debug-phase: move rev 6: 1 -> 0
   test-debug-phase: move rev 7: 2 -> 0
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:  draft -> public
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:  draft -> public
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:  draft -> public
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  draft -> public
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:  draft -> public
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  secret -> public
   $ hg phase --draft '5 or 7'
   test-debug-phase: move rev 5: 2 -> 1
+  test-hook-close-phase: a030c6be5127abc010fcbff1851536552e6951a8:  secret -> draft
   cannot move 1 changesets to a higher phase, use --force
   phase changed for 1 changesets
   [1]
@@ -588,7 +630,7 @@ test hidden changeset are not cloned as public (issue3935)
 (enabling evolution)
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 (making a changeset hidden; H in that case)
@@ -602,6 +644,7 @@ test hidden changeset are not cloned as public (issue3935)
   adding manifests
   adding file changes
   added 7 changesets with 6 changes to 6 files
+  new changesets 4a2df7238c3b:17a481b3bccb
   test-debug-phase: new rev 0:  x -> 0
   test-debug-phase: new rev 1:  x -> 0
   test-debug-phase: new rev 2:  x -> 0
@@ -609,6 +652,13 @@ test hidden changeset are not cloned as public (issue3935)
   test-debug-phase: new rev 4:  x -> 0
   test-debug-phase: new rev 5:  x -> 0
   test-debug-phase: new rev 6:  x -> 0
+  test-hook-close-phase: 4a2df7238c3b48766b5e22fafbb8a2f506ec8256:   -> public
+  test-hook-close-phase: 27547f69f25460a52fff66ad004e58da7ad3fb56:   -> public
+  test-hook-close-phase: f838bfaca5c7226600ebcfd84f3c3c13a28d3757:   -> public
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:   -> public
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:   -> public
+  test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> public
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:   -> public
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clonewithobs
@@ -681,4 +731,95 @@ repositories visible to an external hook.
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
+  [255]
+
+Check that pretxnclose-phase hook can control phase movement
+
+  $ hg phase --force b3325c91a4d9 --secret
+  test-debug-phase: move rev 3: 0 -> 2
+  test-debug-phase: move rev 4: 0 -> 2
+  test-debug-phase: move rev 5: 1 -> 2
+  test-debug-phase: move rev 7: 0 -> 2
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:  public -> secret
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  public -> secret
+  test-hook-close-phase: a030c6be5127abc010fcbff1851536552e6951a8:  draft -> secret
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  public -> secret
+  $ hg log -G -T phases
+  @    changeset:   7:17a481b3bccb
+  |\   tag:         tip
+  | |  phase:       secret
+  | |  parent:      6:cf9fe039dfd6
+  | |  parent:      4:a603bfb5a83e
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge B' and E
+  | |
+  | o  changeset:   6:cf9fe039dfd6
+  | |  phase:       public
+  | |  parent:      1:27547f69f254
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     B'
+  | |
+  o |  changeset:   4:a603bfb5a83e
+  | |  phase:       secret
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     E
+  | |
+  o |  changeset:   3:b3325c91a4d9
+  | |  phase:       secret
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     D
+  | |
+  o |  changeset:   2:f838bfaca5c7
+  |/   phase:       public
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     C
+  |
+  o  changeset:   1:27547f69f254
+  |  phase:       public
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     B
+  |
+  o  changeset:   0:4a2df7238c3b
+     phase:       public
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+
+Install a hook that prevent b3325c91a4d9 to become public
+
+  $ cat >> .hg/hgrc << EOF
+  > [hooks]
+  > pretxnclose-phase.nopublish_D = (echo \$HG_NODE| grep -v b3325c91a4d9>/dev/null) || [ 'public' != \$HG_PHASE ]
+  > EOF
+
+Try various actions. only the draft move should succeed
+
+  $ hg phase --public b3325c91a4d9
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
+  [255]
+  $ hg phase --public a603bfb5a83e
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
+  [255]
+  $ hg phase --draft 17a481b3bccb
+  test-debug-phase: move rev 3: 2 -> 1
+  test-debug-phase: move rev 4: 2 -> 1
+  test-debug-phase: move rev 7: 2 -> 1
+  test-hook-close-phase: b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e:  secret -> draft
+  test-hook-close-phase: a603bfb5a83e312131cebcd05353c217d4d21dde:  secret -> draft
+  test-hook-close-phase: 17a481b3bccb796c0521ae97903d81c52bfee4af:  secret -> draft
+  $ hg phase --public 17a481b3bccb
+  transaction abort!
+  rollback completed
+  abort: pretxnclose-phase.nopublish_D hook exited with status 1
   [255]

@@ -211,10 +211,13 @@ class branchcache(dict):
         Raise KeyError for unknown branch.'''
         return self._branchtip(self[branch])[0]
 
+    def iteropen(self, nodes):
+        return (n for n in nodes if n not in self._closednodes)
+
     def branchheads(self, branch, closed=False):
         heads = self[branch]
         if not closed:
-            heads = [h for h in heads if h not in self._closednodes]
+            heads = list(self.iteropen(heads))
         return heads
 
     def iterbranches(self):
@@ -248,9 +251,8 @@ class branchcache(dict):
                         'wrote %s branch cache with %d labels and %d nodes\n',
                         repo.filtername, len(self), nodecount)
         except (IOError, OSError, error.Abort) as inst:
+            # Abort may be raised by read only opener, so log and continue
             repo.ui.debug("couldn't write branch cache: %s\n" % inst)
-            # Abort may be raise by read only opener
-            pass
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be

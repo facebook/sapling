@@ -8,15 +8,9 @@
 
 from __future__ import absolute_import
 
+import hashlib
 import os
 import sys
-
-try:
-    import hashlib
-    md5 = hashlib.md5
-except ImportError:
-    import md5
-    md5 = md5.md5
 
 try:
     import msvcrt
@@ -32,7 +26,7 @@ for filename in sys.argv[1:]:
         sys.stderr.write('%s: Can\'t open: %s\n' % (filename, msg))
         sys.exit(1)
 
-    m = md5()
+    m = hashlib.md5()
     try:
         for data in iter(lambda: fp.read(8192), b''):
             m.update(data)

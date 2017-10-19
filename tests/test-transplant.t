@@ -262,6 +262,7 @@ test same-parent transplant with --log
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 17ab29e464c6:d11e3596cc1a
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../sameparent
@@ -282,6 +283,7 @@ format-breaking diffopts
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 17ab29e464c6:d11e3596cc1a
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../remote
@@ -339,6 +341,7 @@ remote transplant with pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 17ab29e464c6
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../rp
@@ -351,6 +354,7 @@ remote transplant with pull
   added 1 changesets with 1 changes to 1 files
   applying a53251cdf717
   a53251cdf717 transplanted to 8d9279348abb
+  new changesets 37a1297eb21b:8d9279348abb
   $ hg log --template '{rev} {parents} {desc}\n'
   2  b3
   1  b1
@@ -542,6 +546,7 @@ test transplant into empty repository
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 4 files
+  new changesets 17ab29e464c6:a53251cdf717
 
 test "--merge" causing pull from source repository on local host
 
@@ -555,6 +560,7 @@ test "--merge" causing pull from source repository on local host
   added 2 changesets with 2 changes to 2 files
   applying a53251cdf717
   4:a53251cdf717 merged at 4831f4dc831a
+  new changesets 722f4667af76:4831f4dc831a
 
 test interactive transplant
 
@@ -845,6 +851,7 @@ test transplanting a patch turning into a no-op
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 07f494440405
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd binarydest
@@ -884,7 +891,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
 
   $ cat > $TESTTMP/abort.py <<EOF
   > # emulate that patch.patch() is aborted at patching on "abort" file
-  > from mercurial import extensions, patch as patchmod
+  > from mercurial import error, extensions, patch as patchmod
   > def patch(orig, ui, repo, patchname,
   >           strip=1, prefix='', files=None,
   >           eolmode='strict', similarity=0):
@@ -894,7 +901,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
   >         strip=strip, prefix=prefix, files=files,
   >         eolmode=eolmode, similarity=similarity)
   >     if 'abort' in files:
-  >         raise patchmod.PatchError('intentional error while patching')
+  >         raise error.PatchError('intentional error while patching')
   >     return r
   > def extsetup(ui):
   >     extensions.wrapfunction(patchmod, 'patch', patch)

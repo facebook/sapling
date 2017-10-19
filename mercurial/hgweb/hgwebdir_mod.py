@@ -29,10 +29,12 @@ from .common import (
 from .request import wsgirequest
 
 from .. import (
+    configitems,
     encoding,
     error,
     hg,
     profiling,
+    pycompat,
     scmutil,
     templater,
     ui as uimod,
@@ -70,9 +72,9 @@ def urlrepos(prefix, roothead, paths):
     """yield url paths and filesystem paths from a list of repo paths
 
     >>> conv = lambda seq: [(v, util.pconvert(p)) for v,p in seq]
-    >>> conv(urlrepos('hg', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv(urlrepos(b'hg', b'/opt', [b'/opt/r', b'/opt/r/r', b'/opt']))
     [('hg/r', '/opt/r'), ('hg/r/r', '/opt/r/r'), ('hg', '/opt')]
-    >>> conv(urlrepos('', '/opt', ['/opt/r', '/opt/r/r', '/opt']))
+    >>> conv(urlrepos(b'', b'/opt', [b'/opt/r', b'/opt/r/r', b'/opt']))
     [('r', '/opt/r'), ('r/r', '/opt/r/r'), ('', '/opt')]
     """
     for path in paths:
@@ -84,17 +86,17 @@ def geturlcgivars(baseurl, port):
     """
     Extract CGI variables from baseurl
 
-    >>> geturlcgivars("http://host.org/base", "80")
+    >>> geturlcgivars(b"http://host.org/base", b"80")
     ('host.org', '80', '/base')
-    >>> geturlcgivars("http://host.org:8000/base", "80")
+    >>> geturlcgivars(b"http://host.org:8000/base", b"80")
     ('host.org', '8000', '/base')
-    >>> geturlcgivars('/base', 8000)
+    >>> geturlcgivars(b'/base', 8000)
     ('', '8000', '/base')
-    >>> geturlcgivars("base", '8000')
+    >>> geturlcgivars(b"base", b'8000')
     ('', '8000', '/base')
-    >>> geturlcgivars("http://host", '8000')
+    >>> geturlcgivars(b"http://host", b'8000')
     ('host', '8000', '/')
-    >>> geturlcgivars("http://host/", '8000')
+    >>> geturlcgivars(b"http://host/", b'8000')
     ('host', '8000', '/')
     """
     u = util.url(baseurl)
@@ -105,7 +107,7 @@ def geturlcgivars(baseurl, port):
     if not path.startswith('/'):
         path = '/' + path
 
-    return name, str(port), path
+    return name, pycompat.bytestr(port), path
 
 class hgwebdir(object):
     """HTTP server for multiple repositories.
@@ -124,10 +126,11 @@ class hgwebdir(object):
         self.refresh()
 
     def refresh(self):
-        refreshinterval = 20
         if self.ui:
-            refreshinterval = self.ui.configint('web', 'refreshinterval',
-                                                refreshinterval)
+            refreshinterval = self.ui.configint('web', 'refreshinterval')
+        else:
+            item = configitems.coreitems['web']['refreshinterval']
+            refreshinterval = item.default
 
         # refreshinterval <= 0 means to always refresh.
         if (refreshinterval > 0 and
@@ -170,16 +173,14 @@ class hgwebdir(object):
 
         self.repos = repos
         self.ui = u
-        encoding.encoding = self.ui.config('web', 'encoding',
-                                           encoding.encoding)
-        self.style = self.ui.config('web', 'style', 'paper')
-        self.templatepath = self.ui.config('web', 'templates', None,
-                                           untrusted=False)
-        self.stripecount = self.ui.config('web', 'stripes', 1)
+        encoding.encoding = self.ui.config('web', 'encoding')
+        self.style = self.ui.config('web', 'style')
+        self.templatepath = self.ui.config('web', 'templates', untrusted=False)
+        self.stripecount = self.ui.config('web', 'stripes')
         if self.stripecount:
             self.stripecount = int(self.stripecount)
         self._baseurl = self.ui.config('web', 'baseurl')
-        prefix = self.ui.config('web', 'prefix', '')
+        prefix = self.ui.config('web', 'prefix')
         if prefix.startswith('/'):
             prefix = prefix[1:]
         if prefix.endswith('/'):
@@ -290,10 +291,10 @@ class hgwebdir(object):
                         repo = hg.repository(self.ui.copy(), real)
                         return hgweb_mod.hgweb(repo).run_wsgi(req)
                     except IOError as inst:
-                        msg = inst.strerror
+                        msg = encoding.strtolocal(inst.strerror)
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
                     except error.RepoError as inst:
-                        raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
+                        raise ErrorResponse(HTTP_SERVER_ERROR, bytes(inst))
 
             # browse subdirectories
             subdir = virtual + '/'
@@ -319,14 +320,14 @@ class hgwebdir(object):
             for typ, spec in hgweb_mod.archivespecs.iteritems():
                 if typ in allowed or ui.configbool("web", "allow" + typ,
                                                     untrusted=True):
-                    archives.append({"type" : typ, "extension": spec[2],
+                    archives.append({"type": typ, "extension": spec[2],
                                      "node": nodeid, "url": url})
             return archives
 
         def rawentries(subdir="", **map):
 
-            descend = self.ui.configbool('web', 'descend', True)
-            collapse = self.ui.configbool('web', 'collapse', False)
+            descend = self.ui.configbool('web', 'descend')
+            collapse = self.ui.configbool('web', 'collapse')
             seenrepos = set()
             seendirs = set()
             for name, path in self.repos:
@@ -429,7 +430,7 @@ class hgwebdir(object):
                     continue
 
                 contact = get_contact(get)
-                description = get("web", "description", "")
+                description = get("web", "description")
                 seenrepos.add(name)
                 name = get("web", "name", name)
                 row = {'contact': contact or "unknown",
@@ -490,9 +491,9 @@ class hgwebdir(object):
             if self.motd is not None:
                 yield self.motd
             else:
-                yield config('web', 'motd', '')
+                yield config('web', 'motd')
 
-        def config(section, name, default=None, untrusted=True):
+        def config(section, name, default=uimod._unset, untrusted=True):
             return self.ui.config(section, name, default, untrusted)
 
         self.updatereqenv(req.env)
@@ -502,19 +503,15 @@ class hgwebdir(object):
             url += '/'
 
         vars = {}
-        styles = (
-            req.form.get('style', [None])[0],
-            config('web', 'style'),
-            'paper'
-        )
-        style, mapfile = templater.stylemap(styles, self.templatepath)
+        styles, (style, mapfile) = hgweb_mod.getstyle(req, config,
+                                                      self.templatepath)
         if style == styles[0]:
             vars['style'] = style
 
-        start = url[-1] == '?' and '&' or '?'
+        start = r'&' if url[-1] == r'?' else r'?'
         sessionvars = webutil.sessionvars(vars, start)
-        logourl = config('web', 'logourl', 'https://mercurial-scm.org/')
-        logoimg = config('web', 'logoimg', 'hglogo.png')
+        logourl = config('web', 'logourl')
+        logoimg = config('web', 'logoimg')
         staticurl = config('web', 'staticurl') or url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'

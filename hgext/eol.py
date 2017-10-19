@@ -102,6 +102,7 @@ from mercurial import (
     extensions,
     match,
     pycompat,
+    registrar,
     util,
 )
 
@@ -110,6 +111,19 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('eol', 'fix-trailing-newline',
+    default=False,
+)
+configitem('eol', 'native',
+    default=pycompat.oslinesep,
+)
+configitem('eol', 'only-consistent',
+    default=True,
+)
 
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
@@ -121,9 +135,9 @@ def tolf(s, params, ui, **kwargs):
     """Filter to convert to LF EOLs."""
     if util.binary(s):
         return s
-    if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
+    if ui.configbool('eol', 'only-consistent') and inconsistenteol(s):
         return s
-    if (ui.configbool('eol', 'fix-trailing-newline', False)
+    if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
         s = s + '\n'
     return util.tolf(s)
@@ -132,9 +146,9 @@ def tocrlf(s, params, ui, **kwargs):
     """Filter to convert to CRLF EOLs."""
     if util.binary(s):
         return s
-    if ui.configbool('eol', 'only-consistent', True) and inconsistenteol(s):
+    if ui.configbool('eol', 'only-consistent') and inconsistenteol(s):
         return s
-    if (ui.configbool('eol', 'fix-trailing-newline', False)
+    if (ui.configbool('eol', 'fix-trailing-newline')
         and s and s[-1] != '\n'):
         s = s + '\n'
     return util.tocrlf(s)
@@ -166,7 +180,7 @@ class eolfile(object):
 
         isrepolf = self.cfg.get('repository', 'native') != 'CRLF'
         self._encode['NATIVE'] = isrepolf and 'to-lf' or 'to-crlf'
-        iswdlf = ui.config('eol', 'native', pycompat.oslinesep) in ('LF', '\n')
+        iswdlf = ui.config('eol', 'native') in ('LF', '\n')
         self._decode['NATIVE'] = iswdlf and 'to-lf' or 'to-crlf'
 
         include = []
@@ -230,8 +244,22 @@ def parseeol(ui, repo, nodes):
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return None
 
+def ensureenabled(ui):
+    """make sure the extension is enabled when used as hook
+
+    When eol is used through hooks, the extension is never formally loaded and
+    enabled. This has some side effect, for example the config declaration is
+    never loaded. This function ensure the extension is enabled when running
+    hooks.
+    """
+    if 'eol' in ui._knownconfig:
+        return
+    ui.setconfig('extensions', 'eol', '', source='internal')
+    extensions.loadall(ui, ['eol'])
+
 def _checkhook(ui, repo, node, headsonly):
     # Get revisions to check and touched files at the same time
+    ensureenabled(ui)
     files = set()
     revs = set()
     for rev in xrange(repo[node].rev(), len(repo)):

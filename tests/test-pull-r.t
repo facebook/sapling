@@ -49,6 +49,7 @@ don't show "(+1 heads)" message when pulling closed head
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets 8c900227dd5d:00cfe9073916
   (run 'hg update' to get a working copy)
   $ hg heads -q --closed
   4:00cfe9073916
@@ -121,6 +122,7 @@ We use http because http is better is our racy-est option.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets effea6de0384
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  changeset:   2:effea6de0384

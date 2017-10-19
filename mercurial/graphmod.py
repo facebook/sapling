@@ -172,7 +172,7 @@ def colored(dag, repo):
         yield (cur, type, data, (col, color), edges)
         seen = next
 
-def asciiedges(type, char, lines, state, rev, parents):
+def asciiedges(type, char, state, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
     seen = state['seen']
     if rev not in seen:
@@ -192,6 +192,7 @@ def asciiedges(type, char, lines, state, rev, parents):
             state['edges'][parent] = state['styles'].get(ptype, '|')
 
     ncols = len(seen)
+    width = 1 + ncols * 2
     nextseen = seen[:]
     nextseen[nodeidx:nodeidx + 1] = newparents
     edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
@@ -205,9 +206,9 @@ def asciiedges(type, char, lines, state, rev, parents):
         edges.append((nodeidx, nodeidx))
         edges.append((nodeidx, nodeidx + 1))
         nmorecols = 1
-        yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
+        width += 2
+        yield (type, char, width, (nodeidx, edges, ncols, nmorecols))
         char = '\\'
-        lines = []
         nodeidx += 1
         ncols += 1
         edges = []
@@ -218,9 +219,11 @@ def asciiedges(type, char, lines, state, rev, parents):
     if len(newparents) > 1:
         edges.append((nodeidx, nodeidx + 1))
     nmorecols = len(nextseen) - ncols
+    if nmorecols > 0:
+        width += 2
     # remove current node from edge characters, no longer needed
     state['edges'].pop(rev, None)
-    yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
+    yield (type, char, width, (nodeidx, edges, ncols, nmorecols))
 
 def _fixlongrightedges(edges):
     for (i, (start, end)) in enumerate(edges):

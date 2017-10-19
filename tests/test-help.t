@@ -553,6 +553,7 @@ Test command without options
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
    -U --unified NUM         number of lines of context to show
       --stat                output diffstat-style summary of changes
       --root DIR            produce diffs relative to subdirectory
@@ -1516,8 +1517,8 @@ Test omit indicating for help
   > 
   > This paragraph is never omitted, too (for extension)
   > '''
-  > 
-  > from mercurial import help, commands
+  > from __future__ import absolute_import
+  > from mercurial import commands, help
   > testtopic = """This paragraph is never omitted (for topic).
   > 
   > .. container:: verbose
@@ -1709,7 +1710,7 @@ such str.lower().
 
   $ $PYTHON <<EOF | sh
   > upper = "\x8bL\x98^"
-  > print "hg --encoding cp932 help -e ambiguous.%s" % upper
+  > print("hg --encoding cp932 help -e ambiguous.%s" % upper)
   > EOF
   \x8bL\x98^ (esc)
   ----
@@ -1719,7 +1720,7 @@ such str.lower().
 
   $ $PYTHON <<EOF | sh
   > lower = "\x8bl\x98^"
-  > print "hg --encoding cp932 help -e ambiguous.%s" % lower
+  > print("hg --encoding cp932 help -e ambiguous.%s" % lower)
   > EOF
   \x8bl\x98^ (esc)
   ----

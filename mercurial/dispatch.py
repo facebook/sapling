@@ -35,10 +35,13 @@ from . import (
     hook,
     profiling,
     pycompat,
+    registrar,
     scmutil,
     ui as uimod,
     util,
 )
+
+unrecoverablewrite = registrar.command.unrecoverablewrite
 
 class request(object):
     def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
@@ -75,22 +78,30 @@ class request(object):
 
 def run():
     "run the command in sys.argv"
+    _initstdio()
     req = request(pycompat.sysargv[1:])
     err = None
     try:
         status = (dispatch(req) or 0) & 255
-    except error.StdioError as err:
+    except error.StdioError as e:
+        err = e
         status = -1
     if util.safehasattr(req.ui, 'fout'):
         try:
             req.ui.fout.flush()
-        except IOError as err:
+        except IOError as e:
+            err = e
             status = -1
     if util.safehasattr(req.ui, 'ferr'):
         if err is not None and err.errno != errno.EPIPE:
-            req.ui.ferr.write('abort: %s\n' % err.strerror)
+            req.ui.ferr.write('abort: %s\n' %
+                              encoding.strtolocal(err.strerror))
         req.ui.ferr.flush()
     sys.exit(status & 255)
+
+def _initstdio():
+    for fp in (sys.stdin, sys.stdout, sys.stderr):
+        util.setbinary(fp)
 
 def _getsimilar(symbols, value):
     sim = lambda x: difflib.SequenceMatcher(None, value, x).ratio()
@@ -242,10 +253,10 @@ def _runcatch(req):
         try:
             debugger = 'pdb'
             debugtrace = {
-                'pdb' : pdb.set_trace
+                'pdb': pdb.set_trace
             }
             debugmortem = {
-                'pdb' : pdb.post_mortem
+                'pdb': pdb.post_mortem
             }
 
             # read --config before doing anything else
@@ -356,7 +367,10 @@ def _callcatch(ui, func):
     return -1
 
 def aliasargs(fn, givenargs):
-    args = getattr(fn, 'args', [])
+    args = []
+    # only care about alias 'args', ignore 'args' set by extensions.wrapfunction
+    if not util.safehasattr(fn, '_origfunc'):
+        args = getattr(fn, 'args', args)
     if args:
         cmd = ' '.join(map(util.shellquote, args))
 
@@ -484,7 +498,7 @@ class cmdalias(object):
         return aliasargs(self.fn, args)
 
     def __getattr__(self, name):
-        adefaults = {r'norepo': True,
+        adefaults = {r'norepo': True, r'cmdtype': unrecoverablewrite,
                      r'optionalrepo': False, r'inferrepo': False}
         if name not in adefaults:
             raise AttributeError(name)
@@ -519,23 +533,52 @@ class cmdalias(object):
                 ui.debug("alias '%s' expands to '%s'\n" % (self.name, args))
                 raise
 
+class lazyaliasentry(object):
+    """like a typical command entry (func, opts, help), but is lazy"""
+
+    def __init__(self, name, definition, cmdtable, source):
+        self.name = name
+        self.definition = definition
+        self.cmdtable = cmdtable.copy()
+        self.source = source
+
+    @util.propertycache
+    def _aliasdef(self):
+        return cmdalias(self.name, self.definition, self.cmdtable, self.source)
+
+    def __getitem__(self, n):
+        aliasdef = self._aliasdef
+        if n == 0:
+            return aliasdef
+        elif n == 1:
+            return aliasdef.opts
+        elif n == 2:
+            return aliasdef.help
+        else:
+            raise IndexError
+
+    def __iter__(self):
+        for i in range(3):
+            yield self[i]
+
+    def __len__(self):
+        return 3
+
 def addaliases(ui, cmdtable):
     # aliases are processed after extensions have been loaded, so they
     # may use extension commands. Aliases can also use other alias definitions,
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
-        source = ui.configsource('alias', alias)
-        aliasdef = cmdalias(alias, definition, cmdtable, source)
-
         try:
-            olddef = cmdtable[aliasdef.cmd][0]
-            if olddef.definition == aliasdef.definition:
+            if cmdtable[alias].definition == definition:
                 continue
         except (KeyError, AttributeError):
             # definition might not exist or it might not be a cmdalias
             pass
 
-        cmdtable[aliasdef.name] = (aliasdef, aliasdef.opts, aliasdef.help)
+        source = ui.configsource('alias', alias)
+        entry = lazyaliasentry(alias, definition, cmdtable, source)
+        cmdtable[alias] = entry
 
 def _parse(ui, args):
     options = {}
@@ -603,20 +646,20 @@ def _earlygetopt(aliases, args):
     The values are listed in the order they appear in args.
     The options and values are removed from args.
 
-    >>> args = ['x', '--cwd', 'foo', 'y']
-    >>> _earlygetopt(['--cwd'], args), args
+    >>> args = [b'x', b'--cwd', b'foo', b'y']
+    >>> _earlygetopt([b'--cwd'], args), args
     (['foo'], ['x', 'y'])
 
-    >>> args = ['x', '--cwd=bar', 'y']
-    >>> _earlygetopt(['--cwd'], args), args
+    >>> args = [b'x', b'--cwd=bar', b'y']
+    >>> _earlygetopt([b'--cwd'], args), args
     (['bar'], ['x', 'y'])
 
-    >>> args = ['x', '-R', 'foo', 'y']
-    >>> _earlygetopt(['-R'], args), args
+    >>> args = [b'x', b'-R', b'foo', b'y']
+    >>> _earlygetopt([b'-R'], args), args
     (['foo'], ['x', 'y'])
 
-    >>> args = ['x', '-Rbar', 'y']
-    >>> _earlygetopt(['-R'], args), args
+    >>> args = [b'x', b'-Rbar', b'y']
+    >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
     """
     try:
@@ -676,7 +719,7 @@ def _getlocal(ui, rpath, wd=None):
             wd = pycompat.getcwd()
         except OSError as e:
             raise error.Abort(_("error getting current working directory: %s") %
-                              e.strerror)
+                              encoding.strtolocal(e.strerror))
     path = cmdutil.findrepo(wd) or ""
     if not path:
         lui = ui
@@ -831,7 +874,8 @@ def _dispatch(req):
             # ui.pager() expects 'internal-always-' prefix in this case
             ui.pager('internal-always-' + cmd)
         elif options['pager'] != 'auto':
-            ui.disablepager()
+            for ui_ in uis:
+                ui_.disablepager()
 
         if options['version']:
             return commands.version_(ui)

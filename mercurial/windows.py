@@ -137,7 +137,8 @@ def posixfile(name, mode='r', buffering=-1):
         return fp
     except WindowsError as err:
         # convert to a friendlier exception
-        raise IOError(err.errno, '%s: %s' % (name, err.strerror))
+        raise IOError(err.errno, '%s: %s' % (
+            name, encoding.strtolocal(err.strerror)))
 
 # may be wrapped by win32mbcs extension
 listdir = osutil.listdir
@@ -266,15 +267,15 @@ _quotere = None
 _needsshellquote = None
 def shellquote(s):
     r"""
-    >>> shellquote(r'C:\Users\xyz')
+    >>> shellquote(br'C:\Users\xyz')
     '"C:\\Users\\xyz"'
-    >>> shellquote(r'C:\Users\xyz/mixed')
+    >>> shellquote(br'C:\Users\xyz/mixed')
     '"C:\\Users\\xyz/mixed"'
     >>> # Would be safe not to quote too, since it is all double backslashes
-    >>> shellquote(r'C:\\Users\\xyz')
+    >>> shellquote(br'C:\\Users\\xyz')
     '"C:\\\\Users\\\\xyz"'
     >>> # But this must be quoted
-    >>> shellquote(r'C:\\Users\\xyz/abc')
+    >>> shellquote(br'C:\\Users\\xyz/abc')
     '"C:\\\\Users\\\\xyz/abc"'
     """
     global _quotere

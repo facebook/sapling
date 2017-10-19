@@ -6,18 +6,18 @@ from mercurial import (
     ui as uimod,
 )
 
-ignore = {'highlight', 'win32text', 'factotum'}
+ignore = {b'highlight', b'win32text', b'factotum'}
 
 if os.name != 'nt':
-    ignore.add('win32mbcs')
+    ignore.add(b'win32mbcs')
 
 disabled = [ext for ext in extensions.disabled().keys() if ext not in ignore]
 
-hgrc = open(os.environ["HGRCPATH"], 'w')
-hgrc.write('[extensions]\n')
+hgrc = open(os.environ["HGRCPATH"], 'wb')
+hgrc.write(b'[extensions]\n')
 
 for ext in disabled:
-    hgrc.write(ext + '=\n')
+    hgrc.write(ext + b'=\n')
 
 hgrc.close()
 
@@ -30,7 +30,7 @@ for option in commands.globalopts:
     option[0] and globalshort.add(option[0])
     option[1] and globallong.add(option[1])
 
-for cmd, entry in commands.table.iteritems():
+for cmd, entry in commands.table.items():
     seenshort = globalshort.copy()
     seenlong = globallong.copy()
     for option in entry[1]:

@@ -8,7 +8,7 @@ A script to generate nasty diff worst-case scenarios:
   >     print
   >     if random.randint(0, 100) >= 50:
   >         x += 1
-  >     print hex(x)
+  >     print(hex(x))
   > EOF
 
   $ hg init a

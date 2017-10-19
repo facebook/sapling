@@ -28,6 +28,103 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('convert', 'cvsps.cache',
+    default=True,
+)
+configitem('convert', 'cvsps.fuzz',
+    default=60,
+)
+configitem('convert', 'cvsps.logencoding',
+    default=None,
+)
+configitem('convert', 'cvsps.mergefrom',
+    default=None,
+)
+configitem('convert', 'cvsps.mergeto',
+    default=None,
+)
+configitem('convert', 'git.committeractions',
+    default=lambda: ['messagedifferent'],
+)
+configitem('convert', 'git.extrakeys',
+    default=list,
+)
+configitem('convert', 'git.findcopiesharder',
+    default=False,
+)
+configitem('convert', 'git.remoteprefix',
+    default='remote',
+)
+configitem('convert', 'git.renamelimit',
+    default=400,
+)
+configitem('convert', 'git.saverev',
+    default=True,
+)
+configitem('convert', 'git.similarity',
+    default=50,
+)
+configitem('convert', 'git.skipsubmodules',
+    default=False,
+)
+configitem('convert', 'hg.clonebranches',
+    default=False,
+)
+configitem('convert', 'hg.ignoreerrors',
+    default=False,
+)
+configitem('convert', 'hg.revs',
+    default=None,
+)
+configitem('convert', 'hg.saverev',
+    default=False,
+)
+configitem('convert', 'hg.sourcename',
+    default=None,
+)
+configitem('convert', 'hg.startrev',
+    default=None,
+)
+configitem('convert', 'hg.tagsbranch',
+    default='default',
+)
+configitem('convert', 'hg.usebranchnames',
+    default=True,
+)
+configitem('convert', 'ignoreancestorcheck',
+    default=False,
+)
+configitem('convert', 'localtimezone',
+    default=False,
+)
+configitem('convert', 'p4.encoding',
+    default=lambda: convcmd.orig_encoding,
+)
+configitem('convert', 'p4.startrev',
+    default=0,
+)
+configitem('convert', 'skiptags',
+    default=False,
+)
+configitem('convert', 'svn.debugsvnlog',
+    default=True,
+)
+configitem('convert', 'svn.trunk',
+    default=None,
+)
+configitem('convert', 'svn.tags',
+    default=None,
+)
+configitem('convert', 'svn.branches',
+    default=None,
+)
+configitem('convert', 'svn.startrev',
+    default=0,
+)
+
 # Commands definition was moved elsewhere to ease demandload job.
 
 @command('convert',

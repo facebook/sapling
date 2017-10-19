@@ -186,8 +186,7 @@ def _hostsettings(ui, hostname):
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
-    fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname,
-                                 [])
+    fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname)
     for fingerprint in fingerprints:
         if not (fingerprint.startswith(('sha1:', 'sha256:', 'sha512:'))):
             raise error.Abort(_('invalid fingerprint for %s: %s') % (
@@ -200,7 +199,7 @@ def _hostsettings(ui, hostname):
         s['certfingerprints'].append((alg, fingerprint))
 
     # Fingerprints from [hostfingerprints] are always SHA-1.
-    for fingerprint in ui.configlist('hostfingerprints', hostname, []):
+    for fingerprint in ui.configlist('hostfingerprints', hostname):
         fingerprint = fingerprint.replace(':', '').lower()
         s['certfingerprints'].append(('sha1', fingerprint))
         s['legacyfingerprint'] = True
@@ -477,7 +476,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                         'for more info)\n'))
 
             elif (e.reason == 'CERTIFICATE_VERIFY_FAILED' and
-                pycompat.osname == 'nt'):
+                pycompat.iswindows):
 
                 ui.warn(_('(the full certificate chain may not be available '
                           'locally; see "hg help debugssl")\n'))
@@ -677,8 +676,8 @@ def _plainapplepython():
       for using system certificate store CAs in addition to the provided
       cacerts file
     """
-    if (pycompat.sysplatform != 'darwin' or
-                        util.mainfrozen() or not pycompat.sysexecutable):
+    if (not pycompat.isdarwin or util.mainfrozen() or
+        not pycompat.sysexecutable):
         return False
     exe = os.path.realpath(pycompat.sysexecutable).lower()
     return (exe.startswith('/usr/bin/python') or
@@ -717,7 +716,7 @@ def _defaultcacerts(ui):
     # because we'll get a certificate verification error later and the lack
     # of loaded CA certificates will be the reason why.
     # Assertion: this code is only called if certificates are being verified.
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         if not _canloaddefaultcerts:
             ui.warn(_('(unable to load Windows CA certificates; see '
                       'https://mercurial-scm.org/wiki/SecureConnections for '
@@ -736,7 +735,7 @@ def _defaultcacerts(ui):
 
     # The Apple OpenSSL trick isn't available to us. If Python isn't able to
     # load system certs, we're out of luck.
-    if pycompat.sysplatform == 'darwin':
+    if pycompat.isdarwin:
         # FUTURE Consider looking for Homebrew or MacPorts installed certs
         # files. Also consider exporting the keychain certs to a file during
         # Mercurial install.
@@ -749,7 +748,7 @@ def _defaultcacerts(ui):
     # / is writable on Windows. Out of an abundance of caution make sure
     # we're not on Windows because paths from _systemcacerts could be installed
     # by non-admin users.
-    assert pycompat.osname != 'nt'
+    assert not pycompat.iswindows
 
     # Try to find CA certificates in well-known locations. We print a warning
     # when using a found file because we don't want too much silent magic

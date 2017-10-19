@@ -134,7 +134,7 @@ def state(ctx, ui):
             # However, we still want to allow back references to go
             # through unharmed, so we turn r'\\1' into r'\1'. Again,
             # extra escapes are needed because re.sub string decodes.
-            repl = re.sub(r'\\\\([0-9]+)', r'\\\1', repl)
+            repl = re.sub(br'\\\\([0-9]+)', br'\\\1', repl)
             try:
                 src = re.sub(pattern, repl, src, 1)
             except re.error as e:
@@ -600,7 +600,6 @@ class abstractsubrepo(object):
         walk recursively through the directory tree, finding all files
         matched by the match function
         '''
-        pass
 
     def forget(self, match, prefix):
         return ([], [])
@@ -621,6 +620,11 @@ class abstractsubrepo(object):
 
     def shortid(self, revid):
         return revid
+
+    def unshare(self):
+        '''
+        convert this repository from shared to normal storage.
+        '''
 
     def verify(self):
         '''verify the integrity of the repository.  Return 0 on success or
@@ -858,21 +862,32 @@ class hgsubrepo(abstractsubrepo):
 
     def _get(self, state):
         source, revision, kind = state
+        parentrepo = self._repo._subparent
+
         if revision in self._repo.unfiltered():
-            return True
+            # Allow shared subrepos tracked at null to setup the sharedpath
+            if len(self._repo) != 0 or not parentrepo.shared():
+                return True
         self._repo._subsource = source
         srcurl = _abssource(self._repo)
         other = hg.peer(self._repo, {}, srcurl)
         if len(self._repo) == 0:
-            self.ui.status(_('cloning subrepo %s from %s\n')
-                           % (subrelpath(self), srcurl))
-            parentrepo = self._repo._subparent
             # use self._repo.vfs instead of self.wvfs to remove .hg only
             self._repo.vfs.rmtree()
-            other, cloned = hg.clone(self._repo._subparent.baseui, {},
-                                     other, self._repo.root,
-                                     update=False)
-            self._repo = cloned.local()
+            if parentrepo.shared():
+                self.ui.status(_('sharing subrepo %s from %s\n')
+                               % (subrelpath(self), srcurl))
+                shared = hg.share(self._repo._subparent.baseui,
+                                  other, self._repo.root,
+                                  update=False, bookmarks=False)
+                self._repo = shared.local()
+            else:
+                self.ui.status(_('cloning subrepo %s from %s\n')
+                               % (subrelpath(self), srcurl))
+                other, cloned = hg.clone(self._repo._subparent.baseui, {},
+                                         other, self._repo.root,
+                                         update=False)
+                self._repo = cloned.local()
             self._initrepo(parentrepo, source, create=True)
             self._cachestorehash(srcurl)
         else:
@@ -1073,6 +1088,24 @@ class hgsubrepo(abstractsubrepo):
     def shortid(self, revid):
         return revid[:12]
 
+    @annotatesubrepoerror
+    def unshare(self):
+        # subrepo inherently violates our import layering rules
+        # because it wants to make repo objects from deep inside the stack
+        # so we manually delay the circular imports to not break
+        # scripts that don't use our demand-loading
+        global hg
+        from . import hg as h
+        hg = h
+
+        # Nothing prevents a user from sharing in a repo, and then making that a
+        # subrepo.  Alternately, the previous unshare attempt may have failed
+        # part way through.  So recurse whether or not this layer is shared.
+        if self._repo.shared():
+            self.ui.status(_("unsharing subrepo '%s'\n") % self._relpath)
+
+        hg.unshare(self.ui, self._repo)
+
     def verify(self):
         try:
             rev = self._state[1]
@@ -1154,7 +1187,7 @@ class svnsubrepo(abstractsubrepo):
     @propertycache
     def _svnversion(self):
         output, err = self._svncommand(['--version', '--quiet'], filename=None)
-        m = re.search(r'^(\d+)\.(\d+)', output)
+        m = re.search(br'^(\d+)\.(\d+)', output)
         if not m:
             raise error.Abort(_('cannot retrieve svn tool version'))
         return (int(m.group(1)), int(m.group(2)))
@@ -1346,8 +1379,9 @@ class gitsubrepo(abstractsubrepo):
             genericerror = _("error executing git for subrepo '%s': %s")
             notfoundhint = _("check git is installed and in your PATH")
             if e.errno != errno.ENOENT:
-                raise error.Abort(genericerror % (self._path, e.strerror))
-            elif pycompat.osname == 'nt':
+                raise error.Abort(genericerror % (
+                    self._path, encoding.strtolocal(e.strerror)))
+            elif pycompat.iswindows:
                 try:
                     self._gitexecutable = 'git.cmd'
                     out, err = self._gitnodir(['--version'])
@@ -1358,7 +1392,7 @@ class gitsubrepo(abstractsubrepo):
                             hint=notfoundhint)
                     else:
                         raise error.Abort(genericerror % (self._path,
-                            e2.strerror))
+                            encoding.strtolocal(e2.strerror)))
             else:
                 raise error.Abort(_("couldn't find git for subrepo '%s'")
                     % self._path, hint=notfoundhint)
@@ -1372,11 +1406,11 @@ class gitsubrepo(abstractsubrepo):
 
     @staticmethod
     def _gitversion(out):
-        m = re.search(r'^git version (\d+)\.(\d+)\.(\d+)', out)
+        m = re.search(br'^git version (\d+)\.(\d+)\.(\d+)', out)
         if m:
             return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
 
-        m = re.search(r'^git version (\d+)\.(\d+)', out)
+        m = re.search(br'^git version (\d+)\.(\d+)', out)
         if m:
             return (int(m.group(1)), int(m.group(2)), 0)
 
@@ -1387,23 +1421,23 @@ class gitsubrepo(abstractsubrepo):
         '''ensure git version is new enough
 
         >>> _checkversion = gitsubrepo._checkversion
-        >>> _checkversion('git version 1.6.0')
+        >>> _checkversion(b'git version 1.6.0')
         'ok'
-        >>> _checkversion('git version 1.8.5')
+        >>> _checkversion(b'git version 1.8.5')
         'ok'
-        >>> _checkversion('git version 1.4.0')
+        >>> _checkversion(b'git version 1.4.0')
         'abort'
-        >>> _checkversion('git version 1.5.0')
+        >>> _checkversion(b'git version 1.5.0')
         'warning'
-        >>> _checkversion('git version 1.9-rc0')
+        >>> _checkversion(b'git version 1.9-rc0')
         'ok'
-        >>> _checkversion('git version 1.9.0.265.g81cdec2')
+        >>> _checkversion(b'git version 1.9.0.265.g81cdec2')
         'ok'
-        >>> _checkversion('git version 1.9.0.GIT')
+        >>> _checkversion(b'git version 1.9.0.GIT')
         'ok'
-        >>> _checkversion('git version 12345')
+        >>> _checkversion(b'git version 12345')
         'unknown'
-        >>> _checkversion('no')
+        >>> _checkversion(b'no')
         'unknown'
         '''
         version = gitsubrepo._gitversion(out)

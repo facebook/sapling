@@ -1111,6 +1111,7 @@ test import rev as raw-rev
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 0cd96de13884
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd test1

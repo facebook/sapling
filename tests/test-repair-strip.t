@@ -4,7 +4,7 @@
   > import sys
   > for entry in sys.stdin.read().split('\n'):
   >     if entry:
-  >         print entry.split('\x00')[0]
+  >         print(entry.split('\x00')[0])
   > EOF
 
   $ echo "[extensions]" >> $HGRCPATH

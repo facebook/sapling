@@ -83,6 +83,7 @@ export PYTHONPATH=$PWD/%{docutilsname}
 %endif
 
 make all
+make -C contrib/chg
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -111,6 +112,7 @@ make install DESTDIR=$RPM_BUILD_ROOT PREFIX=%{_prefix} MANDIR=%{_mandir}
 
 %endif
 
+install -m 755 contrib/chg/chg $RPM_BUILD_ROOT%{_bindir}/
 install -m 755 contrib/hgk $RPM_BUILD_ROOT%{_bindir}/
 install -m 755 contrib/hg-ssh $RPM_BUILD_ROOT%{_bindir}/
 
@@ -143,6 +145,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/emacs/site-lisp/mercurial.el
 %{_datadir}/emacs/site-lisp/mq.el
 %{_bindir}/hg
+%{_bindir}/chg
 %{_bindir}/hgk
 %{_bindir}/hg-ssh
 %dir %{_sysconfdir}/bash_completion.d/

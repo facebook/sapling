@@ -21,7 +21,6 @@ from .node import (
 
 from . import (
     dagutil,
-    discovery,
     error,
     mdiff,
     phases,
@@ -189,8 +188,7 @@ class cg1unpacker(object):
         header = struct.unpack(self.deltaheader, headerdata)
         delta = readexactly(self._stream, l - self.deltaheadersize)
         node, p1, p2, deltabase, cs, flags = self._deltaheader(header, prevnode)
-        return {'node': node, 'p1': p1, 'p2': p2, 'cs': cs,
-                'deltabase': deltabase, 'delta': delta, 'flags': flags}
+        return (node, p1, p2, cs, deltabase, delta, flags)
 
     def getchunks(self):
         """returns all the chunks contains in the bundle
@@ -199,23 +197,36 @@ class cg1unpacker(object):
         network API. To do so, it parse the changegroup data, otherwise it will
         block in case of sshrepo because it don't know the end of the stream.
         """
-        # an empty chunkgroup is the end of the changegroup
-        # a changegroup has at least 2 chunkgroups (changelog and manifest).
-        # after that, changegroup versions 1 and 2 have a series of groups
-        # with one group per file. changegroup 3 has a series of directory
-        # manifests before the files.
-        count = 0
-        emptycount = 0
-        while emptycount < self._grouplistcount:
-            empty = True
-            count += 1
+        # For changegroup 1 and 2, we expect 3 parts: changelog, manifestlog,
+        # and a list of filelogs. For changegroup 3, we expect 4 parts:
+        # changelog, manifestlog, a list of tree manifestlogs, and a list of
+        # filelogs.
+        #
+        # Changelog and manifestlog parts are terminated with empty chunks. The
+        # tree and file parts are a list of entry sections. Each entry section
+        # is a series of chunks terminating in an empty chunk. The list of these
+        # entry sections is terminated in yet another empty chunk, so we know
+        # we've reached the end of the tree/file list when we reach an empty
+        # chunk that was proceeded by no non-empty chunks.
+
+        parts = 0
+        while parts < 2 + self._grouplistcount:
+            noentries = True
             while True:
                 chunk = getchunk(self)
                 if not chunk:
-                    if empty and count > 2:
-                        emptycount += 1
+                    # The first two empty chunks represent the end of the
+                    # changelog and the manifestlog portions. The remaining
+                    # empty chunks represent either A) the end of individual
+                    # tree or file entries in the file list, or B) the end of
+                    # the entire list. It's the end of the entire list if there
+                    # were no entries (i.e. noentries is True).
+                    if parts < 2:
+                        parts += 1
+                    elif noentries:
+                        parts += 1
                     break
-                empty = False
+                noentries = False
                 yield chunkheader(len(chunk))
                 pos = 0
                 while pos < len(chunk):
@@ -233,7 +244,8 @@ class cg1unpacker(object):
         # no new manifest will be created and the manifest group will
         # be empty during the pull
         self.manifestheader()
-        repo.manifestlog._revlog.addgroup(self, revmap, trp)
+        deltas = self.deltaiter()
+        repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
         repo.ui.progress(_('manifests'), None)
         self.callback = None
 
@@ -266,7 +278,8 @@ class cg1unpacker(object):
             # in this function.
             srctype = tr.hookargs.setdefault('source', srctype)
             url = tr.hookargs.setdefault('url', url)
-            repo.hook('prechangegroup', throw=True, **tr.hookargs)
+            repo.hook('prechangegroup',
+                      throw=True, **pycompat.strkwargs(tr.hookargs))
 
             # write changelog data to temp files so concurrent readers
             # will not see an inconsistent view
@@ -294,12 +307,13 @@ class cg1unpacker(object):
                 efiles.update(cl.readfiles(node))
 
             self.changelogheader()
-            cgnodes = cl.addgroup(self, csmap, trp, addrevisioncb=onchangelog)
+            deltas = self.deltaiter()
+            cgnodes = cl.addgroup(deltas, csmap, trp, addrevisioncb=onchangelog)
             efiles = len(efiles)
 
             if not cgnodes:
                 repo.ui.develwarn('applied empty changegroup',
-                                  config='empty-changegroup')
+                                  config='warn-empty-changegroup')
             clend = len(cl)
             changesets = clend - clstart
             repo.ui.progress(_('changesets'), None)
@@ -353,7 +367,8 @@ class cg1unpacker(object):
                     hookargs = dict(tr.hookargs)
                     hookargs['node'] = hex(cl.node(clstart))
                     hookargs['node_last'] = hex(cl.node(clend - 1))
-                repo.hook('pretxnchangegroup', throw=True, **hookargs)
+                repo.hook('pretxnchangegroup',
+                          throw=True, **pycompat.strkwargs(hookargs))
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
             phaseall = None
@@ -388,13 +403,13 @@ class cg1unpacker(object):
                     if clstart >= len(repo):
                         return
 
-                    repo.hook("changegroup", **hookargs)
+                    repo.hook("changegroup", **pycompat.strkwargs(hookargs))
 
                     for n in added:
                         args = hookargs.copy()
                         args['node'] = hex(n)
                         del args['node_last']
-                        repo.hook("incoming", **args)
+                        repo.hook("incoming", **pycompat.strkwargs(args))
 
                     newheads = [h for h in repo.heads()
                                 if h not in oldheads]
@@ -413,6 +428,18 @@ class cg1unpacker(object):
         else:
             ret = deltaheads + 1
         return ret
+
+    def deltaiter(self):
+        """
+        returns an iterator of the deltas in this changegroup
+
+        Useful for passing to the underlying storage system to be stored.
+        """
+        chain = None
+        for chunkdata in iter(lambda: self.deltachunk(chain), {}):
+            # Chunkdata: (node, p1, p2, cs, deltabase, delta, flags)
+            yield chunkdata
+            chain = chunkdata[0]
 
 class cg2unpacker(cg1unpacker):
     """Unpacker for cg2 streams.
@@ -454,7 +481,8 @@ class cg3unpacker(cg2unpacker):
             d = chunkdata["filename"]
             repo.ui.debug("adding %s revisions\n" % d)
             dirlog = repo.manifestlog._revlog.dirlog(d)
-            if not dirlog.addgroup(self, revmap, trp):
+            deltas = self.deltaiter()
+            if not dirlog.addgroup(deltas, revmap, trp):
                 raise error.Abort(_("received dir revlog group is empty"))
 
 class headerlessfixup(object):
@@ -624,7 +652,7 @@ class cg1packer(object):
             'treemanifest' not in repo.requirements)
 
         for chunk in self.generatemanifests(commonrevs, clrevorder,
-                fastpathlinkrev, mfs, fnodes):
+                fastpathlinkrev, mfs, fnodes, source):
             yield chunk
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
@@ -650,7 +678,12 @@ class cg1packer(object):
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
-                          fnodes):
+                          fnodes, source):
+        """Returns an iterator of changegroup chunks containing manifests.
+
+        `source` is unused here, but is used by extensions like remotefilelog to
+        change what is sent based in pulls vs pushes, etc.
+        """
         repo = self._repo
         mfl = repo.manifestlog
         dirlog = mfl._revlog.dirlog
@@ -902,7 +935,17 @@ def _changegroupinfo(repo, nodes, source):
         for node in nodes:
             repo.ui.debug("%s\n" % hex(node))
 
-def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
+def makechangegroup(repo, outgoing, version, source, fastpath=False,
+                    bundlecaps=None):
+    cgstream = makestream(repo, outgoing, version, source,
+                          fastpath=fastpath, bundlecaps=bundlecaps)
+    return getunbundler(version, util.chunkbuffer(cgstream), None,
+                        {'clcount': len(outgoing.missing) })
+
+def makestream(repo, outgoing, version, source, fastpath=False,
+               bundlecaps=None):
+    bundler = getbundler(version, repo, bundlecaps=bundlecaps)
+
     repo = repo.unfiltered()
     commonrevs = outgoing.common
     csets = outgoing.missing
@@ -918,59 +961,6 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def getsubset(repo, outgoing, bundler, source, fastpath=False):
-    gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return getunbundler(bundler.version, util.chunkbuffer(gengroup), None,
-                        {'clcount': len(outgoing.missing)})
-
-def changegroupsubset(repo, roots, heads, source, version='01'):
-    """Compute a changegroup consisting of all the nodes that are
-    descendants of any of the roots and ancestors of any of the heads.
-    Return a chunkbuffer object whose read() method will return
-    successive changegroup chunks.
-
-    It is fairly complex as determining which filenodes and which
-    manifest nodes need to be included for the changeset to be complete
-    is non-trivial.
-
-    Another wrinkle is doing the reverse, figuring out which changeset in
-    the changegroup a particular filenode or manifestnode belongs to.
-    """
-    outgoing = discovery.outgoing(repo, missingroots=roots, missingheads=heads)
-    bundler = getbundler(version, repo)
-    return getsubset(repo, outgoing, bundler, source)
-
-def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
-                           version='01'):
-    """Like getbundle, but taking a discovery.outgoing as an argument.
-
-    This is only implemented for local repos and reuses potentially
-    precomputed sets in outgoing. Returns a raw changegroup generator."""
-    if not outgoing.missing:
-        return None
-    bundler = getbundler(version, repo, bundlecaps)
-    return getsubsetraw(repo, outgoing, bundler, source)
-
-def getchangegroup(repo, source, outgoing, bundlecaps=None,
-                   version='01'):
-    """Like getbundle, but taking a discovery.outgoing as an argument.
-
-    This is only implemented for local repos and reuses potentially
-    precomputed sets in outgoing."""
-    if not outgoing.missing:
-        return None
-    bundler = getbundler(version, repo, bundlecaps)
-    return getsubset(repo, outgoing, bundler, source)
-
-def getlocalchangegroup(repo, *args, **kwargs):
-    repo.ui.deprecwarn('getlocalchangegroup is deprecated, use getchangegroup',
-                       '4.3')
-    return getchangegroup(repo, *args, **kwargs)
-
-def changegroup(repo, basenodes, source):
-    # to avoid a race we use changegroupsubset() (issue1320)
-    return changegroupsubset(repo, basenodes, repo.heads(), source)
-
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0
@@ -983,7 +973,8 @@ def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
         fl = repo.file(f)
         o = len(fl)
         try:
-            if not fl.addgroup(source, revmap, trp):
+            deltas = source.deltaiter()
+            if not fl.addgroup(deltas, revmap, trp):
                 raise error.Abort(_("received file revlog group is empty"))
         except error.CensoredBaseError as e:
             raise error.Abort(_("received delta base is censored: %s") % e)

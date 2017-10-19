@@ -47,9 +47,9 @@ sha1re = re.compile(r'\b[0-9a-f]{12,40}\b')
 class mercurial_sink(common.converter_sink):
     def __init__(self, ui, path):
         common.converter_sink.__init__(self, ui, path)
-        self.branchnames = ui.configbool('convert', 'hg.usebranchnames', True)
-        self.clonebranches = ui.configbool('convert', 'hg.clonebranches', False)
-        self.tagsbranch = ui.config('convert', 'hg.tagsbranch', 'default')
+        self.branchnames = ui.configbool('convert', 'hg.usebranchnames')
+        self.clonebranches = ui.configbool('convert', 'hg.clonebranches')
+        self.tagsbranch = ui.config('convert', 'hg.tagsbranch')
         self.lastbranch = None
         if os.path.isdir(path) and len(os.listdir(path)) > 0:
             try:
@@ -446,9 +446,9 @@ class mercurial_sink(common.converter_sink):
 class mercurial_source(common.converter_source):
     def __init__(self, ui, path, revs=None):
         common.converter_source.__init__(self, ui, path, revs)
-        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
+        self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors')
         self.ignored = set()
-        self.saverev = ui.configbool('convert', 'hg.saverev', False)
+        self.saverev = ui.configbool('convert', 'hg.saverev')
         try:
             self.repo = hg.repository(self.ui, path)
             # try to provoke an exception if this isn't really a hg

@@ -47,6 +47,7 @@ Try cloning -r branch:
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:ae3d9c30ec50
   updating to branch br
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -66,6 +67,7 @@ Try cloning -rother clone#branch:
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:ae3d9c30ec50
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -83,6 +85,7 @@ Try cloning -r1 clone#branch:
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:ae3d9c30ec50
   updating to branch br
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

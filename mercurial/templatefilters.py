@@ -7,18 +7,19 @@
 
 from __future__ import absolute_import
 
-import cgi
 import os
 import re
 import time
 
 from . import (
     encoding,
+    error,
     hbisect,
     node,
     pycompat,
     registrar,
     templatekw,
+    url,
     util,
 )
 
@@ -128,7 +129,7 @@ def escape(text):
     """Any text. Replaces the special XML/XHTML characters "&", "<"
     and ">" with XML entities, and filters out NUL characters.
     """
-    return cgi.escape(text.replace('\0', ''), True)
+    return url.escape(text.replace('\0', ''), True)
 
 para_re = None
 space_re = None
@@ -233,6 +234,13 @@ def json(obj, paranoid=True):
         return pycompat.bytestr(obj)
     elif isinstance(obj, bytes):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)
+    elif isinstance(obj, str):
+        # This branch is unreachable on Python 2, because bytes == str
+        # and we'll return in the next-earlier block in the elif
+        # ladder. On Python 3, this helps us catch bugs before they
+        # hurt someone.
+        raise error.ProgrammingError(
+            'Mercurial only does output with bytes on Python 3: %r' % obj)
     elif util.safehasattr(obj, 'keys'):
         out = ['"%s": %s' % (encoding.jsonescape(k, paranoid=paranoid),
                              json(v, paranoid))
@@ -275,19 +283,19 @@ def person(author):
     """Any text. Returns the name before an email address,
     interpreting it as per RFC 5322.
 
-    >>> person('foo@bar')
+    >>> person(b'foo@bar')
     'foo'
-    >>> person('Foo Bar <foo@bar>')
+    >>> person(b'Foo Bar <foo@bar>')
     'Foo Bar'
-    >>> person('"Foo Bar" <foo@bar>')
+    >>> person(b'"Foo Bar" <foo@bar>')
     'Foo Bar'
-    >>> person('"Foo \"buz\" Bar" <foo@bar>')
+    >>> person(b'"Foo \"buz\" Bar" <foo@bar>')
     'Foo "buz" Bar'
     >>> # The following are invalid, but do exist in real-life
     ...
-    >>> person('Foo "buz" Bar <foo@bar>')
+    >>> person(b'Foo "buz" Bar <foo@bar>')
     'Foo "buz" Bar'
-    >>> person('"Foo Bar <foo@bar>')
+    >>> person(b'"Foo Bar <foo@bar>')
     'Foo Bar'
     """
     if '@' not in author:

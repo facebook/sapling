@@ -178,3 +178,14 @@ for i in [b'1', b'2', b'3']:
             print('data mismatch')
     except Exception as ex:
         print('cannot read data: %r' % ex)
+
+with repo.wlock(), repo.lock(), repo.transaction('test'):
+    with open(b'4', 'wb') as f:
+        f.write(b'4')
+    repo.dirstate.normal('4')
+    repo.commit('4')
+    revsbefore = len(repo.changelog)
+    repo.invalidate(clearfilecache=True)
+    revsafter = len(repo.changelog)
+    if revsbefore != revsafter:
+        print('changeset lost by repo.invalidate()')

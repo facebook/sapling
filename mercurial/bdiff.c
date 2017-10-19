@@ -9,17 +9,17 @@
  Based roughly on Python difflib
 */
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
-#include "compat.h"
-#include "bitmanipulation.h"
 #include "bdiff.h"
+#include "bitmanipulation.h"
+#include "compat.h"
 
 /* Hash implementation from diffutils */
 #define ROL(v, n) ((v) << (n) | (v) >> (sizeof(v) * CHAR_BIT - (n)))
-#define HASH(h, c) ((c) + ROL(h ,7))
+#define HASH(h, c) ((c) + ROL(h, 7))
 
 struct pos {
 	int pos, len;
@@ -30,7 +30,7 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 	unsigned hash;
 	int i;
 	const char *p, *b = a;
-	const char * const plast = a + len - 1;
+	const char *const plast = a + len - 1;
 	struct bdiff_line *l;
 
 	/* count the lines */
@@ -79,11 +79,12 @@ int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 
 static inline int cmp(struct bdiff_line *a, struct bdiff_line *b)
 {
-	return a->hash != b->hash || a->len != b->len || memcmp(a->l, b->l, a->len);
+	return a->hash != b->hash || a->len != b->len ||
+	       memcmp(a->l, b->l, a->len);
 }
 
 static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
-	int bn)
+                       int bn)
 {
 	int i, j, buckets = 1, t, scale;
 	struct pos *h = NULL;
@@ -149,8 +150,8 @@ static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
 }
 
 static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
-			struct pos *pos,
-			 int a1, int a2, int b1, int b2, int *omi, int *omj)
+                         struct pos *pos, int a1, int a2, int b1, int b2,
+                         int *omi, int *omj)
 {
 	int mi = a1, mj = b1, mk = 0, i, j, k, half, bhalf;
 
@@ -211,8 +212,7 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 	}
 
 	/* expand match to include subsequent popular lines */
-	while (mi + mk < a2 && mj + mk < b2 &&
-	       a[mi + mk].e == b[mj + mk].e)
+	while (mi + mk < a2 && mj + mk < b2 && a[mi + mk].e == b[mj + mk].e)
 		mk++;
 
 	*omi = mi;
@@ -222,8 +222,8 @@ static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
 }
 
 static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
-				struct pos *pos,
-			    int a1, int a2, int b1, int b2, struct bdiff_hunk *l)
+                                  struct pos *pos, int a1, int a2, int b1,
+                                  int b2, struct bdiff_hunk *l)
 {
 	int i, j, k;
 
@@ -238,7 +238,8 @@ static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
 		if (!l)
 			return NULL;
 
-		l->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
+		l->next =
+		    (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!l->next)
 			return NULL;
 
@@ -255,8 +256,8 @@ static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
 	}
 }
 
-int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
-		int bn, struct bdiff_hunk *base)
+int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b, int bn,
+               struct bdiff_hunk *base)
 {
 	struct bdiff_hunk *curr;
 	struct pos *pos;
@@ -274,7 +275,8 @@ int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
 			return -1;
 
 		/* sentinel end hunk */
-		curr->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
+		curr->next =
+		    (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!curr->next)
 			return -1;
 		curr = curr->next;
@@ -293,10 +295,9 @@ int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
 			break;
 
 		if (curr->a2 == next->a1 || curr->b2 == next->b1)
-			while (curr->a2 < an && curr->b2 < bn
-			       && next->a1 < next->a2
-			       && next->b1 < next->b2
-			       && !cmp(a + curr->a2, b + curr->b2)) {
+			while (curr->a2 < an && curr->b2 < bn &&
+			       next->a1 < next->a2 && next->b1 < next->b2 &&
+			       !cmp(a + curr->a2, b + curr->b2)) {
 				curr->a2++;
 				next->a1++;
 				curr->b2++;
@@ -317,5 +318,3 @@ void bdiff_freehunks(struct bdiff_hunk *l)
 		free(l);
 	}
 }
-
-

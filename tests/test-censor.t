@@ -359,6 +359,7 @@ Repo cloned before tainted content introduced can pull censored nodes
   adding manifests
   adding file changes
   added 11 changesets with 11 changes to 2 files (+1 heads)
+  new changesets 186fb27560c3:683e4645fded
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg update 4
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -423,6 +424,7 @@ Censored nodes can be bundled up and unbundled in another repo
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets 075be80ac777:dcbaf17bf3a1
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg cat -r $REV target
   $ hg cat -r $CLEANREV target
@@ -450,12 +452,14 @@ Censored nodes can be imported on top of censored nodes, consecutively
   adding manifests
   adding file changes
   added 8 changesets with 10 changes to 2 files (+1 heads)
+  new changesets e97f55b2665a:dcbaf17bf3a1
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg unbundle splitbundle
   adding changesets
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 2 files (+1 heads)
+  new changesets efbe78065929:683e4645fded
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ hg update $H2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -481,5 +485,6 @@ Can import bundle where first revision of a file is censored
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets e97f55b2665a
   (run 'hg update' to get a working copy)
   $ hg cat -r 0 target

@@ -5,7 +5,7 @@
   > mock=$TESTDIR/mockblackbox.py
   > 
   > [experimental]
-  > evolution = createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 Create a repo with some tags

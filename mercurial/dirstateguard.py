@@ -11,9 +11,10 @@ from .i18n import _
 
 from . import (
     error,
+    util,
 )
 
-class dirstateguard(object):
+class dirstateguard(util.transactional):
     '''Restore dirstate at unexpected failure.
 
     At the construction, this class does:

@@ -439,6 +439,11 @@ def has_pylint():
                        br"Usage:  pylint",
                        True)
 
+@check("clang-format", "clang-format C code formatter")
+def has_clang_format():
+    return matchoutput("clang-format --help",
+                       br"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code.")
+
 @check("pygments", "Pygments source highlighting library")
 def has_pygments():
     try:
@@ -554,6 +559,11 @@ def has_osxpackaging():
     except ImportError:
         return False
 
+@check('linuxormacos', 'Linux or MacOS')
+def has_linuxormacos():
+    # This isn't a perfect test for MacOS. But it is sufficient for our needs.
+    return sys.platform.startswith(('linux', 'darwin'))
+
 @check("docker", "docker support")
 def has_docker():
     pat = br'A self-sufficient runtime for'
@@ -573,17 +583,31 @@ def has_docker():
 
 @check("debhelper", "debian packaging tools")
 def has_debhelper():
+    # Some versions of dpkg say `dpkg', some say 'dpkg' (` vs ' on the first
+    # quote), so just accept anything in that spot.
     dpkg = matchoutput('dpkg --version',
-                       br"Debian `dpkg' package management program")
+                       br"Debian .dpkg' package management program")
     dh = matchoutput('dh --help',
                      br'dh is a part of debhelper.', ignorestatus=True)
     dh_py2 = matchoutput('dh_python2 --help',
                          br'other supported Python versions')
-    return dpkg and dh and dh_py2
+    # debuild comes from the 'devscripts' package, though you might want
+    # the 'build-debs' package instead, which has a dependency on devscripts.
+    debuild = matchoutput('debuild --help',
+                          br'to run debian/rules with given parameter')
+    return dpkg and dh and dh_py2 and debuild
+
+@check("debdeps",
+       "debian build dependencies (run dpkg-checkbuilddeps in contrib/)")
+def has_debdeps():
+    # just check exit status (ignoring output)
+    path = '%s/../contrib/debian/control' % os.environ['TESTDIR']
+    return matchoutput('dpkg-checkbuilddeps %s' % path, br'')
 
 @check("demandimport", "demandimport enabled")
 def has_demandimport():
-    return os.environ.get('HGDEMANDIMPORT') != 'disable'
+    # chg disables demandimport intentionally for performance wins.
+    return ((not has_chg()) and os.environ.get('HGDEMANDIMPORT') != 'disable')
 
 @check("py3k", "running with Python 3.x")
 def has_py3k():
@@ -652,3 +676,12 @@ def has_virtualenv():
 @check("fsmonitor", "running tests with fsmonitor")
 def has_fsmonitor():
     return 'HGFSMONITOR_TESTS' in os.environ
+
+@check("fuzzywuzzy", "Fuzzy string matching library")
+def has_fuzzywuzzy():
+    try:
+        import fuzzywuzzy
+        fuzzywuzzy.__version__
+        return True
+    except ImportError:
+        return False

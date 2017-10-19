@@ -1,7 +1,8 @@
 
   $ cat > loop.py <<EOF
-  > from mercurial import commands, registrar
+  > from __future__ import absolute_import
   > import time
+  > from mercurial import commands, registrar
   > 
   > cmdtable = {}
   > command = registrar.command(cmdtable)
@@ -184,25 +185,9 @@ test delay time estimates
 
 #if no-chg
 
-  $ cat > mocktime.py <<EOF
-  > import os
-  > import time
-  > 
-  > class mocktime(object):
-  >     def __init__(self, increment):
-  >         self.time = 0
-  >         self.increment = increment
-  >     def __call__(self):
-  >         self.time += self.increment
-  >         return self.time
-  > 
-  > def uisetup(ui):
-  >     time.time = mocktime(int(os.environ.get('MOCKTIME', '11')))
-  > EOF
-
   $ cp $HGRCPATH.orig $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "mocktime=`pwd`/mocktime.py" >> $HGRCPATH
+  $ echo "mocktime=$TESTDIR/mocktime.py" >> $HGRCPATH
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
   $ echo "[progress]" >> $HGRCPATH
@@ -210,7 +195,7 @@ test delay time estimates
   $ echo "delay=25" >> $HGRCPATH
   $ echo "width=60" >> $HGRCPATH
 
-  $ hg -y loop 8
+  $ MOCKTIME=11 hg -y loop 8
   \r (no-eol) (esc)
   loop [=========>                                ] 2/8 1m07s\r (no-eol) (esc)
   loop [===============>                            ] 3/8 56s\r (no-eol) (esc)
@@ -245,8 +230,33 @@ test delay time estimates
   loop [=============================>           ] 3/4 23w02d\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
+Non-linear progress:
+
+  $ MOCKTIME='20 20 20 20 20 20 20 20 20 20 500 500 500 500 500 20 20 20 20 20' hg -y loop 20
+  \r (no-eol) (esc)
+  loop [=>                                      ]  1/20 6m21s\r (no-eol) (esc)
+  loop [===>                                    ]  2/20 6m01s\r (no-eol) (esc)
+  loop [=====>                                  ]  3/20 5m41s\r (no-eol) (esc)
+  loop [=======>                                ]  4/20 5m21s\r (no-eol) (esc)
+  loop [=========>                              ]  5/20 5m01s\r (no-eol) (esc)
+  loop [===========>                            ]  6/20 4m41s\r (no-eol) (esc)
+  loop [=============>                          ]  7/20 4m21s\r (no-eol) (esc)
+  loop [===============>                        ]  8/20 4m01s\r (no-eol) (esc)
+  loop [================>                      ]  9/20 25m40s\r (no-eol) (esc)
+  loop [===================>                    ] 10/20 1h06m\r (no-eol) (esc)
+  loop [=====================>                  ] 11/20 1h13m\r (no-eol) (esc)
+  loop [=======================>                ] 12/20 1h07m\r (no-eol) (esc)
+  loop [========================>              ] 13/20 58m19s\r (no-eol) (esc)
+  loop [===========================>            ] 14/20 7m09s\r (no-eol) (esc)
+  loop [=============================>          ] 15/20 3m38s\r (no-eol) (esc)
+  loop [===============================>        ] 16/20 2m15s\r (no-eol) (esc)
+  loop [=================================>      ] 17/20 1m27s\r (no-eol) (esc)
+  loop [====================================>     ] 18/20 52s\r (no-eol) (esc)
+  loop [======================================>   ] 19/20 25s\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+
 Time estimates should not fail when there's no end point:
-  $ hg -y loop -- -4
+  $ MOCKTIME=11 hg -y loop -- -4
   \r (no-eol) (esc)
   loop [ <=>                                              ] 2\r (no-eol) (esc)
   loop [  <=>                                             ] 3\r (no-eol) (esc)

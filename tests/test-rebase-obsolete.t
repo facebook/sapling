@@ -8,11 +8,13 @@ Enable obsolete
   > [ui]
   > logtemplate= {rev}:{node|short} {desc|firstline}
   > [experimental]
-  > evolution=createmarkers,allowunstable
+  > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > [phases]
   > publish=False
   > [extensions]
   > rebase=
+  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Setup rebase canonical repo
@@ -24,6 +26,7 @@ Setup rebase canonical repo
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -100,9 +103,9 @@ simple rebase
   o  0:cd010b8cd998 A
   
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 e4e5be0395b2cbd471ed22a26b1b6a1a0658a794 0 (*) {'user': 'test'} (glob)
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 2327fea05063f39961b14cb69435a9898dc9a245 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 8eeb3c33ad33d452c89e5dcf611c347f978fb42b 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 e4e5be0395b2cbd471ed22a26b1b6a1a0658a794 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 2327fea05063f39961b14cb69435a9898dc9a245 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a 8eeb3c33ad33d452c89e5dcf611c347f978fb42b 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
 
 
   $ cd ..
@@ -170,9 +173,9 @@ set.
   o  0:cd010b8cd998 A
   
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
 
 
 More complex case where part of the rebase set were already rebased
@@ -180,10 +183,10 @@ More complex case where part of the rebase set were already rebased
   $ hg rebase --rev 'desc(D)' --dest 'desc(H)'
   rebasing 9:08483444fef9 "D"
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
-  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
   $ hg log -G
   @  11:4596109a6a43 D
   |
@@ -205,16 +208,16 @@ More complex case where part of the rebase set were already rebased
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
   rebasing 8:8877864f1edb "B"
-  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D"
+  note: not rebasing 9:08483444fef9 "D", already in destination as 11:4596109a6a43 "D" (tip)
   rebasing 10:5ae4c968c6ac "C"
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (*) {'user': 'test'} (glob)
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (*) {'user': 'test'} (glob)
-  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (*) {'user': 'test'} (glob)
-  8877864f1edb05d0e07dc4ba77b67a80a7b86672 462a34d07e599b87ea08676a449373fe4e2e1347 0 (*) {'user': 'test'} (glob)
-  5ae4c968c6aca831df823664e706c9d4aa34473d 98f6af4ee9539e14da4465128f894c274900b6e5 0 (*) {'user': 'test'} (glob)
-  $ hg log --rev 'divergent()'
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {cd010b8cd998f3981a5a8115f94f8da4ab506089} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a 0 {5fddd98957c8a54a4d436dfe1da9d87f21a1b97b} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  8877864f1edb05d0e07dc4ba77b67a80a7b86672 462a34d07e599b87ea08676a449373fe4e2e1347 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5ae4c968c6aca831df823664e706c9d4aa34473d 98f6af4ee9539e14da4465128f894c274900b6e5 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  $ hg log --rev 'contentdivergent()'
   $ hg log -G
   o  13:98f6af4ee953 C
   |
@@ -349,9 +352,9 @@ collapse rebase
   $ hg id --debug -r tip
   4dc2197e807bae9817f09905b50ab288be2dbbcf tip
   $ hg debugobsolete
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (*) {'user': 'test'} (glob)
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (*) {'user': 'test'} (glob)
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
 
   $ cd ..
 
@@ -411,9 +414,9 @@ not be rebased.
   o  0:cd010b8cd998 A
   
   $ hg debugobsolete
-  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b e273c5e7d2d29df783dce9f9eaa3ac4adc69c15d 0 (*) {'user': 'test'} (glob)
-  32af7686d403cf45b5d95f2d70cebea587ac806a cf44d2f5a9f4297a62be94cbdd3dff7c7dc54258 0 (*) {'user': 'test'} (glob)
-  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 7c6027df6a99d93f461868e5433f63bde20b6dfb 0 (*) {'user': 'test'} (glob)
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b e273c5e7d2d29df783dce9f9eaa3ac4adc69c15d 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  32af7686d403cf45b5d95f2d70cebea587ac806a cf44d2f5a9f4297a62be94cbdd3dff7c7dc54258 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 7c6027df6a99d93f461868e5433f63bde20b6dfb 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
 
 Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------
@@ -449,7 +452,6 @@ Test multiple root handling
   $ hg rebase --dest 4 --rev '7+11+9'
   rebasing 9:cf44d2f5a9f4 "D"
   rebasing 7:02de42196ebe "H"
-  not rebasing ignored 10:7c6027df6a99 "B"
   rebasing 11:0d8f238b634c "C" (tip)
   $ hg log -G
   o  14:1e8370e38cca C
@@ -472,6 +474,30 @@ Test multiple root handling
   
   $ cd ..
 
+Detach both parents
+
+  $ hg init double-detach
+  $ cd double-detach
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > C E
+  > | |
+  > B D G
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d G -r 'B + D + F'
+  rebasing 1:112478962961 "B" (B)
+  rebasing 2:b18e25de2cf5 "D" (D)
+  rebasing 6:f15c3adaf214 "F" (F tip)
+  abort: cannot rebase 6:f15c3adaf214 without moving at least one of its parents
+  [255]
+
+  $ cd ..
+
 test on rebase dropping a merge
 
 (setup)
@@ -483,6 +509,7 @@ test on rebase dropping a merge
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up 3
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -519,7 +546,6 @@ test on rebase dropping a merge
   $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
   rebasing 3:32af7686d403 "D"
   rebasing 7:02de42196ebe "H"
-  not rebasing ignored 8:53a6a128b2b7 "M"
   rebasing 9:4bde274eefcf "I" (tip)
   $ hg log -G
   @  12:acd174b7ab39 I
@@ -603,11 +629,11 @@ Test hidden changesets in the rebase set (issue4504)
   $ hg add M
   $ hg commit --amend -m "M"
   $ hg log -G
-  @  20:bfaedf8eb73b M
+  @  18:bfaedf8eb73b M
   |
-  | o  18:97219452e4bd L
+  | o  17:97219452e4bd L
   | |
-  | x  17:fc37a630c901 K
+  | x  16:fc37a630c901 K
   |/
   | o  15:5ae8a643467b J
   | |
@@ -637,8 +663,8 @@ Test hidden changesets in the rebase set (issue4504)
   |/
   o  0:cd010b8cd998 A
   
-  $ hg rebase -s 14 -d 18 --config experimental.rebaseskipobsolete=True
-  note: not rebasing 14:9ad579b4a5de "I", already in destination as 17:fc37a630c901 "K"
+  $ hg rebase -s 14 -d 17 --config experimental.rebaseskipobsolete=True
+  note: not rebasing 14:9ad579b4a5de "I", already in destination as 16:fc37a630c901 "K"
   rebasing 15:5ae8a643467b "J"
 
   $ cd ..
@@ -710,7 +736,7 @@ Even when the chain include missing node
   |
   o  0:4a2df7238c3b A
   
-  $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.evolution=all
+  $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
   $ hg rebase -d 6 -r "4::"
   rebasing 4:ff2c4d47b71d "C"
@@ -738,7 +764,7 @@ should display a friendly error message
   $ hg add nonrelevant
   $ hg commit -m nonrelevant
   created new head
-  $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=all
+  $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
   $ hg rebase -r . -d 10
   note: not rebasing 11:f44da1f4954c "nonrelevant" (tip), it has no successor
@@ -746,10 +772,8 @@ should display a friendly error message
 If a rebase is going to create divergence, it should abort
 
   $ hg log -G
-  @  11:f44da1f4954c nonrelevant
+  @  10:121d9e3bc4c6 P
   |
-  | o  10:121d9e3bc4c6 P
-  |/
   o  9:4be60e099a77 C
   |
   o  6:9c48361117de D
@@ -776,9 +800,9 @@ If a rebase is going to create divergence, it should abort
   $ hg add foo
   $ hg commit -m "bar foo"
   $ hg log -G
-  @  15:73568ab6879d bar foo
+  @  14:73568ab6879d bar foo
   |
-  | o  14:77d874d096a2 10'
+  | o  13:77d874d096a2 10'
   | |
   | | o  12:3eb461388009 john doe
   | |/
@@ -793,21 +817,21 @@ If a rebase is going to create divergence, it should abort
   o  0:4a2df7238c3b A
   
   $ hg summary
-  parent: 15:73568ab6879d tip (unstable)
+  parent: 14:73568ab6879d tip (orphan)
    bar foo
   branch: default
   commit: (clean)
   update: 2 new changesets, 3 branch heads (merge)
   phases: 8 draft
-  unstable: 1 changesets
+  orphan: 1 changesets
   $ hg rebase -s 10 -d 12
   abort: this rebase will cause divergences from: 121d9e3bc4c6
-  (to force the rebase please set experimental.allowdivergence=True)
+  (to force the rebase please set experimental.evolution.allowdivergence=True)
   [255]
   $ hg log -G
-  @  15:73568ab6879d bar foo
+  @  14:73568ab6879d bar foo
   |
-  | o  14:77d874d096a2 10'
+  | o  13:77d874d096a2 10'
   | |
   | | o  12:3eb461388009 john doe
   | |/
@@ -821,25 +845,25 @@ If a rebase is going to create divergence, it should abort
   |
   o  0:4a2df7238c3b A
   
-With experimental.allowdivergence=True, rebase can create divergence
+With experimental.evolution.allowdivergence=True, rebase can create divergence
 
-  $ hg rebase -s 10 -d 12 --config experimental.allowdivergence=True
+  $ hg rebase -s 10 -d 12 --config experimental.evolution.allowdivergence=True
   rebasing 10:121d9e3bc4c6 "P"
-  rebasing 15:73568ab6879d "bar foo" (tip)
+  rebasing 14:73568ab6879d "bar foo" (tip)
   $ hg summary
-  parent: 17:61bd55f69bc4 tip
+  parent: 16:61bd55f69bc4 tip
    bar foo
   branch: default
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 8 draft
-  divergent: 2 changesets
+  content-divergent: 2 changesets
 
 rebase --continue + skipped rev because their successors are in destination
 we make a change in trunk and work on conflicting changes to make rebase abort.
 
-  $ hg log -G -r 17::
-  @  17:61bd55f69bc4 bar foo
+  $ hg log -G -r 16::
+  @  16:61bd55f69bc4 bar foo
   |
   ~
 
@@ -852,7 +876,7 @@ Create the two changes in trunk
   $ hg commit -m "dummy change successor"
 
 Create the changes that we will rebase
-  $ hg update -C 17 -q
+  $ hg update -C 16 -q
   $ printf "b" > willconflict
   $ hg add willconflict
   $ hg commit -m "willconflict second version"
@@ -863,25 +887,25 @@ Create the changes that we will rebase
   $ printf "dummy" > L
   $ hg add L
   $ hg commit -m "dummy change"
-  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 19 -T '{node}'` --config experimental.evolution=all
+  $ hg debugobsolete `hg log -r ".^" -T '{node}'` `hg log -r 18 -T '{node}'` --config experimental.evolution=true
   obsoleted 1 changesets
 
-  $ hg log -G -r 17::
-  @  22:7bdc8a87673d dummy change
+  $ hg log -G -r 16::
+  @  21:7bdc8a87673d dummy change
   |
-  x  21:8b31da3c4919 dummy change
+  x  20:8b31da3c4919 dummy change
   |
-  o  20:b82fb57ea638 willconflict second version
+  o  19:b82fb57ea638 willconflict second version
   |
-  | o  19:601db7a18f51 dummy change successor
+  | o  18:601db7a18f51 dummy change successor
   | |
-  | o  18:357ddf1602d5 willconflict first version
+  | o  17:357ddf1602d5 willconflict first version
   |/
-  o  17:61bd55f69bc4 bar foo
+  o  16:61bd55f69bc4 bar foo
   |
   ~
-  $ hg rebase -r ".^^ + .^ + ." -d 19
-  rebasing 20:b82fb57ea638 "willconflict second version"
+  $ hg rebase -r ".^^ + .^ + ." -d 18
+  rebasing 19:b82fb57ea638 "willconflict second version"
   merging willconflict
   warning: conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -891,68 +915,298 @@ Create the changes that we will rebase
   (no more unresolved files)
   continue: hg rebase --continue
   $ hg rebase --continue
-  rebasing 20:b82fb57ea638 "willconflict second version"
-  note: not rebasing 21:8b31da3c4919 "dummy change", already in destination as 19:601db7a18f51 "dummy change successor"
-  rebasing 22:7bdc8a87673d "dummy change" (tip)
+  rebasing 19:b82fb57ea638 "willconflict second version"
+  note: not rebasing 20:8b31da3c4919 "dummy change", already in destination as 18:601db7a18f51 "dummy change successor"
+  rebasing 21:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
-rebase source is obsoleted (issue5198)
----------------------------------
+Rebase merge where successor of one parent is equal to destination (issue5198)
 
-  $ hg clone base amended
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd amended
-  $ hg up 9520eea781bc
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ echo 1 >> E
-  $ hg commit --amend -m "E'" -d "0 0"
+  $ hg init p1-succ-is-dest
+  $ cd p1-succ-is-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d B -s D
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
+  rebasing 4:66f1a38021c9 "F" (F tip)
   $ hg log -G
-  @  9:69abe8906104 E'
-  |
-  | o  7:02de42196ebe H
-  | |
-  | | o  6:eea13746799a G
-  | |/|
-  | o |  5:24b6387c8c8c F
-  |/ /
-  | x  4:9520eea781bc E
-  |/
-  | o  3:32af7686d403 D
-  | |
-  | o  2:5fddd98957c8 C
-  | |
-  | o  1:42ccdea3bb16 B
-  |/
-  o  0:cd010b8cd998 A
-  
-  $ hg rebase -d . -s 9520eea781bc
-  note: not rebasing 4:9520eea781bc "E", already in destination as 9:69abe8906104 "E'"
-  rebasing 6:eea13746799a "G"
-  $ hg log -G
-  o    10:17be06e82e95 G
+  o    5:50e9d60b99c6 F
   |\
-  | @  9:69abe8906104 E'
-  | |
-  +---o  7:02de42196ebe H
-  | |
-  o |  5:24b6387c8c8c F
+  | | x  4:66f1a38021c9 F
+  | |/|
+  | o |  3:7fb047a69f22 E
+  | | |
+  | | x  2:b18e25de2cf5 D
+  | |/
+  o |  1:112478962961 B
   |/
-  | o  3:32af7686d403 D
-  | |
-  | o  2:5fddd98957c8 C
-  | |
-  | o  1:42ccdea3bb16 B
-  |/
-  o  0:cd010b8cd998 A
+  o  0:426bada5c675 A
   
+  $ cd ..
+
+Rebase merge where successor of other parent is equal to destination
+
+  $ hg init p2-succ-is-dest
+  $ cd p2-succ-is-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F
+  >  /|
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d B -s E
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
+  rebasing 4:66f1a38021c9 "F" (F tip)
+  $ hg log -G
+  o    5:aae1787dacee F
+  |\
+  | | x  4:66f1a38021c9 F
+  | |/|
+  | | x  3:7fb047a69f22 E
+  | | |
+  | o |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of one parent is ancestor of destination
+
+  $ hg init p1-succ-in-dest
+  $ cd p1-succ-in-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -s D
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
+  rebasing 5:66f1a38021c9 "F" (F tip)
+
+  $ hg log -G
+  o    6:0913febf6439 F
+  |\
+  +---x  5:66f1a38021c9 F
+  | | |
+  | o |  4:26805aba1e60 C
+  | | |
+  o | |  3:7fb047a69f22 E
+  | | |
+  +---x  2:b18e25de2cf5 D
+  | |
+  | o  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of other parent is ancestor of destination
+
+  $ hg init p2-succ-in-dest
+  $ cd p2-succ-in-dest
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -s E
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
+  rebasing 5:66f1a38021c9 "F" (F tip)
+  $ hg log -G
+  o    6:c6ab0cc6d220 F
+  |\
+  +---x  5:66f1a38021c9 F
+  | | |
+  | o |  4:26805aba1e60 C
+  | | |
+  | | x  3:7fb047a69f22 E
+  | | |
+  o---+  2:b18e25de2cf5 D
+   / /
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of one parent is ancestor of destination
+
+  $ hg init p1-succ-in-dest-b
+  $ cd p1-succ-in-dest-b
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: E -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -b F
+  rebasing 2:b18e25de2cf5 "D" (D)
+  note: not rebasing 3:7fb047a69f22 "E" (E), already in destination as 1:112478962961 "B" (B)
+  rebasing 5:66f1a38021c9 "F" (F tip)
+  note: rebase of 5:66f1a38021c9 created no changes to commit
+  $ hg log -G
+  o  6:8f47515dda15 D
+  |
+  | x    5:66f1a38021c9 F
+  | |\
+  o | |  4:26805aba1e60 C
+  | | |
+  | | x  3:7fb047a69f22 E
+  | | |
+  | x |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where successor of other parent is ancestor of destination
+
+  $ hg init p2-succ-in-dest-b
+  $ cd p2-succ-in-dest-b
+
+  $ hg debugdrawdag <<EOF
+  >   F C
+  >  /| |
+  > E D B # replace: D -> B
+  >  \|/
+  >   A
+  > EOF
+
+  $ hg rebase -d C -b F
+  note: not rebasing 2:b18e25de2cf5 "D" (D), already in destination as 1:112478962961 "B" (B)
+  rebasing 3:7fb047a69f22 "E" (E)
+  rebasing 5:66f1a38021c9 "F" (F tip)
+  note: rebase of 5:66f1a38021c9 created no changes to commit
+
+  $ hg log -G
+  o  6:533690786a86 E
+  |
+  | x    5:66f1a38021c9 F
+  | |\
+  o | |  4:26805aba1e60 C
+  | | |
+  | | x  3:7fb047a69f22 E
+  | | |
+  | x |  2:b18e25de2cf5 D
+  | |/
+  o /  1:112478962961 B
+  |/
+  o  0:426bada5c675 A
+  
+  $ cd ..
+
+Rebase merge where both parents have successors in destination
+
+  $ hg init p12-succ-in-dest
+  $ cd p12-succ-in-dest
+  $ hg debugdrawdag <<'EOS'
+  >   E   F
+  >  /|  /|  # replace: A -> C
+  > A B C D  # replace: B -> D
+  > | |
+  > X Y
+  > EOS
+  $ hg rebase -r A+B+E -d F
+  note: not rebasing 4:a3d17304151f "A" (A), already in destination as 0:96cc3511f894 "C" (C)
+  note: not rebasing 5:b23a2cc00842 "B" (B), already in destination as 1:058c1e1fb10a "D" (D)
+  rebasing 7:dac5d11c5a7d "E" (E tip)
+  abort: rebasing 7:dac5d11c5a7d will include unwanted changes from 3:59c792af609c, 5:b23a2cc00842 or 2:ba2b7fa7166d, 4:a3d17304151f
+  [255]
+  $ cd ..
+
+Rebase a non-clean merge. One parent has successor in destination, the other
+parent moves as requested.
+
+  $ hg init p1-succ-p2-move
+  $ cd p1-succ-p2-move
+  $ hg debugdrawdag <<'EOS'
+  >   D Z
+  >  /| | # replace: A -> C
+  > A B C # D/D = D
+  > EOS
+  $ hg rebase -r A+B+D -d Z
+  note: not rebasing 0:426bada5c675 "A" (A), already in destination as 2:96cc3511f894 "C" (C)
+  rebasing 1:fc2b737bb2e5 "B" (B)
+  rebasing 3:b8ed089c80ad "D" (D)
+
+  $ rm .hg/localtags
+  $ hg log -G
+  o  6:e4f78693cc88 D
+  |
+  o  5:76840d832e98 B
+  |
+  o  4:50e41c1f3950 Z
+  |
+  o  2:96cc3511f894 C
+  
+  $ hg files -r tip
+  B
+  C
+  D
+  Z
+
+  $ cd ..
+
+  $ hg init p1-move-p2-succ
+  $ cd p1-move-p2-succ
+  $ hg debugdrawdag <<'EOS'
+  >   D Z
+  >  /| |  # replace: B -> C
+  > A B C  # D/D = D
+  > EOS
+  $ hg rebase -r B+A+D -d Z
+  rebasing 0:426bada5c675 "A" (A)
+  note: not rebasing 1:fc2b737bb2e5 "B" (B), already in destination as 2:96cc3511f894 "C" (C)
+  rebasing 3:b8ed089c80ad "D" (D)
+
+  $ rm .hg/localtags
+  $ hg log -G
+  o  6:1b355ed94d82 D
+  |
+  o  5:a81a74d764a6 A
+  |
+  o  4:50e41c1f3950 Z
+  |
+  o  2:96cc3511f894 C
+  
+  $ hg files -r tip
+  A
+  C
+  D
+  Z
+
   $ cd ..
 
 Test that bookmark is moved and working dir is updated when all changesets have
 equivalents in destination
   $ hg init rbsrepo && cd rbsrepo
   $ echo "[experimental]" > .hg/hgrc
-  $ echo "evolution=all" >> .hg/hgrc
+  $ echo "evolution=true" >> .hg/hgrc
   $ echo "rebaseskipobsolete=on" >> .hg/hgrc
   $ echo root > root && hg ci -Am root
   adding root
@@ -972,18 +1226,151 @@ equivalents in destination
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   2:1e9a3c00cbe9 b (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.evolution.track-operation=1
-  note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b"
-Check that working directory was updated to rev 3 although rev 2 was skipped
-during the rebase operation
+  note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b" (tip)
+Check that working directory and bookmark was updated to rev 3 although rev 2
+was skipped
   $ hg log -r .
   3:be1832deae9a b (no-eol)
-
-Check that bookmark was not moved to rev 3 if rev 2 was skipped during the
-rebase operation. This makes sense because if rev 2 has a successor, the
-operation generating that successor (ex. rebase) should be responsible for
-moving bookmarks. If the bookmark is on a precursor, like rev 2, that means the
-user manually moved it back. In that case we should not move it again.
   $ hg bookmarks
-     mybook                    2:1e9a3c00cbe9
+     mybook                    3:be1832deae9a
   $ hg debugobsolete --rev tip
-  1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc be1832deae9ac531caa7438b8dcf6055a122cd8e 0 (*) {'user': 'test'} (glob)
+  1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc be1832deae9ac531caa7438b8dcf6055a122cd8e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'}
+
+Obsoleted working parent and bookmark could be moved if an ancestor of working
+parent gets moved:
+
+  $ hg init $TESTTMP/ancestor-wd-move
+  $ cd $TESTTMP/ancestor-wd-move
+  $ hg debugdrawdag <<'EOS'
+  >  E D1  # rebase: D1 -> D2
+  >  | |
+  >  | C
+  > D2 |
+  >  | B
+  >  |/
+  >  A
+  > EOS
+  $ hg update D1 -q
+  $ hg bookmark book -i
+  $ hg rebase -r B+D1 -d E
+  rebasing 1:112478962961 "B" (B)
+  note: not rebasing 5:15ecf15e0114 "D1" (book D1 tip), already in destination as 2:0807738e0be9 "D2" (D2)
+  $ hg log -G -T '{desc} {bookmarks}'
+  @  B book
+  |
+  | x  D1
+  | |
+  o |  E
+  | |
+  | o  C
+  | |
+  o |  D2
+  | |
+  | x  B
+  |/
+  o  A
+  
+Rebasing a merge with one of its parent having a hidden successor
+
+  $ hg init $TESTTMP/merge-p1-hidden-successor
+  $ cd $TESTTMP/merge-p1-hidden-successor
+
+  $ hg debugdrawdag <<'EOS'
+  >  E
+  >  |
+  > B3 B2 # amend: B1 -> B2 -> B3
+  >  |/   # B2 is hidden
+  >  |  D
+  >  |  |\
+  >  | B1 C
+  >  |/
+  >  A
+  > EOS
+
+  $ eval `hg tags -T '{tag}={node}\n'`
+  $ rm .hg/localtags
+
+  $ hg rebase -r $D -d $E
+  rebasing 5:9e62094e4d94 "D"
+
+  $ hg log -G
+  o    7:a699d059adcf D
+  |\
+  | o  6:ecc93090a95c E
+  | |
+  | o  4:0dc878468a23 B3
+  | |
+  o |  1:96cc3511f894 C
+   /
+  o  0:426bada5c675 A
+  
+For some reasons (--hidden, rebaseskipobsolete=0, directaccess, etc.),
+rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
+
+  $ hg init $TESTTMP/hidden-state1
+  $ cd $TESTTMP/hidden-state1
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > rebaseskipobsolete=0
+  > EOF
+
+  $ hg debugdrawdag <<'EOS'
+  >    C
+  >    |
+  >  D B # prune: B, C
+  >  |/  # B/D=B
+  >  A
+  > EOS
+
+  $ eval `hg tags -T '{tag}={node}\n'`
+  $ rm .hg/localtags
+
+  $ hg update -q $C --hidden
+  $ hg rebase -s $B -d $D
+  rebasing 1:2ec65233581b "B"
+  merging D
+  warning: conflicts while merging D! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ cp -R . $TESTTMP/hidden-state2
+
+  $ hg log -G
+  @  2:b18e25de2cf5 D
+  |
+  | @  1:2ec65233581b B
+  |/
+  o  0:426bada5c675 A
+  
+  $ hg summary
+  parent: 2:b18e25de2cf5 tip
+   D
+  parent: 1:2ec65233581b  (obsolete)
+   B
+  branch: default
+  commit: 2 modified, 1 unknown, 1 unresolved (merge)
+  update: (current)
+  phases: 3 draft
+  rebase: 0 rebased, 2 remaining (rebase --continue)
+
+  $ hg rebase --abort
+  rebase aborted
+
+Also test --continue for the above case
+
+  $ cd $TESTTMP/hidden-state2
+  $ hg resolve -m
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 1:2ec65233581b "B"
+  rebasing 3:7829726be4dc "C" (tip)
+  $ hg log -G
+  @  5:1964d5d5b547 C
+  |
+  o  4:68deb90c12a2 B
+  |
+  o  2:b18e25de2cf5 D
+  |
+  o  0:426bada5c675 A
+  

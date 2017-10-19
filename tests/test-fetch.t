@@ -30,6 +30,7 @@ should pull one change
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d2ae7f538514
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd b parents -q
   1:d2ae7f538514
@@ -55,6 +56,7 @@ should merge c into a
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets d2ae7f538514
   updating to 2:d2ae7f538514
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 1:d36c0562f908
@@ -77,6 +79,7 @@ fetch over http, no auth
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets d2ae7f538514
   updating to 2:d2ae7f538514
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 1:d36c0562f908
@@ -110,6 +113,7 @@ specified, even though commit message is not specified explicitly)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets d2ae7f538514
   updating to 2:d2ae7f538514
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 1:d36c0562f908
@@ -141,6 +145,7 @@ should merge f into g
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 6343ca3eff20
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging with 3:6343ca3eff20
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -193,6 +198,7 @@ pull in change on foreign branch
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 8fdc9284bbc5
 
 parent should be 2 (no automatic update)
 
@@ -225,6 +231,7 @@ pull in changes on both foreign and local branches
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 8fdc9284bbc5:3c4a837a864f
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 parent should be 4 (fast forward)
@@ -267,6 +274,7 @@ with a local change
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files (+2 heads)
+  new changesets d05ce59ff88d:a7954de24e4c
   updating to 5:3c4a837a864f
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 3:1267f84a9ea5
@@ -314,6 +322,7 @@ heads) with a local change
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 1 files (+2 heads)
+  new changesets b84e8d0f020f:3d3bf54f99c0
   not merging with 1 other new branch heads (use "hg heads ." and "hg merge" to merge them)
   [1]
 
@@ -398,6 +407,7 @@ test issue1726
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 7837755a2789
   updating to 2:7837755a2789
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging with 1:d1f0c6c48ebd
@@ -426,5 +436,6 @@ test issue2047
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets c8735224de5c
 
   $ cd ..

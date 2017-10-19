@@ -7,9 +7,14 @@
 
 from __future__ import absolute_import
 
+import collections
 import heapq
+import os
+
+from .i18n import _
 
 from . import (
+    match as matchmod,
     node,
     pathutil,
     scmutil,
@@ -137,7 +142,7 @@ def _tracefile(fctx, am, limit=-1):
 def _dirstatecopies(d):
     ds = d._repo.dirstate
     c = ds.copies().copy()
-    for k in c.keys():
+    for k in list(c):
         if ds[k] not in 'anm':
             del c[k]
     return c
@@ -182,8 +187,9 @@ def _forwardcopies(a, b, match=None):
     # optimization, since the ctx.files() for a merge commit is not correct for
     # this comparison.
     forwardmissingmatch = match
-    if not match and b.p1() == a and b.p2().node() == node.nullid:
-        forwardmissingmatch = scmutil.matchfiles(a._repo, b.files())
+    if b.p1() == a and b.p2().node() == node.nullid:
+        filesmatcher = scmutil.matchfiles(a._repo, b.files())
+        forwardmissingmatch = matchmod.intersectmatchers(match, filesmatcher)
     missing = _computeforwardmissing(a, b, match=forwardmissingmatch)
 
     ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
@@ -201,7 +207,7 @@ def _forwardcopies(a, b, match=None):
     return cm
 
 def _backwardrenames(a, b):
-    if a._repo.ui.configbool('experimental', 'disablecopytrace'):
+    if a._repo.ui.config('experimental', 'copytrace') == 'off':
         return {}
 
     # Even though we're not taking copies into account, 1:n rename situations
@@ -304,8 +310,27 @@ def _combinecopies(copyfrom, copyto, finalcopy, diverge, incompletediverge):
 
 def mergecopies(repo, c1, c2, base):
     """
-    Find moves and copies between context c1 and c2 that are relevant
-    for merging. 'base' will be used as the merge base.
+    The function calling different copytracing algorithms on the basis of config
+    which find moves and copies between context c1 and c2 that are relevant for
+    merging. 'base' will be used as the merge base.
+
+    Copytracing is used in commands like rebase, merge, unshelve, etc to merge
+    files that were moved/ copied in one merge parent and modified in another.
+    For example:
+
+    o          ---> 4 another commit
+    |
+    |   o      ---> 3 commit that modifies a.txt
+    |  /
+    o /        ---> 2 commit that moves a.txt to b.txt
+    |/
+    o          ---> 1 merge base
+
+    If we try to rebase revision 3 on revision 4, since there is no a.txt in
+    revision 4, and if user have copytrace disabled, we prints the following
+    message:
+
+    ```other changed <file> which local deleted```
 
     Returns five dicts: "copy", "movewithdir", "diverge", "renamedelete" and
     "dirmove".
@@ -336,12 +361,49 @@ def mergecopies(repo, c1, c2, base):
     if c2.node() is None and c1.node() == repo.dirstate.p1():
         return repo.dirstate.copies(), {}, {}, {}, {}
 
+    copytracing = repo.ui.config('experimental', 'copytrace')
+
     # Copy trace disabling is explicitly below the node == p1 logic above
     # because the logic above is required for a simple copy to be kept across a
     # rebase.
-    if repo.ui.configbool('experimental', 'disablecopytrace'):
+    if copytracing == 'off':
         return {}, {}, {}, {}, {}
+    elif copytracing == 'heuristics':
+        # Do full copytracing if only non-public revisions are involved as
+        # that will be fast enough and will also cover the copies which could
+        # be missed by heuristics
+        if _isfullcopytraceable(repo, c1, base):
+            return _fullcopytracing(repo, c1, c2, base)
+        return _heuristicscopytracing(repo, c1, c2, base)
+    else:
+        return _fullcopytracing(repo, c1, c2, base)
 
+def _isfullcopytraceable(repo, c1, base):
+    """ Checks that if base, source and destination are all no-public branches,
+    if yes let's use the full copytrace algorithm for increased capabilities
+    since it will be fast enough.
+
+    `experimental.copytrace.sourcecommitlimit` can be used to set a limit for
+    number of changesets from c1 to base such that if number of changesets are
+    more than the limit, full copytracing algorithm won't be used.
+    """
+    if c1.rev() is None:
+        c1 = c1.p1()
+    if c1.mutable() and base.mutable():
+        sourcecommitlimit = repo.ui.configint('experimental',
+                                              'copytrace.sourcecommitlimit')
+        commits = len(repo.revs('%d::%d', base.rev(), c1.rev()))
+        return commits < sourcecommitlimit
+    return False
+
+def _fullcopytracing(repo, c1, c2, base):
+    """ The full copytracing algorithm which finds all the new files that were
+    added from merge base up to the top commit and for each file it checks if
+    this file was copied from another file.
+
+    This is pretty slow when a lot of changesets are involved but will track all
+    the copies.
+    """
     # In certain scenarios (e.g. graft, update or rebase), base can be
     # overridden We still need to know a real common ancestor in this case We
     # can't just compute _c1.ancestor(_c2) and compare it to ca, because there
@@ -357,7 +419,7 @@ def mergecopies(repo, c1, c2, base):
     # if we have a dirty endpoint, we need to trigger graft logic, and also
     # keep track of which endpoint is dirty
     dirtyc1 = not (base == _c1 or base.descendant(_c1))
-    dirtyc2 = not (base== _c2 or base.descendant(_c2))
+    dirtyc2 = not (base == _c2 or base.descendant(_c2))
     graft = dirtyc1 or dirtyc2
     tca = base
     if graft:
@@ -434,7 +496,7 @@ def mergecopies(repo, c1, c2, base):
     renamedelete = {}
     renamedeleteset = set()
     divergeset = set()
-    for of, fl in diverge.items():
+    for of, fl in list(diverge.items()):
         if len(fl) == 1 or of in c1 or of in c2:
             del diverge[of] # not actually divergent, or not a rename
             if of not in c1 and of not in c2:
@@ -566,6 +628,110 @@ def mergecopies(repo, c1, c2, base):
 
     return copy, movewithdir, diverge, renamedelete, dirmove
 
+def _heuristicscopytracing(repo, c1, c2, base):
+    """ Fast copytracing using filename heuristics
+
+    Assumes that moves or renames are of following two types:
+
+    1) Inside a directory only (same directory name but different filenames)
+    2) Move from one directory to another
+                    (same filenames but different directory names)
+
+    Works only when there are no merge commits in the "source branch".
+    Source branch is commits from base up to c2 not including base.
+
+    If merge is involved it fallbacks to _fullcopytracing().
+
+    Can be used by setting the following config:
+
+        [experimental]
+        copytrace = heuristics
+
+    In some cases the copy/move candidates found by heuristics can be very large
+    in number and that will make the algorithm slow. The number of possible
+    candidates to check can be limited by using the config
+    `experimental.copytrace.movecandidateslimit` which defaults to 100.
+    """
+
+    if c1.rev() is None:
+        c1 = c1.p1()
+    if c2.rev() is None:
+        c2 = c2.p1()
+
+    copies = {}
+
+    changedfiles = set()
+    m1 = c1.manifest()
+    if not repo.revs('%d::%d', base.rev(), c2.rev()):
+        # If base is not in c2 branch, we switch to fullcopytracing
+        repo.ui.debug("switching to full copytracing as base is not "
+                      "an ancestor of c2\n")
+        return _fullcopytracing(repo, c1, c2, base)
+
+    ctx = c2
+    while ctx != base:
+        if len(ctx.parents()) == 2:
+            # To keep things simple let's not handle merges
+            repo.ui.debug("switching to full copytracing because of merges\n")
+            return _fullcopytracing(repo, c1, c2, base)
+        changedfiles.update(ctx.files())
+        ctx = ctx.p1()
+
+    cp = _forwardcopies(base, c2)
+    for dst, src in cp.iteritems():
+        if src in m1:
+            copies[dst] = src
+
+    # file is missing if it isn't present in the destination, but is present in
+    # the base and present in the source.
+    # Presence in the base is important to exclude added files, presence in the
+    # source is important to exclude removed files.
+    missingfiles = filter(lambda f: f not in m1 and f in base and f in c2,
+                          changedfiles)
+
+    if missingfiles:
+        basenametofilename = collections.defaultdict(list)
+        dirnametofilename = collections.defaultdict(list)
+
+        for f in m1.filesnotin(base.manifest()):
+            basename = os.path.basename(f)
+            dirname = os.path.dirname(f)
+            basenametofilename[basename].append(f)
+            dirnametofilename[dirname].append(f)
+
+        # in case of a rebase/graft, base may not be a common ancestor
+        anc = c1.ancestor(c2)
+
+        for f in missingfiles:
+            basename = os.path.basename(f)
+            dirname = os.path.dirname(f)
+            samebasename = basenametofilename[basename]
+            samedirname = dirnametofilename[dirname]
+            movecandidates = samebasename + samedirname
+            # f is guaranteed to be present in c2, that's why
+            # c2.filectx(f) won't fail
+            f2 = c2.filectx(f)
+            # we can have a lot of candidates which can slow down the heuristics
+            # config value to limit the number of candidates moves to check
+            maxcandidates = repo.ui.configint('experimental',
+                                              'copytrace.movecandidateslimit')
+
+            if len(movecandidates) > maxcandidates:
+                repo.ui.status(_("skipping copytracing for '%s', more "
+                                 "candidates than the limit: %d\n")
+                               % (f, len(movecandidates)))
+                continue
+
+            for candidate in movecandidates:
+                f1 = c1.filectx(candidate)
+                if _related(f1, f2, anc.rev()):
+                    # if there are a few related copies then we'll merge
+                    # changes into all of them. This matches the behaviour
+                    # of upstream copytracing
+                    copies[candidate] = f
+
+    return copies, {}, {}, {}, {}
+
 def _related(f1, f2, limit):
     """return True if f1 and f2 filectx have a common ancestor
 
@@ -613,8 +779,8 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
     limit = the rev number to not search beyond
     data = dictionary of dictionary to store copy data. (see mergecopies)
 
-    note: limit is only an optimization, and there is no guarantee that
-    irrelevant revisions will not be limited
+    note: limit is only an optimization, and provides no guarantee that
+    irrelevant revisions will not be visited
     there is no easy way to make this algorithm stop in a guaranteed way
     once it "goes behind a certain revision".
     """
@@ -694,7 +860,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
                         data['incompletediverge'][sf] = [of, f]
                     return
 
-def duplicatecopies(repo, rev, fromrev, skiprev=None):
+def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
     '''reproduce copies from fromrev to rev in the dirstate
 
     If skiprev is specified, it's a revision that should be used to
@@ -704,8 +870,8 @@ def duplicatecopies(repo, rev, fromrev, skiprev=None):
     '''
     exclude = {}
     if (skiprev is not None and
-        not repo.ui.configbool('experimental', 'disablecopytrace')):
-        # disablecopytrace skips this line, but not the entire function because
+        repo.ui.config('experimental', 'copytrace') != 'off'):
+        # copytrace='off' skips this line, but not the entire function because
         # the line below is O(size of the repo) during a rebase, while the rest
         # of the function is much faster (and is required for carrying copy
         # metadata across the rebase anyway).
@@ -715,5 +881,4 @@ def duplicatecopies(repo, rev, fromrev, skiprev=None):
         # actually be in the dirstate
         if dst in exclude:
             continue
-        if repo.dirstate[dst] in "nma":
-            repo.dirstate.copy(src, dst)
+        wctx[dst].markcopied(src)

@@ -143,6 +143,12 @@ colortable = {
 
 templatefilter = registrar.templatefilter()
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('keywordset', 'svn',
+    default=False,
+)
 # date like in cvs' $Date
 @templatefilter('utcdate')
 def utcdate(text):
@@ -614,14 +620,14 @@ def kwweb_skip(orig, web, req, tmpl):
         if kwt:
             kwt.match = origmatch
 
-def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+def kw_amend(orig, ui, repo, old, extra, pats, opts):
     '''Wraps cmdutil.amend expanding keywords after amend.'''
     kwt = getattr(repo, '_keywordkwt', None)
     if kwt is None:
-        return orig(ui, repo, commitfunc, old, extra, pats, opts)
+        return orig(ui, repo, old, extra, pats, opts)
     with repo.wlock():
         kwt.postcommit = True
-        newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
+        newid = orig(ui, repo, old, extra, pats, opts)
         if newid != old.node():
             ctx = repo[newid]
             kwt.restrict = True

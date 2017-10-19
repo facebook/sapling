@@ -29,11 +29,12 @@ from __future__ import absolute_import
 import collections
 import errno
 import math
-import platform
 import select
 import socket
 import sys
 import time
+
+from . import pycompat
 
 namedtuple = collections.namedtuple
 Mapping = collections.Mapping
@@ -288,7 +289,7 @@ if hasattr(select, "select"):
     __all__.append('SelectSelector')
 
     # Jython has a different implementation of .fileno() for socket objects.
-    if platform.system() == 'Java':
+    if pycompat.isjython:
         class _JythonSelectorMapping(object):
             """ This is an implementation of _SelectorMapping that is built
             for use specifically with Jython, which does not provide a hashable
@@ -727,7 +728,7 @@ def DefaultSelector():
     by eventlet, greenlet, and preserve proper behavior. """
     global _DEFAULT_SELECTOR
     if _DEFAULT_SELECTOR is None:
-        if platform.system() == 'Java':  # Platform-specific: Jython
+        if pycompat.isjython:
             _DEFAULT_SELECTOR = JythonSelectSelector
         elif _can_allocate('kqueue'):
             _DEFAULT_SELECTOR = KqueueSelector

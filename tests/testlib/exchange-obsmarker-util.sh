@@ -26,7 +26,7 @@ publish=False
 # reduce output changes
 bundle2-output-capture=True
 # enable evolution
-evolution=all
+evolution=true
 
 [extensions]
 # we need to strip some changeset for some test cases

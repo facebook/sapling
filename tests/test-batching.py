@@ -8,7 +8,9 @@
 from __future__ import absolute_import, print_function
 
 from mercurial import (
+    error,
     peer,
+    util,
     wireproto,
 )
 
@@ -27,9 +29,9 @@ class localthing(thing):
         return "%s und %s" % (b, a,)
     def greet(self, name=None):
         return "Hello, %s" % name
-    def batch(self):
+    def batchiter(self):
         '''Support for local batching.'''
-        return peer.localbatch(self)
+        return peer.localiterbatcher(self)
 
 # usage of "thing" interface
 def use(it):
@@ -41,28 +43,53 @@ def use(it):
     print(it.foo("Un", two="Deux"))
     print(it.bar("Eins", "Zwei"))
 
-    # Batched call to a couple of (possibly proxied) methods.
-    batch = it.batch()
+    # Batched call to a couple of proxied methods.
+    batch = it.batchiter()
     # The calls return futures to eventually hold results.
     foo = batch.foo(one="One", two="Two")
-    foo2 = batch.foo(None)
     bar = batch.bar("Eins", "Zwei")
-    # We can call non-batchable proxy methods, but the break the current batch
-    # request and cause additional roundtrips.
-    greet = batch.greet(name="John Smith")
-    # We can also add local methods into the mix, but they break the batch too.
-    hello = batch.hello()
     bar2 = batch.bar(b="Uno", a="Due")
-    # Only now are all the calls executed in sequence, with as few roundtrips
-    # as possible.
+
+    # Future shouldn't be set until we submit().
+    assert isinstance(foo, peer.future)
+    assert not util.safehasattr(foo, 'value')
+    assert not util.safehasattr(bar, 'value')
     batch.submit()
-    # After the call to submit, the futures actually contain values.
+    # Call results() to obtain results as a generator.
+    results = batch.results()
+
+    # Future results shouldn't be set until we consume a value.
+    assert not util.safehasattr(foo, 'value')
+    foovalue = next(results)
+    assert util.safehasattr(foo, 'value')
+    assert foovalue == foo.value
     print(foo.value)
-    print(foo2.value)
+    next(results)
     print(bar.value)
-    print(greet.value)
-    print(hello.value)
+    next(results)
     print(bar2.value)
+
+    # We should be at the end of the results generator.
+    try:
+        next(results)
+    except StopIteration:
+        print('proper end of results generator')
+    else:
+        print('extra emitted element!')
+
+    # Attempting to call a non-batchable method inside a batch fails.
+    batch = it.batchiter()
+    try:
+        batch.greet(name='John Smith')
+    except error.ProgrammingError as e:
+        print(e)
+
+    # Attempting to call a local method inside a batch fails.
+    batch = it.batchiter()
+    try:
+        batch.hello()
+    except error.ProgrammingError as e:
+        print(e)
 
 # local usage
 mylocal = localthing()
@@ -146,15 +173,14 @@ class remotething(thing):
             req.append(name + ':' + args)
         req = ';'.join(req)
         res = self._submitone('batch', [('cmds', req,)])
-        return res.split(';')
+        for r in res.split(';'):
+            yield r
 
-    def batch(self):
-        return wireproto.remotebatch(self)
+    def batchiter(self):
+        return wireproto.remoteiterbatcher(self)
 
     @peer.batchable
     def foo(self, one, two=None):
-        if not one:
-            yield "Nope", None
         encargs = [('one', mangle(one),), ('two', mangle(two),)]
         encresref = peer.future()
         yield encargs, encresref

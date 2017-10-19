@@ -47,11 +47,13 @@ test with recursive collection
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:184916345baa
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 4052ceaa8c4e
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -86,11 +88,13 @@ test with normal collection
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:184916345baa
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 4052ceaa8c4e
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -125,11 +129,13 @@ test with old-style collection
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets cb9a9f314b8b:184916345baa
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 3 files
+  new changesets 4052ceaa8c4e
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

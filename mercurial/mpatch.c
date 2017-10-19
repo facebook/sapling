@@ -36,7 +36,8 @@ static struct mpatch_flist *lalloc(ssize_t size)
 
 	a = (struct mpatch_flist *)malloc(sizeof(struct mpatch_flist));
 	if (a) {
-		a->base = (struct mpatch_frag *)malloc(sizeof(struct mpatch_frag) * size);
+		a->base = (struct mpatch_frag *)malloc(
+		    sizeof(struct mpatch_frag) * size);
 		if (a->base) {
 			a->head = a->tail = a->base;
 			return a;
@@ -63,7 +64,7 @@ static ssize_t lsize(struct mpatch_flist *a)
    for changes in offset. the last hunk may be split if necessary.
 */
 static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
-	int offset)
+                  int offset)
 {
 	struct mpatch_frag *d = dest->tail, *s = src->head;
 	int postend, c, l;
@@ -77,8 +78,7 @@ static int gather(struct mpatch_flist *dest, struct mpatch_flist *src, int cut,
 			/* save this hunk */
 			offset += s->start + s->len - s->end;
 			*d++ = *s++;
-		}
-		else {
+		} else {
 			/* break up this hunk */
 			c = cut - offset;
 			if (s->end < c)
@@ -121,8 +121,7 @@ static int discard(struct mpatch_flist *src, int cut, int offset)
 		if (postend <= cut) {
 			offset += s->start + s->len - s->end;
 			s++;
-		}
-		else {
+		} else {
 			c = cut - offset;
 			if (s->end < c)
 				c = s->end;
@@ -146,7 +145,7 @@ static int discard(struct mpatch_flist *src, int cut, int offset)
 /* combine hunk lists a and b, while adjusting b for offset changes in a/
    this deletes a and b and returns the resultant list. */
 static struct mpatch_flist *combine(struct mpatch_flist *a,
-	struct mpatch_flist *b)
+                                    struct mpatch_flist *b)
 {
 	struct mpatch_flist *c = NULL;
 	struct mpatch_frag *bh, *ct;
@@ -240,7 +239,7 @@ ssize_t mpatch_calcsize(ssize_t len, struct mpatch_flist *l)
 }
 
 int mpatch_apply(char *buf, const char *orig, ssize_t len,
-	struct mpatch_flist *l)
+                 struct mpatch_flist *l)
 {
 	struct mpatch_frag *f = l->head;
 	int last = 0;
@@ -262,9 +261,9 @@ int mpatch_apply(char *buf, const char *orig, ssize_t len,
 }
 
 /* recursively generate a patch of all bins between start and end */
-struct mpatch_flist *mpatch_fold(void *bins,
-	struct mpatch_flist* (*get_next_item)(void*, ssize_t),
-	ssize_t start, ssize_t end)
+struct mpatch_flist *
+mpatch_fold(void *bins, struct mpatch_flist *(*get_next_item)(void *, ssize_t),
+            ssize_t start, ssize_t end)
 {
 	ssize_t len;
 
@@ -276,5 +275,5 @@ struct mpatch_flist *mpatch_fold(void *bins,
 	/* divide and conquer, memory management is elsewhere */
 	len = (end - start) / 2;
 	return combine(mpatch_fold(bins, get_next_item, start, start + len),
-		       mpatch_fold(bins, get_next_item, start + len, end));
+	               mpatch_fold(bins, get_next_item, start + len, end));
 }

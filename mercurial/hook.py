@@ -189,6 +189,15 @@ def redirect(state):
     global _redirect
     _redirect = state
 
+def hashook(ui, htype):
+    """return True if a hook is configured for 'htype'"""
+    if not ui.callhooks:
+        return False
+    for hname, cmd in _allhooks(ui):
+        if hname.split('.')[0] == htype and cmd:
+            return True
+    return False
+
 def hook(ui, repo, htype, throw=False, **args):
     if not ui.callhooks:
         return False

@@ -2,7 +2,7 @@
   > [extensions]
   > drawdag=$TESTDIR/drawdag.py
   > [experimental]
-  > evolution=all
+  > evolution=true
   > EOF
 
   $ reinit () {
@@ -227,8 +227,46 @@ Create obsmarkers via comments
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
   $ hg debugobsolete
-  112478962961147124edd43549aedd1a335e44bf 7fb047a69f220c21711122dfd94305a9efb60cba 64a8289d249234b9886244d379f15e6b650b28e3 711f53bbef0bebd12eb6f0511d5e2e998b984846 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  26805aba1e600a82e93661149f2313866a221a7b be0ef73c17ade3fc89dc41701eb9fc3a91b58282 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  be0ef73c17ade3fc89dc41701eb9fc3a91b58282 575c4b5ec114d64b681d33f8792853568bfb2b2c 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  64a8289d249234b9886244d379f15e6b650b28e3 0 {7fb047a69f220c21711122dfd94305a9efb60cba} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
-  58e6b987bf7045fcd9c54f496396ca1d1fc81047 0 {575c4b5ec114d64b681d33f8792853568bfb2b2c} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  112478962961147124edd43549aedd1a335e44bf 7fb047a69f220c21711122dfd94305a9efb60cba 64a8289d249234b9886244d379f15e6b650b28e3 711f53bbef0bebd12eb6f0511d5e2e998b984846 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'split', 'user': 'test'}
+  26805aba1e600a82e93661149f2313866a221a7b be0ef73c17ade3fc89dc41701eb9fc3a91b58282 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
+  be0ef73c17ade3fc89dc41701eb9fc3a91b58282 575c4b5ec114d64b681d33f8792853568bfb2b2c 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
+  64a8289d249234b9886244d379f15e6b650b28e3 0 {7fb047a69f220c21711122dfd94305a9efb60cba} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'prune', 'user': 'test'}
+  58e6b987bf7045fcd9c54f496396ca1d1fc81047 0 {575c4b5ec114d64b681d33f8792853568bfb2b2c} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'prune', 'user': 'test'}
+
+Change file contents via comments
+
+  $ reinit
+  $ hg debugdrawdag <<'EOS'
+  > C       # A/dir1/a = 1\n2
+  > |\      # B/dir2/b = 34
+  > A B     # C/dir1/c = 5
+  >         # C/dir2/c = 6
+  >         # C/A = a
+  >         # C/B = b
+  > EOS
+
+  $ hg log -G -T '{desc} {files}'
+  o    C A B dir1/c dir2/c
+  |\
+  | o  B B dir2/b
+  |
+  o  A A dir1/a
+  
+  $ for f in `hg files -r C`; do
+  >   echo FILE "$f"
+  >   hg cat -r C "$f"
+  >   echo
+  > done
+  FILE A
+  a
+  FILE B
+  b
+  FILE dir1/a (glob)
+  1
+  2
+  FILE dir1/c (glob)
+  5
+  FILE dir2/b (glob)
+  34
+  FILE dir2/c (glob)
+  6

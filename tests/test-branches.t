@@ -93,6 +93,7 @@ verify update will accept invalid legacy branch names
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 2 files
+  new changesets f0e4c7f04036:33c2ceb9310b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg update '"colon:test"'
@@ -418,6 +419,131 @@ branch b
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     prune bad branch
   
+
+reclose branch
+
+  $ hg up -C c
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg commit -d '9 0' --close-branch -m 'reclosing this branch'
+  $ hg branches
+  b                             13:e23b5505d1ad
+  a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  a                              5:d8cbc61dbaa6 (inactive)
+  default                        0:19709c5a4e75 (inactive)
+  $ hg branches --closed
+  b                             13:e23b5505d1ad
+  a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  c                             14:f894c25619d3 (closed)
+  a                              5:d8cbc61dbaa6 (inactive)
+  default                        0:19709c5a4e75 (inactive)
+
+multihead branch
+
+  $ hg up -C default
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg branch m
+  marked working directory as branch m
+  $ touch m
+  $ hg add m
+  $ hg commit -d '10 0' -m 'multihead base'
+  $ echo "m1" >m
+  $ hg commit -d '10 0' -m 'head 1'
+  $ hg up -C '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "m2" >m
+  $ hg commit -d '10 0' -m 'head 2'
+  created new head
+  $ hg log -b m
+  changeset:   17:df343b0df04f
+  branch:      m
+  tag:         tip
+  parent:      15:f3447637f53e
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     head 2
+  
+  changeset:   16:a58ca5d3bdf3
+  branch:      m
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     head 1
+  
+  changeset:   15:f3447637f53e
+  branch:      m
+  parent:      0:19709c5a4e75
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     multihead base
+  
+  $ hg heads --topo m
+  changeset:   17:df343b0df04f
+  branch:      m
+  tag:         tip
+  parent:      15:f3447637f53e
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     head 2
+  
+  changeset:   16:a58ca5d3bdf3
+  branch:      m
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     head 1
+  
+  $ hg branches
+  m                             17:df343b0df04f
+  b                             13:e23b5505d1ad
+  a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  a                              5:d8cbc61dbaa6 (inactive)
+  default                        0:19709c5a4e75 (inactive)
+
+partially merge multihead branch
+
+  $ hg up -C default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg branch md
+  marked working directory as branch md
+  $ hg merge m
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -d '11 0' -m 'merge head 2'
+  $ hg heads --topo m
+  changeset:   16:a58ca5d3bdf3
+  branch:      m
+  user:        test
+  date:        Thu Jan 01 00:00:10 1970 +0000
+  summary:     head 1
+  
+  $ hg branches
+  md                            18:c914c99f1fbb
+  m                             17:df343b0df04f
+  b                             13:e23b5505d1ad
+  a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  a                              5:d8cbc61dbaa6 (inactive)
+  default                        0:19709c5a4e75 (inactive)
+
+partially close multihead branch
+
+  $ hg up -C a58ca5d3bdf3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg commit -d '12 0' -m 'close head 1' --close-branch
+  $ hg heads --topo m
+  changeset:   19:cd21a80baa3d
+  branch:      m
+  tag:         tip
+  parent:      16:a58ca5d3bdf3
+  user:        test
+  date:        Thu Jan 01 00:00:12 1970 +0000
+  summary:     close head 1
+  
+  $ hg branches
+  md                            18:c914c99f1fbb
+  b                             13:e23b5505d1ad
+  a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  m                             17:df343b0df04f (inactive)
+  a                              5:d8cbc61dbaa6 (inactive)
+  default                        0:19709c5a4e75 (inactive)
+
 default branch colors:
 
   $ cat <<EOF >> $HGRCPATH
@@ -427,22 +553,23 @@ default branch colors:
   > mode = ansi
   > EOF
 
-  $ hg up -C c
-  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg commit -d '9 0' --close-branch -m 'reclosing this branch'
   $ hg up -C b
-  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branches --color=always
+  \x1b[0;0mmd\x1b[0m\x1b[0;33m                            18:c914c99f1fbb\x1b[0m (esc)
   \x1b[0;32mb\x1b[0m\x1b[0;33m                             13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;33m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;0mm\x1b[0m\x1b[0;33m                             17:df343b0df04f\x1b[0m (inactive) (esc)
   \x1b[0;0ma\x1b[0m\x1b[0;33m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;0mdefault\x1b[0m\x1b[0;33m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
 default closed branch color:
 
   $ hg branches --color=always --closed
+  \x1b[0;0mmd\x1b[0m\x1b[0;33m                            18:c914c99f1fbb\x1b[0m (esc)
   \x1b[0;32mb\x1b[0m\x1b[0;33m                             13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;0ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;33m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;0mm\x1b[0m\x1b[0;33m                             17:df343b0df04f\x1b[0m (inactive) (esc)
   \x1b[0;30;1mc\x1b[0m\x1b[0;33m                             14:f894c25619d3\x1b[0m (closed) (esc)
   \x1b[0;0ma\x1b[0m\x1b[0;33m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;0mdefault\x1b[0m\x1b[0;33m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
@@ -461,16 +588,20 @@ default closed branch color:
 custom branch colors:
 
   $ hg branches --color=always
+  \x1b[0;32mmd\x1b[0m\x1b[0;36m                            18:c914c99f1fbb\x1b[0m (esc)
   \x1b[0;31mb\x1b[0m\x1b[0;36m                             13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;36m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;35mm\x1b[0m\x1b[0;36m                             17:df343b0df04f\x1b[0m (inactive) (esc)
   \x1b[0;35ma\x1b[0m\x1b[0;36m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;35mdefault\x1b[0m\x1b[0;36m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
 
 custom closed branch color:
 
   $ hg branches --color=always --closed
+  \x1b[0;32mmd\x1b[0m\x1b[0;36m                            18:c914c99f1fbb\x1b[0m (esc)
   \x1b[0;31mb\x1b[0m\x1b[0;36m                             13:e23b5505d1ad\x1b[0m (esc)
   \x1b[0;32ma branch name much longer than the default justification used by branches\x1b[0m\x1b[0;36m 7:10ff5895aa57\x1b[0m (esc)
+  \x1b[0;35mm\x1b[0m\x1b[0;36m                             17:df343b0df04f\x1b[0m (inactive) (esc)
   \x1b[0;34mc\x1b[0m\x1b[0;36m                             14:f894c25619d3\x1b[0m (closed) (esc)
   \x1b[0;35ma\x1b[0m\x1b[0;36m                              5:d8cbc61dbaa6\x1b[0m (inactive) (esc)
   \x1b[0;35mdefault\x1b[0m\x1b[0;36m                        0:19709c5a4e75\x1b[0m (inactive) (esc)
@@ -479,6 +610,14 @@ template output:
 
   $ hg branches -Tjson --closed
   [
+   {
+    "active": true,
+    "branch": "md",
+    "closed": false,
+    "current": false,
+    "node": "c914c99f1fbb2b1d785a0a939ed3f67275df18e9",
+    "rev": 18
+   },
    {
     "active": true,
     "branch": "b",
@@ -494,6 +633,14 @@ template output:
     "current": false,
     "node": "10ff5895aa5793bd378da574af8cec8ea408d831",
     "rev": 7
+   },
+   {
+    "active": false,
+    "branch": "m",
+    "closed": false,
+    "current": false,
+    "node": "df343b0df04feb2a946cd4b6e9520e552fef14ee",
+    "rev": 17
    },
    {
     "active": false,
@@ -525,8 +672,10 @@ template output:
   c
 
   $ hg branches -T '{word(0, branch)}: {desc|firstline}\n'
+  md: merge head 2
   b: reopen branch with a change
   a: Adding d branch
+  m: head 2
   a: Adding b branch head 2
   default: Adding root node
 
@@ -538,8 +687,10 @@ template output:
   > EOF
   $ hg branches -T "$TESTTMP/map-myjson"
   {
+   {"branch": "md", "node": "c914c99f1fbb"},
    {"branch": "b", "node": "e23b5505d1ad"},
    {"branch": "a branch *", "node": "10ff5895aa57"}, (glob)
+   {"branch": "m", "node": "df343b0df04f"},
    {"branch": "a", "node": "d8cbc61dbaa6"},
    {"branch": "default", "node": "19709c5a4e75"}
   }
@@ -553,8 +704,10 @@ template output:
   > EOF
   $ hg branches -T myjson
   {
+   {"branch": "md", "node": "c914c99f1fbb"},
    {"branch": "b", "node": "e23b5505d1ad"},
    {"branch": "a branch *", "node": "10ff5895aa57"}, (glob)
+   {"branch": "m", "node": "df343b0df04f"},
    {"branch": "a", "node": "d8cbc61dbaa6"},
    {"branch": "default", "node": "19709c5a4e75"}
   }
@@ -564,8 +717,10 @@ template output:
   > :docheader = 'should not be selected as a docheader for literal templates\n'
   > EOF
   $ hg branches -T '{branch}\n'
+  md
   b
   a branch name much longer than the default justification used by branches
+  m
   a
   default
 
@@ -579,14 +734,14 @@ revision branch cache is created when building the branch head cache
   $ rm -rf .hg/cache; hg head a -T '{rev}\n'
   5
   $ f --hexdump --size .hg/cache/rbc-*
-  .hg/cache/rbc-names-v1: size=87
+  .hg/cache/rbc-names-v1: size=92
   0000: 64 65 66 61 75 6c 74 00 61 00 62 00 63 00 61 20 |default.a.b.c.a |
   0010: 62 72 61 6e 63 68 20 6e 61 6d 65 20 6d 75 63 68 |branch name much|
   0020: 20 6c 6f 6e 67 65 72 20 74 68 61 6e 20 74 68 65 | longer than the|
   0030: 20 64 65 66 61 75 6c 74 20 6a 75 73 74 69 66 69 | default justifi|
   0040: 63 61 74 69 6f 6e 20 75 73 65 64 20 62 79 20 62 |cation used by b|
-  0050: 72 61 6e 63 68 65 73                            |ranches|
-  .hg/cache/rbc-revs-v1: size=120
+  0050: 72 61 6e 63 68 65 73 00 6d 00 6d 64             |ranches.m.md|
+  .hg/cache/rbc-revs-v1: size=160
   0000: 19 70 9c 5a 00 00 00 00 dd 6b 44 0d 00 00 00 01 |.p.Z.....kD.....|
   0010: 88 1f e2 b9 00 00 00 01 ac 22 03 33 00 00 00 02 |.........".3....|
   0020: ae e3 9c d1 00 00 00 02 d8 cb c6 1d 00 00 00 01 |................|
@@ -594,7 +749,9 @@ revision branch cache is created when building the branch head cache
   0040: ee bb 94 44 00 00 00 02 5f 40 61 bb 00 00 00 02 |...D...._@a.....|
   0050: bf be 84 1b 00 00 00 02 d3 f1 63 45 80 00 00 02 |..........cE....|
   0060: e3 d4 9c 05 80 00 00 02 e2 3b 55 05 00 00 00 02 |.........;U.....|
-  0070: f8 94 c2 56 80 00 00 03                         |...V....|
+  0070: f8 94 c2 56 80 00 00 03 f3 44 76 37 00 00 00 05 |...V.....Dv7....|
+  0080: a5 8c a5 d3 00 00 00 05 df 34 3b 0d 00 00 00 05 |.........4;.....|
+  0090: c9 14 c9 9f 00 00 00 06 cd 21 a8 0b 80 00 00 05 |.........!......|
 
 no errors when revbranchcache is not writable
 
@@ -622,9 +779,9 @@ recovery from invalid cache revs file with trailing data
   $ echo >> .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
   5
-  truncating cache/rbc-revs-v1 to 120
+  truncating cache/rbc-revs-v1 to 160
   $ f --size .hg/cache/rbc-revs*
-  .hg/cache/rbc-revs-v1: size=120
+  .hg/cache/rbc-revs-v1: size=160
 recovery from invalid cache file with partial last record
   $ mv .hg/cache/rbc-revs-v1 .
   $ f -qDB 119 rbc-revs-v1 > .hg/cache/rbc-revs-v1
@@ -634,14 +791,14 @@ recovery from invalid cache file with partial last record
   5
   truncating cache/rbc-revs-v1 to 112
   $ f --size .hg/cache/rbc-revs*
-  .hg/cache/rbc-revs-v1: size=120
+  .hg/cache/rbc-revs-v1: size=160
 recovery from invalid cache file with missing record - no truncation
   $ mv .hg/cache/rbc-revs-v1 .
   $ f -qDB 112 rbc-revs-v1 > .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n' --debug
   5
   $ f --size .hg/cache/rbc-revs*
-  .hg/cache/rbc-revs-v1: size=120
+  .hg/cache/rbc-revs-v1: size=160
 recovery from invalid cache file with some bad records
   $ mv .hg/cache/rbc-revs-v1 .
   $ f -qDB 8 rbc-revs-v1 > .hg/cache/rbc-revs-v1
@@ -658,29 +815,29 @@ recovery from invalid cache file with some bad records
   5
   truncating cache/rbc-revs-v1 to 104
   $ f --size --hexdump --bytes=16 .hg/cache/rbc-revs*
-  .hg/cache/rbc-revs-v1: size=120
+  .hg/cache/rbc-revs-v1: size=160
   0000: 19 70 9c 5a 00 00 00 00 dd 6b 44 0d 00 00 00 01 |.p.Z.....kD.....|
 cache is updated when committing
   $ hg branch i-will-regret-this
   marked working directory as branch i-will-regret-this
   $ hg ci -m regrets
   $ f --size .hg/cache/rbc-*
-  .hg/cache/rbc-names-v1: size=106
-  .hg/cache/rbc-revs-v1: size=128
+  .hg/cache/rbc-names-v1: size=111
+  .hg/cache/rbc-revs-v1: size=168
 update after rollback - the cache will be correct but rbc-names will will still
 contain the branch name even though it no longer is used
   $ hg up -qr '.^'
   $ hg rollback -qf
   $ f --size --hexdump .hg/cache/rbc-*
-  .hg/cache/rbc-names-v1: size=106
+  .hg/cache/rbc-names-v1: size=111
   0000: 64 65 66 61 75 6c 74 00 61 00 62 00 63 00 61 20 |default.a.b.c.a |
   0010: 62 72 61 6e 63 68 20 6e 61 6d 65 20 6d 75 63 68 |branch name much|
   0020: 20 6c 6f 6e 67 65 72 20 74 68 61 6e 20 74 68 65 | longer than the|
   0030: 20 64 65 66 61 75 6c 74 20 6a 75 73 74 69 66 69 | default justifi|
   0040: 63 61 74 69 6f 6e 20 75 73 65 64 20 62 79 20 62 |cation used by b|
-  0050: 72 61 6e 63 68 65 73 00 69 2d 77 69 6c 6c 2d 72 |ranches.i-will-r|
-  0060: 65 67 72 65 74 2d 74 68 69 73                   |egret-this|
-  .hg/cache/rbc-revs-v1: size=120
+  0050: 72 61 6e 63 68 65 73 00 6d 00 6d 64 00 69 2d 77 |ranches.m.md.i-w|
+  0060: 69 6c 6c 2d 72 65 67 72 65 74 2d 74 68 69 73    |ill-regret-this|
+  .hg/cache/rbc-revs-v1: size=160
   0000: 19 70 9c 5a 00 00 00 00 dd 6b 44 0d 00 00 00 01 |.p.Z.....kD.....|
   0010: 88 1f e2 b9 00 00 00 01 ac 22 03 33 00 00 00 02 |.........".3....|
   0020: ae e3 9c d1 00 00 00 02 d8 cb c6 1d 00 00 00 01 |................|
@@ -688,12 +845,14 @@ contain the branch name even though it no longer is used
   0040: ee bb 94 44 00 00 00 02 5f 40 61 bb 00 00 00 02 |...D...._@a.....|
   0050: bf be 84 1b 00 00 00 02 d3 f1 63 45 80 00 00 02 |..........cE....|
   0060: e3 d4 9c 05 80 00 00 02 e2 3b 55 05 00 00 00 02 |.........;U.....|
-  0070: f8 94 c2 56 80 00 00 03                         |...V....|
+  0070: f8 94 c2 56 80 00 00 03 f3 44 76 37 00 00 00 05 |...V.....Dv7....|
+  0080: a5 8c a5 d3 00 00 00 05 df 34 3b 0d 00 00 00 05 |.........4;.....|
+  0090: c9 14 c9 9f 00 00 00 06 cd 21 a8 0b 80 00 00 05 |.........!......|
 cache is updated/truncated when stripping - it is thus very hard to get in a
 situation where the cache is out of sync and the hash check detects it
   $ hg --config extensions.strip= strip -r tip --nob
   $ f --size .hg/cache/rbc-revs*
-  .hg/cache/rbc-revs-v1: size=112
+  .hg/cache/rbc-revs-v1: size=152
 
 cache is rebuilt when corruption is detected
   $ echo > .hg/cache/rbc-names-v1
@@ -701,13 +860,14 @@ cache is rebuilt when corruption is detected
   referenced branch names not found - rebuilding revision branch cache from scratch
   8 9 10 11 12 13 truncating cache/rbc-revs-v1 to 40
   $ f --size --hexdump .hg/cache/rbc-*
-  .hg/cache/rbc-names-v1: size=79
+  .hg/cache/rbc-names-v1: size=84
   0000: 62 00 61 00 63 00 61 20 62 72 61 6e 63 68 20 6e |b.a.c.a branch n|
   0010: 61 6d 65 20 6d 75 63 68 20 6c 6f 6e 67 65 72 20 |ame much longer |
   0020: 74 68 61 6e 20 74 68 65 20 64 65 66 61 75 6c 74 |than the default|
   0030: 20 6a 75 73 74 69 66 69 63 61 74 69 6f 6e 20 75 | justification u|
-  0040: 73 65 64 20 62 79 20 62 72 61 6e 63 68 65 73    |sed by branches|
-  .hg/cache/rbc-revs-v1: size=112
+  0040: 73 65 64 20 62 79 20 62 72 61 6e 63 68 65 73 00 |sed by branches.|
+  0050: 6d 00 6d 64                                     |m.md|
+  .hg/cache/rbc-revs-v1: size=152
   0000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0020: 00 00 00 00 00 00 00 00 d8 cb c6 1d 00 00 00 01 |................|
@@ -715,6 +875,9 @@ cache is rebuilt when corruption is detected
   0040: ee bb 94 44 00 00 00 00 5f 40 61 bb 00 00 00 00 |...D...._@a.....|
   0050: bf be 84 1b 00 00 00 00 d3 f1 63 45 80 00 00 00 |..........cE....|
   0060: e3 d4 9c 05 80 00 00 00 e2 3b 55 05 00 00 00 00 |.........;U.....|
+  0070: f8 94 c2 56 80 00 00 02 f3 44 76 37 00 00 00 04 |...V.....Dv7....|
+  0080: a5 8c a5 d3 00 00 00 04 df 34 3b 0d 00 00 00 04 |.........4;.....|
+  0090: c9 14 c9 9f 00 00 00 05                         |........|
 
 Test that cache files are created and grows correctly:
 
@@ -724,7 +887,7 @@ Test that cache files are created and grows correctly:
   $ f --size --hexdump .hg/cache/rbc-*
   .hg/cache/rbc-names-v1: size=1
   0000: 61                                              |a|
-  .hg/cache/rbc-revs-v1: size=112
+  .hg/cache/rbc-revs-v1: size=152
   0000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0020: 00 00 00 00 00 00 00 00 d8 cb c6 1d 00 00 00 00 |................|
@@ -732,6 +895,9 @@ Test that cache files are created and grows correctly:
   0040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
   0060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0090: 00 00 00 00 00 00 00 00                         |........|
 
   $ cd ..
 

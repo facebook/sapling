@@ -30,6 +30,20 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('gpg', 'cmd',
+    default='gpg',
+)
+configitem('gpg', 'key',
+    default=None,
+)
+configitem('gpg', '.*',
+    default=None,
+    generic=True,
+)
+
 class gpg(object):
     def __init__(self, path, key=None):
         self.path = path
@@ -91,10 +105,10 @@ class gpg(object):
 
 def newgpg(ui, **opts):
     """create a new gpg instance"""
-    gpgpath = ui.config("gpg", "cmd", "gpg")
+    gpgpath = ui.config("gpg", "cmd")
     gpgkey = opts.get('key')
     if not gpgkey:
-        gpgkey = ui.config("gpg", "key", None)
+        gpgkey = ui.config("gpg", "key")
     return gpg(gpgpath, gpgkey)
 
 def sigwalk(repo):
@@ -206,7 +220,7 @@ def sigcheck(ui, repo, rev):
 def keystr(ui, key):
     """associate a string to a key (username, comment)"""
     keyid, user, fingerprint = key
-    comment = ui.config("gpg", fingerprint, None)
+    comment = ui.config("gpg", fingerprint)
     if comment:
         return "%s (%s)" % (user, comment)
     else:

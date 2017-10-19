@@ -36,11 +36,13 @@ from __future__ import absolute_import
 
 import itertools
 import os
-import platform
 import subprocess
 import sys
 
-from mercurial import encoding
+from mercurial import (
+    encoding,
+    pycompat,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -49,7 +51,7 @@ from mercurial import encoding
 testedwith = 'ships-with-hg-core'
 
 def uisetup(ui):
-    if platform.system() == 'Windows':
+    if pycompat.iswindows:
         # no fork on Windows, but we can create a detached process
         # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
         # No stdlib constant exists for this value

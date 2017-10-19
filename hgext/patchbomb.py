@@ -99,6 +99,38 @@ stringio = util.stringio
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('patchbomb', 'bundletype',
+    default=None,
+)
+configitem('patchbomb', 'bcc',
+    default=None,
+)
+configitem('patchbomb', 'cc',
+    default=None,
+)
+configitem('patchbomb', 'confirm',
+    default=False,
+)
+configitem('patchbomb', 'flagtemplate',
+    default=None,
+)
+configitem('patchbomb', 'from',
+    default=None,
+)
+configitem('patchbomb', 'intro',
+    default='auto',
+)
+configitem('patchbomb', 'publicurl',
+    default=None,
+)
+configitem('patchbomb', 'reply-to',
+    default=None,
+)
+
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -134,7 +166,7 @@ def prompt(ui, prompt, default=None, rest=':'):
 
 def introwanted(ui, opts, number):
     '''is an introductory message apparently wanted?'''
-    introconfig = ui.config('patchbomb', 'intro', 'auto')
+    introconfig = ui.config('patchbomb', 'intro')
     if opts.get('intro') or opts.get('desc'):
         intro = True
     elif introconfig == 'always':
@@ -308,7 +340,8 @@ def _getdescription(repo, defaultbody, sender, **opts):
     else:
         ui.write(_('\nWrite the introductory message for the '
                    'patch series.\n\n'))
-        body = ui.edit(defaultbody, sender, repopath=repo.path)
+        body = ui.edit(defaultbody, sender, repopath=repo.path,
+                       action='patchbombbody')
         # Save series description in case sendmail fails
         msgfile = repo.vfs('last-email.txt', 'wb')
         msgfile.write(body)

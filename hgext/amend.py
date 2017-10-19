@@ -16,6 +16,7 @@ from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
+    error,
     registrar,
 )
 
@@ -33,6 +34,7 @@ command = registrar.command(cmdtable)
       _('mark new/missing files as added/removed before committing')),
      ('e', 'edit', None, _('invoke editor on commit messages')),
      ('i', 'interactive', None, _('use interactive mode')),
+     ('n', 'note', '', _('store a note on the amend')),
     ] + cmdutil.walkopts + cmdutil.commitopts + cmdutil.commitopts2,
     _('[OPTION]... [FILE]...'),
     inferrepo=True)
@@ -44,6 +46,8 @@ def amend(ui, repo, *pats, **opts):
 
     See :hg:`help commit` for more details.
     """
+    if len(opts['note']) > 255:
+        raise error.Abort(_("cannot store a note of more than 255 bytes"))
     with repo.wlock(), repo.lock():
         if not opts.get('logfile'):
             opts['message'] = opts.get('message') or repo['.'].description()

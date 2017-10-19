@@ -33,6 +33,7 @@ but then local changes are added in the same directory)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets cc7000b01af9
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -C 2
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

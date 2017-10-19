@@ -15,22 +15,30 @@ override_dh_python2:
 	find debian/mercurial/usr/share -type d -empty -delete
 
 override_dh_install:
-	python$(PYVERS) setup.py install --root $(CURDIR)/debian/mercurial --install-layout=deb
+	python$(PYVERS) setup.py install --root "$(CURDIR)"/debian/mercurial --install-layout=deb
+	# chg
+	make -C contrib/chg \
+		DESTDIR="$(CURDIR)"/debian/mercurial \
+		PREFIX=/usr \
+		clean install
 	# remove arch-independent python stuff
-	find $(CURDIR)/debian/mercurial/usr/lib \
+	find "$(CURDIR)"/debian/mercurial/usr/lib \
 		! -name '*.so' ! -type d -delete , \
 		-type d -empty -delete
-	python$(PYVERS) setup.py install --root $(CURDIR)/debian/mercurial-common --install-layout=deb
-	make install-doc PREFIX=$(CURDIR)/debian/mercurial-common/usr
+	python$(PYVERS) setup.py install --root "$(CURDIR)/debian/mercurial-common" --install-layout=deb
+	make install-doc PREFIX="$(CURDIR)"/debian/mercurial-common/usr
 	# remove arch-dependent python stuff
-	find $(CURDIR)/debian/mercurial-common/usr/lib \
+	find "$(CURDIR)"/debian/mercurial-common/usr/lib \
 		-name '*.so' ! -type d -delete , \
 		-type d -empty -delete
-	cp contrib/hg-ssh $(CURDIR)/debian/mercurial-common/usr/bin
-	mkdir -p $(CURDIR)/debian/mercurial-common/usr/share/mercurial
-	cp contrib/hgk $(CURDIR)/debian/mercurial-common/usr/share/mercurial
-	mkdir -p $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
-	cp contrib/debian/*.rc $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
-	mkdir -p $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions
-	cp contrib/bash_completion $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions/hg
-	rm $(CURDIR)/debian/mercurial-common/usr/bin/hg
+	cp contrib/hg-ssh "$(CURDIR)"/debian/mercurial-common/usr/bin
+	mkdir -p "$(CURDIR)"/debian/mercurial-common/usr/share/mercurial
+	cp contrib/hgk "$(CURDIR)"/debian/mercurial-common/usr/share/mercurial
+	mkdir -p "$(CURDIR)"/debian/mercurial-common/etc/mercurial/hgrc.d/
+	cp contrib/debian/*.rc "$(CURDIR)"/debian/mercurial-common/etc/mercurial/hgrc.d/
+	# completions
+	mkdir -p "$(CURDIR)"/debian/mercurial-common/usr/share/bash-completion/completions
+	cp contrib/bash_completion "$(CURDIR)"/debian/mercurial-common/usr/share/bash-completion/completions/hg
+	mkdir -p "$(CURDIR)"/debian/mercurial-common/usr/share/zsh/vendor-completions
+	cp contrib/zsh_completion "$(CURDIR)"/debian/mercurial-common/usr/share/zsh/vendor-completions/_hg
+	rm "$(CURDIR)"/debian/mercurial-common/usr/bin/hg

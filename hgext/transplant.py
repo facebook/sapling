@@ -49,6 +49,16 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('transplant', 'filter',
+    default=None,
+)
+configitem('transplant', 'log',
+    default=None,
+)
+
 class transplantentry(object):
     def __init__(self, lnode, rnode):
         self.lnode = lnode

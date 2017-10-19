@@ -72,6 +72,12 @@ As seen in the above example, ``{template}`` is interpreted as a template.
 To prevent it from being interpreted, you can use an escape character ``\{``
 or a raw string prefix, ``r'...'``.
 
+The dot operator can be used as a shorthand for accessing a sub item:
+
+- ``expr.member`` is roughly equivalent to ``expr % '{member}'`` if ``expr``
+  returns a non-list/dict. The returned value is not stringified.
+- ``dict.key`` is identical to ``get(dict, 'key')``.
+
 Aliases
 =======
 

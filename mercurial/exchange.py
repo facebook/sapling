@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import errno
 import hashlib
 
@@ -294,7 +295,7 @@ class pushoperation(object):
     """
 
     def __init__(self, repo, remote, force=False, revs=None, newbranch=False,
-                 bookmarks=()):
+                 bookmarks=(), pushvars=None):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
@@ -308,8 +309,6 @@ class pushoperation(object):
         self.bookmarks = bookmarks
         # allow push of new branch
         self.newbranch = newbranch
-        # did a local lock get acquired?
-        self.locallocked = None
         # step already performed
         # (used to check what steps have been already performed through bundle2)
         self.stepsdone = set()
@@ -341,6 +340,8 @@ class pushoperation(object):
         self.pushbranchmap = None
         # testable as a boolean indicating if any nodes are missing locally.
         self.incoming = None
+        # summary of the remote phase situation
+        self.remotephases = None
         # phases changes that must be pushed along side the changesets
         self.outdatedphases = None
         # phases changes that must be pushed if changeset push fails
@@ -354,6 +355,8 @@ class pushoperation(object):
         # map { pushkey partid -> callback handling failure}
         # used to handle exception from mandatory pushkey part failure
         self.pkfailcb = {}
+        # an iterable of pushvars or None
+        self.pushvars = pushvars
 
     @util.propertycache
     def futureheads(self):
@@ -423,7 +426,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
     if opargs is None:
         opargs = {}
     pushop = pushoperation(repo, remote, force, revs, newbranch, bookmarks,
-                           **opargs)
+                           **pycompat.strkwargs(opargs))
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
@@ -433,28 +436,26 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
                     " %s") % (', '.join(sorted(missing)))
             raise error.Abort(msg)
 
-    # there are two ways to push to remote repo:
-    #
-    # addchangegroup assumes local user can lock remote
-    # repo (local filesystem, old ssh servers).
-    #
-    # unbundle assumes local user cannot lock remote repo (new ssh
-    # servers, http servers).
-
     if not pushop.remote.canpush():
         raise error.Abort(_("destination does not support push"))
-    # get local lock as we might write phase data
-    localwlock = locallock = None
+
+    if not pushop.remote.capable('unbundle'):
+        raise error.Abort(_('cannot push: destination does not support the '
+                            'unbundle wire protocol command'))
+
+    # get lock as we might write phase data
+    wlock = lock = None
     try:
         # bundle2 push may receive a reply bundle touching bookmarks or other
         # things requiring the wlock. Take it now to ensure proper ordering.
         maypushback = pushop.ui.configbool('experimental', 'bundle2.pushback')
         if (not _forcebundle1(pushop)) and maypushback:
-            localwlock = pushop.repo.wlock()
-        locallock = pushop.repo.lock()
-        pushop.locallocked = True
+            wlock = pushop.repo.wlock()
+        lock = pushop.repo.lock()
+        pushop.trmanager = transactionmanager(pushop.repo,
+                                              'push-response',
+                                              pushop.remote.url())
     except IOError as err:
-        pushop.locallocked = False
         if err.errno != errno.EACCES:
             raise
         # source repo cannot be locked.
@@ -462,36 +463,18 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
         # synchronisation.
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
-    try:
-        if pushop.locallocked:
-            pushop.trmanager = transactionmanager(pushop.repo,
-                                                  'push-response',
-                                                  pushop.remote.url())
+
+    with wlock or util.nullcontextmanager(), \
+            lock or util.nullcontextmanager(), \
+            pushop.trmanager or util.nullcontextmanager():
         pushop.repo.checkpush(pushop)
-        lock = None
-        unbundle = pushop.remote.capable('unbundle')
-        if not unbundle:
-            lock = pushop.remote.lock()
-        try:
-            _pushdiscovery(pushop)
-            if not _forcebundle1(pushop):
-                _pushbundle2(pushop)
-            _pushchangeset(pushop)
-            _pushsyncphase(pushop)
-            _pushobsolete(pushop)
-            _pushbookmark(pushop)
-        finally:
-            if lock is not None:
-                lock.release()
-        if pushop.trmanager:
-            pushop.trmanager.close()
-    finally:
-        if pushop.trmanager:
-            pushop.trmanager.release()
-        if locallock is not None:
-            locallock.release()
-        if localwlock is not None:
-            localwlock.release()
+        _pushdiscovery(pushop)
+        if not _forcebundle1(pushop):
+            _pushbundle2(pushop)
+        _pushchangeset(pushop)
+        _pushsyncphase(pushop)
+        _pushobsolete(pushop)
+        _pushbookmark(pushop)
 
     return pushop
 
@@ -546,27 +529,30 @@ def _pushdiscoveryphase(pushop):
     outgoing = pushop.outgoing
     unfi = pushop.repo.unfiltered()
     remotephases = pushop.remote.listkeys('phases')
-    publishing = remotephases.get('publishing', False)
     if (pushop.ui.configbool('ui', '_usedassubrepo')
         and remotephases    # server supports phases
         and not pushop.outgoing.missing # no changesets to be pushed
-        and publishing):
+        and remotephases.get('publishing', False)):
         # When:
         # - this is a subrepo push
         # - and remote support phase
         # - and no changeset are to be pushed
         # - and remote is publishing
-        # We may be in issue 3871 case!
+        # We may be in issue 3781 case!
         # We drop the possible phase synchronisation done by
         # courtesy to publish changesets possibly locally draft
         # on the remote.
-        remotephases = {'publishing': 'True'}
-    ana = phases.analyzeremotephases(pushop.repo,
-                                     pushop.fallbackheads,
-                                     remotephases)
-    pheads, droots = ana
+        pushop.outdatedphases = []
+        pushop.fallbackoutdatedphases = []
+        return
+
+    pushop.remotephases = phases.remotephasessummary(pushop.repo,
+                                                     pushop.fallbackheads,
+                                                     remotephases)
+    droots = pushop.remotephases.draftroots
+
     extracond = ''
-    if not publishing:
+    if not pushop.remotephases.publishing:
         extracond = ' and public()'
     revset = 'heads((%%ln::%%ln) %s)' % extracond
     # Get the list of all revs draft on remote by public here.
@@ -677,9 +663,11 @@ def _pushcheckoutgoing(pushop):
         if unfi.obsstore:
             # this message are here for 80 char limit reason
             mso = _("push includes obsolete changeset: %s!")
-            mst = {"unstable": _("push includes unstable changeset: %s!"),
-                   "bumped": _("push includes bumped changeset: %s!"),
-                   "divergent": _("push includes divergent changeset: %s!")}
+            mspd = _("push includes phase-divergent changeset: %s!")
+            mscd = _("push includes content-divergent changeset: %s!")
+            mst = {"orphan": _("push includes orphan changeset: %s!"),
+                   "phase-divergent": mspd,
+                   "content-divergent": mscd}
             # If we are to push if there is at least one
             # obsolete or unstable changeset in missing, at
             # least one of the missinghead will be obsolete or
@@ -688,8 +676,10 @@ def _pushcheckoutgoing(pushop):
                 ctx = unfi[node]
                 if ctx.obsolete():
                     raise error.Abort(mso % ctx)
-                elif ctx.troubled():
-                    raise error.Abort(mst[ctx.troubles()[0]] % ctx)
+                elif ctx.isunstable():
+                    # TODO print more than one instability in the abort
+                    # message
+                    raise error.Abort(mst[ctx.instabilities()[0]] % ctx)
 
         discovery.checkheads(pushop)
     return True
@@ -745,6 +735,31 @@ def _pushb2ctxcheckheads(pushop, bundler):
                 data = iter(sorted(affected))
                 bundler.newpart('check:updated-heads', data=data)
 
+def _pushing(pushop):
+    """return True if we are pushing anything"""
+    return bool(pushop.outgoing.missing
+                or pushop.outdatedphases
+                or pushop.outobsmarkers
+                or pushop.outbookmarks)
+
+@b2partsgenerator('check-phases')
+def _pushb2checkphases(pushop, bundler):
+    """insert phase move checking"""
+    if not _pushing(pushop) or pushop.force:
+        return
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    hasphaseheads = 'heads' in b2caps.get('phases', ())
+    if pushop.remotephases is not None and hasphaseheads:
+        # check that the remote phase has not changed
+        checks = [[] for p in phases.allphases]
+        checks[phases.public].extend(pushop.remotephases.publicheads)
+        checks[phases.draft].extend(pushop.remotephases.draftroots)
+        if any(checks):
+            for nodes in checks:
+                nodes.sort()
+            checkdata = phases.binaryencode(checks)
+            bundler.newpart('check:phases', data=checkdata)
+
 @b2partsgenerator('changeset')
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
@@ -771,10 +786,9 @@ def _pushb2ctx(pushop, bundler):
         if not cgversions:
             raise ValueError(_('no common changegroup version'))
         version = max(cgversions)
-    cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
-                                            pushop.outgoing,
-                                            version=version)
-    cgpart = bundler.newpart('changegroup', data=cg)
+    cgstream = changegroup.makestream(pushop.repo, pushop.outgoing, version,
+                                      'push')
+    cgpart = bundler.newpart('changegroup', data=cgstream)
     if cgversions:
         cgpart.addparam('version', version)
     if 'treemanifest' in pushop.repo.requirements:
@@ -792,8 +806,28 @@ def _pushb2phases(pushop, bundler):
     if 'phases' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
-    if not 'pushkey' in b2caps:
-        return
+    ui = pushop.repo.ui
+
+    legacyphase = 'phases' in ui.configlist('devel', 'legacy.exchange')
+    haspushkey = 'pushkey' in b2caps
+    hasphaseheads = 'heads' in b2caps.get('phases', ())
+
+    if hasphaseheads and not legacyphase:
+        _pushb2phaseheads(pushop, bundler)
+    elif haspushkey:
+        _pushb2phasespushkey(pushop, bundler)
+
+def _pushb2phaseheads(pushop, bundler):
+    """push phase information through a bundle2 - binary part"""
+    pushop.stepsdone.add('phases')
+    if pushop.outdatedphases:
+        updates = [[] for p in phases.allphases]
+        updates[0].extend(h.node() for h in pushop.outdatedphases)
+        phasedata = phases.binaryencode(updates)
+        bundler.newpart('phase-heads', data=phasedata)
+
+def _pushb2phasespushkey(pushop, bundler):
+    """push phase information through a bundle2 - pushkey part"""
     pushop.stepsdone.add('phases')
     part2node = []
 
@@ -808,8 +842,8 @@ def _pushb2phases(pushop, bundler):
         part = bundler.newpart('pushkey')
         part.addparam('namespace', enc('phases'))
         part.addparam('key', enc(newremotehead.hex()))
-        part.addparam('old', enc(str(phases.draft)))
-        part.addparam('new', enc(str(phases.public)))
+        part.addparam('old', enc('%d' % phases.draft))
+        part.addparam('new', enc('%d' % phases.public))
         part2node.append((part.id, newremotehead))
         pushop.pkfailcb[part.id] = handlefailure
 
@@ -891,6 +925,24 @@ def _pushb2bookmarks(pushop, bundler):
                         pushop.bkresult = 1
     return handlereply
 
+@b2partsgenerator('pushvars', idx=0)
+def _getbundlesendvars(pushop, bundler):
+    '''send shellvars via bundle2'''
+    pushvars = pushop.pushvars
+    if pushvars:
+        shellvars = {}
+        for raw in pushvars:
+            if '=' not in raw:
+                msg = ("unable to parse variable '%s', should follow "
+                        "'KEY=VALUE' or 'KEY=' format")
+                raise error.Abort(msg % raw)
+            k, v = raw.split('=', 1)
+            shellvars[k] = v
+
+        part = bundler.newpart('pushvars')
+
+        for key, value in shellvars.iteritems():
+            part.addparam(key, value, mandatory=False)
 
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
@@ -948,9 +1000,12 @@ def _pushchangeset(pushop):
     pushop.stepsdone.add('changesets')
     if not _pushcheckoutgoing(pushop):
         return
+
+    # Should have verified this in push().
+    assert pushop.remote.capable('unbundle')
+
     pushop.repo.prepushoutgoinghooks(pushop)
     outgoing = pushop.outgoing
-    unbundle = pushop.remote.capable('unbundle')
     # TODO: get bundlecaps from remote
     bundlecaps = None
     # create a changegroup from local
@@ -958,35 +1013,25 @@ def _pushchangeset(pushop):
                             or pushop.repo.changelog.filteredrevs):
         # push everything,
         # use the fast path, no race possible on push
-        bundler = changegroup.cg1packer(pushop.repo, bundlecaps)
-        cg = changegroup.getsubset(pushop.repo,
-                                   outgoing,
-                                   bundler,
-                                   'push',
-                                   fastpath=True)
+        cg = changegroup.makechangegroup(pushop.repo, outgoing, '01', 'push',
+                fastpath=True, bundlecaps=bundlecaps)
     else:
-        cg = changegroup.getchangegroup(pushop.repo, 'push', outgoing,
-                                        bundlecaps=bundlecaps)
+        cg = changegroup.makechangegroup(pushop.repo, outgoing, '01',
+                                        'push', bundlecaps=bundlecaps)
 
     # apply changegroup to remote
-    if unbundle:
-        # local repo finds heads on server, finds out what
-        # revs it must push. once revs transferred, if server
-        # finds it has different heads (someone else won
-        # commit/push race), server aborts.
-        if pushop.force:
-            remoteheads = ['force']
-        else:
-            remoteheads = pushop.remoteheads
-        # ssh: return remote's addchangegroup()
-        # http: return remote's addchangegroup() or 0 for error
-        pushop.cgresult = pushop.remote.unbundle(cg, remoteheads,
-                                            pushop.repo.url())
+    # local repo finds heads on server, finds out what
+    # revs it must push. once revs transferred, if server
+    # finds it has different heads (someone else won
+    # commit/push race), server aborts.
+    if pushop.force:
+        remoteheads = ['force']
     else:
-        # we return an integer indicating remote head count
-        # change
-        pushop.cgresult = pushop.remote.addchangegroup(cg, 'push',
-                                                       pushop.repo.url())
+        remoteheads = pushop.remoteheads
+    # ssh: return remote's addchangegroup()
+    # http: return remote's addchangegroup() or 0 for error
+    pushop.cgresult = pushop.remote.unbundle(cg, remoteheads,
+                                        pushop.repo.url())
 
 def _pushsyncphase(pushop):
     """synchronise phase information locally and remotely"""
@@ -1173,7 +1218,7 @@ class pulloperation(object):
         # deprecated; talk to trmanager directly
         return self.trmanager.transaction()
 
-class transactionmanager(object):
+class transactionmanager(util.transactional):
     """An object to manage the life cycle of a transaction
 
     It creates the transaction on demand and calls the appropriate hooks when
@@ -1229,8 +1274,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         opargs = {}
     pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
                            streamclonerequested=streamclonerequested, **opargs)
-    if pullop.remote.local():
-        missing = set(pullop.remote.requirements) - pullop.repo.supported
+
+    peerlocal = pullop.remote.local()
+    if peerlocal:
+        missing = set(peerlocal.requirements) - pullop.repo.supported
         if missing:
             msg = _("required features are not"
                     " supported in the destination:"
@@ -1242,10 +1289,10 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         wlock = pullop.repo.wlock()
         lock = pullop.repo.lock()
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
-        streamclone.maybeperformlegacystreamclone(pullop)
         # This should ideally be in _pullbundle2(). However, it needs to run
         # before discovery to avoid extra work.
         _maybeapplyclonebundle(pullop)
+        streamclone.maybeperformlegacystreamclone(pullop)
         _pulldiscovery(pullop)
         if pullop.canusebundle2:
             _pullbundle2(pullop)
@@ -1317,8 +1364,7 @@ def _pulldiscoverychangegroup(pullop):
     common, fetch, rheads = tmp
     nm = pullop.repo.unfiltered().changelog.nodemap
     if fetch and rheads:
-        # If a remote heads in filtered locally, lets drop it from the unknown
-        # remote heads and put in back in common.
+        # If a remote heads is filtered locally, put in back in common.
         #
         # This is a hackish solution to catch most of "common but locally
         # hidden situation".  We do not performs discovery on unfiltered
@@ -1328,16 +1374,12 @@ def _pulldiscoverychangegroup(pullop):
         # If a set of such "common but filtered" changeset exist on the server
         # but are not including a remote heads, we'll not be able to detect it,
         scommon = set(common)
-        filteredrheads = []
         for n in rheads:
             if n in nm:
                 if n not in scommon:
                     common.append(n)
-            else:
-                filteredrheads.append(n)
-        if not filteredrheads:
+        if set(rheads).issubset(set(common)):
             fetch = []
-        rheads = filteredrheads
     pullop.common = common
     pullop.fetch = fetch
     pullop.rheads = rheads
@@ -1358,12 +1400,21 @@ def _pullbundle2(pullop):
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
+
+    ui = pullop.repo.ui
+    legacyphase = 'phases' in ui.configlist('devel', 'legacy.exchange')
+    hasbinaryphase = 'heads' in pullop.remotebundle2caps.get('phases', ())
+    if (not legacyphase and hasbinaryphase):
+        kwargs['phases'] = True
+        pullop.stepsdone.add('phases')
+
     if 'listkeys' in pullop.remotebundle2caps:
-        kwargs['listkeys'] = ['phases']
+        if 'phases' not in pullop.stepsdone:
+            kwargs['listkeys'] = ['phases']
         if pullop.remotebookmarks is None:
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
-            kwargs['listkeys'].append('bookmarks')
+            kwargs.setdefault('listkeys', []).append('bookmarks')
 
     # If this is a full pull / clone and the server supports the clone bundles
     # feature, tell the server whether we attempted a clone bundle. The
@@ -1416,7 +1467,6 @@ def _pullbundle2(pullop):
 
 def _pullbundle2extraprepare(pullop, kwargs):
     """hook function so that extensions can extend the getbundle call"""
-    pass
 
 def _pullchangeset(pullop):
     """pull changeset from unbundle into the local repo"""
@@ -1595,8 +1645,8 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
             raise ValueError(_('unsupported getbundle arguments: %s')
                              % ', '.join(sorted(kwargs.keys())))
         outgoing = _computeoutgoing(repo, heads, common)
-        bundler = changegroup.getbundler('01', repo, bundlecaps)
-        return changegroup.getsubsetraw(repo, outgoing, bundler, source)
+        return changegroup.makestream(repo, outgoing, '01', source,
+                                      bundlecaps=bundlecaps)
 
     # bundle20 case
     b2caps = {}
@@ -1620,7 +1670,7 @@ def getbundlechunks(repo, source, heads=None, common=None, bundlecaps=None,
 def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                               b2caps=None, heads=None, common=None, **kwargs):
     """add a changegroup part to the requested bundle"""
-    cg = None
+    cgstream = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
         version = '01'
@@ -1632,15 +1682,16 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                 raise ValueError(_('no common changegroup version'))
             version = max(cgversions)
         outgoing = _computeoutgoing(repo, heads, common)
-        cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
-                                                bundlecaps=bundlecaps,
-                                                version=version)
+        if outgoing.missing:
+            cgstream = changegroup.makestream(repo, outgoing, version, source,
+                                              bundlecaps=bundlecaps)
 
-    if cg:
-        part = bundler.newpart('changegroup', data=cg)
+    if cgstream:
+        part = bundler.newpart('changegroup', data=cgstream)
         if cgversions:
             part.addparam('version', version)
-        part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
+        part.addparam('nbchanges', '%d' % len(outgoing.missing),
+                      mandatory=False)
         if 'treemanifest' in repo.requirements:
             part.addparam('treemanifest', '1')
 
@@ -1666,6 +1717,53 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
         markers = repo.obsstore.relevantmarkers(subset)
         markers = sorted(markers)
         bundle2.buildobsmarkerspart(bundler, markers)
+
+@getbundle2partsgenerator('phases')
+def _getbundlephasespart(bundler, repo, source, bundlecaps=None,
+                            b2caps=None, heads=None, **kwargs):
+    """add phase heads part to the requested bundle"""
+    if kwargs.get('phases', False):
+        if not 'heads' in b2caps.get('phases'):
+            raise ValueError(_('no common phases exchange method'))
+        if heads is None:
+            heads = repo.heads()
+
+        headsbyphase = collections.defaultdict(set)
+        if repo.publishing():
+            headsbyphase[phases.public] = heads
+        else:
+            # find the appropriate heads to move
+
+            phase = repo._phasecache.phase
+            node = repo.changelog.node
+            rev = repo.changelog.rev
+            for h in heads:
+                headsbyphase[phase(repo, rev(h))].add(h)
+            seenphases = list(headsbyphase.keys())
+
+            # We do not handle anything but public and draft phase for now)
+            if seenphases:
+                assert max(seenphases) <= phases.draft
+
+            # if client is pulling non-public changesets, we need to find
+            # intermediate public heads.
+            draftheads = headsbyphase.get(phases.draft, set())
+            if draftheads:
+                publicheads = headsbyphase.get(phases.public, set())
+
+                revset = 'heads(only(%ln, %ln) and public())'
+                extraheads = repo.revs(revset, draftheads, publicheads)
+                for r in extraheads:
+                    headsbyphase[phases.public].add(node(r))
+
+        # transform data in a format used by the encoding function
+        phasemapping = []
+        for phase in phases.allphases:
+            phasemapping.append(sorted(headsbyphase[phase]))
+
+        # generate the actual part
+        phasedata = phases.binaryencode(phasemapping)
+        bundler.newpart('phase-heads', data=phasedata)
 
 @getbundle2partsgenerator('hgtagsfnodes')
 def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
@@ -1816,7 +1914,9 @@ def _maybeapplyclonebundle(pullop):
                        'falling back to regular clone\n'))
         return
 
-    entries = filterclonebundleentries(repo, entries)
+    entries = filterclonebundleentries(
+        repo, entries, streamclonerequested=pullop.streamclonerequested)
+
     if not entries:
         # There is a thundering herd concern here. However, if a server
         # operator doesn't advertise bundles appropriate for its clients,
@@ -1885,7 +1985,7 @@ def parseclonebundlesmanifest(repo, s):
 
     return m
 
-def filterclonebundleentries(repo, entries):
+def filterclonebundleentries(repo, entries, streamclonerequested=False):
     """Remove incompatible clone bundle manifest entries.
 
     Accepts a list of entries parsed with ``parseclonebundlesmanifest``
@@ -1900,7 +2000,15 @@ def filterclonebundleentries(repo, entries):
         spec = entry.get('BUNDLESPEC')
         if spec:
             try:
-                parsebundlespec(repo, spec, strict=True)
+                comp, version, params = parsebundlespec(repo, spec, strict=True)
+
+                # If a stream clone was requested, filter out non-streamclone
+                # entries.
+                if streamclonerequested and (comp != 'UN' or version != 's1'):
+                    repo.ui.debug('filtering %s because not a stream clone\n' %
+                                  entry['URL'])
+                    continue
+
             except error.InvalidBundleSpecification as e:
                 repo.ui.debug(str(e) + '\n')
                 continue
@@ -1908,6 +2016,12 @@ def filterclonebundleentries(repo, entries):
                 repo.ui.debug('filtering %s because unsupported bundle '
                               'spec: %s\n' % (entry['URL'], str(e)))
                 continue
+        # If we don't have a spec and requested a stream clone, we don't know
+        # what the entry is so don't attempt to apply it.
+        elif streamclonerequested:
+            repo.ui.debug('filtering %s because cannot determine if a stream '
+                          'clone bundle\n' % entry['URL'])
+            continue
 
         if 'REQUIRESNI' in entry and not sslutil.hassni:
             repo.ui.debug('filtering %s because SNI not supported\n' %

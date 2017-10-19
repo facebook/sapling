@@ -70,6 +70,7 @@ show the edit commands offered
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -348,6 +349,7 @@ Verify that revsetalias entries work with histedit:
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -362,6 +364,7 @@ should also work if a commit message is missing
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets 141947992243:bd22688093b3
   (run 'hg update' to get a working copy)
   $ hg co tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

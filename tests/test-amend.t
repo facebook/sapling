@@ -11,7 +11,7 @@
 #if obsstore-on
   $ cat << EOF >> $HGRCPATH
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
 #endif
 
@@ -28,9 +28,9 @@ Basic amend
   $ hg update B -q
   $ echo 2 >> B
 
-#if obsstore-off
   $ hg amend
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/112478962961-af2c0941-amend.hg (glob)
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/112478962961-7e959a55-amend.hg (glob) (obsstore-off !)
+#if obsstore-off
   $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
   @  1 be169c7e8dbe B
   |  diff --git a/B b/B
@@ -50,9 +50,8 @@ Basic amend
      \ No newline at end of file
   
 #else
-  $ hg amend
   $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
-  @  3 be169c7e8dbe B
+  @  2 be169c7e8dbe B
   |  diff --git a/B b/B
   |  new file mode 100644
   |  --- /dev/null
@@ -60,15 +59,6 @@ Basic amend
   |  @@ -0,0 +1,1 @@
   |  +B2
   |
-  | x  2 edf08988b141 temporary amend commit for 112478962961
-  | |  diff --git a/B b/B
-  | |  --- a/B
-  | |  +++ b/B
-  | |  @@ -1,1 +1,1 @@
-  | |  -B
-  | |  \ No newline at end of file
-  | |  +B2
-  | |
   | x  1 112478962961 B
   |/   diff --git a/B b/B
   |    new file mode 100644
@@ -95,17 +85,27 @@ Nothing changed
   nothing changed
   [1]
 
+  $ hg amend -d "0 0"
+  nothing changed
+  [1]
+
+  $ hg amend -d "Thu Jan 01 00:00:00 1970 UTC"
+  nothing changed
+  [1]
+
 Matcher and metadata options
 
   $ echo 3 > C
   $ echo 4 > D
   $ hg add C D
-  $ hg amend -m NEWMESSAGE -I C -q
+  $ hg amend -m NEWMESSAGE -I C
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/be169c7e8dbe-7684ddc5-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc} {files}\n'
   c7ba14d9075b NEWMESSAGE B C
   $ echo 5 > E
   $ rm C
-  $ hg amend -d '2000 1000' -u 'Foo <foo@example.com>' -A C D -q
+  $ hg amend -d '2000 1000' -u 'Foo <foo@example.com>' -A C D
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/c7ba14d9075b-b3e76daa-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc} {files} {author} {date}\n'
   14f6c4bcc865 NEWMESSAGE B D Foo <foo@example.com> 2000.01000
 
@@ -118,10 +118,12 @@ Amend with editor
   > EOF
   $ chmod +x $TESTTMP/prefix.sh
 
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend --edit -q
+  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend --edit
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/14f6c4bcc865-6591f15d-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   298f085230c3 EDITED: NEWMESSAGE
-  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend -e -m MSG -q
+  $ HGEDITOR="sh $TESTTMP/prefix.sh" hg amend -e -m MSG
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/298f085230c3-d81a6ad3-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   974f07f28537 EDITED: MSG
 
@@ -129,7 +131,8 @@ Amend with editor
   $ hg amend -l $TESTTMP/msg -m BAR
   abort: options --message and --logfile are mutually exclusive
   [255]
-  $ hg amend -l $TESTTMP/msg -q
+  $ hg amend -l $TESTTMP/msg
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/974f07f28537-edb6470a-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{node|short} {desc}\n'
   507be9bdac71 FOO
 
@@ -137,7 +140,7 @@ Interactive mode
 
   $ touch F G
   $ hg add F G
-  $ cat <<EOS | hg amend -i --config ui.interactive=1 -q
+  $ cat <<EOS | hg amend -i --config ui.interactive=1
   > y
   > n
   > EOS
@@ -149,6 +152,7 @@ Interactive mode
   new file mode 100644
   examine changes to 'G'? [Ynesfdaq?] n
   
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/507be9bdac71-c8077452-amend.hg (glob) (obsstore-off !)
   $ hg log -r . -T '{files}\n'
   B D F
 
@@ -176,12 +180,13 @@ With allowunstable, amend could work in the middle of a stack
 
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
-  > evolution=createmarkers, allowunstable
+  > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > EOF
 
   $ hg amend
   $ hg log -T '{rev} {node|short} {desc}\n' -G
-  @  4 be169c7e8dbe B
+  @  3 be169c7e8dbe B
   |
   | o  2 26805aba1e60 C
   | |
@@ -189,13 +194,24 @@ With allowunstable, amend could work in the middle of a stack
   |/
   o  0 426bada5c675 A
   
+Checking the note stored in the obsmarker
+
+  $ echo foo > bar
+  $ hg add bar
+  $ hg amend --note 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+  abort: cannot store a note of more than 255 bytes
+  [255]
+  $ hg amend --note "adding bar"
+  $ hg debugobsolete -r .
+  112478962961147124edd43549aedd1a335e44bf be169c7e8dbe21cd10b3d79691cbe7f241e3c21c 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  be169c7e8dbe21cd10b3d79691cbe7f241e3c21c 16084da537dd8f84cfdb3055c633772269d62e1b 0 (Thu Jan 01 00:00:00 1970 +0000) {'note': 'adding bar', 'operation': 'amend', 'user': 'test'}
 #endif
 
 Cannot amend public changeset
 
   $ hg phase -r A --public
   $ hg update -C -q A
-  $ hg amend -m AMEND -q
+  $ hg amend -m AMEND
   abort: cannot amend public changesets
   [255]
 
@@ -209,7 +225,8 @@ Amend a merge changeset
   > A B
   > EOS
   $ hg update -q C
-  $ hg amend -m FOO -q
+  $ hg amend -m FOO
+  saved backup bundle to $TESTTMP/repo3/.hg/strip-backup/a35c07e8a2a4-15ff4612-amend.hg (glob) (obsstore-off !)
   $ rm .hg/localtags
   $ hg log -G -T '{desc}\n'
   @    FOO

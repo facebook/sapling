@@ -16,6 +16,7 @@
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -245,7 +246,7 @@ Rebasing descendant onto ancestor across different named branches
   @  0: 'A'
   
   $ hg rebase -s 5 -d 6
-  abort: source is ancestor of destination
+  abort: source and destination form a cycle
   [255]
 
   $ hg rebase -s 6 -d 5

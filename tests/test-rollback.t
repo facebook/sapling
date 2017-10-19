@@ -134,6 +134,7 @@ test rollback on served repository
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 1 files (+1 heads)
+  new changesets 23b0221f3370:068774709090
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd u
@@ -219,8 +220,16 @@ I/O errors on stdio are handled properly (issue5658)
   > import errno
   > from mercurial.i18n import _
   > from mercurial import (
+  >     registrar,
   >     error,
   >     ui as uimod,
+  > )
+  > 
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > 
+  > configitem('ui', 'ioerrors',
+  >     default=list,
   > )
   > 
   > def pretxncommit(ui, repo, **kwargs):
@@ -244,7 +253,7 @@ I/O errors on stdio are handled properly (issue5658)
   >         return getattr(self._o, attr)
   > 
   >     def write(self, msg):
-  >         errors = set(self._ui.configlist('ui', 'ioerrors', []))
+  >         errors = set(self._ui.configlist('ui', 'ioerrors'))
   >         pretxncommit = msg == 'warn during pretxncommit\n'
   >         pretxnclose = msg == 'warn during pretxnclose\n'
   >         txnclose = msg == 'warn during txnclose\n'

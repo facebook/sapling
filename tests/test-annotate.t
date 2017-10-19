@@ -261,8 +261,8 @@ because the pure code comes up with slightly different deltas internally.
 
   $ hg annotate -nlf b --skip 6
   0 a:1: a
-  1 a:2: z (no-pure !)
-  0 a:1: z (pure !)
+  1 a:2* z (no-pure !)
+  0 a:1* z (pure !)
   1 a:3: a
   3 b:4: b4
   4 b:5: c
@@ -275,9 +275,9 @@ because the pure code comes up with slightly different deltas internally.
   0 a:1: a
   6 b:2: z
   1 a:3: a
-  1 a:3: b4
+  1 a:3* b4
   4 b:5: c
-  1 a:3: b5
+  1 a:3* b5
   7 b:7: d
 
   $ hg annotate -nlf b --skip 4
@@ -285,7 +285,7 @@ because the pure code comes up with slightly different deltas internally.
   6 b:2: z
   1 a:3: a
   3 b:4: b4
-  1 a:3: c
+  1 a:3* c
   3 b:5: b5
   7 b:7: d
 
@@ -293,9 +293,9 @@ because the pure code comes up with slightly different deltas internally.
   0 a:1: a
   6 b:2: z
   1 a:3: a
-  1 a:3: b4
-  1 a:3: c
-  1 a:3: b5
+  1 a:3* b4
+  1 a:3* c
+  1 a:3* b5
   7 b:7: d
 
   $ hg annotate -nlf b --skip 'merge()'
@@ -305,18 +305,18 @@ because the pure code comes up with slightly different deltas internally.
   3 b:4: b4
   4 b:5: c
   3 b:5: b5
-  3 b:5: d
+  3 b:5* d
 
 --skip everything -- use the revision the file was introduced in
 
   $ hg annotate -nlf b --skip 'all()'
   0 a:1: a
-  0 a:1: z
-  0 a:1: a
-  0 a:1: b4
-  0 a:1: c
-  0 a:1: b5
-  0 a:1: d
+  0 a:1* z
+  0 a:1* a
+  0 a:1* b4
+  0 a:1* c
+  0 a:1* b5
+  0 a:1* d
 
 Issue2807: alignment of line numbers with -l
 
@@ -400,7 +400,8 @@ and (2) the extension to allow filelog merging between the revision
 and its ancestor by overriding "repo._filecommit".
 
   $ cat > ../legacyrepo.py <<EOF
-  > from mercurial import node, error
+  > from __future__ import absolute_import
+  > from mercurial import error, node
   > def reposetup(ui, repo):
   >     class legacyrepo(repo.__class__):
   >         def _filecommit(self, fctx, manifest1, manifest2,

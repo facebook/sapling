@@ -126,6 +126,7 @@ union repos can be cloned ... and clones works correctly
   adding manifests
   adding file changes
   added 6 changesets with 11 changes to 6 files (+1 heads)
+  new changesets f093fec0529b:2f0d178c469c
 
   $ hg -R repo3 paths
   default = union:repo1+repo2

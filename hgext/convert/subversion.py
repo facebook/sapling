@@ -61,16 +61,16 @@ class SvnPathNotFound(Exception):
 
 def revsplit(rev):
     """Parse a revision string and return (uuid, path, revnum).
-    >>> revsplit('svn:a2147622-4a9f-4db4-a8d3-13562ff547b2'
-    ...          '/proj%20B/mytrunk/mytrunk@1')
+    >>> revsplit(b'svn:a2147622-4a9f-4db4-a8d3-13562ff547b2'
+    ...          b'/proj%20B/mytrunk/mytrunk@1')
     ('a2147622-4a9f-4db4-a8d3-13562ff547b2', '/proj%20B/mytrunk/mytrunk', 1)
-    >>> revsplit('svn:8af66a51-67f5-4354-b62c-98d67cc7be1d@1')
+    >>> revsplit(b'svn:8af66a51-67f5-4354-b62c-98d67cc7be1d@1')
     ('', '', 1)
-    >>> revsplit('@7')
+    >>> revsplit(b'@7')
     ('', '', 7)
-    >>> revsplit('7')
+    >>> revsplit(b'7')
     ('', '', 0)
-    >>> revsplit('bad')
+    >>> revsplit(b'bad')
     ('', '', 0)
     """
     parts = rev.rsplit('@', 1)
@@ -103,7 +103,7 @@ def geturl(path):
         pass
     if os.path.isdir(path):
         path = os.path.normpath(os.path.abspath(path))
-        if pycompat.osname == 'nt':
+        if pycompat.iswindows:
             path = '/' + util.normpath(path)
         # Module URL is later compared with the repository URL returned
         # by svn API, which is UTF-8.
@@ -254,7 +254,7 @@ def issvnurl(ui, url):
     try:
         proto, path = url.split('://', 1)
         if proto == 'file':
-            if (pycompat.osname == 'nt' and path[:1] == '/'
+            if (pycompat.iswindows and path[:1] == '/'
                   and path[1:2].isalpha() and path[2:6].lower() == '%3a/'):
                 path = path[:2] + ':/' + path[6:]
             path = urlreq.url2pathname(path)
@@ -352,9 +352,11 @@ class svn_source(converter_source):
                 raise error.Abort(_('svn: revision %s is not an integer') %
                                  revs[0])
 
-        self.trunkname = self.ui.config('convert', 'svn.trunk',
-                                        'trunk').strip('/')
-        self.startrev = self.ui.config('convert', 'svn.startrev', default=0)
+        trunkcfg = self.ui.config('convert', 'svn.trunk')
+        if trunkcfg is None:
+            trunkcfg = 'trunk'
+        self.trunkname = trunkcfg.strip('/')
+        self.startrev = self.ui.config('convert', 'svn.startrev')
         try:
             self.startrev = int(self.startrev)
             if self.startrev < 0:
@@ -1059,7 +1061,7 @@ class svn_source(converter_source):
         args = [self.baseurl, relpaths, start, end, limit,
                 discover_changed_paths, strict_node_history]
         # developer config: convert.svn.debugsvnlog
-        if not self.ui.configbool('convert', 'svn.debugsvnlog', True):
+        if not self.ui.configbool('convert', 'svn.debugsvnlog'):
             return directlogstream(*args)
         arg = encodeargs(args)
         hgexe = util.hgexecutable()

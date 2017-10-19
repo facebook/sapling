@@ -39,6 +39,7 @@ file open in your editor::
  #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
+ #  b, base = checkout changeset and apply further changesets from there
  #
 
 In this file, lines beginning with ``#`` are ignored. You must specify a rule
@@ -61,6 +62,7 @@ would reorganize the file to look like this::
  #  r, roll = like fold, but discard this commit's description and date
  #  d, drop = remove commit from history
  #  m, mess = edit commit message without changing commit content
+ #  b, base = checkout changeset and apply further changesets from there
  #
 
 At which point you close the editor and ``histedit`` starts working. When you
@@ -188,6 +190,7 @@ from mercurial.i18n import _
 from mercurial import (
     bundle2,
     cmdutil,
+    configitems,
     context,
     copies,
     destutil,
@@ -211,6 +214,24 @@ pickle = util.pickle
 release = lock.release
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem('experimental', 'histedit.autoverb',
+    default=False,
+)
+configitem('histedit', 'defaultrev',
+    default=configitems.dynamicdefault,
+)
+configitem('histedit', 'dropmissing',
+    default=False,
+)
+configitem('histedit', 'linelen',
+    default=80,
+)
+configitem('histedit', 'singletransaction',
+    default=False,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -442,7 +463,7 @@ class histeditaction(object):
         line = '%s %s %d %s' % (self.verb, ctx, ctx.rev(), summary)
         # trim to 75 columns by default so it's not stupidly wide in my editor
         # (the 5 more are left for verb)
-        maxlen = self.repo.ui.configint('histedit', 'linelen', default=80)
+        maxlen = self.repo.ui.configint('histedit', 'linelen')
         maxlen = max(maxlen, 22) # avoid truncating hash
         return util.ellipsis(line, maxlen)
 
@@ -793,6 +814,8 @@ class fold(histeditaction):
             replacements.append((ich, (n,)))
         return repo[n], replacements
 
+@action(['base', 'b'],
+        _('checkout changeset and apply further changesets from there'))
 class base(histeditaction):
 
     def run(self):
@@ -883,7 +906,6 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
         raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
-
 @command('histedit',
     [('', 'commands', '',
       _('read history edits from the specified file'), _('FILE')),
@@ -915,6 +937,8 @@ def histedit(ui, repo, *freeargs, **opts):
     - `roll` like fold, but discarding this commit's description and date
 
     - `edit` to edit this changeset (preserving date)
+
+    - `base` to checkout changeset and apply further changesets from there
 
     There are a number of ways to select the root changeset:
 
@@ -1117,7 +1141,7 @@ def _continuehistedit(ui, repo, state):
     # Don't use singletransaction by default since it rolls the entire
     # transaction back if an unexpected exception happens (like a
     # pretxncommit hook throws, or the user aborts the commit msg editor).
-    if ui.configbool("histedit", "singletransaction", False):
+    if ui.configbool("histedit", "singletransaction"):
         # Don't use a 'with' for the transaction, since actions may close
         # and reopen a transaction. For example, if the action executes an
         # external process it may choose to commit the transaction first.
@@ -1370,7 +1394,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     rules += '\n\n'
     rules += editcomment
     rules = ui.edit(rules, ui.username(), {'prefix': 'histedit'},
-                    repopath=repo.path)
+                    repopath=repo.path, action='histedit')
 
     # Save edit rules in .hg/histedit-last-edit.txt in case
     # the user needs to ask for help after something
@@ -1417,6 +1441,11 @@ def verifyactions(actions, state, ctxs):
     expected = set(c.node() for c in ctxs)
     seen = set()
     prev = None
+
+    if actions and actions[0].verb in ['roll', 'fold']:
+        raise error.ParseError(_('first changeset cannot use verb "%s"') %
+                               actions[0].verb)
+
     for action in actions:
         action.verify(prev, expected, seen)
         prev = action
@@ -1604,7 +1633,3 @@ def extsetup(ui):
          _("use 'hg histedit --continue' or 'hg histedit --abort'")])
     cmdutil.afterresolvedstates.append(
         ['histedit-state', _('hg histedit --continue')])
-    if ui.configbool("experimental", "histeditng"):
-        globals()['base'] = action(['base', 'b'],
-            _('checkout changeset and apply further changesets from there')
-        )(base)

@@ -51,6 +51,7 @@ testedwith = 'ships-with-hg-core'
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
 revsetpredicate = registrar.revsetpredicate()
 
 class showcmdfunc(registrar._funcregistrarbase):
@@ -161,9 +162,10 @@ def showbookmarks(ui, repo, fm):
             ui.write(_('(no bookmarks set)\n'))
         return
 
+    revs = [repo[node].rev() for node in marks.values()]
     active = repo._activebookmark
     longestname = max(len(b) for b in marks)
-    # TODO consider exposing longest shortest(node).
+    nodelen = longestshortest(repo, revs)
 
     for bm, node in sorted(marks.items()):
         fm.startitem()
@@ -171,7 +173,8 @@ def showbookmarks(ui, repo, fm):
         fm.write('bookmark', '%s', bm)
         fm.write('node', fm.hexfunc(node), fm.hexfunc(node))
         fm.data(active=bm == active,
-                longestbookmarklen=longestname)
+                longestbookmarklen=longestname,
+                nodelen=nodelen)
 
 @showview('stack', csettopic='stack')
 def showstack(ui, repo, displayer):
@@ -235,6 +238,9 @@ def showstack(ui, repo, displayer):
     else:
         newheads = set()
 
+    allrevs = set(stackrevs) | newheads | set([baserev])
+    nodelen = longestshortest(repo, allrevs)
+
     try:
         cmdutil.findcmd('rebase', commands.table)
         haverebase = True
@@ -246,7 +252,7 @@ def showstack(ui, repo, displayer):
     # our simplicity and the customizations required.
     # TODO use proper graph symbols from graphmod
 
-    shortesttmpl = formatter.maketemplater(ui, '{shortest(node, 5)}')
+    shortesttmpl = formatter.maketemplater(ui, '{shortest(node, %d)}' % nodelen)
     def shortest(ctx):
         return shortesttmpl.render({'ctx': ctx, 'node': ctx.hex()})
 
@@ -277,7 +283,7 @@ def showstack(ui, repo, displayer):
                 ui.write('  ')
 
             ui.write(('o  '))
-            displayer.show(ctx)
+            displayer.show(ctx, nodelen=nodelen)
             displayer.flush(ctx)
             ui.write('\n')
 
@@ -317,7 +323,7 @@ def showstack(ui, repo, displayer):
             ui.write('  ')
 
         ui.write(symbol, '  ')
-        displayer.show(ctx)
+        displayer.show(ctx, nodelen=nodelen)
         displayer.flush(ctx)
         ui.write('\n')
 
@@ -334,7 +340,7 @@ def showstack(ui, repo, displayer):
         ui.write(_('(stack base)'), '\n', label='stack.label')
         ui.write(('o  '))
 
-        displayer.show(basectx)
+        displayer.show(basectx, nodelen=nodelen)
         displayer.flush(basectx)
         ui.write('\n')
 
@@ -393,11 +399,13 @@ def showwork(ui, repo, displayer):
     """changesets that aren't finished"""
     # TODO support date-based limiting when calling revset.
     revs = repo.revs('sort(_underway(), topo)')
+    nodelen = longestshortest(repo, revs)
 
     revdag = graphmod.dagwalker(repo, revs)
 
     ui.setconfig('experimental', 'graphshorten', True)
-    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+    cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges,
+                         props={'nodelen': nodelen})
 
 def extsetup(ui):
     # Alias `hg <prefix><view>` to `hg show <view>`.
@@ -417,6 +425,27 @@ def extsetup(ui):
                 continue
 
             ui.setconfig('alias', name, 'show %s' % view, source='show')
+
+def longestshortest(repo, revs, minlen=4):
+    """Return the length of the longest shortest node to identify revisions.
+
+    The result of this function can be used with the ``shortest()`` template
+    function to ensure that a value is unique and unambiguous for a given
+    set of nodes.
+
+    The number of revisions in the repo is taken into account to prevent
+    a numeric node prefix from conflicting with an integer revision number.
+    If we fail to do this, a value of e.g. ``10023`` could mean either
+    revision 10023 or node ``10023abc...``.
+    """
+    tmpl = formatter.maketemplater(repo.ui, '{shortest(node, %d)}' % minlen)
+    lens = [minlen]
+    for rev in revs:
+        ctx = repo[rev]
+        shortest = tmpl.render({'ctx': ctx, 'node': ctx.hex()})
+        lens.append(len(shortest))
+
+    return max(lens)
 
 # Adjust the docstring of the show command so it shows all registered views.
 # This is a bit hacky because it runs at the end of module load. When moved

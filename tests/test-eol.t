@@ -8,15 +8,17 @@ Test EOL extension
 Set up helpers
 
   $ cat > switch-eol.py <<EOF
+  > from __future__ import absolute_import
+  > import os
   > import sys
   > try:
-  >     import os, msvcrt
+  >     import msvcrt
   >     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
   > except ImportError:
   >     pass
   > (old, new) = sys.argv[1] == 'LF' and ('\n', '\r\n') or ('\r\n', '\n')
-  > print "%% switching encoding from %r to %r" % (old, new)
+  > print("%% switching encoding from %r to %r" % (old, new))
   > for path in sys.argv[2:]:
   >     data = file(path, 'rb').read()
   >     data = data.replace(old, new)

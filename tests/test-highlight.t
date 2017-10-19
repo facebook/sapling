@@ -49,7 +49,7 @@ create random Python file to exercise Pygments
   >     except (ValueError, IndexError):
   >         n = 10
   >     p = primes()
-  >     print "The first %d primes: %s" % (n, list(islice(p, n)))
+  >     print("The first %d primes: %s" % (n, list(islice(p, n))))
   > EOF
   $ echo >> primes.py  # to test html markup with an empty line just before EOF
   $ hg ci -Ama
@@ -74,7 +74,7 @@ hgweb filerevision, html
   <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <link rel="stylesheet" href="/highlightcss" type="text/css" />
-  <title>test: 1af356141006 primes.py</title>
+  <title>test: f4fca47b67e6 primes.py</title>
   </head>
   <body>
   
@@ -112,7 +112,7 @@ hgweb filerevision, html
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   view primes.py @ 0:<a href="/rev/1af356141006">1af356141006</a>
+   view primes.py @ 0:<a href="/rev/f4fca47b67e6">f4fca47b67e6</a>
    <span class="tag">tip</span> 
   </h3>
   
@@ -182,7 +182,7 @@ hgweb filerevision, html
   <span id="l27">    <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></span><a href="#l27"></a>
   <span id="l28">        <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></span><a href="#l28"></a>
   <span id="l29">    <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></span><a href="#l29"></a>
-  <span id="l30">    <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></span><a href="#l30"></a>
+  <span id="l30">    <span class="kn">print</span><span class="p">(</span><span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">))))</span></span><a href="#l30"></a>
   <span id="l31"></span><a href="#l31"></a>
   </pre>
   </div>
@@ -251,7 +251,7 @@ hgweb fileannotate, html
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
-   annotate primes.py @ 0:<a href="/rev/1af356141006">1af356141006</a>
+   annotate primes.py @ 0:<a href="/rev/f4fca47b67e6">f4fca47b67e6</a>
    <span class="tag">tip</span> 
   </h3>
   
@@ -284,6 +284,25 @@ hgweb fileannotate, html
   </tr>
   </table>
   
+  
+  <form id="diffopts-form"
+  data-ignorews="0"
+  data-ignorewsamount="0"
+  data-ignorewseol="0"
+  data-ignoreblanklines="0">
+  <span>Ignore whitespace changes - </span>
+  <span>Everywhere:</span>
+  <input id="ignorews-checkbox" type="checkbox" />
+  <span>Within whitespace:</span>
+  <input id="ignorewsamount-checkbox" type="checkbox" />
+  <span>At end of lines:</span>
+  <input id="ignorewseol-checkbox" type="checkbox" />
+  </form>
+  
+  <script type="text/javascript">
+      renderDiffOptsForm();
+  </script>
+  
   <div class="overflow">
   <table class="bigtable">
   <thead>
@@ -299,19 +318,19 @@ hgweb fileannotate, html
     
   <tr id="l1" class="thisrev">
   <td class="annotate parity0">
-  <a href="/annotate/1af356141006/primes.py#l1">
+  <a href="/annotate/f4fca47b67e6/primes.py#l1">
   0
   </a>
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l1">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l1">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l1">     1</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></td>
@@ -321,14 +340,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l2">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l2">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l2">     2</a> </td>
@@ -338,14 +357,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l3">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l3">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l3">     3</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></td>
@@ -355,14 +374,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l4">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l4">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l4">     4</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></td>
@@ -372,14 +391,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l5">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l5">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l5">     5</a> <span class="sd">&quot;&quot;&quot;</span></td>
@@ -389,14 +408,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l6">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l6">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l6">     6</a> </td>
@@ -406,14 +425,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l7">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l7">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l7">     7</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></td>
@@ -423,14 +442,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l8">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l8">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l8">     8</a> </td>
@@ -440,14 +459,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l9">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l9">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l9">     9</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></td>
@@ -457,14 +476,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l10">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l10">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l10">    10</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></td>
@@ -474,14 +493,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l11">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l11">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l11">    11</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
@@ -491,14 +510,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l12">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l12">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l12">    12</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></td>
@@ -508,14 +527,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l13">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l13">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l13">    13</a>         <span class="c"># It is important to yield *here* in order to stop the</span></td>
@@ -525,14 +544,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l14">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l14">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l14">    14</a>         <span class="c"># infinite recursion.</span></td>
@@ -542,14 +561,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l15">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l15">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l15">    15</a>         <span class="kn">yield</span> <span class="n">p</span></td>
@@ -559,14 +578,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l16">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l16">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l16">    16</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
@@ -576,14 +595,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l17">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l17">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l17">    17</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
@@ -593,14 +612,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l18">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l18">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l18">    18</a>             <span class="kn">yield</span> <span class="n">n</span></td>
@@ -610,14 +629,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l19">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l19">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l19">    19</a> </td>
@@ -627,14 +646,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l20">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l20">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l20">    20</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
@@ -644,14 +663,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l21">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l21">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l21">    21</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
@@ -661,14 +680,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l22">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l22">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l22">    22</a> </td>
@@ -678,14 +697,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l23">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l23">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l23">    23</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></td>
@@ -695,14 +714,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l24">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l24">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l24">    24</a>     <span class="kn">import</span> <span class="nn">sys</span></td>
@@ -712,14 +731,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l25">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l25">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l25">    25</a>     <span class="kn">try</span><span class="p">:</span></td>
@@ -729,14 +748,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l26">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l26">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l26">    26</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></td>
@@ -746,14 +765,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l27">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l27">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l27">    27</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></td>
@@ -763,14 +782,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l28">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l28">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></td>
@@ -780,14 +799,14 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l29">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l29">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l29">    29</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></td>
@@ -797,31 +816,31 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l30">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l30">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
-  <td class="source followlines-btn-parent"><a href="#l30">    30</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></td>
+  <td class="source followlines-btn-parent"><a href="#l30">    30</a>     <span class="kn">print</span><span class="p">(</span><span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">))))</span></td>
   </tr>
   <tr id="l31" class="thisrev">
   <td class="annotate parity0">
   
   <div class="annotate-info">
   <div>
-  <a href="/annotate/1af356141006/primes.py#l31">
-  1af356141006</a>
+  <a href="/annotate/f4fca47b67e6/primes.py#l31">
+  f4fca47b67e6</a>
   a
   </div>
   <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
-  <a href="/diff/1af356141006/primes.py">diff</a>
-  <a href="/rev/1af356141006">changeset</a>
+  <a href="/diff/f4fca47b67e6/primes.py">diff</a>
+  <a href="/rev/f4fca47b67e6">changeset</a>
   </div>
   </td>
   <td class="source followlines-btn-parent"><a href="#l31">    31</a> </td>

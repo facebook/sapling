@@ -6,6 +6,7 @@ setup
   > mq=
   > [alias]
   > confuse = log --limit 3
+  > so-confusing = confuse --style compact
   > EOF
   $ hg init blackboxtest
   $ cd blackboxtest
@@ -15,20 +16,28 @@ command, exit codes, and duration
   $ echo a > a
   $ hg add a
   $ hg blackbox --config blackbox.dirty=True
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> init blackboxtest exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox
 
 alias expansion is logged
+  $ rm ./.hg/blackbox.log
   $ hg confuse
   $ hg blackbox
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox --config *blackbox.dirty=True* exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> confuse
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'confuse' expands to 'log --limit 3'
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> confuse exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
+
+recursive aliases work correctly
+  $ rm ./.hg/blackbox.log
+  $ hg so-confusing
+  $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> so-confusing
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'so-confusing' expands to 'confuse --style compact'
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> alias 'confuse' expands to 'log --limit 3'
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> so-confusing exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
 
 incoming change tracking
@@ -57,6 +66,7 @@ clone, commit, pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d02f48003e62
   (run 'hg update' to get a working copy)
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pull
@@ -100,6 +110,7 @@ we must not cause a failure if we cannot write to the log
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets d02f48003e62
   (run 'hg update' to get a working copy)
 
 a failure reading from the log is fatal
@@ -147,11 +158,12 @@ extension and python hooks - use the eol extension for a pythonhook
   > eol=!
   > EOF
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update (no-chg !)
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> writing .hg/cache/tags2-visible with 0 tags
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> exthook-update: echo hooked finished in * seconds (glob)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> update exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> serve --cmdserver chgunix --address $TESTTMP.chgsock/server.* --daemon-postexec 'chdir:/' (glob) (chg !)
   1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> blackbox -l 6
 
 log rotation
@@ -173,6 +185,7 @@ log rotation
   $ hg init blackboxtest3
   $ cd blackboxtest3
   $ hg blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> init blackboxtest3 exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
   $ mv .hg/blackbox.log .hg/blackbox.log-
   $ mkdir .hg/blackbox.log
@@ -229,3 +242,102 @@ Test log recursion from dirty status check
 
 cleanup
   $ cd ..
+
+#if chg
+
+when using chg, blackbox.log should get rotated correctly
+
+  $ cat > $TESTTMP/noop.py << EOF
+  > from __future__ import absolute_import
+  > import time
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('noop')
+  > def noop(ui, repo):
+  >     pass
+  > EOF
+
+  $ hg init blackbox-chg
+  $ cd blackbox-chg
+
+  $ cat > .hg/hgrc << EOF
+  > [blackbox]
+  > maxsize = 500B
+  > [extensions]
+  > # extension change forces chg to restart
+  > noop=$TESTTMP/noop.py
+  > EOF
+
+  $ $PYTHON -c 'print("a" * 400)' > .hg/blackbox.log
+  $ chg noop
+  $ chg noop
+  $ chg noop
+  $ chg noop
+  $ chg noop
+
+  $ cat > showsize.py << 'EOF'
+  > import os, sys
+  > limit = 500
+  > for p in sys.argv[1:]:
+  >     size = os.stat(p).st_size
+  >     if size >= limit:
+  >         desc = '>='
+  >     else:
+  >         desc = '<'
+  >     print('%s: %s %d' % (p, desc, limit))
+  > EOF
+
+  $ $PYTHON showsize.py .hg/blackbox*
+  .hg/blackbox.log: < 500
+  .hg/blackbox.log.1: >= 500
+  .hg/blackbox.log.2: >= 500
+
+  $ cd ..
+
+With chg, blackbox should not create the log file if the repo is gone
+
+  $ hg init repo1
+  $ hg --config extensions.a=! -R repo1 log
+  $ rm -rf $TESTTMP/repo1
+  $ hg --config extensions.a=! init repo1
+
+#endif
+
+blackbox should work if repo.ui.log is not called (issue5518)
+
+  $ cat > $TESTTMP/raise.py << EOF
+  > from __future__ import absolute_import
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('raise')
+  > def raisecmd(*args):
+  >     raise RuntimeError('raise')
+  > EOF
+
+  $ cat >> $HGRCPATH << EOF
+  > [blackbox]
+  > track = commandexception
+  > [extensions]
+  > raise=$TESTTMP/raise.py
+  > EOF
+
+  $ hg init $TESTTMP/blackbox-exception-only
+  $ cd $TESTTMP/blackbox-exception-only
+
+#if chg
+ (chg exits 255 because it fails to receive an exit code)
+  $ hg raise 2>/dev/null
+  [255]
+#else
+ (hg exits 1 because Python default exit code for uncaught exception is 1)
+  $ hg raise 2>/dev/null
+  [1]
+#endif
+
+  $ head -1 .hg/blackbox.log
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> ** Unknown exception encountered with possibly-broken third-party extension mock
+  $ tail -2 .hg/blackbox.log
+  RuntimeError: raise
+  

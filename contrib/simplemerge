@@ -1,12 +1,21 @@
 #!/usr/bin/env python
-
-from mercurial import demandimport
-demandimport.enable()
+from __future__ import absolute_import
 
 import getopt
 import sys
+
+import hgdemandimport
+hgdemandimport.enable()
+
 from mercurial.i18n import _
-from mercurial import error, simplemerge, fancyopts, util, ui
+from mercurial import (
+    context,
+    error,
+    fancyopts,
+    simplemerge,
+    ui as uimod,
+    util,
+)
 
 options = [('L', 'label', [], _('labels to use on conflict markers')),
            ('a', 'text', None, _('treat all files as text')),
@@ -55,7 +64,12 @@ try:
         sys.exit(0)
     if len(args) != 3:
             raise ParseError(_('wrong number of arguments'))
-    sys.exit(simplemerge.simplemerge(ui.ui.load(), *args, **opts))
+    local, base, other = args
+    sys.exit(simplemerge.simplemerge(uimod.ui.load(),
+                                     context.arbitraryfilectx(local),
+                                     context.arbitraryfilectx(base),
+                                     context.arbitraryfilectx(other),
+                                     **opts))
 except ParseError as e:
     sys.stdout.write("%s: %s\n" % (sys.argv[0], e))
     showhelp()

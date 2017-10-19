@@ -148,6 +148,7 @@ Use --pull:
   adding manifests
   adding file changes
   added 11 changesets with 11 changes to 2 files
+  new changesets acb14030fe0a:a7949464abda
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R g verify
@@ -269,6 +270,7 @@ Testing clone --pull -u:
   adding manifests
   adding file changes
   added 16 changesets with 16 changes to 3 files (+1 heads)
+  new changesets acb14030fe0a:0aae7cf88f0d
   updating to branch stable
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -409,6 +411,7 @@ Testing #<branch>:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
+  new changesets acb14030fe0a:0aae7cf88f0d
   updating to branch stable
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -445,6 +448,7 @@ Testing -u -r <branch>:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
+  new changesets acb14030fe0a:0aae7cf88f0d
   updating to branch stable
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -481,6 +485,7 @@ Testing -r <branch>:
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
+  new changesets acb14030fe0a:0aae7cf88f0d
   updating to branch stable
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -543,6 +548,7 @@ iterable in addbranchrevs()
   adding manifests
   adding file changes
   added 14 changesets with 14 changes to 3 files
+  new changesets acb14030fe0a:0aae7cf88f0d
   updating to branch stable
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -r ua
@@ -706,7 +712,7 @@ Create repositories to test auto sharing functionality
   $ cd filteredrev0
   $ cat >> .hg/hgrc << EOF
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ echo initial1 > foo
   $ hg -q commit -A -m initial0
@@ -774,6 +780,7 @@ Clone with auto share from a repo with filtered revision 0 should not result in 
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets e082c1832e09
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -786,6 +793,7 @@ Clone from repo with content should result in shared store being created
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   adding remote bookmark bookA
@@ -823,6 +831,7 @@ Clone with existing share dir should result in pull + share
   added 4 changesets with 4 changes to 1 files (+4 heads)
   adding remote bookmark head1
   adding remote bookmark head2
+  new changesets 4a8dc1ab4c13:6bacf4683960
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -863,6 +872,7 @@ Clone from unrelated repo should result in new share
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 22aeff664783:63cf6c3dba4a
   searching for changes
   no changes found
   updating working directory
@@ -881,6 +891,7 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   adding remote bookmark bookA
@@ -897,6 +908,7 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 1 files (+4 heads)
+  new changesets b5f04eac9d8f:6bacf4683960
   searching for changes
   no changes found
   adding remote bookmark head1
@@ -916,6 +928,7 @@ request to clone a single revision is respected in sharing mode
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets b5f04eac9d8f:4a8dc1ab4c13
   no changes found
   adding remote bookmark head1
   updating working directory
@@ -946,6 +959,7 @@ making another clone should only pull down requested rev
   added 1 changesets with 1 changes to 1 files (+1 heads)
   adding remote bookmark head1
   adding remote bookmark head2
+  new changesets 99f71071f117
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -978,6 +992,7 @@ Request to clone a single branch is respected in sharing mode
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets b5f04eac9d8f:5f92a6c1a1b1
   no changes found
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1003,6 +1018,7 @@ Request to clone a single branch is respected in sharing mode
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 6bacf4683960
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -1084,6 +1100,7 @@ pooled".
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
+  new changesets b5f04eac9d8f:e5bfe23c0b47
   searching for changes
   no changes found
   adding remote bookmark bookA
@@ -1160,3 +1177,80 @@ SEC: check for unsafe ssh url
 We should not have created a file named owned - if it exists, the
 attack succeeded.
   $ if test -f owned; then echo 'you got owned'; fi
+
+Cloning without fsmonitor enabled does not print a warning for small repos
+
+  $ hg clone a fsmonitor-default
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Lower the warning threshold to simulate a large repo
+
+  $ cat >> $HGRCPATH << EOF
+  > [fsmonitor]
+  > warn_update_file_count = 2
+  > EOF
+
+We should see a warning about no fsmonitor on supported platforms
+
+#if linuxormacos no-fsmonitor
+  $ hg clone a nofsmonitor
+  updating to bookmark @ on branch stable
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#else
+  $ hg clone a nofsmonitor
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+We should not see warning about fsmonitor when it is enabled
+
+#if fsmonitor
+  $ hg clone a fsmonitor-enabled
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+We can disable the fsmonitor warning
+
+  $ hg --config fsmonitor.warn_when_unused=false clone a fsmonitor-disable-warning
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Loaded fsmonitor but disabled in config should still print warning
+
+#if linuxormacos fsmonitor
+  $ hg --config fsmonitor.mode=off clone a fsmonitor-mode-off
+  updating to bookmark @ on branch stable
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (fsmonitor !)
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+Warning not printed if working directory isn't empty
+
+  $ hg -q clone a fsmonitor-update
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor") (?)
+  $ cd fsmonitor-update
+  $ hg up acb14030fe0a
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark @)
+  $ hg up cf0fe1914066
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+`hg update` from null revision also prints
+
+  $ hg up null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+
+#if linuxormacos no-fsmonitor
+  $ hg up cf0fe1914066
+  (warning: large working directory being used without fsmonitor enabled; enable fsmonitor to improve performance; see "hg help -e fsmonitor")
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#else
+  $ hg up cf0fe1914066
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
+  $ cd ..
+

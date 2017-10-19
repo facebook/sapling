@@ -17,6 +17,7 @@ import binascii
 import collections
 import errno
 import hashlib
+import heapq
 import os
 import struct
 import zlib
@@ -161,6 +162,95 @@ def hash(text, p1, p2):
     s.update(text)
     return s.digest()
 
+def _trimchunk(revlog, revs, startidx, endidx=None):
+    """returns revs[startidx:endidx] without empty trailing revs
+    """
+    length = revlog.length
+
+    if endidx is None:
+        endidx = len(revs)
+
+    # Trim empty revs at the end, but never the very first revision of a chain
+    while endidx > 1 and endidx > startidx and length(revs[endidx - 1]) == 0:
+        endidx -= 1
+
+    return revs[startidx:endidx]
+
+def _slicechunk(revlog, revs):
+    """slice revs to reduce the amount of unrelated data to be read from disk.
+
+    ``revs`` is sliced into groups that should be read in one time.
+    Assume that revs are sorted.
+    """
+    start = revlog.start
+    length = revlog.length
+
+    if len(revs) <= 1:
+        yield revs
+        return
+
+    startbyte = start(revs[0])
+    endbyte = start(revs[-1]) + length(revs[-1])
+    readdata = deltachainspan = endbyte - startbyte
+
+    chainpayload = sum(length(r) for r in revs)
+
+    if deltachainspan:
+        density = chainpayload / float(deltachainspan)
+    else:
+        density = 1.0
+
+    # Store the gaps in a heap to have them sorted by decreasing size
+    gapsheap = []
+    heapq.heapify(gapsheap)
+    prevend = None
+    for i, rev in enumerate(revs):
+        revstart = start(rev)
+        revlen = length(rev)
+
+        # Skip empty revisions to form larger holes
+        if revlen == 0:
+            continue
+
+        if prevend is not None:
+            gapsize = revstart - prevend
+            # only consider holes that are large enough
+            if gapsize > revlog._srmingapsize:
+                heapq.heappush(gapsheap, (-gapsize, i))
+
+        prevend = revstart + revlen
+
+    # Collect the indices of the largest holes until the density is acceptable
+    indicesheap = []
+    heapq.heapify(indicesheap)
+    while gapsheap and density < revlog._srdensitythreshold:
+        oppgapsize, gapidx = heapq.heappop(gapsheap)
+
+        heapq.heappush(indicesheap, gapidx)
+
+        # the gap sizes are stored as negatives to be sorted decreasingly
+        # by the heap
+        readdata -= (-oppgapsize)
+        if readdata > 0:
+            density = chainpayload / float(readdata)
+        else:
+            density = 1.0
+
+    # Cut the revs at collected indices
+    previdx = 0
+    while indicesheap:
+        idx = heapq.heappop(indicesheap)
+
+        chunk = _trimchunk(revlog, revs, previdx, idx)
+        if chunk:
+            yield chunk
+
+        previdx = idx
+
+    chunk = _trimchunk(revlog, revs, previdx)
+    if chunk:
+        yield chunk
+
 # index v0:
 #  4 bytes: offset
 #  4 bytes: compressed length
@@ -268,8 +358,13 @@ class revlog(object):
 
     If checkambig, indexfile is opened with checkambig=True at
     writing, to avoid file stat ambiguity.
+
+    If mmaplargeindex is True, and an mmapindexthreshold is set, the
+    index will be mmapped rather than read if it is larger than the
+    configured threshold.
     """
-    def __init__(self, opener, indexfile, datafile=None, checkambig=False):
+    def __init__(self, opener, indexfile, datafile=None, checkambig=False,
+                 mmaplargeindex=False):
         """
         create a revlog object
 
@@ -300,7 +395,11 @@ class revlog(object):
         self._nodepos = None
         self._compengine = 'zlib'
         self._maxdeltachainspan = -1
+        self._withsparseread = False
+        self._srdensitythreshold = 0.25
+        self._srmingapsize = 262144
 
+        mmapindexthreshold = None
         v = REVLOG_DEFAULT_VERSION
         opts = getattr(opener, 'options', None)
         if opts is not None:
@@ -323,6 +422,13 @@ class revlog(object):
                 self._compengine = opts['compengine']
             if 'maxdeltachainspan' in opts:
                 self._maxdeltachainspan = opts['maxdeltachainspan']
+            if mmaplargeindex and 'mmapindexthreshold' in opts:
+                mmapindexthreshold = opts['mmapindexthreshold']
+            self._withsparseread = bool(opts.get('with-sparse-read', False))
+            if 'sparse-read-density-threshold' in opts:
+                self._srdensitythreshold = opts['sparse-read-density-threshold']
+            if 'sparse-read-min-gap-size' in opts:
+                self._srmingapsize = opts['sparse-read-min-gap-size']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -335,7 +441,11 @@ class revlog(object):
         self._initempty = True
         try:
             f = self.opener(self.indexfile)
-            indexdata = f.read()
+            if (mmapindexthreshold is not None and
+                    self.opener.fstat(f).st_size >= mmapindexthreshold):
+                indexdata = util.buffer(util.mmapread(f))
+            else:
+                indexdata = f.read()
             f.close()
             if len(indexdata) > 0:
                 v = versionformat_unpack(indexdata[:4])[0]
@@ -1128,6 +1238,44 @@ class revlog(object):
 
         raise LookupError(id, self.indexfile, _('no match found'))
 
+    def shortest(self, hexnode, minlength=1):
+        """Find the shortest unambiguous prefix that matches hexnode."""
+        def isvalid(test):
+            try:
+                if self._partialmatch(test) is None:
+                    return False
+
+                try:
+                    i = int(test)
+                    # if we are a pure int, then starting with zero will not be
+                    # confused as a rev; or, obviously, if the int is larger
+                    # than the value of the tip rev
+                    if test[0] == '0' or i > len(self):
+                        return True
+                    return False
+                except ValueError:
+                    return True
+            except error.RevlogError:
+                return False
+            except error.WdirUnsupported:
+                # single 'ff...' match
+                return True
+
+        shortest = hexnode
+        startlength = max(6, minlength)
+        length = startlength
+        while True:
+            test = hexnode[:length]
+            if isvalid(test):
+                shortest = test
+                if length == minlength or length > startlength:
+                    return shortest
+                length -= 1
+            else:
+                length += 1
+                if len(shortest) <= length:
+                    return shortest
+
     def cmp(self, node, text):
         """compare text with a given file revision
 
@@ -1277,20 +1425,32 @@ class revlog(object):
         l = []
         ladd = l.append
 
-        try:
-            offset, data = self._getsegmentforrevs(revs[0], revs[-1], df=df)
-        except OverflowError:
-            # issue4215 - we can't cache a run of chunks greater than
-            # 2G on Windows
-            return [self._chunk(rev, df=df) for rev in revs]
+        if not self._withsparseread:
+            slicedchunks = (revs,)
+        else:
+            slicedchunks = _slicechunk(self, revs)
 
-        decomp = self.decompress
-        for rev in revs:
-            chunkstart = start(rev)
-            if inline:
-                chunkstart += (rev + 1) * iosize
-            chunklength = length(rev)
-            ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
+        for revschunk in slicedchunks:
+            firstrev = revschunk[0]
+            # Skip trailing revisions with empty diff
+            for lastrev in revschunk[::-1]:
+                if length(lastrev) != 0:
+                    break
+
+            try:
+                offset, data = self._getsegmentforrevs(firstrev, lastrev, df=df)
+            except OverflowError:
+                # issue4215 - we can't cache a run of chunks greater than
+                # 2G on Windows
+                return [self._chunk(rev, df=df) for rev in revschunk]
+
+            decomp = self.decompress
+            for rev in revschunk:
+                chunkstart = start(rev)
+                if inline:
+                    chunkstart += (rev + 1) * iosize
+                chunklength = length(rev)
+                ladd(decomp(buffer(data, chunkstart - offset, chunklength)))
 
         return l
 
@@ -1473,7 +1633,7 @@ class revlog(object):
             if revornode is None:
                 revornode = templatefilters.short(hex(node))
             raise RevlogError(_("integrity check failed on %s:%s")
-                % (self.indexfile, revornode))
+                % (self.indexfile, pycompat.bytestr(revornode)))
 
     def checkinlinesize(self, tr, fp=None):
         """Check if the revlog is too big for inline and convert if so.
@@ -1694,6 +1854,13 @@ class revlog(object):
         - rawtext is optional (can be None); if not set, cachedelta must be set.
           if both are set, they must correspond to each other.
         """
+        if node == nullid:
+            raise RevlogError(_("%s: attempt to add null revision") %
+                              (self.indexfile))
+        if node == wdirid:
+            raise RevlogError(_("%s: attempt to add wdir revision") %
+                              (self.indexfile))
+
         btext = [rawtext]
         def buildtext():
             if btext[0] is not None:
@@ -1865,7 +2032,7 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, cg, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
         """
         add a delta group
 
@@ -1898,22 +2065,15 @@ class revlog(object):
             ifh.flush()
         try:
             # loop through our set of deltas
-            chain = None
-            for chunkdata in iter(lambda: cg.deltachunk(chain), {}):
-                node = chunkdata['node']
-                p1 = chunkdata['p1']
-                p2 = chunkdata['p2']
-                cs = chunkdata['cs']
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
-                flags = chunkdata['flags'] or REVIDX_DEFAULT_FLAGS
+            for data in deltas:
+                node, p1, p2, linknode, deltabase, delta, flags = data
+                link = linkmapper(linknode)
+                flags = flags or REVIDX_DEFAULT_FLAGS
 
                 nodes.append(node)
 
-                link = linkmapper(cs)
                 if node in self.nodemap:
                     # this can happen if two branches make the same change
-                    chain = node
                     continue
 
                 for p in (p1, p2):
@@ -1947,13 +2107,13 @@ class revlog(object):
                 # We're only using addgroup() in the context of changegroup
                 # generation so the revision data can always be handled as raw
                 # by the flagprocessor.
-                chain = self._addrevision(node, None, transaction, link,
-                                          p1, p2, flags, (baserev, delta),
-                                          ifh, dfh,
-                                          alwayscache=bool(addrevisioncb))
+                self._addrevision(node, None, transaction, link,
+                                  p1, p2, flags, (baserev, delta),
+                                  ifh, dfh,
+                                  alwayscache=bool(addrevisioncb))
 
                 if addrevisioncb:
-                    addrevisioncb(self, chain)
+                    addrevisioncb(self, node)
 
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional

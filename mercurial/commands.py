@@ -326,12 +326,12 @@ def annotate(ui, repo, *pats, **opts):
         hexfn = rootfm.hexfunc
         formatrev = formathex = pycompat.bytestr
 
-    opmap = [('user', ' ', lambda x: x[0].user(), ui.shortuser),
-             ('number', ' ', lambda x: x[0].rev(), formatrev),
-             ('changeset', ' ', lambda x: hexfn(x[0].node()), formathex),
-             ('date', ' ', lambda x: x[0].date(), util.cachefunc(datefunc)),
-             ('file', ' ', lambda x: x[0].path(), str),
-             ('line_number', ':', lambda x: x[1], str),
+    opmap = [('user', ' ', lambda x: x.fctx.user(), ui.shortuser),
+             ('number', ' ', lambda x: x.fctx.rev(), formatrev),
+             ('changeset', ' ', lambda x: hexfn(x.fctx.node()), formathex),
+             ('date', ' ', lambda x: x.fctx.date(), util.cachefunc(datefunc)),
+             ('file', ' ', lambda x: x.fctx.path(), str),
+             ('line_number', ':', lambda x: x.lineno, str),
             ]
     fieldnamemap = {'number': 'rev', 'changeset': 'node'}
 
@@ -400,7 +400,11 @@ def annotate(ui, repo, *pats, **opts):
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
             fm.startitem()
             fm.write(fields, "".join(f), *p)
-            fm.write('line', ": %s", l[1])
+            if l[0].skip:
+                fmt = "* %s"
+            else:
+                fmt = ": %s"
+            fm.write('line', fmt, l[1])
 
         if not lines[-1][1].endswith('\n'):
             fm.plain('\n')
@@ -477,9 +481,9 @@ def archive(ui, repo, dest, **opts):
             prefix = os.path.basename(repo.root) + '-%h'
 
     prefix = cmdutil.makefilename(repo, prefix, node)
-    matchfn = scmutil.match(ctx, [], opts)
+    match = scmutil.match(ctx, [], opts)
     archival.archive(repo, dest, node, kind, not opts.get('no_decode'),
-                     matchfn, prefix, subrepos=opts.get('subrepos'))
+                     match, prefix, subrepos=opts.get('subrepos'))
 
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
@@ -917,6 +921,9 @@ def bookmark(ui, repo, *names, **opts):
     diverged, a new 'divergent bookmark' of the form 'name@path' will
     be created. Using :hg:`merge` will resolve the divergence.
 
+    Specifying bookmark as '.' to -m or -d options is equivalent to specifying
+    the active bookmark's name.
+
     A bookmark named '@' has the special property that :hg:`clone` will
     check it out by default if it exists.
 
@@ -962,12 +969,14 @@ def bookmark(ui, repo, *names, **opts):
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
             if delete:
+                names = pycompat.maplist(repo._bookmarks.expandname, names)
                 bookmarks.delete(repo, tr, names)
             elif rename:
                 if not names:
                     raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
                     raise error.Abort(_("only one new bookmark name allowed"))
+                rename = repo._bookmarks.expandname(rename)
                 bookmarks.rename(repo, tr, rename, names[0], force, inactive)
             elif names:
                 bookmarks.addbookmarks(repo, tr, names, rev, force, inactive)
@@ -1072,7 +1081,10 @@ def branches(ui, repo, active=False, closed=False, **opts):
     allheads = set(repo.heads())
     branches = []
     for tag, heads, tip, isclosed in repo.branchmap().iterbranches():
-        isactive = not isclosed and bool(set(heads) & allheads)
+        isactive = False
+        if not isclosed:
+            openheads = set(repo.branchmap().iteropen(heads))
+            isactive = bool(openheads & allheads)
         branches.append((tag, repo[tip], isactive, not isclosed))
     branches.sort(key=lambda i: (i[2], i[1].rev(), i[0], i[3]),
                   reverse=True)
@@ -1286,7 +1298,10 @@ def cat(ui, repo, file1, *pats, **opts):
     ('r', 'rev', [], _('include the specified changeset'), _('REV')),
     ('b', 'branch', [], _('clone only the specified branch'), _('BRANCH')),
     ('', 'pull', None, _('use pull protocol to copy metadata')),
-    ('', 'uncompressed', None, _('use uncompressed transfer (fast over LAN)')),
+    ('', 'uncompressed', None,
+       _('an alias to --stream (DEPRECATED)')),
+    ('', 'stream', None,
+       _('clone with minimal data processing')),
     ] + remoteopts,
     _('[OPTION]... SOURCE [DEST]'),
     norepo=True)
@@ -1317,6 +1332,19 @@ def clone(ui, source, dest=None, **opts):
     their ancestors. These options (or 'clone src#rev dest') imply
     --pull, even for local source repositories.
 
+    In normal clone mode, the remote normalizes repository data into a common
+    exchange format and the receiving end translates this data into its local
+    storage format. --stream activates a different clone mode that essentially
+    copies repository files from the remote with minimal data processing. This
+    significantly reduces the CPU cost of a clone both remotely and locally.
+    However, it often increases the transferred data size by 30-40%. This can
+    result in substantially faster clones where I/O throughput is plentiful,
+    especially for larger repositories. A side-effect of --stream clones is
+    that storage settings and requirements on the remote are applied locally:
+    a modern client may inherit legacy or inefficient storage used by the
+    remote or a legacy Mercurial client may not be able to clone from a
+    modern Mercurial remote.
+
     .. note::
 
        Specifying a tag will include the tagged changeset but not the
@@ -1330,18 +1358,6 @@ def clone(ui, source, dest=None, **opts):
       directory). Some filesystems, such as AFS, implement hardlinking
       incorrectly, but do not report errors. In these cases, use the
       --pull option to avoid hardlinking.
-
-      In some cases, you can clone repositories and the working
-      directory using full hardlinks with ::
-
-        $ cp -al REPO REPOCLONE
-
-      This is the fastest way to clone, but it is not always safe. The
-      operation is not atomic (making sure REPO is not modified during
-      the operation is up to you) and you have to make sure your
-      editor breaks hardlinks (Emacs and most Linux Kernel tools do
-      so). Also, this is not compatible with certain extensions that
-      place their metadata under the .hg directory, such as mq.
 
       Mercurial will update the working directory to the first applicable
       revision from this list:
@@ -1380,10 +1396,9 @@ def clone(ui, source, dest=None, **opts):
 
           hg clone ssh://user@server//home/projects/alpha/
 
-      - do a high-speed clone over a LAN while checking out a
-        specified version::
+      - do a streaming clone while checking out a specified version::
 
-          hg clone --uncompressed http://server/repo -u 1.5
+          hg clone --stream http://server/repo -u 1.5
 
       - create a repository without changesets after a particular revision::
 
@@ -1403,7 +1418,7 @@ def clone(ui, source, dest=None, **opts):
 
     r = hg.clone(ui, opts, source, dest,
                  pull=opts.get('pull'),
-                 stream=opts.get('uncompressed'),
+                 stream=opts.get('stream') or opts.get('uncompressed'),
                  rev=opts.get('rev'),
                  update=opts.get('updaterev') or not opts.get('noupdate'),
                  branch=opts.get('branch'),
@@ -1542,15 +1557,7 @@ def _docommit(ui, repo, *pats, **opts):
         if not obsolete.isenabled(repo, obsolete.createmarkersopt):
             cmdutil.checkunfinished(repo)
 
-        # commitfunc is used only for temporary amend commit by cmdutil.amend
-        def commitfunc(ui, repo, message, match, opts):
-            return repo.commit(message,
-                               opts.get('user') or old.user(),
-                               opts.get('date') or old.date(),
-                               match,
-                               extra=extra)
-
-        node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
+        node = cmdutil.amend(ui, repo, old, extra, pats, opts)
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1
@@ -1644,8 +1651,8 @@ def config(ui, repo, *values, **opts):
                 samplehgrc = uimod.samplehgrcs['user']
 
             f = paths[0]
-            fp = open(f, "w")
-            fp.write(samplehgrc)
+            fp = open(f, "wb")
+            fp.write(util.tonativeeol(samplehgrc))
             fp.close()
 
         editor = ui.geteditor()
@@ -2150,7 +2157,7 @@ def _dograft(ui, repo, *revs, **opts):
     skipped = set()
     # check for merges
     for rev in repo.revs('%ld and merge()', revs):
-        ui.warn(_('skipping ungraftable merge revision %s\n') % rev)
+        ui.warn(_('skipping ungraftable merge revision %d\n') % rev)
         skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
@@ -2481,7 +2488,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     skip = {}
     revfiles = {}
-    matchfn = scmutil.match(repo[None], pats, opts)
+    match = scmutil.match(repo[None], pats, opts)
     found = False
     follow = opts.get('follow')
 
@@ -2522,7 +2529,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     ui.pager('grep')
     fm = ui.formatter('grep', opts)
-    for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
+    for ctx in cmdutil.walkchangerevs(repo, match, opts, prep):
         rev = ctx.rev()
         parent = ctx.p1().rev()
         for fn in sorted(revfiles.get(rev, [])):
@@ -3227,6 +3234,9 @@ def locate(ui, repo, *pats, **opts):
     ('k', 'keyword', [],
      _('do case-insensitive search for a given text'), _('TEXT')),
     ('r', 'rev', [], _('show the specified revision or revset'), _('REV')),
+    ('L', 'line-range', [],
+     _('follow line range of specified file (EXPERIMENTAL)'),
+     _('FILE,RANGE')),
     ('', 'removed', None, _('include revisions where files were removed')),
     ('m', 'only-merges', None, _('show only merges (DEPRECATED)')),
     ('u', 'user', [], _('revisions committed by user'), _('USER')),
@@ -3268,6 +3278,14 @@ def log(ui, repo, *pats, **opts):
     Paths in the DAG are represented with '|', '/' and so forth. ':' in place
     of a '|' indicates one or more revisions in a path are omitted.
 
+    .. container:: verbose
+
+       Use -L/--line-range FILE,M:N options to follow the history of lines
+       from M to N in FILE. With -p/--patch only diff hunks affecting
+       specified line range will be shown. This option requires --follow;
+       it can be specified multiple times. Currently, this option is not
+       compatible with --graph. This option is experimental.
+
     .. note::
 
        :hg:`log --patch` may generate unexpected diff output for merge
@@ -3280,6 +3298,14 @@ def log(ui, repo, *pats, **opts):
        For performance reasons, :hg:`log FILE` may omit duplicate changes
        made on branches and will not show removals or mode changes. To
        see all such changes, use the --removed switch.
+
+    .. container:: verbose
+
+       .. note::
+
+          The history resulting from -L/--line-range options depends on diff
+          options; for instance if white-spaces are ignored, respective changes
+          with only white-spaces in specified line range will not be listed.
 
     .. container:: verbose
 
@@ -3329,6 +3355,15 @@ def log(ui, repo, *pats, **opts):
 
           hg log -r "last(tagged())::" --template "{desc|firstline}\\n"
 
+      - changesets touching lines 13 to 23 for file.c::
+
+          hg log -L file.c,13:23
+
+      - changesets touching lines 13 to 23 for file.c and lines 2 to 6 of
+        main.c with patch::
+
+          hg log -L file.c,13:23 -L main.c,2:6 -p
+
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     See :hg:`help revisions` for more about specifying and ordering
@@ -3343,14 +3378,43 @@ def log(ui, repo, *pats, **opts):
 
     """
     opts = pycompat.byteskwargs(opts)
+    linerange = opts.get('line_range')
+
+    if linerange and not opts.get('follow'):
+        raise error.Abort(_('--line-range requires --follow'))
+
+    if linerange and pats:
+        raise error.Abort(
+            _('FILE arguments are not compatible with --line-range option')
+        )
+
     if opts.get('follow') and opts.get('rev'):
         opts['rev'] = [revsetlang.formatspec('reverse(::%lr)', opts.get('rev'))]
         del opts['follow']
 
     if opts.get('graph'):
+        if linerange:
+            raise error.Abort(_('graph not supported with line range patterns'))
         return cmdutil.graphlog(ui, repo, pats, opts)
 
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
+    hunksfilter = None
+
+    if linerange:
+        revs, lrfilematcher, hunksfilter = cmdutil.getloglinerangerevs(
+            repo, revs, opts)
+
+        if filematcher is not None and lrfilematcher is not None:
+            basefilematcher = filematcher
+
+            def filematcher(rev):
+                files = (basefilematcher(rev).files()
+                         + lrfilematcher(rev).files())
+                return scmutil.matchfiles(repo, files)
+
+        elif filematcher is None:
+            filematcher = lrfilematcher
+
     limit = cmdutil.loglimit(opts)
     count = 0
 
@@ -3378,7 +3442,12 @@ def log(ui, repo, *pats, **opts):
             revmatchfn = filematcher(ctx.rev())
         else:
             revmatchfn = None
-        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
+        if hunksfilter:
+            revhunksfilter = hunksfilter(rev)
+        else:
+            revhunksfilter = None
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn,
+                       hunksfilterfn=revhunksfilter)
         if displayer.flush(ctx):
             count += 1
 
@@ -3844,7 +3913,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
                         "merge)\n"))
         else:
             ui.status(_("(run 'hg heads' to see heads)\n"))
-    else:
+    elif not ui.configbool('commands', 'update.requiredest'):
         ui.status(_("(run 'hg update' to get a working copy)\n"))
 
 @command('^pull',
@@ -3972,6 +4041,7 @@ def pull(ui, repo, source="default", **opts):
     ('b', 'branch', [],
      _('a specific branch you would like to push'), _('BRANCH')),
     ('', 'new-branch', False, _('allow pushing a new branch')),
+    ('', 'pushvars', [], _('variables that can be sent to server (ADVANCED)')),
     ] + remoteopts,
     _('[-f] [-r REV]... [-e CMD] [--remotecmd CMD] [DEST]'))
 def push(ui, repo, dest=None, **opts):
@@ -4008,6 +4078,25 @@ def push(ui, repo, dest=None, **opts):
 
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
+
+    .. container:: verbose
+
+        The --pushvars option sends strings to the server that become
+        environment variables prepended with ``HG_USERVAR_``. For example,
+        ``--pushvars ENABLE_FEATURE=true``, provides the server side hooks with
+        ``HG_USERVAR_ENABLE_FEATURE=true`` as part of their environment.
+
+        pushvars can provide for user-overridable hooks as well as set debug
+        levels. One example is having a hook that blocks commits containing
+        conflict markers, but enables the user to override the hook if the file
+        is using conflict markers for testing purposes or the file format has
+        strings that look like conflict markers.
+
+        By default, servers will ignore `--pushvars`. To enable it add the
+        following to your configuration file::
+
+            [push]
+            pushvars.server = true
 
     Returns 0 if push was successful, 1 if nothing to push.
     """
@@ -4061,10 +4150,14 @@ def push(ui, repo, dest=None, **opts):
                 return not result
     finally:
         del repo._subtoppath
+
+    opargs = dict(opts.get('opargs', {})) # copy opargs since we may mutate it
+    opargs.setdefault('pushvars', []).extend(opts.get('pushvars', []))
+
     pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
                            newbranch=opts.get('new_branch'),
                            bookmarks=opts.get('bookmark', ()),
-                           opargs=opts.get('opargs'))
+                           opargs=opargs)
 
     result = not pushop.cgresult
 
@@ -4241,14 +4334,26 @@ def resolve(ui, repo, *pats, **opts):
         fm = ui.formatter('resolve', opts)
         ms = mergemod.mergestate.read(repo)
         m = scmutil.match(repo[None], pats, opts)
+
+        # Labels and keys based on merge state.  Unresolved path conflicts show
+        # as 'P'.  Resolved path conflicts show as 'R', the same as normal
+        # resolved conflicts.
+        mergestateinfo = {
+            'u': ('resolve.unresolved', 'U'),
+            'r': ('resolve.resolved', 'R'),
+            'pu': ('resolve.unresolved', 'P'),
+            'pr': ('resolve.resolved', 'R'),
+            'd': ('resolve.driverresolved', 'D'),
+        }
+
         for f in ms:
             if not m(f):
                 continue
-            l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved',
-                              'd': 'driverresolved'}[ms[f]]
+
+            label, key = mergestateinfo[ms[f]]
             fm.startitem()
-            fm.condwrite(not nostatus, 'status', '%s ', ms[f].upper(), label=l)
-            fm.write('path', '%s\n', f, label=l)
+            fm.condwrite(not nostatus, 'status', '%s ', key, label=label)
+            fm.write('path', '%s\n', f, label=label)
         fm.end()
         return 0
 
@@ -4294,6 +4399,17 @@ def resolve(ui, repo, *pats, **opts):
                                 % f)
                 else:
                     runconclude = True
+                continue
+
+            # path conflicts must be resolved manually
+            if ms[f] in ("pu", "pr"):
+                if mark:
+                    ms.mark(f, "pr")
+                elif unmark:
+                    ms.mark(f, "pu")
+                elif ms[f] == "pu":
+                    ui.warn(_('%s: path conflict must be resolved manually\n')
+                            % f)
                 continue
 
             if mark:
@@ -4665,15 +4781,23 @@ def status(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-      The -t/--terse option abbreviates the output by showing directory name
-      if all the files in it share the same status. The option expects a value
-      which can be a string formed by using 'm', 'a', 'r', 'd', 'u', 'i', 'c'
-      where, 'm' stands for 'modified', 'a' for 'added', 'r' for 'removed',
-      'd' for 'deleted', 'u' for 'unknown', 'i' for 'ignored' and 'c' for clean.
+      The -t/--terse option abbreviates the output by showing only the directory
+      name if all the files in it share the same status. The option takes an
+      argument indicating the statuses to abbreviate: 'm' for 'modified', 'a'
+      for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'
+      for 'ignored' and 'c' for clean.
 
-      It terses the output of only those status which are passed. The ignored
-      files are not considered while tersing until 'i' is there in --terse value
-      or the --ignored option is used.
+      It abbreviates only those statuses which are passed. Note that ignored
+      files are not displayed with '--terse i' unless the -i/--ignored option is
+      also used.
+
+      The -v/--verbose option shows information when the repository is in an
+      unfinished merge, shelve, rebase state etc. You can have this behavior
+      turned on by default by enabling the ``commands.status.verbose`` option.
+
+      You can skip displaying some of these states by setting
+      ``commands.status.skipstates`` to one or more of: 'bisect', 'graft',
+      'histedit', 'merge', 'rebase', or 'unshelve'.
 
       Examples:
 
@@ -4695,7 +4819,13 @@ def status(ui, repo, *pats, **opts):
 
           hg status -an0
 
+      - show more information about the repository status, abbreviating
+        added, removed, modified, deleted, and untracked paths::
+
+          hg status -v -t mardu
+
     Returns 0 on success.
+
     """
 
     opts = pycompat.byteskwargs(opts)
@@ -4737,12 +4867,18 @@ def status(ui, repo, *pats, **opts):
             show = states[:5]
 
     m = scmutil.match(repo[node2], pats, opts)
-    stat = repo.status(node1, node2, m,
-                       'ignored' in show, 'clean' in show, 'unknown' in show,
-                       opts.get('subrepos'))
     if terse:
-        stat = cmdutil.tersestatus(repo.root, stat, terse,
-                                    repo.dirstate._ignore, opts.get('ignored'))
+        # we need to compute clean and unknown to terse
+        stat = repo.status(node1, node2, m,
+                           'ignored' in show or 'i' in terse,
+                            True, True, opts.get('subrepos'))
+
+        stat = cmdutil.tersedir(stat, terse)
+    else:
+        stat = repo.status(node1, node2, m,
+                           'ignored' in show, 'clean' in show,
+                           'unknown' in show, opts.get('subrepos'))
+
     changestates = zip(states, pycompat.iterbytestr('MAR!?IC'), stat)
 
     if (opts.get('all') or opts.get('copies')
@@ -4764,6 +4900,10 @@ def status(ui, repo, *pats, **opts):
                 if f in copy:
                     fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
                              label='status.copied')
+
+    if ((ui.verbose or ui.configbool('commands', 'status.verbose'))
+        and not ui.plain()):
+        cmdutil.morestatus(repo, fm)
     fm.end()
 
 @command('^summary|sum',
@@ -4814,10 +4954,11 @@ def summary(ui, repo, **opts):
                 ui.write(_(' (no revision checked out)'))
         if p.obsolete():
             ui.write(_(' (obsolete)'))
-        if p.troubled():
+        if p.isunstable():
+            instabilities = (ui.label(instability, 'trouble.%s' % instability)
+                             for instability in p.instabilities())
             ui.write(' ('
-                     + ', '.join(ui.label(trouble, 'trouble.%s' % trouble)
-                                 for trouble in p.troubles())
+                     + ', '.join(instabilities)
                      + ')')
         ui.write('\n')
         if p.description():
@@ -4939,13 +5080,13 @@ def summary(ui, repo, **opts):
         ui.status(_('phases: %s\n') % ', '.join(t))
 
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        for trouble in ("unstable", "divergent", "bumped"):
+        for trouble in ("orphan", "contentdivergent", "phasedivergent"):
             numtrouble = len(repo.revs(trouble + "()"))
             # We write all the possibilities to ease translation
             troublemsg = {
-               "unstable": _("unstable: %d changesets"),
-               "divergent": _("divergent: %d changesets"),
-               "bumped": _("bumped: %d changesets"),
+               "orphan": _("orphan: %d changesets"),
+               "contentdivergent": _("content-divergent: %d changesets"),
+               "phasedivergent": _("phase-divergent: %d changesets"),
             }
             if numtrouble > 0:
                 ui.status(troublemsg[trouble] % numtrouble + "\n")

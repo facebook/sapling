@@ -3,7 +3,7 @@
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
-  > 
+  > drawdag=$TESTDIR/drawdag.py
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
   > EOF
@@ -334,3 +334,93 @@ rebase of merge of ancestors
   |/
   o  0: 'common'
   
+Due to the limitation of 3-way merge algorithm (1 merge base), rebasing a merge
+may include unwanted content:
+
+  $ hg init $TESTTMP/dual-merge-base1
+  $ cd $TESTTMP/dual-merge-base1
+  $ hg debugdrawdag <<'EOS'
+  >   F
+  >  /|
+  > D E
+  > | |
+  > B C
+  > |/
+  > A Z
+  > |/
+  > R
+  > EOS
+  $ hg rebase -r D+E+F -d Z
+  rebasing 5:5f2c926dfecf "D" (D)
+  rebasing 6:b296604d9846 "E" (E)
+  rebasing 7:caa9781e507d "F" (F tip)
+  abort: rebasing 7:caa9781e507d will include unwanted changes from 4:d6003a550c2c or 3:c1e6b162678d
+  [255]
+
+The warning does not get printed if there is no unwanted change detected:
+
+  $ hg init $TESTTMP/dual-merge-base2
+  $ cd $TESTTMP/dual-merge-base2
+  $ hg debugdrawdag <<'EOS'
+  >   D
+  >  /|
+  > B C
+  > |/
+  > A Z
+  > |/
+  > R
+  > EOS
+  $ hg rebase -r B+C+D -d Z
+  rebasing 3:c1e6b162678d "B" (B)
+  rebasing 4:d6003a550c2c "C" (C)
+  rebasing 5:c8f78076273e "D" (D tip)
+  saved backup bundle to $TESTTMP/dual-merge-base2/.hg/strip-backup/d6003a550c2c-6f1424b6-rebase.hg (glob)
+  $ hg manifest -r 'desc(D)'
+  B
+  C
+  R
+  Z
+
+The merge base could be different from old p1 (changed parent becomes new p1):
+
+  $ hg init $TESTTMP/chosen-merge-base1
+  $ cd $TESTTMP/chosen-merge-base1
+  $ hg debugdrawdag <<'EOS'
+  >   F
+  >  /|
+  > D E
+  > | |
+  > B C Z
+  > EOS
+  $ hg rebase -r D+F -d Z
+  rebasing 3:004dc1679908 "D" (D)
+  rebasing 5:4be4cbf6f206 "F" (F tip)
+  saved backup bundle to $TESTTMP/chosen-merge-base1/.hg/strip-backup/004dc1679908-06a66a3c-rebase.hg (glob)
+  $ hg manifest -r 'desc(F)'
+  C
+  D
+  E
+  Z
+  $ hg log -r `hg log -r 'desc(F)' -T '{p1node}'` -T '{desc}\n'
+  D
+
+  $ hg init $TESTTMP/chosen-merge-base2
+  $ cd $TESTTMP/chosen-merge-base2
+  $ hg debugdrawdag <<'EOS'
+  >   F
+  >  /|
+  > D E
+  > | |
+  > B C Z
+  > EOS
+  $ hg rebase -r E+F -d Z
+  rebasing 4:974e4943c210 "E" (E)
+  rebasing 5:4be4cbf6f206 "F" (F tip)
+  saved backup bundle to $TESTTMP/chosen-merge-base2/.hg/strip-backup/974e4943c210-b2874da5-rebase.hg (glob)
+  $ hg manifest -r 'desc(F)'
+  B
+  D
+  E
+  Z
+  $ hg log -r `hg log -r 'desc(F)' -T '{p1node}'` -T '{desc}\n'
+  E

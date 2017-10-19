@@ -3,7 +3,8 @@
   > Current bundle2 implementation doesn't provide a way to generate those
   > parts, so they must be created by extensions.
   > """
-  > from mercurial import bundle2, pushkey, exchange, util
+  > from __future__ import absolute_import
+  > from mercurial import bundle2, exchange, pushkey, util
   > def _newhandlechangegroup(op, inpart):
   >     """This function wraps the changegroup part handler for getbundle.
   >     It issues an additional pushkey part to send a new

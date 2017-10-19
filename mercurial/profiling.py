@@ -138,7 +138,7 @@ def statprofile(ui, fp):
 
         if profformat == 'chrome':
             showmin = ui.configwith(fraction, 'profiling', 'showmin', 0.005)
-            showmax = ui.configwith(fraction, 'profiling', 'showmax', 0.999)
+            showmax = ui.configwith(fraction, 'profiling', 'showmax')
             kwargs.update(minthreshold=showmin, maxthreshold=showmax)
         elif profformat == 'hotpath':
             # inconsistent config: profiling.showmin
@@ -183,7 +183,7 @@ class profile(object):
         profiler = encoding.environ.get('HGPROF')
         proffn = None
         if profiler is None:
-            profiler = self._ui.config('profiling', 'type', default='stat')
+            profiler = self._ui.config('profiling', 'type')
         if profiler not in ('ls', 'stat', 'flame'):
             # try load profiler from extension with the same name
             proffn = _loadprofiler(self._ui, profiler)

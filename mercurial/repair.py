@@ -12,7 +12,10 @@ import errno
 import hashlib
 
 from .i18n import _
-from .node import short
+from .node import (
+    hex,
+    short,
+)
 from . import (
     bundle2,
     changegroup,
@@ -35,8 +38,9 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     # Include a hash of all the nodes in the filename for uniqueness
     allcommits = repo.set('%ln::%ln', bases, heads)
     allhashes = sorted(c.hex() for c in allcommits)
-    totalhash = hashlib.sha1(''.join(allhashes)).hexdigest()
-    name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
+    totalhash = hashlib.sha1(''.join(allhashes)).digest()
+    name = "%s/%s-%s-%s.hg" % (backupdir, short(node),
+                               hex(totalhash[:4]), suffix)
 
     cgversion = changegroup.localversion(repo)
     comp = None
@@ -67,16 +71,20 @@ def _collectfiles(repo, striprev):
 
     return sorted(files)
 
+def _collectrevlog(revlog, striprev):
+    _, brokenset = revlog.getstrippoint(striprev)
+    return [revlog.linkrev(r) for r in brokenset]
+
+def _collectmanifest(repo, striprev):
+    return _collectrevlog(repo.manifestlog._revlog, striprev)
+
 def _collectbrokencsets(repo, files, striprev):
     """return the changesets which will be broken by the truncation"""
     s = set()
-    def collectone(revlog):
-        _, brokenset = revlog.getstrippoint(striprev)
-        s.update([revlog.linkrev(r) for r in brokenset])
 
-    collectone(repo.manifestlog._revlog)
+    s.update(_collectmanifest(repo, striprev))
     for fname in files:
-        collectone(repo.file(fname))
+        s.update(_collectrevlog(repo.file(fname), striprev))
 
     return s
 
@@ -174,16 +182,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         tmpbundlefile = _bundle(repo, savebases, saveheads, node, 'temp',
                                 compress=False, obsolescence=False)
 
-    mfst = repo.manifestlog._revlog
-
     try:
         with repo.transaction("strip") as tr:
             offset = len(tr.entries)
 
             tr.startgroup()
             cl.strip(striprev, tr)
-            mfst.strip(striprev, tr)
-            striptrees(repo, tr, striprev, files)
+            stripmanifest(repo, striprev, tr, files)
 
             for fn in files:
                 repo.file(fn).strip(striprev, tr)
@@ -309,6 +314,11 @@ def delayedstrip(ui, repo, nodelist, topic=None):
     if topic:
         callback.topic = topic
     callback.addnodes(nodelist)
+
+def stripmanifest(repo, striprev, tr, files):
+    revlog = repo.manifestlog._revlog
+    revlog.strip(striprev, tr)
+    striptrees(repo, tr, striprev, files)
 
 def striptrees(repo, tr, striprev, files):
     if 'treemanifest' in repo.requirements: # safe but unnecessary

@@ -29,7 +29,7 @@ except NameError:
     unicode = str
 
 _languages = None
-if (pycompat.osname == 'nt'
+if (pycompat.iswindows
     and 'LANGUAGE' not in encoding.environ
     and 'LC_ALL' not in encoding.environ
     and 'LC_MESSAGES' not in encoding.environ
@@ -58,7 +58,7 @@ def setdatapath(datapath):
     except AttributeError:
         _ugettext = t.gettext
 
-_msgcache = {}
+_msgcache = {}  # encoding: {message: translation}
 
 def gettext(message):
     """Translate message.
@@ -74,7 +74,8 @@ def gettext(message):
     if message is None or not _ugettext:
         return message
 
-    if message not in _msgcache:
+    cache = _msgcache.setdefault(encoding.encoding, {})
+    if message not in cache:
         if type(message) is unicode:
             # goofy unicode docstrings in test
             paragraphs = message.split(u'\n\n')
@@ -90,11 +91,11 @@ def gettext(message):
             # the Python encoding defaults to 'ascii', this fails if the
             # translated string use non-ASCII characters.
             encodingstr = pycompat.sysstr(encoding.encoding)
-            _msgcache[message] = u.encode(encodingstr, "replace")
+            cache[message] = u.encode(encodingstr, "replace")
         except LookupError:
             # An unknown encoding results in a LookupError.
-            _msgcache[message] = message
-    return _msgcache[message]
+            cache[message] = message
+    return cache[message]
 
 def _plain():
     if ('HGPLAIN' not in encoding.environ

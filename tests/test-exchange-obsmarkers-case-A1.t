@@ -103,6 +103,7 @@ Variant a: push -r A
   adding file changes
   added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
+  new changesets f5bc6836db60
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main
@@ -144,6 +145,7 @@ Variant b: push
   adding file changes
   added 1 changesets with 1 changes to 1 files
   1 new obsolescence markers
+  new changesets f5bc6836db60
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main
@@ -244,6 +246,7 @@ Variant a: push -r A
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
+  new changesets f5bc6836db60:f6fbb35d8ac9
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main
@@ -285,6 +288,7 @@ Variant b: push
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
+  new changesets f5bc6836db60:f6fbb35d8ac9
   (run 'hg update' to get a working copy)
   ## post pull state
   # obstore: main

@@ -31,11 +31,11 @@ should be used from d74fc8dec2b4 onward to route the request.
   > input = stringio()
   > 
   > def startrsp(status, headers):
-  >     print '---- STATUS'
-  >     print status
-  >     print '---- HEADERS'
-  >     print [i for i in headers if i[0] != 'ETag']
-  >     print '---- DATA'
+  >     print('---- STATUS')
+  >     print(status)
+  >     print('---- HEADERS')
+  >     print([i for i in headers if i[0] != 'ETag'])
+  >     print('---- DATA')
   >     return output.write
   > 
   > env = {
@@ -59,8 +59,8 @@ should be used from d74fc8dec2b4 onward to route the request.
   >     sys.stdout.write(output.getvalue())
   >     sys.stdout.write(''.join(content))
   >     getattr(content, 'close', lambda : None)()
-  >     print '---- ERRORS'
-  >     print errors.getvalue()
+  >     print('---- ERRORS')
+  >     print(errors.getvalue())
   > 
   > output = stringio()
   > env['QUERY_STRING'] = 'style=atom'

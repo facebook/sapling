@@ -119,7 +119,9 @@ testpats = [
     (r'\[[^\]]+==', '[ foo == bar ] is a bashism, use [ foo = bar ] instead'),
     (r'(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w',
      "use egrep for extended grep syntax"),
-    (r'/bin/', "don't use explicit paths for tools"),
+    (r'(^|\|\s*)e?grep .*\\S', "don't use \\S in regular expression"),
+    (r'(?<!!)/bin/', "don't use explicit paths for tools"),
+    (r'#!.*/bash', "don't use bash in shebang, use sh"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export .*=', "don't export and assign at once"),
     (r'^source\b', "don't use 'source', use '.'"),
@@ -159,7 +161,7 @@ testpats = [
 ]
 
 testfilters = [
-    (r"( *)(#([^\n]*\S)?)", repcomment),
+    (r"( *)(#([^!][^\n]*\S)?)", repcomment),
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
@@ -201,6 +203,7 @@ utestpats = [
      'use test -f to test for file existence'),
     (r'^  diff -[^ -]*p',
      "don't use (external) diff with -p for portability"),
+    (r' readlink ', 'use readlink.py instead of readlink'),
     (r'^  [-+][-+][-+] .* [-+]0000 \(glob\)',
      "glob timezone field in diff output for portability"),
     (r'^  @@ -[0-9]+ [+][0-9]+,[0-9]+ @@',
@@ -232,7 +235,7 @@ for i in [0, 1]:
 
 utestfilters = [
     (r"<<(\S+)((.|\n)*?\n  > \1)", rephere),
-    (r"( +)(#([^\n]*\S)?)", repcomment),
+    (r"( +)(#([^!][^\n]*\S)?)", repcomment),
 ]
 
 pypats = [
@@ -255,13 +258,23 @@ pypats = [
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
+    ((
+        # a line ending with a colon, potentially with trailing comments
+        r':([ \t]*#[^\n]*)?\n'
+        # one that is not a pass and not only a comment
+        r'(?P<indent>[ \t]+)[^#][^\n]+\n'
+        # more lines at the same indent level
+        r'((?P=indent)[^\n]+\n)*'
+        # a pass at the same indent level, which is bogus
+        r'(?P=indent)pass[ \t\n#]'
+      ), 'omit superfluous pass'),
     (r'.{81}', "line too long"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
 #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=',
 #     "don't use underbars in identifiers"),
-    (r'^\s+(self\.)?[A-za-z][a-z0-9]+[A-Z]\w* = ',
-     "don't use camelcase in identifiers"),
+    (r'^\s+(self\.)?[A-Za-z][a-z0-9]+[A-Z]\w* = ',
+     "don't use camelcase in identifiers", r'#.*camelcase-required'),
     (r'^\s*(if|while|def|class|except|try)\s[^[\n]*:\s*[^\\n]#\s]+',
      "linebreak after :"),
     (r'class\s[^( \n]+:', "old-style class, use class foo(object)",
@@ -333,6 +346,7 @@ pypats = [
     (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
     (r'^@(\w*\.)?cachefunc', "module-level @cachefunc is risky, please avoid"),
+    (r'^import atexit', "don't use atexit, use ui.atexit"),
     (r'^import Queue', "don't use Queue, use util.queue + util.empty"),
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
@@ -348,6 +362,7 @@ pypats = [
     (r'\.next\(\)', "don't use .next(), use next(...)"),
     (r'([a-z]*).revision\(\1\.node\(',
      "don't convert rev to node before passing to revision(nodeorrev)"),
+    (r'platform\.system\(\)', "don't use platform.system(), use pycompat"),
 
     # rules depending on implementation of repquote()
     (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',
@@ -382,6 +397,18 @@ pyfilters = [
           (?P=quote))""", reppython),
 ]
 
+# non-filter patterns
+pynfpats = [
+    [
+    (r'pycompat\.osname\s*[=!]=\s*[\'"]nt[\'"]', "use pycompat.iswindows"),
+    (r'pycompat\.osname\s*[=!]=\s*[\'"]posix[\'"]', "use pycompat.isposix"),
+    (r'pycompat\.sysplatform\s*[!=]=\s*[\'"]darwin[\'"]',
+     "use pycompat.isdarwin"),
+    ],
+    # warnings
+    [],
+]
+
 # extension non-filter patterns
 pyextnfpats = [
     [(r'^"""\n?[A-Z]', "don't capitalize docstring title")],
@@ -402,7 +429,6 @@ txtpats = [
 cpats = [
   [
     (r'//', "don't use //-style comments"),
-    (r'^  ', "don't use spaces to indent"),
     (r'\S\t', "don't use tabs except for indent"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
     (r'.{81}', "line too long"),
@@ -498,6 +524,7 @@ py3pats = [
 
 checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
+    ('python', r'.*\.(py|cgi)$', r'^#!.*python', [], pynfpats),
     ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
     ('python 3', r'.*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py',
      '', pyfilters, py3pats),

@@ -1,7 +1,10 @@
 Test how largefiles abort in case the disk runs full
 
   $ cat > criple.py <<EOF
-  > import os, errno, shutil
+  > from __future__ import absolute_import
+  > import errno
+  > import os
+  > import shutil
   > from mercurial import util
   > #
   > # this makes the original largefiles code abort:
@@ -60,6 +63,7 @@ makes copies instead of hardlinks:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 390cf214e9ac
   updating to branch default
   getting changed largefiles
   abort: No space left on device

@@ -28,6 +28,7 @@ import socket
 import stat
 
 from . import (
+    urllibcompat,
     util,
 )
 
@@ -44,7 +45,6 @@ unquote = urlreq.unquote
 
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
-    pass
 
 class HTTPRangeHandler(urlreq.basehandler):
     """Handler that enables HTTP Range headers.
@@ -91,7 +91,7 @@ class RangeableFileObject(object):
     Examples:
         # expose 10 bytes, starting at byte position 20, from
         # /etc/aliases.
-        >>> fo = RangeableFileObject(file('/etc/passwd', 'r'), (20,30))
+        >>> fo = RangeableFileObject(file(b'/etc/passwd', b'r'), (20,30))
         # seek seeks within the range (to position 23 in this case)
         >>> fo.seek(3)
         # tell tells where your at _within the range_ (position 3 in
@@ -215,8 +215,8 @@ class FileRangeHandler(urlreq.filehandler):
     server would.
     """
     def open_local_file(self, req):
-        host = req.get_host()
-        file = req.get_selector()
+        host = urllibcompat.gethost(req)
+        file = urllibcompat.getselector(req)
         localfile = urlreq.url2pathname(file)
         stats = os.stat(localfile)
         size = stats[stat.ST_SIZE]
@@ -253,7 +253,7 @@ class FileRangeHandler(urlreq.filehandler):
 
 class FTPRangeHandler(urlreq.ftphandler):
     def ftp_open(self, req):
-        host = req.get_host()
+        host = urllibcompat.gethost(req)
         if not host:
             raise IOError('ftp error', 'no host given')
         host, port = splitport(host)

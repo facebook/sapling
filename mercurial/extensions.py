@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import functools
 import imp
 import inspect
 import os
@@ -19,7 +20,6 @@ from .i18n import (
 from . import (
     cmdutil,
     configitems,
-    encoding,
     error,
     pycompat,
     util,
@@ -114,16 +114,11 @@ def _importext(name, path=None, reportfunc=None):
                 mod = _importh(name)
     return mod
 
-def _forbytes(inst):
-    """Portably format an import error into a form suitable for
-    %-formatting into bytestrings."""
-    return encoding.strtolocal(str(inst))
-
 def _reportimporterror(ui, err, failed, next):
     # note: this ui.debug happens before --debug is processed,
     #       Use --config ui.debug=1 to see them.
     ui.debug('could not import %s (%s): trying %s\n'
-             % (failed, _forbytes(err), next))
+             % (failed, util.forcebytestr(err), next))
     if ui.debugflag:
         ui.traceback()
 
@@ -139,6 +134,14 @@ def _validatecmdtable(ui, cmdtable):
                           "registrar.command to register '%s'" % c, '4.6')
         missing = [a for a in _cmdfuncattrs if not util.safehasattr(f, a)]
         if not missing:
+            for option in e[1]:
+                default = option[2]
+                if isinstance(default, type(u'')):
+                    raise error.ProgrammingError(
+                        "option '%s.%s' has a unicode default value"
+                        % (c, option[1]),
+                        hint=("change the %s.%s default value to a "
+                              "non-unicode string" % (c, option[1])))
             continue
         raise error.ProgrammingError(
             'missing attributes: %s' % ', '.join(missing),
@@ -179,8 +182,8 @@ def _runuisetup(name, ui):
         try:
             uisetup(ui)
         except Exception as inst:
-            ui.traceback()
-            msg = _forbytes(inst)
+            ui.traceback(force=True)
+            msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False
     return True
@@ -192,12 +195,16 @@ def _runextsetup(name, ui):
             try:
                 extsetup(ui)
             except TypeError:
-                if inspect.getargspec(extsetup).args:
+                # Try to use getfullargspec (Python 3) first, and fall
+                # back to getargspec only if it doesn't exist so as to
+                # avoid warnings.
+                if getattr(inspect, 'getfullargspec',
+                           getattr(inspect, 'getargspec'))(extsetup).args:
                     raise
                 extsetup() # old extsetup with no ui argument
         except Exception as inst:
-            ui.traceback()
-            msg = _forbytes(inst)
+            ui.traceback(force=True)
+            msg = util.forcebytestr(inst)
             ui.warn(_("*** failed to set up extension %s: %s\n") % (name, msg))
             return False
     return True
@@ -215,7 +222,7 @@ def loadall(ui, whitelist=None):
         try:
             load(ui, name, path)
         except Exception as inst:
-            msg = _forbytes(inst)
+            msg = util.forcebytestr(inst)
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
                         % (name, path, msg))
@@ -225,6 +232,18 @@ def loadall(ui, whitelist=None):
             if isinstance(inst, error.Hint) and inst.hint:
                 ui.warn(_("*** (%s)\n") % inst.hint)
             ui.traceback()
+    # list of (objname, loadermod, loadername) tuple:
+    # - objname is the name of an object in extension module,
+    #   from which extra information is loaded
+    # - loadermod is the module where loader is placed
+    # - loadername is the name of the function,
+    #   which takes (ui, extensionname, extraobj) arguments
+    #
+    # This one is for the list of item that must be run before running any setup
+    earlyextraloaders = [
+        ('configtable', configitems, 'loadconfigtable'),
+    ]
+    _loadextra(ui, newindex, earlyextraloaders)
 
     broken = set()
     for name in _order[newindex:]:
@@ -256,6 +275,7 @@ def loadall(ui, whitelist=None):
     from . import (
         color,
         commands,
+        filemerge,
         fileset,
         revset,
         templatefilters,
@@ -272,14 +292,16 @@ def loadall(ui, whitelist=None):
     extraloaders = [
         ('cmdtable', commands, 'loadcmdtable'),
         ('colortable', color, 'loadcolortable'),
-        ('configtable', configitems, 'loadconfigtable'),
         ('filesetpredicate', fileset, 'loadpredicate'),
+        ('internalmerge', filemerge, 'loadinternalmerge'),
         ('revsetpredicate', revset, 'loadpredicate'),
         ('templatefilter', templatefilters, 'loadfilter'),
         ('templatefunc', templater, 'loadfunction'),
         ('templatekeyword', templatekw, 'loadkeyword'),
     ]
+    _loadextra(ui, newindex, extraloaders)
 
+def _loadextra(ui, newindex, extraloaders):
     for name in _order[newindex:]:
         module = _extensions[name]
         if not module:
@@ -324,6 +346,10 @@ def bind(func, *args):
 
 def _updatewrapper(wrap, origfn, unboundwrapper):
     '''Copy and add some useful attributes to wrapper'''
+    try:
+        wrap.__name__ = origfn.__name__
+    except AttributeError:
+        pass
     wrap.__module__ = getattr(origfn, '__module__')
     wrap.__doc__ = getattr(origfn, '__doc__')
     wrap.__dict__.update(getattr(origfn, '__dict__', {}))
@@ -367,7 +393,8 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
             break
 
     origfn = entry[0]
-    wrap = bind(util.checksignature(wrapper), util.checksignature(origfn))
+    wrap = functools.partial(util.checksignature(wrapper),
+                             util.checksignature(origfn))
     _updatewrapper(wrap, origfn, wrapper)
     if docstring is not None:
         wrap.__doc__ += docstring
@@ -384,6 +411,7 @@ def wrapfilecache(cls, propname, wrapper):
 
     These can't be wrapped using the normal wrapfunction.
     """
+    propname = pycompat.sysstr(propname)
     assert callable(wrapper)
     for currcls in cls.__mro__:
         if propname in currcls.__dict__:
@@ -395,8 +423,23 @@ def wrapfilecache(cls, propname, wrapper):
             break
 
     if currcls is object:
-        raise AttributeError(
-            _("type '%s' has no property '%s'") % (cls, propname))
+        raise AttributeError(r"type '%s' has no property '%s'" % (
+            cls, propname))
+
+class wrappedfunction(object):
+    '''context manager for temporarily wrapping a function'''
+
+    def __init__(self, container, funcname, wrapper):
+        assert callable(wrapper)
+        self._container = container
+        self._funcname = funcname
+        self._wrapper = wrapper
+
+    def __enter__(self):
+        wrapfunction(self._container, self._funcname, self._wrapper)
+
+    def __exit__(self, exctype, excvalue, traceback):
+        unwrapfunction(self._container, self._funcname, self._wrapper)
 
 def wrapfunction(container, funcname, wrapper):
     '''Wrap the function named funcname in container
@@ -435,7 +478,14 @@ def wrapfunction(container, funcname, wrapper):
 
     origfn = getattr(container, funcname)
     assert callable(origfn)
-    wrap = bind(wrapper, origfn)
+    if inspect.ismodule(container):
+        # origfn is not an instance or class method. "partial" can be used.
+        # "partial" won't insert a frame in traceback.
+        wrap = functools.partial(wrapper, origfn)
+    else:
+        # "partial" cannot be safely used. Emulate its effect by using "bind".
+        # The downside is one more frame in traceback.
+        wrap = bind(wrapper, origfn)
     _updatewrapper(wrap, origfn, wrapper)
     setattr(container, funcname, wrap)
     return origfn

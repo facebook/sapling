@@ -17,6 +17,7 @@ import traceback
 from ..i18n import _
 
 from .. import (
+    encoding,
     error,
     pycompat,
     util,
@@ -37,10 +38,10 @@ def _splitURI(uri):
     Just like CGI environment, the path is unquoted, the query is
     not.
     """
-    if '?' in uri:
-        path, query = uri.split('?', 1)
+    if r'?' in uri:
+        path, query = uri.split(r'?', 1)
     else:
-        path, query = uri, ''
+        path, query = uri, r''
     return urlreq.unquote(path), query
 
 class _error_logger(object):
@@ -61,16 +62,16 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
     @staticmethod
     def preparehttpserver(httpserver, ui):
         """Prepare .socket of new HTTPServer instance"""
-        pass
 
     def __init__(self, *args, **kargs):
-        self.protocol_version = 'HTTP/1.1'
+        self.protocol_version = r'HTTP/1.1'
         httpservermod.basehttprequesthandler.__init__(self, *args, **kargs)
 
     def _log_any(self, fp, format, *args):
-        fp.write("%s - - [%s] %s\n" % (self.client_address[0],
-                                       self.log_date_time_string(),
-                                       format % args))
+        fp.write(pycompat.sysbytes(
+            r"%s - - [%s] %s" % (self.client_address[0],
+                                 self.log_date_time_string(),
+                                 format % args)) + '\n')
         fp.flush()
 
     def log_error(self, format, *args):
@@ -79,14 +80,14 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
     def log_message(self, format, *args):
         self._log_any(self.server.accesslog, format, *args)
 
-    def log_request(self, code='-', size='-'):
+    def log_request(self, code=r'-', size=r'-'):
         xheaders = []
         if util.safehasattr(self, 'headers'):
             xheaders = [h for h in self.headers.items()
-                        if h[0].startswith('x-')]
-        self.log_message('"%s" %s %s%s',
+                        if h[0].startswith(r'x-')]
+        self.log_message(r'"%s" %s %s%s',
                          self.requestline, str(code), str(size),
-                         ''.join([' %s:%s' % h for h in sorted(xheaders)]))
+                         r''.join([r' %s:%s' % h for h in sorted(xheaders)]))
 
     def do_write(self):
         try:
@@ -102,60 +103,71 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
             self._start_response("500 Internal Server Error", [])
             self._write("Internal Server Error")
             self._done()
-            tb = "".join(traceback.format_exception(*sys.exc_info()))
-            self.log_error("Exception happened during processing "
-                           "request '%s':\n%s", self.path, tb)
+            tb = r"".join(traceback.format_exception(*sys.exc_info()))
+            # We need a native-string newline to poke in the log
+            # message, because we won't get a newline when using an
+            # r-string. This is the easy way out.
+            newline = chr(10)
+            self.log_error(r"Exception happened during processing "
+                           r"request '%s':%s%s", self.path, newline, tb)
 
     def do_GET(self):
         self.do_POST()
 
     def do_hgweb(self):
+        self.sent_headers = False
         path, query = _splitURI(self.path)
 
         env = {}
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        env['REQUEST_METHOD'] = self.command
-        env['SERVER_NAME'] = self.server.server_name
-        env['SERVER_PORT'] = str(self.server.server_port)
-        env['REQUEST_URI'] = self.path
-        env['SCRIPT_NAME'] = self.server.prefix
-        env['PATH_INFO'] = path[len(self.server.prefix):]
-        env['REMOTE_HOST'] = self.client_address[0]
-        env['REMOTE_ADDR'] = self.client_address[0]
+        env[r'GATEWAY_INTERFACE'] = r'CGI/1.1'
+        env[r'REQUEST_METHOD'] = self.command
+        env[r'SERVER_NAME'] = self.server.server_name
+        env[r'SERVER_PORT'] = str(self.server.server_port)
+        env[r'REQUEST_URI'] = self.path
+        env[r'SCRIPT_NAME'] = self.server.prefix
+        env[r'PATH_INFO'] = path[len(self.server.prefix):]
+        env[r'REMOTE_HOST'] = self.client_address[0]
+        env[r'REMOTE_ADDR'] = self.client_address[0]
         if query:
-            env['QUERY_STRING'] = query
+            env[r'QUERY_STRING'] = query
 
-        if self.headers.typeheader is None:
-            env['CONTENT_TYPE'] = self.headers.type
+        if pycompat.ispy3:
+            if self.headers.get_content_type() is None:
+                env[r'CONTENT_TYPE'] = self.headers.get_default_type()
+            else:
+                env[r'CONTENT_TYPE'] = self.headers.get_content_type()
+            length = self.headers.get('content-length')
         else:
-            env['CONTENT_TYPE'] = self.headers.typeheader
-        length = self.headers.getheader('content-length')
+            if self.headers.typeheader is None:
+                env[r'CONTENT_TYPE'] = self.headers.type
+            else:
+                env[r'CONTENT_TYPE'] = self.headers.typeheader
+            length = self.headers.getheader('content-length')
         if length:
-            env['CONTENT_LENGTH'] = length
+            env[r'CONTENT_LENGTH'] = length
         for header in [h for h in self.headers.keys()
                        if h not in ('content-type', 'content-length')]:
-            hkey = 'HTTP_' + header.replace('-', '_').upper()
-            hval = self.headers.getheader(header)
-            hval = hval.replace('\n', '').strip()
+            hkey = r'HTTP_' + header.replace(r'-', r'_').upper()
+            hval = self.headers.get(header)
+            hval = hval.replace(r'\n', r'').strip()
             if hval:
                 env[hkey] = hval
-        env['SERVER_PROTOCOL'] = self.request_version
-        env['wsgi.version'] = (1, 0)
-        env['wsgi.url_scheme'] = self.url_scheme
-        if env.get('HTTP_EXPECT', '').lower() == '100-continue':
+        env[r'SERVER_PROTOCOL'] = self.request_version
+        env[r'wsgi.version'] = (1, 0)
+        env[r'wsgi.url_scheme'] = self.url_scheme
+        if env.get(r'HTTP_EXPECT', '').lower() == '100-continue':
             self.rfile = common.continuereader(self.rfile, self.wfile.write)
 
-        env['wsgi.input'] = self.rfile
-        env['wsgi.errors'] = _error_logger(self)
-        env['wsgi.multithread'] = isinstance(self.server,
+        env[r'wsgi.input'] = self.rfile
+        env[r'wsgi.errors'] = _error_logger(self)
+        env[r'wsgi.multithread'] = isinstance(self.server,
                                              socketserver.ThreadingMixIn)
-        env['wsgi.multiprocess'] = isinstance(self.server,
+        env[r'wsgi.multiprocess'] = isinstance(self.server,
                                               socketserver.ForkingMixIn)
-        env['wsgi.run_once'] = 0
+        env[r'wsgi.run_once'] = 0
 
         self.saved_status = None
         self.saved_headers = []
-        self.sent_headers = False
         self.length = None
         self._chunked = None
         for chunk in self.server.application(env, self._start_response):
@@ -182,9 +194,9 @@ class _httprequesthandler(httpservermod.basehttprequesthandler):
             self._chunked = (not self.close_connection and
                              self.request_version == "HTTP/1.1")
             if self._chunked:
-                self.send_header('Transfer-Encoding', 'chunked')
+                self.send_header(r'Transfer-Encoding', r'chunked')
             else:
-                self.send_header('Connection', 'close')
+                self.send_header(r'Connection', r'close')
         self.end_headers()
         self.sent_headers = True
 
@@ -267,7 +279,7 @@ def openlog(opt, default):
 class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
 
     # SO_REUSEADDR has broken semantics on windows
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         allow_reuse_address = 0
 
     def __init__(self, ui, app, addr, handler, **kwargs):
@@ -277,13 +289,13 @@ class MercurialHTTPServer(_mixin, httpservermod.httpserver, object):
 
         handler.preparehttpserver(self, ui)
 
-        prefix = ui.config('web', 'prefix', '')
+        prefix = ui.config('web', 'prefix')
         if prefix:
             prefix = '/' + prefix.strip('/')
         self.prefix = prefix
 
-        alog = openlog(ui.config('web', 'accesslog', '-'), ui.fout)
-        elog = openlog(ui.config('web', 'errorlog', '-'), ui.ferr)
+        alog = openlog(ui.config('web', 'accesslog'), ui.fout)
+        elog = openlog(ui.config('web', 'errorlog'), ui.ferr)
         self.accesslog = alog
         self.errorlog = elog
 
@@ -326,10 +338,10 @@ def create_server(ui, app):
         mimetypes.init()
         sys.setdefaultencoding(oldenc)
 
-    address = ui.config('web', 'address', '')
-    port = util.getport(ui.config('web', 'port', 8000))
+    address = ui.config('web', 'address')
+    port = util.getport(ui.config('web', 'port'))
     try:
         return cls(ui, app, (address, port), handler)
     except socket.error as inst:
         raise error.Abort(_("cannot start server at '%s:%d': %s")
-                         % (address, port, inst.args[1]))
+                          % (address, port, encoding.strtolocal(inst.args[1])))

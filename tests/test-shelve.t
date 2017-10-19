@@ -342,6 +342,23 @@ force a conflicted merge to occur
   warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
+  $ hg status -v
+  M a/a
+  M b.rename/b
+  M c.copy
+  R b/b
+  ? a/a.orig
+  # The repository is in an unfinished *unshelve* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     a/a (glob)
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg unshelve --continue
+  # To abort:                   hg unshelve --abort
+  
 
 ensure that we have a merge with unresolved conflicts
 
@@ -679,7 +696,7 @@ test bug 4073 we need to enable obsolete markers for it
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
   $ hg shelve
   shelved as default
@@ -1071,6 +1088,7 @@ no general delta
   adding manifests
   adding file changes
   added 5 changesets with 8 changes to 6 files
+  new changesets cc01e2b0c59f:33f7f61e6c5e
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle1
@@ -1091,6 +1109,7 @@ with general delta
   adding manifests
   adding file changes
   added 5 changesets with 8 changes to 6 files
+  new changesets cc01e2b0c59f:33f7f61e6c5e
   updating to branch default
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd bundle2
@@ -1100,8 +1119,8 @@ with general delta
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugbundle .hg/shelved/*.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       45993d65fe9dc3c6d8764b9c3b07fa831ee7d92d
   $ cd ..
 
@@ -1243,7 +1262,7 @@ test .orig files go where the user wants them to
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ ls .hg/origbackups
-  root.orig
+  root
   $ rm -rf .hg/origbackups
 
 test Abort unshelve always gets user out of the unshelved state

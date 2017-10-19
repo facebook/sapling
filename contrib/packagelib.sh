@@ -8,13 +8,16 @@
 #
 # node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
+    export HGRCPATH=
+    export HGPLAIN=
+
     make cleanbutpackages
-    make local || make local PURE=--pure
+    make local PURE=--pure
     HG="$PWD/hg"
 
-    $HG version > /dev/null || { echo 'abort: hg version failed!'; exit 1 ; }
+    "$HG" version > /dev/null || { echo 'abort: hg version failed!'; exit 1 ; }
 
-    hgversion=`LANGUAGE=C $HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
+    hgversion=`LANGUAGE=C "$HG" version | sed -ne 's/.*(version \(.*\))$/\1/p'`
 
     if echo $hgversion | grep + > /dev/null 2>&1 ; then
         tmp=`echo $hgversion | cut -d+ -f 2`

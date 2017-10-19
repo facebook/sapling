@@ -846,3 +846,12 @@ def printbookmarks(ui, repo, **opts):
 
         bmarks[bmark] = (n, prefix, label)
     _printbookmarks(ui, repo, bmarks, **opts)
+
+def preparehookargs(name, old, new):
+    if new is None:
+        new = ''
+    if old is None:
+        old = ''
+    return {'bookmark': name,
+            'node': hex(new),
+            'oldnode': hex(old)}

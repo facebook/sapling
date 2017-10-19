@@ -32,13 +32,22 @@ import os
 import re
 import sys
 
+# Python 3 adapters
+ispy3 = (sys.version_info[0] >= 3)
+if ispy3:
+    def iterbytes(s):
+        for i in range(len(s)):
+            yield s[i:i + 1]
+else:
+    iterbytes = iter
+
 def visit(opts, filenames, outfile):
     """Process filenames in the way specified in opts, writing output to
     outfile."""
     for f in sorted(filenames):
         isstdin = f == '-'
         if not isstdin and not os.path.lexists(f):
-            outfile.write('%s: file not found\n' % f)
+            outfile.write(b'%s: file not found\n' % f.encode('utf-8'))
             continue
         quiet = opts.quiet and not opts.recurse or isstdin
         isdir = os.path.isdir(f)
@@ -57,7 +66,7 @@ def visit(opts, filenames, outfile):
                 facts.append('link')
             content = os.readlink(f)
         elif isstdin:
-            content = sys.stdin.read()
+            content = getattr(sys.stdin, 'buffer', sys.stdin).read()
             if opts.size:
                 facts.append('size=%s' % len(content))
         elif isdir:
@@ -87,19 +96,19 @@ def visit(opts, filenames, outfile):
             h = hashlib.sha1(content)
             facts.append('sha1=%s' % h.hexdigest()[:opts.bytes])
         if isstdin:
-            outfile.write(', '.join(facts) + '\n')
+            outfile.write(b', '.join(facts) + b'\n')
         elif facts:
-            outfile.write('%s: %s\n' % (f, ', '.join(facts)))
+            outfile.write(b'%s: %s\n' % (f.encode('utf-8'), b', '.join(facts)))
         elif not quiet:
-            outfile.write('%s:\n' % f)
+            outfile.write(b'%s:\n' % f.encode('utf-8'))
         if content is not None:
             chunk = content
             if not islink:
                 if opts.lines:
                     if opts.lines >= 0:
-                        chunk = ''.join(chunk.splitlines(True)[:opts.lines])
+                        chunk = b''.join(chunk.splitlines(True)[:opts.lines])
                     else:
-                        chunk = ''.join(chunk.splitlines(True)[opts.lines:])
+                        chunk = b''.join(chunk.splitlines(True)[opts.lines:])
                 if opts.bytes:
                     if opts.bytes >= 0:
                         chunk = chunk[:opts.bytes]
@@ -108,18 +117,19 @@ def visit(opts, filenames, outfile):
             if opts.hexdump:
                 for i in range(0, len(chunk), 16):
                     s = chunk[i:i + 16]
-                    outfile.write('%04x: %-47s |%s|\n' %
-                                  (i, ' '.join('%02x' % ord(c) for c in s),
-                                   re.sub('[^ -~]', '.', s)))
+                    outfile.write(b'%04x: %-47s |%s|\n' %
+                                  (i, b' '.join(
+                                      b'%02x' % ord(c) for c in iterbytes(s)),
+                                   re.sub(b'[^ -~]', b'.', s)))
             if opts.dump:
                 if not quiet:
-                    outfile.write('>>>\n')
+                    outfile.write(b'>>>\n')
                 outfile.write(chunk)
                 if not quiet:
-                    if chunk.endswith('\n'):
-                        outfile.write('<<<\n')
+                    if chunk.endswith(b'\n'):
+                        outfile.write(b'<<<\n')
                     else:
-                        outfile.write('\n<<< no trailing newline\n')
+                        outfile.write(b'\n<<< no trailing newline\n')
         if opts.recurse and dirfiles:
             assert not isstdin
             visit(opts, dirfiles, outfile)
@@ -156,4 +166,4 @@ if __name__ == "__main__":
     if not filenames:
         filenames = ['-']
 
-    visit(opts, filenames, sys.stdout)
+    visit(opts, filenames, getattr(sys.stdout, 'buffer', sys.stdout))

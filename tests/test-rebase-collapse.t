@@ -20,6 +20,7 @@ Create repo a:
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -641,6 +642,7 @@ Rebase, collapse and copies
   adding manifests
   adding file changes
   added 4 changesets with 11 changes to 7 files (+1 heads)
+  new changesets f447d5abf5ea:338e84e2e558
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up -q tip
   $ hg tglog
@@ -792,7 +794,7 @@ Test collapsing changes that add then remove a file
   $ hg book foo
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
   rebasing 1:6d8d9f24eec3 "a"
-  rebasing 2:1cc73eca5ecc "b" (tip foo)
+  rebasing 2:1cc73eca5ecc "b" (foo tip)
   saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/6d8d9f24eec3-77d3b6e2-rebase.hg (glob)
   $ hg log -G --template "{rev}: '{desc}' {bookmarks}"
   @  1: 'collapsed' foo

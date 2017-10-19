@@ -50,7 +50,8 @@ make sure that this does not erase untracked data
   $ hg st
   ? name/file
   $ hg up 1
-  abort: *: '$TESTTMP/r1/r2/name' (glob)
+  name: untracked directory conflicts with file
+  abort: untracked files in working directory differ from files in requested revision
   [255]
   $ cd ..
 

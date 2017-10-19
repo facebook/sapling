@@ -8,9 +8,9 @@
 
 from __future__ import absolute_import
 
-from .i18n import _
 from . import (
     error,
+    pycompat,
     util,
 )
 
@@ -35,7 +35,9 @@ class batcher(object):
     def __getattr__(self, name):
         def call(*args, **opts):
             resref = future()
-            self.calls.append((name, args, opts, resref,))
+            # Please don't invent non-ascii method names, or you will
+            # give core hg a very sad time.
+            self.calls.append((name.encode('ascii'), args, opts, resref,))
             return resref
         return call
     def submit(self):
@@ -49,15 +51,6 @@ class iterbatcher(batcher):
     def results(self):
         raise NotImplementedError()
 
-class localbatch(batcher):
-    '''performs the queued calls directly'''
-    def __init__(self, local):
-        batcher.__init__(self)
-        self.local = local
-    def submit(self):
-        for name, args, opts, resref in self.calls:
-            resref.set(getattr(self.local, name)(*args, **opts))
-
 class localiterbatcher(iterbatcher):
     def __init__(self, local):
         super(iterbatcher, self).__init__()
@@ -69,7 +62,8 @@ class localiterbatcher(iterbatcher):
 
     def results(self):
         for name, args, opts, resref in self.calls:
-            yield getattr(self.local, name)(*args, **opts)
+            resref.set(getattr(self.local, name)(*args, **opts))
+            yield resref.value
 
 def batchable(f):
     '''annotation for batchable methods
@@ -78,9 +72,6 @@ def batchable(f):
 
     @batchable
     def sample(self, one, two=None):
-        # Handle locally computable results first:
-        if not one:
-            yield "a local result", None
         # Build list of encoded arguments suitable for your wire protocol:
         encargs = [('one', encode(one),), ('two', encode(two),)]
         # Create future for injection of encoded result:
@@ -102,54 +93,8 @@ def batchable(f):
         if not encresref:
             return encargsorres # a local result in this case
         self = args[0]
-        encresref.set(self._submitone(f.func_name, encargsorres))
+        cmd = pycompat.bytesurl(f.__name__)  # ensure cmd is ascii bytestr
+        encresref.set(self._submitone(cmd, encargsorres))
         return next(batchable)
     setattr(plain, 'batchable', f)
     return plain
-
-class peerrepository(object):
-
-    def batch(self):
-        return localbatch(self)
-
-    def iterbatch(self):
-        """Batch requests but allow iterating over the results.
-
-        This is to allow interleaving responses with things like
-        progress updates for clients.
-        """
-        return localiterbatcher(self)
-
-    def capable(self, name):
-        '''tell whether repo supports named capability.
-        return False if not supported.
-        if boolean capability, return True.
-        if string capability, return string.'''
-        caps = self._capabilities()
-        if name in caps:
-            return True
-        name_eq = name + '='
-        for cap in caps:
-            if cap.startswith(name_eq):
-                return cap[len(name_eq):]
-        return False
-
-    def requirecap(self, name, purpose):
-        '''raise an exception if the given capability is not present'''
-        if not self.capable(name):
-            raise error.CapabilityError(
-                _('cannot %s; remote repository does not '
-                  'support the %r capability') % (purpose, name))
-
-    def local(self):
-        '''return peer as a localrepo, or None'''
-        return None
-
-    def peer(self):
-        return self
-
-    def canpush(self):
-        return True
-
-    def close(self):
-        pass

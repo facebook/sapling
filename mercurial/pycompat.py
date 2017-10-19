@@ -63,6 +63,7 @@ if ispy3:
         sysexecutable = os.fsencode(sysexecutable)
     stringio = io.BytesIO
     maplist = lambda *args: list(map(*args))
+    rawinput = input
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
     # a silly wrapper to make a bytes stream backed by a unicode one.
@@ -312,150 +313,10 @@ else:
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
     maplist = map
+    rawinput = raw_input
 
-class _pycompatstub(object):
-    def __init__(self):
-        self._aliases = {}
+isjython = sysplatform.startswith('java')
 
-    def _registeraliases(self, origin, items):
-        """Add items that will be populated at the first access"""
-        items = map(sysstr, items)
-        self._aliases.update(
-            (item.replace(sysstr('_'), sysstr('')).lower(), (origin, item))
-            for item in items)
-
-    def _registeralias(self, origin, attr, name):
-        """Alias ``origin``.``attr`` as ``name``"""
-        self._aliases[sysstr(name)] = (origin, sysstr(attr))
-
-    def __getattr__(self, name):
-        try:
-            origin, item = self._aliases[name]
-        except KeyError:
-            raise AttributeError(name)
-        self.__dict__[name] = obj = getattr(origin, item)
-        return obj
-
-httpserver = _pycompatstub()
-urlreq = _pycompatstub()
-urlerr = _pycompatstub()
-if not ispy3:
-    import BaseHTTPServer
-    import CGIHTTPServer
-    import SimpleHTTPServer
-    import urllib2
-    import urllib
-    import urlparse
-    urlreq._registeraliases(urllib, (
-        "addclosehook",
-        "addinfourl",
-        "ftpwrapper",
-        "pathname2url",
-        "quote",
-        "splitattr",
-        "splitpasswd",
-        "splitport",
-        "splituser",
-        "unquote",
-        "url2pathname",
-        "urlencode",
-    ))
-    urlreq._registeraliases(urllib2, (
-        "AbstractHTTPHandler",
-        "BaseHandler",
-        "build_opener",
-        "FileHandler",
-        "FTPHandler",
-        "HTTPBasicAuthHandler",
-        "HTTPDigestAuthHandler",
-        "HTTPHandler",
-        "HTTPPasswordMgrWithDefaultRealm",
-        "HTTPSHandler",
-        "install_opener",
-        "ProxyHandler",
-        "Request",
-        "urlopen",
-    ))
-    urlreq._registeraliases(urlparse, (
-        "urlparse",
-        "urlunparse",
-    ))
-    urlerr._registeraliases(urllib2, (
-        "HTTPError",
-        "URLError",
-    ))
-    httpserver._registeraliases(BaseHTTPServer, (
-        "HTTPServer",
-        "BaseHTTPRequestHandler",
-    ))
-    httpserver._registeraliases(SimpleHTTPServer, (
-        "SimpleHTTPRequestHandler",
-    ))
-    httpserver._registeraliases(CGIHTTPServer, (
-        "CGIHTTPRequestHandler",
-    ))
-
-else:
-    import urllib.parse
-    urlreq._registeraliases(urllib.parse, (
-        "splitattr",
-        "splitpasswd",
-        "splitport",
-        "splituser",
-        "urlparse",
-        "urlunparse",
-    ))
-    urlreq._registeralias(urllib.parse, "unquote_to_bytes", "unquote")
-    import urllib.request
-    urlreq._registeraliases(urllib.request, (
-        "AbstractHTTPHandler",
-        "BaseHandler",
-        "build_opener",
-        "FileHandler",
-        "FTPHandler",
-        "ftpwrapper",
-        "HTTPHandler",
-        "HTTPSHandler",
-        "install_opener",
-        "pathname2url",
-        "HTTPBasicAuthHandler",
-        "HTTPDigestAuthHandler",
-        "HTTPPasswordMgrWithDefaultRealm",
-        "ProxyHandler",
-        "Request",
-        "url2pathname",
-        "urlopen",
-    ))
-    import urllib.response
-    urlreq._registeraliases(urllib.response, (
-        "addclosehook",
-        "addinfourl",
-    ))
-    import urllib.error
-    urlerr._registeraliases(urllib.error, (
-        "HTTPError",
-        "URLError",
-    ))
-    import http.server
-    httpserver._registeraliases(http.server, (
-        "HTTPServer",
-        "BaseHTTPRequestHandler",
-        "SimpleHTTPRequestHandler",
-        "CGIHTTPRequestHandler",
-    ))
-
-    # urllib.parse.quote() accepts both str and bytes, decodes bytes
-    # (if necessary), and returns str. This is wonky. We provide a custom
-    # implementation that only accepts bytes and emits bytes.
-    def quote(s, safe=r'/'):
-        s = urllib.parse.quote_from_bytes(s, safe=safe)
-        return s.encode('ascii', 'strict')
-
-    # urllib.parse.urlencode() returns str. We use this function to make
-    # sure we return bytes.
-    def urlencode(query, doseq=False):
-            s = urllib.parse.urlencode(query, doseq=doseq)
-            return s.encode('ascii')
-
-    urlreq.quote = quote
-    urlreq.urlencode = urlencode
+isdarwin = sysplatform == 'darwin'
+isposix = osname == 'posix'
+iswindows = osname == 'nt'

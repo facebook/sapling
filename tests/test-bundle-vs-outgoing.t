@@ -106,6 +106,7 @@ sanity check of outgoing: expect revs 4 5 6 7 8
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
+  new changesets 6ae4cca4e39a:478f191e53f8
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

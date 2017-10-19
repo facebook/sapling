@@ -213,32 +213,32 @@
   [1]
 
   $ cat > ./map-inside-gettext.py <<EOF
-  > print _("map inside gettext %s" % v)
+  > print(_("map inside gettext %s" % v))
   > 
-  > print _("concatenating " " by " " space %s" % v)
-  > print _("concatenating " + " by " + " '+' %s" % v)
+  > print(_("concatenating " " by " " space %s" % v))
+  > print(_("concatenating " + " by " + " '+' %s" % v))
   > 
-  > print _("mapping operation in different line %s"
-  >         % v)
+  > print(_("mapping operation in different line %s"
+  >         % v))
   > 
-  > print _(
-  >         "leading spaces inside of '(' %s" % v)
+  > print(_(
+  >         "leading spaces inside of '(' %s" % v))
   > EOF
   $ "$check_code" ./map-inside-gettext.py
   ./map-inside-gettext.py:1:
-   > print _("map inside gettext %s" % v)
+   > print(_("map inside gettext %s" % v))
    don't use % inside _()
   ./map-inside-gettext.py:3:
-   > print _("concatenating " " by " " space %s" % v)
+   > print(_("concatenating " " by " " space %s" % v))
    don't use % inside _()
   ./map-inside-gettext.py:4:
-   > print _("concatenating " + " by " + " '+' %s" % v)
+   > print(_("concatenating " + " by " + " '+' %s" % v))
    don't use % inside _()
   ./map-inside-gettext.py:6:
-   > print _("mapping operation in different line %s"
+   > print(_("mapping operation in different line %s"
    don't use % inside _()
   ./map-inside-gettext.py:9:
-   > print _(
+   > print(_(
    don't use % inside _()
   [1]
 
@@ -285,11 +285,43 @@ web templates
   >           ''' "%-6d \n 123456 .:*+-= foobar")
   > EOF
 
+superfluous pass
+
+  $ cat > superfluous_pass.py <<EOF
+  > # correct examples
+  > if foo:
+  >     pass
+  > else:
+  >     # comment-only line means still need pass
+  >     pass
+  > def nothing():
+  >     pass
+  > class empty(object):
+  >     pass
+  > if whatever:
+  >     passvalue(value)
+  > # bad examples
+  > if foo:
+  >     "foo"
+  >     pass
+  > else: # trailing comment doesn't fool checker
+  >     wat()
+  >     pass
+  > def nothing():
+  >     "docstring means no pass"
+  >     pass
+  > class empty(object):
+  >     """multiline
+  >     docstring also
+  >     means no pass"""
+  >     pass
+  > EOF
+
 (Checking multiple invalid files at once examines whether caching
 translation table for repquote() works as expected or not. All files
 should break rules depending on result of repquote(), in this case)
 
-  $ "$check_code" stringjoin.py uigettext.py
+  $ "$check_code" stringjoin.py uigettext.py superfluous_pass.py
   stringjoin.py:1:
    > foo = (' foo'
    string join across lines with no space
@@ -317,4 +349,16 @@ should break rules depending on result of repquote(), in this case)
   uigettext.py:1:
    > ui.status("% 10s %05d % -3.2f %*s %%"
    missing _() in ui message (use () to hide false-positives)
+  superfluous_pass.py:14:
+   > if foo:
+   omit superfluous pass
+  superfluous_pass.py:17:
+   > else: # trailing comment doesn't fool checker
+   omit superfluous pass
+  superfluous_pass.py:20:
+   > def nothing():
+   omit superfluous pass
+  superfluous_pass.py:23:
+   > class empty(object):
+   omit superfluous pass
   [1]

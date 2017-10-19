@@ -27,12 +27,10 @@ This also has some limitations compared to the Python 2 implementation:
 from __future__ import absolute_import
 
 import contextlib
-import os
-import sys
-
 import importlib.abc
 import importlib.machinery
 import importlib.util
+import sys
 
 _deactivated = False
 
@@ -81,8 +79,7 @@ def disable():
         pass
 
 def enable():
-    if os.environ.get('HGDEMANDIMPORT') != 'disable':
-        sys.path_hooks.insert(0, _makefinder)
+    sys.path_hooks.insert(0, _makefinder)
 
 @contextlib.contextmanager
 def deactivated():

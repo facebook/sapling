@@ -23,7 +23,6 @@ int strcpy_s(char *d, size_t n, const char *s)
 }
 #endif
 
-
 static char pyscript[MAX_PATH + 10];
 static char pyhome[MAX_PATH + 10];
 static char envpyhome[MAX_PATH + 10];
@@ -40,11 +39,10 @@ int main(int argc, char *argv[])
 	HANDLE hfind;
 	const char *err;
 	HMODULE pydll;
-	void (__cdecl *Py_SetPythonHome)(char *home);
-	int (__cdecl *Py_Main)(int argc, char *argv[]);
+	void(__cdecl * Py_SetPythonHome)(char *home);
+	int(__cdecl * Py_Main)(int argc, char *argv[]);
 
-	if (GetModuleFileName(NULL, pyscript, sizeof(pyscript)) == 0)
-	{
+	if (GetModuleFileName(NULL, pyscript, sizeof(pyscript)) == 0) {
 		err = "GetModuleFileName failed";
 		goto bail;
 	}
@@ -87,10 +85,12 @@ int main(int argc, char *argv[])
 		strcat_s(pydllfile, sizeof(pydllfile), "\\" HGPYTHONLIB ".dll");
 		pydll = LoadLibrary(pydllfile);
 		if (pydll == NULL) {
-			err = "failed to load private Python DLL " HGPYTHONLIB ".dll";
+			err = "failed to load private Python DLL " HGPYTHONLIB
+			      ".dll";
 			goto bail;
 		}
-		Py_SetPythonHome = (void*)GetProcAddress(pydll, "Py_SetPythonHome");
+		Py_SetPythonHome =
+		    (void *)GetProcAddress(pydll, "Py_SetPythonHome");
 		if (Py_SetPythonHome == NULL) {
 			err = "failed to get Py_SetPythonHome";
 			goto bail;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	Py_Main = (void*)GetProcAddress(pydll, "Py_Main");
+	Py_Main = (void *)GetProcAddress(pydll, "Py_Main");
 	if (Py_Main == NULL) {
 		err = "failed to get Py_Main";
 		goto bail;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 	name of our exe (argv[0]) in the position where the python.exe
 	canonically is, and insert the pyscript next.
 	*/
-	pyargv = malloc((argc + 5) * sizeof(char*));
+	pyargv = malloc((argc + 5) * sizeof(char *));
 	if (pyargv == NULL) {
 		err = "not enough memory";
 		goto bail;

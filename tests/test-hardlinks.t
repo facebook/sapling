@@ -1,11 +1,12 @@
 #require hardlink
 
   $ cat > nlinks.py <<EOF
+  > from __future__ import print_function
   > import sys
   > from mercurial import util
   > for f in sorted(sys.stdin.readlines()):
   >     f = f[:-1]
-  >     print util.nlinks(f), f
+  >     print(util.nlinks(f), f)
   > EOF
 
   $ nlinksdir()
@@ -16,8 +17,9 @@
 Some implementations of cp can't create hardlinks (replaces 'cp -al' on Linux):
 
   $ cat > linkcp.py <<EOF
-  > from mercurial import util
+  > from __future__ import absolute_import
   > import sys
+  > from mercurial import util
   > util.copyfiles(sys.argv[1], sys.argv[2], hardlink=True)
   > EOF
 
@@ -75,6 +77,7 @@ Create non-hardlinked clone r3:
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 40d85e9847f2:7069c422939c
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

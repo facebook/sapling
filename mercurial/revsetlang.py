@@ -49,6 +49,8 @@ elements = {
 
 keywords = {'and', 'or', 'not'}
 
+symbols = {}
+
 _quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 
@@ -78,7 +80,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     letters of symbols, if ``c.isalnum() or c in '-._/@' or ord(c) > 127``.
 
     Check that @ is a valid unquoted token character (issue3686):
-    >>> list(tokenize("@::"))
+    >>> list(tokenize(b"@::"))
     [('symbol', '@', 0), ('::', None, 1), ('end', None, 3)]
 
     '''
@@ -239,79 +241,39 @@ def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, parser.splitargspec(keys),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
-def _isnamedfunc(x, funcname):
-    """Check if given tree matches named function"""
-    return x and x[0] == 'func' and getsymbol(x[1]) == funcname
+# cache of {spec: raw parsed tree} built internally
+_treecache = {}
 
-def _isposargs(x, n):
-    """Check if given tree is n-length list of positional arguments"""
-    l = getlist(x)
-    return len(l) == n and all(y and y[0] != 'keyvalue' for y in l)
+def _cachedtree(spec):
+    # thread safe because parse() is reentrant and dict.__setitem__() is atomic
+    tree = _treecache.get(spec)
+    if tree is None:
+        _treecache[spec] = tree = parse(spec)
+    return tree
 
-def _matchnamedfunc(x, funcname):
-    """Return args tree if given tree matches named function; otherwise None
+def _build(tmplspec, *repls):
+    """Create raw parsed tree from a template revset statement
 
-    This can't be used for testing a nullary function since its args tree
-    is also None. Use _isnamedfunc() instead.
+    >>> _build(b'f(_) and _', (b'string', b'1'), (b'symbol', b'2'))
+    ('and', ('func', ('symbol', 'f'), ('string', '1')), ('symbol', '2'))
     """
-    if not _isnamedfunc(x, funcname):
-        return
-    return x[2]
+    template = _cachedtree(tmplspec)
+    return parser.buildtree(template, ('symbol', '_'), *repls)
 
-# Constants for ordering requirement, used in _analyze():
-#
-# If 'define', any nested functions and operations can change the ordering of
-# the entries in the set. If 'follow', any nested functions and operations
-# should take the ordering specified by the first operand to the '&' operator.
-#
-# For instance,
-#
-#   X & (Y | Z)
-#   ^   ^^^^^^^
-#   |   follow
-#   define
-#
-# will be evaluated as 'or(y(x()), z(x()))', where 'x()' can change the order
-# of the entries in the set, but 'y()', 'z()' and 'or()' shouldn't.
-#
-# 'any' means the order doesn't matter. For instance,
-#
-#   X & !Y
-#        ^
-#        any
-#
-# 'y()' can either enforce its ordering requirement or take the ordering
-# specified by 'x()' because 'not()' doesn't care the order.
-#
-# Transition of ordering requirement:
-#
-# 1. starts with 'define'
-# 2. shifts to 'follow' by 'x & y'
-# 3. changes back to 'define' on function call 'f(x)' or function-like
-#    operation 'x (f) y' because 'f' may have its own ordering requirement
-#    for 'x' and 'y' (e.g. 'first(x)')
-#
-anyorder = 'any'        # don't care the order
-defineorder = 'define'  # should define the order
-followorder = 'follow'  # must follow the current order
+def _match(patspec, tree):
+    """Test if a tree matches the given pattern statement; return the matches
 
-# transition table for 'x & y', from the current expression 'x' to 'y'
-_tofolloworder = {
-    anyorder: anyorder,
-    defineorder: followorder,
-    followorder: followorder,
-}
+    >>> _match(b'f(_)', parse(b'f()'))
+    >>> _match(b'f(_)', parse(b'f(1)'))
+    [('func', ('symbol', 'f'), ('symbol', '1')), ('symbol', '1')]
+    >>> _match(b'f(_)', parse(b'f(1, 2)'))
+    """
+    pattern = _cachedtree(patspec)
+    return parser.matchtree(pattern, tree, ('symbol', '_'),
+                            {'keyvalue', 'list'})
 
 def _matchonly(revs, bases):
-    """
-    >>> f = lambda *args: _matchonly(*map(parse, args))
-    >>> f('ancestors(A)', 'not ancestors(B)')
-    ('list', ('symbol', 'A'), ('symbol', 'B'))
-    """
-    ta = _matchnamedfunc(revs, 'ancestors')
-    tb = bases and bases[0] == 'not' and _matchnamedfunc(bases[1], 'ancestors')
-    if _isposargs(ta, 1) and _isposargs(tb, 1):
-        return ('list', ta, tb)
+    return _match('ancestors(_) and not ancestors(_)', ('and', revs, bases))
 
 def _fixops(x):
     """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
@@ -340,109 +302,90 @@ def _fixops(x):
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
-def _analyze(x, order):
+def _analyze(x):
     if x is None:
         return x
 
     op = x[0]
     if op == 'minus':
-        return _analyze(('and', x[1], ('not', x[2])), order)
+        return _analyze(_build('_ and not _', *x[1:]))
     elif op == 'only':
-        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _analyze(t, order)
+        return _analyze(_build('only(_, _)', *x[1:]))
     elif op == 'onlypost':
-        return _analyze(('func', ('symbol', 'only'), x[1]), order)
+        return _analyze(_build('only(_)', x[1]))
     elif op == 'dagrangepre':
-        return _analyze(('func', ('symbol', 'ancestors'), x[1]), order)
+        return _analyze(_build('ancestors(_)', x[1]))
     elif op == 'dagrangepost':
-        return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
+        return _analyze(_build('descendants(_)', x[1]))
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
-        return _analyze(('string', '-' + s), order)
+        return _analyze(('string', '-' + s))
     elif op in ('string', 'symbol'):
         return x
-    elif op == 'and':
-        ta = _analyze(x[1], order)
-        tb = _analyze(x[2], _tofolloworder[order])
-        return (op, ta, tb, order)
-    elif op == 'or':
-        return (op, _analyze(x[1], order), order)
-    elif op == 'not':
-        return (op, _analyze(x[1], anyorder), order)
     elif op == 'rangeall':
-        return (op, None, order)
-    elif op in ('rangepre', 'rangepost', 'parentpost'):
-        return (op, _analyze(x[1], defineorder), order)
+        return (op, None)
+    elif op in {'or', 'not', 'rangepre', 'rangepost', 'parentpost'}:
+        return (op, _analyze(x[1]))
     elif op == 'group':
-        return _analyze(x[1], order)
-    elif op in ('dagrange', 'range', 'parent', 'ancestor', 'relation',
-                'subscript'):
-        ta = _analyze(x[1], defineorder)
-        tb = _analyze(x[2], defineorder)
-        return (op, ta, tb, order)
+        return _analyze(x[1])
+    elif op in {'and', 'dagrange', 'range', 'parent', 'ancestor', 'relation',
+                'subscript'}:
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        return (op, ta, tb)
     elif op == 'relsubscript':
-        ta = _analyze(x[1], defineorder)
-        tb = _analyze(x[2], defineorder)
-        tc = _analyze(x[3], defineorder)
-        return (op, ta, tb, tc, order)
+        ta = _analyze(x[1])
+        tb = _analyze(x[2])
+        tc = _analyze(x[3])
+        return (op, ta, tb, tc)
     elif op == 'list':
-        return (op,) + tuple(_analyze(y, order) for y in x[1:])
+        return (op,) + tuple(_analyze(y) for y in x[1:])
     elif op == 'keyvalue':
-        return (op, x[1], _analyze(x[2], order))
+        return (op, x[1], _analyze(x[2]))
     elif op == 'func':
-        f = getsymbol(x[1])
-        d = defineorder
-        if f == 'present':
-            # 'present(set)' is known to return the argument set with no
-            # modification, so forward the current order to its argument
-            d = order
-        return (op, x[1], _analyze(x[2], d), order)
+        return (op, x[1], _analyze(x[2]))
     raise ValueError('invalid operator %r' % op)
 
-def analyze(x, order=defineorder):
+def analyze(x):
     """Transform raw parsed tree to evaluatable tree which can be fed to
     optimize() or getset()
 
     All pseudo operations should be mapped to real operations or functions
     defined in methods or symbols table respectively.
-
-    'order' specifies how the current expression 'x' is ordered (see the
-    constants defined above.)
     """
-    return _analyze(x, order)
+    return _analyze(x)
 
-def _optimize(x, small):
+def _optimize(x):
     if x is None:
         return 0, x
 
-    smallbonus = 1
-    if small:
-        smallbonus = .5
-
     op = x[0]
     if op in ('string', 'symbol'):
-        return smallbonus, x # single revisions are small
+        return 0.5, x # single revisions are small
     elif op == 'and':
-        wa, ta = _optimize(x[1], True)
-        wb, tb = _optimize(x[2], True)
-        order = x[3]
+        wa, ta = _optimize(x[1])
+        wb, tb = _optimize(x[2])
         w = min(wa, wb)
 
+        # (draft/secret/_notpublic() & ::x) have a fast path
+        m = _match('_() & ancestors(_)', ('and', ta, tb))
+        if m and getsymbol(m[1]) in {'draft', 'secret', '_notpublic'}:
+            return w, _build('_phaseandancestors(_, _)', m[1], m[2])
+
         # (::x and not ::y)/(not ::y and ::x) have a fast path
-        tm = _matchonly(ta, tb) or _matchonly(tb, ta)
-        if tm:
-            return w, ('func', ('symbol', 'only'), tm, order)
+        m = _matchonly(ta, tb) or _matchonly(tb, ta)
+        if m:
+            return w, _build('only(_, _)', *m[1:])
 
-        if tb is not None and tb[0] == 'not':
-            return wa, ('difference', ta, tb[1], order)
-
+        m = _match('not _', tb)
+        if m:
+            return wa, ('difference', ta, m[1])
         if wa > wb:
-            return w, (op, tb, ta, order)
-        return w, (op, ta, tb, order)
+            op = 'andsmally'
+        return w, (op, ta, tb)
     elif op == 'or':
         # fast path for machine-generated expression, that is likely to have
         # lots of trivial revisions: 'a + b + c()' to '_list(a b) + c()'
-        order = x[2]
         ws, ts, ss = [], [], []
         def flushss():
             if not ss:
@@ -451,13 +394,13 @@ def _optimize(x, small):
                 w, t = ss[0]
             else:
                 s = '\0'.join(t[1] for w, t in ss)
-                y = ('func', ('symbol', '_list'), ('string', s), order)
-                w, t = _optimize(y, False)
+                y = _build('_list(_)', ('string', s))
+                w, t = _optimize(y)
             ws.append(w)
             ts.append(t)
             del ss[:]
         for y in getlist(x[1]):
-            w, t = _optimize(y, False)
+            w, t = _optimize(y)
             if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
                 continue
@@ -467,66 +410,41 @@ def _optimize(x, small):
         flushss()
         if len(ts) == 1:
             return ws[0], ts[0] # 'or' operation is fully optimized out
-        if order != defineorder:
-            # reorder by weight only when f(a + b) == f(b + a)
-            ts = [wt[1] for wt in sorted(zip(ws, ts), key=lambda wt: wt[0])]
-        return max(ws), (op, ('list',) + tuple(ts), order)
+        return max(ws), (op, ('list',) + tuple(ts))
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
-        if x[1][:3] == ('func', ('symbol', 'public'), None):
-            order = x[1][3]
-            newsym = ('func', ('symbol', '_notpublic'), None, order)
-            o = _optimize(newsym, not small)
+        if _match('public()', x[1]):
+            o = _optimize(_build('_notpublic()'))
             return o[0], o[1]
         else:
-            o = _optimize(x[1], not small)
-            order = x[2]
-            return o[0], (op, o[1], order)
+            o = _optimize(x[1])
+            return o[0], (op, o[1])
     elif op == 'rangeall':
-        return smallbonus, x
+        return 1, x
     elif op in ('rangepre', 'rangepost', 'parentpost'):
-        o = _optimize(x[1], small)
-        order = x[2]
-        return o[0], (op, o[1], order)
+        o = _optimize(x[1])
+        return o[0], (op, o[1])
     elif op in ('dagrange', 'range'):
-        wa, ta = _optimize(x[1], small)
-        wb, tb = _optimize(x[2], small)
-        order = x[3]
-        return wa + wb, (op, ta, tb, order)
+        wa, ta = _optimize(x[1])
+        wb, tb = _optimize(x[2])
+        return wa + wb, (op, ta, tb)
     elif op in ('parent', 'ancestor', 'relation', 'subscript'):
-        w, t = _optimize(x[1], small)
-        order = x[3]
-        return w, (op, t, x[2], order)
+        w, t = _optimize(x[1])
+        return w, (op, t, x[2])
     elif op == 'relsubscript':
-        w, t = _optimize(x[1], small)
-        order = x[4]
-        return w, (op, t, x[2], x[3], order)
+        w, t = _optimize(x[1])
+        return w, (op, t, x[2], x[3])
     elif op == 'list':
-        ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
+        ws, ts = zip(*(_optimize(y) for y in x[1:]))
         return sum(ws), (op,) + ts
     elif op == 'keyvalue':
-        w, t = _optimize(x[2], small)
+        w, t = _optimize(x[2])
         return w, (op, x[1], t)
     elif op == 'func':
         f = getsymbol(x[1])
-        wa, ta = _optimize(x[2], small)
-        if f in ('author', 'branch', 'closed', 'date', 'desc', 'file', 'grep',
-                 'keyword', 'outgoing', 'user', 'destination'):
-            w = 10 # slow
-        elif f in ('modifies', 'adds', 'removes'):
-            w = 30 # slower
-        elif f == "contains":
-            w = 100 # very slow
-        elif f == "ancestor":
-            w = 1 * smallbonus
-        elif f in ('reverse', 'limit', 'first', 'wdir', '_intlist'):
-            w = 0
-        elif f == "sort":
-            w = 10 # assume most sorts look at changelog
-        else:
-            w = 1
-        order = x[3]
-        return w + wa, (op, x[1], ta, order)
+        wa, ta = _optimize(x[2])
+        w = getattr(symbols.get(f), '_weight', 1)
+        return w + wa, (op, x[1], ta)
     raise ValueError('invalid operator %r' % op)
 
 def optimize(tree):
@@ -534,23 +452,23 @@ def optimize(tree):
 
     All pseudo operations should be transformed beforehand.
     """
-    _weight, newtree = _optimize(tree, small=True)
+    _weight, newtree = _optimize(tree)
     return newtree
 
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
-_aliassyminitletters = _syminitletters | set(pycompat.sysstr('$'))
+_aliassyminitletters = _syminitletters | {'$'}
 
 def _parsewith(spec, lookup=None, syminitletters=None):
     """Generate a parse tree of given spec with given tokenizing options
 
-    >>> _parsewith('foo($1)', syminitletters=_aliassyminitletters)
+    >>> _parsewith(b'foo($1)', syminitletters=_aliassyminitletters)
     ('func', ('symbol', 'foo'), ('symbol', '$1'))
-    >>> _parsewith('$1')
+    >>> _parsewith(b'$1')
     Traceback (most recent call last):
       ...
     ParseError: ("syntax error in revset '$1'", 0)
-    >>> _parsewith('foo bar')
+    >>> _parsewith(b'foo bar')
     Traceback (most recent call last):
       ...
     ParseError: ('invalid token', 4)
@@ -620,11 +538,11 @@ def parse(spec, lookup=None):
 def _quote(s):
     r"""Quote a value in order to make it safe for the revset engine.
 
-    >>> _quote('asdf')
+    >>> _quote(b'asdf')
     "'asdf'"
-    >>> _quote("asdf'\"")
+    >>> _quote(b"asdf'\"")
     '\'asdf\\\'"\''
-    >>> _quote('asdf\'')
+    >>> _quote(b'asdf\'')
     "'asdf\\''"
     >>> _quote(1)
     "'1'"
@@ -648,19 +566,19 @@ def formatspec(expr, *args):
 
     Prefixing the type with 'l' specifies a parenthesized list of that type.
 
-    >>> formatspec('%r:: and %lr', '10 or 11', ("this()", "that()"))
+    >>> formatspec(b'%r:: and %lr', b'10 or 11', (b"this()", b"that()"))
     '(10 or 11):: and ((this()) or (that()))'
-    >>> formatspec('%d:: and not %d::', 10, 20)
+    >>> formatspec(b'%d:: and not %d::', 10, 20)
     '10:: and not 20::'
-    >>> formatspec('%ld or %ld', [], [1])
+    >>> formatspec(b'%ld or %ld', [], [1])
     "_list('') or 1"
-    >>> formatspec('keyword(%s)', 'foo\\xe9')
+    >>> formatspec(b'keyword(%s)', b'foo\\xe9')
     "keyword('foo\\\\xe9')"
-    >>> b = lambda: 'default'
+    >>> b = lambda: b'default'
     >>> b.branch = b
-    >>> formatspec('branch(%b)', b)
+    >>> formatspec(b'branch(%b)', b)
     "branch('default')"
-    >>> formatspec('root(%ls)', ['a', 'b', 'c', 'd'])
+    >>> formatspec(b'root(%ls)', [b'a', b'b', b'c', b'd'])
     "root(_list('a\\x00b\\x00c\\x00d'))"
     '''
 

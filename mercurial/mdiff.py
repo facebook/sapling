@@ -63,6 +63,7 @@ class diffopts(object):
         'index': 0,
         'ignorews': False,
         'ignorewsamount': False,
+        'ignorewseol': False,
         'ignoreblanklines': False,
         'upgrade': False,
         'showsimilarity': False,
@@ -97,6 +98,8 @@ def wsclean(opts, text, blank=True):
         text = bdiff.fixws(text, 0)
     if blank and opts.ignoreblanklines:
         text = re.sub('\n+', '\n', text).strip('\n')
+    if opts.ignorewseol:
+        text = re.sub(r'[ \t\r\f]+\n', r'\n', text)
     return text
 
 def splitblock(base1, lines1, base2, lines2, opts):
@@ -199,7 +202,7 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     """
     if opts is None:
         opts = defaultopts
-    if opts.ignorews or opts.ignorewsamount:
+    if opts.ignorews or opts.ignorewsamount or opts.ignorewseol:
         text1 = wsclean(opts, text1, False)
         text2 = wsclean(opts, text2, False)
     diff = bdiff.blocks(text1, text2)
@@ -454,7 +457,7 @@ def b85diff(to, tn):
     # TODO: deltas
     ret = []
     ret.append('GIT binary patch\n')
-    ret.append('literal %s\n' % len(tn))
+    ret.append('literal %d\n' % len(tn))
     for l in chunk(zlib.compress(tn)):
         ret.append(fmtline(l))
     ret.append('\n')

@@ -9746,8 +9746,8 @@ msgstr ""
 
 #. i18n: column positioning for "hg log"
 #, python-format
-msgid "changeset:   %d:%s\n"
-msgstr "Änderung:        %d:%s\n"
+msgid "changeset:   %s\n"
+msgstr "Änderung:        %s\n"
 
 #. i18n: column positioning for "hg log"
 #, python-format
@@ -9771,8 +9771,8 @@ msgstr "Phase:       %s\n"
 
 #. i18n: column positioning for "hg log"
 #, python-format
-msgid "parent:      %d:%s\n"
-msgstr "Vorgänger:       %d:%s\n"
+msgid "parent:      %s\n"
+msgstr "Vorgänger:       %s\n"
 
 #. i18n: column positioning for "hg log"
 #, python-format

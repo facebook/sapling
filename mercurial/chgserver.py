@@ -68,8 +68,13 @@ def _hashlist(items):
 # sensitive config sections affecting confighash
 _configsections = [
     'alias',  # affects global state commands.table
+    'eol',    # uses setconfig('eol', ...)
     'extdiff',  # uisetup will register new commands
     'extensions',
+]
+
+_configsectionitems = [
+    ('commands', 'show.aliasprefix'), # show.py reads it in extsetup
 ]
 
 # sensitive environment variables affecting confighash
@@ -100,9 +105,16 @@ def _confighash(ui):
     sectionitems = []
     for section in _configsections:
         sectionitems.append(ui.configitems(section))
+    for section, item in _configsectionitems:
+        sectionitems.append(ui.config(section, item))
     sectionhash = _hashlist(sectionitems)
+    # If $CHGHG is set, the change to $HG should not trigger a new chg server
+    if 'CHGHG' in encoding.environ:
+        ignored = {'HG'}
+    else:
+        ignored = set()
     envitems = [(k, v) for k, v in encoding.environ.iteritems()
-                if _envre.match(k)]
+                if _envre.match(k) and k not in ignored]
     envhash = _hashlist(sorted(envitems))
     return sectionhash[:6] + envhash[:6]
 
@@ -565,8 +577,11 @@ class chgunixservicehandler(object):
                             self._hashstate, self._baseaddress)
 
 def chgunixservice(ui, repo, opts):
-    # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
-    # start another chg. drop it to avoid possible side effects.
+    # CHGINTERNALMARK is set by chg client. It is an indication of things are
+    # started by chg so other code can do things accordingly, like disabling
+    # demandimport or detecting chg client started by chg client. When executed
+    # here, CHGINTERNALMARK is no longer useful and hence dropped to make
+    # environ cleaner.
     if 'CHGINTERNALMARK' in encoding.environ:
         del encoding.environ['CHGINTERNALMARK']
 

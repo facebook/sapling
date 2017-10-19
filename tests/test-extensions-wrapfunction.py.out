@@ -12,3 +12,10 @@ unwrap 0: -: ValueError
 unwrap 2: 2: [1, 'orig']
 unwrap 1: 1: ['orig']
 unwrap -: -: IndexError
+context manager ['orig']
+context manager [1, 'orig']
+context manager [0, 1, 'orig']
+context manager [2, 0, 1, 'orig']
+context manager [2, 1, 'orig']
+context manager [2, 'orig']
+wrap callable object [0, 'orig']

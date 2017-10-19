@@ -18,6 +18,9 @@ fsmonitor requires no configuration -- it will tell Watchman about your
 repository as necessary. You'll need to install Watchman from
 https://facebook.github.io/watchman/ and make sure it is in your PATH.
 
+fsmonitor is incompatible with the largefiles and eol extensions, and
+will disable itself if any of those are active.
+
 The following configuration options exist:
 
 ::
@@ -58,9 +61,22 @@ false. You may wish to set this to true if you have a very fast filesystem
 that can outpace the IPC overhead of getting the result data for the full repo
 from Watchman. Defaults to false.
 
-fsmonitor is incompatible with the largefiles and eol extensions, and
-will disable itself if any of those are active.
+::
 
+    [fsmonitor]
+    warn_when_unused = (boolean)
+
+Whether to print a warning during certain operations when fsmonitor would be
+beneficial to performance but isn't enabled.
+
+::
+
+    [fsmonitor]
+    warn_update_file_count = (integer)
+
+If ``warn_when_unused`` is set and fsmonitor isn't enabled, a warning will
+be printed during working directory updates if this many files will be
+created.
 '''
 
 # Platforms Supported
@@ -96,8 +112,14 @@ import hashlib
 import os
 import stat
 import sys
+import weakref
 
 from mercurial.i18n import _
+from mercurial.node import (
+    hex,
+    nullid,
+)
+
 from mercurial import (
     context,
     encoding,
@@ -107,6 +129,7 @@ from mercurial import (
     merge,
     pathutil,
     pycompat,
+    registrar,
     scmutil,
     util,
 )
@@ -123,6 +146,28 @@ from . import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fsmonitor', 'mode',
+    default='on',
+)
+configitem('fsmonitor', 'walk_on_invalidate',
+    default=False,
+)
+configitem('fsmonitor', 'timeout',
+    default='2',
+)
+configitem('fsmonitor', 'blacklistusers',
+    default=list,
+)
+configitem('experimental', 'fsmonitor.transaction_notify',
+    default=False,
+)
+configitem('experimental', 'fsmonitor.wc_change_notify',
+    default=False,
+)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -228,10 +273,10 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
 
     matchfn = match.matchfn
     matchalways = match.always()
-    dmap = self._map
-    nonnormalset = getattr(self, '_nonnormalset', None)
+    dmap = self._map._map
+    nonnormalset = self._map.nonnormalset
 
-    copymap = self._copymap
+    copymap = self._map.copymap
     getkind = stat.S_IFMT
     dirkind = stat.S_IFDIR
     regkind = stat.S_IFREG
@@ -359,7 +404,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     visit = set((f for f in notefiles if (f not in results and matchfn(f)
                                           and (f in dmap or not ignore(f)))))
 
-    if nonnormalset is not None and not fresh_instance:
+    if not fresh_instance:
         if matchalways:
             visit.update(f for f in nonnormalset if f not in results)
             visit.update(f for f in copymap if f not in results)
@@ -370,15 +415,11 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
                          if f not in results and matchfn(f))
     else:
         if matchalways:
-            visit.update(f for f, st in dmap.iteritems()
-                         if (f not in results and
-                             (st[2] < 0 or st[0] != 'n' or fresh_instance)))
+            visit.update(f for f, st in dmap.iteritems() if f not in results)
             visit.update(f for f in copymap if f not in results)
         else:
             visit.update(f for f, st in dmap.iteritems()
-                         if (f not in results and
-                             (st[2] < 0 or st[0] != 'n' or fresh_instance)
-                             and matchfn(f)))
+                         if f not in results and matchfn(f))
             visit.update(f for f in copymap
                          if f not in results and matchfn(f))
 
@@ -538,11 +579,12 @@ class poststatus(object):
 
 def makedirstate(repo, dirstate):
     class fsmonitordirstate(dirstate.__class__):
-        def _fsmonitorinit(self, fsmonitorstate, watchmanclient):
+        def _fsmonitorinit(self, repo):
             # _fsmonitordisable is used in paranoid mode
             self._fsmonitordisable = False
-            self._fsmonitorstate = fsmonitorstate
-            self._watchmanclient = watchmanclient
+            self._fsmonitorstate = repo._fsmonitorstate
+            self._watchmanclient = repo._watchmanclient
+            self._repo = weakref.proxy(repo)
 
         def walk(self, *args, **kwargs):
             orig = super(fsmonitordirstate, self).walk
@@ -558,8 +600,16 @@ def makedirstate(repo, dirstate):
             self._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
 
+        if dirstate._ui.configbool(
+            "experimental", "fsmonitor.wc_change_notify"):
+            def setparents(self, p1, p2=nullid):
+                with state_update(self._repo, name="hg.wc_change",
+                                  oldnode=self._pl[0], newnode=p1,
+                                  partial=False):
+                    return super(fsmonitordirstate, self).setparents(p1, p2)
+
     dirstate.__class__ = fsmonitordirstate
-    dirstate._fsmonitorinit(repo._fsmonitorstate, repo._watchmanclient)
+    dirstate._fsmonitorinit(repo)
 
 def wrapdirstate(orig, self):
     ds = orig(self)
@@ -571,7 +621,7 @@ def wrapdirstate(orig, self):
 def extsetup(ui):
     extensions.wrapfilecache(
         localrepo.localrepository, 'dirstate', wrapdirstate)
-    if pycompat.sysplatform == 'darwin':
+    if pycompat.isdarwin:
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
@@ -590,47 +640,74 @@ def wrapsymlink(orig, source, link_name):
 
 class state_update(object):
     ''' This context manager is responsible for dispatching the state-enter
-        and state-leave signals to the watchman service '''
+        and state-leave signals to the watchman service. The enter and leave
+        methods can be invoked manually (for scenarios where context manager
+        semantics are not possible). If parameters oldnode and newnode are None,
+        they will be populated based on current working copy in enter and
+        leave, respectively. Similarly, if the distance is none, it will be
+        calculated based on the oldnode and newnode in the leave method.'''
 
-    def __init__(self, repo, node, distance, partial):
-        self.repo = repo
-        self.node = node
+    def __init__(self, repo, name, oldnode=None, newnode=None, distance=None,
+                 partial=False):
+        self.repo = repo.unfiltered()
+        self.name = name
+        self.oldnode = oldnode
+        self.newnode = newnode
         self.distance = distance
         self.partial = partial
         self._lock = None
         self.need_leave = False
 
     def __enter__(self):
+        self.enter()
+
+    def enter(self):
         # We explicitly need to take a lock here, before we proceed to update
         # watchman about the update operation, so that we don't race with
         # some other actor.  merge.update is going to take the wlock almost
         # immediately anyway, so this is effectively extending the lock
         # around a couple of short sanity checks.
+        if self.oldnode is None:
+            self.oldnode = self.repo['.'].node()
         self._lock = self.repo.wlock()
-        self.need_leave = self._state('state-enter')
+        self.need_leave = self._state(
+            'state-enter',
+            hex(self.oldnode))
         return self
 
     def __exit__(self, type_, value, tb):
+        abort = True if type_ else False
+        self.exit(abort=abort)
+
+    def exit(self, abort=False):
         try:
             if self.need_leave:
-                status = 'ok' if type_ is None else 'failed'
-                self._state('state-leave', status=status)
+                status = 'failed' if abort else 'ok'
+                if self.newnode is None:
+                    self.newnode = self.repo['.'].node()
+                if self.distance is None:
+                    self.distance = calcdistance(
+                        self.repo, self.oldnode, self.newnode)
+                self._state(
+                    'state-leave',
+                    hex(self.newnode),
+                    status=status)
         finally:
+            self.need_leave = False
             if self._lock:
                 self._lock.release()
 
-    def _state(self, cmd, status='ok'):
+    def _state(self, cmd, commithash, status='ok'):
         if not util.safehasattr(self.repo, '_watchmanclient'):
             return False
         try:
-            commithash = self.repo[self.node].hex()
             self.repo._watchmanclient.command(cmd, {
-                'name': 'hg.update',
+                'name': self.name,
                 'metadata': {
                     # the target revision
                     'rev': commithash,
                     # approximate number of commits between current and target
-                    'distance': self.distance,
+                    'distance': self.distance if self.distance else 0,
                     # success/failure (only really meaningful for state-leave)
                     'status': status,
                     # whether the working copy parent is changing
@@ -643,6 +720,14 @@ class state_update(object):
                 'watchman', 'Exception %s while running %s\n', e, cmd)
             return False
 
+# Estimate the distance between two nodes
+def calcdistance(repo, oldnode, newnode):
+    anc = repo.changelog.ancestor(oldnode, newnode)
+    ancrev = repo[anc].rev()
+    distance = (abs(repo[oldnode].rev() - ancrev)
+        + abs(repo[newnode].rev() - ancrev))
+    return distance
+
 # Bracket working copy updates with calls to the watchman state-enter
 # and state-leave commands.  This allows clients to perform more intelligent
 # settling during bulk file change scenarios
@@ -652,18 +737,14 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
 
     distance = 0
     partial = True
+    oldnode = repo['.'].node()
+    newnode = repo[node].node()
     if matcher is None or matcher.always():
         partial = False
-        wc = repo[None]
-        parents = wc.parents()
-        if len(parents) == 2:
-            anc = repo.changelog.ancestor(parents[0].node(), parents[1].node())
-            ancrev = repo[anc].rev()
-            distance = abs(repo[node].rev() - ancrev)
-        elif len(parents) == 1:
-            distance = abs(repo[node].rev() - parents[0].rev())
+        distance = calcdistance(repo.unfiltered(), oldnode, newnode)
 
-    with state_update(repo, node, distance, partial):
+    with state_update(repo, name="hg.update", oldnode=oldnode, newnode=newnode,
+                      distance=distance, partial=partial):
         return orig(
             repo, node, branchmerge, force, ancestor, mergeancestor,
             labels, matcher, **kwargs)
@@ -708,5 +789,33 @@ def reposetup(ui, repo):
             def status(self, *args, **kwargs):
                 orig = super(fsmonitorrepo, self).status
                 return overridestatus(orig, self, *args, **kwargs)
+
+            if ui.configbool("experimental", "fsmonitor.transaction_notify"):
+                def transaction(self, *args, **kwargs):
+                    tr = super(fsmonitorrepo, self).transaction(
+                               *args, **kwargs)
+                    if tr.count != 1:
+                        return tr
+                    stateupdate = state_update(self, name="hg.transaction")
+                    stateupdate.enter()
+
+                    class fsmonitortrans(tr.__class__):
+                        def _abort(self):
+                            try:
+                                result = super(fsmonitortrans, self)._abort()
+                            finally:
+                                stateupdate.exit(abort=True)
+                            return result
+
+                        def close(self):
+                            try:
+                                result = super(fsmonitortrans, self).close()
+                            finally:
+                                if self.count == 0:
+                                    stateupdate.exit()
+                            return result
+
+                    tr.__class__ = fsmonitortrans
+                    return tr
 
         repo.__class__ = fsmonitorrepo

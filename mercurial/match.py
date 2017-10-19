@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import copy
 import os
@@ -17,6 +17,11 @@ from . import (
     pathutil,
     util,
 )
+
+allpatternkinds = ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
+                   'listfile', 'listfile0', 'set', 'include', 'subinclude',
+                   'rootfilesin')
+cwdrelativepatternkinds = ('relpath', 'glob')
 
 propertycache = util.propertycache
 
@@ -190,7 +195,7 @@ def _donormalize(patterns, default, root, cwd, auditor, warn):
     normalized and rooted patterns and with listfiles expanded.'''
     kindpats = []
     for kind, pat in [_patsplit(p, default) for p in patterns]:
-        if kind in ('glob', 'relpath'):
+        if kind in cwdrelativepatternkinds:
             pat = pathutil.canonpath(root, cwd, pat, auditor)
         elif kind in ('relglob', 'path', 'rootfilesin'):
             pat = util.normpath(pat)
@@ -245,7 +250,6 @@ class basematcher(object):
     def bad(self, f, msg):
         '''Callback from dirstate.walk for each explicit file that can't be
         found/accessed, with an error message.'''
-        pass
 
     # If an explicitdir is set, it will be called when an explicitly listed
     # directory is visited.
@@ -575,28 +579,29 @@ class subdirmatcher(basematcher):
 
     The paths are remapped to remove/insert the path as needed:
 
-    >>> m1 = match('root', '', ['a.txt', 'sub/b.txt'])
-    >>> m2 = subdirmatcher('sub', m1)
-    >>> bool(m2('a.txt'))
+    >>> from . import pycompat
+    >>> m1 = match(b'root', b'', [b'a.txt', b'sub/b.txt'])
+    >>> m2 = subdirmatcher(b'sub', m1)
+    >>> bool(m2(b'a.txt'))
     False
-    >>> bool(m2('b.txt'))
+    >>> bool(m2(b'b.txt'))
     True
-    >>> bool(m2.matchfn('a.txt'))
+    >>> bool(m2.matchfn(b'a.txt'))
     False
-    >>> bool(m2.matchfn('b.txt'))
+    >>> bool(m2.matchfn(b'b.txt'))
     True
     >>> m2.files()
     ['b.txt']
-    >>> m2.exact('b.txt')
+    >>> m2.exact(b'b.txt')
     True
-    >>> util.pconvert(m2.rel('b.txt'))
+    >>> util.pconvert(m2.rel(b'b.txt'))
     'sub/b.txt'
     >>> def bad(f, msg):
-    ...     print "%s: %s" % (f, msg)
+    ...     print(pycompat.sysstr(b"%s: %s" % (f, msg)))
     >>> m1.bad = bad
-    >>> m2.bad('x.txt', 'No such file')
+    >>> m2.bad(b'x.txt', b'No such file')
     sub/x.txt: No such file
-    >>> m2.abs('c.txt')
+    >>> m2.abs(b'c.txt')
     'sub/c.txt'
     """
 
@@ -691,30 +696,31 @@ def _patsplit(pattern, default):
     pattern."""
     if ':' in pattern:
         kind, pat = pattern.split(':', 1)
-        if kind in ('re', 'glob', 'path', 'relglob', 'relpath', 'relre',
-                    'listfile', 'listfile0', 'set', 'include', 'subinclude',
-                    'rootfilesin'):
+        if kind in allpatternkinds:
             return kind, pat
     return default, pattern
 
 def _globre(pat):
     r'''Convert an extended glob string to a regexp string.
 
-    >>> print _globre(r'?')
+    >>> from . import pycompat
+    >>> def bprint(s):
+    ...     print(pycompat.sysstr(s))
+    >>> bprint(_globre(br'?'))
     .
-    >>> print _globre(r'*')
+    >>> bprint(_globre(br'*'))
     [^/]*
-    >>> print _globre(r'**')
+    >>> bprint(_globre(br'**'))
     .*
-    >>> print _globre(r'**/a')
+    >>> bprint(_globre(br'**/a'))
     (?:.*/)?a
-    >>> print _globre(r'a/**/b')
+    >>> bprint(_globre(br'a/**/b'))
     a\/(?:.*/)?b
-    >>> print _globre(r'[a*?!^][^b][!c]')
+    >>> bprint(_globre(br'[a*?!^][^b][!c]'))
     [a*?!^][\^b][^c]
-    >>> print _globre(r'{a,b}')
+    >>> bprint(_globre(br'{a,b}'))
     (?:a|b)
-    >>> print _globre(r'.\*\?')
+    >>> bprint(_globre(br'.\*\?'))
     \.\*\?
     '''
     i, n = 0, len(pat)
@@ -907,17 +913,20 @@ def _rootsanddirs(kindpats):
     include directories that need to be implicitly considered as either, such as
     parent directories.
 
-    >>> _rootsanddirs(\
-        [('glob', 'g/h/*', ''), ('glob', 'g/h', ''), ('glob', 'g*', '')])
+    >>> _rootsanddirs(
+    ...     [(b'glob', b'g/h/*', b''), (b'glob', b'g/h', b''),
+    ...      (b'glob', b'g*', b'')])
     (['g/h', 'g/h', '.'], ['g', '.'])
-    >>> _rootsanddirs(\
-        [('rootfilesin', 'g/h', ''), ('rootfilesin', '', '')])
+    >>> _rootsanddirs(
+    ...     [(b'rootfilesin', b'g/h', b''), (b'rootfilesin', b'', b'')])
     ([], ['g/h', '.', 'g', '.'])
-    >>> _rootsanddirs(\
-        [('relpath', 'r', ''), ('path', 'p/p', ''), ('path', '', '')])
+    >>> _rootsanddirs(
+    ...     [(b'relpath', b'r', b''), (b'path', b'p/p', b''),
+    ...      (b'path', b'', b'')])
     (['r', 'p/p', '.'], ['p', '.'])
-    >>> _rootsanddirs(\
-        [('relglob', 'rg*', ''), ('re', 're/', ''), ('relre', 'rr', '')])
+    >>> _rootsanddirs(
+    ...     [(b'relglob', b'rg*', b''), (b're', b're/', b''),
+    ...      (b'relre', b'rr', b'')])
     (['.', '.', '.'], ['.'])
     '''
     r, d = _patternrootsanddirs(kindpats)
@@ -934,9 +943,9 @@ def _rootsanddirs(kindpats):
 def _explicitfiles(kindpats):
     '''Returns the potential explicit filenames from the patterns.
 
-    >>> _explicitfiles([('path', 'foo/bar', '')])
+    >>> _explicitfiles([(b'path', b'foo/bar', b'')])
     ['foo/bar']
-    >>> _explicitfiles([('rootfilesin', 'foo/bar', '')])
+    >>> _explicitfiles([(b'rootfilesin', b'foo/bar', b'')])
     []
     '''
     # Keep only the pattern kinds where one can specify filenames (vs only

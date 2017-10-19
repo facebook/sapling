@@ -111,7 +111,7 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
 
     lfmatcher = None
     if lfutil.islfilesrepo(repo):
-        lfpats = ui.configlist(lfutil.longname, 'patterns', default=[])
+        lfpats = ui.configlist(lfutil.longname, 'patterns')
         if lfpats:
             lfmatcher = matchmod.match(repo.root, '', list(lfpats))
 
@@ -545,10 +545,10 @@ def mergerecordupdates(orig, repo, actions, branchmerge):
 
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits without prompting the user.
-def overridefilemerge(origfn, premerge, repo, mynode, orig, fcd, fco, fca,
+def overridefilemerge(origfn, premerge, repo, wctx, mynode, orig, fcd, fco, fca,
                       labels=None):
     if not lfutil.isstandin(orig) or fcd.isabsent() or fco.isabsent():
-        return origfn(premerge, repo, mynode, orig, fcd, fco, fca,
+        return origfn(premerge, repo, wctx, mynode, orig, fcd, fco, fca,
                       labels=labels)
 
     ahash = lfutil.readasstandin(fca).lower()
@@ -1218,8 +1218,9 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts=None, dry_run=None,
         return orig(repo, matcher, prefix, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-    unsure, s = lfdirstate.status(matchmod.always(repo.root, repo.getcwd()), [],
-                                  False, False, False)
+    unsure, s = lfdirstate.status(matchmod.always(repo.root, repo.getcwd()),
+                                  subrepos=[], ignored=False, clean=False,
+                                  unknown=False)
 
     # Call into the normal remove code, but the removing of the standin, we want
     # to have handled by original addremove.  Monkey patching here makes sure
@@ -1403,7 +1404,8 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
         unsure, s = lfdirstate.status(matchmod.always(repo.root,
                                                     repo.getcwd()),
-                                      [], False, True, False)
+                                      subrepos=[], ignored=False,
+                                      clean=True, unknown=False)
         oldclean = set(s.clean)
         pctx = repo['.']
         dctx = repo[node]
@@ -1432,7 +1434,10 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         lfdirstate.write()
 
         oldstandins = lfutil.getstandinsstate(repo)
-
+        # Make sure the merge runs on disk, not in-memory. largefiles is not a
+        # good candidate for in-memory merge (large files, custom dirstate,
+        # matcher usage).
+        kwargs['wc'] = repo[None]
         result = orig(repo, node, branchmerge, force, *args, **kwargs)
 
         newstandins = lfutil.getstandinsstate(repo)

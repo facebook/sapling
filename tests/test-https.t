@@ -148,6 +148,7 @@ A per-host certificate matching the server's cert will be accepted
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
 
 A per-host certificate with multiple certs and one matching will be accepted
 
@@ -159,6 +160,7 @@ A per-host certificate with multiple certs and one matching will be accepted
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
 
 Defining both per-host certificate and a fingerprint will print a warning
 
@@ -170,6 +172,7 @@ Defining both per-host certificate and a fingerprint will print a warning
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
 
   $ DISABLECACERTS="--config devel.disableloaddefaultcerts=true"
 
@@ -189,6 +192,7 @@ Inability to verify peer certificate will result in abort
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg verify -R copy-pull
@@ -226,6 +230,7 @@ pull without cacert
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 5fed3813f7f5
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=https://localhost:$HGPORT/
   (run 'hg update' to get a working copy)
   $ cd ..
@@ -624,7 +629,6 @@ without client certificate:
 
   $ P="$CERTSDIR" hg id https://localhost:$HGPORT/
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
-  (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *handshake failure* (glob)
   [255]
 

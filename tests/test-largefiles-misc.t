@@ -111,6 +111,7 @@ We have to simulate that here by setting $HOME and removing write permissions
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 09a186cfa6da
   updating to branch default
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -528,13 +529,13 @@ Test orig files go where we want them
   $ echo moremore >> anotherlarge
   $ hg revert anotherlarge -v --config 'ui.origbackuppath=.hg/origbackups'
   creating directory: $TESTTMP/addrm2/.hg/origbackups/.hglf/sub (glob)
-  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge.orig (glob)
+  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge (glob)
   reverting ../.hglf/sub/anotherlarge (glob)
   creating directory: $TESTTMP/addrm2/.hg/origbackups/sub (glob)
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   $ ls ../.hg/origbackups/sub
-  anotherlarge.orig
+  anotherlarge
   $ cd ..
 
 Test glob logging from the root dir
@@ -1113,6 +1114,7 @@ Test "pull --rebase" when rebase is enabled before largefiles (issue3861)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets bf5e395ced2c
   nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

@@ -1,5 +1,3 @@
-HG = $(CURDIR)/../../hg
-
 TARGET = chg
 SRCS = chg.c hgclient.c procutil.c util.c
 OBJS = $(SRCS:.c=.o)
@@ -15,9 +13,6 @@ DESTDIR =
 PREFIX = /usr/local
 MANDIR = $(PREFIX)/share/man/man1
 
-CHGSOCKDIR = /tmp/chg$(shell id -u)
-CHGSOCKNAME = $(CHGSOCKDIR)/server
-
 .PHONY: all
 all: $(TARGET)
 
@@ -31,17 +26,10 @@ util.o: util.h
 
 .PHONY: install
 install: $(TARGET)
-	install -d $(DESTDIR)$(PREFIX)/bin
-	install -m 755 $(TARGET) $(DESTDIR)$(PREFIX)/bin
-	install -d $(DESTDIR)$(MANDIR)
-	install -m 644 chg.1 $(DESTDIR)$(MANDIR)
-
-.PHONY: serve
-serve:
-	[ -d $(CHGSOCKDIR) ] || ( umask 077; mkdir $(CHGSOCKDIR) )
-	$(HG) serve --cwd / --cmdserver chgunix \
-		--address $(CHGSOCKNAME) \
-		--config cmdserver.log=/dev/stderr
+	install -d "$(DESTDIR)$(PREFIX)"/bin
+	install -m 755 "$(TARGET)" "$(DESTDIR)$(PREFIX)"/bin
+	install -d "$(DESTDIR)$(MANDIR)"
+	install -m 644 chg.1 "$(DESTDIR)$(MANDIR)"
 
 .PHONY: clean
 clean:

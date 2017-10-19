@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import filecmp
 import os
 import re
 import stat
@@ -24,6 +25,9 @@ from .node import (
     wdirid,
     wdirnodes,
     wdirrev,
+)
+from .thirdparty import (
+    attr,
 )
 from . import (
     encoding,
@@ -103,12 +107,10 @@ class basectx(object):
         return self.manifest()
 
     def _matchstatus(self, other, match):
-        """return match.always if match is none
-
-        This internal method provides a way for child objects to override the
+        """This internal method provides a way for child objects to override the
         match operator.
         """
-        return match or matchmod.always(self._repo.root, self._repo.getcwd())
+        return match
 
     def _buildstatus(self, other, s, match, listignored, listclean,
                      listunknown):
@@ -204,43 +206,84 @@ class basectx(object):
         return self.rev() in obsmod.getrevs(self._repo, 'extinct')
 
     def unstable(self):
+        msg = ("'context.unstable' is deprecated, "
+               "use 'context.orphan'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.orphan()
+
+    def orphan(self):
         """True if the changeset is not obsolete but it's ancestor are"""
-        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
+        return self.rev() in obsmod.getrevs(self._repo, 'orphan')
 
     def bumped(self):
+        msg = ("'context.bumped' is deprecated, "
+               "use 'context.phasedivergent'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.phasedivergent()
+
+    def phasedivergent(self):
         """True if the changeset try to be a successor of a public changeset
 
         Only non-public and non-obsolete changesets may be bumped.
         """
-        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
+        return self.rev() in obsmod.getrevs(self._repo, 'phasedivergent')
 
     def divergent(self):
+        msg = ("'context.divergent' is deprecated, "
+               "use 'context.contentdivergent'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.contentdivergent()
+
+    def contentdivergent(self):
         """Is a successors of a changeset with multiple possible successors set
 
         Only non-public and non-obsolete changesets may be divergent.
         """
-        return self.rev() in obsmod.getrevs(self._repo, 'divergent')
+        return self.rev() in obsmod.getrevs(self._repo, 'contentdivergent')
 
     def troubled(self):
+        msg = ("'context.troubled' is deprecated, "
+               "use 'context.isunstable'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+        return self.isunstable()
+
+    def isunstable(self):
         """True if the changeset is either unstable, bumped or divergent"""
-        return self.unstable() or self.bumped() or self.divergent()
+        return self.orphan() or self.phasedivergent() or self.contentdivergent()
 
     def troubles(self):
-        """return the list of troubles affecting this changesets.
-
-        Troubles are returned as strings. possible values are:
-        - unstable,
-        - bumped,
-        - divergent.
+        """Keep the old version around in order to avoid breaking extensions
+        about different return values.
         """
+        msg = ("'context.troubles' is deprecated, "
+               "use 'context.instabilities'")
+        self._repo.ui.deprecwarn(msg, '4.4')
+
         troubles = []
-        if self.unstable():
-            troubles.append('unstable')
-        if self.bumped():
+        if self.orphan():
+            troubles.append('orphan')
+        if self.phasedivergent():
             troubles.append('bumped')
-        if self.divergent():
+        if self.contentdivergent():
             troubles.append('divergent')
         return troubles
+
+    def instabilities(self):
+        """return the list of instabilities affecting this changeset.
+
+        Instabilities are returned as strings. possible values are:
+        - orphan,
+        - phase-divergent,
+        - content-divergent.
+        """
+        instabilities = []
+        if self.orphan():
+            instabilities.append('orphan')
+        if self.phasedivergent():
+            instabilities.append('phase-divergent')
+        if self.contentdivergent():
+            instabilities.append('content-divergent')
+        return instabilities
 
     def parents(self):
         """return contexts for each parent changeset"""
@@ -351,6 +394,7 @@ class basectx(object):
             reversed = True
             ctx1, ctx2 = ctx2, ctx1
 
+        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         match = ctx2._matchstatus(ctx1, match)
         r = scmutil.status([], [], [], [], [], [], [])
         r = ctx2._buildstatus(ctx1, r, match, listignored, listclean,
@@ -579,6 +623,9 @@ class changectx(basectx):
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, 'visible')
 
+    def isinmemory(self):
+        return False
+
     def children(self):
         """return contexts for each child changeset"""
         c = self._repo.changelog.children(self._node)
@@ -616,7 +663,7 @@ class changectx(basectx):
             anc = cahs[0]
         else:
             # experimental config: merge.preferancestor
-            for r in self._repo.ui.configlist('merge', 'preferancestor', ['*']):
+            for r in self._repo.ui.configlist('merge', 'preferancestor'):
                 try:
                     ctx = changectx(self._repo, r)
                 except error.RepoLookupError:
@@ -943,10 +990,11 @@ class basefilectx(object):
 
         if linenumber:
             def decorate(text, rev):
-                return ([(rev, i) for i in xrange(1, lines(text) + 1)], text)
+                return ([annotateline(fctx=rev, lineno=i)
+                         for i in xrange(1, lines(text) + 1)], text)
         else:
             def decorate(text, rev):
-                return ([(rev, False)] * lines(text), text)
+                return ([annotateline(fctx=rev)] * lines(text), text)
 
         getlog = util.lrucachefunc(lambda x: self._repo.file(x))
 
@@ -1056,6 +1104,20 @@ class basefilectx(object):
             c = visit.pop(max(visit))
             yield c
 
+    def decodeddata(self):
+        """Returns `data()` after running repository decoding filters.
+
+        This is often equivalent to how the data would be expressed on disk.
+        """
+        return self._repo.wwritedata(self.path(), self.data())
+
+@attr.s(slots=True, frozen=True)
+class annotateline(object):
+    fctx = attr.ib()
+    lineno = attr.ib(default=False)
+    # Whether this annotation was the result of a skip-annotate.
+    skip = attr.ib(default=False)
+
 def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     r'''
     Given parent and child fctxes and annotate data for parents, for all lines
@@ -1065,56 +1127,7 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
     Additionally, if `skipchild` is True, replace all other lines with parent
     annotate data as well such that child is never blamed for any lines.
 
-    >>> oldfctx = 'old'
-    >>> p1fctx, p2fctx, childfctx = 'p1', 'p2', 'c'
-    >>> olddata = 'a\nb\n'
-    >>> p1data = 'a\nb\nc\n'
-    >>> p2data = 'a\nc\nd\n'
-    >>> childdata = 'a\nb2\nc\nc2\nd\n'
-    >>> diffopts = mdiff.diffopts()
-
-    >>> def decorate(text, rev):
-    ...     return ([(rev, i) for i in xrange(1, text.count('\n') + 1)], text)
-
-    Basic usage:
-
-    >>> oldann = decorate(olddata, oldfctx)
-    >>> p1ann = decorate(p1data, p1fctx)
-    >>> p1ann = _annotatepair([oldann], p1fctx, p1ann, False, diffopts)
-    >>> p1ann[0]
-    [('old', 1), ('old', 2), ('p1', 3)]
-    >>> p2ann = decorate(p2data, p2fctx)
-    >>> p2ann = _annotatepair([oldann], p2fctx, p2ann, False, diffopts)
-    >>> p2ann[0]
-    [('old', 1), ('p2', 2), ('p2', 3)]
-
-    Test with multiple parents (note the difference caused by ordering):
-
-    >>> childann = decorate(childdata, childfctx)
-    >>> childann = _annotatepair([p1ann, p2ann], childfctx, childann, False,
-    ...                          diffopts)
-    >>> childann[0]
-    [('old', 1), ('c', 2), ('p2', 2), ('c', 4), ('p2', 3)]
-
-    >>> childann = decorate(childdata, childfctx)
-    >>> childann = _annotatepair([p2ann, p1ann], childfctx, childann, False,
-    ...                          diffopts)
-    >>> childann[0]
-    [('old', 1), ('c', 2), ('p1', 3), ('c', 4), ('p2', 3)]
-
-    Test with skipchild (note the difference caused by ordering):
-
-    >>> childann = decorate(childdata, childfctx)
-    >>> childann = _annotatepair([p1ann, p2ann], childfctx, childann, True,
-    ...                          diffopts)
-    >>> childann[0]
-    [('old', 1), ('old', 2), ('p2', 2), ('p2', 2), ('p2', 3)]
-
-    >>> childann = decorate(childdata, childfctx)
-    >>> childann = _annotatepair([p2ann, p1ann], childfctx, childann, True,
-    ...                          diffopts)
-    >>> childann[0]
-    [('old', 1), ('old', 2), ('p1', 3), ('p1', 3), ('p2', 3)]
+    See test-annotate.py for unit tests.
     '''
     pblocks = [(parent, mdiff.allblocks(parent[1], child[1], opts=diffopts))
                for parent in parents]
@@ -1150,9 +1163,9 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
             for (a1, a2, b1, b2), _t in blocks:
                 if a2 - a1 >= b2 - b1:
                     for bk in xrange(b1, b2):
-                        if child[0][bk][0] == childfctx:
+                        if child[0][bk].fctx == childfctx:
                             ak = min(a1 + (bk - b1), a2 - 1)
-                            child[0][bk] = parent[0][ak]
+                            child[0][bk] = attr.evolve(parent[0][ak], skip=True)
                 else:
                     remaining[idx][1].append((a1, a2, b1, b2))
 
@@ -1161,9 +1174,9 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
         for parent, blocks in remaining:
             for a1, a2, b1, b2 in blocks:
                 for bk in xrange(b1, b2):
-                    if child[0][bk][0] == childfctx:
+                    if child[0][bk].fctx == childfctx:
                         ak = min(a1 + (bk - b1), a2 - 1)
-                        child[0][bk] = parent[0][ak]
+                        child[0][bk] = attr.evolve(parent[0][ak], skip=True)
     return child
 
 class filectx(basefilectx):
@@ -1392,6 +1405,9 @@ class committablectx(basectx):
     def extra(self):
         return self._extra
 
+    def isinmemory(self):
+        return False
+
     def tags(self):
         return []
 
@@ -1431,8 +1447,9 @@ class committablectx(basectx):
 
     def walk(self, match):
         '''Generates matching file names.'''
-        return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
-                                               True, False))
+        return sorted(self._repo.dirstate.walk(match,
+                                               subrepos=sorted(self.substate),
+                                               unknown=True, ignored=False))
 
     def matches(self, match):
         return sorted(self._repo.dirstate.matches(match))
@@ -1614,6 +1631,9 @@ class workingctx(committablectx):
                               listsubrepos=listsubrepos, badfn=badfn,
                               icasefs=icasefs)
 
+    def flushall(self):
+        pass # For overlayworkingfilectx compatibility.
+
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:
             return files
@@ -1703,16 +1723,13 @@ class workingctx(committablectx):
                 # Even if the wlock couldn't be grabbed, clear out the list.
                 self._repo.clearpostdsstatus()
 
-    def _dirstatestatus(self, match=None, ignored=False, clean=False,
-                        unknown=False):
+    def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         '''Gets the status from the dirstate -- internal use only.'''
-        listignored, listclean, listunknown = ignored, clean, unknown
-        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         subrepos = []
         if '.hgsub' in self:
             subrepos = sorted(self.substate)
-        cmp, s = self._repo.dirstate.status(match, subrepos, listignored,
-                                            listclean, listunknown)
+        cmp, s = self._repo.dirstate.status(match, subrepos, ignored=ignored,
+                                            clean=clean, unknown=unknown)
 
         # check for any possibly clean files
         fixup = []
@@ -1721,7 +1738,7 @@ class workingctx(committablectx):
             s.modified.extend(modified2)
             s.deleted.extend(deleted2)
 
-            if fixup and listclean:
+            if fixup and clean:
                 s.clean.extend(fixup)
 
         self._poststatusfixup(s, fixup)
@@ -1800,8 +1817,6 @@ class workingctx(committablectx):
         If we aren't comparing against the working directory's parent, then we
         just use the default match object sent to us.
         """
-        superself = super(workingctx, self)
-        match = superself._matchstatus(other, match)
         if other != self._repo['.']:
             def bad(f, msg):
                 # 'f' may be a directory pattern from 'match.files()',
@@ -1920,8 +1935,218 @@ class workingfilectx(committablefilectx):
         self._repo.wwrite(self._path, data, flags,
                           backgroundclose=backgroundclose)
 
+    def markcopied(self, src):
+        """marks this file a copy of `src`"""
+        if self._repo.dirstate[self._path] in "nma":
+            self._repo.dirstate.copy(src, self._path)
+
+    def clearunknown(self):
+        """Removes conflicting items in the working directory so that
+        ``write()`` can be called successfully.
+        """
+        wvfs = self._repo.wvfs
+        f = self._path
+        wvfs.audit(f)
+        if wvfs.isdir(f) and not wvfs.islink(f):
+            wvfs.rmtree(f, forcibly=True)
+        for p in reversed(list(util.finddirs(f))):
+            if wvfs.isfileorlink(p):
+                wvfs.unlink(p)
+                break
+
     def setflags(self, l, x):
         self._repo.wvfs.setflags(self._path, l, x)
+
+class overlayworkingctx(workingctx):
+    """Wraps another mutable context with a write-back cache that can be flushed
+    at a later time.
+
+    self._cache[path] maps to a dict with keys: {
+        'exists': bool?
+        'date': date?
+        'data': str?
+        'flags': str?
+    }
+    If `exists` is True, `flags` must be non-None and 'date' is non-None. If it
+    is `False`, the file was deleted.
+    """
+
+    def __init__(self, repo, wrappedctx):
+        super(overlayworkingctx, self).__init__(repo)
+        self._repo = repo
+        self._wrappedctx = wrappedctx
+        self._clean()
+
+    def data(self, path):
+        if self.isdirty(path):
+            if self._cache[path]['exists']:
+                if self._cache[path]['data']:
+                    return self._cache[path]['data']
+                else:
+                    # Must fallback here, too, because we only set flags.
+                    return self._wrappedctx[path].data()
+            else:
+                raise error.ProgrammingError("No such file or directory: %s" %
+                                             self._path)
+        else:
+            return self._wrappedctx[path].data()
+
+    def isinmemory(self):
+        return True
+
+    def filedate(self, path):
+        if self.isdirty(path):
+            return self._cache[path]['date']
+        else:
+            return self._wrappedctx[path].date()
+
+    def flags(self, path):
+        if self.isdirty(path):
+            if self._cache[path]['exists']:
+                return self._cache[path]['flags']
+            else:
+                raise error.ProgrammingError("No such file or directory: %s" %
+                                             self._path)
+        else:
+            return self._wrappedctx[path].flags()
+
+    def write(self, path, data, flags=''):
+        if data is None:
+            raise error.ProgrammingError("data must be non-None")
+        self._markdirty(path, exists=True, data=data, date=util.makedate(),
+                        flags=flags)
+
+    def setflags(self, path, l, x):
+        self._markdirty(path, exists=True, date=util.makedate(),
+                        flags=(l and 'l' or '') + (x and 'x' or ''))
+
+    def remove(self, path):
+        self._markdirty(path, exists=False)
+
+    def exists(self, path):
+        """exists behaves like `lexists`, but needs to follow symlinks and
+        return False if they are broken.
+        """
+        if self.isdirty(path):
+            # If this path exists and is a symlink, "follow" it by calling
+            # exists on the destination path.
+            if (self._cache[path]['exists'] and
+                        'l' in self._cache[path]['flags']):
+                return self.exists(self._cache[path]['data'].strip())
+            else:
+                return self._cache[path]['exists']
+        return self._wrappedctx[path].exists()
+
+    def lexists(self, path):
+        """lexists returns True if the path exists"""
+        if self.isdirty(path):
+            return self._cache[path]['exists']
+        return self._wrappedctx[path].lexists()
+
+    def size(self, path):
+        if self.isdirty(path):
+            if self._cache[path]['exists']:
+                return len(self._cache[path]['data'])
+            else:
+                raise error.ProgrammingError("No such file or directory: %s" %
+                                             self._path)
+        return self._wrappedctx[path].size()
+
+    def flushall(self):
+        for path in self._writeorder:
+            entry = self._cache[path]
+            if entry['exists']:
+                self._wrappedctx[path].clearunknown()
+                if entry['data'] is not None:
+                    if entry['flags'] is None:
+                        raise error.ProgrammingError('data set but not flags')
+                    self._wrappedctx[path].write(
+                        entry['data'],
+                        entry['flags'])
+                else:
+                    self._wrappedctx[path].setflags(
+                        'l' in entry['flags'],
+                        'x' in entry['flags'])
+            else:
+                self._wrappedctx[path].remove(path)
+        self._clean()
+
+    def isdirty(self, path):
+        return path in self._cache
+
+    def _clean(self):
+        self._cache = {}
+        self._writeorder = []
+
+    def _markdirty(self, path, exists, data=None, date=None, flags=''):
+        if path not in self._cache:
+            self._writeorder.append(path)
+
+        self._cache[path] = {
+            'exists': exists,
+            'data': data,
+            'date': date,
+            'flags': flags,
+        }
+
+    def filectx(self, path, filelog=None):
+        return overlayworkingfilectx(self._repo, path, parent=self,
+                                     filelog=filelog)
+
+class overlayworkingfilectx(workingfilectx):
+    """Wrap a ``workingfilectx`` but intercepts all writes into an in-memory
+    cache, which can be flushed through later by calling ``flush()``."""
+
+    def __init__(self, repo, path, filelog=None, parent=None):
+        super(overlayworkingfilectx, self).__init__(repo, path, filelog,
+                                                    parent)
+        self._repo = repo
+        self._parent = parent
+        self._path = path
+
+    def cmp(self, fctx):
+        return self.data() != fctx.data()
+
+    def ctx(self):
+        return self._parent
+
+    def data(self):
+        return self._parent.data(self._path)
+
+    def date(self):
+        return self._parent.filedate(self._path)
+
+    def exists(self):
+        return self.lexists()
+
+    def lexists(self):
+        return self._parent.exists(self._path)
+
+    def renamed(self):
+        # Copies are currently tracked in the dirstate as before. Straight copy
+        # from workingfilectx.
+        rp = self._repo.dirstate.copied(self._path)
+        if not rp:
+            return None
+        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
+
+    def size(self):
+        return self._parent.size(self._path)
+
+    def audit(self):
+        pass
+
+    def flags(self):
+        return self._parent.flags(self._path)
+
+    def setflags(self, islink, isexec):
+        return self._parent.setflags(self._path, islink, isexec)
+
+    def write(self, data, flags, backgroundclose=False):
+        return self._parent.write(self._path, data, flags)
+
+    def remove(self, ignoremissing=False):
+        return self._parent.remove(self._path)
 
 class workingcommitctx(workingctx):
     """A workingcommitctx object makes access to data related to
@@ -1935,14 +2160,12 @@ class workingcommitctx(workingctx):
         super(workingctx, self).__init__(repo, text, user, date, extra,
                                          changes)
 
-    def _dirstatestatus(self, match=None, ignored=False, clean=False,
-                        unknown=False):
+    def _dirstatestatus(self, match, ignored=False, clean=False, unknown=False):
         """Return matched files only in ``self._status``
 
         Uncommitted files appear "clean" via this context, even if
         they aren't actually so in the working directory.
         """
-        match = match or matchmod.always(self._repo.root, self._repo.getcwd())
         if clean:
             clean = [f for f in self._manifest if f not in self._changedset]
         else:
@@ -2232,9 +2455,9 @@ class overlayfilectx(committablefilectx):
         if reusable:
             # copy extra fields from originalfctx
             attrs = ['rawdata', 'rawflags', '_filenode', '_filerev']
-            for attr in attrs:
-                if util.safehasattr(originalfctx, attr):
-                    setattr(self, attr, getattr(originalfctx, attr))
+            for attr_ in attrs:
+                if util.safehasattr(originalfctx, attr_):
+                    setattr(self, attr_, getattr(originalfctx, attr_))
 
     def data(self):
         return self._datafunc()
@@ -2257,15 +2480,23 @@ class metadataonlyctx(committablectx):
     def __new__(cls, repo, originalctx, *args, **kwargs):
         return super(metadataonlyctx, cls).__new__(cls, repo)
 
-    def __init__(self, repo, originalctx, parents, text, user=None, date=None,
-                 extra=None, editor=False):
+    def __init__(self, repo, originalctx, parents=None, text=None, user=None,
+                 date=None, extra=None, editor=False):
+        if text is None:
+            text = originalctx.description()
         super(metadataonlyctx, self).__init__(repo, text, user, date, extra)
         self._rev = None
         self._node = None
         self._originalctx = originalctx
         self._manifestnode = originalctx.manifestnode()
-        parents = [(p or nullid) for p in parents]
-        p1, p2 = self._parents = [changectx(self._repo, p) for p in parents]
+        if parents is None:
+            parents = originalctx.parents()
+        else:
+            parents = [repo[p] for p in parents if p is not None]
+        parents = parents[:]
+        while len(parents) < 2:
+            parents.append(repo[nullid])
+        p1, p2 = self._parents = parents
 
         # sanity check to ensure that the reused manifest parents are
         # manifests of our commit parents
@@ -2322,9 +2553,50 @@ class metadataonlyctx(committablectx):
         for f in self._files:
             if not managing(f):
                 added.append(f)
-            elif self[f]:
+            elif f in self:
                 modified.append(f)
             else:
                 removed.append(f)
 
         return scmutil.status(modified, added, removed, [], [], [], [])
+
+class arbitraryfilectx(object):
+    """Allows you to use filectx-like functions on a file in an arbitrary
+    location on disk, possibly not in the working directory.
+    """
+    def __init__(self, path, repo=None):
+        # Repo is optional because contrib/simplemerge uses this class.
+        self._repo = repo
+        self._path = path
+
+    def cmp(self, fctx):
+        # filecmp follows symlinks whereas `cmp` should not, so skip the fast
+        # path if either side is a symlink.
+        symlinks = ('l' in self.flags() or 'l' in fctx.flags())
+        if not symlinks and isinstance(fctx, workingfilectx) and self._repo:
+            # Add a fast-path for merge if both sides are disk-backed.
+            # Note that filecmp uses the opposite return values (True if same)
+            # from our cmp functions (True if different).
+            return not filecmp.cmp(self.path(), self._repo.wjoin(fctx.path()))
+        return self.data() != fctx.data()
+
+    def path(self):
+        return self._path
+
+    def flags(self):
+        return ''
+
+    def data(self):
+        return util.readfile(self._path)
+
+    def decodeddata(self):
+        with open(self._path, "rb") as f:
+            return f.read()
+
+    def remove(self):
+        util.unlink(self._path)
+
+    def write(self, data, flags):
+        assert not flags
+        with open(self._path, "w") as f:
+            f.write(data)

@@ -33,6 +33,7 @@ from mercurial import (
     bundlerepo,
     changegroup,
     cmdutil,
+    discovery,
     error,
     exchange,
     hg,
@@ -61,6 +62,13 @@ command = registrar.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('shelve', 'maxbackups',
+    default=10,
+)
 
 backupdir = 'shelve-backup'
 shelvedir = 'shelved'
@@ -145,8 +153,11 @@ class shelvedfile(object):
             btype = 'HG20'
             compression = 'BZ'
 
-        cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve',
-                                           version=cgversion)
+        outgoing = discovery.outgoing(self.repo, missingroots=bases,
+                                      missingheads=[node])
+        cg = changegroup.makechangegroup(self.repo, outgoing, cgversion,
+                                         'shelve')
+
         bundle2.writebundle(self.ui, cg, self.fname, btype, self.vfs,
                                 compression=compression)
 
@@ -267,7 +278,7 @@ class shelvedstate(object):
 
 def cleanupoldbackups(repo):
     vfs = vfsmod.vfs(repo.vfs.join(backupdir))
-    maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
+    maxbackups = repo.ui.configint('shelve', 'maxbackups')
     hgfiles = [f for f in vfs.listdir()
                if f.endswith('.' + patchextension)]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])

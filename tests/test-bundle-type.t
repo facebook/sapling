@@ -26,6 +26,7 @@ bundle w/o type option
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets c35a0f9217e6
   (run 'hg update' to get a working copy)
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -73,7 +74,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: {}
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   none-v2
   
@@ -81,8 +82,8 @@ test bundle types
   searching for changes
   1 changesets found
   HG20\x00\x00 (esc)
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   bzip2-v2
   
@@ -90,8 +91,8 @@ test bundle types
   searching for changes
   1 changesets found
   HG20\x00\x00 (esc)
-  Stream params: sortdict([('Compression', 'GZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: GZ}
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   gzip-v2
   
@@ -100,7 +101,7 @@ test bundle types
   1 changesets found
   HG20\x00\x00 (esc)
   Stream params: {}
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   none-v2
   
@@ -108,8 +109,8 @@ test bundle types
   searching for changes
   1 changesets found
   HG20\x00\x00 (esc)
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   bzip2-v2
   
@@ -167,8 +168,8 @@ Compression level can be adjusted for bundle2 bundles
   searching for changes
   1 changesets found
   HG20\x00\x00 (esc)
-  Stream params: sortdict([('Compression', 'ZS')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: ZS}
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   zstd-v2
   
@@ -176,8 +177,8 @@ Compression level can be adjusted for bundle2 bundles
   searching for changes
   1 changesets found
   HG20\x00\x00 (esc)
-  Stream params: sortdict([('Compression', 'ZS')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: ZS}
+  changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   zstd-v2
   

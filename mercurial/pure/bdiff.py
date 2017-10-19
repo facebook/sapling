@@ -60,7 +60,8 @@ def bdiff(a, b):
 
     bin = []
     p = [0]
-    for i in a: p.append(p[-1] + len(i))
+    for i in a:
+        p.append(p[-1] + len(i))
 
     d = difflib.SequenceMatcher(None, a, b).get_matching_blocks()
     d = _normalizeblocks(a, b, d)

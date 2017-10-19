@@ -13,8 +13,9 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "util.h"
 #include "bitmanipulation.h"
+#include "charencode.h"
+#include "util.h"
 
 #ifdef IS_PY3K
 /* The mapping of Python types is meant to be temporary to get Python
@@ -406,7 +407,8 @@ static PyObject *list_copy(PyObject *list)
 	return newlist;
 }
 
-static int check_filter(PyObject *filter, Py_ssize_t arg) {
+static int check_filter(PyObject *filter, Py_ssize_t arg)
+{
 	if (filter) {
 		PyObject *arglist, *result;
 		int isfiltered;
@@ -444,8 +446,7 @@ static Py_ssize_t add_roots_get_min(indexObject *self, PyObject *list,
 		iter = PyObject_GetIter(list);
 		if (iter == NULL)
 			return -2;
-		while ((iter_item = PyIter_Next(iter)))
-		{
+		while ((iter_item = PyIter_Next(iter))) {
 			iter_item_long = PyInt_AS_LONG(iter_item);
 			Py_DECREF(iter_item);
 			if (iter_item_long < min_idx)
@@ -1990,7 +1991,7 @@ static PyGetSetDef index_getset[] = {
 };
 
 static PyTypeObject indexType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(NULL, 0) /* header */
 	"parsers.index",           /* tp_name */
 	sizeof(indexObject),       /* tp_basicsize */
 	0,                         /* tp_itemsize */

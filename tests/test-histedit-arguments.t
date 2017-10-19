@@ -70,6 +70,7 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -305,6 +306,7 @@ Test that trimming description using multi-byte characters
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date
@@ -494,7 +496,8 @@ amend should not be blocked by the ongoing histedit.
 
   $ cat >>$HGRCPATH <<EOF
   > [experimental]
-  > evolution=createmarkers,allowunstable
+  > evolution.createmarkers=True
+  > evolution.allowunstable=True
   > EOF
   $ hg commit --amend -m 'allow this fold'
   $ hg histedit --continue
@@ -541,6 +544,7 @@ Check that 'roll' is selected by default
   #  e, edit = use commit, but stop for amending
   #  m, mess = edit commit message without changing commit content
   #  p, pick = use commit
+  #  b, base = checkout changeset and apply further changesets from there
   #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description and date

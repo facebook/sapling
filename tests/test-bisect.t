@@ -184,6 +184,14 @@ bisect test
 
   $ hg bisect -r
   $ hg bisect -b
+  $ hg status -v
+  # The repository is in an unfinished *bisect* state.
+  
+  # To mark the changeset good:    hg bisect --good
+  # To mark the changeset bad:     hg bisect --bad
+  # To abort:                      hg bisect --reset
+  
+  $ hg status -v --config commands.status.skipstates=bisect
   $ hg summary
   parent: 31:58c80a7c8a40 tip
    msg 31
@@ -454,9 +462,10 @@ test bisecting command
 
   $ cat > script.py <<EOF
   > #!$PYTHON
+  > from __future__ import absolute_import
   > import sys
-  > from mercurial import ui, hg
-  > repo = hg.repository(ui.ui.load(), '.')
+  > from mercurial import hg, ui as uimod
+  > repo = hg.repository(uimod.ui.load(), '.')
   > if repo['.'].rev() < 6:
   >     sys.exit(1)
   > EOF
@@ -565,7 +574,7 @@ Check that bisect does not break on obsolete changesets
 
   $ cat >> $HGRCPATH << EOF
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 tip is obsolete

@@ -109,7 +109,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             lfiles = set()
             normalfiles = set()
             if not pats:
-                pats = ui.configlist(lfutil.longname, 'patterns', default=[])
+                pats = ui.configlist(lfutil.longname, 'patterns')
             if pats:
                 matcher = matchmod.match(rsrc.root, '', list(pats))
             else:
@@ -422,14 +422,13 @@ def cachelfiles(ui, repo, node, filelist=None):
     return ([], [])
 
 def downloadlfiles(ui, repo, rev=None):
-    matchfn = scmutil.match(repo[None],
-                            [repo.wjoin(lfutil.shortname)], {})
+    match = scmutil.match(repo[None], [repo.wjoin(lfutil.shortname)], {})
     def prepare(ctx, fns):
         pass
     totalsuccess = 0
     totalmissing = 0
     if rev != []: # walkchangerevs on empty list would return all revs
-        for ctx in cmdutil.walkchangerevs(repo, matchfn, {'rev' : rev},
+        for ctx in cmdutil.walkchangerevs(repo, match, {'rev' : rev},
                                           prepare):
             success, missing = cachelfiles(ui, repo, ctx.node())
             totalsuccess += len(success)

@@ -33,3 +33,17 @@ Check update.requiredest interaction with pull --update
   abort: update destination required by configuration
   (use hg pull followed by hg update DEST)
   [255]
+
+  $ cd ..
+
+update.requiredest should silent the "hg update" text after pull
+  $ hg init repo1
+  $ cd repo1
+  $ hg pull ../repo
+  pulling from ../repo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  new changesets 8f0162e483d0:048c2cb95949

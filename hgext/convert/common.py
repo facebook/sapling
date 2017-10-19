@@ -15,6 +15,7 @@ import subprocess
 
 from mercurial.i18n import _
 from mercurial import (
+    encoding,
     error,
     phases,
     util,
@@ -104,7 +105,6 @@ class converter_source(object):
 
     def setrevmap(self, revmap):
         """set the map of already-converted revisions"""
-        pass
 
     def getheads(self):
         """Return a list of this repository's heads"""
@@ -181,7 +181,6 @@ class converter_source(object):
 
     def converted(self, rev, sinkrev):
         '''Notify the source that a revision has been converted.'''
-        pass
 
     def hasnativeorder(self):
         """Return true if this source has a meaningful, native revision
@@ -275,7 +274,6 @@ class converter_sink(object):
         on the branch.
         branch: branch name for subsequent commits
         pbranches: (converted parent revision, parent branch) tuples"""
-        pass
 
     def setfilemapmode(self, active):
         """Tell the destination that we're using a filemap
@@ -285,7 +283,6 @@ class converter_sink(object):
         tells the destination that we're using a filemap and that it should
         filter empty revisions.
         """
-        pass
 
     def before(self):
         pass
@@ -299,7 +296,6 @@ class converter_sink(object):
         bookmarks: {bookmarkname: sink_rev_id, ...}
         where bookmarkname is an UTF-8 string.
         """
-        pass
 
     def hascommitfrommap(self, rev):
         """Return False if a rev mentioned in a filemap is known to not be
@@ -475,8 +471,9 @@ class mapfile(dict):
             try:
                 self.fp = open(self.path, 'a')
             except IOError as err:
-                raise error.Abort(_('could not open map file %r: %s') %
-                                 (self.path, err.strerror))
+                raise error.Abort(
+                    _('could not open map file %r: %s') %
+                    (self.path, encoding.strtolocal(err.strerror)))
         self.fp.write('%s %s\n' % (key, value))
         self.fp.flush()
         super(mapfile, self).__setitem__(key, value)

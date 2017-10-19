@@ -139,8 +139,25 @@ else:
             return func
         return decorator
 
+try:
+    import mercurial.registrar
+    import mercurial.configitems
+    configtable = {}
+    configitem = mercurial.registrar.configitem(configtable)
+    configitem('perf', 'presleep',
+        default=mercurial.configitems.dynamicdefault,
+    )
+    configitem('perf', 'stub',
+        default=mercurial.configitems.dynamicdefault,
+    )
+    configitem('perf', 'parentscount',
+        default=mercurial.configitems.dynamicdefault,
+    )
+except (ImportError, AttributeError):
+    pass
+
 def getlen(ui):
-    if ui.configbool("perf", "stub"):
+    if ui.configbool("perf", "stub", False):
         return lambda x: 1
     return len
 
@@ -203,7 +220,7 @@ def gettimer(ui, opts=None):
 
     # stub function, runs code only once instead of in a loop
     # experimental config: perf.stub
-    if ui.configbool("perf", "stub"):
+    if ui.configbool("perf", "stub", False):
         return functools.partial(stub_timer, fm), fm
     return functools.partial(_timer, fm), fm
 
@@ -370,15 +387,9 @@ def clearfilecache(repo, attrname):
 @command('perfwalk', formatteropts)
 def perfwalk(ui, repo, *pats, **opts):
     timer, fm = gettimer(ui, opts)
-    try:
-        m = scmutil.match(repo[None], pats, {})
-        timer(lambda: len(list(repo.dirstate.walk(m, [], True, False))))
-    except Exception:
-        try:
-            m = scmutil.match(repo[None], pats, {})
-            timer(lambda: len([b for a, b, c in repo.dirstate.statwalk([], m)]))
-        except Exception:
-            timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
+    m = scmutil.match(repo[None], pats, {})
+    timer(lambda: len(list(repo.dirstate.walk(m, subrepos=[], unknown=True,
+                                              ignored=False))))
     fm.end()
 
 @command('perfannotate', formatteropts)
@@ -515,7 +526,7 @@ def perfdirs(ui, repo, **opts):
     'a' in dirstate
     def d():
         dirstate.dirs()
-        del dirstate._dirs
+        del dirstate._map.dirs
     timer(d)
     fm.end()
 
@@ -534,8 +545,8 @@ def perfdirstatedirs(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     "a" in repo.dirstate
     def d():
-        "a" in repo.dirstate._dirs
-        del repo.dirstate._dirs
+        "a" in repo.dirstate._map.dirs
+        del repo.dirstate._map.dirs
     timer(d)
     fm.end()
 
@@ -545,8 +556,8 @@ def perfdirstatefoldmap(ui, repo, **opts):
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
-        dirstate._filefoldmap.get('a')
-        del dirstate._filefoldmap
+        dirstate._map.filefoldmap.get('a')
+        del dirstate._map.filefoldmap
     timer(d)
     fm.end()
 
@@ -556,9 +567,9 @@ def perfdirfoldmap(ui, repo, **opts):
     dirstate = repo.dirstate
     'a' in dirstate
     def d():
-        dirstate._dirfoldmap.get('a')
-        del dirstate._dirfoldmap
-        del dirstate._dirs
+        dirstate._map.dirfoldmap.get('a')
+        del dirstate._map.dirfoldmap
+        del dirstate._map.dirs
     timer(d)
     fm.end()
 

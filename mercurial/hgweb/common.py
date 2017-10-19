@@ -12,7 +12,6 @@ import base64
 import errno
 import mimetypes
 import os
-import uuid
 
 from .. import (
     encoding,
@@ -69,7 +68,7 @@ def checkauthz(hgweb, req, op):
     # require ssl by default for pushing, auth info cannot be sniffed
     # and replayed
     scheme = req.env.get('wsgi.url_scheme')
-    if hgweb.configbool('web', 'push_ssl', True) and scheme != 'https':
+    if hgweb.configbool('web', 'push_ssl') and scheme != 'https':
         raise ErrorResponse(HTTP_FORBIDDEN, 'ssl required')
 
     deny = hgweb.configlist('web', 'deny_push')
@@ -167,7 +166,7 @@ def staticfile(directory, fname, req):
             break
     try:
         os.stat(path)
-        ct = mimetypes.guess_type(path)[0] or "text/plain"
+        ct = mimetypes.guess_type(pycompat.fsdecode(path))[0] or "text/plain"
         with open(path, 'rb') as fh:
             data = fh.read()
 
@@ -178,7 +177,8 @@ def staticfile(directory, fname, req):
         if err.errno == errno.ENOENT:
             raise ErrorResponse(HTTP_NOT_FOUND)
         else:
-            raise ErrorResponse(HTTP_SERVER_ERROR, err.strerror)
+            raise ErrorResponse(HTTP_SERVER_ERROR,
+                                encoding.strtolocal(err.strerror))
 
 def paritygen(stripecount, offset=0):
     """count parity of horizontal stripes for easier reading"""
@@ -207,7 +207,7 @@ def get_contact(config):
             encoding.environ.get("EMAIL") or "")
 
 def caching(web, req):
-    tag = 'W/"%s"' % web.mtime
+    tag = r'W/"%d"' % web.mtime
     if req.env.get('HTTP_IF_NONE_MATCH') == tag:
         raise ErrorResponse(HTTP_NOT_MODIFIED)
     req.headers.append(('ETag', tag))
@@ -220,6 +220,23 @@ def cspvalues(ui):
     First value is ``None`` if CSP isn't enabled. Second value is ``None``
     if CSP isn't enabled or if the CSP header doesn't need a nonce.
     """
+    # Without demandimport, "import uuid" could have an immediate side-effect
+    # running "ldconfig" on Linux trying to find libuuid.
+    # With Python <= 2.7.12, that "ldconfig" is run via a shell and the shell
+    # may pollute the terminal with:
+    #
+    #   shell-init: error retrieving current directory: getcwd: cannot access
+    #   parent directories: No such file or directory
+    #
+    # Python >= 2.7.13 has fixed it by running "ldconfig" directly without a
+    # shell (hg changeset a09ae70f3489).
+    #
+    # Moved "import uuid" from here so it's executed after we know we have
+    # a sane cwd (i.e. after dispatch.py cwd check).
+    #
+    # We can move it back once we no longer need Python <= 2.7.12 support.
+    import uuid
+
     # Don't allow untrusted CSP setting since it be disable protections
     # from a trusted/global source.
     csp = ui.config('web', 'csp', untrusted=False)

@@ -13,12 +13,14 @@ import hashlib
 import os
 import re
 import socket
+import subprocess
 import weakref
 
 from .i18n import _
 from .node import (
     hex,
     nullid,
+    short,
     wdirid,
     wdirrev,
 )
@@ -34,10 +36,12 @@ from . import (
     pycompat,
     revsetlang,
     similar,
+    url,
     util,
+    vfs,
 )
 
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     from . import scmwindows as scmplatform
 else:
     from . import scmposix as scmplatform
@@ -163,7 +167,8 @@ def callcatch(ui, func):
             ui.warn(_("(lock might be very busy)\n"))
     except error.LockUnavailable as inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
-               (inst.desc or inst.filename, inst.strerror))
+               (inst.desc or inst.filename,
+                encoding.strtolocal(inst.strerror)))
     except error.OutOfBandError as inst:
         if inst.args:
             msg = _("abort: remote error:\n")
@@ -226,16 +231,18 @@ def callcatch(ui, func):
             pass
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
-                ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
+                ui.warn(_("abort: %s: %s\n") % (
+                    encoding.strtolocal(inst.strerror), inst.filename))
             else:
-                ui.warn(_("abort: %s\n") % inst.strerror)
+                ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
         else:
             raise
     except OSError as inst:
         if getattr(inst, "filename", None) is not None:
-            ui.warn(_("abort: %s: '%s'\n") % (inst.strerror, inst.filename))
+            ui.warn(_("abort: %s: '%s'\n") % (
+                encoding.strtolocal(inst.strerror), inst.filename))
         else:
-            ui.warn(_("abort: %s\n") % inst.strerror)
+            ui.warn(_("abort: %s\n") % encoding.strtolocal(inst.strerror))
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
     except SystemExit as inst:
@@ -273,7 +280,7 @@ def checkportable(ui, f):
     if abort or warn:
         msg = util.checkwinfilename(f)
         if msg:
-            msg = "%s: %r" % (msg, f)
+            msg = "%s: %s" % (msg, util.shellquote(f))
             if abort:
                 raise error.Abort(msg)
             ui.warn(_("warning: %s\n") % msg)
@@ -284,7 +291,7 @@ def checkportabilityalert(ui):
     val = ui.config('ui', 'portablefilenames')
     lval = val.lower()
     bval = util.parsebool(val)
-    abort = pycompat.osname == 'nt' or lval == 'abort'
+    abort = pycompat.iswindows or lval == 'abort'
     warn = bval or lval == 'warn'
     if bval is None and not (warn or abort or lval == 'ignore'):
         raise error.ConfigError(
@@ -402,11 +409,25 @@ def intrev(ctx):
         return wdirrev
     return rev
 
-def revsingle(repo, revspec, default='.'):
+def formatchangeid(ctx):
+    """Format changectx as '{rev}:{node|formatnode}', which is the default
+    template provided by cmdutil.changeset_templater"""
+    repo = ctx.repo()
+    return formatrevnode(repo.ui, intrev(ctx), binnode(ctx))
+
+def formatrevnode(ui, rev, node):
+    """Format given revision and node depending on the current verbosity"""
+    if ui.debugflag:
+        hexfunc = hex
+    else:
+        hexfunc = short
+    return '%d:%s' % (rev, hexfunc(node))
+
+def revsingle(repo, revspec, default='.', localalias=None):
     if not revspec and revspec != 0:
         return repo[default]
 
-    l = revrange(repo, [revspec])
+    l = revrange(repo, [revspec], localalias=localalias)
     if not l:
         raise error.Abort(_('empty revision set'))
     return repo[l.last()]
@@ -445,7 +466,7 @@ def revpair(repo, revs):
 
     return repo.lookup(first), repo.lookup(second)
 
-def revrange(repo, specs):
+def revrange(repo, specs, localalias=None):
     """Execute 1 to many revsets and return the union.
 
     This is the preferred mechanism for executing revsets using user-specified
@@ -471,7 +492,7 @@ def revrange(repo, specs):
         if isinstance(spec, int):
             spec = revsetlang.formatspec('rev(%d)', spec)
         allspecs.append(spec)
-    return repo.anyrevs(allspecs, user=True)
+    return repo.anyrevs(allspecs, user=True, localalias=localalias)
 
 def meaningfulparents(repo, ctx):
     """Return list of meaningful (or all if debug) parentrevs for rev.
@@ -546,25 +567,55 @@ def matchfiles(repo, files, badfn=None):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files, badfn=badfn)
 
+def parsefollowlinespattern(repo, rev, pat, msg):
+    """Return a file name from `pat` pattern suitable for usage in followlines
+    logic.
+    """
+    if not matchmod.patkind(pat):
+        return pathutil.canonpath(repo.root, repo.getcwd(), pat)
+    else:
+        ctx = repo[rev]
+        m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=ctx)
+        files = [f for f in ctx if m(f)]
+        if len(files) != 1:
+            raise error.ParseError(msg)
+        return files[0]
+
 def origpath(ui, repo, filepath):
     '''customize where .orig files are created
 
     Fetch user defined path from config file: [ui] origbackuppath = <path>
-    Fall back to default (filepath) if not specified
+    Fall back to default (filepath with .orig suffix) if not specified
     '''
     origbackuppath = ui.config('ui', 'origbackuppath')
-    if origbackuppath is None:
+    if not origbackuppath:
         return filepath + ".orig"
 
-    filepathfromroot = os.path.relpath(filepath, start=repo.root)
-    fullorigpath = repo.wjoin(origbackuppath, filepathfromroot)
+    # Convert filepath from an absolute path into a path inside the repo.
+    filepathfromroot = util.normpath(os.path.relpath(filepath,
+                                                     start=repo.root))
 
-    origbackupdir = repo.vfs.dirname(fullorigpath)
-    if not repo.vfs.exists(origbackupdir):
-        ui.note(_('creating directory: %s\n') % origbackupdir)
-        util.makedirs(origbackupdir)
+    origvfs = vfs.vfs(repo.wjoin(origbackuppath))
+    origbackupdir = origvfs.dirname(filepathfromroot)
+    if not origvfs.isdir(origbackupdir) or origvfs.islink(origbackupdir):
+        ui.note(_('creating directory: %s\n') % origvfs.join(origbackupdir))
 
-    return fullorigpath + ".orig"
+        # Remove any files that conflict with the backup file's path
+        for f in reversed(list(util.finddirs(filepathfromroot))):
+            if origvfs.isfileorlink(f):
+                ui.note(_('removing conflicting file: %s\n')
+                        % origvfs.join(f))
+                origvfs.unlink(f)
+                break
+
+        origvfs.makedirs(origbackupdir)
+
+    if origvfs.isdir(filepathfromroot):
+        ui.note(_('removing conflicting directory: %s\n')
+                % origvfs.join(filepathfromroot))
+        origvfs.rmtree(filepathfromroot, forcibly=True)
+
+    return origvfs.join(filepathfromroot)
 
 class _containsnode(object):
     """proxy __contains__(node) to container.__contains__ which accepts revs"""
@@ -576,7 +627,7 @@ class _containsnode(object):
     def __contains__(self, node):
         return self._revcontains(self._torev(node))
 
-def cleanupnodes(repo, replacements, operation, moves=None):
+def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
@@ -588,6 +639,9 @@ def cleanupnodes(repo, replacements, operation, moves=None):
 
     replacements is {oldnode: [newnode]} or a iterable of nodes if they do not
     have replacements. operation is a string, like "rebase".
+
+    metadata is dictionary containing metadata to be stored in obsmarker if
+    obsolescence is enabled.
     """
     if not replacements and not moves:
         return
@@ -658,7 +712,8 @@ def cleanupnodes(repo, replacements, operation, moves=None):
                     for n, s in sorted(replacements.items(), key=sortfunc)
                     if s or not isobs(n)]
             if rels:
-                obsolete.createmarkers(repo, rels, operation=operation)
+                obsolete.createmarkers(repo, rels, operation=operation,
+                                       metadata=metadata)
         else:
             from . import repair # avoid import cycle
             tostrip = list(replacements)
@@ -761,8 +816,8 @@ def _interestingfiles(repo, matcher):
 
     ctx = repo[None]
     dirstate = repo.dirstate
-    walkresults = dirstate.walk(matcher, sorted(ctx.substate), True, False,
-                                full=False)
+    walkresults = dirstate.walk(matcher, subrepos=sorted(ctx.substate),
+                                unknown=True, ignored=False, full=False)
     for abs, st in walkresults.iteritems():
         dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
@@ -998,6 +1053,62 @@ class filecache(object):
         except KeyError:
             raise AttributeError(self.name)
 
+def extdatasource(repo, source):
+    """Gather a map of rev -> value dict from the specified source
+
+    A source spec is treated as a URL, with a special case shell: type
+    for parsing the output from a shell command.
+
+    The data is parsed as a series of newline-separated records where
+    each record is a revision specifier optionally followed by a space
+    and a freeform string value. If the revision is known locally, it
+    is converted to a rev, otherwise the record is skipped.
+
+    Note that both key and value are treated as UTF-8 and converted to
+    the local encoding. This allows uniformity between local and
+    remote data sources.
+    """
+
+    spec = repo.ui.config("extdata", source)
+    if not spec:
+        raise error.Abort(_("unknown extdata source '%s'") % source)
+
+    data = {}
+    src = proc = None
+    try:
+        if spec.startswith("shell:"):
+            # external commands should be run relative to the repo root
+            cmd = spec[6:]
+            proc = subprocess.Popen(cmd, shell=True, bufsize=-1,
+                                    close_fds=util.closefds,
+                                    stdout=subprocess.PIPE, cwd=repo.root)
+            src = proc.stdout
+        else:
+            # treat as a URL or file
+            src = url.open(repo.ui, spec)
+        for l in src:
+            if " " in l:
+                k, v = l.strip().split(" ", 1)
+            else:
+                k, v = l.strip(), ""
+
+            k = encoding.tolocal(k)
+            try:
+                data[repo[k].rev()] = encoding.tolocal(v)
+            except (error.LookupError, error.RepoLookupError):
+                pass # we ignore data for nodes that don't exist locally
+    finally:
+        if proc:
+            proc.communicate()
+            if proc.returncode != 0:
+                # not an error so 'cmd | grep' can be empty
+                repo.ui.debug("extdata command '%s' %s\n"
+                              % (cmd, util.explainexit(proc.returncode)[0]))
+        if src:
+            src.close()
+
+    return data
+
 def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
     if lock is None:
         raise error.LockInheritanceContractViolation(
@@ -1107,18 +1218,56 @@ _reportobsoletedsource = [
     'unbundle',
 ]
 
+_reportnewcssource = [
+    'pull',
+    'unbundle',
+]
+
 def registersummarycallback(repo, otr, txnname=''):
     """register a callback to issue a summary after the transaction is closed
     """
-    for source in _reportobsoletedsource:
-        if txnname.startswith(source):
-            reporef = weakref.ref(repo)
-            def reportsummary(tr):
-                """the actual callback reporting the summary"""
-                repo = reporef()
-                obsoleted = obsutil.getobsoleted(repo, tr)
-                if obsoleted:
-                    repo.ui.status(_('obsoleted %i changesets\n')
-                                   % len(obsoleted))
-            otr.addpostclose('00-txnreport', reportsummary)
-            break
+    def txmatch(sources):
+        return any(txnname.startswith(source) for source in sources)
+
+    categories = []
+
+    def reportsummary(func):
+        """decorator for report callbacks."""
+        reporef = weakref.ref(repo)
+        def wrapped(tr):
+            repo = reporef()
+            func(repo, tr)
+        newcat = '%2i-txnreport' % len(categories)
+        otr.addpostclose(newcat, wrapped)
+        categories.append(newcat)
+        return wrapped
+
+    if txmatch(_reportobsoletedsource):
+        @reportsummary
+        def reportobsoleted(repo, tr):
+            obsoleted = obsutil.getobsoleted(repo, tr)
+            if obsoleted:
+                repo.ui.status(_('obsoleted %i changesets\n')
+                               % len(obsoleted))
+
+    if txmatch(_reportnewcssource):
+        @reportsummary
+        def reportnewcs(repo, tr):
+            """Report the range of new revisions pulled/unbundled."""
+            newrevs = list(tr.changes.get('revs', set()))
+            if not newrevs:
+                return
+
+            # Compute the bounds of new revisions' range, excluding obsoletes.
+            unfi = repo.unfiltered()
+            revs = unfi.revs('%ld and not obsolete()', newrevs)
+            if not revs:
+                # Got only obsoletes.
+                return
+            minrev, maxrev = repo[revs.min()], repo[revs.max()]
+
+            if minrev == maxrev:
+                revrange = minrev
+            else:
+                revrange = '%s:%s' % (minrev, maxrev)
+            repo.ui.status(_('new changesets %s\n') % revrange)

@@ -58,16 +58,30 @@ def checklocalchanges(repo, force=False, excsuffix=''):
             raise error.Abort(_("local changed subrepos found" + excsuffix))
     return s
 
+def _findupdatetarget(repo, nodes):
+    unode, p2 = repo.changelog.parents(nodes[0])
+    currentbranch = repo[None].branch()
+
+    if (util.safehasattr(repo, 'mq') and p2 != nullid
+        and p2 in [x.node for x in repo.mq.applied]):
+        unode = p2
+    elif currentbranch != repo[unode].branch():
+        pwdir = 'parents(wdir())'
+        revset = 'max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))'
+        branchtarget = repo.revs(revset, nodes, pwdir, pwdir, nodes, pwdir,
+                                 currentbranch)
+        if branchtarget:
+            cl = repo.changelog
+            unode = cl.node(branchtarget.first())
+
+    return unode
+
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
     with repo.wlock(), repo.lock():
 
         if update:
             checklocalchanges(repo, force=force)
-            urev, p2 = repo.changelog.parents(revs[0])
-            if (util.safehasattr(repo, 'mq') and
-                p2 != nullid
-                and p2 in [x.node for x in repo.mq.applied]):
-                urev = p2
+            urev = _findupdatetarget(repo, revs)
             hg.clean(repo, urev)
             repo.dirstate.write(repo.currenttransaction())
 
@@ -196,10 +210,7 @@ def stripcmd(ui, repo, *revs, **opts):
 
         revs = sorted(rootnodes)
         if update and opts.get('keep'):
-            urev, p2 = repo.changelog.parents(revs[0])
-            if (util.safehasattr(repo, 'mq') and p2 != nullid
-                and p2 in [x.node for x in repo.mq.applied]):
-                urev = p2
+            urev = _findupdatetarget(repo, revs)
             uctx = repo[urev]
 
             # only reset the dirstate for files that would actually change

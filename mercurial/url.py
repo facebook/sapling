@@ -19,7 +19,9 @@ from . import (
     error,
     httpconnection as httpconnectionmod,
     keepalive,
+    pycompat,
     sslutil,
+    urllibcompat,
     util,
 )
 
@@ -27,6 +29,21 @@ httplib = util.httplib
 stringio = util.stringio
 urlerr = util.urlerr
 urlreq = util.urlreq
+
+def escape(s, quote=None):
+    '''Replace special characters "&", "<" and ">" to HTML-safe sequences.
+    If the optional flag quote is true, the quotation mark character (")
+    is also translated.
+
+    This is the same as cgi.escape in Python, but always operates on
+    bytes, whereas cgi.escape in Python 3 only works on unicodes.
+    '''
+    s = s.replace(b"&", b"&amp;")
+    s = s.replace(b"<", b"&lt;")
+    s = s.replace(b">", b"&gt;")
+    if quote:
+        s = s.replace(b'"', b"&quot;")
+    return s
 
 class passwordmgr(object):
     def __init__(self, ui, passwddb):
@@ -118,7 +135,7 @@ class proxyhandler(urlreq.proxyhandler):
         self.ui = ui
 
     def proxy_open(self, req, proxy, type_):
-        host = req.get_host().split(':')[0]
+        host = urllibcompat.gethost(req).split(':')[0]
         for e in self.no_list:
             if host == e:
                 return None
@@ -165,10 +182,10 @@ def _generic_start_transaction(handler, h, req):
             tunnel_host = 'https://' + tunnel_host
         new_tunnel = True
     else:
-        tunnel_host = req.get_selector()
+        tunnel_host = urllibcompat.getselector(req)
         new_tunnel = False
 
-    if new_tunnel or tunnel_host == req.get_full_url(): # has proxy
+    if new_tunnel or tunnel_host == urllibcompat.getfullurl(req): # has proxy
         u = util.url(tunnel_host)
         if new_tunnel or u.scheme == 'https': # only use CONNECT for HTTPS
             h.realhostport = ':'.join([u.host, (u.port or '443')])
@@ -319,9 +336,9 @@ if has_https:
             return keepalive.KeepAliveHandler._start_transaction(self, h, req)
 
         def https_open(self, req):
-            # req.get_full_url() does not contain credentials and we may
-            # need them to match the certificates.
-            url = req.get_full_url()
+            # urllibcompat.getfullurl() does not contain credentials
+            # and we may need them to match the certificates.
+            url = urllibcompat.getfullurl(req)
             user, password = self.pwmgr.find_stored_password(url)
             res = httpconnectionmod.readauthforuri(self.ui, url, user)
             if res:
@@ -405,7 +422,8 @@ class httpbasicauthhandler(urlreq.httpbasicauthhandler):
                         self, auth_header, host, req, headers)
 
     def retry_http_basic_auth(self, host, req, realm):
-        user, pw = self.passwd.find_user_password(realm, req.get_full_url())
+        user, pw = self.passwd.find_user_password(
+            realm, urllibcompat.getfullurl(req))
         if pw is not None:
             raw = "%s:%s" % (user, pw)
             auth = 'Basic %s' % base64.b64encode(raw).strip()
@@ -495,13 +513,13 @@ def opener(ui, authinfo=None):
     # agent string for anything, clients should be able to define whatever
     # user agent they deem appropriate.
     agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
-    opener.addheaders = [('User-agent', agent)]
+    opener.addheaders = [(r'User-agent', pycompat.sysstr(agent))]
 
     # This header should only be needed by wire protocol requests. But it has
     # been sent on all requests since forever. We keep sending it for backwards
     # compatibility reasons. Modern versions of the wire protocol use
     # X-HgProto-<N> for advertising client support.
-    opener.addheaders.append(('Accept', 'application/mercurial-0.1'))
+    opener.addheaders.append((r'Accept', r'application/mercurial-0.1'))
     return opener
 
 def open(ui, url_, data=None):

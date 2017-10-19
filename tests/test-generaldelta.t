@@ -85,6 +85,7 @@ delta coming from the server base delta server are not recompressed.
   adding manifests
   adding file changes
   added 4 changesets with 6 changes to 3 files (+2 heads)
+  new changesets 0ea3fcf9d01d:bba78d330d9c
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone repo --pull --config format.generaldelta=1 full
@@ -93,6 +94,7 @@ delta coming from the server base delta server are not recompressed.
   adding manifests
   adding file changes
   added 4 changesets with 6 changes to 3 files (+2 heads)
+  new changesets 0ea3fcf9d01d:bba78d330d9c
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R repo debugindex -m
@@ -154,10 +156,10 @@ Test that strip bundle use bundle2
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/aggressive/.hg/strip-backup/1c5d4dc9a8b8-6c68e60c-backup.hg (glob)
   $ hg debugbundle .hg/strip-backup/*
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9 draft
 
   $ cd ..
@@ -229,6 +231,7 @@ test maxdeltachainspan
   adding manifests
   adding file changes
   added 53 changesets with 53 changes to 53 files (+2 heads)
+  new changesets 61246295ee1e:99cae3713489
   updating to branch default
   14 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R relax-chain debugindex -m
@@ -292,6 +295,7 @@ test maxdeltachainspan
   adding manifests
   adding file changes
   added 53 changesets with 53 changes to 53 files (+2 heads)
+  new changesets 61246295ee1e:99cae3713489
   updating to branch default
   14 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R noconst-chain debugindex -m

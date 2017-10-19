@@ -17,21 +17,6 @@ from . import (
     wireproto,
 )
 
-class remotelock(object):
-    def __init__(self, repo):
-        self.repo = repo
-    def release(self):
-        self.repo.unlock()
-        self.repo = None
-    def __enter__(self):
-        return self
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.repo:
-            self.release()
-    def __del__(self):
-        if self.repo:
-            self.release()
-
 def _serverquote(s):
     if not s:
         return s
@@ -132,8 +117,8 @@ class doublepipe(object):
 class sshpeer(wireproto.wirepeer):
     def __init__(self, ui, path, create=False):
         self._url = path
-        self.ui = ui
-        self.pipeo = self.pipei = self.pipee = None
+        self._ui = ui
+        self._pipeo = self._pipei = self._pipee = None
 
         u = util.url(path, parsequery=False, parsefragment=False)
         if u.scheme != 'ssh' or not u.host or u.path is None:
@@ -141,22 +126,23 @@ class sshpeer(wireproto.wirepeer):
 
         util.checksafessh(path)
 
-        self.user = u.user
         if u.passwd is not None:
             self._abort(error.RepoError(_("password in URL not supported")))
-        self.host = u.host
-        self.port = u.port
-        self.path = u.path or "."
+
+        self._user = u.user
+        self._host = u.host
+        self._port = u.port
+        self._path = u.path or '.'
 
         sshcmd = self.ui.config("ui", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd")
 
-        args = util.sshargs(sshcmd, self.host, self.user, self.port)
+        args = util.sshargs(sshcmd, self._host, self._user, self._port)
 
         if create:
             cmd = '%s %s %s' % (sshcmd, args,
                 util.shellquote("%s init %s" %
-                    (_serverquote(remotecmd), _serverquote(self.path))))
+                    (_serverquote(remotecmd), _serverquote(self._path))))
             ui.debug('running %s\n' % cmd)
             res = ui.system(cmd, blockedtag='sshpeer')
             if res != 0:
@@ -164,31 +150,58 @@ class sshpeer(wireproto.wirepeer):
 
         self._validaterepo(sshcmd, args, remotecmd)
 
+    # Begin of _basepeer interface.
+
+    @util.propertycache
+    def ui(self):
+        return self._ui
+
     def url(self):
         return self._url
 
+    def local(self):
+        return None
+
+    def peer(self):
+        return self
+
+    def canpush(self):
+        return True
+
+    def close(self):
+        pass
+
+    # End of _basepeer interface.
+
+    # Begin of _basewirecommands interface.
+
+    def capabilities(self):
+        return self._caps
+
+    # End of _basewirecommands interface.
+
     def _validaterepo(self, sshcmd, args, remotecmd):
         # cleanup up previous run
-        self.cleanup()
+        self._cleanup()
 
         cmd = '%s %s %s' % (sshcmd, args,
             util.shellquote("%s -R %s serve --stdio" %
-                (_serverquote(remotecmd), _serverquote(self.path))))
+                (_serverquote(remotecmd), _serverquote(self._path))))
         self.ui.debug('running %s\n' % cmd)
         cmd = util.quotecommand(cmd)
 
-        # while self.subprocess isn't used, having it allows the subprocess to
+        # while self._subprocess isn't used, having it allows the subprocess to
         # to clean up correctly later
         #
         # no buffer allow the use of 'select'
         # feel free to remove buffering and select usage when we ultimately
         # move to threading.
         sub = util.popen4(cmd, bufsize=0)
-        self.pipeo, self.pipei, self.pipee, self.subprocess = sub
+        self._pipeo, self._pipei, self._pipee, self._subprocess = sub
 
-        self.pipei = util.bufferedinputpipe(self.pipei)
-        self.pipei = doublepipe(self.ui, self.pipei, self.pipee)
-        self.pipeo = doublepipe(self.ui, self.pipeo, self.pipee)
+        self._pipei = util.bufferedinputpipe(self._pipei)
+        self._pipei = doublepipe(self.ui, self._pipei, self._pipee)
+        self._pipeo = doublepipe(self.ui, self._pipeo, self._pipee)
 
         def badresponse():
             self._abort(error.RepoError(_('no suitable response from '
@@ -206,7 +219,7 @@ class sshpeer(wireproto.wirepeer):
         while lines[-1] and max_noise:
             try:
                 l = r.readline()
-                self.readerr()
+                self._readerr()
                 if lines[-1] == "1\n" and l == "\n":
                     break
                 if l:
@@ -224,30 +237,27 @@ class sshpeer(wireproto.wirepeer):
                 self._caps.update(l[:-1].split(":")[1].split())
                 break
 
-    def _capabilities(self):
-        return self._caps
-
-    def readerr(self):
-        _forwardoutput(self.ui, self.pipee)
+    def _readerr(self):
+        _forwardoutput(self.ui, self._pipee)
 
     def _abort(self, exception):
-        self.cleanup()
+        self._cleanup()
         raise exception
 
-    def cleanup(self):
-        if self.pipeo is None:
+    def _cleanup(self):
+        if self._pipeo is None:
             return
-        self.pipeo.close()
-        self.pipei.close()
+        self._pipeo.close()
+        self._pipei.close()
         try:
             # read the error descriptor until EOF
-            for l in self.pipee:
+            for l in self._pipee:
                 self.ui.status(_("remote: "), l)
         except (IOError, ValueError):
             pass
-        self.pipee.close()
+        self._pipee.close()
 
-    __del__ = cleanup
+    __del__ = _cleanup
 
     def _submitbatch(self, req):
         rsp = self._callstream("batch", cmds=wireproto.encodebatchcmds(req))
@@ -271,7 +281,7 @@ class sshpeer(wireproto.wirepeer):
     def _callstream(self, cmd, **args):
         args = pycompat.byteskwargs(args)
         self.ui.debug("sending %s command\n" % cmd)
-        self.pipeo.write("%s\n" % cmd)
+        self._pipeo.write("%s\n" % cmd)
         _func, names = wireproto.commands[cmd]
         keys = names.split()
         wireargs = {}
@@ -283,16 +293,16 @@ class sshpeer(wireproto.wirepeer):
                 wireargs[k] = args[k]
                 del args[k]
         for k, v in sorted(wireargs.iteritems()):
-            self.pipeo.write("%s %d\n" % (k, len(v)))
+            self._pipeo.write("%s %d\n" % (k, len(v)))
             if isinstance(v, dict):
                 for dk, dv in v.iteritems():
-                    self.pipeo.write("%s %d\n" % (dk, len(dv)))
-                    self.pipeo.write(dv)
+                    self._pipeo.write("%s %d\n" % (dk, len(dv)))
+                    self._pipeo.write(dv)
             else:
-                self.pipeo.write(v)
-        self.pipeo.flush()
+                self._pipeo.write(v)
+        self._pipeo.flush()
 
-        return self.pipei
+        return self._pipei
 
     def _callcompressable(self, cmd, **args):
         return self._callstream(cmd, **args)
@@ -321,58 +331,29 @@ class sshpeer(wireproto.wirepeer):
         for d in iter(lambda: fp.read(4096), ''):
             self._send(d)
         self._send("", flush=True)
-        return self.pipei
+        return self._pipei
 
     def _getamount(self):
-        l = self.pipei.readline()
+        l = self._pipei.readline()
         if l == '\n':
-            self.readerr()
+            self._readerr()
             msg = _('check previous remote output')
             self._abort(error.OutOfBandError(hint=msg))
-        self.readerr()
+        self._readerr()
         try:
             return int(l)
         except ValueError:
             self._abort(error.ResponseError(_("unexpected response:"), l))
 
     def _recv(self):
-        return self.pipei.read(self._getamount())
+        return self._pipei.read(self._getamount())
 
     def _send(self, data, flush=False):
-        self.pipeo.write("%d\n" % len(data))
+        self._pipeo.write("%d\n" % len(data))
         if data:
-            self.pipeo.write(data)
+            self._pipeo.write(data)
         if flush:
-            self.pipeo.flush()
-        self.readerr()
-
-    def lock(self):
-        self._call("lock")
-        return remotelock(self)
-
-    def unlock(self):
-        self._call("unlock")
-
-    def addchangegroup(self, cg, source, url, lock=None):
-        '''Send a changegroup to the remote server.  Return an integer
-        similar to unbundle(). DEPRECATED, since it requires locking the
-        remote.'''
-        d = self._call("addchangegroup")
-        if d:
-            self._abort(error.RepoError(_("push refused: %s") % d))
-        for d in iter(lambda: cg.read(4096), ''):
-            self.pipeo.write(d)
-            self.readerr()
-
-        self.pipeo.flush()
-
-        self.readerr()
-        r = self._recv()
-        if not r:
-            return 1
-        try:
-            return int(r)
-        except ValueError:
-            self._abort(error.ResponseError(_("unexpected response:"), r))
+            self._pipeo.flush()
+        self._readerr()
 
 instance = sshpeer

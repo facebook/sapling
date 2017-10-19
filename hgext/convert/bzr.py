@@ -30,11 +30,12 @@ try:
     import bzrlib.bzrdir
     import bzrlib.errors
     import bzrlib.revision
-    import bzrlib.revisionspec.RevisionSpec
+    import bzrlib.revisionspec
     bzrdir = bzrlib.bzrdir
     errors = bzrlib.errors
     revision = bzrlib.revision
     revisionspec = bzrlib.revisionspec
+    revisionspec.RevisionSpec
 except ImportError:
     pass
 

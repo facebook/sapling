@@ -88,39 +88,30 @@ log template:
 
  (behaves as a {name: path-string} dict by default)
 
-  $ hg log -rnull -T '{peerpaths}\n'
+  $ hg log -rnull -T '{peerurls}\n'
   dupe=$TESTTMP/b#tip expand=$TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{join(peerpaths, "\n")}\n'
+  $ hg log -rnull -T '{join(peerurls, "\n")}\n'
   dupe=$TESTTMP/b#tip (glob)
   expand=$TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{peerpaths % "{name}: {path}\n"}'
-  dupe: $TESTTMP/a/$SOMETHING/bar (glob)
+  $ hg log -rnull -T '{peerurls % "{name}: {url}\n"}'
+  dupe: $TESTTMP/b#tip (glob)
   expand: $TESTTMP/a/$SOMETHING/bar (glob)
-  $ hg log -rnull -T '{get(peerpaths, "dupe")}\n'
-  $TESTTMP/a/$SOMETHING/bar (glob)
+  $ hg log -rnull -T '{get(peerurls, "dupe")}\n'
+  $TESTTMP/b#tip (glob)
 
- (but a path is actually a dict of url and sub-options)
+ (sub options can be populated by map/dot operation)
 
-  $ hg log -rnull -T '{join(get(peerpaths, "dupe"), "\n")}\n'
-  url=$TESTTMP/b#tip (glob)
-  pushurl=https://example.com/dupe
-  $ hg log -rnull -T '{get(peerpaths, "dupe") % "{key}: {value}\n"}'
+  $ hg log -rnull \
+  > -T '{get(peerurls, "dupe") % "url: {url}\npushurl: {pushurl}\n"}'
   url: $TESTTMP/b#tip (glob)
   pushurl: https://example.com/dupe
-  $ hg log -rnull -T '{get(get(peerpaths, "dupe"), "pushurl")}\n'
+  $ hg log -rnull -T '{peerurls.dupe.pushurl}\n'
   https://example.com/dupe
 
- (so there's weird behavior)
+ (in JSON, it's a dict of urls)
 
-  $ hg log -rnull -T '{get(peerpaths, "dupe")|count}\n'
-  2
-  $ hg log -rnull -T '{get(peerpaths, "dupe")|stringify|count}\n'
-  [0-9]{2,} (re)
-
- (in JSON, it's a dict of dicts)
-
-  $ hg log -rnull -T '{peerpaths|json}\n' | sed 's|\\\\|/|g'
-  {"dupe": {"pushurl": "https://example.com/dupe", "url": "$TESTTMP/b#tip"}, "expand": {"url": "$TESTTMP/a/$SOMETHING/bar"}}
+  $ hg log -rnull -T '{peerurls|json}\n' | sed 's|\\\\|/|g'
+  {"dupe": "$TESTTMP/b#tip", "expand": "$TESTTMP/a/$SOMETHING/bar"}
 
 password should be masked in plain output, but not in machine-readable/template
 output:
@@ -135,7 +126,7 @@ output:
     "url": "http://foo:insecure@example.com/"
    }
   ]
-  $ hg log -rnull -T '{get(peerpaths, "insecure")}\n'
+  $ hg log -rnull -T '{get(peerurls, "insecure")}\n'
   http://foo:insecure@example.com/
 
 zeroconf wraps ui.configitems(), which shouldn't crash at least:

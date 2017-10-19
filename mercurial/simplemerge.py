@@ -18,15 +18,12 @@
 
 from __future__ import absolute_import
 
-import os
-
 from .i18n import _
 from . import (
     error,
     mdiff,
     pycompat,
     util,
-    vfs as vfsmod,
 )
 
 class CantReprocessAndShowBase(Exception):
@@ -397,51 +394,53 @@ class Merge3Text(object):
 
         return unc
 
-def simplemerge(ui, local, base, other, **opts):
-    def readfile(filename):
-        f = open(filename, "rb")
-        text = f.read()
-        f.close()
-        if util.binary(text):
-            msg = _("%s looks like a binary file.") % filename
-            if not opts.get('quiet'):
-                ui.warn(_('warning: %s\n') % msg)
-            if not opts.get('text'):
-                raise error.Abort(msg)
-        return text
+def _verifytext(text, path, ui, opts):
+    """verifies that text is non-binary (unless opts[text] is passed,
+    then we just warn)"""
+    if util.binary(text):
+        msg = _("%s looks like a binary file.") % path
+        if not opts.get('quiet'):
+            ui.warn(_('warning: %s\n') % msg)
+        if not opts.get('text'):
+            raise error.Abort(msg)
+    return text
+
+def _picklabels(defaults, overrides):
+    if len(overrides) > 3:
+        raise error.Abort(_("can only specify three labels."))
+    result = defaults[:]
+    for i, override in enumerate(overrides):
+        result[i] = override
+    return result
+
+def simplemerge(ui, localctx, basectx, otherctx, **opts):
+    """Performs the simplemerge algorithm.
+
+    The merged result is written into `localctx`.
+    """
+    def readctx(ctx):
+        # Merges were always run in the working copy before, which means
+        # they used decoded data, if the user defined any repository
+        # filters.
+        #
+        # Maintain that behavior today for BC, though perhaps in the future
+        # it'd be worth considering whether merging encoded data (what the
+        # repository usually sees) might be more useful.
+        return _verifytext(ctx.decodeddata(), ctx.path(), ui, opts)
 
     mode = opts.get('mode','merge')
-    if mode == 'union':
-        name_a = None
-        name_b = None
-        name_base = None
-    else:
-        name_a = local
-        name_b = other
-        name_base = None
-        labels = opts.get('label', [])
-        if len(labels) > 0:
-            name_a = labels[0]
-        if len(labels) > 1:
-            name_b = labels[1]
-        if len(labels) > 2:
-            name_base = labels[2]
-        if len(labels) > 3:
-            raise error.Abort(_("can only specify three labels."))
+    name_a, name_b, name_base = None, None, None
+    if mode != 'union':
+        name_a, name_b, name_base = _picklabels([localctx.path(),
+                                                 otherctx.path(), None],
+                                                opts.get('label', []))
 
     try:
-        localtext = readfile(local)
-        basetext = readfile(base)
-        othertext = readfile(other)
+        localtext = readctx(localctx)
+        basetext = readctx(basectx)
+        othertext = readctx(otherctx)
     except error.Abort:
         return 1
-
-    local = os.path.realpath(local)
-    if not opts.get('print'):
-        opener = vfsmod.vfs(os.path.dirname(local))
-        out = opener(os.path.basename(local), "w", atomictemp=True)
-    else:
-        out = ui.fout
 
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {
@@ -456,12 +455,17 @@ def simplemerge(ui, local, base, other, **opts):
         extrakwargs['base_marker'] = '|||||||'
         extrakwargs['name_base'] = name_base
         extrakwargs['minimize'] = False
+
+    mergedtext = ""
     for line in m3.merge_lines(name_a=name_a, name_b=name_b,
                                **pycompat.strkwargs(extrakwargs)):
-        out.write(line)
+        if opts.get('print'):
+            ui.fout.write(line)
+        else:
+            mergedtext += line
 
     if not opts.get('print'):
-        out.close()
+        localctx.write(mergedtext, localctx.flags())
 
     if m3.conflicts and not mode == 'union':
         return 1

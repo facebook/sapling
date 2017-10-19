@@ -10,8 +10,8 @@ from __future__ import absolute_import
 import email
 import email.charset
 import email.header
+import email.message
 import os
-import quopri
 import smtplib
 import socket
 import time
@@ -216,17 +216,17 @@ def mimetextqp(body, subtype, charset):
     '''Return MIME message.
     Quoted-printable transfer encoding will be used if necessary.
     '''
-    enc = None
+    cs = email.charset.Charset(charset)
+    msg = email.message.Message()
+    msg.set_type('text/' + subtype)
+
     for line in body.splitlines():
         if len(line) > 950:
-            body = quopri.encodestring(body)
-            enc = "quoted-printable"
+            cs.body_encoding = email.charset.QP
             break
 
-    msg = email.MIMEText.MIMEText(body, subtype, charset)
-    if enc:
-        del msg['Content-Transfer-Encoding']
-        msg['Content-Transfer-Encoding'] = enc
+    msg.set_payload(body, cs)
+
     return msg
 
 def _charsets(ui):

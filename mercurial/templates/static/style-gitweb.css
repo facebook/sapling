@@ -97,6 +97,12 @@ div.annotate-info {
 }
 div.annotate-info a { color: #0000FF; text-decoration: underline; }
 td.annotate:hover div.annotate-info { display: inline; }
+
+#diffopts-form {
+  padding-left: 8px;
+  display: none;
+}
+
 .linenr { color:#999999; text-decoration:none }
 div.rss_logo { float: right; white-space: nowrap; }
 div.rss_logo a {

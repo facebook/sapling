@@ -1,6 +1,8 @@
   $ cat > echo.py <<EOF
   > #!$PYTHON
-  > import os, sys
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > try:
   >     import msvcrt
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
@@ -9,7 +11,7 @@
   >     pass
   > 
   > for k in ('HG_FILE', 'HG_MY_ISLINK', 'HG_OTHER_ISLINK', 'HG_BASE_ISLINK'):
-  >     print k, os.environ[k]
+  >     print(k, os.environ[k])
   > EOF
 
 Create 2 heads containing the same file, once as

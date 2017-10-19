@@ -173,6 +173,7 @@ user a pulls, merges, commits
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 089416c11d73
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge 2>/dev/null
    subrepository s diverged (local revision: 7969594, remote revision: aa84837)
@@ -885,9 +886,9 @@ revert moves orig files to the right place
   $ hg revert --all --verbose --config 'ui.origbackuppath=.hg/origbackups'
   reverting subrepo ../gitroot
   creating directory: $TESTTMP/tc/.hg/origbackups (glob)
-  saving current version of foobar as $TESTTMP/tc/.hg/origbackups/foobar.orig (glob)
+  saving current version of foobar as $TESTTMP/tc/.hg/origbackups/foobar (glob)
   $ ls .hg/origbackups
-  foobar.orig
+  foobar
   $ rm -rf .hg/origbackups
 
 show file at specific revision

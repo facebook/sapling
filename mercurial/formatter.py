@@ -45,21 +45,25 @@ Doctest helper:
 ...     import sys
 ...     from . import ui as uimod
 ...     ui = uimod.ui()
-...     ui.fout = sys.stdout  # redirect to doctest
 ...     ui.verbose = verbose
-...     return fn(ui, ui.formatter(fn.__name__, opts))
+...     ui.pushbuffer()
+...     try:
+...         return fn(ui, ui.formatter(pycompat.sysbytes(fn.__name__),
+...                   pycompat.byteskwargs(opts)))
+...     finally:
+...         print(pycompat.sysstr(ui.popbuffer()), end='')
 
 Basic example:
 
 >>> def files(ui, fm):
-...     files = [('foo', 123, (0, 0)), ('bar', 456, (1, 0))]
+...     files = [(b'foo', 123, (0, 0)), (b'bar', 456, (1, 0))]
 ...     for f in files:
 ...         fm.startitem()
-...         fm.write('path', '%s', f[0])
-...         fm.condwrite(ui.verbose, 'date', '  %s',
-...                      fm.formatdate(f[2], '%Y-%m-%d %H:%M:%S'))
+...         fm.write(b'path', b'%s', f[0])
+...         fm.condwrite(ui.verbose, b'date', b'  %s',
+...                      fm.formatdate(f[2], b'%Y-%m-%d %H:%M:%S'))
 ...         fm.data(size=f[1])
-...         fm.plain('\\n')
+...         fm.plain(b'\\n')
 ...     fm.end()
 >>> show(files)
 foo
@@ -67,7 +71,7 @@ bar
 >>> show(files, verbose=True)
 foo  1970-01-01 00:00:00
 bar  1970-01-01 00:00:01
->>> show(files, template='json')
+>>> show(files, template=b'json')
 [
  {
   "date": [0, 0],
@@ -80,7 +84,7 @@ bar  1970-01-01 00:00:01
   "size": 456
  }
 ]
->>> show(files, template='path: {path}\\ndate: {date|rfc3339date}\\n')
+>>> show(files, template=b'path: {path}\\ndate: {date|rfc3339date}\\n')
 path: foo
 date: 1970-01-01T00:00:00+00:00
 path: bar
@@ -90,18 +94,18 @@ Nested example:
 
 >>> def subrepos(ui, fm):
 ...     fm.startitem()
-...     fm.write('repo', '[%s]\\n', 'baz')
-...     files(ui, fm.nested('files'))
+...     fm.write(b'repo', b'[%s]\\n', b'baz')
+...     files(ui, fm.nested(b'files'))
 ...     fm.end()
 >>> show(subrepos)
 [baz]
 foo
 bar
->>> show(subrepos, template='{repo}: {join(files % "{path}", ", ")}\\n')
+>>> show(subrepos, template=b'{repo}: {join(files % "{path}", ", ")}\\n')
 baz: foo, bar
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import collections
 import contextlib
@@ -163,7 +167,6 @@ class baseformatter(object):
             self.end()
     def _showitem(self):
         '''show a formatted item once all data is collected'''
-        pass
     def startitem(self):
         '''begin an item in the format list'''
         if self._item is not None:
@@ -202,7 +205,6 @@ class baseformatter(object):
         self._item.update(zip(fieldkeys, fielddata))
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
-        pass
     def isplain(self):
         '''check for plain formatter usage'''
         return False
@@ -346,15 +348,14 @@ class _templateconverter(object):
         data = util.sortdict(_iteritems(data))
         def f():
             yield _plainconverter.formatdict(data, key, value, fmt, sep)
-        return templatekw.hybriddict(data, key=key, value=value, fmt=fmt,
-                                     gen=f())
+        return templatekw.hybriddict(data, key=key, value=value, fmt=fmt, gen=f)
     @staticmethod
     def formatlist(data, name, fmt, sep):
         '''build object that can be evaluated as either plain string or list'''
         data = list(data)
         def f():
             yield _plainconverter.formatlist(data, name, fmt, sep)
-        return templatekw.hybridlist(data, name=name, fmt=fmt, gen=f())
+        return templatekw.hybridlist(data, name=name, fmt=fmt, gen=f)
 
 class templateformatter(baseformatter):
     def __init__(self, ui, out, topic, opts):
@@ -417,8 +418,8 @@ def lookuptemplate(ui, topic, tmpl):
 
     A map file defines a stand-alone template environment. If a map file
     selected, all templates defined in the file will be loaded, and the
-    template matching the given topic will be rendered. No aliases will be
-    loaded from user config.
+    template matching the given topic will be rendered. Aliases won't be
+    loaded from user config, but from the map file.
 
     If no map file selected, all templates in [templates] section will be
     available as well as aliases in [templatealias].

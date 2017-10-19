@@ -34,6 +34,9 @@ if sys.version_info[0] >= 3:
             # selectors2 is already dual-version clean, don't try and mangle it
             if fullname.startswith('mercurial.selectors2'):
                 return None
+            # third-party packages are expected to be dual-version clean
+            if fullname.startswith('mercurial.thirdparty'):
+                return None
             # zstd is already dual-version clean, don't try and mangle it
             if fullname.startswith('mercurial.zstd'):
                 return None

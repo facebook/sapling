@@ -52,14 +52,14 @@ def split(p):
     '''Same as posixpath.split, but faster
 
     >>> import posixpath
-    >>> for f in ['/absolute/path/to/file',
-    ...           'relative/path/to/file',
-    ...           'file_alone',
-    ...           'path/to/directory/',
-    ...           '/multiple/path//separators',
-    ...           '/file_at_root',
-    ...           '///multiple_leading_separators_at_root',
-    ...           '']:
+    >>> for f in [b'/absolute/path/to/file',
+    ...           b'relative/path/to/file',
+    ...           b'file_alone',
+    ...           b'path/to/directory/',
+    ...           b'/multiple/path//separators',
+    ...           b'/file_at_root',
+    ...           b'///multiple_leading_separators_at_root',
+    ...           b'']:
     ...     assert split(f) == posixpath.split(f), f
     '''
     ht = p.rsplit('/', 1)
@@ -300,7 +300,7 @@ def checklink(path):
 def checkosfilename(path):
     '''Check that the base-relative path is a valid filename on this platform.
     Returns None if the path is ok, or a UI string describing the problem.'''
-    pass # on posix platforms, every path is ok
+    return None # on posix platforms, every path is ok
 
 def setbinary(fd):
     pass
@@ -332,7 +332,7 @@ normcasespec = encoding.normcasespecs.lower
 # fallback normcase function for non-ASCII strings
 normcasefallback = normcase
 
-if pycompat.sysplatform == 'darwin':
+if pycompat.isdarwin:
 
     def normcase(path):
         '''
@@ -342,13 +342,13 @@ if pycompat.sysplatform == 'darwin':
         - lowercase
         - omit ignored characters [200c-200f, 202a-202e, 206a-206f,feff]
 
-        >>> normcase('UPPER')
+        >>> normcase(b'UPPER')
         'upper'
-        >>> normcase('Caf\xc3\xa9')
+        >>> normcase(b'Caf\\xc3\\xa9')
         'cafe\\xcc\\x81'
-        >>> normcase('\xc3\x89')
+        >>> normcase(b'\\xc3\\x89')
         'e\\xcc\\x81'
-        >>> normcase('\xb8\xca\xc3\xca\xbe\xc8.JPG') # issue3918
+        >>> normcase(b'\\xb8\\xca\\xc3\\xca\\xbe\\xc8.JPG') # issue3918
         '%b8%ca%c3\\xca\\xbe%c8.jpg'
         '''
 
@@ -372,14 +372,14 @@ if pycompat.sysplatform == 'darwin':
                     c = encoding.getutf8char(path, pos)
                     pos += len(c)
                 except ValueError:
-                    c = '%%%02X' % ord(path[pos])
+                    c = '%%%02X' % ord(path[pos:pos + 1])
                     pos += 1
                 s += c
 
             u = s.decode('utf-8')
 
         # Decompose then lowercase (HFS+ technote specifies lower)
-        enc = unicodedata.normalize('NFD', u).lower().encode('utf-8')
+        enc = unicodedata.normalize(r'NFD', u).lower().encode('utf-8')
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 

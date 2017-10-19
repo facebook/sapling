@@ -20,13 +20,13 @@ when adding support for new constructs.
 
 from __future__ import absolute_import
 
-import cgi
 import re
 
 from .i18n import _
 from . import (
     encoding,
     pycompat,
+    url,
     util,
 )
 
@@ -46,13 +46,13 @@ def replace(text, substs):
     '''
     Apply a list of (find, replace) pairs to a text.
 
-    >>> replace("foo bar", [('f', 'F'), ('b', 'B')])
+    >>> replace(b"foo bar", [(b'f', b'F'), (b'b', b'B')])
     'Foo Bar'
-    >>> encoding.encoding = 'latin1'
-    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    >>> encoding.encoding = b'latin1'
+    >>> replace(b'\\x81\\\\', [(b'\\\\', b'/')])
     '\\x81/'
-    >>> encoding.encoding = 'shiftjis'
-    >>> replace('\\x81\\\\', [('\\\\', '/')])
+    >>> encoding.encoding = b'shiftjis'
+    >>> replace(b'\\x81\\\\', [(b'\\\\', b'/')])
     '\\x81\\\\'
     '''
 
@@ -552,7 +552,7 @@ def formathtml(blocks):
     listnest = []
 
     def escape(s):
-        return cgi.escape(s, True)
+        return url.escape(s, True)
 
     def openlist(start, level):
         if not listnest or listnest[-1][0] != start:

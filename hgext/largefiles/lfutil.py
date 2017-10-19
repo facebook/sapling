@@ -12,7 +12,6 @@ from __future__ import absolute_import
 import copy
 import hashlib
 import os
-import platform
 import stat
 
 from mercurial.i18n import _
@@ -72,19 +71,19 @@ def usercachepath(ui, hash):
 
 def _usercachedir(ui):
     '''Return the location of the "global" largefiles cache.'''
-    path = ui.configpath(longname, 'usercache', None)
+    path = ui.configpath(longname, 'usercache')
     if path:
         return path
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         appdata = encoding.environ.get('LOCALAPPDATA',\
                         encoding.environ.get('APPDATA'))
         if appdata:
             return os.path.join(appdata, longname)
-    elif platform.system() == 'Darwin':
+    elif pycompat.isdarwin:
         home = encoding.environ.get('HOME')
         if home:
             return os.path.join(home, 'Library', 'Caches', longname)
-    elif pycompat.osname == 'posix':
+    elif pycompat.isposix:
         path = encoding.environ.get('XDG_CACHE_HOME')
         if path:
             return os.path.join(path, longname)
@@ -155,7 +154,8 @@ def openlfdirstate(ui, repo, create=True):
     # largefiles operation in a new clone.
     if create and not vfs.exists(vfs.join(lfstoredir, 'dirstate')):
         matcher = getstandinmatcher(repo)
-        standins = repo.dirstate.walk(matcher, [], False, False)
+        standins = repo.dirstate.walk(matcher, subrepos=[], unknown=False,
+                                      ignored=False)
 
         if len(standins) > 0:
             vfs.makedirs(lfstoredir)
@@ -168,7 +168,8 @@ def openlfdirstate(ui, repo, create=True):
 def lfdirstatestatus(lfdirstate, repo):
     pctx = repo['.']
     match = matchmod.always(repo.root, repo.getcwd())
-    unsure, s = lfdirstate.status(match, [], False, False, False)
+    unsure, s = lfdirstate.status(match, subrepos=[], ignored=False,
+                                  clean=False, unknown=False)
     modified, clean = s.modified, s.clean
     for lfile in unsure:
         try:
@@ -428,7 +429,8 @@ def getstandinsstate(repo):
     standins = []
     matcher = getstandinmatcher(repo)
     wctx = repo[None]
-    for standin in repo.dirstate.walk(matcher, [], False, False):
+    for standin in repo.dirstate.walk(matcher, subrepos=[], unknown=False,
+                                      ignored=False):
         lfile = splitstandin(standin)
         try:
             hash = readasstandin(wctx[standin])
@@ -549,8 +551,8 @@ def updatestandinsbymatch(repo, match):
         # large.
         lfdirstate = openlfdirstate(ui, repo)
         dirtymatch = matchmod.always(repo.root, repo.getcwd())
-        unsure, s = lfdirstate.status(dirtymatch, [], False, False,
-                                      False)
+        unsure, s = lfdirstate.status(dirtymatch, subrepos=[], ignored=False,
+                                      clean=False, unknown=False)
         modifiedfiles = unsure + s.modified + s.added + s.removed
         lfiles = listlfiles(repo)
         # this only loops through largefiles that exist (not
@@ -573,7 +575,8 @@ def updatestandinsbymatch(repo, match):
     # Case 2: user calls commit with specified patterns: refresh
     # any matching big files.
     smatcher = composestandinmatcher(repo, match)
-    standins = repo.dirstate.walk(smatcher, [], False, False)
+    standins = repo.dirstate.walk(smatcher, subrepos=[], unknown=False,
+                                  ignored=False)
 
     # No matching big files: get out of the way and pass control to
     # the usual commit() method.

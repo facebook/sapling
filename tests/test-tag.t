@@ -411,6 +411,60 @@ tagging on null rev
   abort: cannot tag null revision
   [255]
 
+issue5539: pruned tags do not appear in .hgtags
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > evolution.exchange = True
+  > evolution.createmarkers=True
+  > EOF
+  $ hg up e4d483960b9b --quiet
+  $ echo aaa >>a
+  $ hg ci -maaa
+  $ hg log -r . -T "{node}\n"
+  743b3afd5aa69f130c246806e48ad2e699f490d2
+  $ hg tag issue5539
+  hook: tag changes detected
+  hook: +A 743b3afd5aa69f130c246806e48ad2e699f490d2 issue5539
+  $ cat .hgtags
+  acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
+  a0eea09de1eeec777b46f2085260a373b2fbc293 newline
+  743b3afd5aa69f130c246806e48ad2e699f490d2 issue5539
+  $ hg log -r . -T "{node}\n"
+  abeb261f0508ecebcd345ce21e7a25112df417aa
+(mimic 'hg prune' command by obsoleting current changeset and then moving to its parent)
+  $ hg debugobsolete abeb261f0508ecebcd345ce21e7a25112df417aa --record-parents
+  obsoleted 1 changesets
+  $ hg up ".^" --quiet
+  $ cat .hgtags
+  acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
+  a0eea09de1eeec777b46f2085260a373b2fbc293 newline
+  $ echo bbb >>a
+  $ hg ci -mbbb
+  $ hg log -r . -T "{node}\n"
+  089dd20da58cae34165c37b064539c6ac0c6a0dd
+  $ hg tag issue5539
+  hook: tag changes detected
+  hook: -M 743b3afd5aa69f130c246806e48ad2e699f490d2 issue5539
+  hook: +M 089dd20da58cae34165c37b064539c6ac0c6a0dd issue5539
+  $ hg id
+  0accf560a709 tip
+  $ cat .hgtags
+  acb14030fe0a21b60322c440ad2d20cf7685a376 foobar
+  a0eea09de1eeec777b46f2085260a373b2fbc293 newline
+  089dd20da58cae34165c37b064539c6ac0c6a0dd issue5539
+  $ hg tags
+  tip                               19:0accf560a709
+  issue5539                         18:089dd20da58c
+  new-topo-head                     13:0f26aaea6f74
+  baz                               13:0f26aaea6f74
+  custom-tag                        12:75a534207be6
+  tag-and-branch-same-name          11:fc93d2ea1cd7
+  newline                            9:a0eea09de1ee
+  localnewline                       8:c2899151f4e7
+  localblah                          0:acb14030fe0a
+  foobar                             0:acb14030fe0a
+
   $ cd ..
 
 tagging on an uncommitted merge (issue2542)
@@ -571,6 +625,7 @@ check that we can merge tags that differ in rank
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 3 files (+1 heads)
+  new changesets 9aa4e1292a27:b325cc5b642c
   hook: tag changes detected
   hook: +A 929bca7b18d067cbf3844c3896319a940059d748 t2
   hook: +A 9aa4e1292a27a248f8d07339bed9931d54907be7 t4

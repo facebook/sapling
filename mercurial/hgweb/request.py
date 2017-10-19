@@ -19,6 +19,7 @@ from .common import (
 )
 
 from .. import (
+    pycompat,
     util,
 )
 
@@ -39,7 +40,7 @@ shortcuts = {
 
 def normalize(form):
     # first expand the shortcuts
-    for k in shortcuts.iterkeys():
+    for k in shortcuts:
         if k in form:
             for name, value in shortcuts[k]:
                 if value is None:
@@ -59,15 +60,15 @@ class wsgirequest(object):
     for obtaining request parameters, writing HTTP output, etc.
     """
     def __init__(self, wsgienv, start_response):
-        version = wsgienv['wsgi.version']
+        version = wsgienv[r'wsgi.version']
         if (version < (1, 0)) or (version >= (2, 0)):
             raise RuntimeError("Unknown and unsupported WSGI version %d.%d"
                                % version)
-        self.inp = wsgienv['wsgi.input']
-        self.err = wsgienv['wsgi.errors']
-        self.threaded = wsgienv['wsgi.multithread']
-        self.multiprocess = wsgienv['wsgi.multiprocess']
-        self.run_once = wsgienv['wsgi.run_once']
+        self.inp = wsgienv[r'wsgi.input']
+        self.err = wsgienv[r'wsgi.errors']
+        self.threaded = wsgienv[r'wsgi.multithread']
+        self.multiprocess = wsgienv[r'wsgi.multiprocess']
+        self.run_once = wsgienv[r'wsgi.run_once']
         self.env = wsgienv
         self.form = normalize(cgi.parse(self.inp,
                                         self.env,
@@ -89,15 +90,17 @@ class wsgirequest(object):
             pass
 
     def respond(self, status, type, filename=None, body=None):
+        if not isinstance(type, str):
+            type = pycompat.sysstr(type)
         if self._start_response is not None:
-            self.headers.append(('Content-Type', type))
+            self.headers.append((r'Content-Type', type))
             if filename:
                 filename = (filename.rpartition('/')[-1]
                             .replace('\\', '\\\\').replace('"', '\\"'))
                 self.headers.append(('Content-Disposition',
                                      'inline; filename="%s"' % filename))
             if body is not None:
-                self.headers.append(('Content-Length', str(len(body))))
+                self.headers.append((r'Content-Length', str(len(body))))
 
             for k, v in self.headers:
                 if not isinstance(v, str):

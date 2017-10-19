@@ -53,6 +53,8 @@ rollback = False
 [commands]
 # Make `hg status` emit cwd-relative paths by default.
 status.relative = yes
+# Refuse to perform an `hg update` that would cause a file content merge
+update.check = noconflict
 
 [diff]
 git = 1
@@ -60,11 +62,16 @@ git = 1
 
 samplehgrcs = {
     'user':
-"""# example user config (see 'hg help config' for more info)
+b"""# example user config (see 'hg help config' for more info)
 [ui]
 # name and email, e.g.
 # username = Jane Doe <jdoe@example.com>
 username =
+
+# We recommend enabling tweakdefaults to get slight improvements to
+# the UI over time. Make sure to set HGPLAIN in the environment when
+# writing scripts!
+# tweakdefaults = True
 
 # uncomment to disable color in command output
 # (see 'hg help color' for details)
@@ -82,7 +89,7 @@ username =
 """,
 
     'cloned':
-"""# example repository config (see 'hg help config' for more info)
+b"""# example repository config (see 'hg help config' for more info)
 [paths]
 default = %s
 
@@ -99,7 +106,7 @@ default = %s
 """,
 
     'local':
-"""# example repository config (see 'hg help config' for more info)
+b"""# example repository config (see 'hg help config' for more info)
 [paths]
 # path aliases to other clones of this repo in URLs or filesystem paths
 # (see 'hg help config.paths' for more info)
@@ -115,7 +122,7 @@ default = %s
 """,
 
     'global':
-"""# example system-wide hg config (see 'hg help config' for more info)
+b"""# example system-wide hg config (see 'hg help config' for more info)
 
 [ui]
 # uncomment to disable color in command output
@@ -135,6 +142,15 @@ default = %s
 """,
 }
 
+def _maybestrurl(maybebytes):
+    if maybebytes is None:
+        return None
+    return pycompat.strurl(maybebytes)
+
+def _maybebytesurl(maybestr):
+    if maybestr is None:
+        return None
+    return pycompat.bytesurl(maybestr)
 
 class httppasswordmgrdbproxy(object):
     """Delays loading urllib2 until it's needed."""
@@ -146,11 +162,19 @@ class httppasswordmgrdbproxy(object):
             self._mgr = urlreq.httppasswordmgrwithdefaultrealm()
         return self._mgr
 
-    def add_password(self, *args, **kwargs):
-        return self._get_mgr().add_password(*args, **kwargs)
+    def add_password(self, realm, uris, user, passwd):
+        if isinstance(uris, tuple):
+            uris = tuple(_maybestrurl(u) for u in uris)
+        else:
+            uris = _maybestrurl(uris)
+        return self._get_mgr().add_password(
+            _maybestrurl(realm), uris,
+            _maybestrurl(user), _maybestrurl(passwd))
 
-    def find_user_password(self, *args, **kwargs):
-        return self._get_mgr().find_user_password(*args, **kwargs)
+    def find_user_password(self, realm, uri):
+        return tuple(_maybebytesurl(v) for v in
+                     self._get_mgr().find_user_password(_maybestrurl(realm),
+                                                        _maybestrurl(uri)))
 
 def _catchterm(*args):
     raise error.SignalInterrupt
@@ -158,6 +182,9 @@ def _catchterm(*args):
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
 _unset = object()
+
+# _reqexithandlers: callbacks run at the end of a request
+_reqexithandlers = []
 
 class ui(object):
     def __init__(self, src=None):
@@ -169,8 +196,6 @@ class ui(object):
         """
         # _buffers: used for temporary capture of output
         self._buffers = []
-        # _exithandlers: callbacks run at the end of a request
-        self._exithandlers = []
         # 3-tuple describing how each buffer in the stack behaves.
         # Values are (capture stderr, capture subprocesses, apply labels).
         self._bufferstates = []
@@ -196,7 +221,6 @@ class ui(object):
         self._styles = {}
 
         if src:
-            self._exithandlers = src._exithandlers
             self.fout = src.fout
             self.ferr = src.ferr
             self.fin = src.fin
@@ -453,6 +477,10 @@ class ui(object):
 
         if item is not None:
             alternates.extend(item.alias)
+        else:
+            msg = ("accessing unregistered config item: '%s.%s'")
+            msg %= (section, name)
+            self.develwarn(msg, 2, 'warn-config-unknown')
 
         if default is _unset:
             if item is None:
@@ -531,19 +559,19 @@ class ui(object):
     def configbool(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a boolean
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'true', 'yes')
-        >>> u.configbool(s, 'true')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'true', b'yes')
+        >>> u.configbool(s, b'true')
         True
-        >>> u.setconfig(s, 'false', 'no')
-        >>> u.configbool(s, 'false')
+        >>> u.setconfig(s, b'false', b'no')
+        >>> u.configbool(s, b'false')
         False
-        >>> u.configbool(s, 'unknown')
+        >>> u.configbool(s, b'unknown')
         False
-        >>> u.configbool(s, 'unknown', True)
+        >>> u.configbool(s, b'unknown', True)
         True
-        >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbool(s, 'invalid')
+        >>> u.setconfig(s, b'invalid', b'somevalue')
+        >>> u.configbool(s, b'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a boolean ('somevalue')
@@ -568,21 +596,21 @@ class ui(object):
                    desc=None, untrusted=False):
         """parse a configuration element with a conversion function
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'float1', '42')
-        >>> u.configwith(float, s, 'float1')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'float1', b'42')
+        >>> u.configwith(float, s, b'float1')
         42.0
-        >>> u.setconfig(s, 'float2', '-4.25')
-        >>> u.configwith(float, s, 'float2')
+        >>> u.setconfig(s, b'float2', b'-4.25')
+        >>> u.configwith(float, s, b'float2')
         -4.25
-        >>> u.configwith(float, s, 'unknown', 7)
+        >>> u.configwith(float, s, b'unknown', 7)
         7.0
-        >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configwith(float, s, 'invalid')
+        >>> u.setconfig(s, b'invalid', b'somevalue')
+        >>> u.configwith(float, s, b'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid float ('somevalue')
-        >>> u.configwith(float, s, 'invalid', desc='womble')
+        >>> u.configwith(float, s, b'invalid', desc=b'womble')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid womble ('somevalue')
@@ -595,24 +623,24 @@ class ui(object):
             return convert(v)
         except (ValueError, error.ParseError):
             if desc is None:
-                desc = convert.__name__
+                desc = pycompat.sysbytes(convert.__name__)
             raise error.ConfigError(_("%s.%s is not a valid %s ('%s')")
                                     % (section, name, desc, v))
 
     def configint(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as an integer
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'int1', '42')
-        >>> u.configint(s, 'int1')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'int1', b'42')
+        >>> u.configint(s, b'int1')
         42
-        >>> u.setconfig(s, 'int2', '-42')
-        >>> u.configint(s, 'int2')
+        >>> u.setconfig(s, b'int2', b'-42')
+        >>> u.configint(s, b'int2')
         -42
-        >>> u.configint(s, 'unknown', 7)
+        >>> u.configint(s, b'unknown', 7)
         7
-        >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configint(s, 'invalid')
+        >>> u.setconfig(s, b'invalid', b'somevalue')
+        >>> u.configint(s, b'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a valid integer ('somevalue')
@@ -627,17 +655,17 @@ class ui(object):
         Units can be specified as b (bytes), k or kb (kilobytes), m or
         mb (megabytes), g or gb (gigabytes).
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'val1', '42')
-        >>> u.configbytes(s, 'val1')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'val1', b'42')
+        >>> u.configbytes(s, b'val1')
         42
-        >>> u.setconfig(s, 'val2', '42.5 kb')
-        >>> u.configbytes(s, 'val2')
+        >>> u.setconfig(s, b'val2', b'42.5 kb')
+        >>> u.configbytes(s, b'val2')
         43520
-        >>> u.configbytes(s, 'unknown', '7 MB')
+        >>> u.configbytes(s, b'unknown', b'7 MB')
         7340032
-        >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbytes(s, 'invalid')
+        >>> u.setconfig(s, b'invalid', b'somevalue')
+        >>> u.configbytes(s, b'invalid')
         Traceback (most recent call last):
             ...
         ConfigError: foo.invalid is not a byte quantity ('somevalue')
@@ -660,9 +688,9 @@ class ui(object):
         """parse a configuration element as a list of comma/space separated
         strings
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'list1', 'this,is "a small" ,test')
-        >>> u.configlist(s, 'list1')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'list1', b'this,is "a small" ,test')
+        >>> u.configlist(s, b'list1')
         ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
@@ -677,9 +705,9 @@ class ui(object):
     def configdate(self, section, name, default=_unset, untrusted=False):
         """parse a configuration element as a tuple of ints
 
-        >>> u = ui(); s = 'foo'
-        >>> u.setconfig(s, 'date', '0 0')
-        >>> u.configdate(s, 'date')
+        >>> u = ui(); s = b'foo'
+        >>> u.setconfig(s, b'date', b'0 0')
+        >>> u.configdate(s, b'date')
         (0, 0)
         """
         if self.config(section, name, default, untrusted):
@@ -741,13 +769,15 @@ class ui(object):
             return feature not in exceptions
         return True
 
-    def username(self):
+    def username(self, acceptempty=False):
         """Return default username to be used in commits.
 
         Searched in this order: $HGUSER, [ui] section of hgrcs, $EMAIL
         and stop searching if one of these is set.
+        If not found and acceptempty is True, returns None.
         If not found and ui.askusername is True, ask the user, else use
         ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
+        If no username could be found, raise an Abort error.
         """
         user = encoding.environ.get("HGUSER")
         if user is None:
@@ -756,6 +786,8 @@ class ui(object):
                 user = os.path.expandvars(user)
         if user is None:
             user = encoding.environ.get("EMAIL")
+        if user is None and acceptempty:
+            return user
         if user is None and self.configbool("ui", "askusername"):
             user = self.prompt(_("enter a commit username:"), default=None)
         if user is None and not self.interactive():
@@ -962,6 +994,7 @@ class ui(object):
             # formatted() will need some adjustment.
             or not self.formatted()
             or self.plain()
+            or self._buffers
             # TODO: expose debugger-enabled on the UI object
             or '--debugger' in pycompat.sysargv):
             # We only want to paginate if the ui appears to be
@@ -1018,7 +1051,7 @@ class ui(object):
         # gracefully and tell the user about their broken pager.
         shell = any(c in command for c in "|&;<>()$`\\\"' \t\n*?[#~=%")
 
-        if pycompat.osname == 'nt' and not shell:
+        if pycompat.iswindows and not shell:
             # Window's built-in `more` cannot be invoked with shell=False, but
             # its `more.com` can.  Hide this implementation detail from the
             # user so we can also get sane bad PAGER behavior.  MSYS has
@@ -1064,6 +1097,10 @@ class ui(object):
             pager.wait()
 
         return True
+
+    @property
+    def _exithandlers(self):
+        return _reqexithandlers
 
     def atexit(self, func, *args, **kwargs):
         '''register a function to run after dispatching a request
@@ -1126,7 +1163,7 @@ class ui(object):
             defaultinterface = i
 
         choseninterface = defaultinterface
-        f = self.config("ui", "interface.%s" % feature, None)
+        f = self.config("ui", "interface.%s" % feature)
         if f in availableinterfaces:
             choseninterface = f
 
@@ -1220,18 +1257,10 @@ class ui(object):
         self.write(prompt, prompt=True)
         self.flush()
 
-        # instead of trying to emulate raw_input, swap (self.fin,
-        # self.fout) with (sys.stdin, sys.stdout)
-        oldin = sys.stdin
-        oldout = sys.stdout
-        sys.stdin = self.fin
-        sys.stdout = self.fout
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection('stdio'):
-            line = raw_input(' ')
-        sys.stdin = oldin
-        sys.stdout = oldout
+            line = util.bytesinput(self.fin, self.fout, r' ')
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
@@ -1263,11 +1292,11 @@ class ui(object):
         This returns tuple "(message, choices)", and "choices" is the
         list of tuple "(response character, text without &)".
 
-        >>> ui.extractchoices("awake? $$ &Yes $$ &No")
+        >>> ui.extractchoices(b"awake? $$ &Yes $$ &No")
         ('awake? ', [('y', 'Yes'), ('n', 'No')])
-        >>> ui.extractchoices("line\\nbreak? $$ &Yes $$ &No")
+        >>> ui.extractchoices(b"line\\nbreak? $$ &Yes $$ &No")
         ('line\\nbreak? ', [('y', 'Yes'), ('n', 'No')])
-        >>> ui.extractchoices("want lots of $$money$$?$$Ye&s$$N&o")
+        >>> ui.extractchoices(b"want lots of $$money$$?$$Ye&s$$N&o")
         ('want lots of $$money$$?', [('s', 'Yes'), ('o', 'No')])
         """
 
@@ -1279,9 +1308,10 @@ class ui(object):
         m = re.match(br'(?s)(.+?)\$\$([^\$]*&[^ \$].*)', prompt)
         msg = m.group(1)
         choices = [p.strip(' ') for p in m.group(2).split('$$')]
-        return (msg,
-                [(s[s.index('&') + 1].lower(), s.replace('&', '', 1))
-                 for s in choices])
+        def choicetuple(s):
+            ampidx = s.index('&')
+            return s[ampidx + 1:ampidx + 2].lower(), s.replace('&', '', 1)
+        return (msg, [choicetuple(s) for s in choices])
 
     def promptchoice(self, prompt, default=0):
         """Prompt user with a message, read response, and ensure it matches
@@ -1352,20 +1382,33 @@ class ui(object):
             self.write(*msg, **opts)
 
     def edit(self, text, user, extra=None, editform=None, pending=None,
-             repopath=None):
+             repopath=None, action=None):
+        if action is None:
+            self.develwarn('action is None but will soon be a required '
+                           'parameter to ui.edit()')
         extra_defaults = {
             'prefix': 'editor',
             'suffix': '.txt',
         }
         if extra is not None:
+            if extra.get('suffix') is not None:
+                self.develwarn('extra.suffix is not None but will soon be '
+                               'ignored by ui.edit()')
             extra_defaults.update(extra)
         extra = extra_defaults
+
+        if action == 'diff':
+            suffix = '.diff'
+        elif action:
+            suffix = '.%s.hg.txt' % action
+        else:
+            suffix = extra['suffix']
 
         rdir = None
         if self.configbool('experimental', 'editortmpinhg'):
             rdir = repopath
         (fd, name) = tempfile.mkstemp(prefix='hg-' + extra['prefix'] + '-',
-                                      suffix=extra['suffix'],
+                                      suffix=suffix,
                                       dir=rdir)
         try:
             f = os.fdopen(fd, r'wb')
@@ -1514,10 +1557,10 @@ class ui(object):
 
         if total:
             pct = 100.0 * pos / total
-            self.debug('%s:%s %s/%s%s (%4.2f%%)\n'
+            self.debug('%s:%s %d/%d%s (%4.2f%%)\n'
                      % (topic, item, pos, total, unit, pct))
         else:
-            self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
+            self.debug('%s:%s %d%s\n' % (topic, item, pos, unit))
 
     def log(self, service, *msg, **opts):
         '''hook for logging facility extensions

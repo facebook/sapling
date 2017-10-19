@@ -19,13 +19,14 @@
 Should respect config to disable dirty update
   $ hg co -qC 0
   $ echo 2 > foo
-  $ hg --config experimental.updatecheck=abort pull -u ../tt
+  $ hg --config commands.update.check=abort pull -u ../tt
   pulling from ../tt
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 107cefe13e42
   abort: uncommitted changes
   [255]
   $ hg --config extensions.strip= strip --no-backup tip
@@ -40,6 +41,7 @@ Should not update to the other topological branch:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 107cefe13e42
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "800c91d5bfc1: m"
   1 other heads for branch "default"
@@ -55,6 +57,7 @@ Should not update to the other branch:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 800c91d5bfc1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "107cefe13e42: m"
   1 other heads for branch "default"
@@ -76,6 +79,7 @@ Should work:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (-1 heads)
+  new changesets 483b76ad4309
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Similarity between "hg update" and "hg pull -u" in handling bookmark
@@ -103,6 +107,7 @@ explicit destination of the update.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark active-after-pull
+  new changesets f815b3da6163
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark active-after-pull)
 
@@ -131,6 +136,7 @@ explicit destination of the update.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   adding remote bookmark active-after-pull
+  new changesets f815b3da6163
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark active-after-pull)
 
@@ -168,6 +174,7 @@ match with the name of any existing bookmarks.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets f815b3da6163:b5e4babfaaa7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark active-before-pull)
 
@@ -194,6 +201,7 @@ match with the name of any existing bookmarks.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets f815b3da6163:b5e4babfaaa7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark active-before-pull)
 
@@ -220,6 +228,7 @@ match with the name of any existing bookmarks.
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 1 files
+  new changesets f815b3da6163:b5e4babfaaa7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark active-before-pull)
 

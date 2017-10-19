@@ -26,16 +26,17 @@ from . import (
     changelog,
     copies,
     crecord as crecordmod,
+    dagop,
     dirstateguard,
     encoding,
     error,
     formatter,
     graphmod,
     match as matchmod,
+    mdiff,
     obsolete,
     patch,
     pathutil,
-    phases,
     pycompat,
     registrar,
     revlog,
@@ -123,6 +124,8 @@ diffwsopts = [
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
+    ('Z', 'ignore-space-at-eol', None,
+     _('ignore changes in whitespace at EOL')),
 ]
 
 diffopts2 = [
@@ -277,7 +280,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         # 1. filter patch, since we are intending to apply subset of it
         try:
             chunks, newopts = filterfn(ui, originalchunks)
-        except patch.PatchError as err:
+        except error.PatchError as err:
             raise error.Abort(_('error parsing patch: %s') % err)
         opts.update(newopts)
 
@@ -339,7 +342,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                              + crecordmod.patchhelptext
                              + fp.read())
                 reviewedpatch = ui.edit(patchtext, "",
-                                        extra={"suffix": ".diff"},
+                                        action="diff",
                                         repopath=repo.path)
                 fp.truncate(0)
                 fp.write(reviewedpatch)
@@ -359,7 +362,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
                     patch.internalpatch(ui, repo, fp, 1, eolmode=None)
-                except patch.PatchError as err:
+                except error.PatchError as err:
                     raise error.Abort(str(err))
             del fp
 
@@ -401,177 +404,265 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
     return commit(ui, repo, recordinwlock, pats, opts)
 
-def tersestatus(root, statlist, status, ignorefn, ignore):
+
+# extracted at module level as it's required each time a file will be added
+# to dirnode class object below
+pathsep = pycompat.ossep
+
+class dirnode(object):
     """
-    Returns a list of statuses with directory collapsed if all the files in the
-    directory has the same status.
+    Represent a directory in user working copy with information required for
+    the purpose of tersing its status.
+
+    path is the path to the directory
+
+    statuses is a set of statuses of all files in this directory (this includes
+    all the files in all the subdirectories too)
+
+    files is a list of files which are direct child of this directory
+
+    subdirs is a dictionary of sub-directory name as the key and it's own
+    dirnode object as the value
     """
 
-    def numfiles(dirname):
+    def __init__(self, dirpath):
+        self.path = dirpath
+        self.statuses = set([])
+        self.files = []
+        self.subdirs = {}
+
+    def _addfileindir(self, filename, status):
+        """Add a file in this directory as a direct child."""
+        self.files.append((filename, status))
+
+    def addfile(self, filename, status):
         """
-        Calculates the number of tracked files in a given directory which also
-        includes files which were removed or deleted. Considers ignored files
-        if ignore argument is True or 'i' is present in status argument.
+        Add a file to this directory or to its direct parent directory.
+
+        If the file is not direct child of this directory, we traverse to the
+        directory of which this file is a direct child of and add the file
+        there.
         """
-        if lencache.get(dirname):
-            return lencache[dirname]
-        if 'i' in status or ignore:
-            def match(localpath):
-                absolutepath = os.path.join(root, localpath)
-                if os.path.isdir(absolutepath) and isemptydir(absolutepath):
-                    return True
-                return False
+
+        # the filename contains a path separator, it means it's not the direct
+        # child of this directory
+        if pathsep in filename:
+            subdir, filep = filename.split(pathsep, 1)
+
+            # does the dirnode object for subdir exists
+            if subdir not in self.subdirs:
+                subdirpath = os.path.join(self.path, subdir)
+                self.subdirs[subdir] = dirnode(subdirpath)
+
+            # try adding the file in subdir
+            self.subdirs[subdir].addfile(filep, status)
+
         else:
-            def match(localpath):
-                # there can be directory whose all the files are ignored and
-                # hence the drectory should also be ignored while counting
-                # number of files or subdirs in it's parent directory. This
-                # checks the same.
-                # XXX: We need a better logic here.
-                if os.path.isdir(os.path.join(root, localpath)):
-                    return isignoreddir(localpath)
-                else:
-                    # XXX: there can be files which have the ignored pattern but
-                    # are not ignored. That leads to bug in counting number of
-                    # tracked files in the directory.
-                    return ignorefn(localpath)
-        lendir = 0
-        abspath = os.path.join(root, dirname)
-        # There might be cases when a directory does not exists as the whole
-        # directory can be removed and/or deleted.
-        try:
-            for f in os.listdir(abspath):
-                localpath = os.path.join(dirname, f)
-                if not match(localpath):
-                    lendir += 1
-        except OSError:
-            pass
-        lendir += len(absentdir.get(dirname, []))
-        lencache[dirname] = lendir
-        return lendir
+            self._addfileindir(filename, status)
 
-    def isemptydir(abspath):
+        if status not in self.statuses:
+            self.statuses.add(status)
+
+    def iterfilepaths(self):
+        """Yield (status, path) for files directly under this directory."""
+        for f, st in self.files:
+            yield st, os.path.join(self.path, f)
+
+    def tersewalk(self, terseargs):
         """
-        Check whether a directory is empty or not, i.e. there is no files in the
-        directory and all its subdirectories.
+        Yield (status, path) obtained by processing the status of this
+        dirnode.
+
+        terseargs is the string of arguments passed by the user with `--terse`
+        flag.
+
+        Following are the cases which can happen:
+
+        1) All the files in the directory (including all the files in its
+        subdirectories) share the same status and the user has asked us to terse
+        that status. -> yield (status, dirpath)
+
+        2) Otherwise, we do following:
+
+                a) Yield (status, filepath)  for all the files which are in this
+                    directory (only the ones in this directory, not the subdirs)
+
+                b) Recurse the function on all the subdirectories of this
+                   directory
         """
-        for f in os.listdir(abspath):
-            fullpath = os.path.join(abspath, f)
-            if os.path.isdir(fullpath):
-                # recursion here
-                ret = isemptydir(fullpath)
-                if not ret:
-                    return False
-            else:
-                return False
-        return True
 
-    def isignoreddir(localpath):
-        """
-        This function checks whether the directory contains only ignored files
-        and hence should the directory be considered ignored. Returns True, if
-        that should be ignored otherwise False.
-        """
-        dirpath = os.path.join(root, localpath)
-        for f in os.listdir(dirpath):
-            filepath = os.path.join(dirpath, f)
-            if os.path.isdir(filepath):
-                # recursion here
-                ret = isignoreddir(os.path.join(localpath, f))
-                if not ret:
-                    return False
-            else:
-                if not ignorefn(os.path.join(localpath, f)):
-                    return False
-        return True
+        if len(self.statuses) == 1:
+            onlyst = self.statuses.pop()
 
-    def absentones(removedfiles, missingfiles):
-        """
-        Returns a dictionary of directories with files in it which are either
-        removed or missing (deleted) in them.
-        """
-        absentdir = {}
-        absentfiles = removedfiles + missingfiles
-        while absentfiles:
-            f = absentfiles.pop()
-            par = os.path.dirname(f)
-            if par == '':
-                continue
-            # we need to store files rather than number of files as some files
-            # or subdirectories in a directory can be counted twice. This is
-            # also we have used sets here.
-            try:
-                absentdir[par].add(f)
-            except KeyError:
-                absentdir[par] = set([f])
-            absentfiles.append(par)
-        return absentdir
+            # Making sure we terse only when the status abbreviation is
+            # passed as terse argument
+            if onlyst in terseargs:
+                yield onlyst, self.path + pycompat.ossep
+                return
 
-    indexes = {'m': 0, 'a': 1, 'r': 2, 'd': 3, 'u': 4, 'i': 5, 'c': 6}
-    # get a dictonary of directories and files which are missing as os.listdir()
-    # won't be able to list them.
-    absentdir = absentones(statlist[2], statlist[3])
-    finalrs = [[]] * len(indexes)
-    didsomethingchanged = False
-    # dictionary to store number of files and subdir in a directory so that we
-    # don't compute that again.
-    lencache = {}
+        # add the files to status list
+        for st, fpath in self.iterfilepaths():
+            yield st, fpath
 
-    for st in pycompat.bytestr(status):
+        #recurse on the subdirs
+        for dirobj in self.subdirs.values():
+            for st, fpath in dirobj.tersewalk(terseargs):
+                yield st, fpath
 
-        try:
-            ind = indexes[st]
-        except KeyError:
-            # TODO: Need a better error message here
-            raise error.Abort("'%s' not recognized" % st)
+def tersedir(statuslist, terseargs):
+    """
+    Terse the status if all the files in a directory shares the same status.
 
-        sfiles = statlist[ind]
-        if not sfiles:
+    statuslist is scmutil.status() object which contains a list of files for
+    each status.
+    terseargs is string which is passed by the user as the argument to `--terse`
+    flag.
+
+    The function makes a tree of objects of dirnode class, and at each node it
+    stores the information required to know whether we can terse a certain
+    directory or not.
+    """
+    # the order matters here as that is used to produce final list
+    allst = ('m', 'a', 'r', 'd', 'u', 'i', 'c')
+
+    # checking the argument validity
+    for s in pycompat.bytestr(terseargs):
+        if s not in allst:
+            raise error.Abort(_("'%s' not recognized") % s)
+
+    # creating a dirnode object for the root of the repo
+    rootobj = dirnode('')
+    pstatus = ('modified', 'added', 'deleted', 'clean', 'unknown',
+               'ignored', 'removed')
+
+    tersedict = {}
+    for attrname in pstatus:
+        statuschar = attrname[0:1]
+        for f in getattr(statuslist, attrname):
+            rootobj.addfile(f, statuschar)
+        tersedict[statuschar] = []
+
+    # we won't be tersing the root dir, so add files in it
+    for st, fpath in rootobj.iterfilepaths():
+        tersedict[st].append(fpath)
+
+    # process each sub-directory and build tersedict
+    for subdir in rootobj.subdirs.values():
+        for st, f in subdir.tersewalk(terseargs):
+            tersedict[st].append(f)
+
+    tersedlist = []
+    for st in allst:
+        tersedict[st].sort()
+        tersedlist.append(tersedict[st])
+
+    return tersedlist
+
+def _commentlines(raw):
+    '''Surround lineswith a comment char and a new line'''
+    lines = raw.splitlines()
+    commentedlines = ['# %s' % line for line in lines]
+    return '\n'.join(commentedlines) + '\n'
+
+def _conflictsmsg(repo):
+    # avoid merge cycle
+    from . import merge as mergemod
+    mergestate = mergemod.mergestate.read(repo)
+    if not mergestate.active():
+        return
+
+    m = scmutil.match(repo[None])
+    unresolvedlist = [f for f in mergestate.unresolved() if m(f)]
+    if unresolvedlist:
+        mergeliststr = '\n'.join(
+            ['    %s' % os.path.relpath(
+                os.path.join(repo.root, path),
+                pycompat.getcwd()) for path in unresolvedlist])
+        msg = _('''Unresolved merge conflicts:
+
+%s
+
+To mark files as resolved:  hg resolve --mark FILE''') % mergeliststr
+    else:
+        msg = _('No unresolved merge conflicts.')
+
+    return _commentlines(msg)
+
+def _helpmessage(continuecmd, abortcmd):
+    msg = _('To continue:                %s\n'
+            'To abort:                   %s') % (continuecmd, abortcmd)
+    return _commentlines(msg)
+
+def _rebasemsg():
+    return _helpmessage('hg rebase --continue', 'hg rebase --abort')
+
+def _histeditmsg():
+    return _helpmessage('hg histedit --continue', 'hg histedit --abort')
+
+def _unshelvemsg():
+    return _helpmessage('hg unshelve --continue', 'hg unshelve --abort')
+
+def _updatecleanmsg(dest=None):
+    warning = _('warning: this will discard uncommitted changes')
+    return 'hg update --clean %s    (%s)' % (dest or '.', warning)
+
+def _graftmsg():
+    # tweakdefaults requires `update` to have a rev hence the `.`
+    return _helpmessage('hg graft --continue', _updatecleanmsg())
+
+def _mergemsg():
+    # tweakdefaults requires `update` to have a rev hence the `.`
+     return _helpmessage('hg commit', _updatecleanmsg())
+
+def _bisectmsg():
+    msg = _('To mark the changeset good:    hg bisect --good\n'
+            'To mark the changeset bad:     hg bisect --bad\n'
+            'To abort:                      hg bisect --reset\n')
+    return _commentlines(msg)
+
+def fileexistspredicate(filename):
+    return lambda repo: repo.vfs.exists(filename)
+
+def _mergepredicate(repo):
+    return len(repo[None].parents()) > 1
+
+STATES = (
+    # (state, predicate to detect states, helpful message function)
+    ('histedit', fileexistspredicate('histedit-state'), _histeditmsg),
+    ('bisect', fileexistspredicate('bisect.state'), _bisectmsg),
+    ('graft', fileexistspredicate('graftstate'), _graftmsg),
+    ('unshelve', fileexistspredicate('unshelverebasestate'), _unshelvemsg),
+    ('rebase', fileexistspredicate('rebasestate'), _rebasemsg),
+    # The merge state is part of a list that will be iterated over.
+    # They need to be last because some of the other unfinished states may also
+    # be in a merge or update state (eg. rebase, histedit, graft, etc).
+    # We want those to have priority.
+    ('merge', _mergepredicate, _mergemsg),
+)
+
+def _getrepostate(repo):
+    # experimental config: commands.status.skipstates
+    skip = set(repo.ui.configlist('commands', 'status.skipstates'))
+    for state, statedetectionpredicate, msgfn in STATES:
+        if state in skip:
             continue
-        pardict = {}
-        for a in sfiles:
-            par = os.path.dirname(a)
-            pardict.setdefault(par, []).append(a)
+        if statedetectionpredicate(repo):
+            return (state, statedetectionpredicate, msgfn)
 
-        rs = []
-        newls = []
-        for par, files in pardict.iteritems():
-            lenpar = numfiles(par)
-            if lenpar == len(files):
-                newls.append(par)
-
-        if not newls:
-            continue
-
-        while newls:
-            newel = newls.pop()
-            if newel == '':
-                continue
-            parn = os.path.dirname(newel)
-            pardict[newel] = []
-            # Adding pycompat.ossep as newel is a directory.
-            pardict.setdefault(parn, []).append(newel + pycompat.ossep)
-            lenpar = numfiles(parn)
-            if lenpar == len(pardict[parn]):
-                newls.append(parn)
-
-        # dict.values() for Py3 compatibility
-        for files in pardict.values():
-            rs.extend(files)
-
-        rs.sort()
-        finalrs[ind] = rs
-        didsomethingchanged = True
-
-    # If nothing is changed, make sure the order of files is preserved.
-    if not didsomethingchanged:
-        return statlist
-
-    for x in xrange(len(indexes)):
-        if not finalrs[x]:
-            finalrs[x] = statlist[x]
-
-    return finalrs
+def morestatus(repo, fm):
+    statetuple = _getrepostate(repo)
+    label = 'status.morestatus'
+    if statetuple:
+        fm.startitem()
+        state, statedetectionpredicate, helpfulmsg = statetuple
+        statemsg = _('The repository is in an unfinished *%s* state.') % state
+        fm.write('statemsg', '%s\n',  _commentlines(statemsg), label=label)
+        conmsg = _conflictsmsg(repo)
+        if conmsg:
+            fm.write('conflictsmsg', '%s\n', conmsg, label=label)
+        if helpfulmsg:
+            helpmsg = helpfulmsg()
+            fm.write('helpmsg', '%s\n', helpmsg, label=label)
 
 def findpossible(cmd, table, strict=False):
     """
@@ -669,7 +760,7 @@ def logmessage(ui, opts):
                 message = '\n'.join(util.readfile(logfile).splitlines())
         except IOError as inst:
             raise error.Abort(_("can't read commit message '%s': %s") %
-                             (logfile, inst.strerror))
+                             (logfile, encoding.strtolocal(inst.strerror)))
     return message
 
 def mergeeditform(ctxorbool, baseformname):
@@ -991,7 +1082,7 @@ def copy(ui, repo, pats, opts, rename=False):
                     srcexists = False
                 else:
                     ui.warn(_('%s: cannot copy - %s\n') %
-                            (relsrc, inst.strerror))
+                            (relsrc, encoding.strtolocal(inst.strerror)))
                     return True # report a failure
 
         if ui.verbose or not exact:
@@ -1227,7 +1318,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             try:
                 patch.patch(ui, repo, tmpname, strip=strip, prefix=prefix,
                             files=files, eolmode=None, similarity=sim / 100.0)
-            except patch.PatchError as e:
+            except error.PatchError as e:
                 if not partial:
                     raise error.Abort(str(e))
                 if partial:
@@ -1273,7 +1364,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 try:
                     patch.patchrepo(ui, repo, p1, store, tmpname, strip, prefix,
                                     files, eolmode=None)
-                except patch.PatchError as e:
+                except error.PatchError as e:
                     raise error.Abort(str(e))
                 if opts.get('exact'):
                     editor = None
@@ -1406,7 +1497,7 @@ def export(repo, revs, fntemplate='hg-%h.patch', fp=None, switch_parent=False,
 
 def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                    changes=None, stat=False, fp=None, prefix='',
-                   root='', listsubrepos=False):
+                   root='', listsubrepos=False, hunksfilterfn=None):
     '''show diff or diffstat.'''
     if fp is None:
         write = ui.write
@@ -1434,14 +1525,16 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         if not ui.plain():
             width = ui.termwidth()
         chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
-                            prefix=prefix, relroot=relroot)
+                            prefix=prefix, relroot=relroot,
+                            hunksfilterfn=hunksfilterfn)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),
                                              width=width):
             write(chunk, label=label)
     else:
         for chunk, label in patch.diffui(repo, node1, node2, match,
                                          changes, diffopts, prefix=prefix,
-                                         relroot=relroot):
+                                         relroot=relroot,
+                                         hunksfilterfn=hunksfilterfn):
             write(chunk, label=label)
 
     if listsubrepos:
@@ -1465,10 +1558,10 @@ def _changesetlabels(ctx):
     labels = ['log.changeset', 'changeset.%s' % ctx.phasestr()]
     if ctx.obsolete():
         labels.append('changeset.obsolete')
-    if ctx.troubled():
-        labels.append('changeset.troubled')
-        for trouble in ctx.troubles():
-            labels.append('trouble.%s' % trouble)
+    if ctx.isunstable():
+        labels.append('changeset.unstable')
+        for instability in ctx.instabilities():
+            labels.append('instability.%s' % instability)
     return ' '.join(labels)
 
 class changeset_printer(object):
@@ -1503,35 +1596,30 @@ class changeset_printer(object):
         if self.footer:
             self.ui.write(self.footer)
 
-    def show(self, ctx, copies=None, matchfn=None, **props):
+    def show(self, ctx, copies=None, matchfn=None, hunksfilterfn=None,
+             **props):
         props = pycompat.byteskwargs(props)
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
-            self._show(ctx, copies, matchfn, props)
+            self._show(ctx, copies, matchfn, hunksfilterfn, props)
             self.hunk[ctx.rev()] = self.ui.popbuffer()
         else:
-            self._show(ctx, copies, matchfn, props)
+            self._show(ctx, copies, matchfn, hunksfilterfn, props)
 
-    def _show(self, ctx, copies, matchfn, props):
+    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
         '''show a single changeset or file revision'''
         changenode = ctx.node()
         rev = ctx.rev()
-        if self.ui.debugflag:
-            hexfunc = hex
-        else:
-            hexfunc = short
-        # as of now, wctx.node() and wctx.rev() return None, but we want to
-        # show the same values as {node} and {rev} templatekw
-        revnode = (scmutil.intrev(ctx), hexfunc(scmutil.binnode(ctx)))
 
         if self.ui.quiet:
-            self.ui.write("%d:%s\n" % revnode, label='log.node')
+            self.ui.write("%s\n" % scmutil.formatchangeid(ctx),
+                          label='log.node')
             return
 
         date = util.datestr(ctx.date())
 
         # i18n: column positioning for "hg log"
-        self.ui.write(_("changeset:   %d:%s\n") % revnode,
+        self.ui.write(_("changeset:   %s\n") % scmutil.formatchangeid(ctx),
                       label=_changesetlabels(ctx))
 
         # branches are shown first before any other names due to backwards
@@ -1560,16 +1648,15 @@ class changeset_printer(object):
         for pctx in scmutil.meaningfulparents(self.repo, ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
             # i18n: column positioning for "hg log"
-            self.ui.write(_("parent:      %d:%s\n")
-                          % (pctx.rev(), hexfunc(pctx.node())),
+            self.ui.write(_("parent:      %s\n") % scmutil.formatchangeid(pctx),
                           label=label)
 
         if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()
+            mrev = self.repo.manifestlog._revlog.rev(mnode)
             # i18n: column positioning for "hg log"
-            self.ui.write(_("manifest:    %d:%s\n") %
-                          (self.repo.manifestlog._revlog.rev(mnode),
-                           hex(mnode)),
+            self.ui.write(_("manifest:    %s\n")
+                          % scmutil.formatrevnode(self.ui, mrev, mnode),
                           label='ui.debug log.manifest')
         # i18n: column positioning for "hg log"
         self.ui.write(_("user:        %s\n") % ctx.user(),
@@ -1578,10 +1665,14 @@ class changeset_printer(object):
         self.ui.write(_("date:        %s\n") % date,
                       label='log.date')
 
-        if ctx.troubled():
+        if ctx.isunstable():
             # i18n: column positioning for "hg log"
-            self.ui.write(_("trouble:     %s\n") % ', '.join(ctx.troubles()),
-                          label='log.trouble')
+            instabilities = ctx.instabilities()
+            self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
+                          label='log.instability')
+
+        elif ctx.obsolete():
+            self._showobsfate(ctx)
 
         self._exthook(ctx)
 
@@ -1629,14 +1720,22 @@ class changeset_printer(object):
                               label='log.summary')
         self.ui.write("\n")
 
-        self.showpatch(ctx, matchfn)
+        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
+
+    def _showobsfate(self, ctx):
+        obsfate = templatekw.showobsfate(repo=self.repo, ctx=ctx, ui=self.ui)
+
+        if obsfate:
+            for obsfateline in obsfate:
+                # i18n: column positioning for "hg log"
+                self.ui.write(_("obsolete:    %s\n") % obsfateline,
+                              label='log.obsfate')
 
     def _exthook(self, ctx):
         '''empty method used by extension as a hook point
         '''
-        pass
 
-    def showpatch(self, ctx, matchfn):
+    def showpatch(self, ctx, matchfn, hunksfilterfn=None):
         if not matchfn:
             matchfn = self.matchfn
         if matchfn:
@@ -1647,12 +1746,14 @@ class changeset_printer(object):
             prev = ctx.p1().node()
             if stat:
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
-                               match=matchfn, stat=True)
+                               match=matchfn, stat=True,
+                               hunksfilterfn=hunksfilterfn)
             if diff:
                 if stat:
                     self.ui.write("\n")
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
-                               match=matchfn, stat=False)
+                               match=matchfn, stat=False,
+                               hunksfilterfn=hunksfilterfn)
             self.ui.write("\n")
 
 class jsonchangeset(changeset_printer):
@@ -1669,7 +1770,7 @@ class jsonchangeset(changeset_printer):
         else:
             self.ui.write("[]\n")
 
-    def _show(self, ctx, copies, matchfn, props):
+    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
         '''show a single changeset or file revision'''
         rev = ctx.rev()
         if rev is None:
@@ -1803,7 +1904,7 @@ class changeset_templater(changeset_printer):
             self.footer += templater.stringify(self.t(self._parts['docfooter']))
         return super(changeset_templater, self).close()
 
-    def _show(self, ctx, copies, matchfn, props):
+    def _show(self, ctx, copies, matchfn, hunksfilterfn, props):
         '''show a single changeset or file revision'''
         props = props.copy()
         props.update(templatekw.keywords)
@@ -1835,7 +1936,7 @@ class changeset_templater(changeset_printer):
         # write changeset metadata, then patch if requested
         key = self._parts[self._tref]
         self.ui.write(templater.stringify(self.t(key, **props)))
-        self.showpatch(ctx, matchfn)
+        self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
 
         if self._parts['footer']:
             if not self.footer:
@@ -1893,19 +1994,19 @@ def show_changeset(ui, repo, opts, buffered=False):
     regular display via changeset_printer() is done.
     """
     # options
-    matchfn = None
+    match = None
     if opts.get('patch') or opts.get('stat'):
-        matchfn = scmutil.matchall(repo)
+        match = scmutil.matchall(repo)
 
     if opts.get('template') == 'json':
-        return jsonchangeset(ui, repo, matchfn, opts, buffered)
+        return jsonchangeset(ui, repo, match, opts, buffered)
 
     spec = _lookuplogtemplate(ui, opts.get('template'), opts.get('style'))
 
     if not spec.ref and not spec.tmpl and not spec.mapfile:
-        return changeset_printer(ui, repo, matchfn, opts, buffered)
+        return changeset_printer(ui, repo, match, opts, buffered)
 
-    return changeset_templater(ui, repo, spec, matchfn, opts, buffered)
+    return changeset_templater(ui, repo, spec, match, opts, buffered)
 
 def showmarker(fm, marker, index=None):
     """utility function to display obsolescence marker in a readable way
@@ -1913,7 +2014,7 @@ def showmarker(fm, marker, index=None):
     To be used by debug function."""
     if index is not None:
         fm.write('index', '%i ', index)
-    fm.write('precnode', '%s ', hex(marker.precnode()))
+    fm.write('prednode', '%s ', hex(marker.prednode()))
     succs = marker.succnodes()
     fm.condwrite(succs, 'succnodes', '%s ',
                  fm.formatlist(map(hex, succs), name='node'))
@@ -2449,7 +2550,7 @@ def getgraphlogrevs(repo, pats, opts):
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
     if expr:
-        matcher = revset.match(repo.ui, expr, order=revset.followorder)
+        matcher = revset.match(repo.ui, expr)
         revs = matcher(repo, revs)
     if limit is not None:
         limitedrevs = []
@@ -2475,7 +2576,7 @@ def getlogrevs(repo, pats, opts):
         return smartset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        matcher = revset.match(repo.ui, expr, order=revset.followorder)
+        matcher = revset.match(repo.ui, expr)
         revs = matcher(repo, revs)
     if limit is not None:
         limitedrevs = []
@@ -2486,6 +2587,93 @@ def getlogrevs(repo, pats, opts):
         revs = smartset.baseset(limitedrevs)
 
     return revs, expr, filematcher
+
+def _parselinerangelogopt(repo, opts):
+    """Parse --line-range log option and return a list of tuples (filename,
+    (fromline, toline)).
+    """
+    linerangebyfname = []
+    for pat in opts.get('line_range', []):
+        try:
+            pat, linerange = pat.rsplit(',', 1)
+        except ValueError:
+            raise error.Abort(_('malformatted line-range pattern %s') % pat)
+        try:
+            fromline, toline = map(int, linerange.split(':'))
+        except ValueError:
+            raise error.Abort(_("invalid line range for %s") % pat)
+        msg = _("line range pattern '%s' must match exactly one file") % pat
+        fname = scmutil.parsefollowlinespattern(repo, None, pat, msg)
+        linerangebyfname.append(
+            (fname, util.processlinerange(fromline, toline)))
+    return linerangebyfname
+
+def getloglinerangerevs(repo, userrevs, opts):
+    """Return (revs, filematcher, hunksfilter).
+
+    "revs" are revisions obtained by processing "line-range" log options and
+    walking block ancestors of each specified file/line-range.
+
+    "filematcher(rev) -> match" is a factory function returning a match object
+    for a given revision for file patterns specified in --line-range option.
+    If neither --stat nor --patch options are passed, "filematcher" is None.
+
+    "hunksfilter(rev) -> filterfn(fctx, hunks)" is a factory function
+    returning a hunks filtering function.
+    If neither --stat nor --patch options are passed, "filterhunks" is None.
+    """
+    wctx = repo[None]
+
+    # Two-levels map of "rev -> file ctx -> [line range]".
+    linerangesbyrev = {}
+    for fname, (fromline, toline) in _parselinerangelogopt(repo, opts):
+        if fname not in wctx:
+            raise error.Abort(_('cannot follow file not in parent '
+                                'revision: "%s"') % fname)
+        fctx = wctx.filectx(fname)
+        for fctx, linerange in dagop.blockancestors(fctx, fromline, toline):
+            rev = fctx.introrev()
+            if rev not in userrevs:
+                continue
+            linerangesbyrev.setdefault(
+                rev, {}).setdefault(
+                    fctx.path(), []).append(linerange)
+
+    filematcher = None
+    hunksfilter = None
+    if opts.get('patch') or opts.get('stat'):
+
+        def nofilterhunksfn(fctx, hunks):
+            return hunks
+
+        def hunksfilter(rev):
+            fctxlineranges = linerangesbyrev.get(rev)
+            if fctxlineranges is None:
+                return nofilterhunksfn
+
+            def filterfn(fctx, hunks):
+                lineranges = fctxlineranges.get(fctx.path())
+                if lineranges is not None:
+                    for hr, lines in hunks:
+                        if hr is None: # binary
+                            yield hr, lines
+                            continue
+                        if any(mdiff.hunkinrange(hr[2:], lr)
+                               for lr in lineranges):
+                            yield hr, lines
+                else:
+                    for hunk in hunks:
+                        yield hunk
+
+            return filterfn
+
+        def filematcher(rev):
+            files = list(linerangesbyrev.get(rev, []))
+            return scmutil.matchfiles(repo, files)
+
+    revs = sorted(linerangesbyrev, reverse=True)
+
+    return revs, filematcher, hunksfilter
 
 def _graphnodeformatter(ui, displayer):
     spec = ui.config('ui', 'graphnodetemplate')
@@ -2509,7 +2697,8 @@ def _graphnodeformatter(ui, displayer):
     return formatnode
 
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
-                 filematcher=None):
+                 filematcher=None, props=None):
+    props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
     state = graphmod.asciistate()
     styles = state['styles']
@@ -2546,14 +2735,18 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         revmatchfn = None
         if filematcher is not None:
             revmatchfn = filematcher(ctx.rev())
-        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
+        edges = edgefn(type, char, state, rev, parents)
+        firstedge = next(edges)
+        width = firstedge[2]
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn,
+                       _graphwidth=width, **props)
         lines = displayer.hunk.pop(rev).split('\n')
         if not lines[-1]:
             del lines[-1]
         displayer.flush(ctx)
-        edges = edgefn(type, char, lines, state, rev, parents)
-        for type, char, lines, coldata in edges:
+        for type, char, width, coldata in itertools.chain([firstedge], edges):
             graphmod.ascii(ui, state, type, char, lines, coldata)
+            lines = []
     displayer.close()
 
 def graphlog(ui, repo, pats, opts):
@@ -2602,8 +2795,8 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     dirstate = repo.dirstate
     # We don't want to just call wctx.walk here, since it would return a lot of
     # clean files, which we aren't interested in and takes time.
-    for f in sorted(dirstate.walk(badmatch, sorted(wctx.substate),
-                                  True, False, full=False)):
+    for f in sorted(dirstate.walk(badmatch, subrepos=sorted(wctx.substate),
+                                  unknown=True, ignored=False, full=False)):
         exact = match.exact(f)
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
@@ -2892,20 +3085,15 @@ def commit(ui, repo, commitfunc, pats, opts):
     dsguard = None
     # extract addremove carefully -- this function can be called from a command
     # that doesn't support addremove
-    try:
-        if opts.get('addremove'):
-            dsguard = dirstateguard.dirstateguard(repo, 'commit')
+    if opts.get('addremove'):
+        dsguard = dirstateguard.dirstateguard(repo, 'commit')
+    with dsguard or util.nullcontextmanager():
+        if dsguard:
             if scmutil.addremove(repo, matcher, "", opts) != 0:
                 raise error.Abort(
                     _("failed to mark all new/missing files as added/removed"))
 
-        r = commitfunc(ui, repo, message, matcher, opts)
-        if dsguard:
-            dsguard.close()
-        return r
-    finally:
-        if dsguard:
-            dsguard.release()
+        return commitfunc(ui, repo, message, matcher, opts)
 
 def samefile(f, ctx1, ctx2):
     if f in ctx1.manifest():
@@ -2919,7 +3107,7 @@ def samefile(f, ctx1, ctx2):
     else:
         return f not in ctx2.manifest()
 
-def amend(ui, repo, commitfunc, old, extra, pats, opts):
+def amend(ui, repo, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
 
@@ -2931,44 +3119,29 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
-    newid = None
     with repo.wlock(), repo.lock(), repo.transaction('amend'):
-        # See if we got a message from -m or -l, if not, open the editor
-        # with the message of the changeset to amend
-        message = logmessage(ui, opts)
-        # ensure logfile does not conflict with later enforcement of the
-        # message. potential logfile content has been processed by
-        # `logmessage` anyway.
-        opts.pop('logfile')
-        # First, do a regular commit to record all changes in the working
-        # directory (if there are any)
-        ui.callhooks = False
-        activebookmark = repo._bookmarks.active
-        try:
-            repo._bookmarks.active = None
-            opts['message'] = 'temporary amend commit for %s' % old
-            node = commit(ui, repo, commitfunc, pats, opts)
-        finally:
-            repo._bookmarks.active = activebookmark
-            ui.callhooks = True
-        ctx = repo[node]
-
         # Participating changesets:
         #
-        # node/ctx o - new (intermediate) commit that contains changes
-        #          |   from working dir to go into amending commit
-        #          |   (or a workingctx if there were no changes)
+        # wctx     o - workingctx that contains changes from working copy
+        #          |   to go into amending commit
         #          |
         # old      o - changeset to amend
         #          |
-        # base     o - parent of amending changeset
+        # base     o - first parent of the changeset to amend
+        wctx = repo[None]
 
         # Update extra dict from amended commit (e.g. to preserve graft
         # source)
         extra.update(old.extra())
 
-        # Also update it from the intermediate commit or from the wctx
-        extra.update(ctx.extra())
+        # Also update it from the from the wctx
+        extra.update(wctx.extra())
+
+        user = opts.get('user') or old.user()
+        date = opts.get('date') or old.date()
+
+        # Parse the date to allow comparison between date and old.date()
+        date = util.parsedate(date)
 
         if len(old.parents()) > 1:
             # ctx.files() isn't reliable for merges, so fall back to the
@@ -2978,30 +3151,47 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         else:
             files = set(old.files())
 
-        # Second, we use either the commit we just did, or if there were no
-        # changes the parent of the working directory as the version of the
-        # files in the final amend commit
-        if node:
-            ui.note(_('copying changeset %s to %s\n') % (ctx, base))
+        # add/remove the files to the working copy if the "addremove" option
+        # was specified.
+        matcher = scmutil.match(wctx, pats, opts)
+        if (opts.get('addremove')
+            and scmutil.addremove(repo, matcher, "", opts)):
+            raise error.Abort(
+                _("failed to mark all new/missing files as added/removed"))
 
-            user = ctx.user()
-            date = ctx.date()
+        filestoamend = set(f for f in wctx.files() if matcher(f))
+
+        changes = (len(filestoamend) > 0)
+        if changes:
             # Recompute copies (avoid recording a -> b -> a)
-            copied = copies.pathcopies(base, ctx)
+            copied = copies.pathcopies(base, wctx, matcher)
             if old.p2:
-                copied.update(copies.pathcopies(old.p2(), ctx))
+                copied.update(copies.pathcopies(old.p2(), wctx, matcher))
 
             # Prune files which were reverted by the updates: if old
-            # introduced file X and our intermediate commit, node,
-            # renamed that file, then those two files are the same and
+            # introduced file X and the file was renamed in the working
+            # copy, then those two files are the same and
             # we can discard X from our list of files. Likewise if X
             # was deleted, it's no longer relevant
-            files.update(ctx.files())
-            files = [f for f in files if not samefile(f, ctx, base)]
+            files.update(filestoamend)
+            files = [f for f in files if not samefile(f, wctx, base)]
 
             def filectxfn(repo, ctx_, path):
                 try:
-                    fctx = ctx[path]
+                    # If the file being considered is not amongst the files
+                    # to be amended, we should return the file context from the
+                    # old changeset. This avoids issues when only some files in
+                    # the working copy are being amended but there are also
+                    # changes to other files from the old changeset.
+                    if path not in filestoamend:
+                        return old.filectx(path)
+
+                    fctx = wctx[path]
+
+                    # Return None for removed files.
+                    if not fctx.exists():
+                        return None
+
                     flags = fctx.flags()
                     mctx = context.memfilectx(repo,
                                               fctx.path(), fctx.data(),
@@ -3021,11 +3211,14 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 except KeyError:
                     return None
 
-            user = opts.get('user') or old.user()
-            date = opts.get('date') or old.date()
+        # See if we got a message from -m or -l, if not, open the editor with
+        # the message of the changeset to amend.
+        message = logmessage(ui, opts)
+
         editform = mergeeditform(old, 'commit.amend')
         editor = getcommiteditor(editform=editform,
                                  **pycompat.strkwargs(opts))
+
         if not message:
             editor = getcommiteditor(edit=True, editform=editform)
             message = old.description()
@@ -3044,7 +3237,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                              editor=editor)
 
         newdesc = changelog.stripdesc(new.description())
-        if ((not node)
+        if ((not changes)
             and newdesc == old.description()
             and user == old.user()
             and date == old.date()
@@ -3055,23 +3248,41 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # This not what we expect from amend.
             return old.node()
 
-        ph = repo.ui.config('phases', 'new-commit', phases.draft)
-        try:
-            if opts.get('secret'):
-                commitphase = 'secret'
-            else:
-                commitphase = old.phase()
-            repo.ui.setconfig('phases', 'new-commit', commitphase, 'amend')
+        if opts.get('secret'):
+            commitphase = 'secret'
+        else:
+            commitphase = old.phase()
+        overrides = {('phases', 'new-commit'): commitphase}
+        with ui.configoverride(overrides, 'amend'):
             newid = repo.commitctx(new)
-        finally:
-            repo.ui.setconfig('phases', 'new-commit', ph, 'amend')
-        if newid != old.node():
-            # Reroute the working copy parent to the new changeset
-            repo.setparents(newid, nullid)
-            mapping = {old.node(): (newid,)}
-            if node:
-                mapping[node] = ()
-            scmutil.cleanupnodes(repo, mapping, 'amend')
+
+        # Reroute the working copy parent to the new changeset
+        repo.setparents(newid, nullid)
+        mapping = {old.node(): (newid,)}
+        obsmetadata = None
+        if opts.get('note'):
+            obsmetadata = {'note': opts['note']}
+        scmutil.cleanupnodes(repo, mapping, 'amend', metadata=obsmetadata)
+
+        # Fixing the dirstate because localrepo.commitctx does not update
+        # it. This is rather convenient because we did not need to update
+        # the dirstate for all the files in the new commit which commitctx
+        # could have done if it updated the dirstate. Now, we can
+        # selectively update the dirstate only for the amended files.
+        dirstate = repo.dirstate
+
+        # Update the state of the files which were added and
+        # and modified in the amend to "normal" in the dirstate.
+        normalfiles = set(wctx.modified() + wctx.added()) & filestoamend
+        for f in normalfiles:
+            dirstate.normal(f)
+
+        # Update the state of files which were removed in the amend
+        # to "removed" in the dirstate.
+        removedfiles = set(wctx.removed()) & filestoamend
+        for f in removedfiles:
+            dirstate.drop(f)
+
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):
@@ -3109,7 +3320,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
 
     editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
                               editform=editform, pending=pending,
-                              repopath=repo.path)
+                              repopath=repo.path, action='commit')
     text = editortext
 
     # strip away anything below this special string (used for editors that want
@@ -3511,7 +3722,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
-    pass
 
 def _performrevert(repo, parents, ctx, actions, interactive=False,
                    tobackup=None):
@@ -3601,7 +3811,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             if reversehunks:
                 chunks = patch.reversehunks(chunks)
 
-        except patch.PatchError as err:
+        except error.PatchError as err:
             raise error.Abort(_('error parsing patch: %s') % err)
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
@@ -3623,7 +3833,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         if dopatch:
             try:
                 patch.internalpatch(repo.ui, repo, fp, 1, eolmode=None)
-            except patch.PatchError as err:
+            except error.PatchError as err:
                 raise error.Abort(str(err))
         del fp
     else:

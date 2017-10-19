@@ -516,6 +516,26 @@ class buildhgextindex(Command):
 
 class buildhgexe(build_ext):
     description = 'compile hg.exe from mercurial/exewrapper.c'
+    user_options = build_ext.user_options + [
+        ('long-paths-support', None, 'enable support for long paths on '
+                                     'Windows (off by default and '
+                                     'experimental)'),
+    ]
+
+    LONG_PATHS_MANIFEST = """
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+        <application>
+            <windowsSettings
+            xmlns:ws2="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
+                <ws2:longPathAware>true</ws2:longPathAware>
+            </windowsSettings>
+        </application>
+    </assembly>"""
+
+    def initialize_options(self):
+        build_ext.initialize_options(self)
+        self.long_paths_support = False
 
     def build_extensions(self):
         if os.name != 'nt':
@@ -557,10 +577,45 @@ class buildhgexe(build_ext):
         objects = self.compiler.compile(['mercurial/exewrapper.c'],
                                          output_dir=self.build_temp)
         dir = os.path.dirname(self.get_ext_fullpath('dummy'))
-        target = os.path.join(dir, 'hg')
-        self.compiler.link_executable(objects, target,
+        self.hgtarget = os.path.join(dir, 'hg')
+        self.compiler.link_executable(objects, self.hgtarget,
                                       libraries=[],
                                       output_dir=self.build_temp)
+        if self.long_paths_support:
+            self.addlongpathsmanifest()
+
+    def addlongpathsmanifest(self):
+        """Add manifest pieces so that hg.exe understands long paths
+
+        This is an EXPERIMENTAL feature, use with care.
+        To enable long paths support, one needs to do two things:
+        - build Mercurial with --long-paths-support option
+        - change HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\
+                 LongPathsEnabled to have value 1.
+
+        Please ignore 'warning 81010002: Unrecognized Element "longPathAware"';
+        it happens because Mercurial uses mt.exe circa 2008, which is not
+        yet aware of long paths support in the manifest (I think so at least).
+        This does not stop mt.exe from embedding/merging the XML properly.
+
+        Why resource #1 should be used for .exe manifests? I don't know and
+        wasn't able to find an explanation for mortals. But it seems to work.
+        """
+        exefname = self.compiler.executable_filename(self.hgtarget)
+        fdauto, manfname = tempfile.mkstemp(suffix='.hg.exe.manifest')
+        os.close(fdauto)
+        with open(manfname, 'w') as f:
+            f.write(self.LONG_PATHS_MANIFEST)
+        log.info("long paths manifest is written to '%s'" % manfname)
+        inputresource = '-inputresource:%s;#1' % exefname
+        outputresource = '-outputresource:%s;#1' % exefname
+        log.info("running mt.exe to update hg.exe's manifest in-place")
+        # supplying both -manifest and -inputresource to mt.exe makes
+        # it merge the embedded and supplied manifests in the -outputresource
+        self.spawn(['mt.exe', '-nologo', '-manifest', manfname,
+                    inputresource, outputresource])
+        log.info("done updating hg.exe's manifest")
+        os.remove(manfname)
 
     @property
     def hgexepath(self):
@@ -709,6 +764,8 @@ packages = ['mercurial',
             'mercurial.hgweb',
             'mercurial.httpclient',
             'mercurial.pure',
+            'mercurial.thirdparty',
+            'mercurial.thirdparty.attr',
             'hgext', 'hgext.convert', 'hgext.fsmonitor',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
             'hgext.largefiles', 'hgext.zeroconf', 'hgext3rd',
@@ -760,13 +817,14 @@ extmodules = [
                                         'mercurial/cext/mpatch.c'],
               include_dirs=common_include_dirs,
               depends=common_depends),
-    Extension('mercurial.cext.parsers', ['mercurial/cext/dirs.c',
+    Extension('mercurial.cext.parsers', ['mercurial/cext/charencode.c',
+                                         'mercurial/cext/dirs.c',
                                          'mercurial/cext/manifest.c',
                                          'mercurial/cext/parsers.c',
                                          'mercurial/cext/pathencode.c',
                                          'mercurial/cext/revlog.c'],
               include_dirs=common_include_dirs,
-              depends=common_depends),
+              depends=common_depends + ['mercurial/cext/charencode.h']),
     Extension('mercurial.cext.osutil', ['mercurial/cext/osutil.c'],
               include_dirs=common_include_dirs,
               extra_compile_args=osutil_cflags,

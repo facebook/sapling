@@ -29,6 +29,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   $ rm -rf ../b
 
   $ hg clone -u . .#other ../b -r 0 -r 1 -r 2 -b other
@@ -36,6 +37,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch mine
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -45,6 +47,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -54,6 +57,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch mine
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -63,6 +67,7 @@
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch other
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -74,6 +79,7 @@ Test -r mine ... mine is ignored:
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch other
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -83,6 +89,7 @@ Test -r mine ... mine is ignored:
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+2 heads)
+  new changesets 8c68ee086fd0:fcc393352796
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b
@@ -92,6 +99,7 @@ Test -r mine ... mine is ignored:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets fcc393352796
   updating to branch other
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm -rf ../b

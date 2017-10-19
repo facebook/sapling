@@ -6,8 +6,11 @@
   > [phases]
   > publish=False
   > [experimental]
-  > evolution=createmarkers,exchange
+  > evolution.createmarkers=True
+  > evolution.exchange=True
   > EOF
+
+  $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'
 
 initialize
 
@@ -30,7 +33,7 @@ import bookmark by name
   $ hg book Y
   $ hg book
    * Y                         -1:000000000000
-  $ hg pull ../a
+  $ hg pull ../a --config "$TESTHOOK"
   pulling from ../a
   requesting all changes
   adding changesets
@@ -40,6 +43,10 @@ import bookmark by name
   adding remote bookmark X
   updating bookmark Y
   adding remote bookmark Z
+  new changesets 4e3505fd9583
+  test-hook-bookmark: X:   -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
+  test-hook-bookmark: Y:  0000000000000000000000000000000000000000 -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
+  test-hook-bookmark: Z:   -> 4e3505fd95835d721066b76e75dbb8cc554d7f77
   (run 'hg update' to get a working copy)
   $ hg bookmarks
      X                         0:4e3505fd9583
@@ -93,10 +100,11 @@ export bookmark by name
 delete a remote bookmark
 
   $ hg book -d W
-  $ hg push -B W ../a
+  $ hg push -B W ../a --config "$TESTHOOK"
   pushing to ../a
   searching for changes
   no changes found
+  test-hook-bookmark: W:  0000000000000000000000000000000000000000 -> 
   deleting remote bookmark W
   [1]
 
@@ -164,7 +172,7 @@ divergent bookmarks
      Z                         1:0d2164f0ce0d
 
   $ cd ../b
-  $ hg up
+  $ hg up --config
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark foobar
   $ echo c2 > f2
@@ -180,7 +188,7 @@ divergent bookmarks
      foo                       -1:000000000000
    * foobar                    1:9b140be10808
 
-  $ hg pull --config paths.foo=../a foo
+  $ hg pull --config paths.foo=../a foo --config "$TESTHOOK"
   pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
@@ -190,6 +198,10 @@ divergent bookmarks
   divergent bookmark @ stored as @foo
   divergent bookmark X stored as X@foo
   updating bookmark Z
+  new changesets 0d2164f0ce0d
+  test-hook-bookmark: @foo:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  test-hook-bookmark: X@foo:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  test-hook-bookmark: Z:  4e3505fd95835d721066b76e75dbb8cc554d7f77 -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      @                         1:9b140be10808
@@ -252,11 +264,13 @@ explicit pull should overwrite the local version (issue4439)
   $ hg update -r X
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark X)
-  $ hg pull --config paths.foo=../a foo -B .
+  $ hg pull --config paths.foo=../a foo -B . --config "$TESTHOOK"
   pulling from $TESTTMP/a (glob)
   no changes found
   divergent bookmark @ stored as @foo
   importing bookmark X
+  test-hook-bookmark: @foo:  0d2164f0ce0d8f1d6f94351eba04b794909be66c -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  test-hook-bookmark: X:  9b140be1080824d768c5a4691a564088eede71f9 -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
 
 reinstall state for further testing:
 
@@ -281,13 +295,14 @@ update a remote bookmark from a non-head to a head
   $ hg ci -Am3
   adding f2
   created new head
-  $ hg push ../a
+  $ hg push ../a --config "$TESTHOOK"
   pushing to ../a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  test-hook-bookmark: Y:  4e3505fd95835d721066b76e75dbb8cc554d7f77 -> f6fc62dde3c0771e29704af56ba4d8af77abcc2f
   updating bookmark Y
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
@@ -312,7 +327,11 @@ race conditions
   > echo committed in pull-race
   > EOF
 
-  $ hg clone -q http://localhost:$HGPORT/ pull-race2
+  $ hg clone -q http://localhost:$HGPORT/ pull-race2 --config "$TESTHOOK"
+  test-hook-bookmark: @:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  test-hook-bookmark: X:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  test-hook-bookmark: Y:   -> f6fc62dde3c0771e29704af56ba4d8af77abcc2f
+  test-hook-bookmark: Z:   -> 0d2164f0ce0d8f1d6f94351eba04b794909be66c
   $ cd pull-race
   $ hg up -q Y
   $ echo c4 > f2
@@ -343,6 +362,7 @@ race conditions
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
+  new changesets b0a5eff05604
   (run 'hg update' to get a working copy)
   $ hg book
    * @                         1:0d2164f0ce0d
@@ -392,6 +412,7 @@ Update a bookmark right after the initial lookup -B (issue4689)
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark Y
+  new changesets 35d1ef0a8d1b
   (run 'hg update' to get a working copy)
   $ hg book
      @                         1:0d2164f0ce0d
@@ -555,6 +576,7 @@ hgweb
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
   2 new obsolescence markers
+  new changesets 4e3505fd9583:c922c0139ca0
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
@@ -691,6 +713,7 @@ bookmark, not all outgoing changes:
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
   2 new obsolescence markers
+  new changesets 4e3505fd9583:c922c0139ca0
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd addmarks

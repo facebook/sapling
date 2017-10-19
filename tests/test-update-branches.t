@@ -198,8 +198,8 @@ Cases are run as shown in that table, row by row.
   parent=1
   M foo
 
-  $ echo '[experimental]' >> .hg/hgrc
-  $ echo 'updatecheck = abort' >> .hg/hgrc
+  $ echo '[commands]' >> .hg/hgrc
+  $ echo 'update.check = abort' >> .hg/hgrc
 
   $ revtest 'none dirty linear' dirty 1 2
   abort: uncommitted changes
@@ -215,7 +215,7 @@ Cases are run as shown in that table, row by row.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   parent=2
 
-  $ echo 'updatecheck = none' >> .hg/hgrc
+  $ echo 'update.check = none' >> .hg/hgrc
 
   $ revtest 'none dirty cross'  dirty 3 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -258,7 +258,7 @@ Cases are run as shown in that table, row by row.
   >>>>>>> destination:  d047485b3896 b1 - test: 4
   $ rm a.orig
 
-  $ echo 'updatecheck = noconflict' >> .hg/hgrc
+  $ echo 'update.check = noconflict' >> .hg/hgrc
 
   $ revtest 'none dirty cross'  dirty 3 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -315,7 +315,7 @@ Change/delete conflict is not allowed
   $ hg up -q 4
 
 Uses default value of "linear" when value is misspelled
-  $ echo 'updatecheck = linyar' >> .hg/hgrc
+  $ echo 'update.check = linyar' >> .hg/hgrc
 
   $ revtest 'dirty cross'  dirty 3 4
   abort: uncommitted changes
@@ -473,7 +473,7 @@ successors should be taken in account when checking head destination
   > [ui]
   > logtemplate={rev}:{node|short} {desc|firstline}
   > [experimental]
-  > evolution=createmarkers
+  > evolution.createmarkers=True
   > EOF
 
 Test no-argument update to a successor of an obsoleted changeset

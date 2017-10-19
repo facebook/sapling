@@ -31,6 +31,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets b6c483daf290
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -263,8 +264,14 @@ Testing --debug:
 
 Testing --traceback:
 
+#if no-chg
   $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
   Traceback (most recent call last):
+#else
+Traceback for '--config' errors not supported with chg.
+  $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
+  [1]
+#endif
 
 Testing --time:
 

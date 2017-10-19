@@ -140,6 +140,7 @@ Local is empty:
   adding manifests
   adding file changes
   added 12 changesets with 24 changes to 2 files
+  new changesets d57206cc072a:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -155,6 +156,7 @@ Local is subset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets d57206cc072a:d8f638ac69e9
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg incoming $remote
@@ -183,6 +185,7 @@ Local is subset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets a7892891da29:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -242,6 +245,7 @@ Local is superset:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets d57206cc072a:d8f638ac69e9
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tstart subset2
@@ -293,6 +297,7 @@ Partial pull:
   adding manifests
   adding file changes
   added 6 changesets with 12 changes to 2 files
+  new changesets d57206cc072a:d8f638ac69e9
   updating to branch name2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd partial
@@ -318,6 +323,7 @@ Partial pull:
   adding manifests
   adding file changes
   added 3 changesets with 6 changes to 2 files (+1 heads)
+  new changesets a7892891da29:e71dbbc70e03
   (run 'hg heads' to see heads)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -364,6 +370,7 @@ Both have new stuff in new named branches:
   adding manifests
   adding file changes
   added 3 changesets with 6 changes to 2 files (+1 heads)
+  new changesets a7892891da29:e71dbbc70e03
   (run 'hg heads' to see heads)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -400,6 +407,7 @@ Both have new stuff in new named branches:
   adding manifests
   adding file changes
   added 3 changesets with 6 changes to 2 files (+1 heads)
+  new changesets a7892891da29:e71dbbc70e03
   (run 'hg heads' to see heads)
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/
@@ -453,6 +461,7 @@ Both have new stuff in existing named branches:
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets d8f638ac69e9
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
@@ -484,6 +493,7 @@ Both have new stuff in existing named branches:
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets d8f638ac69e9
   (run 'hg update' to get a working copy)
   $ hg push $remote --new-branch
   pushing to http://localhost:$HGPORT/
@@ -520,7 +530,7 @@ Both have new stuff in existing named branches:
   "GET /?cmd=heads HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
   "GET /?cmd=branches HTTP/1.1" 200 - x-hgarg-1:nodes=d8f638ac69e9ae8dea4f09f11d696546a912d961 x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
   "GET /?cmd=between HTTP/1.1" 200 - x-hgarg-1:pairs=d8f638ac69e9ae8dea4f09f11d696546a912d961-d57206cc072a18317c1e381fb60aa31bd3401785 x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
-  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961 x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
+  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961+2c8d5d5ec612be65cdfdeac78b7662ab1696324a x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=heads HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=zstd,zlib,none,bzip2
@@ -552,7 +562,7 @@ Both have new stuff in existing named branches:
   "GET /?cmd=heads HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
   "GET /?cmd=branches HTTP/1.1" 200 - x-hgarg-1:nodes=d8f638ac69e9ae8dea4f09f11d696546a912d961 x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
   "GET /?cmd=between HTTP/1.1" 200 - x-hgarg-1:pairs=d8f638ac69e9ae8dea4f09f11d696546a912d961-d57206cc072a18317c1e381fb60aa31bd3401785 x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
-  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961 x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
+  "GET /?cmd=changegroupsubset HTTP/1.1" 200 - x-hgarg-1:bases=d8f638ac69e9ae8dea4f09f11d696546a912d961&heads=d8f638ac69e9ae8dea4f09f11d696546a912d961+2c8d5d5ec612be65cdfdeac78b7662ab1696324a x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
   "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2
   "GET /?cmd=capabilities HTTP/1.1" 200 -
   "GET /?cmd=heads HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=zlib,none,bzip2

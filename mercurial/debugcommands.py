@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import codecs
+import collections
 import difflib
 import errno
 import operator
@@ -261,18 +263,11 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
 
         def showchunks(named):
             ui.write("\n%s%s\n" % (indent_string, named))
-            chain = None
-            for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
-                node = chunkdata['node']
-                p1 = chunkdata['p1']
-                p2 = chunkdata['p2']
-                cs = chunkdata['cs']
-                deltabase = chunkdata['deltabase']
-                delta = chunkdata['delta']
+            for deltadata in gen.deltaiter():
+                node, p1, p2, cs, deltabase, delta, flags = deltadata
                 ui.write("%s%s %s %s %s %s %s\n" %
                          (indent_string, hex(node), hex(p1), hex(p2),
                           hex(cs), hex(deltabase), len(delta)))
-                chain = node
 
         chunkdata = gen.changelogheader()
         showchunks("changelog")
@@ -285,11 +280,9 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
         if isinstance(gen, bundle2.unbundle20):
             raise error.Abort(_('use debugbundle2 for this file'))
         chunkdata = gen.changelogheader()
-        chain = None
-        for chunkdata in iter(lambda: gen.deltachunk(chain), {}):
-            node = chunkdata['node']
+        for deltadata in gen.deltaiter():
+            node, p1, p2, cs, deltabase, delta, flags = deltadata
             ui.write("%s%s\n" % (indent_string, hex(node)))
-            chain = node
 
 def _debugobsmarkers(ui, part, indent=0, **opts):
     """display version and markers contained in 'data'"""
@@ -317,22 +310,28 @@ def _debugobsmarkers(ui, part, indent=0, **opts):
 def _debugphaseheads(ui, data, indent=0):
     """display version and markers contained in 'data'"""
     indent_string = ' ' * indent
-    headsbyphase = bundle2._readphaseheads(data)
+    headsbyphase = phases.binarydecode(data)
     for phase in phases.allphases:
         for head in headsbyphase[phase]:
             ui.write(indent_string)
             ui.write('%s %s\n' % (hex(head), phases.phasenames[phase]))
 
+def _quasirepr(thing):
+    if isinstance(thing, (dict, util.sortdict, collections.OrderedDict)):
+        return '{%s}' % (
+            b', '.join(b'%s: %s' % (k, thing[k]) for k in sorted(thing)))
+    return pycompat.bytestr(repr(thing))
+
 def _debugbundle2(ui, gen, all=None, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_('not a bundle2 file'))
-    ui.write(('Stream params: %s\n' % repr(gen.params)))
+    ui.write(('Stream params: %s\n' % _quasirepr(gen.params)))
     parttypes = opts.get(r'part_type', [])
     for part in gen.iterparts():
         if parttypes and part.type not in parttypes:
             continue
-        ui.write('%s -- %r\n' % (part.type, repr(part.params)))
+        ui.write('%s -- %s\n' % (part.type, _quasirepr(part.params)))
         if part.type == 'changegroup':
             version = part.params.get('version', '01')
             cg = changegroup.getunbundler(version, part, 'UN')
@@ -990,9 +989,9 @@ def debuginstall(ui, **opts):
     fm.write('encoding', _("checking encoding (%s)...\n"), encoding.encoding)
     err = None
     try:
-        encoding.fromlocal("test")
-    except error.Abort as inst:
-        err = inst
+        codecs.lookup(pycompat.sysstr(encoding.encoding))
+    except LookupError as inst:
+        err = util.forcebytestr(inst)
         problems += 1
     fm.condwrite(err, 'encodingerror', _(" %s\n"
                  " (check that your locale is properly set)\n"), err)
@@ -1048,7 +1047,7 @@ def debuginstall(ui, **opts):
             )
             dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
         except Exception as inst:
-            err = inst
+            err = util.forcebytestr(inst)
             problems += 1
         fm.condwrite(err, 'extensionserror', " %s\n", err)
 
@@ -1080,7 +1079,7 @@ def debuginstall(ui, **opts):
             try:
                 templater.templater.frommapfile(m)
             except Exception as inst:
-                err = inst
+                err = util.forcebytestr(inst)
                 p = None
             fm.condwrite(err, 'defaulttemplateerror', " %s\n", err)
         else:
@@ -1116,7 +1115,7 @@ def debuginstall(ui, **opts):
     try:
         username = ui.username()
     except error.Abort as e:
-        err = e
+        err = util.forcebytestr(e)
         problems += 1
 
     fm.condwrite(username, 'username',  _("checking username (%s)\n"), username)
@@ -2073,7 +2072,7 @@ def debugssl(ui, repo, source=None, **opts):
     If the update succeeds, retry the original operation.  Otherwise, the cause
     of the SSL error is likely another issue.
     '''
-    if pycompat.osname != 'nt':
+    if not pycompat.iswindows:
         raise error.Abort(_('certificate chain building is only possible on '
                             'Windows'))
 

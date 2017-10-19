@@ -11,9 +11,9 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 
 #include "bdiff.h"
 #include "bitmanipulation.h"

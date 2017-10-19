@@ -62,7 +62,7 @@ This extension used to provide a strip command. This command now lives
 in the strip extension.
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import errno
 import os
@@ -80,6 +80,7 @@ from mercurial import (
     cmdutil,
     commands,
     dirstateguard,
+    encoding,
     error,
     extensions,
     hg,
@@ -107,6 +108,22 @@ command = registrar.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('mq', 'git',
+    default='auto',
+)
+configitem('mq', 'keepchanges',
+    default=False,
+)
+configitem('mq', 'plain',
+    default=False,
+)
+configitem('mq', 'secret',
+    default=False,
+)
 
 # force load strip extension formerly included in mq and import some utility
 try:
@@ -153,23 +170,25 @@ PLAINHEADERS = {
 
 def inserthgheader(lines, header, value):
     """Assuming lines contains a HG patch header, add a header line with value.
-    >>> try: inserthgheader([], '# Date ', 'z')
-    ... except ValueError, inst: print "oops"
+    >>> try: inserthgheader([], b'# Date ', b'z')
+    ... except ValueError as inst: print("oops")
     oops
-    >>> inserthgheader(['# HG changeset patch'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', ''], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b''], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '']
-    >>> inserthgheader(['# HG changeset patch', '# User y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# User y'], b'# Date ', b'z')
     ['# HG changeset patch', '# User y', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', '# Date x', '# User y'],
-    ...                '# User ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Date x', b'# User y'],
+    ...                b'# User ', b'z')
     ['# HG changeset patch', '# Date x', '# User z']
-    >>> inserthgheader(['# HG changeset patch', '# Date y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Date y'], b'# Date ', b'z')
     ['# HG changeset patch', '# Date z']
-    >>> inserthgheader(['# HG changeset patch', '', '# Date y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'', b'# Date y'],
+    ...                b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '', '# Date y']
-    >>> inserthgheader(['# HG changeset patch', '# Parent  y'], '# Date ', 'z')
+    >>> inserthgheader([b'# HG changeset patch', b'# Parent  y'],
+    ...                b'# Date ', b'z')
     ['# HG changeset patch', '# Date z', '# Parent  y']
     """
     start = lines.index('# HG changeset patch') + 1
@@ -193,19 +212,19 @@ def inserthgheader(lines, header, value):
 
 def insertplainheader(lines, header, value):
     """For lines containing a plain patch header, add a header line with value.
-    >>> insertplainheader([], 'Date', 'z')
+    >>> insertplainheader([], b'Date', b'z')
     ['Date: z']
-    >>> insertplainheader([''], 'Date', 'z')
+    >>> insertplainheader([b''], b'Date', b'z')
     ['Date: z', '']
-    >>> insertplainheader(['x'], 'Date', 'z')
+    >>> insertplainheader([b'x'], b'Date', b'z')
     ['Date: z', '', 'x']
-    >>> insertplainheader(['From: y', 'x'], 'Date', 'z')
+    >>> insertplainheader([b'From: y', b'x'], b'Date', b'z')
     ['From: y', 'Date: z', '', 'x']
-    >>> insertplainheader([' date : x', ' from : y', ''], 'From', 'z')
+    >>> insertplainheader([b' date : x', b' from : y', b''], b'From', b'z')
     [' date : x', 'From: z', '']
-    >>> insertplainheader(['', 'Date: y'], 'Date', 'z')
+    >>> insertplainheader([b'', b'Date: y'], b'Date', b'z')
     ['Date: z', '', 'Date: y']
-    >>> insertplainheader(['foo: bar', 'DATE: z', 'x'], 'From', 'y')
+    >>> insertplainheader([b'foo: bar', b'DATE: z', b'x'], b'From', b'y')
     ['From: y', 'foo: bar', 'DATE: z', '', 'x']
     """
     newprio = PLAINHEADERS[header.lower()]
@@ -403,7 +422,7 @@ def newcommit(repo, phase, *args, **kwargs):
     """
     repo = repo.unfiltered()
     if phase is None:
-        if repo.ui.configbool('mq', 'secret', False):
+        if repo.ui.configbool('mq', 'secret'):
             phase = phases.secret
     overrides = {('ui', 'allowemptycommit'): True}
     if phase is not None:
@@ -441,19 +460,16 @@ class queue(object):
         self.activeguards = None
         self.guardsdirty = False
         # Handle mq.git as a bool with extended values
-        try:
-            gitmode = ui.configbool('mq', 'git', None)
-            if gitmode is None:
-                raise error.ConfigError
-            if gitmode:
-                self.gitmode = 'yes'
+        gitmode = ui.config('mq', 'git').lower()
+        boolmode = util.parsebool(gitmode)
+        if boolmode is not None:
+            if boolmode:
+                gitmode = 'yes'
             else:
-                self.gitmode = 'no'
-        except error.ConfigError:
-            # let's have check-config ignore the type mismatch
-            self.gitmode = ui.config(r'mq', 'git', 'auto').lower()
+                gitmode = 'no'
+        self.gitmode = gitmode
         # deprecated config: mq.plain
-        self.plainmode = ui.configbool('mq', 'plain', False)
+        self.plainmode = ui.configbool('mq', 'plain')
         self.checkapplied = True
 
     @util.propertycache
@@ -1046,10 +1062,10 @@ class queue(object):
         repo._phasecache
         patches = self._revpatches(repo, sorted(revs))
         qfinished = self._cleanup(patches, len(patches))
-        if qfinished and repo.ui.configbool('mq', 'secret', False):
+        if qfinished and repo.ui.configbool('mq', 'secret'):
             # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
-            tphase = repo.ui.config('phases', 'new-commit', phases.draft)
+            tphase = phases.newcommitphase(repo.ui)
             if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
                 with repo.transaction('qfinish') as tr:
                     phases.advanceboundary(repo, tr, tphase, qfinished)
@@ -1209,7 +1225,7 @@ class queue(object):
                 p = self.opener(patchfn, "w")
             except IOError as e:
                 raise error.Abort(_('cannot write patch "%s": %s')
-                                 % (patchfn, e.strerror))
+                                 % (patchfn, encoding.strtolocal(e.strerror)))
             try:
                 defaultmsg = "[mq]: %s" % patchfn
                 editor = cmdutil.getcommiteditor(editform=editform)
@@ -1667,15 +1683,15 @@ class queue(object):
             changes = repo.changelog.read(top)
             man = repo.manifestlog[changes[0]].read()
             aaa = aa[:]
-            matchfn = scmutil.match(repo[None], pats, opts)
+            match1 = scmutil.match(repo[None], pats, opts)
             # in short mode, we only diff the files included in the
             # patch already plus specified files
             if opts.get('short'):
                 # if amending a patch, we start with existing
                 # files plus specified files - unfiltered
-                match = scmutil.matchfiles(repo, mm + aa + dd + matchfn.files())
+                match = scmutil.matchfiles(repo, mm + aa + dd + match1.files())
                 # filter with include/exclude options
-                matchfn = scmutil.match(repo[None], opts=opts)
+                match1 = scmutil.match(repo[None], opts=opts)
             else:
                 match = scmutil.matchall(repo)
             m, a, r, d = repo.status(match=match)[:4]
@@ -1716,8 +1732,8 @@ class queue(object):
             a = list(aa)
 
             # create 'match' that includes the files to be recommitted.
-            # apply matchfn via repo.status to ensure correct case handling.
-            cm, ca, cr, cd = repo.status(patchparent, match=matchfn)[:4]
+            # apply match1 via repo.status to ensure correct case handling.
+            cm, ca, cr, cd = repo.status(patchparent, match=match1)[:4]
             allmatches = set(cm + ca + cr + cd)
             refreshchanges = [x.intersection(allmatches) for x in (mm, aa, dd)]
 
@@ -1767,7 +1783,7 @@ class queue(object):
                 # file with mtime=0 so status can see it.
                 mm = []
                 for i in xrange(len(m) - 1, -1, -1):
-                    if not matchfn(m[i]):
+                    if not match1(m[i]):
                         mm.append(m[i])
                         del m[i]
                 for f in m:
@@ -2151,7 +2167,7 @@ class queue(object):
                     self.added.append(patchname)
                     imported.append(patchname)
                     patchname = None
-                    if rev and repo.ui.configbool('mq', 'secret', False):
+                    if rev and repo.ui.configbool('mq', 'secret'):
                         # if we added anything with --rev, move the secret root
                         phases.retractboundary(repo, tr, phases.secret, [n])
                     self.parseseries()
@@ -2250,6 +2266,7 @@ def applied(ui, repo, patch=None, **opts):
     Returns 0 on success."""
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
 
     if patch:
         if patch not in q.series:
@@ -2283,6 +2300,7 @@ def unapplied(ui, repo, patch=None, **opts):
     Returns 0 on success."""
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     if patch:
         if patch not in q.series:
             raise error.Abort(_("patch %s is not in series file") % patch)
@@ -2345,6 +2363,7 @@ def qimport(ui, repo, *filename, **opts):
 
     Returns 0 if import succeeded.
     """
+    opts = pycompat.byteskwargs(opts)
     with repo.lock(): # cause this may move phase
         q = repo.mq
         try:
@@ -2399,7 +2418,7 @@ def init(ui, repo, **opts):
 
     This command is deprecated. Without -c, it's implied by other relevant
     commands. With -c, use :hg:`init --mq` instead."""
-    return qinit(ui, repo, create=opts.get('create_repo'))
+    return qinit(ui, repo, create=opts.get(r'create_repo'))
 
 @command("qclone",
          [('', 'pull', None, _('use pull protocol to copy metadata')),
@@ -2429,6 +2448,7 @@ def clone(ui, source, dest=None, **opts):
 
     Return 0 on success.
     '''
+    opts = pycompat.byteskwargs(opts)
     def patchdir(repo):
         """compute a patch repo url from a repo object"""
         url = repo.url()
@@ -2510,8 +2530,8 @@ def series(ui, repo, **opts):
     """print the entire series file
 
     Returns 0 on success."""
-    repo.mq.qseries(repo, missing=opts.get('missing'),
-                    summary=opts.get('summary'))
+    repo.mq.qseries(repo, missing=opts.get(r'missing'),
+                    summary=opts.get(r'summary'))
     return 0
 
 @command("qtop", seriesopts, _('hg qtop [-s]'))
@@ -2527,7 +2547,7 @@ def top(ui, repo, **opts):
 
     if t:
         q.qseries(repo, start=t - 1, length=1, status='A',
-                  summary=opts.get('summary'))
+                  summary=opts.get(r'summary'))
     else:
         ui.write(_("no patches applied\n"))
         return 1
@@ -2542,7 +2562,7 @@ def next(ui, repo, **opts):
     if end == len(q.series):
         ui.write(_("all patches applied\n"))
         return 1
-    q.qseries(repo, start=end, length=1, summary=opts.get('summary'))
+    q.qseries(repo, start=end, length=1, summary=opts.get(r'summary'))
 
 @command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
@@ -2559,7 +2579,7 @@ def prev(ui, repo, **opts):
         return 1
     idx = q.series.index(q.applied[-2].name)
     q.qseries(repo, start=idx, length=1, status='A',
-              summary=opts.get('summary'))
+              summary=opts.get(r'summary'))
 
 def setupheaderopts(ui, opts):
     if not opts.get('user') and opts.get('currentuser'):
@@ -2605,11 +2625,12 @@ def new(ui, repo, patch, *args, **opts):
 
     Returns 0 on successful creation of a new patch.
     """
+    opts = pycompat.byteskwargs(opts)
     msg = cmdutil.logmessage(ui, opts)
     q = repo.mq
     opts['msg'] = msg
     setupheaderopts(ui, opts)
-    q.new(repo, patch, *args, **opts)
+    q.new(repo, patch, *args, **pycompat.strkwargs(opts))
     q.savedirty()
     return 0
 
@@ -2650,11 +2671,12 @@ def refresh(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     q = repo.mq
     message = cmdutil.logmessage(ui, opts)
     setupheaderopts(ui, opts)
     with repo.wlock():
-        ret = q.refresh(repo, pats, msg=message, **opts)
+        ret = q.refresh(repo, pats, msg=message, **pycompat.strkwargs(opts))
         q.savedirty()
         return ret
 
@@ -2678,7 +2700,7 @@ def diff(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
     ui.pager('qdiff')
-    repo.mq.diff(repo, pats, opts)
+    repo.mq.diff(repo, pats, pycompat.byteskwargs(opts))
     return 0
 
 @command('qfold',
@@ -2700,6 +2722,7 @@ def fold(ui, repo, *files, **opts):
     current patch header, separated by a line of ``* * *``.
 
     Returns 0 on success."""
+    opts = pycompat.byteskwargs(opts)
     q = repo.mq
     if not files:
         raise error.Abort(_('qfold requires at least one patch name'))
@@ -2758,6 +2781,7 @@ def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
 
     Returns 0 on success.'''
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     q = repo.mq
     patch = q.lookup(patch)
@@ -2823,7 +2847,7 @@ def guard(ui, repo, *args, **opts):
     applied = set(p.name for p in q.applied)
     patch = None
     args = list(args)
-    if opts.get('list'):
+    if opts.get(r'list'):
         if args or opts.get('none'):
             raise error.Abort(_('cannot mix -l/--list with options or '
                                'arguments'))
@@ -2917,6 +2941,7 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
@@ -2957,6 +2982,7 @@ def pop(ui, repo, patch=None, **opts):
 
     Return 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
@@ -3036,8 +3062,8 @@ def restore(ui, repo, rev, **opts):
     This command is deprecated, use :hg:`rebase` instead."""
     rev = repo.lookup(rev)
     q = repo.mq
-    q.restore(repo, rev, delete=opts.get('delete'),
-              qupdate=opts.get('update'))
+    q.restore(repo, rev, delete=opts.get(r'delete'),
+              qupdate=opts.get(r'update'))
     q.savedirty()
     return 0
 
@@ -3053,6 +3079,7 @@ def save(ui, repo, **opts):
 
     This command is deprecated, use :hg:`rebase` instead."""
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     message = cmdutil.logmessage(ui, opts)
     ret = q.save(repo, msg=message)
     if ret:
@@ -3122,6 +3149,7 @@ def select(ui, repo, *args, **opts):
     Returns 0 on success.'''
 
     q = repo.mq
+    opts = pycompat.byteskwargs(opts)
     guards = q.active()
     pushable = lambda i: q.pushable(q.applied[i].name)[0]
     if args or opts.get('none'):
@@ -3210,9 +3238,9 @@ def finish(ui, repo, *revrange, **opts):
 
     Returns 0 on success.
     """
-    if not opts.get('applied') and not revrange:
+    if not opts.get(r'applied') and not revrange:
         raise error.Abort(_('no revisions specified'))
-    elif opts.get('applied'):
+    elif opts.get(r'applied'):
         revrange = ('qbase::qtip',) + revrange
 
     q = repo.mq
@@ -3341,6 +3369,7 @@ def qqueue(ui, repo, name=None, **opts):
         fh.close()
         repo.vfs.rename('patches.queues.new', _allqueues)
 
+    opts = pycompat.byteskwargs(opts)
     if not name or opts.get('list') or opts.get('active'):
         current = _getcurrent()
         if opts.get('active'):
@@ -3410,7 +3439,7 @@ def qqueue(ui, repo, name=None, **opts):
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
     if repo.mq.applied:
-        if repo.ui.configbool('mq', 'secret', False):
+        if repo.ui.configbool('mq', 'secret'):
             mqphase = phases.secret
         else:
             mqphase = phases.draft
@@ -3512,13 +3541,13 @@ def reposetup(ui, repo):
 
 def mqimport(orig, ui, repo, *args, **kwargs):
     if (util.safehasattr(repo, 'abortifwdirpatched')
-        and not kwargs.get('no_commit', False)):
+        and not kwargs.get(r'no_commit', False)):
         repo.abortifwdirpatched(_('cannot import over an applied patch'),
-                                   kwargs.get('force'))
+                                   kwargs.get(r'force'))
     return orig(ui, repo, *args, **kwargs)
 
 def mqinit(orig, ui, *args, **kwargs):
-    mq = kwargs.pop('mq', None)
+    mq = kwargs.pop(r'mq', None)
 
     if not mq:
         return orig(ui, *args, **kwargs)

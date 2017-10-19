@@ -394,7 +394,7 @@ stream-preferred
 ----------------
 
 If present the server prefers that clients clone using the streaming clone
-protocol (``hg clone --uncompressed``) rather than the standard
+protocol (``hg clone --stream``) rather than the standard
 changegroup/bundle based protocol.
 
 This capability was introduced in Mercurial 2.2 (released May 2012).

@@ -29,22 +29,49 @@ Absolute paths outside the repo should just be rejected
 
 #if no-windows
   $ hg debugsparse --include /foo/bar
-  warning: paths cannot start with /, ignoring: ['/foo/bar']
+  abort: paths cannot be absolute
+  [255]
   $ hg debugsparse --include '$TESTTMP/myrepo/hide'
 
   $ hg debugsparse --include '/root'
-  warning: paths cannot start with /, ignoring: ['/root']
+  abort: paths cannot be absolute
+  [255]
 #else
 TODO: See if this can be made to fail the same way as on Unix
   $ hg debugsparse --include /c/foo/bar
-  abort: c:/foo/bar not under root '$TESTTMP/myrepo' (glob)
+  abort: paths cannot be absolute
   [255]
   $ hg debugsparse --include '$TESTTMP/myrepo/hide'
 
   $ hg debugsparse --include '/c/root'
-  abort: c:/root not under root '$TESTTMP/myrepo' (glob)
+  abort: paths cannot be absolute
   [255]
 #endif
+
+Paths should be treated as cwd-relative, not repo-root-relative
+  $ mkdir subdir && cd subdir
+  $ hg debugsparse --include path
+  $ hg debugsparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  subdir/path
+  
+  $ cd ..
+  $ echo hello > subdir/file2.ext
+  $ cd subdir
+  $ hg debugsparse --include '**.ext'  # let us test globs
+  $ hg debugsparse --include 'path:abspath'  # and a path: pattern
+  $ cd ..
+  $ hg debugsparse
+  [include]
+  $TESTTMP/myrepo/hide
+  hide
+  path:abspath
+  subdir/**.ext
+  subdir/path
+  
+  $ rm -rf subdir
 
 Verify commiting while sparse includes other files
 

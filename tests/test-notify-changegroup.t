@@ -39,15 +39,15 @@ commit
 push
 
   $ hg --traceback --cwd b push ../a 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   pushing to ../a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)
@@ -85,6 +85,7 @@ unbundle with unrelated source
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets cb9a9f314b8b:ba677d0156c1
   (run 'hg update' to get a working copy)
   $ hg --cwd a rollback
   repository tip rolled back to revision -1 (undo unbundle)
@@ -92,13 +93,14 @@ unbundle with unrelated source
 unbundle with correct source
 
   $ hg --config notify.sources=unbundle --cwd a unbundle ../test.hg 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
+  new changesets cb9a9f314b8b:ba677d0156c1
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)
@@ -167,15 +169,15 @@ merge as a different user
 push
 
   $ hg --traceback --cwd b --config notify.fromauthor=True push ../a 2>&1 |
-  >     $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  >     $PYTHON -c 'from __future__ import print_function ; import sys,re; print(re.sub("\n\t", " ", sys.stdin.read()), end="")'
   pushing to ../a
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 1 files
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Date: * (glob)
   Subject: * (glob)

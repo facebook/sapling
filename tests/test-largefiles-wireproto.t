@@ -41,6 +41,7 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets b6eb3a2e2efe
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -53,6 +54,7 @@ largefiles clients still work with vanilla servers
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets b6eb3a2e2efe
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 #endif
@@ -224,9 +226,11 @@ Clone over http, no largefiles pulled on clone.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets cf03e5bb9936
 
 Archive contains largefiles
-  >>> import urllib2, os
+  >>> import os
+  >>> import urllib2
   >>> u = 'http://localhost:%s/archive/default.zip' % os.environ['HGPORT2']
   >>> with open('archive.zip', 'w') as f:
   ...     f.write(urllib2.urlopen(u).read())
@@ -338,6 +342,7 @@ largefiles should batch verify remote calls
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 567253b0f523:04d19c27a332
   $ hg -R batchverifyclone verify --large --lfa
   checking changesets
   checking manifests
@@ -374,6 +379,7 @@ available locally.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 6bba8cb6935d
   (run 'hg update' to get a working copy)
   $ hg -R batchverifyclone verify --lfa
   checking changesets
@@ -436,6 +442,7 @@ a large file from the server rather than to get it from the cache
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 567253b0f523
   updating to branch default
   getting changed largefiles
   1 largefiles updated, 0 removed

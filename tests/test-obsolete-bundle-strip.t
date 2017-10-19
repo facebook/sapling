@@ -15,7 +15,7 @@ Config setup
   > 
   > [experimental]
   > # enable evolution
-  > evolution = all
+  > evolution=true
   > 
   > # include obsmarkers in bundle
   > evolution.bundle-obsmarker = yes
@@ -207,6 +207,7 @@ Actual testing
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 2 new obsolescence markers
   # unbundling: obsoleted 1 changesets
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
@@ -246,6 +247,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
   # unbundling: 3 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
 chain with prune children
@@ -371,6 +373,7 @@ problematic)
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 1 new obsolescence markers
   # unbundling: obsoleted 1 changesets
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
 bundling multiple revisions
@@ -432,6 +435,7 @@ bundling multiple revisions
   # unbundling: adding file changes
   # unbundling: added 3 changesets with 3 changes to 3 files (+1 heads)
   # unbundling: 3 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
 chain with precursors also pruned
@@ -532,6 +536,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 1 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
   $ testrevs 'desc("C-A")'
@@ -571,6 +576,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files (+1 heads)
   # unbundling: 3 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg heads' to see heads)
 
 chain with missing prune
@@ -653,6 +659,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
   # unbundling: 3 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg update' to get a working copy)
 
 chain with precursors also pruned
@@ -732,6 +739,7 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 1 changesets with 1 changes to 1 files
   # unbundling: 3 new obsolescence markers
+  # unbundling: new changesets cf2c22470d67
   # unbundling: (run 'hg update' to get a working copy)
 
 Chain with fold and split
@@ -971,6 +979,7 @@ Actual testing
   # unbundling: added 1 changesets with 1 changes to 1 files (+1 heads)
   # unbundling: 6 new obsolescence markers
   # unbundling: obsoleted 3 changesets
+  # unbundling: new changesets 2f20ff6509f0
   # unbundling: (run 'hg heads' to see heads)
 
 Bundle multiple revisions
@@ -1072,6 +1081,7 @@ Bundle multiple revisions
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 7 new obsolescence markers
   # unbundling: obsoleted 2 changesets
+  # unbundling: new changesets 2f20ff6509f0
   # unbundling: (run 'hg heads' to see heads)
 
 * top one and initial precursors
@@ -1138,6 +1148,7 @@ Bundle multiple revisions
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 6 new obsolescence markers
   # unbundling: obsoleted 3 changesets
+  # unbundling: new changesets 2f20ff6509f0
   # unbundling: (run 'hg heads' to see heads)
 
 * top one and one of the split
@@ -1206,6 +1217,7 @@ Bundle multiple revisions
   # unbundling: added 2 changesets with 2 changes to 2 files (+2 heads)
   # unbundling: 7 new obsolescence markers
   # unbundling: obsoleted 2 changesets
+  # unbundling: new changesets 2f20ff6509f0
   # unbundling: (run 'hg heads' to see heads)
 
 * all
@@ -1280,6 +1292,7 @@ Bundle multiple revisions
   # unbundling: adding file changes
   # unbundling: added 5 changesets with 5 changes to 5 files (+4 heads)
   # unbundling: 9 new obsolescence markers
+  # unbundling: new changesets 2f20ff6509f0
   # unbundling: (run 'hg heads' to see heads)
 
 changeset pruned on its own
@@ -1381,4 +1394,5 @@ Actual testing
   # unbundling: adding file changes
   # unbundling: added 2 changesets with 2 changes to 2 files
   # unbundling: 1 new obsolescence markers
+  # unbundling: new changesets 9ac430e15fca
   # unbundling: (run 'hg update' to get a working copy)

@@ -95,9 +95,9 @@ _defaultstyles = {
     'diff.inserted': 'green',
     'diff.tab': '',
     'diff.trailingwhitespace': 'bold red_background',
-    'changeset.public' : '',
-    'changeset.draft' : '',
-    'changeset.secret' : '',
+    'changeset.public': '',
+    'changeset.draft': '',
+    'changeset.secret': '',
     'diffstat.deleted': 'red',
     'diffstat.inserted': 'green',
     'histedit.remaining': 'red bold',
@@ -130,7 +130,7 @@ _defaultstyles = {
 def loadcolortable(ui, extname, colortable):
     _defaultstyles.update(colortable)
 
-def _terminfosetup(ui, mode):
+def _terminfosetup(ui, mode, formatted):
     '''Initialize terminfo data and the terminal if we're in terminfo mode.'''
 
     # If we failed to load curses, we go ahead and return.
@@ -164,8 +164,8 @@ def _terminfosetup(ui, mode):
             del ui._terminfoparams[key]
     if not curses.tigetstr('setaf') or not curses.tigetstr('setab'):
         # Only warn about missing terminfo entries if we explicitly asked for
-        # terminfo mode.
-        if mode == "terminfo":
+        # terminfo mode and we're in a formatted terminal.
+        if mode == "terminfo" and formatted:
             ui.warn(_("no terminfo entry for setab/setaf: reverting to "
               "ECMA-48 color\n"))
         ui._terminfoparams.clear()
@@ -210,7 +210,7 @@ def _modesetup(ui):
         mode = ui.config('color', 'pagermode', mode)
 
     realmode = mode
-    if pycompat.osname == 'nt':
+    if pycompat.iswindows:
         from . import win32
 
         term = encoding.environ.get('TERM')
@@ -242,7 +242,7 @@ def _modesetup(ui):
     def modewarn():
         # only warn if color.mode was explicitly set and we're in
         # a formatted terminal
-        if mode == realmode and ui.formatted():
+        if mode == realmode and formatted:
             ui.warn(_('warning: failed to set color mode to %s\n') % mode)
 
     if realmode == 'win32':
@@ -253,7 +253,7 @@ def _modesetup(ui):
     elif realmode == 'ansi':
         ui._terminfoparams.clear()
     elif realmode == 'terminfo':
-        _terminfosetup(ui, mode)
+        _terminfosetup(ui, mode, formatted)
         if not ui._terminfoparams:
             ## FIXME Shouldn't we return None in this case too?
             modewarn()
@@ -320,10 +320,10 @@ def _effect_str(ui, effect):
 def _mergeeffects(text, start, stop):
     """Insert start sequence at every occurrence of stop sequence
 
-    >>> s = _mergeeffects('cyan', '[C]', '|')
-    >>> s = _mergeeffects(s + 'yellow', '[Y]', '|')
-    >>> s = _mergeeffects('ma' + s + 'genta', '[M]', '|')
-    >>> s = _mergeeffects('red' + s, '[R]', '|')
+    >>> s = _mergeeffects(b'cyan', b'[C]', b'|')
+    >>> s = _mergeeffects(s + b'yellow', b'[Y]', b'|')
+    >>> s = _mergeeffects(b'ma' + s + b'genta', b'[M]', b'|')
+    >>> s = _mergeeffects(b'red' + s, b'[R]', b'|')
     >>> s
     '[R]red[M]ma[Y][C]cyan|[R][M][Y]yellow|[R][M]genta|'
     """
@@ -379,7 +379,7 @@ def colorlabel(ui, msg, label):
     return msg
 
 w32effects = None
-if pycompat.osname == 'nt':
+if pycompat.iswindows:
     import ctypes
 
     _kernel32 = ctypes.windll.kernel32

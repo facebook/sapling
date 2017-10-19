@@ -28,11 +28,12 @@ Missing manifest should not result in server lookup
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
   $ cat server/access.log
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
-  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=aaff8d2ffbbf07a46dd1f05d8ae7877e3f56e2a2&listkeys=phases%2Cbookmarks x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
+  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Aphases%253Dheads%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=aaff8d2ffbbf07a46dd1f05d8ae7877e3f56e2a2&listkeys=bookmarks&phases=1 x-hgproto-1:0.1 0.2 comp=*zlib,none,bzip2 (glob)
 
 Empty manifest file results in retrieval
 (the extension only checks if the manifest file exists)
@@ -45,6 +46,7 @@ Empty manifest file results in retrieval
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Manifest file with invalid URL aborts
 
@@ -89,6 +91,7 @@ We can override failure to fall back to regular clone
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Bundle with partial content works
 
@@ -127,6 +130,7 @@ changes. If this output changes, we could break old clients.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets aaff8d2ffbbf
 
 Incremental pull doesn't fetch bundle
 
@@ -135,6 +139,7 @@ Incremental pull doesn't fetch bundle
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 53245c60e682
 
   $ cd partial-clone
   $ hg pull
@@ -144,6 +149,7 @@ Incremental pull doesn't fetch bundle
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets aaff8d2ffbbf
   (run 'hg update' to get a working copy)
   $ cd ..
 
@@ -240,6 +246,7 @@ Automatic fallback when all entries are filtered
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 URLs requiring SNI are filtered in Python <2.7.9
 
@@ -337,6 +344,7 @@ Stream bundle spec with unknown requirements should be filtered out
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets 53245c60e682:aaff8d2ffbbf
 
 Set up manifest for testing preferences
 (Remember, the TYPE does not have to match reality - the URL is
@@ -429,5 +437,83 @@ Test where attribute is missing from some entries
   adding file changes
   added 2 changesets with 2 changes to 2 files
   finished applying clone bundle
+  searching for changes
+  no changes found
+
+Test interaction between clone bundles and --stream
+
+A manifest with just a gzip bundle
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
+  > EOF
+
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
+  streaming all changes
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in * seconds (*) (glob)
+  searching for changes
+  no changes found
+
+A manifest with a stream clone but no BUNDLESPEC
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/packed.hg
+  > EOF
+
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-no-bundlespec
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
+  streaming all changes
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in * seconds (*) (glob)
+  searching for changes
+  no changes found
+
+A manifest with a gzip bundle and a stream clone
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1
+  > EOF
+
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in * seconds (*) (glob)
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+A manifest with a gzip bundle and stream clone with supported requirements
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv1
+  > EOF
+
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-requirements
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in * seconds (*) (glob)
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+A manifest with a gzip bundle and a stream clone with unsupported requirements
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv42
+  > EOF
+
+  $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-unsupported-requirements
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
+  streaming all changes
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in * seconds (*) (glob)
   searching for changes
   no changes found

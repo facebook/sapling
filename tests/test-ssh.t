@@ -52,7 +52,7 @@ non-existent absolute path
 
 clone remote via stream
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --uncompressed ssh://user@dummy/remote local-stream
+  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/remote local-stream
   streaming all changes
   4 files to transfer, 602 bytes of data
   transferred 602 bytes in * seconds (*) (glob)
@@ -74,7 +74,7 @@ clone remote via stream
 clone bookmarks via stream
 
   $ hg -R local-stream book mybook
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --uncompressed ssh://user@dummy/local-stream stream2
+  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/local-stream stream2
   streaming all changes
   4 files to transfer, 602 bytes of data
   transferred 602 bytes in * seconds (*) (glob)
@@ -96,6 +96,7 @@ clone remote via pull
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 2 files
+  new changesets 1160648e36ce:ad076bfb429d
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -317,6 +318,7 @@ clone bookmarks
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
+  new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R local-bookmarks bookmarks
@@ -417,6 +419,7 @@ Test hg-ssh in read-only mode:
   adding manifests
   adding file changes
   added 6 changesets with 5 changes to 4 files (+1 heads)
+  new changesets 1160648e36ce:1383141674ec
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -480,8 +483,8 @@ debug output
   running .* ".*/dummyssh" ['"]user@dummy['"] ('|")hg -R remote serve --stdio('|") (re)
   sending hello command
   sending between command
-  remote: 355
-  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN
+  remote: 372
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Aphases%3Dheads%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN
   remote: 1
   query 1; heads
   sending batch command
@@ -491,9 +494,9 @@ debug output
   sending getbundle command
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-part: total payload size 15
-  bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: total payload size 45
+  bundle2-input-part: "phase-heads" supported
+  bundle2-input-part: total payload size 72
   bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
 

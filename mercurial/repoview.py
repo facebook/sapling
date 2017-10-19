@@ -99,9 +99,6 @@ def computeunserved(repo):
         return hiddens
 
 def computemutable(repo):
-    """compute the set of revision that should be filtered when used a server
-
-    Secret and hidden changeset should not pretend to be here."""
     assert not repo.changelog.filteredrevs
     # fast check to avoid revset call on huge repo
     if any(repo._phasecache.phaseroots[1:]):

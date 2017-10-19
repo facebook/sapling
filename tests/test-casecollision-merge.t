@@ -144,7 +144,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ hg commit -m '#4'
 
   $ hg merge
-  abort: case-folding collision between a and A
+  abort: case-folding collision between [aA] and [Aa] (re)
   [255]
   $ hg parents --template '{rev}\n'
   4
@@ -157,7 +157,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ hg update --clean 2
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg merge
-  abort: case-folding collision between a and A
+  abort: case-folding collision between [aA] and [Aa] (re)
   [255]
   $ hg parents --template '{rev}\n'
   2
@@ -327,7 +327,7 @@ test for rename awareness of case-folding collision check:
   $ hg status
   A B
   $ hg update
-  abort: case-folding collision between b and B
+  abort: case-folding collision between [bB] and [Bb] (re)
   [255]
 
   $ hg update --check

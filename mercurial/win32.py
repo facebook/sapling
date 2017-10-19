@@ -286,7 +286,8 @@ def _raiseoserror(name):
     if code > 0x7fffffff:
         code -= 2**32
     err = ctypes.WinError(code=code)
-    raise OSError(err.errno, '%s: %s' % (name, err.strerror))
+    raise OSError(err.errno, '%s: %s' % (name,
+                                         encoding.strtolocal(err.strerror)))
 
 def _getfileinfo(name):
     fh = _kernel32.CreateFileA(name, 0,

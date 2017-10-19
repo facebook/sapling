@@ -13,13 +13,13 @@ Create an extension to test bundle2 with multiple changegroups
   >     # in 'heads' as intermediate heads for the first changegroup.
   >     intermediates = [repo[r].p1().node() for r in heads]
   >     outgoing = discovery.outgoing(repo, common, intermediates)
-  >     cg = changegroup.getchangegroup(repo, source, outgoing,
-  >                                     bundlecaps=bundlecaps)
+  >     cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >                                      source, bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup1')
   >     bundler.newpart('changegroup', data=cg.getchunks())
   >     outgoing = discovery.outgoing(repo, common + intermediates, heads)
-  >     cg = changegroup.getchangegroup(repo, source, outgoing,
-  >                                     bundlecaps=bundlecaps)
+  >     cg = changegroup.makechangegroup(repo, outgoing, '01',
+  >                                      source, bundlecaps=bundlecaps)
   >     bundler.newpart('output', data='changegroup2')
   >     bundler.newpart('changegroup', data=cg.getchunks())
   > 
@@ -88,6 +88,7 @@ Pull the new commits in the clone
   adding file changes
   added 1 changesets with 1 changes to 1 files
   pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  new changesets 27547f69f254:f838bfaca5c7
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
@@ -158,6 +159,7 @@ pullop.cgresult
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
   pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  new changesets b3325c91a4d9:5cd59d311f65
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
@@ -231,6 +233,7 @@ pullop.cgresult
   adding file changes
   added 1 changesets with 1 changes to 1 files
   pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
+  new changesets 71bd7b46de72:9d18e5bd9ab0
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   incoming hook: HG_HOOKNAME=incoming HG_HOOKTYPE=incoming HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo

@@ -211,10 +211,10 @@
   summary:     b
   
   $ hg debugbundle .hg/strip-backup/*
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '1')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 1, version: 02}
       264128213d290d868c54642d13aeaa3675551a78
-  phase-heads -- 'sortdict()'
+  phase-heads -- {}
       264128213d290d868c54642d13aeaa3675551a78 draft
   $ hg pull .hg/strip-backup/*
   pulling from .hg/strip-backup/264128213d29-0b39d6bf-backup.hg
@@ -223,6 +223,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 264128213d29
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ rm .hg/strip-backup/*
   $ hg log --graph
@@ -941,6 +942,215 @@ Error during post-close callback of the strip transaction
   abort: boom
   [255]
 
+test stripping a working directory parent doesn't switch named branches
+
+  $ hg log -G
+  @  changeset:   1:eca11cf91c71
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg branch new-branch
+  marked working directory as branch new-branch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m "start new branch"
+  $ echo 'foo' > foo.txt
+  $ hg ci -Aqm foo
+  $ hg up default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'bar' > bar.txt
+  $ hg ci -Aqm bar
+  $ hg up new-branch
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg log -G
+  @  changeset:   4:35358f982181
+  |  tag:         tip
+  |  parent:      1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     bar
+  |
+  | @  changeset:   3:f62c6c09b707
+  | |  branch:      new-branch
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     foo
+  | |
+  | o  changeset:   2:b1d33a8cadd9
+  |/   branch:      new-branch
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg strip --force -r 35358f982181
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-50d992d4-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg up default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'bar' > bar.txt
+  $ hg ci -Aqm bar
+  $ hg up new-branch
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ hg log -G
+  @    changeset:   5:4cf5e92caec2
+  |\   branch:      new-branch
+  | |  tag:         tip
+  | |  parent:      3:f62c6c09b707
+  | |  parent:      4:35358f982181
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge
+  | |
+  | o  changeset:   4:35358f982181
+  | |  parent:      1:eca11cf91c71
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     bar
+  | |
+  o |  changeset:   3:f62c6c09b707
+  | |  branch:      new-branch
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     foo
+  | |
+  o |  changeset:   2:b1d33a8cadd9
+  |/   branch:      new-branch
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg strip -r 35358f982181
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+  $ hg pull -u $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg
+  pulling from $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  new changesets 35358f982181:4cf5e92caec2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg strip -k -r 35358f982181
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/35358f982181-a6f020aa-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   3:f62c6c09b707
+  |  branch:      new-branch
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     foo
+  |
+  o  changeset:   2:b1d33a8cadd9
+  |  branch:      new-branch
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     start new branch
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+  $ hg diff
+  diff -r f62c6c09b707 bar.txt
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/bar.txt	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +bar
+
 Use delayedstrip to strip inside a transaction
 
   $ cd $TESTTMP
@@ -961,8 +1171,12 @@ Use delayedstrip to strip inside a transaction
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 >> I
   $ cat > $TESTTMP/delayedstrip.py <<EOF
-  > from mercurial import repair, commands
-  > def reposetup(ui, repo):
+  > from __future__ import absolute_import
+  > from mercurial import commands, registrar, repair
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('testdelayedstrip')
+  > def testdelayedstrip(ui, repo):
   >     def getnodes(expr):
   >         return [repo.changelog.node(r) for r in repo.revs(expr)]
   >     with repo.wlock():
@@ -972,10 +1186,10 @@ Use delayedstrip to strip inside a transaction
   >                 repair.delayedstrip(ui, repo, getnodes('G+H+Z'), 'I')
   >                 commands.commit(ui, repo, message='J', date='0 0')
   > EOF
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/delayedstrip.py
+  $ hg testdelayedstrip --config extensions.t=$TESTTMP/delayedstrip.py
   warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
   saved backup bundle to $TESTTMP/delayedstrip/.hg/strip-backup/f585351a92f8-17475721-I.hg (glob)
-  
+
   $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
   @  6:2f2d51af6205 J
   |
@@ -1008,8 +1222,11 @@ Test high-level scmutil.cleanupnodes API
   $ cp -R . ../scmutilcleanup.obsstore
 
   $ cat > $TESTTMP/scmutilcleanup.py <<EOF
-  > from mercurial import scmutil
-  > def reposetup(ui, repo):
+  > from mercurial import registrar, scmutil
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('testnodescleanup')
+  > def testnodescleanup(ui, repo):
   >     def nodes(expr):
   >         return [repo.changelog.node(r) for r in repo.revs(expr)]
   >     def node(expr):
@@ -1023,10 +1240,10 @@ Test high-level scmutil.cleanupnodes API
   >                 scmutil.cleanupnodes(repo, mapping, 'replace')
   >                 scmutil.cleanupnodes(repo, nodes('((B::)+I+Z)-D2'), 'replace')
   > EOF
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/scmutilcleanup.py
+  $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
   warning: orphaned descendants detected, not stripping 112478962961, 1fc8102cda62, 26805aba1e60
   saved backup bundle to $TESTTMP/scmutilcleanup/.hg/strip-backup/f585351a92f8-73fb7c03-replace.hg (glob)
-  
+
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  8:1473d4b996d1 G2 b-F@divergent3 b-G
   |
@@ -1063,12 +1280,12 @@ we have reusable code here
   $ cd $TESTTMP/scmutilcleanup.obsstore
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > evolution=all
+  > evolution=true
   > evolution.track-operation=1
   > EOF
 
-  $ hg log -r . -T '\n' --config extensions.t=$TESTTMP/scmutilcleanup.py
-  
+  $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
+
   $ rm .hg/localtags
   $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  12:1473d4b996d1 G2 b-F@divergent3 b-G
@@ -1105,17 +1322,17 @@ Test that obsmarkers are restored even when not using generaldelta
   $ cd issue5678
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
-  > evolution=all
+  > evolution=true
   > EOF
   $ echo a > a
   $ hg ci -Aqm a
   $ hg ci --amend -m a2
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ hg strip .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/489bac576828-bef27e14-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
   $ cd ..

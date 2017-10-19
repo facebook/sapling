@@ -79,6 +79,7 @@ help record (record)
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
   
   (some details hidden, use --verbose to show complete help)
 
@@ -152,6 +153,7 @@ help (mq present)
    -w --ignore-all-space    ignore white space when comparing lines
    -b --ignore-space-change ignore changes in the amount of white space
    -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
       --mq                  operate on patch repository
   
   (some details hidden, use --verbose to show complete help)

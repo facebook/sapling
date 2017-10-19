@@ -669,6 +669,7 @@ Cloning should pull down hgtags fnodes mappings and write the cache file
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 2 files
+  new changesets 96ee1d7354c4:40f0358cb314
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -721,13 +722,13 @@ Check that the bundle includes cache data
   $ hg -R tagsclient bundle --all ./test-cache-in-bundle-all-rev.hg
   4 changesets found
   $ hg debugbundle ./test-cache-in-bundle-all-rev.hg
-  Stream params: sortdict([('Compression', 'BZ')])
-  changegroup -- "sortdict([('version', '02'), ('nbchanges', '4')])"
+  Stream params: {Compression: BZ}
+  changegroup -- {nbchanges: 4, version: 02}
       96ee1d7354c4ad7372047672c36a1f561e3a6a4c
       c4dab0c2fd337eb9191f80c3024830a4889a8f34
       f63cc8fe54e4d326f8d692805d70e092f851ddb1
       40f0358cb314c824a5929ee527308d90e023bc10
-  hgtagsfnodes -- 'sortdict()'
+  hgtagsfnodes -- {}
 
 Check that local clone includes cache data
 

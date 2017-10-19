@@ -37,3 +37,28 @@ def batchunwrap(wrappers):
 batchwrap(wrappers + [wrappers[0]])
 batchunwrap([(wrappers[i] if i >= 0 else None)
              for i in [3, None, 0, 4, 0, 2, 1, None]])
+
+wrap0 = extensions.wrappedfunction(dummy, 'getstack', wrappers[0])
+wrap1 = extensions.wrappedfunction(dummy, 'getstack', wrappers[1])
+
+# Use them in a different order from how they were created to check that
+# the wrapping happens in __enter__, not in __init__
+print('context manager', dummy.getstack())
+with wrap1:
+    print('context manager', dummy.getstack())
+    with wrap0:
+        print('context manager', dummy.getstack())
+        # Bad programmer forgets to unwrap the function, but the context
+        # managers still unwrap their wrappings.
+        extensions.wrapfunction(dummy, 'getstack', wrappers[2])
+        print('context manager', dummy.getstack())
+    print('context manager', dummy.getstack())
+print('context manager', dummy.getstack())
+
+# Wrap callable object which has no __name__
+class callableobj(object):
+    def __call__(self):
+        return ['orig']
+dummy.cobj = callableobj()
+extensions.wrapfunction(dummy, 'cobj', wrappers[0])
+print('wrap callable object', dummy.cobj())

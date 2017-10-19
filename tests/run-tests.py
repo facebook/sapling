@@ -94,20 +94,61 @@ if os.name != 'nt':
     try: # is pygments installed
         import pygments
         import pygments.lexers as lexers
+        import pygments.lexer as lexer
         import pygments.formatters as formatters
+        import pygments.token as token
+        import pygments.style as style
         pygmentspresent = True
         difflexer = lexers.DiffLexer()
         terminal256formatter = formatters.Terminal256Formatter()
     except ImportError:
         pass
 
+if pygmentspresent:
+    class TestRunnerStyle(style.Style):
+        default_style = ""
+        skipped = token.string_to_tokentype("Token.Generic.Skipped")
+        failed = token.string_to_tokentype("Token.Generic.Failed")
+        skippedname = token.string_to_tokentype("Token.Generic.SName")
+        failedname = token.string_to_tokentype("Token.Generic.FName")
+        styles = {
+            skipped:         '#e5e5e5',
+            skippedname:     '#00ffff',
+            failed:          '#7f0000',
+            failedname:      '#ff0000',
+        }
+
+    class TestRunnerLexer(lexer.RegexLexer):
+        tokens = {
+            'root': [
+                (r'^Skipped', token.Generic.Skipped, 'skipped'),
+                (r'^Failed ', token.Generic.Failed, 'failed'),
+                (r'^ERROR: ', token.Generic.Failed, 'failed'),
+            ],
+            'skipped': [
+                (r'[\w-]+\.(t|py)', token.Generic.SName),
+                (r':.*', token.Generic.Skipped),
+            ],
+            'failed': [
+                (r'[\w-]+\.(t|py)', token.Generic.FName),
+                (r'(:| ).*', token.Generic.Failed),
+            ]
+        }
+
+    runnerformatter = formatters.Terminal256Formatter(style=TestRunnerStyle)
+    runnerlexer = TestRunnerLexer()
+
 if sys.version_info > (3, 5, 0):
     PYTHON3 = True
     xrange = range # we use xrange in one place, and we'd rather not use range
     def _bytespath(p):
+        if p is None:
+            return p
         return p.encode('utf-8')
 
     def _strpath(p):
+        if p is None:
+            return p
         return p.decode('utf-8')
 
 elif sys.version_info >= (3, 0, 0):
@@ -262,6 +303,8 @@ def getparser():
         help="skip tests listed in the specified blacklist file")
     parser.add_option("--whitelist", action="append",
         help="always run tests listed in the specified whitelist file")
+    parser.add_option("--test-list", action="append",
+                      help="read tests to run from the specified file")
     parser.add_option("--changed", type="string",
         help="run tests that are changed in parent rev or working directory")
     parser.add_option("-C", "--annotate", action="store_true",
@@ -365,6 +408,10 @@ def getparser():
                       metavar="known_good_rev",
                       help=("Automatically bisect any failures using this "
                             "revision as a known-good revision."))
+    parser.add_option('--bisect-repo', type="string",
+                      metavar='bisect_repo',
+                      help=("Path of a repo to bisect. Use together with "
+                            "--known-good-rev"))
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -416,6 +463,9 @@ def parseargs(args, parser):
     if options.color == 'always' and not pygmentspresent:
         sys.stderr.write('warning: --color=always ignored because '
                          'pygments is not installed\n')
+
+    if options.bisect_repo and not options.known_good_rev:
+        parser.error("--bisect-repo cannot be used without --known-good-rev")
 
     global useipv6
     if options.ipv6:
@@ -545,7 +595,7 @@ CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 # list in group 2, and the preceeding line output in group 1:
 #
 #   output..output (feature !)\n
-optline = re.compile(b'(.+) \((.+?) !\)\n$')
+optline = re.compile(b'(.*) \((.+?) !\)\n$')
 
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
@@ -569,6 +619,19 @@ def log(*msg):
             print(m, end=' ')
         print()
         sys.stdout.flush()
+
+def highlightdiff(line, color):
+    if not color:
+        return line
+    assert pygmentspresent
+    return pygments.highlight(line.decode('latin1'), difflexer,
+                              terminal256formatter).encode('latin1')
+
+def highlightmsg(msg, color):
+    if not color:
+        return msg
+    assert pygmentspresent
+    return pygments.highlight(msg, runnerlexer, runnerformatter)
 
 def terminate(proc):
     """Terminate subprocess"""
@@ -596,10 +659,10 @@ class Test(unittest.TestCase):
 
     def __init__(self, path, outputdir, tmpdir, keeptmpdir=False,
                  debug=False,
-                 timeout=defaults['timeout'],
-                 startport=defaults['port'], extraconfigopts=None,
+                 timeout=None,
+                 startport=None, extraconfigopts=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
-                 slowtimeout=defaults['slowtimeout'], usechg=False,
+                 slowtimeout=None, usechg=False,
                  useipv6=False):
         """Create a test from parameters.
 
@@ -631,6 +694,12 @@ class Test(unittest.TestCase):
 
         shell is the shell to execute tests in.
         """
+        if timeout is None:
+            timeout = defaults['timeout']
+        if startport is None:
+            startport = defaults['port']
+        if slowtimeout is None:
+            slowtimeout = defaults['slowtimeout']
         self.path = path
         self.bname = os.path.basename(path)
         self.name = _strpath(self.bname)
@@ -1196,7 +1265,7 @@ class TTest(Test):
         if ret != 0:
             return False, stdout
 
-        if 'slow' in reqs:
+        if b'slow' in reqs:
             self._timeout = self._slowtimeout
         return True, None
 
@@ -1359,7 +1428,7 @@ class TTest(Test):
                 while i < len(els):
                     el = els[i]
 
-                    r = TTest.linematch(el, lout)
+                    r = self.linematch(el, lout)
                     if isinstance(r, str):
                         if r == '+glob':
                             lout = el[:-1] + ' (glob)\n'
@@ -1383,11 +1452,10 @@ class TTest(Test):
                         else:
                             m = optline.match(el)
                             if m:
-                                conditions = [c for c in m.group(2).split(' ')]
+                                conditions = [
+                                    c for c in m.group(2).split(b' ')]
 
-                                if self._hghave(conditions)[0]:
-                                    lout = el
-                                else:
+                                if not self._iftest(conditions):
                                     optional.append(i)
 
                     i += 1
@@ -1416,9 +1484,16 @@ class TTest(Test):
                 while expected.get(pos, None):
                     el = expected[pos].pop(0)
                     if el:
-                        if (not optline.match(el)
-                            and not el.endswith(b" (?)\n")):
-                            break
+                        if not el.endswith(b" (?)\n"):
+                            m = optline.match(el)
+                            if m:
+                                conditions = [c for c in m.group(2).split(b' ')]
+
+                                if self._iftest(conditions):
+                                    # Don't append as optional line
+                                    continue
+                            else:
+                                continue
                     postout.append(b'  ' + el)
 
             if lcmd:
@@ -1481,8 +1556,7 @@ class TTest(Test):
                 res += re.escape(c)
         return TTest.rematch(res, l)
 
-    @staticmethod
-    def linematch(el, l):
+    def linematch(self, el, l):
         retry = False
         if el == l: # perfect match (fast)
             return True
@@ -1493,8 +1567,11 @@ class TTest(Test):
             else:
                 m = optline.match(el)
                 if m:
+                    conditions = [c for c in m.group(2).split(b' ')]
+
                     el = m.group(1) + b"\n"
-                    retry = "retry"
+                    if not self._iftest(conditions):
+                        retry = "retry"    # Not required by listed features
 
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
@@ -1586,7 +1663,10 @@ class TestResult(unittest._TextTestResult):
                     self.stream.write('t')
                 else:
                     if not self._options.nodiff:
-                        self.stream.write('\nERROR: %s output changed\n' % test)
+                        self.stream.write('\n')
+                        # Exclude the '\n' from highlighting to lex correctly
+                        formatted = 'ERROR: %s output changed\n' % test
+                        self.stream.write(highlightmsg(formatted, self.color))
                     self.stream.write('!')
 
                 self.stream.flush()
@@ -1652,10 +1732,7 @@ class TestResult(unittest._TextTestResult):
                 else:
                     self.stream.write('\n')
                     for line in lines:
-                        if self.color:
-                            line = pygments.highlight(line,
-                                                      difflexer,
-                                                      terminal256formatter)
+                        line = highlightdiff(line, self.color)
                         if PYTHON3:
                             self.stream.flush()
                             self.stream.buffer.write(line)
@@ -1778,7 +1855,7 @@ class TestSuite(unittest.TestSuite):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
-            if not (self._whitelist and test.name in self._whitelist):
+            if not (self._whitelist and test.bname in self._whitelist):
                 if self._blacklist and test.bname in self._blacklist:
                     result.addSkip(test, 'blacklisted')
                     continue
@@ -1988,9 +2065,11 @@ class TextTestRunner(unittest.TextTestRunner):
 
             if not self._runner.options.noskips:
                 for test, msg in result.skipped:
-                    self.stream.writeln('Skipped %s: %s' % (test.name, msg))
+                    formatted = 'Skipped %s: %s\n' % (test.name, msg)
+                    self.stream.write(highlightmsg(formatted, result.color))
             for test, msg in result.failures:
-                self.stream.writeln('Failed %s: %s' % (test.name, msg))
+                formatted = 'Failed %s: %s\n' % (test.name, msg)
+                self.stream.write(highlightmsg(formatted, result.color))
             for test, msg in result.errors:
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
@@ -2008,38 +2087,7 @@ class TextTestRunner(unittest.TextTestRunner):
             savetimes(self._runner._outputdir, result)
 
             if failed and self._runner.options.known_good_rev:
-                def nooutput(args):
-                    p = subprocess.Popen(args, stderr=subprocess.STDOUT,
-                                         stdout=subprocess.PIPE)
-                    p.stdout.read()
-                    p.wait()
-                for test, msg in result.failures:
-                    nooutput(['hg', 'bisect', '--reset']),
-                    nooutput(['hg', 'bisect', '--bad', '.'])
-                    nooutput(['hg', 'bisect', '--good',
-                              self._runner.options.known_good_rev])
-                    # TODO: we probably need to forward some options
-                    # that alter hg's behavior inside the tests.
-                    rtc = '%s %s %s' % (sys.executable, sys.argv[0], test)
-                    sub = subprocess.Popen(['hg', 'bisect', '--command', rtc],
-                                           stderr=subprocess.STDOUT,
-                                           stdout=subprocess.PIPE)
-                    data = sub.stdout.read()
-                    sub.wait()
-                    m = re.search(
-                        (r'\nThe first (?P<goodbad>bad|good) revision '
-                         r'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
-                         r'summary: +(?P<summary>[^\n]+)\n'),
-                        data, (re.MULTILINE | re.DOTALL))
-                    if m is None:
-                        self.stream.writeln(
-                            'Failed to identify failure point for %s' % test)
-                        continue
-                    dat = m.groupdict()
-                    verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
-                    self.stream.writeln(
-                        '%s %s by %s (%s)' % (
-                            test, verb, dat['node'], dat['summary']))
+                self._bisecttests(t for t, m in result.failures)
             self.stream.writeln(
                 '# Ran %d tests, %d skipped, %d failed.'
                 % (result.testsRun, skipped + ignored, failed))
@@ -2051,6 +2099,47 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.flush()
 
         return result
+
+    def _bisecttests(self, tests):
+        bisectcmd = ['hg', 'bisect']
+        bisectrepo = self._runner.options.bisect_repo
+        if bisectrepo:
+            bisectcmd.extend(['-R', os.path.abspath(bisectrepo)])
+        def pread(args):
+            env = os.environ.copy()
+            env['HGPLAIN'] = '1'
+            p = subprocess.Popen(args, stderr=subprocess.STDOUT,
+                                 stdout=subprocess.PIPE, env=env)
+            data = p.stdout.read()
+            p.wait()
+            return data
+        for test in tests:
+            pread(bisectcmd + ['--reset']),
+            pread(bisectcmd + ['--bad', '.'])
+            pread(bisectcmd + ['--good', self._runner.options.known_good_rev])
+            # TODO: we probably need to forward more options
+            # that alter hg's behavior inside the tests.
+            opts = ''
+            withhg = self._runner.options.with_hg
+            if withhg:
+                opts += ' --with-hg=%s ' % shellquote(_strpath(withhg))
+            rtc = '%s %s %s %s' % (sys.executable, sys.argv[0], opts,
+                                   test)
+            data = pread(bisectcmd + ['--command', rtc])
+            m = re.search(
+                (br'\nThe first (?P<goodbad>bad|good) revision '
+                 br'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
+                 br'summary: +(?P<summary>[^\n]+)\n'),
+                data, (re.MULTILINE | re.DOTALL))
+            if m is None:
+                self.stream.writeln(
+                    'Failed to identify failure point for %s' % test)
+                continue
+            dat = m.groupdict()
+            verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
+            self.stream.writeln(
+                '%s %s by %s (%s)' % (
+                    test, verb, dat['node'], dat['summary']))
 
     def printtimes(self, times):
         # iolock held by run
@@ -2108,7 +2197,8 @@ class TextTestRunner(unittest.TextTestRunner):
             # the skip message as a text node instead.
             t = doc.createElement('testcase')
             t.setAttribute('name', tc.name)
-            message = cdatasafe(message).decode('utf-8', 'replace')
+            binmessage = message.encode('utf-8')
+            message = cdatasafe(binmessage).decode('utf-8', 'replace')
             cd = doc.createCDATASection(message)
             skipelem = doc.createElement('skipped')
             skipelem.appendChild(cd)
@@ -2201,6 +2291,10 @@ class TestRunner(object):
             # positional arguments are paths to test files to run, so
             # we make sure they're all bytestrings
             args = [_bytespath(a) for a in args]
+            if options.test_list is not None:
+                for listfile in options.test_list:
+                    with open(listfile, 'rb') as f:
+                        args.extend(t for t in f.read().splitlines() if t)
             self.options = options
 
             self._checktools()

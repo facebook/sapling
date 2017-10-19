@@ -313,6 +313,9 @@ related options for the diff command.
 ``ignorews``
     Ignore white space when comparing lines.
 
+``ignorewseol``
+    Ignore white space at the end of a line when comparing lines.
+
 ``ignorewsamount``
     Ignore changes in the amount of white space.
 
@@ -438,6 +441,18 @@ effect and style see :hg:`help color`.
 ``status.relative``
     Make paths in :hg:`status` output relative to the current directory.
     (default: False)
+
+``update.check``
+    Determines what level of checking :hg:`update` will perform before moving
+    to a destination revision. Valid values are ``abort``, ``none``,
+    ``linear``, and ``noconflict``. ``abort`` always fails if the working
+    directory has uncommitted changes. ``none`` performs no checking, and may
+    result in a merge with uncommitted changes. ``linear`` allows any update
+    as long as it follows a straight line in the revision history, and may
+    trigger a merge with uncommitted changes. ``noconflict`` will allow any
+    update which would not trigger a merge with uncommitted changes, if any
+    are present.
+    (default: ``linear``)
 
 ``update.requiredest``
     Require that the user pass a destination when running :hg:`update`.
@@ -973,11 +988,48 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   phase changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``
   respectively, etc.
 
+``pretxnclose-bookmark``
+  Run right before a bookmark change is actually finalized. Any repository
+  change will be visible to the hook program. This lets you validate the
+  transaction content or change it. Exit status 0 allows the commit to
+  proceed. A non-zero status will cause the transaction to be rolled back.
+  The name of the bookmark will be available in ``$HG_BOOKMARK``, the new
+  bookmark location will be available in ``$HG_NODE`` while the previous
+  location will be available in ``$HG_OLDNODE``. In case of a bookmark
+  creation ``$HG_OLDNODE`` will be empty. In case of deletion ``$HG_NODE``
+  will be empty.
+  In addition, the reason for the transaction opening will be in
+  ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
+  ``HG_TXNID``.
+
+``pretxnclose-phase``
+  Run right before a phase change is actually finalized. Any repository change
+  will be visible to the hook program. This lets you validate the transaction
+  content or change it. Exit status 0 allows the commit to proceed.  A non-zero
+  status will cause the transaction to be rolled back.
+  The affected node is available in ``$HG_NODE``, the phase in ``$HG_PHASE``
+  while the previous ``$HG_OLDPHASE``. In case of new node, ``$HG_OLDPHASE``
+  will be empty.  In addition, the reason for the transaction opening will be in
+  ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
+  ``HG_TXNID``.
+
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
   after the lock is released. See :hg:`help config.hooks.pretxnclose` for
   details about available variables.
+
+``txnclose-bookmark``
+  Run after any bookmark change has been committed. At this point, the
+  transaction can no longer be rolled back. The hook will run after the lock
+  is released. See :hg:`help config.hooks.pretxnclose-bookmark` for details
+  about available variables.
+
+``txnclose-phase``
+  Run after any phase change has been committed. At this point, the
+  transaction can no longer be rolled back. The hook will run after the lock
+  is released. See :hg:`help config.hooks.pretxnclose-phase` for details about
+  available variables.
 
 ``txnabort``
   Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
@@ -1235,6 +1287,17 @@ This section specifies behavior during merges and updates.
    as a tracked file in the changeset being merged or updated to, and has
    different contents. Similar to ``merge.checkignored``, except for files that
    are not ignored. (default: ``abort``)
+
+``on-failure``
+   When set to ``continue`` (the default), the merge process attempts to
+   merge all unresolved files using the merge chosen tool, regardless of
+   whether previous file merge attempts during the process succeeded or not.
+   Setting this to ``prompt`` will prompt after any merge failure continue
+   or halt the merge process. Setting this to ``halt`` will automatically
+   halt the merge process on any merge tool failure. The merge process
+   can be restarted by using the ``resolve`` command. When a merge is
+   halted, the repository is left in a normal ``unresolved`` merge state.
+   (default: ``continue``)
 
 ``merge-patterns``
 ------------------
@@ -1610,6 +1673,10 @@ have a definite end point.
     Minimum delay before showing a new topic. When set to less than 3 * refresh,
     that value will be used instead. (default: 1)
 
+``estimateinterval``
+    Maximum sampling interval in seconds for speed and estimated time
+    calculation. (default: 60)
+
 ``refresh``
     Time in seconds between refreshes of the progress bar. (default: 0.1)
 
@@ -1640,7 +1707,7 @@ have a definite end point.
 ``rebase``
 ----------
 
-``allowdivergence``
+``evolution.allowdivergence``
     Default to False, when True allow creating divergence when performing
     rebase of obsolete changesets.
 
@@ -2004,7 +2071,9 @@ User interface controls.
 
 ``origbackuppath``
     The path to a directory used to store generated .orig files. If the path is
-    not a directory, one will be created.
+    not a directory, one will be created.  If set, files stored in this
+    directory have the same name as the original file and do not have a .orig
+    suffix.
 
 ``paginate``
   Control the pagination of command output (default: True). See :hg:`help pager`

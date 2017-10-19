@@ -101,9 +101,9 @@ class progbar(object):
         self.changedelay = max(3 * self.refresh,
                                float(self.ui.config(
                                    'progress', 'changedelay')))
-        self.order = self.ui.configlist(
-            'progress', 'format',
-            default=['topic', 'bar', 'number', 'estimate'])
+        self.order = self.ui.configlist('progress', 'format')
+        self.estimateinterval = self.ui.configwith(
+            float, 'progress', 'estimateinterval')
 
     def show(self, now, topic, pos, item, unit, total):
         if not shouldprint(self.ui):
@@ -172,7 +172,7 @@ class progbar(object):
                 amt -= progwidth
                 bar = (' ' * int(progwidth - abs(amt)) + '<=>' +
                        ' ' * int(abs(amt)))
-            prog = ''.join(('[', bar , ']'))
+            prog = ''.join(('[', bar, ']'))
             out = spacejoin(head, prog, tail)
         else:
             out = spacejoin(head, tail)
@@ -215,19 +215,15 @@ class progbar(object):
         delta = pos - initialpos
         if delta > 0:
             elapsed = now - self.starttimes[topic]
-            # experimental config: progress.estimate
-            if elapsed > float(
-                self.ui.config('progress', 'estimate')):
-                seconds = (elapsed * (target - delta)) // delta + 1
-                return fmtremaining(seconds)
+            seconds = (elapsed * (target - delta)) // delta + 1
+            return fmtremaining(seconds)
         return ''
 
     def speed(self, topic, pos, unit, now):
         initialpos = self.startvals[topic]
         delta = pos - initialpos
         elapsed = now - self.starttimes[topic]
-        if elapsed > float(
-            self.ui.config('progress', 'estimate')):
+        if elapsed > 0:
             return _('%d %s/sec') % (delta / elapsed, unit)
         return ''
 
@@ -241,6 +237,32 @@ class progbar(object):
             return True
         else:
             return False
+
+    def _calibrateestimate(self, topic, now, pos):
+        '''Adjust starttimes and startvals for topic so ETA works better
+
+        If progress is non-linear (ex. get much slower in the last minute),
+        it's more friendly to only use a recent time span for ETA and speed
+        calculation.
+
+            [======================================>       ]
+                                             ^^^^^^^
+                           estimateinterval, only use this for estimation
+        '''
+        interval = self.estimateinterval
+        if interval <= 0:
+            return
+        elapsed = now - self.starttimes[topic]
+        if elapsed > interval:
+            delta = pos - self.startvals[topic]
+            newdelta = delta * interval / elapsed
+            # If a stall happens temporarily, ETA could change dramatically
+            # frequently. This is to avoid such dramatical change and make ETA
+            # smoother.
+            if newdelta < 0.1:
+                return
+            self.startvals[topic] = pos - newdelta
+            self.starttimes[topic] = now - interval
 
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
@@ -272,6 +294,7 @@ class progbar(object):
                     self.topics.append(topic)
                 self.topicstates[topic] = pos, item, unit, total
                 self.curtopic = topic
+                self._calibrateestimate(topic, now, pos)
                 if now - self.lastprint >= self.refresh and self.topics:
                     if self._oktoprint(now):
                         self.lastprint = now

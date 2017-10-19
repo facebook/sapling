@@ -18,13 +18,92 @@
   $ echo "subrepo = subrepo" > .hgsub
   $ hg add .hgsub
   $ hg ci -m "add subrepo"
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > share =
+  > EOF
+
+hg subrepos are shared when the parent repo is shared
+
+  $ cd ..
+  $ hg share test shared1
+  updating working directory
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat shared1/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+
+hg subrepos are shared into existence on demand if the parent was shared
+
+  $ hg clone -qr 1 test clone1
+  $ hg share clone1 share2
+  updating working directory
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone1 -q pull
+  $ hg -R share2 update tip
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat share2/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $ echo 'mod' > share2/subrepo/sub
+  $ hg -R share2 ci -Sqm 'subrepo mod'
+  $ hg -R clone1 update -C tip
+  cloning subrepo subrepo from $TESTTMP/test/subrepo
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ find share2 | egrep 'sharedpath|00.+\.i' | sort
+  share2/.hg/sharedpath
+  share2/subrepo/.hg/sharedpath
+  $ hg -R share2 unshare
+  unsharing subrepo 'subrepo'
+  $ find share2 | egrep 'sharedpath|00.+\.i' | sort
+  share2/.hg/00changelog.i
+  share2/.hg/sharedpath.old
+  share2/.hg/store/00changelog.i
+  share2/.hg/store/00manifest.i
+  share2/subrepo/.hg/00changelog.i
+  share2/subrepo/.hg/sharedpath.old
+  share2/subrepo/.hg/store/00changelog.i
+  share2/subrepo/.hg/store/00manifest.i
+  $ hg -R share2/subrepo log -r tip -T compact
+  1[tip]   559dcc9bfa65   1970-01-01 00:00 +0000   test
+    subrepo mod
+  
+  $ rm -rf clone1
+
+  $ hg clone -qr 1 test clone1
+  $ hg share clone1 shared3
+  updating working directory
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone1 -q pull
+  $ hg -R shared3 archive --config ui.archivemeta=False -r tip -S archive
+  sharing subrepo subrepo from $TESTTMP/test/subrepo
+  $ cat shared3/subrepo/.hg/sharedpath
+  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $ diff -r archive test
+  Only in test: .hg
+  Common subdirectories: archive/baz and test/baz (?)
+  Common subdirectories: archive/subrepo and test/subrepo (?)
+  Only in test/subrepo: .hg
+  [1]
+  $ rm -rf archive
+
+  $ cd test
   $ echo "[web]" >> .hg/hgrc
   $ echo "name = test-archive" >> .hg/hgrc
   $ echo "archivesubrepos = True" >> .hg/hgrc
   $ cp .hg/hgrc .hg/hgrc-base
   > test_archtype() {
   >     echo "allow_archive = $1" >> .hg/hgrc
-  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >     test_archtype_run "$@"
+  > }
+  > test_archtype_deprecated() {
+  >     echo "allow$1 = True" >> .hg/hgrc
+  >     test_archtype_run "$@"
+  > }
+  > test_archtype_run() {
+  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log \
+  >         --config extensions.blackbox= --config blackbox.track=develwarn
   >     cat hg.pid >> $DAEMON_PIDS
   >     echo % $1 allowed should give 200
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$2" | head -n 1
@@ -33,6 +112,7 @@
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$4" | head -n 1
   >     killdaemons.py
   >     cat errors.log
+  >     hg blackbox --config extensions.blackbox= --config blackbox.track=
   >     cp .hg/hgrc-base .hg/hgrc
   > }
 
@@ -51,6 +131,27 @@ check http return codes
   403 Archive type not allowed: zip
   403 Archive type not allowed: gz
   $ test_archtype zip zip tar.gz tar.bz2
+  % zip allowed should give 200
+  200 Script output follows
+  % tar.gz and tar.bz2 disallowed should both give 403
+  403 Archive type not allowed: gz
+  403 Archive type not allowed: bz2
+
+check http return codes (with deprecated option)
+
+  $ test_archtype_deprecated gz tar.gz tar.bz2 zip
+  % gz allowed should give 200
+  200 Script output follows
+  % tar.bz2 and zip disallowed should both give 403
+  403 Archive type not allowed: bz2
+  403 Archive type not allowed: zip
+  $ test_archtype_deprecated bz2 tar.bz2 zip tar.gz
+  % bz2 allowed should give 200
+  200 Script output follows
+  % zip and tar.gz disallowed should both give 403
+  403 Archive type not allowed: zip
+  403 Archive type not allowed: gz
+  $ test_archtype_deprecated zip zip tar.gz tar.bz2
   % zip allowed should give 200
   200 Script output follows
   % tar.gz and tar.bz2 disallowed should both give 403
@@ -211,15 +312,12 @@ The '-t' should override autodetection
   > done
 
   $ cat > md5comp.py <<EOF
-  > from __future__ import print_function
-  > try:
-  >     from hashlib import md5
-  > except ImportError:
-  >     from md5 import md5
+  > from __future__ import absolute_import, print_function
+  > import hashlib
   > import sys
   > f1, f2 = sys.argv[1:3]
-  > h1 = md5(open(f1, 'rb').read()).hexdigest()
-  > h2 = md5(open(f2, 'rb').read()).hexdigest()
+  > h1 = hashlib.md5(open(f1, 'rb').read()).hexdigest()
+  > h2 = hashlib.md5(open(f2, 'rb').read()).hexdigest()
   > print(h1 == h2 or "md5 differ: " + repr((h1, h2)))
   > EOF
 
@@ -357,8 +455,9 @@ configured as GMT.
   $ hg -R repo add repo/a
   $ hg -R repo commit -m '#0' -d '456789012 21600'
   $ cat > show_mtime.py <<EOF
-  > from __future__ import print_function
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > print(int(os.stat(sys.argv[1]).st_mtime))
   > EOF
 

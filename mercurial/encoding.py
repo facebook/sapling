@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
-import array
+import io
 import locale
 import os
 import unicodedata
@@ -17,6 +17,17 @@ from . import (
     policy,
     pycompat,
 )
+
+from .pure import (
+    charencode as charencodepure,
+)
+
+charencode = policy.importmod(r'charencode')
+
+isasciistr = charencode.isasciistr
+asciilower = charencode.asciilower
+asciiupper = charencode.asciiupper
+_jsonescapeu8fast = charencode.jsonescapeu8fast
 
 _sysstr = pycompat.sysstr
 
@@ -73,11 +84,11 @@ except locale.Error:
 encodingmode = environ.get("HGENCODINGMODE", "strict")
 fallbackencoding = 'ISO-8859-1'
 
-class localstr(str):
+class localstr(bytes):
     '''This class allows strings that are unmodified to be
     round-tripped to the local encoding and back'''
     def __new__(cls, u, l):
-        s = str.__new__(cls, l)
+        s = bytes.__new__(cls, l)
         s._utf8 = u
         return s
     def __hash__(self):
@@ -97,25 +108,28 @@ def tolocal(s):
     strings next to their local representation to allow lossless
     round-trip conversion back to UTF-8.
 
-    >>> u = 'foo: \\xc3\\xa4' # utf-8
+    >>> u = b'foo: \\xc3\\xa4' # utf-8
     >>> l = tolocal(u)
     >>> l
     'foo: ?'
     >>> fromlocal(l)
     'foo: \\xc3\\xa4'
-    >>> u2 = 'foo: \\xc3\\xa1'
+    >>> u2 = b'foo: \\xc3\\xa1'
     >>> d = { l: 1, tolocal(u2): 2 }
     >>> len(d) # no collision
     2
-    >>> 'foo: ?' in d
+    >>> b'foo: ?' in d
     False
-    >>> l1 = 'foo: \\xe4' # historical latin1 fallback
+    >>> l1 = b'foo: \\xe4' # historical latin1 fallback
     >>> l = tolocal(l1)
     >>> l
     'foo: ?'
     >>> fromlocal(l) # magically in utf-8
     'foo: \\xc3\\xa4'
     """
+
+    if isasciistr(s):
+        return s
 
     try:
         try:
@@ -159,6 +173,8 @@ def fromlocal(s):
     # can we do a lossless round-trip?
     if isinstance(s, localstr):
         return s._utf8
+    if isasciistr(s):
+        return s
 
     try:
         u = s.decode(_sysstr(encoding), _sysstr(encodingmode))
@@ -231,60 +247,63 @@ def trim(s, width, ellipsis='', leftside=False):
     If 'leftside' is True, left side of string 's' is trimmed.
     'ellipsis' is always placed at trimmed side.
 
-    >>> ellipsis = '+++'
+    >>> from .node import bin
+    >>> def bprint(s):
+    ...     print(pycompat.sysstr(s))
+    >>> ellipsis = b'+++'
     >>> from . import encoding
-    >>> encoding.encoding = 'utf-8'
-    >>> t= '1234567890'
-    >>> print trim(t, 12, ellipsis=ellipsis)
+    >>> encoding.encoding = b'utf-8'
+    >>> t = b'1234567890'
+    >>> bprint(trim(t, 12, ellipsis=ellipsis))
     1234567890
-    >>> print trim(t, 10, ellipsis=ellipsis)
+    >>> bprint(trim(t, 10, ellipsis=ellipsis))
     1234567890
-    >>> print trim(t, 8, ellipsis=ellipsis)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis))
     12345+++
-    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
     +++67890
-    >>> print trim(t, 8)
+    >>> bprint(trim(t, 8))
     12345678
-    >>> print trim(t, 8, leftside=True)
+    >>> bprint(trim(t, 8, leftside=True))
     34567890
-    >>> print trim(t, 3, ellipsis=ellipsis)
+    >>> bprint(trim(t, 3, ellipsis=ellipsis))
     +++
-    >>> print trim(t, 1, ellipsis=ellipsis)
+    >>> bprint(trim(t, 1, ellipsis=ellipsis))
     +
     >>> u = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
-    >>> t = u.encode(encoding.encoding)
-    >>> print trim(t, 12, ellipsis=ellipsis)
+    >>> t = u.encode(pycompat.sysstr(encoding.encoding))
+    >>> bprint(trim(t, 12, ellipsis=ellipsis))
     \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
-    >>> print trim(t, 10, ellipsis=ellipsis)
+    >>> bprint(trim(t, 10, ellipsis=ellipsis))
     \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
-    >>> print trim(t, 8, ellipsis=ellipsis)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis))
     \xe3\x81\x82\xe3\x81\x84+++
-    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
     +++\xe3\x81\x88\xe3\x81\x8a
-    >>> print trim(t, 5)
+    >>> bprint(trim(t, 5))
     \xe3\x81\x82\xe3\x81\x84
-    >>> print trim(t, 5, leftside=True)
+    >>> bprint(trim(t, 5, leftside=True))
     \xe3\x81\x88\xe3\x81\x8a
-    >>> print trim(t, 4, ellipsis=ellipsis)
+    >>> bprint(trim(t, 4, ellipsis=ellipsis))
     +++
-    >>> print trim(t, 4, ellipsis=ellipsis, leftside=True)
+    >>> bprint(trim(t, 4, ellipsis=ellipsis, leftside=True))
     +++
-    >>> t = '\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa' # invalid byte sequence
-    >>> print trim(t, 12, ellipsis=ellipsis)
+    >>> t = bin(b'112233445566778899aa') # invalid byte sequence
+    >>> bprint(trim(t, 12, ellipsis=ellipsis))
     \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> print trim(t, 10, ellipsis=ellipsis)
+    >>> bprint(trim(t, 10, ellipsis=ellipsis))
     \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> print trim(t, 8, ellipsis=ellipsis)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis))
     \x11\x22\x33\x44\x55+++
-    >>> print trim(t, 8, ellipsis=ellipsis, leftside=True)
+    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
     +++\x66\x77\x88\x99\xaa
-    >>> print trim(t, 8)
+    >>> bprint(trim(t, 8))
     \x11\x22\x33\x44\x55\x66\x77\x88
-    >>> print trim(t, 8, leftside=True)
+    >>> bprint(trim(t, 8, leftside=True))
     \x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> print trim(t, 3, ellipsis=ellipsis)
+    >>> bprint(trim(t, 3, ellipsis=ellipsis))
     +++
-    >>> print trim(t, 1, ellipsis=ellipsis)
+    >>> bprint(trim(t, 1, ellipsis=ellipsis))
     +
     """
     try:
@@ -317,38 +336,6 @@ def trim(s, width, ellipsis='', leftside=False):
         if ucolwidth(usub) <= width:
             return concat(usub.encode(_sysstr(encoding)))
     return ellipsis # no enough room for multi-column characters
-
-def _asciilower(s):
-    '''convert a string to lowercase if ASCII
-
-    Raises UnicodeDecodeError if non-ASCII characters are found.'''
-    s.decode('ascii')
-    return s.lower()
-
-def asciilower(s):
-    # delay importing avoids cyclic dependency around "parsers" in
-    # pure Python build (util => i18n => encoding => parsers => util)
-    parsers = policy.importmod(r'parsers')
-    impl = getattr(parsers, 'asciilower', _asciilower)
-    global asciilower
-    asciilower = impl
-    return impl(s)
-
-def _asciiupper(s):
-    '''convert a string to uppercase if ASCII
-
-    Raises UnicodeDecodeError if non-ASCII characters are found.'''
-    s.decode('ascii')
-    return s.upper()
-
-def asciiupper(s):
-    # delay importing avoids cyclic dependency around "parsers" in
-    # pure Python build (util => i18n => encoding => parsers => util)
-    parsers = policy.importmod(r'parsers')
-    impl = getattr(parsers, 'asciiupper', _asciiupper)
-    global asciiupper
-    asciiupper = impl
-    return impl(s)
 
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
@@ -409,22 +396,6 @@ class normcasespecs(object):
     upper = 1
     other = 0
 
-_jsonmap = []
-_jsonmap.extend("\\u%04x" % x for x in range(32))
-_jsonmap.extend(pycompat.bytechr(x) for x in range(32, 127))
-_jsonmap.append('\\u007f')
-_jsonmap[0x09] = '\\t'
-_jsonmap[0x0a] = '\\n'
-_jsonmap[0x22] = '\\"'
-_jsonmap[0x5c] = '\\\\'
-_jsonmap[0x08] = '\\b'
-_jsonmap[0x0c] = '\\f'
-_jsonmap[0x0d] = '\\r'
-_paranoidjsonmap = _jsonmap[:]
-_paranoidjsonmap[0x3c] = '\\u003c'  # '<' (e.g. escape "</script>")
-_paranoidjsonmap[0x3e] = '\\u003e'  # '>'
-_jsonmap.extend(pycompat.bytechr(x) for x in range(128, 256))
-
 def jsonescape(s, paranoid=False):
     '''returns a string suitable for JSON
 
@@ -438,48 +409,51 @@ def jsonescape(s, paranoid=False):
 
     (escapes are doubled in these tests)
 
-    >>> jsonescape('this is a test')
+    >>> jsonescape(b'this is a test')
     'this is a test'
-    >>> jsonescape('escape characters: \\0 \\x0b \\x7f')
+    >>> jsonescape(b'escape characters: \\0 \\x0b \\x7f')
     'escape characters: \\\\u0000 \\\\u000b \\\\u007f'
-    >>> jsonescape('escape characters: \\t \\n \\r \\" \\\\')
-    'escape characters: \\\\t \\\\n \\\\r \\\\" \\\\\\\\'
-    >>> jsonescape('a weird byte: \\xdd')
+    >>> jsonescape(b'escape characters: \\b \\t \\n \\f \\r \\" \\\\')
+    'escape characters: \\\\b \\\\t \\\\n \\\\f \\\\r \\\\" \\\\\\\\'
+    >>> jsonescape(b'a weird byte: \\xdd')
     'a weird byte: \\xed\\xb3\\x9d'
-    >>> jsonescape('utf-8: caf\\xc3\\xa9')
+    >>> jsonescape(b'utf-8: caf\\xc3\\xa9')
     'utf-8: caf\\xc3\\xa9'
-    >>> jsonescape('')
+    >>> jsonescape(b'')
     ''
 
     If paranoid, non-ascii and common troublesome characters are also escaped.
     This is suitable for web output.
 
-    >>> jsonescape('escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
+    >>> s = b'escape characters: \\0 \\x0b \\x7f'
+    >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
+    >>> s = b'escape characters: \\b \\t \\n \\f \\r \\" \\\\'
+    >>> assert jsonescape(s) == jsonescape(s, paranoid=True)
+    >>> jsonescape(b'escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
     'escape boundary: ~ \\\\u007f \\\\u0080'
-    >>> jsonescape('a weird byte: \\xdd', paranoid=True)
+    >>> jsonescape(b'a weird byte: \\xdd', paranoid=True)
     'a weird byte: \\\\udcdd'
-    >>> jsonescape('utf-8: caf\\xc3\\xa9', paranoid=True)
+    >>> jsonescape(b'utf-8: caf\\xc3\\xa9', paranoid=True)
     'utf-8: caf\\\\u00e9'
-    >>> jsonescape('non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
+    >>> jsonescape(b'non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
     'non-BMP: \\\\ud834\\\\udd1e'
-    >>> jsonescape('<foo@example.org>', paranoid=True)
+    >>> jsonescape(b'<foo@example.org>', paranoid=True)
     '\\\\u003cfoo@example.org\\\\u003e'
     '''
 
-    if paranoid:
-        jm = _paranoidjsonmap
-    else:
-        jm = _jsonmap
-
     u8chars = toutf8b(s)
     try:
-        return ''.join(jm[x] for x in bytearray(u8chars))  # fast path
-    except IndexError:
+        return _jsonescapeu8fast(u8chars, paranoid)
+    except ValueError:
         pass
-    # non-BMP char is represented as UTF-16 surrogate pair
-    u16codes = array.array('H', u8chars.decode('utf-8').encode('utf-16'))
-    u16codes.pop(0)  # drop BOM
-    return ''.join(jm[x] if x < 128 else '\\u%04x' % x for x in u16codes)
+    return charencodepure.jsonescapeu8fallback(u8chars, paranoid)
+
+# We need to decode/encode U+DCxx codes transparently since invalid UTF-8
+# bytes are mapped to that range.
+if pycompat.ispy3:
+    _utf8strict = r'surrogatepass'
+else:
+    _utf8strict = r'strict'
 
 _utf8len = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4]
 
@@ -491,13 +465,13 @@ def getutf8char(s, pos):
     '''
 
     # find how many bytes to attempt decoding from first nibble
-    l = _utf8len[ord(s[pos]) >> 4]
+    l = _utf8len[ord(s[pos:pos + 1]) >> 4]
     if not l: # ascii
-        return s[pos]
+        return s[pos:pos + 1]
 
     c = s[pos:pos + l]
     # validate with attempted decode
-    c.decode("utf-8")
+    c.decode("utf-8", _utf8strict)
     return c
 
 def toutf8b(s):
@@ -530,15 +504,18 @@ def toutf8b(s):
     internal surrogate encoding as a UTF-8 string.)
     '''
 
+    if not isinstance(s, localstr) and isasciistr(s):
+        return s
     if "\xed" not in s:
         if isinstance(s, localstr):
             return s._utf8
         try:
-            s.decode('utf-8')
+            s.decode('utf-8', _utf8strict)
             return s
         except UnicodeDecodeError:
             pass
 
+    s = pycompat.bytestr(s)
     r = ""
     pos = 0
     l = len(s)
@@ -547,12 +524,12 @@ def toutf8b(s):
             c = getutf8char(s, pos)
             if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
-                c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+                c = unichr(0xdc00 + ord(s[pos])).encode('utf-8', _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
-            c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+            c = unichr(0xdc00 + ord(s[pos])).encode('utf-8', _utf8strict)
             pos += 1
         r += c
     return r
@@ -565,21 +542,23 @@ def fromutf8b(s):
     that's was passed through tolocal will remain in UTF-8.
 
     >>> roundtrip = lambda x: fromutf8b(toutf8b(x)) == x
-    >>> m = "\\xc3\\xa9\\x99abcd"
+    >>> m = b"\\xc3\\xa9\\x99abcd"
     >>> toutf8b(m)
     '\\xc3\\xa9\\xed\\xb2\\x99abcd'
     >>> roundtrip(m)
     True
-    >>> roundtrip("\\xc2\\xc2\\x80")
+    >>> roundtrip(b"\\xc2\\xc2\\x80")
     True
-    >>> roundtrip("\\xef\\xbf\\xbd")
+    >>> roundtrip(b"\\xef\\xbf\\xbd")
     True
-    >>> roundtrip("\\xef\\xef\\xbf\\xbd")
+    >>> roundtrip(b"\\xef\\xef\\xbf\\xbd")
     True
-    >>> roundtrip("\\xf1\\x80\\x80\\x80\\x80")
+    >>> roundtrip(b"\\xf1\\x80\\x80\\x80\\x80")
     True
     '''
 
+    if isasciistr(s):
+        return s
     # fast path - look for uDxxx prefixes in s
     if "\xed" not in s:
         return s
@@ -589,6 +568,7 @@ def fromutf8b(s):
     # points to be escaped. Instead, we use our handy getutf8char
     # helper again to walk the string without "decoding" it.
 
+    s = pycompat.bytestr(s)
     r = ""
     pos = 0
     l = len(s)
@@ -597,6 +577,21 @@ def fromutf8b(s):
         pos += len(c)
         # unescape U+DCxx characters
         if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
-            c = chr(ord(c.decode("utf-8")) & 0xff)
+            c = pycompat.bytechr(ord(c.decode("utf-8", _utf8strict)) & 0xff)
         r += c
     return r
+
+if pycompat.ispy3:
+    class strio(io.TextIOWrapper):
+        """Wrapper around TextIOWrapper that respects hg's encoding assumptions.
+
+        Also works around Python closing streams.
+        """
+
+        def __init__(self, buffer):
+            super(strio, self).__init__(buffer, encoding=_sysstr(encoding))
+
+        def __del__(self):
+            """Override __del__ so it doesn't close the underlying stream."""
+else:
+    strio = pycompat.identity

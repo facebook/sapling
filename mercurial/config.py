@@ -20,13 +20,14 @@ from . import (
 class config(object):
     def __init__(self, data=None, includepaths=None):
         self._data = {}
-        self._source = {}
         self._unset = []
         self._includepaths = includepaths or []
         if data:
             for k in data._data:
                 self._data[k] = data[k].copy()
             self._source = data._source.copy()
+        else:
+            self._source = util.cowdict()
     def copy(self):
         return config(self)
     def __contains__(self, section):
@@ -39,13 +40,19 @@ class config(object):
         for d in self.sections():
             yield d
     def update(self, src):
+        self._source = self._source.preparewrite()
         for s, n in src._unset:
-            if s in self and n in self._data[s]:
+            ds = self._data.get(s, None)
+            if ds is not None and n in ds:
+                self._data[s] = ds.preparewrite()
                 del self._data[s][n]
                 del self._source[(s, n)]
         for s in src:
-            if s not in self:
-                self._data[s] = util.sortdict()
+            ds = self._data.get(s, None)
+            if ds:
+                self._data[s] = ds.preparewrite()
+            else:
+                self._data[s] = util.cowsortdict()
             self._data[s].update(src._data[s])
         self._source.update(src._source)
     def get(self, section, item, default=None):
@@ -74,16 +81,21 @@ class config(object):
             assert not isinstance(value, str), (
                 'config values may not be unicode strings on Python 3')
         if section not in self:
-            self._data[section] = util.sortdict()
+            self._data[section] = util.cowsortdict()
+        else:
+            self._data[section] = self._data[section].preparewrite()
         self._data[section][item] = value
         if source:
+            self._source = self._source.preparewrite()
             self._source[(section, item)] = source
 
     def restore(self, data):
         """restore data returned by self.backup"""
+        self._source = self._source.preparewrite()
         if len(data) == 4:
             # restore old data
             section, item, value, source = data
+            self._data[section] = self._data[section].preparewrite()
             self._data[section][item] = value
             self._source[(section, item)] = source
         else:
@@ -105,6 +117,9 @@ class config(object):
         item = None
         line = 0
         cont = False
+
+        if remap:
+            section = remap.get(section, section)
 
         for l in data.splitlines(True):
             line += 1
@@ -149,7 +164,7 @@ class config(object):
                 if remap:
                     section = remap.get(section, section)
                 if section not in self:
-                    self._data[section] = util.sortdict()
+                    self._data[section] = util.cowsortdict()
                 continue
             m = itemre.match(l)
             if m:
@@ -165,6 +180,7 @@ class config(object):
                 if sections and section not in sections:
                     continue
                 if self.get(section, name) is not None:
+                    self._data[section] = self._data[section].preparewrite()
                     del self._data[section][name]
                 self._unset.append((section, name))
                 continue
@@ -183,7 +199,7 @@ class config(object):
 def parselist(value):
     """parse a configuration value as a list of comma/space separated strings
 
-    >>> parselist('this,is "a small" ,test')
+    >>> parselist(b'this,is "a small" ,test')
     ['this', 'is', 'a small', 'test']
     """
 

@@ -1,14 +1,16 @@
 # TODO there are a few deficiencies in this file:
 # * The "namespace" of the labels needs to be worked out. We currently
 #   piggyback on existing values so color works.
-# * Obsolescence isn't considered for node labels. See _cset_labels in
-#   map-cmdline.default.
-showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, 5)}\n'
+
+%include map-cmdline.default
+
+[templates]
+showbookmarks = '{if(active, "*", " ")} {pad(bookmark, longestbookmarklen + 4)}{shortest(node, nodelen)}\n'
 
 showwork = '{cset_shortnode}{namespaces % cset_namespace} {cset_shortdesc}'
 showstack = '{showwork}'
 
-cset_shortnode = '{label("log.changeset changeset.{phase}", shortest(node, 5))}'
+cset_shortnode = '{labelcset(shortest(node, nodelen))}'
 
 # Treat branch and tags specially so we don't display "default" or "tip"
 cset_namespace = '{ifeq(namespace, "branches", names_branches, ifeq(namespace, "tags", names_tags, names_others))}'

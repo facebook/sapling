@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function
 
 import inspect
 import os
+import re
 import sys
 
 
@@ -60,9 +61,15 @@ def poentry(path, lineno, s):
             'msgid %s\n' % normalize(s) +
             'msgstr ""\n')
 
+doctestre = re.compile(r'^ +>>> ', re.MULTILINE)
 
 def offset(src, doc, name, default):
     """Compute offset or issue a warning on stdout."""
+    # remove doctest part, in order to avoid backslash mismatching
+    m = doctestre.search(doc)
+    if m:
+        doc = doc[:m.start()]
+
     # Backslashes in doc appear doubled in src.
     end = src.find(doc.replace('\\', '\\\\'))
     if end == -1:
@@ -96,7 +103,7 @@ def docstrings(path):
     only extract docstrings from functions mentioned in these tables.
     """
     mod = importpath(path)
-    if mod.__doc__:
+    if not path.startswith('mercurial/') and mod.__doc__:
         src = open(path).read()
         lineno = 1 + offset(src, mod.__doc__, path, 7)
         print(poentry(path, lineno, mod.__doc__))
@@ -112,6 +119,8 @@ def docstrings(path):
 
     for func, rstrip in functions:
         if func.__doc__:
+            docobj = func # this might be a proxy to provide formatted doc
+            func = getattr(func, '_origfunc', func)
             funcmod = inspect.getmodule(func)
             extra = ''
             if funcmod.__package__ == funcmod.__name__:
@@ -121,10 +130,15 @@ def docstrings(path):
             src = inspect.getsource(func)
             name = "%s.%s" % (actualpath, func.__name__)
             lineno = inspect.getsourcelines(func)[1]
-            doc = func.__doc__
+            doc = docobj.__doc__
+            origdoc = getattr(docobj, '_origdoc', '')
             if rstrip:
                 doc = doc.rstrip()
-            lineno += offset(src, doc, name, 1)
+                origdoc = origdoc.rstrip()
+            if origdoc:
+                lineno += offset(src, origdoc, name, 1)
+            else:
+                lineno += offset(src, doc, name, 1)
             print(poentry(actualpath, lineno, doc))
 
 

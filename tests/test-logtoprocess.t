@@ -8,10 +8,15 @@ Test if logtoprocess correctly captures command-related log calls.
 
   $ hg init
   $ cat > $TESTTMP/foocommand.py << EOF
+  > from __future__ import absolute_import
   > from mercurial import registrar
-  > from time import sleep
   > cmdtable = {}
   > command = registrar.command(cmdtable)
+  > configtable = {}
+  > configitem = registrar.configitem(configtable)
+  > configitem('logtoprocess', 'foo',
+  >     default=None,
+  > )
   > @command(b'foo', [])
   > def foo(ui, repo):
   >     ui.log('foo', 'a message: %(bar)s\n', bar='spam')
@@ -45,9 +50,11 @@ Use sort to avoid ordering issues between the various processes we spawn:
   
   
   
+   (chg !)
   0
   a message: spam
   command
+  command (chg !)
   commandfinish
   foo
   foo
@@ -55,8 +62,11 @@ Use sort to avoid ordering issues between the various processes we spawn:
   foo
   foo exited 0 after * seconds (glob)
   logtoprocess command output:
+  logtoprocess command output: (chg !)
   logtoprocess commandfinish output:
   logtoprocess foo output:
+  serve --cmdserver chgunix * (glob) (chg !)
+  serve --cmdserver chgunix * (glob) (chg !)
   spam
 
 Confirm that logging blocked time catches stdio properly:

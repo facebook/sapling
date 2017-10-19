@@ -15,6 +15,8 @@ from .common import (
 )
 
 from .. import (
+    error,
+    pycompat,
     util,
     wireproto,
 )
@@ -28,15 +30,18 @@ HGTYPE2 = 'application/mercurial-0.2'
 HGERRTYPE = 'application/hg-error'
 
 def decodevaluefromheaders(req, headerprefix):
-    """Decode a long value from multiple HTTP request headers."""
+    """Decode a long value from multiple HTTP request headers.
+
+    Returns the value as a bytes, not a str.
+    """
     chunks = []
     i = 1
+    prefix = headerprefix.upper().replace(r'-', r'_')
     while True:
-        v = req.env.get('HTTP_%s_%d' % (
-            headerprefix.upper().replace('-', '_'), i))
+        v = req.env.get(r'HTTP_%s_%d' % (prefix, i))
         if v is None:
             break
-        chunks.append(v)
+        chunks.append(pycompat.bytesurl(v))
         i += 1
 
     return ''.join(chunks)
@@ -64,17 +69,23 @@ class webproto(wireproto.abstractserverproto):
         return [data[k] for k in keys]
     def _args(self):
         args = self.req.form.copy()
-        postlen = int(self.req.env.get('HTTP_X_HGARGS_POST', 0))
+        if pycompat.ispy3:
+            args = {k.encode('ascii'): [v.encode('ascii') for v in vs]
+                    for k, vs in args.items()}
+        postlen = int(self.req.env.get(r'HTTP_X_HGARGS_POST', 0))
         if postlen:
             args.update(cgi.parse_qs(
                 self.req.read(postlen), keep_blank_values=True))
             return args
 
-        argvalue = decodevaluefromheaders(self.req, 'X-HgArg')
+        argvalue = decodevaluefromheaders(self.req, r'X-HgArg')
         args.update(cgi.parse_qs(argvalue, keep_blank_values=True))
         return args
     def getfile(self, fp):
-        length = int(self.req.env['CONTENT_LENGTH'])
+        length = int(self.req.env[r'CONTENT_LENGTH'])
+        # If httppostargs is used, we need to read Content-Length
+        # minus the amount that was consumed by args.
+        length -= int(self.req.env.get(r'HTTP_X_HGARGS_POST', 0))
         for s in util.filechunkiter(self.req, limit=length):
             fp.write(s)
     def redirect(self):
@@ -107,7 +118,7 @@ class webproto(wireproto.abstractserverproto):
 
         # Determine the response media type and compression engine based
         # on the request parameters.
-        protocaps = decodevaluefromheaders(self.req, 'X-HgProto').split(' ')
+        protocaps = decodevaluefromheaders(self.req, r'X-HgProto').split(' ')
 
         if '0.2' in protocaps:
             # Default as defined by wire protocol spec.
@@ -160,7 +171,7 @@ def call(repo, req, cmd):
                 yield chunk
 
     rsp = wireproto.dispatch(repo, p, cmd)
-    if isinstance(rsp, str):
+    if isinstance(rsp, bytes):
         req.respond(HTTP_OK, HGTYPE, body=rsp)
         return []
     elif isinstance(rsp, wireproto.streamres):
@@ -196,3 +207,4 @@ def call(repo, req, cmd):
         rsp = rsp.message
         req.respond(HTTP_OK, HGERRTYPE, body=rsp)
         return []
+    raise error.ProgrammingError('hgweb.protocol internal failure', rsp)

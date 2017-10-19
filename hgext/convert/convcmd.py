@@ -59,18 +59,18 @@ def recode(s):
 
 def mapbranch(branch, branchmap):
     '''
-    >>> bmap = {'default': 'branch1'}
-    >>> for i in ['', None]:
+    >>> bmap = {b'default': b'branch1'}
+    >>> for i in [b'', None]:
     ...     mapbranch(i, bmap)
     'branch1'
     'branch1'
-    >>> bmap = {'None': 'branch2'}
-    >>> for i in ['', None]:
+    >>> bmap = {b'None': b'branch2'}
+    >>> for i in [b'', None]:
     ...     mapbranch(i, bmap)
     'branch2'
     'branch2'
-    >>> bmap = {'None': 'branch3', 'default': 'branch4'}
-    >>> for i in ['None', '', None, 'default', 'branch5']:
+    >>> bmap = {b'None': b'branch3', b'default': b'branch4'}
+    >>> for i in [b'None', b'', None, b'default', b'branch5']:
     ...     mapbranch(i, bmap)
     'branch3'
     'branch4'
@@ -87,7 +87,7 @@ def mapbranch(branch, branchmap):
     # At some point we used "None" literal to denote the default branch,
     # attempt to use that for backward compatibility.
     if (not branch):
-        branch = branchmap.get(str(None), branch)
+        branch = branchmap.get('None', branch)
     return branch
 
 source_converters = [

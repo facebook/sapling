@@ -52,18 +52,20 @@ except ImportError:
     sys.stderr.write("(check your install and PYTHONPATH)\n")
     sys.exit(-1)
 
-import mercurial.util
-import mercurial.dispatch
+from mercurial import (
+    dispatch,
+    util,
+)
 
 def timer(func, title=None):
     results = []
-    begin = mercurial.util.timer()
+    begin = util.timer()
     count = 0
     while True:
         ostart = os.times()
-        cstart = mercurial.util.timer()
+        cstart = util.timer()
         r = func()
-        cstop = mercurial.util.timer()
+        cstop = util.timer()
         ostop = os.times()
         count += 1
         a, b = ostart, ostop
@@ -80,7 +82,7 @@ def timer(func, title=None):
     sys.stderr.write("! wall %f comb %f user %f sys %f (best of %d)\n"
                      % (m[0], m[1] + m[2], m[1], m[2], count))
 
-orgruncommand = mercurial.dispatch.runcommand
+orgruncommand = dispatch.runcommand
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     ui.pushbuffer()
@@ -90,9 +92,6 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     ui.popbuffer()
     lui.popbuffer()
 
-mercurial.dispatch.runcommand = runcommand
+dispatch.runcommand = runcommand
 
-for fp in (sys.stdin, sys.stdout, sys.stderr):
-    mercurial.util.setbinary(fp)
-
-mercurial.dispatch.run()
+dispatch.run()

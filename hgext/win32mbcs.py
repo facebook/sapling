@@ -54,6 +54,7 @@ from mercurial import (
     encoding,
     error,
     pycompat,
+    registrar,
 )
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -61,6 +62,15 @@ from mercurial import (
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+# Encoding.encoding may be updated by --encoding option.
+# Use a lambda do delay the resolution.
+configitem('win32mbcs', 'encoding',
+    default=lambda: encoding.encoding,
+)
 
 _encoding = None                                # see extsetup
 
@@ -175,12 +185,12 @@ def extsetup(ui):
         return
     # determine encoding for filename
     global _encoding
-    _encoding = ui.config('win32mbcs', 'encoding', encoding.encoding)
+    _encoding = ui.config('win32mbcs', 'encoding')
     # fake is only for relevant environment.
     if _encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f, wrapper)
-        if pycompat.osname == 'nt':
+        if pycompat.iswindows:
             for f in winfuncs.split():
                 wrapname(f, wrapper)
         wrapname("mercurial.util.listdir", wrapperforlistdir)

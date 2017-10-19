@@ -50,6 +50,7 @@ from mercurial import (
     patch,
     registrar,
     scmutil,
+    util,
 )
 
 cmdtable = {}
@@ -59,6 +60,13 @@ command = registrar.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('hgk', 'path',
+    default='hgk',
+)
 
 @command('debug-diff-tree',
     [('p', 'patch', None, _('generate patch')),
@@ -96,7 +104,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     while True:
         if opts['stdin']:
             try:
-                line = raw_input().split(' ')
+                line = util.bytesinput(ui.fin, ui.fout).split(' ')
                 node1 = line[0]
                 if len(line) > 1:
                     node2 = line[1]
@@ -177,7 +185,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
     prefix = ""
     if opts['stdin']:
         try:
-            (type, r) = raw_input().split(' ')
+            (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
             prefix = "    "
         except EOFError:
             return
@@ -195,7 +203,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
         catcommit(ui, repo, n, prefix)
         if opts['stdin']:
             try:
-                (type, r) = raw_input().split(' ')
+                (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
             except EOFError:
                 break
         else:
@@ -345,6 +353,6 @@ def view(ui, repo, *etc, **opts):
     if repo.filtername is None:
         optstr += '--hidden'
 
-    cmd = ui.config("hgk", "path", "hgk") + " %s %s" % (optstr, " ".join(etc))
+    cmd = ui.config("hgk", "path") + " %s %s" % (optstr, " ".join(etc))
     ui.debug("running %s\n" % cmd)
     ui.system(cmd, blockedtag='hgk_view')

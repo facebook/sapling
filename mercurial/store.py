@@ -27,13 +27,13 @@ parsers = policy.importmod(r'parsers')
 # foo.i or foo.d
 def _encodedir(path):
     '''
-    >>> _encodedir('data/foo.i')
+    >>> _encodedir(b'data/foo.i')
     'data/foo.i'
-    >>> _encodedir('data/foo.i/bla.i')
+    >>> _encodedir(b'data/foo.i/bla.i')
     'data/foo.i.hg/bla.i'
-    >>> _encodedir('data/foo.i.hg/bla.i')
+    >>> _encodedir(b'data/foo.i.hg/bla.i')
     'data/foo.i.hg.hg/bla.i'
-    >>> _encodedir('data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
+    >>> _encodedir(b'data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
     'data/foo.i\\ndata/foo.i.hg/bla.i\\ndata/foo.i.hg.hg/bla.i\\n'
     '''
     return (path
@@ -45,11 +45,11 @@ encodedir = getattr(parsers, 'encodedir', _encodedir)
 
 def decodedir(path):
     '''
-    >>> decodedir('data/foo.i')
+    >>> decodedir(b'data/foo.i')
     'data/foo.i'
-    >>> decodedir('data/foo.i.hg/bla.i')
+    >>> decodedir(b'data/foo.i.hg/bla.i')
     'data/foo.i/bla.i'
-    >>> decodedir('data/foo.i.hg.hg/bla.i')
+    >>> decodedir(b'data/foo.i.hg.hg/bla.i')
     'data/foo.i.hg/bla.i'
     '''
     if ".hg/" not in path:
@@ -80,24 +80,24 @@ def _buildencodefun():
     '''
     >>> enc, dec = _buildencodefun()
 
-    >>> enc('nothing/special.txt')
+    >>> enc(b'nothing/special.txt')
     'nothing/special.txt'
-    >>> dec('nothing/special.txt')
+    >>> dec(b'nothing/special.txt')
     'nothing/special.txt'
 
-    >>> enc('HELLO')
+    >>> enc(b'HELLO')
     '_h_e_l_l_o'
-    >>> dec('_h_e_l_l_o')
+    >>> dec(b'_h_e_l_l_o')
     'HELLO'
 
-    >>> enc('hello:world?')
+    >>> enc(b'hello:world?')
     'hello~3aworld~3f'
-    >>> dec('hello~3aworld~3f')
+    >>> dec(b'hello~3aworld~3f')
     'hello:world?'
 
-    >>> enc('the\x07quick\xADshot')
+    >>> enc(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
-    >>> dec('the~07quick~adshot')
+    >>> dec(b'the~07quick~adshot')
     'the\\x07quick\\xadshot'
     '''
     e = '_'
@@ -133,14 +133,14 @@ _encodefname, _decodefname = _buildencodefun()
 
 def encodefilename(s):
     '''
-    >>> encodefilename('foo.i/bar.d/bla.hg/hi:world?/HELLO')
+    >>> encodefilename(b'foo.i/bar.d/bla.hg/hi:world?/HELLO')
     'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o'
     '''
     return _encodefname(encodedir(s))
 
 def decodefilename(s):
     '''
-    >>> decodefilename('foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
+    >>> decodefilename(b'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
     'foo.i/bar.d/bla.hg/hi:world?/HELLO'
     '''
     return decodedir(_decodefname(s))
@@ -148,21 +148,24 @@ def decodefilename(s):
 def _buildlowerencodefun():
     '''
     >>> f = _buildlowerencodefun()
-    >>> f('nothing/special.txt')
+    >>> f(b'nothing/special.txt')
     'nothing/special.txt'
-    >>> f('HELLO')
+    >>> f(b'HELLO')
     'hello'
-    >>> f('hello:world?')
+    >>> f(b'hello:world?')
     'hello~3aworld~3f'
-    >>> f('the\x07quick\xADshot')
+    >>> f(b'the\\x07quick\\xADshot')
     'the~07quick~adshot'
     '''
-    cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
+    xchr = pycompat.bytechr
+    cmap = dict([(xchr(x), xchr(x)) for x in xrange(127)])
     for x in _reserved():
-        cmap[chr(x)] = "~%02x" % x
+        cmap[xchr(x)] = "~%02x" % x
     for x in range(ord("A"), ord("Z") + 1):
-        cmap[chr(x)] = chr(x).lower()
-    return lambda s: "".join([cmap[c] for c in s])
+        cmap[xchr(x)] = xchr(x).lower()
+    def lowerencode(s):
+        return "".join([cmap[c] for c in pycompat.iterbytestr(s)])
+    return lowerencode
 
 lowerencode = getattr(parsers, 'lowerencode', None) or _buildlowerencodefun()
 
@@ -180,15 +183,15 @@ def _auxencode(path, dotencode):
     basename (e.g. "aux", "aux.foo"). A directory or file named "foo.aux"
     doesn't need encoding.
 
-    >>> s = '.foo/aux.txt/txt.aux/con/prn/nul/foo.'
-    >>> _auxencode(s.split('/'), True)
+    >>> s = b'.foo/aux.txt/txt.aux/con/prn/nul/foo.'
+    >>> _auxencode(s.split(b'/'), True)
     ['~2efoo', 'au~78.txt', 'txt.aux', 'co~6e', 'pr~6e', 'nu~6c', 'foo~2e']
-    >>> s = '.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.'
-    >>> _auxencode(s.split('/'), False)
+    >>> s = b'.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.'
+    >>> _auxencode(s.split(b'/'), False)
     ['.com1com2', 'lp~749.lpt4.lpt1', 'conprn', 'com0', 'lpt0', 'foo~2e']
-    >>> _auxencode(['foo. '], True)
+    >>> _auxencode([b'foo. '], True)
     ['foo.~20']
-    >>> _auxencode([' .foo'], True)
+    >>> _auxencode([b' .foo'], True)
     ['~20.foo']
     '''
     for i, n in enumerate(path):

@@ -442,6 +442,8 @@ class manifestdict(object):
         self._lm[key] = node, self.flags(key, '')
 
     def __contains__(self, key):
+        if key is None:
+            return False
         return key in self._lm
 
     def __delitem__(self, key):
@@ -1231,7 +1233,8 @@ class manifestrevlog(revlog.revlog):
 
         super(manifestrevlog, self).__init__(opener, indexfile,
                                              # only root indexfile is cached
-                                             checkambig=not bool(dir))
+                                             checkambig=not bool(dir),
+                                             mmaplargeindex=True)
 
     @property
     def fulltextcache(self):

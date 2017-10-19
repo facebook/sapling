@@ -111,6 +111,7 @@ statprof can be used as a standalone module
 
   $ cd ..
 
+#if no-chg
 profiler extension could be loaded before other extensions
 
   $ cat > fooprof.py <<EOF
@@ -158,3 +159,4 @@ profiler extension could be loaded before other extensions
   unrecognized profiler 'unknown' - ignored
 
   $ cd ..
+#endif

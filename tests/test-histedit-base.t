@@ -5,8 +5,6 @@
   > tglog = log -G --template "{rev}:{node}:{phase} '{desc}'\n"
   > [extensions]
   > histedit=
-  > [experimental]
-  > histeditng=True
   > EOF
 
 Create repo a:
@@ -18,6 +16,7 @@ Create repo a:
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -237,15 +236,6 @@ base on a previously picked changeset
   > EOF
   hg: parse error: base "d273e35dcdf2" changeset was an edited list candidate
   (base must only use unlisted changesets)
-
-  $ hg --config experimental.histeditng=False histedit 5 --commands - 2>&1 << EOF | fixbundle
-  > base cd010b8cd998 A
-  > pick d273e35dcdf2 B
-  > pick 03772da75548 X
-  > pick b2f90fd8aa85 I
-  > pick e8c55b19d366 J
-  > EOF
-  hg: parse error: unknown action "base"
 
   $ hg tglog
   @  8:e8c55b19d366b335626e805484110d1d5f6f2ea3:draft 'J'

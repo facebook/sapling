@@ -122,6 +122,10 @@ testpy-%:
 check-code:
 	hg manifest | xargs python contrib/check-code.py
 
+format-c:
+	clang-format --style file -i \
+	  `hg files 'set:(**.c or **.h) and not "listfile:contrib/clang-format-blacklist"'`
+
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
@@ -132,6 +136,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	  mercurial/templater.py \
 	  mercurial/filemerge.py \
 	  mercurial/hgweb/webcommands.py \
+	  mercurial/util.py \
 	  $(DOCFILES) > i18n/hg.pot.tmp
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
@@ -180,7 +185,6 @@ osx:
 	make -C contrib/chg \
 	  HGPATH=/usr/local/bin/hg \
 	  PYTHON=/usr/bin/python2.7 \
-	  HG=/usr/local/bin/hg \
 	  HGEXTDIR=/Library/Python/2.7/site-packages/hgext \
 	  DESTDIR=../../build/mercurial \
 	  PREFIX=/usr/local \

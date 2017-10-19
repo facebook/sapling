@@ -90,7 +90,10 @@ import socket
 import sys
 import threading
 
+from .i18n import _
 from . import (
+    pycompat,
+    urllibcompat,
     util,
 )
 
@@ -133,7 +136,8 @@ class ConnectionManager(object):
                 del self._connmap[connection]
                 del self._readymap[connection]
                 self._hostmap[host].remove(connection)
-                if not self._hostmap[host]: del self._hostmap[host]
+                if not self._hostmap[host]:
+                    del self._hostmap[host]
         finally:
             self._lock.release()
 
@@ -203,7 +207,7 @@ class KeepAliveHandler(object):
         return self.do_open(HTTPConnection, req)
 
     def do_open(self, http_class, req):
-        host = req.get_host()
+        host = urllibcompat.gethost(req)
         if not host:
             raise urlerr.urlerror('no host given')
 
@@ -231,6 +235,11 @@ class KeepAliveHandler(object):
                 self._cm.add(host, h, 0)
                 self._start_transaction(h, req)
                 r = h.getresponse()
+        # The string form of BadStatusLine is the status line. Add some context
+        # to make the error message slightly more useful.
+        except httplib.BadStatusLine as err:
+            raise urlerr.urlerror(
+                _('bad HTTP status line: %s') % pycompat.sysbytes(err.line))
         except (socket.error, httplib.HTTPException) as err:
             raise urlerr.urlerror(err)
 
@@ -309,10 +318,11 @@ class KeepAliveHandler(object):
             if n in headers:
                 skipheaders['skip_' + n.replace('-', '_')] = 1
         try:
-            if req.has_data():
-                data = req.get_data()
+            if urllibcompat.hasdata(req):
+                data = urllibcompat.getdata(req)
                 h.putrequest(
-                    req.get_method(), req.get_selector(), **skipheaders)
+                    req.get_method(), urllibcompat.getselector(req),
+                    **skipheaders)
                 if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
@@ -320,13 +330,14 @@ class KeepAliveHandler(object):
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest(
-                    req.get_method(), req.get_selector(), **skipheaders)
+                    req.get_method(), urllibcompat.getselector(req),
+                    **skipheaders)
         except socket.error as err:
             raise urlerr.urlerror(err)
         for k, v in headers.items():
             h.putheader(k, v)
         h.endheaders()
-        if req.has_data():
+        if urllibcompat.hasdata(req):
             h.send(data)
 
 class HTTPHandler(KeepAliveHandler, urlreq.httphandler):
@@ -353,9 +364,12 @@ class HTTPResponse(httplib.HTTPResponse):
 
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
+        extrakw = {}
+        if not pycompat.ispy3:
+            extrakw['strict'] = True
+            extrakw['buffering'] = True
         httplib.HTTPResponse.__init__(self, sock, debuglevel=debuglevel,
-                                      strict=True, method=method,
-                                      buffering=True)
+                                      method=method, **extrakw)
         self.fileno = sock.fileno
         self.code = None
         self._rbuf = ''
@@ -388,7 +402,7 @@ class HTTPResponse(httplib.HTTPResponse):
     def read(self, amt=None):
         # the _rbuf test is only in this first if for speed.  It's not
         # logically necessary
-        if self._rbuf and not amt is None:
+        if self._rbuf and amt is not None:
             L = len(self._rbuf)
             if amt > L:
                 amt -= L
@@ -611,7 +625,8 @@ def continuity(url):
         f = fo.readline()
         if f:
             foo = foo + f
-        else: break
+        else:
+            break
     fo.close()
     m = md5(foo)
     print(format % ('keepalive readline', m.hexdigest()))

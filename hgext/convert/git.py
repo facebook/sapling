@@ -81,18 +81,16 @@ class convert_git(common.converter_source, common.commandline):
                                 path)
 
         # The default value (50) is based on the default for 'git diff'.
-        similarity = ui.configint('convert', 'git.similarity', default=50)
+        similarity = ui.configint('convert', 'git.similarity')
         if similarity < 0 or similarity > 100:
             raise error.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
             self.simopt = ['-C%d%%' % similarity]
-            findcopiesharder = ui.configbool('convert', 'git.findcopiesharder',
-                                             False)
+            findcopiesharder = ui.configbool('convert', 'git.findcopiesharder')
             if findcopiesharder:
                 self.simopt.append('--find-copies-harder')
 
-            renamelimit = ui.configint('convert', 'git.renamelimit',
-                                       default=400)
+            renamelimit = ui.configint('convert', 'git.renamelimit')
             self.simopt.append('-l%d' % renamelimit)
         else:
             self.simopt = []
@@ -110,8 +108,7 @@ class convert_git(common.converter_source, common.commandline):
             raise error.Abort(_('copying of extra key is forbidden: %s') %
                               _(', ').join(sorted(banned)))
 
-        committeractions = self.ui.configlist('convert', 'git.committeractions',
-                                              'messagedifferent')
+        committeractions = self.ui.configlist('convert', 'git.committeractions')
 
         messagedifferent = None
         messagealways = None
@@ -264,8 +261,7 @@ class convert_git(common.converter_source, common.commandline):
         lcount = len(difftree)
         i = 0
 
-        skipsubmodules = self.ui.configbool('convert', 'git.skipsubmodules',
-                                            False)
+        skipsubmodules = self.ui.configbool('convert', 'git.skipsubmodules')
         def add(entry, f, isdest):
             seen.add(f)
             h = entry[3]
@@ -375,7 +371,7 @@ class convert_git(common.converter_source, common.commandline):
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
-        saverev = self.ui.configbool('convert', 'git.saverev', True)
+        saverev = self.ui.configbool('convert', 'git.saverev')
 
         c = common.commit(parents=parents, date=date, author=author,
                           desc=message,
@@ -448,7 +444,7 @@ class convert_git(common.converter_source, common.commandline):
         bookmarks = {}
 
         # Handle local and remote branches
-        remoteprefix = self.ui.config('convert', 'git.remoteprefix', 'remote')
+        remoteprefix = self.ui.config('convert', 'git.remoteprefix')
         reftypes = [
             # (git prefix, hg prefix)
             ('refs/remotes/origin/', remoteprefix + '/'),

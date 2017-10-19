@@ -16,6 +16,7 @@ Test basic functionality of url#rev syntax
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  new changesets 1f0dee641bb7:cd2a86ecc814
   updating to branch foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

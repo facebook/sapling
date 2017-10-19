@@ -1,9 +1,11 @@
 # Base templates. Due to name clashes with existing keywords, we have
 # to replace some keywords with 'lkeyword', for 'labelled keyword'
-changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{summary}\n'
+
+[templates]
+changeset = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lobsfate}{summary}\n'
 changeset_quiet = '{lnode}'
-changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lfiles}{lfile_copies_switch}{description}\n'
-changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
+changeset_verbose = '{cset}{branches}{bookmarks}{tags}{parents}{user}{ldate}{ltroubles}{lobsfate}{lfiles}{lfile_copies_switch}{description}\n'
+changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manifest}{user}{ldate}{ltroubles}{lobsfate}{lfile_mods}{lfile_adds}{lfile_dels}{lfile_copies_switch}{extras}{description}\n'
 
 # File templates
 lfiles = '{if(files,
@@ -28,18 +30,11 @@ lfile_copies_switch = '{if(file_copies_switch,
                                                % ' {name} ({source})'}\n"))}'
 
 # General templates
-_trouble_label = 'trouble.{trouble}'
-_troubles_labels = '{if(troubles, "changeset.troubled {troubles%_trouble_label}")}'
-_obsolete_label = '{if(obsolete, "changeset.obsolete")}'
-_cset_labels = '{separate(" ", "log.changeset", "changeset.{phase}", "{_obsolete_label}", "{_troubles_labels}")}'
-cset = '{label("{_cset_labels}",
-               "changeset:   {rev}:{node|short}")}\n'
+cset = '{labelcset("changeset:   {rev}:{node|short}")}\n'
+fullcset = '{labelcset("changeset:   {rev}:{node}")}\n'
 
 lphase = '{label("log.phase",
                  "phase:       {phase}")}\n'
-
-fullcset = '{label("{_cset_labels}",
-                   "changeset:   {rev}:{node}")}\n'
 
 parent = '{label("log.parent changeset.{phase}",
                   "parent:      {rev}:{node|formatnode}")}\n'
@@ -68,8 +63,8 @@ summary = '{if(desc|strip, "{label('log.summary',
 ldate = '{label("log.date",
                 "date:        {date|date}")}\n'
 
-ltroubles = '{if(troubles, "{label('log.trouble',
-                                   'trouble:     {join(troubles, ", ")}')}\n")}'
+ltroubles = '{if(instabilities, "{label('log.instability',
+                                   'instability: {join(instabilities, ", ")}')}\n")}'
 
 extra = '{label("ui.debug log.extra",
                 "extra:       {key}={value|stringescape}")}\n'
@@ -80,3 +75,17 @@ description = '{if(desc|strip, "{label('ui.note log.description',
                                        '{desc|strip}')}\n\n")}'
 
 status = '{status} {path}\n{if(copy, "  {copy}\n")}'
+
+# Obsfate templates, it would be removed once we introduce the obsfate
+# template fragment
+lobsfate = '{if(obsfate, "{label('log.obsfate', '{obsfate % "obsolete:    {fate}\n"}')}")}'
+
+[templatealias]
+labelcset(expr) = label(separate(" ",
+                                 "log.changeset",
+                                 "changeset.{phase}",
+                                 if(obsolete, "changeset.obsolete"),
+                                 if(instabilities, "changeset.unstable"),
+                                 join(instabilities
+                                      % "instability.{instability}", " ")),
+                        expr)

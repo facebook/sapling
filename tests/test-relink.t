@@ -8,13 +8,15 @@
   > }
 
   $ cat > arelinked.py <<EOF
-  > import sys, os
+  > from __future__ import absolute_import, print_function
+  > import os
+  > import sys
   > from mercurial import util
   > path1, path2 = sys.argv[1:3]
   > if util.samefile(path1, path2):
-  >     print '%s == %s' % (path1, path2)
+  >     print('%s == %s' % (path1, path2))
   > else:
-  >     print '%s != %s' % (path1, path2)
+  >     print('%s != %s' % (path1, path2))
   > EOF
 
 
@@ -58,6 +60,7 @@ clone and pull to break links
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  new changesets 008c0c271c47
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone

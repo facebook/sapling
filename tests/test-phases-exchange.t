@@ -80,6 +80,7 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  new changesets 54acac6f23ab:b555f63b6063
   test-debug-phase: new rev 3:  x -> 0
   test-debug-phase: new rev 4:  x -> 0
   (run 'hg heads' to see heads, 'hg merge' to merge)
@@ -148,6 +149,7 @@ update must update phase of common changeset too
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets f54f1bb90ff3
   test-debug-phase: new rev 4:  x -> 0
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
@@ -202,6 +204,7 @@ changegroup are added without phase movement
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 5 files (+1 heads)
+  new changesets 054250a37db4:b555f63b6063
   test-debug-phase: new rev 0:  x -> 1
   test-debug-phase: new rev 1:  x -> 1
   test-debug-phase: new rev 2:  x -> 1
@@ -235,6 +238,7 @@ Pulling from publish=False to publish=False does not move boundary.
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files
+  new changesets 054250a37db4:54acac6f23ab
   test-debug-phase: new rev 0:  x -> 1
   test-debug-phase: new rev 1:  x -> 1
   test-debug-phase: new rev 2:  x -> 1
@@ -256,6 +260,7 @@ Even for common
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets f54f1bb90ff3
   test-debug-phase: new rev 3:  x -> 1
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
@@ -279,6 +284,7 @@ we are in nu
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets b555f63b6063
   test-debug-phase: move rev 0: 1 -> 0
   test-debug-phase: move rev 1: 1 -> 0
   test-debug-phase: move rev 2: 1 -> 0
@@ -326,6 +332,7 @@ pulling from Publish=False to publish=False with some public
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets d6bcb4f74035:145e75495359
   test-debug-phase: move rev 0: 1 -> 0
   test-debug-phase: move rev 1: 1 -> 0
   test-debug-phase: move rev 3: 1 -> 0
@@ -371,6 +378,7 @@ pulling into publish=True
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets d6bcb4f74035:145e75495359
   test-debug-phase: new rev 5:  x -> 1
   test-debug-phase: new rev 6:  x -> 1
   (run 'hg update' to get a working copy)
@@ -930,6 +938,7 @@ Discovery locally secret changeset on a remote repository:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 435b5d83910c
   test-debug-phase: new rev 10:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph -R ../mu
@@ -1059,6 +1068,7 @@ pull new changeset with common draft locally
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 5237fb433fc8
   test-debug-phase: new rev 13:  x -> 1
   (run 'hg update' to get a working copy)
   $ hgph
@@ -1120,6 +1130,7 @@ Test that test are properly ignored on remote event when existing locally
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  new changesets e9f537e46dea:b740e3e5c05d
   test-debug-phase: new rev 5:  x -> 0
   test-debug-phase: new rev 6:  x -> 0
   (run 'hg update' to get a working copy)

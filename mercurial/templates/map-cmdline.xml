@@ -1,3 +1,4 @@
+[templates]
 docheader = '<?xml version="1.0"?>\n<log>\n'
 docfooter = '</log>\n'
 

@@ -3,7 +3,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from __future__ import absolute_import
+
+from __future__ import absolute_import, print_function
 
 import posixpath
 import shlex
@@ -18,7 +19,7 @@ SKIPREV = common.SKIPREV
 def rpairs(path):
     '''Yield tuples with path split at '/', starting with the full path.
     No leading, trailing or double '/', please.
-    >>> for x in rpairs('foo/bar/baz'): print x
+    >>> for x in rpairs(b'foo/bar/baz'): print(x)
     ('foo/bar/baz', '')
     ('foo/bar', 'baz')
     ('foo', 'bar/baz')

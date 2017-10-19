@@ -102,7 +102,6 @@ class _funcregistrarbase(object):
     def _extrasetup(self, name, func):
         """Execute exra setup for registered function, if needed
         """
-        pass
 
 class command(_funcregistrarbase):
     """Decorator to register a command function to table
@@ -132,13 +131,35 @@ class command(_funcregistrarbase):
     command line arguments. If True, arguments will be examined for potential
     repository locations. See ``findrepo()``. If a repository is found, it
     will be used.
+
+    There are three constants in the class which tells what type of the command
+    that is. That information will be helpful at various places. It will be also
+    be used to decide what level of access the command has on hidden commits.
+    The constants are:
+
+    unrecoverablewrite is for those write commands which can't be recovered like
+    push.
+    recoverablewrite is for write commands which can be recovered like commit.
+    readonly is for commands which are read only.
     """
 
+    unrecoverablewrite = "unrecoverable"
+    recoverablewrite = "recoverable"
+    readonly = "readonly"
+
+    possiblecmdtypes = {unrecoverablewrite, recoverablewrite, readonly}
+
     def _doregister(self, func, name, options=(), synopsis=None,
-                    norepo=False, optionalrepo=False, inferrepo=False):
+                    norepo=False, optionalrepo=False, inferrepo=False,
+                    cmdtype=unrecoverablewrite):
+
+        if cmdtype not in self.possiblecmdtypes:
+            raise error.ProgrammingError("unknown cmdtype value '%s' for "
+                                         "'%s' command" % (cmdtype, name))
         func.norepo = norepo
         func.optionalrepo = optionalrepo
         func.inferrepo = inferrepo
+        func.cmdtype = cmdtype
         if synopsis:
             self._table[name] = func, list(options), synopsis
         else:
@@ -166,6 +187,16 @@ class revsetpredicate(_funcregistrarbase):
     Optional argument 'takeorder' indicates whether a predicate function
     takes ordering policy as the last argument.
 
+    Optional argument 'weight' indicates the estimated run-time cost, useful
+    for static optimization, default is 1. Higher weight means more expensive.
+    Usually, revsets that are fast and return only one revision has a weight of
+    0.5 (ex. a symbol); revsets with O(changelog) complexity and read only the
+    changelog have weight 10 (ex. author); revsets reading manifest deltas have
+    weight 30 (ex. adds); revset reading manifest contents have weight 100
+    (ex. contains). Note: those values are flexible. If the revset has a
+    same big-O time complexity as 'contains', but with a smaller constant, it
+    might have a weight of 90.
+
     'revsetpredicate' instance in example above can be used to
     decorate multiple functions.
 
@@ -178,9 +209,10 @@ class revsetpredicate(_funcregistrarbase):
     _getname = _funcregistrarbase._parsefuncdecl
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, safe=False, takeorder=False):
+    def _extrasetup(self, name, func, safe=False, takeorder=False, weight=1):
         func._safe = safe
         func._takeorder = takeorder
+        func._weight = weight
 
 class filesetpredicate(_funcregistrarbase):
     """Decorator to register fileset predicate
@@ -308,3 +340,64 @@ class templatefunc(_templateregistrarbase):
 
     def _extrasetup(self, name, func, argspec=None):
         func._argspec = argspec
+
+class internalmerge(_funcregistrarbase):
+    """Decorator to register in-process merge tool
+
+    Usage::
+
+        internalmerge = registrar.internalmerge()
+
+        @internalmerge('mymerge', internalmerge.mergeonly,
+                       onfailure=None, precheck=None):
+        def mymergefunc(repo, mynode, orig, fcd, fco, fca,
+                        toolconf, files, labels=None):
+            '''Explanation of this internal merge tool ....
+            '''
+            return 1, False # means "conflicted", "no deletion needed"
+
+    The first string argument is used to compose actual merge tool name,
+    ":name" and "internal:name" (the latter is historical one).
+
+    The second argument is one of merge types below:
+
+    ========== ======== ======== =========
+    merge type precheck premerge fullmerge
+    ========== ======== ======== =========
+    nomerge     x        x        x
+    mergeonly   o        x        o
+    fullmerge   o        o        o
+    ========== ======== ======== =========
+
+    Optional argument 'onfailure' is the format of warning message
+    to be used at failure of merging (target filename is specified
+    at formatting). Or, None or so, if warning message should be
+    suppressed.
+
+    Optional argument 'precheck' is the function to be used
+    before actual invocation of internal merge tool itself.
+    It takes as same arguments as internal merge tool does, other than
+    'files' and 'labels'. If it returns false value, merging is aborted
+    immediately (and file is marked as "unresolved").
+
+    'internalmerge' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'internalmerge' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'filemerge.loadinternalmerge()' is needed.
+    """
+    _docformat = "``:%s``\n    %s"
+
+    # merge type definitions:
+    nomerge = None
+    mergeonly = 'mergeonly'  # just the full merge, no premerge
+    fullmerge = 'fullmerge'  # both premerge and merge
+
+    def _extrasetup(self, name, func, mergetype,
+                    onfailure=None, precheck=None):
+        func.mergetype = mergetype
+        func.onfailure = onfailure
+        func.precheck = precheck

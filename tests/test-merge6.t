@@ -1,6 +1,6 @@
   $ cat <<EOF > merge
   > import sys, os
-  > print "merging for", os.path.basename(sys.argv[1])
+  > print("merging for", os.path.basename(sys.argv[1]))
   > EOF
   $ HGMERGE="$PYTHON ../merge"; export HGMERGE
 
@@ -41,6 +41,7 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets b90e70beeb58
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -58,6 +59,7 @@ bar should remain deleted.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets e1adc944e717
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg merge
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

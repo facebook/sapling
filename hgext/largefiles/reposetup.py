@@ -162,8 +162,10 @@ def reposetup(ui, repo):
                                     if sfindirstate(f)]
                     # Don't waste time getting the ignored and unknown
                     # files from lfdirstate
-                    unsure, s = lfdirstate.status(match, [], False, listclean,
-                                                  False)
+                    unsure, s = lfdirstate.status(match, subrepos=[],
+                                                  ignored=False,
+                                                  clean=listclean,
+                                                  unknown=False)
                     (modified, added, removed, deleted, clean) = (
                         s.modified, s.added, s.removed, s.deleted, s.clean)
                     if parentworking:

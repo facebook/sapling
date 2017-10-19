@@ -30,6 +30,7 @@ from .. import (
     hg,
     hook,
     profiling,
+    pycompat,
     repoview,
     templatefilters,
     templater,
@@ -59,6 +60,17 @@ archivespecs = util.sortdict((
     ('gz', ('application/x-gzip', 'tgz', '.tar.gz', None)),
     ('bz2', ('application/x-bzip2', 'tbz2', '.tar.bz2', None)),
 ))
+
+def getstyle(req, configfn, templatepath):
+    fromreq = req.form.get('style', [None])[0]
+    if fromreq is not None:
+        fromreq = pycompat.sysbytes(fromreq)
+    styles = (
+        fromreq,
+        configfn('web', 'style'),
+        'paper',
+    )
+    return styles, templater.stylemap(styles, templatepath)
 
 def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
@@ -98,11 +110,11 @@ class requestcontext(object):
 
         self.archivespecs = archivespecs
 
-        self.maxchanges = self.configint('web', 'maxchanges', 10)
-        self.stripecount = self.configint('web', 'stripes', 1)
-        self.maxshortchanges = self.configint('web', 'maxshortchanges', 60)
-        self.maxfiles = self.configint('web', 'maxfiles', 10)
-        self.allowpull = self.configbool('web', 'allowpull', True)
+        self.maxchanges = self.configint('web', 'maxchanges')
+        self.stripecount = self.configint('web', 'stripes')
+        self.maxshortchanges = self.configint('web', 'maxshortchanges')
+        self.maxfiles = self.configint('web', 'maxfiles')
+        self.allowpull = self.configbool('web', 'allowpull')
 
         # we use untrusted=False to prevent a repo owner from using
         # web.templates in .hg/hgrc to get access to any file readable
@@ -153,11 +165,11 @@ class requestcontext(object):
             proto = 'http'
             default_port = '80'
 
-        port = req.env['SERVER_PORT']
-        port = port != default_port and (':' + port) or ''
-        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
-        logourl = self.config('web', 'logourl', 'https://mercurial-scm.org/')
-        logoimg = self.config('web', 'logoimg', 'hglogo.png')
+        port = req.env[r'SERVER_PORT']
+        port = port != default_port and (r':' + port) or r''
+        urlbase = r'%s://%s%s' % (proto, req.env[r'SERVER_NAME'], port)
+        logourl = self.config('web', 'logourl')
+        logoimg = self.config('web', 'logoimg')
         staticurl = self.config('web', 'staticurl') or req.url + 'static/'
         if not staticurl.endswith('/'):
             staticurl += '/'
@@ -165,25 +177,21 @@ class requestcontext(object):
         # some functions for the templater
 
         def motd(**map):
-            yield self.config('web', 'motd', '')
+            yield self.config('web', 'motd')
 
         # figure out which style to use
 
         vars = {}
-        styles = (
-            req.form.get('style', [None])[0],
-            self.config('web', 'style'),
-            'paper',
-        )
-        style, mapfile = templater.stylemap(styles, self.templatepath)
+        styles, (style, mapfile) = getstyle(req, self.config,
+                                            self.templatepath)
         if style == styles[0]:
             vars['style'] = style
 
-        start = req.url[-1] == '?' and '&' or '?'
+        start = '&' if req.url[-1] == r'?' else '?'
         sessionvars = webutil.sessionvars(vars, start)
 
         if not self.reponame:
-            self.reponame = (self.config('web', 'name')
+            self.reponame = (self.config('web', 'name', '')
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
 
@@ -320,7 +328,7 @@ class hgweb(object):
         rctx = requestcontext(self, repo)
 
         # This state is global across all threads.
-        encoding.encoding = rctx.config('web', 'encoding', encoding.encoding)
+        encoding.encoding = rctx.config('web', 'encoding')
         rctx.repo.ui.environ = req.env
 
         if rctx.csp:
@@ -333,27 +341,27 @@ class hgweb(object):
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
 
-        req.url = req.env['SCRIPT_NAME']
+        req.url = req.env[r'SCRIPT_NAME']
         if not req.url.endswith('/'):
             req.url += '/'
         if req.env.get('REPO_NAME'):
-            req.url += req.env['REPO_NAME'] + '/'
+            req.url += req.env[r'REPO_NAME'] + r'/'
 
-        if 'PATH_INFO' in req.env:
-            parts = req.env['PATH_INFO'].strip('/').split('/')
-            repo_parts = req.env.get('REPO_NAME', '').split('/')
+        if r'PATH_INFO' in req.env:
+            parts = req.env[r'PATH_INFO'].strip('/').split('/')
+            repo_parts = req.env.get(r'REPO_NAME', r'').split(r'/')
             if parts[:len(repo_parts)] == repo_parts:
                 parts = parts[len(repo_parts):]
             query = '/'.join(parts)
         else:
-            query = req.env['QUERY_STRING'].partition('&')[0]
-            query = query.partition(';')[0]
+            query = req.env[r'QUERY_STRING'].partition(r'&')[0]
+            query = query.partition(r';')[0]
 
         # process this if it's a protocol request
         # protocol bits don't need to create any URLs
         # and the clients always use the old URL structure
 
-        cmd = req.form.get('cmd', [''])[0]
+        cmd = pycompat.sysbytes(req.form.get(r'cmd', [r''])[0])
         if protocol.iscmd(cmd):
             try:
                 if query:
@@ -370,7 +378,7 @@ class hgweb(object):
                     req.env.get('X-HgHttp2', '')):
                     req.drain()
                 else:
-                    req.headers.append(('Connection', 'Close'))
+                    req.headers.append((r'Connection', r'Close'))
                 req.respond(inst, protocol.HGTYPE,
                             body='0\n%s\n' % inst)
                 return ''
@@ -378,8 +386,7 @@ class hgweb(object):
         # translate user-visible url structure to internal structure
 
         args = query.split('/', 2)
-        if 'cmd' not in req.form and args and args[0]:
-
+        if r'cmd' not in req.form and args and args[0]:
             cmd = args.pop(0)
             style = cmd.rfind('-')
             if style != -1:
@@ -388,7 +395,7 @@ class hgweb(object):
 
             # avoid accepting e.g. style parameter as command
             if util.safehasattr(webcommands, cmd):
-                req.form['cmd'] = [cmd]
+                req.form[r'cmd'] = [cmd]
 
             if cmd == 'static':
                 req.form['file'] = ['/'.join(args)]
@@ -423,17 +430,17 @@ class hgweb(object):
                 self.check_perm(rctx, req, None)
 
             if cmd == '':
-                req.form['cmd'] = [tmpl.cache['default']]
-                cmd = req.form['cmd'][0]
+                req.form[r'cmd'] = [tmpl.cache['default']]
+                cmd = req.form[r'cmd'][0]
 
             # Don't enable caching if using a CSP nonce because then it wouldn't
             # be a nonce.
-            if rctx.configbool('web', 'cache', True) and not rctx.nonce:
+            if rctx.configbool('web', 'cache') and not rctx.nonce:
                 caching(self, req) # sets ETag header or raises NOT_MODIFIED
             if cmd not in webcommands.__all__:
                 msg = 'no such method: %s' % cmd
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
-            elif cmd == 'file' and 'raw' in req.form.get('style', []):
+            elif cmd == 'file' and r'raw' in req.form.get(r'style', []):
                 rctx.ctype = ctype
                 content = webcommands.rawfile(rctx, req, tmpl)
             else:
@@ -474,8 +481,8 @@ def getwebview(repo):
 
     The option has been around undocumented since Mercurial 2.5, but no
     user ever asked about it. So we better keep it undocumented for now."""
-    viewconfig = repo.ui.config('web', 'view', 'served',
-                                untrusted=True)
+    # experimental config: web.view
+    viewconfig = repo.ui.config('web', 'view', untrusted=True)
     if viewconfig == 'all':
         return repo.unfiltered()
     elif viewconfig in repoview.filtertable:

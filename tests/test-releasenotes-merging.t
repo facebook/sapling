@@ -1,3 +1,5 @@
+#require fuzzywuzzy
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > releasenotes=
@@ -158,3 +160,122 @@ Bullets from rev merge with those from notes file.
   
   * this is fix3.
 
+  $ cd ..
+
+Ignores commit messages containing issueNNNN based on issue number.
+
+  $ hg init simple-fuzzrepo
+  $ cd simple-fuzzrepo
+  $ touch fix1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. fix::
+  > 
+  >    Resolved issue4567.
+  > EOF
+
+  $ cat >> $TESTTMP/issue-number-notes << EOF
+  > Bug Fixes
+  > =========
+  > 
+  > * Fixed issue1234 related to XYZ.
+  > 
+  > * Fixed issue4567 related to ABC.
+  > 
+  > * Fixed issue3986 related to PQR.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/issue-number-notes
+  "issue4567" already exists in notes; ignoring
+
+  $ cat $TESTTMP/issue-number-notes
+  Bug Fixes
+  =========
+  
+  * Fixed issue1234 related to XYZ.
+  
+  * Fixed issue4567 related to ABC.
+  
+  * Fixed issue3986 related to PQR.
+
+  $ cd ..
+
+Adds short commit messages (words < 10) without
+comparison unless there is an exact match.
+
+  $ hg init tempdir
+  $ cd tempdir
+  $ touch feature1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. feature::
+  > 
+  >    Adds a new feature 1.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/short-sentence-notes
+
+  $ touch feature2
+  $ hg -q commit -A -l - << EOF
+  > commit 2
+  > 
+  > .. feature::
+  > 
+  >    Adds a new feature 2.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/short-sentence-notes
+  $ cat $TESTTMP/short-sentence-notes
+  New Features
+  ============
+  
+  * Adds a new feature 1.
+  
+  * Adds a new feature 2.
+
+  $ cd ..
+
+Ignores commit messages based on fuzzy comparison.
+
+  $ hg init fuzznotes
+  $ cd fuzznotes
+  $ touch fix1
+  $ hg -q commit -A -l - << EOF
+  > commit 1
+  > 
+  > .. fix::
+  > 
+  >    This is a fix with another line.
+  >    And it is a big one.
+  > EOF
+
+  $ cat >> $TESTTMP/fuzz-ignore-notes << EOF
+  > Bug Fixes
+  > =========
+  > 
+  > * Fixed issue4567 by improving X.
+  > 
+  > * This is the first line. This is next line with one newline.
+  > 
+  >   This is another line written after two newlines. This is going to be a big one.
+  > 
+  > * This fixes another problem.
+  > EOF
+
+  $ hg releasenotes -r . $TESTTMP/fuzz-ignore-notes
+  "This is a fix with another line. And it is a big one." already exists in notes file; ignoring
+
+  $ cat $TESTTMP/fuzz-ignore-notes
+  Bug Fixes
+  =========
+  
+  * Fixed issue4567 by improving X.
+  
+  * This is the first line. This is next line with one newline.
+  
+    This is another line written after two newlines. This is going to be a big
+    one.
+  
+  * This fixes another problem.

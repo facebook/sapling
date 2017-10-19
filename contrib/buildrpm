@@ -11,6 +11,7 @@
 
 BUILD=1
 RPMBUILDDIR="$PWD/rpmbuild"
+
 while [ "$1" ]; do
     case "$1" in
     --prepare )

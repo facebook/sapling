@@ -357,7 +357,7 @@ class baseset(abstractsmartset):
 
     def _fastsetop(self, other, op):
         # try to use native set operations as fast paths
-        if (type(other) is baseset and '_set' in other.__dict__ and '_set' in
+        if (type(other) is baseset and r'_set' in other.__dict__ and r'_set' in
             self.__dict__ and self._ascending is not None):
             s = baseset(data=getattr(self._set, op)(other._set),
                         istopo=self._istopo)

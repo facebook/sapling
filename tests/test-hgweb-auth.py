@@ -25,7 +25,7 @@ def writeauth(items):
 
 def dumpdict(dict):
     return '{' + ', '.join(['%s: %s' % (k, dict[k])
-                            for k in sorted(dict.iterkeys())]) + '}'
+                            for k in sorted(dict)]) + '}'
 
 def test(auth, urls=None):
     print('CFG:', dumpdict(auth))

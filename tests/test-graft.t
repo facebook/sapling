@@ -221,6 +221,25 @@ Summary should mention graft:
   $ hg summary |grep graft
   commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
 
+Using status to get more context
+
+  $ hg status --verbose
+  M d
+  M e
+  ? a.orig
+  ? e.orig
+  # The repository is in an unfinished *graft* state.
+  
+  # Unresolved merge conflicts:
+  # 
+  #     e
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  
+  # To continue:                hg graft --continue
+  # To abort:                   hg update --clean .    (warning: this will discard uncommitted changes)
+  
+
 Commit while interrupted should fail:
 
   $ hg ci -m 'commit interrupted graft'

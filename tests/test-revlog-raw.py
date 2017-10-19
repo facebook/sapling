@@ -119,11 +119,27 @@ def addgroupcopy(rlog, tr, destname=b'_destrevlog.i', optimaldelta=True):
                     'deltabase': rlog.node(deltaparent),
                     'delta': rlog.revdiff(deltaparent, r)}
 
+        def deltaiter(self):
+            chain = None
+            for chunkdata in iter(lambda: self.deltachunk(chain), {}):
+                node = chunkdata['node']
+                p1 = chunkdata['p1']
+                p2 = chunkdata['p2']
+                cs = chunkdata['cs']
+                deltabase = chunkdata['deltabase']
+                delta = chunkdata['delta']
+                flags = chunkdata['flags']
+
+                chain = node
+
+                yield (node, p1, p2, cs, deltabase, delta, flags)
+
     def linkmap(lnode):
         return rlog.rev(lnode)
 
     dlog = newrevlog(destname, recreate=True)
-    dlog.addgroup(dummychangegroup(), linkmap, tr)
+    dummydeltas = dummychangegroup().deltaiter()
+    dlog.addgroup(dummydeltas, linkmap, tr)
     return dlog
 
 def lowlevelcopy(rlog, tr, destname=b'_destrevlog.i'):

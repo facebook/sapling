@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -59,6 +60,13 @@ void abortmsgerrno(const char *fmt, ...)
 }
 
 static int debugmsgenabled = 0;
+static double debugstart = 0;
+
+static double now() {
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return t.tv_usec / 1e6 + t.tv_sec;
+}
 
 void enablecolor(void)
 {
@@ -68,6 +76,7 @@ void enablecolor(void)
 void enabledebugmsg(void)
 {
 	debugmsgenabled = 1;
+	debugstart = now();
 }
 
 void debugmsg(const char *fmt, ...)
@@ -78,7 +87,7 @@ void debugmsg(const char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	fsetcolor(stderr, "1;30");
-	fputs("chg: debug: ", stderr);
+	fprintf(stderr, "chg: debug: %4.6f ", now() - debugstart);
 	vfprintf(stderr, fmt, args);
 	fsetcolor(stderr, "");
 	fputc('\n', stderr);

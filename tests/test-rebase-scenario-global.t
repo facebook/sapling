@@ -18,6 +18,7 @@
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files (+2 heads)
+  new changesets cd010b8cd998:02de42196ebe
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -264,14 +265,14 @@ G onto F - rebase onto an ancestor:
 F onto G - rebase onto a descendant:
 
   $ hg rebase -s 5 -d 6
-  abort: source is ancestor of destination
+  abort: source and destination form a cycle
   [255]
 
 G onto B - merge revision with both parents not in ancestors of target:
 
   $ hg rebase -s 6 -d 1
   rebasing 6:eea13746799a "G"
-  abort: cannot use revision 6 as base, result would have 3 parents
+  abort: cannot rebase 6:eea13746799a without moving at least one of its parents
   [255]
   $ hg rebase --abort
   rebase aborted
@@ -420,6 +421,7 @@ All destination are B
   adding manifests
   adding file changes
   added 9 changesets with 9 changes to 9 files (+2 heads)
+  new changesets 9ae2ed22e576:479ddb54a924
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg tglog
   o  8: 'I'
@@ -966,7 +968,7 @@ Testing rebase being called inside another transaction
   > [extensions]
   > wraprebase=$TESTTMP/wraprebase.py
   > [experimental]
-  > evolution=all
+  > evolution=true
   > EOF
 
   $ hg debugdrawdag <<'EOS'

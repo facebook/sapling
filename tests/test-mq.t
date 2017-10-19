@@ -782,6 +782,7 @@ strip
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  new changesets 770eb8fce608
   (run 'hg update' to get a working copy)
 
 
@@ -1388,7 +1389,7 @@ apply force, should discard changes in hello, but not bye
   $ hg qpush -f --verbose --config 'ui.origbackuppath=.hg/origbackups'
   applying empty
   creating directory: $TESTTMP/forcepush/.hg/origbackups (glob)
-  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt.orig (glob)
+  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt (glob)
   patching file hello.txt
   committing files:
   hello.txt
@@ -1422,7 +1423,7 @@ apply force, should discard changes in hello, but not bye
 test that the previous call to qpush with -f (--force) and --config actually put
 the orig files out of the working copy
   $ ls .hg/origbackups
-  hello.txt.orig
+  hello.txt
 
 test popping revisions not in working dir ancestry
 

@@ -31,8 +31,8 @@ Create a feature and use -B
   Cc: 
   
   displaying [PATCH 0 of 2] bookmark ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 0 of 2] bookmark
   Message-Id: <patchbomb.347155260@*> (glob)
@@ -43,8 +43,8 @@ Create a feature and use -B
   
   
   displaying [PATCH 1 of 2] first ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 1 of 2] first
   X-Mercurial-Node: accde9b8b6dce861c185d0825c1affc09a79cb26
@@ -74,8 +74,8 @@ Create a feature and use -B
   +first
   
   displaying [PATCH 2 of 2] second ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 2 of 2] second
   X-Mercurial-Node: 417defd1559c396ba06a44dce8dc1c2d2d653f3f
@@ -138,8 +138,8 @@ Do the same and combine with -o only one must be exported
   Cc: 
   
   displaying [PATCH] bookmark ...
-  Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
+  Content-Type: text/plain; charset="us-ascii"
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] bookmark
   X-Mercurial-Node: 8dab2639fd35f1e337ad866c372a5c44f1064e3c

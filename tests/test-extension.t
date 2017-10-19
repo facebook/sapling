@@ -42,11 +42,13 @@ Test basic extension support
   uisetup called
   reposetup called for a
   ui == repo.ui
+  reposetup called for a (chg !)
+  ui == repo.ui (chg !)
   Foo
 
   $ cd ..
   $ hg clone a b
-  uisetup called
+  uisetup called (no-chg !)
   reposetup called for a
   ui == repo.ui
   reposetup called for b
@@ -55,7 +57,7 @@ Test basic extension support
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg bar
-  uisetup called
+  uisetup called (no-chg !)
   Bar
   $ echo 'foobar = !' >> $HGRCPATH
 
@@ -67,6 +69,8 @@ module/__init__.py-style
   uisetup called
   reposetup called for a
   ui == repo.ui
+  reposetup called for a (chg !)
+  ui == repo.ui (chg !)
   Foo
   $ echo 'barfoo = !' >> $HGRCPATH
 
@@ -75,13 +79,13 @@ Check that extensions are loaded in phases:
   $ cat > foo.py <<EOF
   > import os
   > name = os.path.basename(__file__).rsplit('.', 1)[0]
-  > print "1) %s imported" % name
+  > print("1) %s imported" % name)
   > def uisetup(ui):
-  >     print "2) %s uisetup" % name
+  >     print("2) %s uisetup" % name)
   > def extsetup():
-  >     print "3) %s extsetup" % name
+  >     print("3) %s extsetup" % name)
   > def reposetup(ui, repo):
-  >    print "4) %s reposetup" % name
+  >    print("4) %s reposetup" % name)
   > 
   > # custom predicate to check registration of functions at loading
   > from mercurial import (
@@ -172,7 +176,7 @@ Check "from __future__ import absolute_import" support for external libraries
   $ cat > loadabs.py <<EOF
   > import mod.ambigabs as ambigabs
   > def extsetup():
-  >     print 'ambigabs.s=%s' % ambigabs.s
+  >     print('ambigabs.s=%s' % ambigabs.s)
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
   ambigabs.s=libroot/ambig.py
@@ -186,7 +190,7 @@ Check "from __future__ import absolute_import" support for external libraries
   $ cat > loadrel.py <<EOF
   > import mod.ambigrel as ambigrel
   > def extsetup():
-  >     print 'ambigrel.s=%s' % ambigrel.s
+  >     print('ambigrel.s=%s' % ambigrel.s)
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py root)
   ambigrel.s=libroot/mod/ambig.py
@@ -511,6 +515,28 @@ See also issue5208 for detail about example case on Python 3.x.
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.checkrelativity=$TESTTMP/checkrelativity.py checkrelativity)
 
 #endif
+
+Make sure a broken uisetup doesn't globally break hg:
+  $ cat > $TESTTMP/baduisetup.py <<EOF
+  > def uisetup(ui):
+  >     1/0
+  > EOF
+
+Even though the extension fails during uisetup, hg is still basically usable:
+  $ hg --config extensions.baduisetup=$TESTTMP/baduisetup.py version
+  Traceback (most recent call last):
+    File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
+      uisetup(ui)
+    File "$TESTTMP/baduisetup.py", line 2, in uisetup
+      1/0
+  ZeroDivisionError: integer division or modulo by zero
+  *** failed to set up extension baduisetup: integer division or modulo by zero
+  Mercurial Distributed SCM (version *) (glob)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-2017 Matt Mackall and others
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   $ cd ..
 
@@ -1478,6 +1504,7 @@ Commands handling multiple repositories at a time should invoke only
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> src/.hg/hgrc
   $ hg -R src status
   reposetup() for $TESTTMP/reposetup-test/src (glob)
+  reposetup() for $TESTTMP/reposetup-test/src (glob) (chg !)
 
   $ hg clone -U src clone-dst1
   reposetup() for $TESTTMP/reposetup-test/src (glob)
@@ -1663,53 +1690,25 @@ Show deprecation warning for the use of cmdutil.command
   devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
   (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
 
-Make sure a broken uisetup doesn't globally break hg:
-  $ cat > $TESTTMP/baduisetup.py <<EOF
-  > from mercurial import (
-  >     bdiff,
-  >     extensions,
-  > )
-  > 
-  > def blockswrapper(orig, *args, **kwargs):
-  >     return orig(*args, **kwargs)
-  > 
-  > def uisetup(ui):
-  >     extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
+Prohibit the use of unicode strings as the default value of options
+
+  $ hg init $TESTTMP/opt-unicode-default
+
+  $ cat > $TESTTMP/test_unicode_default_value.py << EOF
+  > from mercurial import registrar
+  > cmdtable = {}
+  > command = registrar.command(cmdtable)
+  > @command('dummy', [('', 'opt', u'value', u'help')], 'ext [OPTIONS]')
+  > def ext(*args, **opts):
+  >     print(opts['opt'])
   > EOF
-  $ cat >> $HGRCPATH <<EOF
+  $ cat > $TESTTMP/opt-unicode-default/.hg/hgrc << EOF
   > [extensions]
-  > baduisetup = $TESTTMP/baduisetup.py
+  > test_unicode_default_value = $TESTTMP/test_unicode_default_value.py
   > EOF
-
-Even though the extension fails during uisetup, hg is still basically usable:
-  $ hg version
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-  $ hg version --traceback
-  Traceback (most recent call last):
-    File "*/mercurial/extensions.py", line *, in _runuisetup (glob)
-      uisetup(ui)
-    File "$TESTTMP/baduisetup.py", line 10, in uisetup
-      extensions.wrapfunction(bdiff, 'blocks', blockswrapper)
-    File "*/mercurial/extensions.py", line *, in wrapfunction (glob)
-      origfn = getattr(container, funcname)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in __getattr__ (glob)
-      self._load()
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _load (glob)
-      mod = _hgextimport(_origimport, head, globals, locals, None, level)
-    File "*/hgdemandimport/demandimportpy2.py", line *, in _hgextimport (glob)
-      return importfunc(name, globals, *args, **kwargs)
-  ImportError: No module named (mercurial\.)?bdiff (re)
-  \*\*\* failed to set up extension baduisetup: No module named (mercurial\.)?bdiff (re)
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-2017 Matt Mackall and others
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  $ hg -R $TESTTMP/opt-unicode-default dummy
+  *** failed to import extension test_unicode_default_value from $TESTTMP/test_unicode_default_value.py: option 'dummy.opt' has a unicode default value
+  *** (change the dummy.opt default value to a non-unicode string)
+  hg: unknown command 'dummy'
+  (did you mean summary?)
+  [255]
