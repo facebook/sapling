@@ -950,7 +950,7 @@ test the default cmdline template
   parent:      3:6f9641995072
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  obsfate:     pruned
+  obsolete:    pruned
   summary:     add obsolete_e
   
 
@@ -986,7 +986,7 @@ test the obsolete labels
   [log.parent changeset.draft|parent:      3:6f9641995072]
   [log.user|user:        test]
   [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
-  [log.obsfate|obsfate:     pruned]
+  [log.obsfate|obsolete:    pruned]
   [log.summary|summary:     add obsolete_e]
   
 

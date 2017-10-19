@@ -78,7 +78,7 @@ status = '{status} {path}\n{if(copy, "  {copy}\n")}'
 
 # Obsfate templates, it would be removed once we introduce the obsfate
 # template fragment
-lobsfate = '{if(obsfate, "{label('log.obsfate', '{obsfate % "obsfate:     {fate}\n"}')}")}'
+lobsfate = '{if(obsfate, "{label('log.obsfate', '{obsfate % "obsolete:    {fate}\n"}')}")}'
 
 [templatealias]
 labelcset(expr) = label(separate(" ",

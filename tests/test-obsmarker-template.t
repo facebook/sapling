@@ -137,7 +137,7 @@ Predecessors template should show current revision as it is the working copy
   | @  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test, test2
+  |    obsolete:    rewritten using amend as 3:d004c8f274b9 by test, test2
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -297,13 +297,13 @@ Check other fatelog implementations
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2
+  |    obsolete:    rewritten using amend as 3:d004c8f274b9 by test2
   |    summary:     A1
   |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 2:a468dc9b3633
+  |    obsolete:    rewritten using amend as 2:a468dc9b3633
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -326,7 +326,7 @@ Check other fatelog implementations
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
+  |    obsolete:    rewritten using amend as 3:d004c8f274b9 by test2 (at 2001-04-19 04:25 +0000)
   |    files:       A0
   |    description:
   |    A1
@@ -335,7 +335,7 @@ Check other fatelog implementations
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
+  |    obsolete:    rewritten using amend as 2:a468dc9b3633 by test (at 2009-02-13 23:31 +0000)
   |    files:       A0
   |    description:
   |    A0
@@ -540,7 +540,7 @@ Check other fatelog implementations
   | x  changeset:   1:471597cad322
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     split as 2:337fec4d2edc, 3:f257fde29c7a
+  |    obsolete:    split as 2:337fec4d2edc, 3:f257fde29c7a
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -763,13 +763,13 @@ Check other fatelog implementations
   | x  changeset:   2:0dec01379d3b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  obsfate:     rewritten as 3:eb5a0daa2192
+  | |  obsolete:    rewritten as 3:eb5a0daa2192
   | |  summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten as 3:eb5a0daa2192
+  |    obsolete:    rewritten as 3:eb5a0daa2192
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1035,7 +1035,7 @@ Check other fatelog implementations
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 4:019fadeab383
+  |    obsolete:    rewritten using amend as 4:019fadeab383
   |    summary:     A2
   |
   | @  changeset:   2:fdf9bde5129a
@@ -1048,8 +1048,8 @@ Check other fatelog implementations
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
-  |    obsfate:     rewritten using amend as 3:65b757b745b9
+  |    obsolete:    rewritten using amend as 2:fdf9bde5129a
+  |    obsolete:    rewritten using amend as 3:65b757b745b9
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1341,19 +1341,19 @@ Check other fatelog implementations
   | |  parent:      1:471f378eab4c
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  obsfate:     rewritten as 4:eb5a0daa2192
+  | |  obsolete:    rewritten as 4:eb5a0daa2192
   | |  summary:     B1
   | |
   | | x  changeset:   2:0dec01379d3b
   | |/   user:        test
   | |    date:        Thu Jan 01 00:00:00 1970 +0000
-  | |    obsfate:     rewritten using amend as 3:b7ea6d14e664
+  | |    obsolete:    rewritten using amend as 3:b7ea6d14e664
   | |    summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten as 4:eb5a0daa2192
+  |    obsolete:    rewritten as 4:eb5a0daa2192
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1550,7 +1550,7 @@ Check other fatelog implementations
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 2:7a230b46bf61
+  |    obsolete:    rewritten using amend as 2:7a230b46bf61
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -1741,14 +1741,14 @@ Check other fatelog implementations
   | x  changeset:   2:0dec01379d3b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  obsfate:     rewritten as 3:f897c6137566
-  | |  obsfate:     rewritten as 1:471f378eab4c
+  | |  obsolete:    rewritten as 3:f897c6137566
+  | |  obsolete:    rewritten as 1:471f378eab4c
   | |  summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten as 2:0dec01379d3b
+  |    obsolete:    rewritten as 2:0dec01379d3b
   |    summary:     A0
   |
   @  changeset:   0:ea207398892e
@@ -2212,14 +2212,14 @@ Check other fatelog implementations
   | x  changeset:   7:ba2ed02b0c9a
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  obsfate:     rewritten using rebase as 10:eceed8f98ffc
+  | |  obsolete:    rewritten using rebase as 10:eceed8f98ffc
   | |  summary:     Add A,B,C
   | |
   | x  changeset:   6:4a004186e638
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 8:b18bc8331526
-  |    obsfate:     rewritten using amend as 9:0b997eb7ceee
+  |    obsolete:    rewritten using amend as 8:b18bc8331526
+  |    obsolete:    rewritten using amend as 9:0b997eb7ceee
   |    summary:     Add A,B,C
   |
   o  changeset:   5:dd800401bd8c
@@ -2232,7 +2232,7 @@ Check other fatelog implementations
   | @  changeset:   4:9bd10a0775e4
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a
+  |    obsolete:    split as 5:dd800401bd8c, 6:4a004186e638, 7:ba2ed02b0c9a
   |    summary:     Add A,B,C
   |
   o  changeset:   3:f897c6137566
@@ -2244,14 +2244,14 @@ Check other fatelog implementations
   | x  changeset:   2:0dec01379d3b
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  obsfate:     rewritten as 3:f897c6137566
-  | |  obsfate:     rewritten as 1:471f378eab4c
+  | |  obsolete:    rewritten as 3:f897c6137566
+  | |  obsolete:    rewritten as 1:471f378eab4c
   | |  summary:     B0
   | |
   | x  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten as 2:0dec01379d3b
+  |    obsolete:    rewritten as 2:0dec01379d3b
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -2373,21 +2373,21 @@ Check other fatelog implementations
   |  parent:      0:ea207398892e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  obsfate:     pruned
+  |  obsolete:    pruned
   |  summary:     A2
   |
   | x  changeset:   2:fdf9bde5129a
   |/   parent:      0:ea207398892e
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     pruned
+  |    obsolete:    pruned
   |    summary:     A1
   |
   | @  changeset:   1:471f378eab4c
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     rewritten using amend as 2:fdf9bde5129a
-  |    obsfate:     rewritten using amend as 3:65b757b745b9
+  |    obsolete:    rewritten using amend as 2:fdf9bde5129a
+  |    obsolete:    rewritten using amend as 3:65b757b745b9
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
@@ -2523,7 +2523,7 @@ Check other fatelog implementations
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  obsfate:     pruned
+  |  obsolete:    pruned
   |  summary:     A2
   |
   o  changeset:   2:617adc3a144c
@@ -2535,7 +2535,7 @@ Check other fatelog implementations
   | x  changeset:   1:471597cad322
   |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    obsfate:     split as 2:617adc3a144c, 3:0d0ef4bdf70e
+  |    obsolete:    split as 2:617adc3a144c, 3:0d0ef4bdf70e
   |    summary:     A0
   |
   o  changeset:   0:ea207398892e
