@@ -1792,7 +1792,7 @@ Test dynamic list of merge tools only shows up once
         accordingly be named "a.txt.local", "a.txt.other" and "a.txt.base" and
         they will be placed in the same directory as "a.txt".
   
-        This implies permerge. Therefore, files aren't dumped, if premerge runs
+        This implies premerge. Therefore, files aren't dumped, if premerge runs
         successfully. Use :forcedump to forcibly write files out.
   
       ":fail"
