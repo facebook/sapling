@@ -148,6 +148,9 @@ void EdenServiceHandler::getSHA1(
     vector<SHA1Result>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> paths) {
+  XLOG(DBG2) << "getSHA1(" << *mountPoint << ", ["
+             << folly::join(", ", *paths.get()) << "])";
+
   vector<Future<Hash>> futures;
   for (const auto& path : *paths) {
     futures.emplace_back(getSHA1ForPathDefensively(*mountPoint, path));
@@ -323,6 +326,8 @@ void EdenServiceHandler::glob(
     vector<string>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> globs) {
+  XLOG(DBG2) << "glob(" << *mountPoint << ", ["
+             << folly::join(", ", *globs.get()) << "])";
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
