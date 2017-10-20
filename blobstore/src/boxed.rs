@@ -4,11 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::marker::PhantomData;
 use std::error;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
-use futures::{BoxFuture, Future};
+use futures::Future;
+
+use futures_ext::{BoxFuture, FutureExt};
 
 use super::*;
 
@@ -112,11 +114,11 @@ where
             .get(key)
             .map(|v| v.map(Vo::from))
             .map_err(E::from)
-            .boxed()
+            .boxify()
     }
 
     fn put(&self, key: Self::Key, value: Self::ValueIn) -> Self::PutBlob {
         let value = B::ValueIn::from(value);
-        self.blobstore.put(key, value).map_err(E::from).boxed()
+        self.blobstore.put(key, value).map_err(E::from).boxify()
     }
 }
