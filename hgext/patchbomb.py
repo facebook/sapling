@@ -130,6 +130,9 @@ configitem('patchbomb', 'publicurl',
 configitem('patchbomb', 'reply-to',
     default=None,
 )
+configitem('patchbomb', 'to',
+    default=None,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

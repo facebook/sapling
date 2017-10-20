@@ -314,6 +314,9 @@ coreconfigitem('email', 'method',
 coreconfigitem('email', 'reply-to',
     default=None,
 )
+coreconfigitem('email', 'to',
+    default=None,
+)
 coreconfigitem('experimental', 'archivemetatemplate',
     default=dynamicdefault,
 )
