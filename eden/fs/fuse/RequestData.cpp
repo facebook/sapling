@@ -80,9 +80,10 @@ Future<folly::Unit> RequestData::startRequest(
 }
 
 void RequestData::finishRequest() {
-  auto now = duration_cast<seconds>(steady_clock::now().time_since_epoch());
-  auto diff = duration_cast<microseconds>(steady_clock::now() - startTime_);
-  stats_->get()->recordLatency(latencyHistogram_, diff, now);
+  auto now = steady_clock::now();
+  auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
+  auto diff = duration_cast<microseconds>(now - startTime_);
+  stats_->get()->recordLatency(latencyHistogram_, diff, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
 }
