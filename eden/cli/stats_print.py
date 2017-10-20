@@ -34,18 +34,20 @@ def write_mem_status_table(fuse_counters, out: TextIO) -> None:
         out.write(format_str.format(key.replace('_', ' '), ':', value))
 
 
+LATENCY_FORMAT_STR = '{:<12} {:^4} {:^10}  {:>10}  {:>15}  {:>10} {:>10}\n'
+
+
 # Prints a record of latencies with 50'th,90'th and 99'th percentile.
 def write_latency_record(syscall: str, matrix, out: TextIO) -> None:
     border = '-' * 80
-    format_str = '{:^12} {:^4} {:^10}  {:^10}  {:^15}  {:^10} {:^10}\n'
-    percentile = {0: 'P50', 1: 'p90', 2: 'p99'}
+    percentile = {0: 'p50', 1: 'p90', 2: 'p99'}
 
     for i in range(len(percentile)):
         syscall_name = ''
         if i == int(len(percentile) / 2):
             syscall_name = syscall
         out.write(
-            format_str.format(
+            LATENCY_FORMAT_STR.format(
                 syscall_name, '|', percentile[i], matrix[i][0], matrix[i][1],
                 matrix[i][2], matrix[i][3]
             )
@@ -54,9 +56,8 @@ def write_latency_record(syscall: str, matrix, out: TextIO) -> None:
 
 
 def write_latency_table(table, out: TextIO) -> None:
-    format_str = '{:^12} {:^4} {:^10}  {:^10}  {:^15}  {:^10} {:^10}\n'
     out.write(
-        format_str.format(
+        LATENCY_FORMAT_STR.format(
             'SystemCall', '|', 'Percentile', 'Last Minute', 'Last 10 Minutes',
             'Last Hour', 'All Time'
         )
@@ -68,10 +69,10 @@ def write_latency_table(table, out: TextIO) -> None:
 
 
 def write_table(table, heading: str, out: TextIO) -> None:
-    format_str = '{:^20}{:^15}{:^15}{:^15}{:^15}\n'
+    format_str = '{:<18}{:>15}{:>15}{:>15}{:>15}\n'
     out.write(
         format_str.format(
-            heading, 'Last minute', 'Last 10 minutes', 'Last Hour', 'All Time'
+            heading, 'Last Minute', 'Last 10m', 'Last Hour', 'All Time'
         )
     )
     border = '-' * 80

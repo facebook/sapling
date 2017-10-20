@@ -116,16 +116,16 @@ def get_fuse_counters(counters, all_flg: bool):
     for key in counters:
         if key.startswith('fuse') and key.find('.count') >= 0:
             tokens = key.split('.')
-            syscall = tokens[1][:-3]
+            syscall = tokens[1][:-3]  # _us
             if not all_flg and syscall not in syscalls:
                 continue
 
             if syscall not in table.keys():
                 table[syscall] = [0, 0, 0, 0]
             if len(tokens) == 3:
-                table[syscall][3] = counters[key]
+                table[syscall][3] = str(counters[key])
             else:
-                table[syscall][index[tokens[3]]] = counters[key]
+                table[syscall][index[tokens[3]]] = str(counters[key])
 
     return table
 
@@ -160,6 +160,12 @@ def get_fuse_latency(counters, all_flg: bool):
         'opendir', 'readdir', 'rmdir'
     ]
 
+    def with_microsecond_units(i):
+        if i:
+            return str(i) + u" \u03BCs" # mu for micro
+        else:
+            return str(i) + '   '
+
     for key in counters:
         if key.startswith('fuse') and key.find('.count') == -1:
             tokens = key.split('.')
@@ -172,7 +178,7 @@ def get_fuse_latency(counters, all_flg: bool):
             j = 3
             if len(tokens) > 3:
                 j = index[tokens[3]]
-            table[syscall][i][j] = counters[key]
+            table[syscall][i][j] = with_microsecond_units(counters[key])
     return table
 
 

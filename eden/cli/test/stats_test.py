@@ -31,14 +31,10 @@ class StatsTest(unittest.TestCase):
     def test_print_latency_record(self):
         matrix = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
         expected_output = (
-            '              |      P50          1              2             3   '
-            '       4     \n'
-            '   access     |      p90          5              6             7   '
-            '       8     \n'
-            '              |      p99          9             10             11  '
-            '       12    \n'
-            '-------------------------------------------------------------------'
-            '-------------\n'
+            '              |      p50               1                2           3          4\n'
+            'access        |      p90               5                6           7          8\n'
+            '              |      p99               9               10          11         12\n'
+            '--------------------------------------------------------------------------------\n'
         )
         out = StringIO()
         stats_print.write_latency_record('access', matrix, out)
@@ -69,19 +65,13 @@ class StatsTest(unittest.TestCase):
             'key4': [13, 14, 15, 16]
         }
         expected_output = (
-            '     SystemCall       Last minute  Last 10 minutes   Last Hour     '
-            ' All Time    \n'
-            '-------------------------------------------------------------------'
-            '-------------\n'
-            '        key1               1              2              3         '
-            '     4       \n'
-            '        key2               5              6              7         '
-            '     8       \n'
-            '        key3               9             10             11         '
-            '    12       \n'
-            '        key4              13             14             15         '
-            '    16       \n'
+            'SystemCall            Last Minute       Last 10m      Last Hour       All Time\n'
+            '--------------------------------------------------------------------------------\n'
+            'key1                            1              2              3              4\n'
+            'key2                            5              6              7              8\n'
+            'key3                            9             10             11             12\n'
+            'key4                           13             14             15             16\n'
         )
         out = StringIO()
         stats_print.write_table(table, 'SystemCall', out)
-        self.assertEqual(out.getvalue(), expected_output)
+        self.assertEqual(expected_output, out.getvalue())
