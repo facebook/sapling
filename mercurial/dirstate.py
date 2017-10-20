@@ -1187,7 +1187,11 @@ class dirstate(object):
         # changes of dirstate out after restoring from backup file
         self.invalidate()
         filename = self._actualfilename(tr)
-        self._opener.rename(backupname, filename, checkambig=True)
+        o = self._opener
+        if util.samefile(o.join(backupname), o.join(filename)):
+            o.unlink(backupname)
+        else:
+            o.rename(backupname, filename, checkambig=True)
 
     def clearbackup(self, tr, backupname):
         '''Clear backup file'''

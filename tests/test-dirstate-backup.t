@@ -11,9 +11,8 @@ Try to import an empty patch
   abort: stdin: no diffs found
   [255]
 
-A dirstate backup is left behind
+No dirstate backups are left behind
 
   $ ls .hg/dirstate* | sort
   .hg/dirstate
-  .hg/dirstate.backup.import.* (glob)
 
