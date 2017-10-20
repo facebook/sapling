@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import time
+import warnings
 
 import urllib3
 
@@ -82,8 +83,14 @@ class Client(object):
         if self._connection is None:
             self._connection = urllib3.PoolManager(ca_certs=self._ca_certs)
         try:
-            response = self._connection.request(
-                'POST', url, headers=headers, fields=req_data, timeout=timeout)
+            with warnings.catch_warnings():
+                if not self._ca_certs:
+                    # ignore the urllib3 certificate verification warnings
+                    warnings.simplefilter(
+                        'ignore', urllib3.exceptions.InsecureRequestWarning)
+                response = self._connection.request(
+                    'POST', url, headers=headers, fields=req_data,
+                    timeout=timeout)
         except urllib3.exceptions.HTTPError as ex:
             errno = -1
             if ex.args and util.safehasattr(ex.args[0], 'errno'):
