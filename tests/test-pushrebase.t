@@ -897,3 +897,93 @@ phase is updated correctly with the marker information.
   |
   o  a [public:cb9a9f314b8b]
   
+Push a file-copy changeset and the copy source gets modified by others:
+
+  $ cd $TESTTMP
+  $ hg init server2
+  $ cd server2
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > EOF
+
+  $ echo 1 > A
+  $ hg commit -m A -A A
+
+  $ cd ..
+  $ cp -R server2 client2
+
+  $ cd client2
+  $ hg cp A B
+  $ hg commit -m 'Copy A to B'
+
+  $ cd ../server2
+  $ echo 2 >> A
+  $ hg commit -m 'Modify A' A
+
+  $ cd ../client2
+  $ cat >> .hg/hgrc <<EOF
+  > [experimental]
+  > evolution = all
+  > [paths]
+  > default = ../server2
+  > EOF
+
+  $ hg push -r . --to default
+  pushing to $TESTTMP/server2 (glob)
+  searching for changes
+  pushing 1 changeset:
+      40d149b24655  Copy A to B
+  2 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  1 new obsolescence markers
+  obsoleted 1 changesets
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+SUBOPTIMAL: The pushrebased changest lost the content of "Modify A":
+
+  $ hg log -Gr 'all()' -p --config diff.git=1
+  @  changeset:   3:b0bbcfeb5f8d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Copy A to B
+  |
+  |  diff --git a/A b/B
+  |  copy from A
+  |  copy to B
+  |  --- a/A
+  |  +++ b/B
+  |  @@ -1,2 +1,1 @@
+  |   1
+  |  -2
+  |
+  o  changeset:   2:986e0f3a27f2
+  |  parent:      0:a18fe624bf77
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     Modify A
+  |
+  |  diff --git a/A b/A
+  |  --- a/A
+  |  +++ b/A
+  |  @@ -1,1 +1,2 @@
+  |   1
+  |  +2
+  |
+  o  changeset:   0:a18fe624bf77
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+     diff --git a/A b/A
+     new file mode 100644
+     --- /dev/null
+     +++ b/A
+     @@ -0,0 +1,1 @@
+     +1
+  
