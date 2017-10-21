@@ -190,7 +190,6 @@ from mercurial.i18n import _
 from mercurial import (
     bundle2,
     cmdutil,
-    configitems,
     context,
     copies,
     destutil,
@@ -221,7 +220,7 @@ configitem('experimental', 'histedit.autoverb',
     default=False,
 )
 configitem('histedit', 'defaultrev',
-    default=configitems.dynamicdefault,
+    default=configitem.dynamicdefault,
 )
 configitem('histedit', 'dropmissing',
     default=False,

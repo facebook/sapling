@@ -106,7 +106,10 @@ dynamicdefault = object()
 # Registering actual config items
 
 def getitemregister(configtable):
-    return functools.partial(_register, configtable)
+    f = functools.partial(_register, configtable)
+    # export pseudo enum as configitem.*
+    f.dynamicdefault = dynamicdefault
+    return f
 
 coreconfigitem = getitemregister(coreitems)
 

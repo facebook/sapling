@@ -301,7 +301,6 @@ from mercurial.i18n import _
 from mercurial.node import short
 from mercurial import (
     cmdutil,
-    configitems,
     error,
     mail,
     registrar,
@@ -354,7 +353,7 @@ configitem('bugzilla', 'host',
     default='localhost',
 )
 configitem('bugzilla', 'notify',
-    default=configitems.dynamicdefault,
+    default=configitem.dynamicdefault,
 )
 configitem('bugzilla', 'password',
     default=None,

@@ -107,7 +107,6 @@ command.
 from __future__ import absolute_import
 
 from mercurial import (
-    configitems,
     hg,
     localrepo,
     registrar,
@@ -131,7 +130,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem('largefiles', 'minsize',
-    default=configitems.dynamicdefault,
+    default=configitem.dynamicdefault,
 )
 configitem('largefiles', 'patterns',
     default=list,
