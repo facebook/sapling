@@ -194,6 +194,36 @@ Pager works with shell aliases.
   $ hg --config pager.attend-echoa=yes echoa
   paged! 'a\n'
 
+Pager attributes should be copied to mq repo. Otherwise pager would be started
+twice and color mode would be lost.
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > mq =
+  > EOF
+  $ hg init --mq
+  $ hg qnew foo.patch
+  $ hg qpop
+  popping foo.patch
+  patch queue now empty
+  $ hg ci --mq -m 'commit patches'
+  $ hg log --mq --debug
+  starting pager for command 'extension-via-attend-log'
+  paged! '\x1b[0;33mchangeset:   0:6cc2ded15503e368aaf76b6cc3d12f320c9e3b87\x1b[0m\n'
+  paged! 'tag:         tip\n'
+  paged! 'phase:       draft\n'
+  paged! 'parent:      -1:0000000000000000000000000000000000000000\n'
+  paged! 'parent:      -1:0000000000000000000000000000000000000000\n'
+  paged! 'manifest:    0:4980de1ae1b612014d5bcfa9507da84ce8891daa\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'files+:      .hgignore foo.patch series\n'
+  paged! 'extra:       branch=default\n'
+  paged! 'description:\n'
+  paged! 'commit patches\n'
+  paged! '\n'
+  paged! '\n'
+
 Pager works with hg aliases including environment variables.
 
   $ cat >> $HGRCPATH <<'EOF'

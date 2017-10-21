@@ -1963,6 +1963,14 @@ class queue(object):
 
     def qrepo(self, create=False):
         ui = self.baseui.copy()
+        # copy back attributes set by ui.pager()
+        if self.ui.pageractive and not ui.pageractive:
+            ui.pageractive = self.ui.pageractive
+            # internal config: ui.formatted
+            ui.setconfig('ui', 'formatted',
+                         self.ui.config('ui', 'formatted'), 'mqpager')
+            ui.setconfig('ui', 'interactive',
+                         self.ui.config('ui', 'interactive'), 'mqpager')
         if create or os.path.isdir(self.join(".hg")):
             return hg.repository(ui, path=self.path, create=create)
 
