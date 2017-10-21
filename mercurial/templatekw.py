@@ -860,12 +860,6 @@ def showtags(**args):
     """List of strings. Any tags associated with the changeset."""
     return shownames('tags', **args)
 
-def loadkeyword(ui, extname, registrarobj):
-    """Load template keyword from specified registrarobj
-    """
-    for name, func in registrarobj._table.iteritems():
-        keywords[name] = func
-
 @templatekeyword('termwidth')
 def showtermwidth(repo, ctx, templ, **args):
     """Integer. The width of the current terminal."""
@@ -890,6 +884,12 @@ def showinstabilities(**args):
     args = pycompat.byteskwargs(args)
     return showlist('instability', args['ctx'].instabilities(), args,
                     plural='instabilities')
+
+def loadkeyword(ui, extname, registrarobj):
+    """Load template keyword from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        keywords[name] = func
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()
