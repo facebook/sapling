@@ -349,6 +349,11 @@ def shortdate(text):
     """Date. Returns a date like "2006-09-18"."""
     return util.shortdate(text)
 
+@templatefilter('slashpath')
+def slashpath(path):
+    """Any text. Replaces the native path separator with slash."""
+    return util.pconvert(path)
+
 @templatefilter('splitlines')
 def splitlines(text):
     """Any text. Split text into a list of lines."""

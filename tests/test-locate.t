@@ -151,4 +151,13 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ hg files .
   [1]
 
+Convert native path separator to slash (issue5572)
+
+  $ hg files -T '{path|slashpath}\n'
+  ../b
+  ../dir.h/foo
+  ../t.h
+  ../t/e.h
+  ../t/x
+
   $ cd ../..
