@@ -848,6 +848,9 @@ coreconfigitem('ui', 'debug',
 coreconfigitem('ui', 'debugger',
     default=None,
 )
+coreconfigitem('ui', 'editor',
+    default=dynamicdefault,
+)
 coreconfigitem('ui', 'fallbackencoding',
     default=None,
 )
