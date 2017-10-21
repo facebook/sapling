@@ -816,7 +816,7 @@ def showphase(repo, ctx, templ, **args):
 
 @templatekeyword('phaseidx')
 def showphaseidx(repo, ctx, templ, **args):
-    """Integer. The changeset phase index."""
+    """Integer. The changeset phase index. (ADVANCED)"""
     return ctx.phase()
 
 @templatekeyword('rev')
