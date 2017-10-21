@@ -56,12 +56,16 @@ expect authorization error: must have authorized user
 
 expect success
 
+  $ cat > $TESTTMP/hook.sh <<'EOF'
+  > echo "phase-move: $HG_NODE:  $HG_OLDPHASE -> $HG_PHASE"
+  > EOF
+
   $ cat >> .hg/hgrc <<EOF
   > allow_push = *
   > [hooks]
   > changegroup = sh -c "printenv.py changegroup 0"
   > pushkey = sh -c "printenv.py pushkey 0"
-  > txnclose-phase.test = echo "phase-move: \$HG_NODE:  \$HG_OLDPHASE -> \$HG_PHASE"
+  > txnclose-phase.test = sh $TESTTMP/hook.sh 
   > EOF
   $ req
   pushing to http://localhost:$HGPORT/

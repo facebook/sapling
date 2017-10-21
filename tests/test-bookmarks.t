@@ -2,7 +2,10 @@
   $ hg init repo
   $ cd repo
 
-  $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'
+  $ cat > $TESTTMP/hook.sh <<'EOF'
+  > echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"
+  > EOF
+  $ TESTHOOK="hooks.txnclose-bookmark.test=sh $TESTTMP/hook.sh"
 
 no bookmarks
 
@@ -1074,8 +1077,8 @@ add hooks:
 
   $ cat << EOF >> .hg/hgrc
   > [hooks]
-  > pretxnclose-bookmark.force-public  = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "\$HG_NODE" -T '{phase}' | grep public > /dev/null)
-  > pretxnclose-bookmark.force-forward = (echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z "\$HG_NODE" ] || (hg log -r "max(\$HG_OLDNODE::\$HG_NODE)" -T 'MATCH' | grep MATCH > /dev/null)
+  > pretxnclose-bookmark.force-public  = sh -c "(echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z \"\$HG_NODE\" ] || (hg log -r \"\$HG_NODE\" -T '{phase}' | grep public > /dev/null)"
+  > pretxnclose-bookmark.force-forward = sh -c "(echo \$HG_BOOKMARK| grep -v NEW > /dev/null) || [ -z \"\$HG_NODE\" ] || (hg log -r \"max(\$HG_OLDNODE::\$HG_NODE)\" -T 'MATCH' | grep MATCH > /dev/null)"
   > EOF
 
   $ hg log -G -T phases

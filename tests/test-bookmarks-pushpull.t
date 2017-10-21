@@ -10,7 +10,10 @@
   > evolution.exchange=True
   > EOF
 
-  $ TESTHOOK='hooks.txnclose-bookmark.test=echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"'
+  $ cat > $TESTTMP/hook.sh <<'EOF'
+  > echo "test-hook-bookmark: $HG_BOOKMARK:  $HG_OLDNODE -> $HG_NODE"
+  > EOF
+  $ TESTHOOK="hooks.txnclose-bookmark.test=sh $TESTTMP/hook.sh"
 
 initialize
 

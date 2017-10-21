@@ -1,9 +1,12 @@
+  $ cat > $TESTTMP/hook.sh << 'EOF'
+  > echo "test-hook-close-phase: $HG_NODE:  $HG_OLDPHASE -> $HG_PHASE"
+  > EOF
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > phasereport=$TESTDIR/testlib/ext-phase-report.py
   > [hooks]
-  > txnclose-phase.test = echo "test-hook-close-phase: \$HG_NODE:  \$HG_OLDPHASE -> \$HG_PHASE"
+  > txnclose-phase.test = sh $TESTTMP/hook.sh
   > EOF
 
   $ hglog() { hg log --template "{rev} {phaseidx} {desc}\n" $*; }
@@ -796,7 +799,7 @@ Install a hook that prevent b3325c91a4d9 to become public
 
   $ cat >> .hg/hgrc << EOF
   > [hooks]
-  > pretxnclose-phase.nopublish_D = (echo \$HG_NODE| grep -v b3325c91a4d9>/dev/null) || [ 'public' != \$HG_PHASE ]
+  > pretxnclose-phase.nopublish_D = sh -c "(echo \$HG_NODE| grep -v b3325c91a4d9>/dev/null) || [ 'public' != \$HG_PHASE ]"
   > EOF
 
 Try various actions. only the draft move should succeed
