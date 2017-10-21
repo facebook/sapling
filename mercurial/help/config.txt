@@ -2184,6 +2184,8 @@ User interface controls.
     (default: True)
 
 ``slash``
+    (Deprecated. Use ``slashpath`` template filter instead.)
+
     Display paths using a slash (``/``) as the path separator. This
     only makes a difference on systems where the default path
     separator is not the slash character (e.g. Windows uses the
