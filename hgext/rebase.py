@@ -53,7 +53,6 @@ from mercurial import (
 )
 
 release = lock.release
-templateopts = cmdutil.templateopts
 
 # The following constants are used throughout the rebase module. The ordering of
 # their values must be maintained.
@@ -594,7 +593,7 @@ class rebaseruntime(object):
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
-     templateopts,
+    cmdutil.formatteropts,
     _('[-s REV | -b REV] [-d REV] [OPTION]'))
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
