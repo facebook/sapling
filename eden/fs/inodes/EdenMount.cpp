@@ -15,10 +15,10 @@
 #include <folly/FBString.h>
 #include <folly/File.h>
 #include <folly/Subprocess.h>
-#include <folly/ThreadName.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
