@@ -885,6 +885,19 @@ def showinstabilities(**args):
     return showlist('instability', args['ctx'].instabilities(), args,
                     plural='instabilities')
 
+@templatekeyword('verbosity')
+def showverbosity(ui, **args):
+    """String. The current output verbosity in 'debug', 'quiet', 'verbose',
+    or ''."""
+    # see cmdutil.changeset_templater for priority of these flags
+    if ui.debugflag:
+        return 'debug'
+    elif ui.quiet:
+        return 'quiet'
+    elif ui.verbose:
+        return 'verbose'
+    return ''
+
 def loadkeyword(ui, extname, registrarobj):
     """Load template keyword from specified registrarobj
     """

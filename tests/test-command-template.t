@@ -2876,6 +2876,17 @@ Test diff function:
   @@ -0,0 +1,1 @@
   +second
 
+ui verbosity:
+
+  $ hg log -l1 -T '{verbosity}\n'
+  
+  $ hg log -l1 -T '{verbosity}\n' --debug
+  debug
+  $ hg log -l1 -T '{verbosity}\n' --quiet
+  quiet
+  $ hg log -l1 -T '{verbosity}\n' --verbose
+  verbose
+
   $ cd ..
 
 
