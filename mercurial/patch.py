@@ -203,7 +203,7 @@ def extract(ui, fileobj):
 
     # attempt to detect the start of a patch
     # (this heuristic is borrowed from quilt)
-    diffre = re.compile(br'^(?:Index:[ \t]|diff[ \t]|RCS file: |'
+    diffre = re.compile(br'^(?:Index:[ \t]|diff[ \t]-|RCS file: |'
                         br'retrieving revision [0-9]+(\.[0-9]+)*$|'
                         br'---[ \t].*?^\+\+\+[ \t]|'
                         br'\*\*\*[ \t].*?^---[ \t])',

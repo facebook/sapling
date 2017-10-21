@@ -1346,6 +1346,93 @@ import a unified diff with no lines of context (diff -U0)
 
   $ cd ..
 
+commit message that looks like a diff header (issue1879)
+
+  $ hg init headerlikemsg
+  $ cd headerlikemsg
+  $ touch empty
+  $ echo nonempty >> nonempty
+  $ hg ci -qAl - <<EOF
+  > blah blah
+  > diff blah
+  > blah blah
+  > EOF
+  $ hg --config diff.git=1 log -pv
+  changeset:   0:c6ef204ef767
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       empty nonempty
+  description:
+  blah blah
+  diff blah
+  blah blah
+  
+  
+  diff --git a/empty b/empty
+  new file mode 100644
+  diff --git a/nonempty b/nonempty
+  new file mode 100644
+  --- /dev/null
+  +++ b/nonempty
+  @@ -0,0 +1,1 @@
+  +nonempty
+  
+
+ (without --git, empty file is lost, but commit message should be preserved)
+
+  $ hg init plain
+  $ hg export 0 | hg -R plain import -
+  applying patch from stdin
+  $ hg --config diff.git=1 -R plain log -pv
+  changeset:   0:60a2d231e71f
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       nonempty
+  description:
+  blah blah
+  diff blah
+  blah blah
+  
+  
+  diff --git a/nonempty b/nonempty
+  new file mode 100644
+  --- /dev/null
+  +++ b/nonempty
+  @@ -0,0 +1,1 @@
+  +nonempty
+  
+
+ (with --git, patch contents should be fully preserved)
+
+  $ hg init git
+  $ hg --config diff.git=1 export 0 | hg -R git import -
+  applying patch from stdin
+  $ hg --config diff.git=1 -R git log -pv
+  changeset:   0:c6ef204ef767
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       empty nonempty
+  description:
+  blah blah
+  diff blah
+  blah blah
+  
+  
+  diff --git a/empty b/empty
+  new file mode 100644
+  diff --git a/nonempty b/nonempty
+  new file mode 100644
+  --- /dev/null
+  +++ b/nonempty
+  @@ -0,0 +1,1 @@
+  +nonempty
+  
+
+  $ cd ..
+
 no segfault while importing a unified diff which start line is zero but chunk
 size is non-zero
 
