@@ -46,7 +46,7 @@ def _commit(orig, ui, repo, *pats, **opts):
     origcommit = repo.commit
     try:
         def _wrappedcommit(*innerpats, **inneropts):
-            extras = opts.get('extra')
+            extras = opts.get(r'extra')
             if extras:
                 for raw in extras:
                     if '=' not in raw:
@@ -65,7 +65,7 @@ def _commit(orig, ui, repo, *pats, **opts):
                         msg = _("key '%s' is used internally, can't be set "
                                 "manually")
                         raise error.Abort(msg % k)
-                    inneropts['extra'][k] = v
+                    inneropts[r'extra'][k] = v
             return origcommit(*innerpats, **inneropts)
 
         # This __dict__ logic is needed because the normal
