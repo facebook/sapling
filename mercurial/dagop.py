@@ -77,7 +77,10 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
 
 def filectxancestors(fctxs, followfirst=False):
     """Like filectx.ancestors(), but can walk from multiple files/revisions,
-    and includes the given fctxs themselves"""
+    and includes the given fctxs themselves
+
+    Yields (rev, {fctx, ...}) pairs in descending order.
+    """
     visit = {}
     def addvisit(fctx):
         rev = fctx.rev()
@@ -93,13 +96,21 @@ def filectxancestors(fctxs, followfirst=False):
     for c in fctxs:
         addvisit(c)
     while visit:
-        rev = max(visit)
-        c = visit[rev].pop()
-        if not visit[rev]:
-            del visit[rev]
-        yield c
-        for parent in c.parents()[:cut]:
-            addvisit(parent)
+        currev = max(visit)
+        curfctxs = visit.pop(currev)
+        yield currev, curfctxs
+        for c in curfctxs:
+            for parent in c.parents()[:cut]:
+                addvisit(parent)
+
+def filerevancestors(fctxs, followfirst=False):
+    """Like filectx.ancestors(), but can walk from multiple files/revisions,
+    and includes the given fctxs themselves
+
+    Returns a smartset.
+    """
+    gen = (rev for rev, _cs in filectxancestors(fctxs, followfirst))
+    return generatorset(gen, iterasc=False)
 
 def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
     if followfirst:

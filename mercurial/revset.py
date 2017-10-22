@@ -928,8 +928,7 @@ def _follow(repo, subset, x, name, followfirst=False):
         files = c.manifest().walk(matcher)
 
         fctxs = [c[f].introfilectx() for f in files]
-        a = dagop.filectxancestors(fctxs, followfirst)
-        s = set(c.rev() for c in a)
+        s = dagop.filerevancestors(fctxs, followfirst)
     else:
         s = dagop.revancestors(repo, baseset([c.rev()]), followfirst)
 
