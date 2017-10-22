@@ -19,6 +19,7 @@ from mercurial import (
     cmdutil,
     encoding,
     patch,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -45,6 +46,7 @@ def changedlines(ui, repo, ctx1, ctx2, fns):
 
 def countrate(ui, repo, amap, *pats, **opts):
     """Calculate stats"""
+    opts = pycompat.byteskwargs(opts)
     if opts.get('dateformat'):
         def getkey(ctx):
             t, tz = ctx.date()
@@ -154,7 +156,7 @@ def churn(ui, repo, *pats, **opts):
         return s + " " * (l - encoding.colwidth(s))
 
     amap = {}
-    aliases = opts.get('aliases')
+    aliases = opts.get(r'aliases')
     if not aliases and os.path.exists(repo.wjoin('.hgchurn')):
         aliases = repo.wjoin('.hgchurn')
     if aliases:
@@ -172,7 +174,7 @@ def churn(ui, repo, *pats, **opts):
     if not rate:
         return
 
-    if opts.get('sort'):
+    if opts.get(r'sort'):
         rate.sort()
     else:
         rate.sort(key=lambda x: (-sum(x[1]), x))
@@ -185,7 +187,7 @@ def churn(ui, repo, *pats, **opts):
     ui.debug("assuming %i character terminal\n" % ttywidth)
     width = ttywidth - maxname - 2 - 2 - 2
 
-    if opts.get('diffstat'):
+    if opts.get(r'diffstat'):
         width -= 15
         def format(name, diffstat):
             added, removed = diffstat
