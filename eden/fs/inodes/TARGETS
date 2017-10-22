@@ -68,6 +68,7 @@ cpp_library(
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly:unit",
+        "@/folly/executors:cpu_thread_pool_executor",
         "@/folly/executors:global_executor",
         "@/folly/experimental:string_keyed_unordered_map",
         "@/folly/experimental/logging:logging",
@@ -76,7 +77,6 @@ cpp_library(
         "@/folly/io/async:async",
         "@/folly/system:thread_name",
         "@/thrift/lib/cpp2/protocol:protocol",
-        "@/wangle:wangle",
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),

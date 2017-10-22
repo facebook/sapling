@@ -10,10 +10,10 @@
 #include "EdenDispatcher.h"
 
 #include <folly/Format.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/experimental/logging/xlog.h>
 #include <gflags/gflags.h>
-#include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <shared_mutex>
 
 #include "eden/fs/fuse/DirHandle.h"
