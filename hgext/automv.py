@@ -32,6 +32,7 @@ from mercurial import (
     copies,
     error,
     extensions,
+    pycompat,
     registrar,
     scmutil,
     similar
@@ -53,6 +54,7 @@ def extsetup(ui):
 
 def mvcheck(orig, ui, repo, *pats, **opts):
     """Hook to check for moves at commit time"""
+    opts = pycompat.byteskwargs(opts)
     renames = None
     disabled = opts.pop('no_automv', False)
     if not disabled:
@@ -68,7 +70,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
     with repo.wlock():
         if renames is not None:
             scmutil._markchanges(repo, (), (), renames)
-        return orig(ui, repo, *pats, **opts)
+        return orig(ui, repo, *pats, **pycompat.strkwargs(opts))
 
 def _interestingfiles(repo, matcher):
     """Find what files were added or removed in this commit.
