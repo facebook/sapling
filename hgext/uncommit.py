@@ -29,6 +29,7 @@ from mercurial import (
     error,
     node,
     obsolete,
+    pycompat,
     registrar,
     scmutil,
 )
@@ -152,6 +153,7 @@ def uncommit(ui, repo, *pats, **opts):
     deleted in the changeset will be left unchanged, and so will remain
     modified in the working directory.
     """
+    opts = pycompat.byteskwargs(opts)
 
     with repo.wlock(), repo.lock():
         wctx = repo[None]
