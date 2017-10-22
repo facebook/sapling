@@ -946,6 +946,14 @@ class basefilectx(object):
             return self.linkrev()
         return self._adjustlinkrev(self.rev(), inclusive=True)
 
+    def introfilectx(self):
+        """Return filectx having identical contents, but pointing to the
+        changeset revision where this filectx was introduced"""
+        introrev = self.introrev()
+        if self.rev() == introrev:
+            return self
+        return self.filectx(self.filenode(), changeid=introrev)
+
     def _parentfilectx(self, path, fileid, filelog):
         """create parent filectx keeping ancestry info for _adjustlinkrev()"""
         fctx = filectx(self._repo, path, fileid=fileid, filelog=filelog)
@@ -1036,19 +1044,16 @@ class basefilectx(object):
             return pl
 
         # use linkrev to find the first changeset where self appeared
-        base = self
-        introrev = self.introrev()
-        if self.rev() != introrev:
-            base = self.filectx(self.filenode(), changeid=introrev)
+        base = self.introfilectx()
         if getattr(base, '_ancestrycontext', None) is None:
             cl = self._repo.changelog
-            if introrev is None:
+            if base.rev() is None:
                 # wctx is not inclusive, but works because _ancestrycontext
                 # is used to test filelog revisions
                 ac = cl.ancestors([p.rev() for p in base.parents()],
                                   inclusive=True)
             else:
-                ac = cl.ancestors([introrev], inclusive=True)
+                ac = cl.ancestors([base.rev()], inclusive=True)
             base._ancestrycontext = ac
 
         # This algorithm would prefer to be recursive, but Python is a
