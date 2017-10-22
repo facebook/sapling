@@ -30,6 +30,7 @@ from mercurial import (
     localrepo,
     lock,
     node,
+    pycompat,
     registrar,
     util,
 )
@@ -133,7 +134,7 @@ def _mergeentriesiter(*iterables, **kwargs):
 
     Note that by default entries go from most recent to oldest.
     """
-    order = kwargs.pop('order', max)
+    order = kwargs.pop(r'order', max)
     iterables = [iter(it) for it in iterables]
     # this tracks still active iterables; iterables are deleted as they are
     # exhausted, which is why this is a dictionary and why each entry also
@@ -458,6 +459,7 @@ def journal(ui, repo, *args, **opts):
     `hg journal -T json` can be used to produce machine readable output.
 
     """
+    opts = pycompat.byteskwargs(opts)
     name = '.'
     if opts.get('all'):
         if args:
