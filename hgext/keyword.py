@@ -104,6 +104,7 @@ from mercurial import (
     match,
     patch,
     pathutil,
+    pycompat,
     registrar,
     scmutil,
     templatefilters,
@@ -380,6 +381,7 @@ def _status(ui, repo, wctx, kwt, *pats, **opts):
     '''Bails out if [keyword] configuration is not active.
     Returns status of working directory.'''
     if kwt:
+        opts = pycompat.byteskwargs(opts)
         return repo.status(match=scmutil.match(wctx, pats, opts), clean=True,
                            unknown=opts.get('unknown') or opts.get('all'))
     if ui.configitems('keyword'):
@@ -436,16 +438,16 @@ def demo(ui, repo, *args, **opts):
     ui.setconfig('keywordset', 'svn', svn, 'keyword')
 
     uikwmaps = ui.configitems('keywordmaps')
-    if args or opts.get('rcfile'):
+    if args or opts.get(r'rcfile'):
         ui.status(_('\n\tconfiguration using custom keyword template maps\n'))
         if uikwmaps:
             ui.status(_('\textending current template maps\n'))
-        if opts.get('default') or not uikwmaps:
+        if opts.get(r'default') or not uikwmaps:
             if svn:
                 ui.status(_('\toverriding default svn keywordset\n'))
             else:
                 ui.status(_('\toverriding default cvs keywordset\n'))
-        if opts.get('rcfile'):
+        if opts.get(r'rcfile'):
             ui.readconfig(opts.get('rcfile'))
         if args:
             # simulate hgrc parsing
@@ -453,7 +455,7 @@ def demo(ui, repo, *args, **opts):
             repo.vfs.write('hgrc', rcmaps)
             ui.readconfig(repo.vfs.join('hgrc'))
         kwmaps = dict(ui.configitems('keywordmaps'))
-    elif opts.get('default'):
+    elif opts.get(r'default'):
         if svn:
             ui.status(_('\n\tconfiguration using default svn keywordset\n'))
         else:
@@ -543,6 +545,7 @@ def files(ui, repo, *pats, **opts):
     else:
         cwd = ''
     files = []
+    opts = pycompat.byteskwargs(opts)
     if not opts.get('unknown') or opts.get('all'):
         files = sorted(status.modified + status.added + status.clean)
     kwfiles = kwt.iskwfile(files, wctx)
