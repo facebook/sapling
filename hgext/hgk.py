@@ -48,6 +48,7 @@ from mercurial import (
     commands,
     obsolete,
     patch,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -79,6 +80,7 @@ configitem('hgk', 'path',
     inferrepo=True)
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
+
     def __difftree(repo, node1, node2, files=None):
         assert node2 is not None
         if files is None:
@@ -102,7 +104,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     ##
 
     while True:
-        if opts['stdin']:
+        if opts[r'stdin']:
             try:
                 line = util.bytesinput(ui.fin, ui.fout).split(' ')
                 node1 = line[0]
@@ -118,8 +120,8 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
         else:
             node2 = node1
             node1 = repo.changelog.parents(node1)[0]
-        if opts['patch']:
-            if opts['pretty']:
+        if opts[r'patch']:
+            if opts[r'pretty']:
                 catcommit(ui, repo, node2, "")
             m = scmutil.match(repo[node1], files)
             diffopts = patch.difffeatureopts(ui)
@@ -130,7 +132,7 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
                 ui.write(chunk)
         else:
             __difftree(repo, node1, node2, files=files)
-        if not opts['stdin']:
+        if not opts[r'stdin']:
             break
 
 def catcommit(ui, repo, n, prefix, ctx=None):
@@ -183,7 +185,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
     # strings
     #
     prefix = ""
-    if opts['stdin']:
+    if opts[r'stdin']:
         try:
             (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
             prefix = "    "
@@ -201,7 +203,7 @@ def catfile(ui, repo, type=None, r=None, **opts):
             return 1
         n = repo.lookup(r)
         catcommit(ui, repo, n, prefix)
-        if opts['stdin']:
+        if opts[r'stdin']:
             try:
                 (type, r) = util.bytesinput(ui.fin, ui.fout).split(' ')
             except EOFError:
@@ -340,7 +342,7 @@ def revlist(ui, repo, *revs, **opts):
     else:
         full = None
     copy = [x for x in revs]
-    revtree(ui, copy, repo, full, opts['max_count'], opts['parents'])
+    revtree(ui, copy, repo, full, opts[r'max_count'], opts[r'parents'])
 
 @command('view',
     [('l', 'limit', '',
@@ -348,6 +350,7 @@ def revlist(ui, repo, *revs, **opts):
     _('[-l LIMIT] [REVRANGE]'))
 def view(ui, repo, *etc, **opts):
     "start interactive history viewer"
+    opts = pycompat.byteskwargs(opts)
     os.chdir(repo.root)
     optstr = ' '.join(['--%s %s' % (k, v) for k, v in opts.iteritems() if v])
     if repo.filtername is None:
