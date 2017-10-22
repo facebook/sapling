@@ -66,5 +66,5 @@ def glog(ui, repo, *pats, **opts):
 
     This is an alias to :hg:`log -G`.
     """
-    opts['graph'] = True
+    opts[r'graph'] = True
     return commands.log(ui, repo, *pats, **opts)
