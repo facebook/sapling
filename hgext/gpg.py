@@ -106,7 +106,7 @@ class gpg(object):
 def newgpg(ui, **opts):
     """create a new gpg instance"""
     gpgpath = ui.config("gpg", "cmd")
-    gpgkey = opts.get('key')
+    gpgkey = opts.get(r'key')
     if not gpgkey:
         gpgkey = ui.config("gpg", "key")
     return gpg(gpgpath, gpgkey)
@@ -253,6 +253,7 @@ def sign(ui, repo, *revs, **opts):
 
 def _dosign(ui, repo, *revs, **opts):
     mygpg = newgpg(ui, **opts)
+    opts = pycompat.byteskwargs(opts)
     sigver = "0"
     sigmessage = ""
 
@@ -312,7 +313,8 @@ def _dosign(ui, repo, *revs, **opts):
                              % hgnode.short(n)
                              for n in nodes])
     try:
-        editor = cmdutil.getcommiteditor(editform='gpg.sign', **opts)
+        editor = cmdutil.getcommiteditor(editform='gpg.sign',
+                                         **pycompat.strkwargs(opts))
         repo.commit(message, opts['user'], opts['date'], match=msigs,
                     editor=editor)
     except ValueError as inst:
