@@ -43,6 +43,7 @@ from mercurial import (
     node as nodemod,
     patch,
     phases,
+    pycompat,
     registrar,
     repair,
     scmutil,
@@ -380,7 +381,7 @@ def getcommitfunc(extra, interactive, editor=False):
             editor_ = False
             if editor:
                 editor_ = cmdutil.getcommiteditor(editform='shelve.shelve',
-                                                  **opts)
+                                                  **pycompat.strkwargs(opts))
             with repo.ui.configoverride(overrides):
                 return repo.commit(message, shelveuser, opts.get('date'),
                                    match, editor=editor_, extra=extra)
@@ -389,6 +390,7 @@ def getcommitfunc(extra, interactive, editor=False):
                 repo.mq.checkapplied = saved
 
     def interactivecommitfunc(ui, repo, *pats, **opts):
+        opts = pycompat.byteskwargs(opts)
         match = scmutil.match(repo['.'], pats, {})
         message = opts['message']
         return commitfunc(ui, repo, message, match, opts)
@@ -465,7 +467,7 @@ def _docreatecmd(ui, repo, pats, opts):
         else:
             node = cmdutil.dorecord(ui, repo, commitfunc, None,
                                     False, cmdutil.recordfilter, *pats,
-                                    **opts)
+                                    **pycompat.strkwargs(opts))
         if not node:
             _nothingtoshelvemessaging(ui, repo, pats, opts)
             return 1
@@ -852,6 +854,7 @@ def unshelve(ui, repo, *shelved, **opts):
         return _dounshelve(ui, repo, *shelved, **opts)
 
 def _dounshelve(ui, repo, *shelved, **opts):
+    opts = pycompat.byteskwargs(opts)
     abortf = opts.get('abort')
     continuef = opts.get('continue')
     if not abortf and not continuef:
@@ -1010,6 +1013,7 @@ def shelvecmd(ui, repo, *pats, **opts):
     To delete specific shelved changes, use ``--delete``. To delete
     all shelved changes, use ``--cleanup``.
     '''
+    opts = pycompat.byteskwargs(opts)
     allowables = [
         ('addremove', {'create'}), # 'create' is pseudo action
         ('unknown', {'create'}),
