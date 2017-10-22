@@ -203,6 +203,7 @@ from mercurial import (
     mergeutil,
     node,
     obsolete,
+    pycompat,
     registrar,
     repair,
     scmutil,
@@ -541,9 +542,9 @@ def commitfuncfor(repo, src):
     def commitfunc(**kwargs):
         overrides = {('phases', 'new-commit'): phasemin}
         with repo.ui.configoverride(overrides, 'histedit'):
-            extra = kwargs.get('extra', {}).copy()
+            extra = kwargs.get(r'extra', {}).copy()
             extra['histedit_source'] = src.hex()
-            kwargs['extra'] = extra
+            kwargs[r'extra'] = extra
             return repo.commit(**kwargs)
     return commitfunc
 
@@ -1093,6 +1094,7 @@ def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
                     _('histedit requires exactly one ancestor revision'))
 
 def _histedit(ui, repo, state, *freeargs, **opts):
+    opts = pycompat.byteskwargs(opts)
     goal = _getgoal(opts)
     revs = opts.get('rev', [])
     rules = opts.get('commands', '')
