@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from mercurial.i18n import _
 from mercurial import (
     cmdutil,
+    pycompat,
     registrar,
 )
 
@@ -55,6 +56,7 @@ def children(ui, repo, file_=None, **opts):
     See :hg:`help log` and :hg:`help revsets.children`.
 
     """
+    opts = pycompat.byteskwargs(opts)
     rev = opts.get('rev')
     if file_:
         fctx = repo.filectx(file_, changeid=rev)
