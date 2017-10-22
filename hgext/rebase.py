@@ -43,6 +43,7 @@ from mercurial import (
     obsutil,
     patch,
     phases,
+    pycompat,
     registrar,
     repair,
     revset,
@@ -698,6 +699,7 @@ def rebase(ui, repo, **opts):
     unresolved conflicts.
 
     """
+    opts = pycompat.byteskwargs(opts)
     rbsrt = rebaseruntime(repo, ui, opts)
 
     with repo.wlock(), repo.lock():
@@ -1552,15 +1554,15 @@ def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     ret = None
-    if opts.get('rebase'):
+    if opts.get(r'rebase'):
         if ui.configbool('commands', 'rebase.requiredest'):
             msg = _('rebase destination required by configuration')
             hint = _('use hg pull followed by hg rebase -d DEST')
             raise error.Abort(msg, hint=hint)
 
         with repo.wlock(), repo.lock():
-            if opts.get('update'):
-                del opts['update']
+            if opts.get(r'update'):
+                del opts[r'update']
                 ui.debug('--update and --rebase are not compatible, ignoring '
                          'the update flag\n')
 
@@ -1581,15 +1583,15 @@ def pullrebase(orig, ui, repo, *args, **opts):
             if revspostpull > revsprepull:
                 # --rev option from pull conflict with rebase own --rev
                 # dropping it
-                if 'rev' in opts:
-                    del opts['rev']
+                if r'rev' in opts:
+                    del opts[r'rev']
                 # positional argument from pull conflicts with rebase's own
                 # --source.
-                if 'source' in opts:
-                    del opts['source']
+                if r'source' in opts:
+                    del opts[r'source']
                 # revsprepull is the len of the repo, not revnum of tip.
                 destspace = list(repo.changelog.revs(start=revsprepull))
-                opts['_destspace'] = destspace
+                opts[r'_destspace'] = destspace
                 try:
                     rebase(ui, repo, **opts)
                 except error.NoMergeDestAbort:
@@ -1603,7 +1605,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
                         # with warning and trumpets
                         commands.update(ui, repo)
     else:
-        if opts.get('tool'):
+        if opts.get(r'tool'):
             raise error.Abort(_('--tool can only be used with --rebase'))
         ret = orig(ui, repo, *args, **opts)
 
