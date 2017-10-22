@@ -25,6 +25,7 @@ from mercurial import (
     error,
     minirst,
     node,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -570,6 +571,8 @@ def releasenotes(ui, repo, file_=None, **opts):
     admonitions along with their title. This also includes the custom
     admonitions (if any).
     """
+
+    opts = pycompat.byteskwargs(opts)
     sections = releasenotessections(ui, repo)
 
     listflag = opts.get('list')
