@@ -226,7 +226,7 @@ def blackbox(ui, repo, *revs, **opts):
     if not repo.vfs.exists('blackbox.log'):
         return
 
-    limit = opts.get('limit')
+    limit = opts.get(r'limit')
     fp = repo.vfs('blackbox.log', 'r')
     lines = fp.read().split('\n')
 
