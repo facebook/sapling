@@ -19,6 +19,7 @@ from mercurial import (
     exchange,
     hg,
     lock,
+    pycompat,
     registrar,
     util,
 )
@@ -60,6 +61,7 @@ def fetch(ui, repo, source='default', **opts):
     Returns 0 on success.
     '''
 
+    opts = pycompat.byteskwargs(opts)
     date = opts.get('date')
     if date:
         opts['date'] = util.parsedate(date)
