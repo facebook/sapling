@@ -338,6 +338,7 @@ def extdiff(ui, repo, *pats, **opts):
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
     to its parent.'''
+    opts = pycompat.byteskwargs(opts)
     program = opts.get('program')
     option = opts.get('option')
     if not program:
@@ -369,6 +370,7 @@ class savedcmd(object):
         self._cmdline = cmdline
 
     def __call__(self, ui, repo, *pats, **opts):
+        opts = pycompat.byteskwargs(opts)
         options = ' '.join(map(util.shellquote, opts['option']))
         if options:
             options = ' ' + options
