@@ -17,6 +17,7 @@ from mercurial import (
     cmdutil,
     commands,
     error,
+    pycompat,
     registrar,
 )
 
@@ -46,10 +47,11 @@ def amend(ui, repo, *pats, **opts):
 
     See :hg:`help commit` for more details.
     """
+    opts = pycompat.byteskwargs(opts)
     if len(opts['note']) > 255:
         raise error.Abort(_("cannot store a note of more than 255 bytes"))
     with repo.wlock(), repo.lock():
         if not opts.get('logfile'):
             opts['message'] = opts.get('message') or repo['.'].description()
         opts['amend'] = True
-        return commands._docommit(ui, repo, *pats, **opts)
+        return commands._docommit(ui, repo, *pats, **pycompat.strkwargs(opts))
