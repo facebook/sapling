@@ -39,7 +39,7 @@ from mercurial import (
     hg,
     manifest,
     obsolete,
-    phases,
+    phases as phasesmod,
     pushkey,
     registrar,
     revsetlang,
@@ -126,6 +126,12 @@ def extsetup(ui):
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['pushkey'] = newpushkeyhandler
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
+
+    origphaseheadshandler = bundle2.parthandlermapping['phase-heads']
+    newphaseheadshandler = lambda *args, **kwargs: \
+        bundle2phaseheads(origphaseheadshandler, *args, **kwargs)
+    newphaseheadshandler.params = origphaseheadshandler.params
+    bundle2.parthandlermapping['phase-heads'] = newphaseheadshandler
 
     wrapfunction(exchange, 'unbundle', unbundle)
 
@@ -349,7 +355,7 @@ def _mergemarkers(orig, self, transaction, data):
                 self._pushrebasereplaces[prec] = sucs[0]
     return orig(self, transaction, data)
 
-def _phasemove(orig, pushop, nodes, phase=phases.public):
+def _phasemove(orig, pushop, nodes, phase=phasesmod.public):
     """prevent original changesets from being marked public
 
     When marking changesets as public, we need to mark the replaced nodes
@@ -386,7 +392,7 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
     # is not enabled locally.
     mapping = getattr(pushop.repo.obsstore, '_pushrebasereplaces', {})
     nodes = [mapping.get(n, n) for n in nodes]
-    if phase == phases.public:
+    if phase == phasesmod.public:
         # only allow new nodes to become public
         allowednodes = set(mapping.values())
         nodes = [n for n in nodes if n in allowednodes]
@@ -845,7 +851,7 @@ def bundle2rebase(op, part):
     # Move public phase forward
     publishing = op.repo.ui.configbool('phases', 'publish', untrusted=True)
     if publishing:
-        phases.advanceboundary(op.repo, tr, phases.public, [added[-1]])
+        phasesmod.advanceboundary(op.repo, tr, phasesmod.public, [added[-1]])
 
     addfinalhooks(op, tr, hookargs, added)
 
@@ -1011,6 +1017,8 @@ def addfinalhooks(op, tr, hookargs, added):
                     lambda tr: op.repo._afterlock(runhooks))
 
 def bundle2pushkey(orig, op, part):
+    # Merges many dicts into one. First it converts them to list of pairs,
+    # then concatenates them (using sum), and then creates a diff out of them.
     replacements = dict(sum([record.items()
                              for record
                              in op.records[rebaseparttype]],
@@ -1040,4 +1048,25 @@ def bundle2pushkey(orig, op, part):
                 # This forbids moving bookmarks backwards from clients.
                 part.params['old'] = pushkey.encode(hex(serverbin))
 
+    return orig(op, part)
+
+def bundle2phaseheads(orig, op, part):
+    # Merges many dicts into one. First it converts them to list of pairs,
+    # then concatenates them (using sum), and then creates a diff out of them.
+    replacements = dict(sum([record.items()
+                             for record
+                             in op.records[rebaseparttype]],
+                            []))
+
+    decodedphases = phasesmod.binarydecode(part)
+
+    replacedphases = []
+    for phasetype in decodedphases:
+        replacedphases.append(
+            [replacements.get(node, node) for node in phasetype])
+    # Since we've just read the bundle part, then `orig()` won't be able to
+    # read it again. Let's replace payload stream with new stream of replaced
+    # nodes.
+    part._payloadstream = util.chunkbuffer(
+        [phasesmod.binaryencode(replacedphases)])
     return orig(op, part)
