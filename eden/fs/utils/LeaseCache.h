@@ -8,7 +8,7 @@
  *
  */
 #pragma once
-#include <folly/EvictingCacheMap.h>
+#include <folly/container/EvictingCacheMap.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
 
