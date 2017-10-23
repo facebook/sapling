@@ -51,8 +51,8 @@ test for ssh vulnerability
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
   [255]
   $ hg clone 'git+ssh://fakehost|rm${IFS}nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
-  ssh: connect to host fakehost%7crm%24%7bifs%7dnonexistent port 22: * (glob)
+  ssh: * fakehost%7crm%24%7bifs%7dnonexistent* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
   $ hg clone 'git+ssh://fakehost%7Crm${IFS}nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
-  ssh: connect to host fakehost%7crm%24%7bifs%7dnonexistent port 22: * (glob)
+  ssh: * fakehost%7crm%24%7bifs%7dnonexistent* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
