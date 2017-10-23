@@ -184,17 +184,17 @@ Cases are run as shown in that table, row by row.
   parent=2
 
   $ revtest '-cC dirty linear'  dirty 1 2 -cC
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   parent=1
   M foo
 
   $ revtest '-mc dirty linear'  dirty 1 2 -mc
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   parent=1
   M foo
 
   $ revtest '-mC dirty linear'  dirty 1 2 -mC
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   parent=1
   M foo
 

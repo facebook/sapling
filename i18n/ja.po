@@ -16535,8 +16535,8 @@ msgstr ""
 msgid "for example: hg update \".::\""
 msgstr "指定例: hg update \".::\""
 
-msgid "can only specify one of -C/--clean, -c/--check, or -m/merge"
-msgstr "-C/--clean, -c/--check および -m/merge は複数指定できません"
+msgid "can only specify one of -C/--clean, -c/--check, or -m/--merge"
+msgstr "-C/--clean, -c/--check および -m/--merge は複数指定できません"
 
 msgid "verify the integrity of the repository"
 msgstr "リポジトリの整合性検証"

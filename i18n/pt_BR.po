@@ -18293,9 +18293,9 @@ msgstr ""
 msgid "for example: hg update \".::\""
 msgstr "por exemplo: hg update \".::\""
 
-msgid "can only specify one of -C/--clean, -c/--check, or -m/merge"
+msgid "can only specify one of -C/--clean, -c/--check, or -m/--merge"
 msgstr ""
-"só se pode especificar uma opção dentre -C/--clean, -c/--check ou -m/merge"
+"só se pode especificar uma opção dentre -C/--clean, -c/--check ou -m/--merge"
 
 msgid "verify the integrity of the repository"
 msgstr "verifica a integridade do repositório"

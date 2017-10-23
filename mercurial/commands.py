@@ -5489,7 +5489,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     if len([x for x in (clean, check, merge) if x]) > 1:
         raise error.Abort(_("can only specify one of -C/--clean, -c/--check, "
-                            "or -m/merge"))
+                            "or -m/--merge"))
 
     updatecheck = None
     if check:
