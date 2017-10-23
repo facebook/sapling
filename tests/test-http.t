@@ -40,5 +40,6 @@ Make sure that clone regular mercurial repos over http doesn't break
   adding manifests
   adding file changes
   added 1 changesets with 4 changes to 4 files
+  new changesets 8b6053c928fe (?)
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
