@@ -454,7 +454,7 @@ void HgImporter::initializeTreeManifestImport(const Options& options) {
     return;
   }
 
-  std::vector<DatapackStore*> storePtrs;
+  std::vector<DataStore*> storePtrs;
   for (const auto& path : options.treeManifestPackPaths) {
     XLOG(DBG5) << "treemanifest pack path: " << path;
     dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path));
