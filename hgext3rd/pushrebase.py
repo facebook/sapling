@@ -63,6 +63,11 @@ testedwith = 'ships-with-fb-hgext'
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('pushrebase', 'blocknonpushrebase', default=False)
+
 rebaseparttype = 'b2x:rebase'
 rebasepackparttype = 'b2x:rebasepackpart'
 commonheadsparttype = 'b2x:commonheads'

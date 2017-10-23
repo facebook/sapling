@@ -120,6 +120,12 @@ import time
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('treemanifest', 'sendtrees', default=False)
+configitem('treemanifest', 'server', default=False)
+
 PACK_CATEGORY='manifests'
 
 TREEGROUP_PARTTYPE = 'b2x:treegroup'

@@ -80,6 +80,13 @@ except Exception:
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('remotefilelog', 'servercachepath', default=None)
+configitem('remotefilelog', 'server', default=None)
+
 testedwith = 'ships-with-fb-hgext'
 
 repoclass = localrepo.localrepository
