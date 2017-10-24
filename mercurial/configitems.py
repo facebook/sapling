@@ -579,7 +579,7 @@ coreconfigitem('merge', 'checkignored',
     default='abort',
 )
 coreconfigitem('experimental', 'merge.checkpathconflicts',
-    default=True,
+    default=False,
 )
 coreconfigitem('merge', 'followcopies',
     default=True,

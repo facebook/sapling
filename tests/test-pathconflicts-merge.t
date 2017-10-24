@@ -1,3 +1,11 @@
+Path conflict checking is currently disabled by default because of issue5716.
+Turn it on for this test.
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > merge.checkpathconflicts=True
+  > EOF
+
   $ hg init repo
   $ cd repo
   $ echo base > base

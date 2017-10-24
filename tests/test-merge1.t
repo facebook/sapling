@@ -30,22 +30,23 @@ of the files in a commit we're updating to
 
   $ mkdir b && touch b/nonempty
   $ hg up
-  b: untracked directory conflicts with file
-  abort: untracked files in working directory differ from files in requested revision
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg ci
   nothing changed
   [1]
   $ hg sum
-  parent: 0:538afb845929 
-   commit #0
+  parent: 1:b8bb4a988f25 tip
+   commit #1
   branch: default
-  commit: 1 unknown (clean)
-  update: 1 new changesets (update)
+  commit: (clean)
+  update: (current)
   phases: 2 draft
-  $ rm b/nonempty
+
+The following line is commented out because the file doesn't exist at the moment, and some OSes error out even with `rm -f`.
+$ rm b/nonempty
+
   $ hg up
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
   parent: 1:b8bb4a988f25 tip
    commit #1

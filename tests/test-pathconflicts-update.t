@@ -1,3 +1,11 @@
+Path conflict checking is currently disabled by default because of issue5716.
+Turn it on for this test.
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > merge.checkpathconflicts=True
+  > EOF
+
   $ hg init repo
   $ cd repo
   $ echo base > base
@@ -150,4 +158,3 @@ Update clean - local directory conflicts with changed remote file
   $ hg up file2 --clean
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark file2)
-

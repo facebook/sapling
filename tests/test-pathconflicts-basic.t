@@ -1,3 +1,11 @@
+Path conflict checking is currently disabled by default because of issue5716.
+Turn it on for this test.
+
+  $ cat >> $HGRCPATH << EOF
+  > [experimental]
+  > merge.checkpathconflicts=True
+  > EOF
+
   $ hg init repo
   $ cd repo
   $ echo base > base
@@ -96,4 +104,3 @@ Repo state is ok
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
-

@@ -50,9 +50,7 @@ make sure that this does not erase untracked data
   $ hg st
   ? name/file
   $ hg up 1
-  name: untracked directory conflicts with file
-  abort: untracked files in working directory differ from files in requested revision
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 #if symlink

@@ -975,12 +975,8 @@ and the merge should fail (issue5628)
   *** runcommand up -qC 2
   *** runcommand up -qC 1
   *** runcommand merge 2
-  a: path conflict - a file or link has the same name as a directory
-  the local file has been renamed to a~aa04623eb0c3
-  resolve manually then use 'hg resolve --mark a'
-  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
-   [1]
+  abort: path 'a/poisoned' traverses symbolic link 'a'
+   [255]
   $ ls ../merge-symlink-out
 
 cache of repo.auditor should be discarded, so matcher would never traverse
