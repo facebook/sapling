@@ -578,6 +578,9 @@ coreconfigitem('merge', 'checkunknown',
 coreconfigitem('merge', 'checkignored',
     default='abort',
 )
+coreconfigitem('experimental', 'merge.checkpathconflicts',
+    default=True,
+)
 coreconfigitem('merge', 'followcopies',
     default=True,
 )

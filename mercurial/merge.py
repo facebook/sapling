@@ -693,6 +693,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     abortconflicts = set()
     unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
     ignoredconfig = _getcheckunknownconfig(repo, 'merge', 'checkignored')
+    pathconfig = repo.ui.configbool('experimental', 'merge.checkpathconflicts')
     if not force:
         def collectconflicts(conflicts, config):
             if config == 'abort':
@@ -704,7 +705,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
                     fileconflicts.add(f)
-                elif f not in wctx:
+                elif pathconfig and f not in wctx:
                     path = _checkunknowndirs(repo, f)
                     if path is not None:
                         pathconflicts.add(path)
@@ -1139,8 +1140,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                     actions[f] = ('dc', (None, f, f, False, pa.node()),
                                   "prompt deleted/changed")
 
-    # If we are merging, look for path conflicts.
-    checkpathconflicts(repo, wctx, p2, actions)
+    if repo.ui.configbool('experimental', 'merge.checkpathconflicts'):
+        # If we are merging, look for path conflicts.
+        checkpathconflicts(repo, wctx, p2, actions)
 
     return actions, diverge, renamedelete
 
