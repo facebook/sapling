@@ -69,6 +69,7 @@ CONFIG_DEFAULTS = {
         'branch_bookmark_suffix': None,
         'debugextrainmessage': False,   # test only -- do not document this!
         'intree': None,
+        'mindate': None,
     },
     'hggit': {
         'mapsavefrequency': 0,

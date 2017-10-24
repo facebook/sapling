@@ -1263,7 +1263,7 @@ class GitHandler(object):
         '''filter refs by minimum date
 
         This only works for refs that are available locally.'''
-        min_date = self.ui.config('git', 'mindate')
+        min_date = compat.config(self.ui, 'string', 'git', 'mindate')
         if min_date is None:
             return refs
 
