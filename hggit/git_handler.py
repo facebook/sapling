@@ -1548,7 +1548,7 @@ class GitHandler(object):
     @hgutil.propertycache
     def _rename_detector(self):
         # disabled by default to avoid surprises
-        similarity = self.ui.configint('git', 'similarity', default=0)
+        similarity = compat.config(self.ui, 'int', 'git', 'similarity')
         if similarity < 0 or similarity > 100:
             raise hgutil.Abort(_('git.similarity must be between 0 and 100'))
         if similarity == 0:
