@@ -32,12 +32,14 @@ from mercurial import localrepo
 from mercurial import lock as lockmod
 from mercurial import namespaces
 from mercurial import obsutil
+from mercurial import registrar
 from mercurial import repair
 from mercurial import repoview
 from mercurial import revset
 from mercurial import scmutil
 from mercurial import setdiscovery
 from mercurial import templatekw
+from mercurial import ui as uimod
 from mercurial import url
 from mercurial import util
 from mercurial import vfs as vfsmod
@@ -51,11 +53,63 @@ try:
 except ImportError:
     smartset = revset
 
+configtable = {}
+try:
+    from mercurial import registrar
+    if not util.safehasattr(registrar, 'configitem'):
+        raise ImportError()
+    # Supported in 4.3+
+    configitem = registrar.configitem(configtable)
+except ImportError:
+    # Support older releases that didn't register config defaults
+    registrar = None
+    def configitem(section, name, default=None):
+        configtable[(section, name)] = default
+
+    def configdefault(orig, self, section, name, default=None,
+                      untrusted=False):
+        if default is None:
+            default = configtable.get((section, name))
+        return orig(self, section, name, default=default, untrusted=untrusted)
+
+configitem('remotenames', 'alias.default', default=False)
+configitem('remotenames', 'allownonfastforward', default=False)
+configitem('remotenames', 'bookmarks', default=True)
+configitem('remotenames', 'branches', default=True)
+configitem('remotenames', 'calculatedistance', default=True)
+configitem('remotenames', 'disallowedbookmarks', default=[])
+configitem('remotenames', 'disallowedhint', default=None)
+configitem('remotenames', 'disallowedto', default=None)
+configitem('remotenames', 'fastheaddiscovery', default=True)
+configitem('remotenames', 'forcecompat', default=False)
+configitem('remotenames', 'forceto', default=False)
+configitem('remotenames', 'hoist', default='default')
+configitem('remotenames', 'precachecurrent', default=True)
+configitem('remotenames', 'precachedistance', default=True)
+configitem('remotenames', 'pushanonheads', default=False)
+configitem('remotenames', 'pushrev', default=None)
+configitem('remotenames', 'resolvenodes', default=True)
+configitem('remotenames', 'selectivepull', default=False)
+configitem('remotenames', 'selectivepulldefault', default=[])
+configitem('remotenames', 'suppressbranches', default=False)
+configitem('remotenames', 'syncbookmarks', default=False)
+configitem('remotenames', 'tracking', default=True)
+configitem('remotenames', 'transitionbookmarks', default=[])
+configitem('remotenames', 'transitionmessage', default=None)
+configitem('remotenames', 'upstream', default=[])
+
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = 'remotebookmark'
 # name of the file that is used to mark that transition to selectivepull has
 # happened
 _selectivepullenabledfile = 'selectivepullenabled'
+
+def uisetup(ui):
+    if registrar is None:
+        if util.safehasattr(uimod.ui, '_config'):
+            extensions.wrapfunction(uimod.ui, '_config', configdefault)
+        else:
+            extensions.wrapfunction(uimod.ui, 'config', configdefault)
 
 def exbookcalcupdate(orig, ui, repo, checkout):
     '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
@@ -85,7 +139,7 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
         setattr(pushop, flag, kwargs.pop(flag, None))
 
 def _isselectivepull(ui):
-    return ui.configbool('remotenames', 'selectivepull', False)
+    return ui.configbool('remotenames', 'selectivepull')
 
 def _getselectivepulldefaultbookmarks(ui):
     default_books = ui.configlist('remotenames', 'selectivepulldefault')
@@ -186,7 +240,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
     # the current remotenames are representative of what's on the server. In the
     # worst case the data might be slightly out of sync and the server sends us
     # more data than necessary, but this should be rare.
-    if not ui.configbool('remotenames', 'fastheaddiscovery', True):
+    if not ui.configbool('remotenames', 'fastheaddiscovery'):
         return orig(ui, local, remote, **kwargs)
 
     cl = local.changelog
@@ -280,7 +334,7 @@ def blockerhook(orig, repo, *args, **kwargs):
     return blockers
 
 def exupdatefromremote(orig, ui, repo, remotemarks, path, trfunc, explicit=()):
-    if ui.configbool('remotenames', 'syncbookmarks', False):
+    if ui.configbool('remotenames', 'syncbookmarks'):
         return orig(ui, repo, remotemarks, path, trfunc, explicit)
 
     ui.debug('remotenames: skipped syncing local bookmarks\n')
@@ -293,7 +347,7 @@ def exclone(orig, ui, *args, **opts):
 
     pullremotenames(dstpeer.local(), srcpeer, srcpeer.listkeys('bookmarks'))
 
-    if not ui.configbool('remotenames', 'syncbookmarks', False):
+    if not ui.configbool('remotenames', 'syncbookmarks'):
         ui.debug('remotenames: removing cloned bookmarks\n')
         repo = dstpeer.local()
         wlock = repo.wlock()
@@ -465,7 +519,7 @@ class lazyremotenamedict(UserDict.DictMixin):
             - is not None: the bool value of resolvenodes is used"""
         if resolvenodes is None:
             resolvenodes = self._repo.ui.configbool("remotenames",
-                                                   "resolvenodes", True)
+                                                   "resolvenodes")
         if not self.loaded:
             self._load()
         if resolvenodes:
@@ -482,7 +536,7 @@ class lazyremotenamedict(UserDict.DictMixin):
             self._load()
         if resolvenodes is None:
             resolvenodes = self._repo.ui.configbool("remotenames",
-                                                   "resolvenodes", True)
+                                                   "resolvenodes")
         for k, vtup in self.potentialentries.iteritems():
             if resolvenodes:
                 self._fetchandcache(k)
@@ -566,7 +620,7 @@ def reposetup(ui, repo):
     repo._remotenames = remotenames(repo)
     ns = namespaces.namespace
 
-    if ui.configbool('remotenames', 'bookmarks', True):
+    if ui.configbool('remotenames', 'bookmarks'):
         remotebookmarkns = ns(
             'remotebookmarks',
             templatename='remotebookmarks',
@@ -580,7 +634,7 @@ def reposetup(ui, repo):
         repo.names.addnamespace(remotebookmarkns)
 
         # hoisting only works if there are remote bookmarks
-        hoist = ui.config('remotenames', 'hoist', 'default')
+        hoist = ui.config('remotenames', 'hoist')
         if hoist:
             hoistednamens = ns(
                 'hoistednames',
@@ -610,10 +664,10 @@ def reposetup(ui, repo):
 
 def _tracking(ui):
     # omg default true
-    return ui.configbool('remotenames', 'tracking', True)
+    return ui.configbool('remotenames', 'tracking')
 
 def _branchesenabled(ui):
-    return ui.configbool('remotenames', 'branches', True)
+    return ui.configbool('remotenames', 'branches')
 
 def exrebasecmd(orig, ui, repo, **opts):
     dest = opts['dest']
@@ -1037,7 +1091,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
                 return orig(ui, repo, dest, opargs=opargs, **opts)
 
     if not opargs['to']:
-        if ui.configbool('remotenames', 'forceto', False):
+        if ui.configbool('remotenames', 'forceto'):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
             raise error.Abort(msg, hint=hint)
@@ -1603,7 +1657,7 @@ def calculatedistance(repo, fromrev, torev):
     Return the (ahead, behind) distance between `fromrev` and `torev`.
     The returned tuple will contain ints if calculated, Nones otherwise.
     """
-    if not repo.ui.configbool('remotenames', 'calculatedistance', True):
+    if not repo.ui.configbool('remotenames', 'calculatedistance'):
         return (None, None)
 
     ahead = len(repo.revs('only(%d, %d)' % (fromrev, torev)))
@@ -1691,7 +1745,7 @@ def precachedistance(repo):
         invalidatedistancecache(repo)
 
         distances = {}
-        if repo.ui.configbool('remotenames', 'precachedistance', True):
+        if repo.ui.configbool('remotenames', 'precachedistance'):
             distances = {}
             for bmark, tracked in _readtracking(repo).iteritems():
                 distance = calculatenamedistance(repo, bmark, tracked)
@@ -1699,7 +1753,7 @@ def precachedistance(repo):
                     distances[bmark] = distance
             writedistancecache(repo, distances)
 
-        if repo.ui.configbool('remotenames', 'precachecurrent', True):
+        if repo.ui.configbool('remotenames', 'precachecurrent'):
             # are we on a 'branch' but not at the head?
             # i.e. is there a bookmark that we are heading towards?
             revs = list(repo.revs('limit(.:: and bookmark() - ., 1)'))
@@ -1806,7 +1860,7 @@ def remotenameskw(**args):
     if 'remotebookmarks' in repo.names:
         remotenames = repo.names['remotebookmarks'].names(repo, ctx.node())
 
-    suppress = repo.ui.configbool('remotenames', 'suppressbranches', False)
+    suppress = repo.ui.configbool('remotenames', 'suppressbranches')
     if (not remotenames or not suppress) and 'remotebranches' in repo.names:
         remotenames += repo.names['remotebranches'].names(repo, ctx.node())
 
