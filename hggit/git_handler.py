@@ -1547,7 +1547,7 @@ class GitHandler(object):
         # disabled by default to avoid surprises
         similarity = self.ui.configint('git', 'similarity', default=0)
         if similarity < 0 or similarity > 100:
-            raise util.Abort(_('git.similarity must be between 0 and 100'))
+            raise hgutil.Abort(_('git.similarity must be between 0 and 100'))
         if similarity == 0:
             return None
 

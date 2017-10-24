@@ -600,3 +600,9 @@ findcopiesharder finds copies from unmodified files if similarity is met
   +4
   +5
   +6
+
+Config values out of range
+  $ hg --config git.similarity=999 clone gitcopyharder hgcopyharder2
+  importing git objects into hg
+  abort: git.similarity must be between 0 and 100
+  [255]
