@@ -218,7 +218,8 @@ def filterhgerr(err):
     err = [e for e in err.splitlines()
            if (not e.startswith(b'not trusting file')
                and not e.startswith(b'warning: Not importing')
-               and not e.startswith(b'obsolete feature not enabled'))]
+               and not e.startswith(b'obsolete feature not enabled')
+               and not e.startswith(b'devel-warn:'))]
     return b'\n'.join(b'  ' + e for e in err)
 
 def findhg():
