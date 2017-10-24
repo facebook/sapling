@@ -267,6 +267,12 @@ def serverextsetup(ui):
     newpushkeyhandler.params = origpushkeyhandler.params
     bundle2.parthandlermapping['pushkey'] = newpushkeyhandler
 
+    orighandlephasehandler = bundle2.parthandlermapping['phase-heads']
+    newphaseheadshandler = lambda *args, **kwargs: \
+        bundle2handlephases(orighandlephasehandler, *args, **kwargs)
+    newphaseheadshandler.params = orighandlephasehandler.params
+    bundle2.parthandlermapping['phase-heads'] = newphaseheadshandler
+
     wrapfunction(localrepo.localrepository, 'listkeys', localrepolistkeys)
     wireproto.commands['lookup'] = (
         _lookupwrap(wireproto.commands['lookup'][0]), 'key')
@@ -1006,9 +1012,11 @@ def processparts(orig, repo, op, unbundler):
                 cgparams = part.params
 
                 # If we're not dumping all parts into the new bundle, we need to
-                # alert the future pushkey handler to skip the part.
+                # alert the future pushkey and phase-heads handler to skip
+                # the part.
                 if not handleallparts:
                     op.records.add(scratchbranchparttype + '_skippushkey', True)
+                    op.records.add(scratchbranchparttype + '_skipphaseheads', True)
             elif part.type == scratchbookmarksparttype:
                 # Save this for later processing. Details below.
                 scratchbookpart = part
@@ -1221,12 +1229,29 @@ def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
             op.reply.newpart('pushkey', mandatoryparams=params.iteritems())
 
 def bundle2pushkey(orig, op, part):
+    '''Wrapper of bundle2.handlepushkey()
+
+    The only goal is to skip calling the original function if flag is set.
+    It's set if infinitepush push is happening.
+    '''
     if op.records[scratchbranchparttype + '_skippushkey']:
         if op.reply is not None:
             rpart = op.reply.newpart('reply:pushkey')
             rpart.addparam('in-reply-to', str(part.id), mandatory=False)
             rpart.addparam('return', '1', mandatory=False)
         return 1
+
+    return orig(op, part)
+
+def bundle2handlephases(orig, op, part):
+    '''Wrapper of bundle2.handlephases()
+
+    The only goal is to skip calling the original function if flag is set.
+    It's set if infinitepush push is happening.
+    '''
+
+    if op.records[scratchbranchparttype + '_skipphaseheads']:
+        return
 
     return orig(op, part)
 
