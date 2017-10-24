@@ -114,8 +114,8 @@ class GitHandler(object):
 
         self.paths = ui.configitems('paths')
 
-        self.branch_bookmark_suffix = ui.config('git',
-                                                'branch_bookmark_suffix')
+        self.branch_bookmark_suffix = compat.config(
+            ui, 'string', 'git', 'branch_bookmark_suffix')
 
         self._map_git_real = None
         self._map_hg_real = None

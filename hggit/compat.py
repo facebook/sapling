@@ -65,6 +65,7 @@ def read_pkt_refs(proto):
 CONFIG_DEFAULTS = {
     'git': {
         'blockdotgit': True,
+        'branch_bookmark_suffix': None,
         'intree': None,
     },
 }
