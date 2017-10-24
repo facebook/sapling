@@ -60,3 +60,13 @@ def read_pkt_refs(proto):
     if len(refs) == 0:
         return None, set([])
     return refs, set(server_capabilities)
+
+
+CONFIG_DEFAULTS = {
+}
+
+def config(ui, subtype, section, item):
+    if subtype == 'string':
+        subtype = ''
+    getconfig = getattr(ui, 'config' + subtype)
+    return getconfig(section, item, CONFIG_DEFAULTS[section][item])
