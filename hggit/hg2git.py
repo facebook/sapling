@@ -56,7 +56,7 @@ def audit_git_path(ui, path):
                 dangerous = True
                 break
     if dangerous:
-        if ui.configbool('git', 'blockdotgit', True):
+        if compat.config(ui, 'bool', 'git', 'blockdotgit'):
             raise hgutil.Abort(
                 ('Refusing to export likely-dangerous path %r' % path),
                 hint=("If you need to continue, read about CVE-2014-9390 and "

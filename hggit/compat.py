@@ -63,6 +63,9 @@ def read_pkt_refs(proto):
 
 
 CONFIG_DEFAULTS = {
+    'git': {
+        'blockdotgit': True,
+    },
 }
 
 hasconfigitems = False
