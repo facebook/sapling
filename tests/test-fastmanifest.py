@@ -63,7 +63,9 @@ class HybridManifest(unittest.TestCase):
 
         """
         vfs = vfsmod.vfs(os.getcwd())
-        hd = fastmanifest.implementation.hybridmanifest(ui.ui(), vfs, None,
+        tempui = ui.ui()
+        tempui.setconfig("fastmanifest", "usecache", True)
+        hd = fastmanifest.implementation.hybridmanifest(tempui, vfs, None,
                                                         fast=True)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
         magicmethods = [k
@@ -105,8 +107,10 @@ class HybridManifest(unittest.TestCase):
         """We mock the ondisk cache and test that the two layers of cache
         work properly"""
         vfs = vfsmod.vfs(os.getcwd())
+        tempui = ui.ui()
+        tempui.setconfig("fastmanifest", "usecache", True)
         cache = fastmanifest.implementation.fastmanifestcache(vfs,
-                                                              ui.ui(), None)
+                                                              tempui, None)
         ondiskcache = mockondiskcache()
         cache.ondiskcache = ondiskcache
         # Test 1) Put one manifest in the cache, check that retrieving it does
