@@ -490,7 +490,8 @@ class GitHandler(object):
         exporter = hg2git.IncrementalChangesetExporter(
             self.repo, pctx, self.git.object_store, gitcommit)
 
-        mapsavefreq = self.ui.configint('hggit', 'mapsavefrequency', 0)
+        mapsavefreq = compat.config(self.ui, 'int', 'hggit',
+                                          'mapsavefrequency')
         for i, ctx in enumerate(export):
             self.ui.progress('exporting', i, total=total)
             self.export_hg_commit(ctx.node(), exporter)
@@ -777,7 +778,8 @@ class GitHandler(object):
         else:
             self.ui.status(_("no changes found\n"))
 
-        mapsavefreq = self.ui.configint('hggit', 'mapsavefrequency', 0)
+        mapsavefreq = compat.config(self.ui, 'int', 'hggit',
+                                          'mapsavefrequency')
         for i, csha in enumerate(commits):
             self.ui.progress('importing', i, total=total, unit='commits')
             commit = commit_cache[csha]

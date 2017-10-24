@@ -69,6 +69,9 @@ CONFIG_DEFAULTS = {
         'branch_bookmark_suffix': None,
         'intree': None,
     },
+    'hggit': {
+        'mapsavefrequency': 0,
+    }
 }
 
 hasconfigitems = False
