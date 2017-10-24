@@ -112,11 +112,11 @@ def _drawendinglines(orig, lines, extra, edgemap, seen):
 
 def uisetup(ui):
     # Hide output for fake nodes
-    def show(orig, self, ctx, copies, matchfn, props):
+    def show(orig, self, ctx, *args):
         if ctx.node() == "...":
             self.ui.write('\n\n\n')
             return
-        res = orig(self, ctx, copies, matchfn, props)
+        res = orig(self, ctx, *args)
 
         if commit_info and ctx == self.repo['.']:
             changes = ctx.p1().status(ctx)
