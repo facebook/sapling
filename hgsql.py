@@ -25,6 +25,28 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 testedwith = '3.9.1'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('hgsql', 'database', default=None)
+configitem('hgsql', 'host', default=None)
+configitem('hgsql', 'reponame', default=None)
+configitem('hgsql', 'password', default='')
+configitem('hgsql', 'port', default=0)
+configitem('hgsql', 'user', default=None)
+
+configitem('hgsql', 'bypass', default=False)
+configitem('hgsql', 'enabled', default=False)
+configitem('hgsql', 'locktimeout', default=60)
+configitem('hgsql', 'maxcommitsize', default=52428800)
+configitem('hgsql', 'maxinsertsize', default=1048576)
+configitem('hgsql', 'maxrowsize', default=1048576)
+configitem('hgsql', 'profileoutput', default='/tmp')
+configitem('hgsql', 'profiler', default=None)
+configitem('hgsql', 'verifybatchsize', default=1000)
+configitem('hgsql', 'waittimeout', default=300)
+configitem('format', 'usehgsql', default=True)
+
 writelock = 'write_lock'
 
 INITIAL_SYNC_NORMAL = 'normal'
@@ -41,7 +63,7 @@ for reqs in ['openerreqs', '_basesupported']:
 
 def newreporequirements(orig, repo):
     reqs = orig(repo)
-    if repo.ui.configbool('format', 'usehgsql', True):
+    if repo.ui.configbool('format', 'usehgsql'):
         reqs.add('hgsql')
     return reqs
 
@@ -323,7 +345,7 @@ class sqlcontext(object):
                 raise
 
     def _startprofile(self):
-        profiler = self.repo.ui.config('hgsql', 'profiler', None)
+        profiler = self.repo.ui.config('hgsql', 'profiler')
         if not profiler:
             return
 
@@ -340,10 +362,10 @@ class sqlcontext(object):
             raise Exception("unknown profiler: %s" % profiler)
 
     def _stopprofile(self, elapsed):
-        profiler = self.repo.ui.config('hgsql', 'profiler', None)
+        profiler = self.repo.ui.config('hgsql', 'profiler')
         if not profiler:
             return
-        outputdir = self.repo.ui.config('hgsql', 'profileoutput', '/tmp')
+        outputdir = self.repo.ui.config('hgsql', 'profileoutput')
         import random
         pid = os.getpid()
         rand = random.random()
@@ -411,10 +433,10 @@ def wraprepo(repo):
                         raise
                     time.sleep(0.2)
 
-            waittimeout = self.ui.config('hgsql', 'waittimeout', '300')
+            waittimeout = self.ui.config('hgsql', 'waittimeout')
             waittimeout = self.sqlconn.converter.escape('%s' % waittimeout)
 
-            self.locktimeout = self.ui.config('hgsql', 'locktimeout', '60')
+            self.locktimeout = self.ui.config('hgsql', 'locktimeout')
             self.locktimeout = self.sqlconn.converter.escape('%s' %
                                 self.locktimeout)
 
@@ -1036,7 +1058,7 @@ def wraprepo(repo):
             missingrevs = []
             expectedlist = list(expectedrevs)
             expectedcount = len(expectedrevs)
-            batchsize = self.ui.configint('hgsql', 'verifybatchsize', 1000)
+            batchsize = self.ui.configint('hgsql', 'verifybatchsize')
             i = 0
             while i < expectedcount:
                 checkrevs = set(expectedlist[i:i + batchsize])
@@ -1090,7 +1112,7 @@ def wraprepo(repo):
     sqlargs['database'] = ui.config("hgsql", "database")
     sqlargs['user'] = ui.config("hgsql", "user")
     sqlargs['port'] = ui.configint("hgsql", "port")
-    password = ui.config("hgsql", "password", "")
+    password = ui.config("hgsql", "password")
     if password:
         sqlargs['password'] = password
 
@@ -1099,9 +1121,9 @@ def wraprepo(repo):
     repo.sqlreponame = ui.config("hgsql", "reponame")
     if not repo.sqlreponame:
         raise Exception("missing hgsql.reponame")
-    repo.maxcommitsize = ui.configbytes("hgsql", "maxcommitsize", 52428800) # 50MB
-    repo.maxinsertsize = ui.configbytes("hgsql", "maxinsertsize", 1048576) # 1MB
-    repo.maxrowsize = ui.configbytes("hgsql", "maxrowsize", 1048576)
+    repo.maxcommitsize = ui.configbytes("hgsql", "maxcommitsize")
+    repo.maxinsertsize = ui.configbytes("hgsql", "maxinsertsize")
+    repo.maxrowsize = ui.configbytes("hgsql", "maxrowsize")
     repo.sqlconn = None
     repo.sqlcursor = None
     repo.disablesync = False
