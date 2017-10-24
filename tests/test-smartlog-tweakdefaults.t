@@ -6,7 +6,7 @@
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > [experimental]
   > evolution=createmarkers
-  > allowdivergence=on
+  > evolution.allowdivergence=on
   > EOF
 
 Prepare a repo for amend checks

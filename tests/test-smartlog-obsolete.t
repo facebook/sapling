@@ -10,7 +10,7 @@
   > histeditkeepdate = true
   > [experimental]
   > evolution = createmarkers, allowunstable
-  > allowdivergence = on
+  > evolution.allowdivergence = on
   > [ui]
   > interactive = true
   > EOF

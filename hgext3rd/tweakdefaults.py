@@ -795,7 +795,7 @@ def _checkobsrebasewrapper(orig, repo, ui, *args):
     try:
         extensions.find('inhibit')
         # if inhibit is enabled, allow divergence
-        overrides[('experimental', 'allowdivergence')] = True
+        overrides[('experimental', 'evolution.allowdivergence')] = True
     except KeyError:
         pass
     with repo.ui.configoverride(overrides, 'tweakdefaults'):

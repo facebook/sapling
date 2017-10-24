@@ -6,7 +6,7 @@ Set up test environment.
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > rebase=
   > [experimental]
-  > allowdivergence = True
+  > evolution.allowdivergence = True
   > evolution = createmarkers, allowunstable
   > [fbamend]
   > # do not write preamend bookmarks

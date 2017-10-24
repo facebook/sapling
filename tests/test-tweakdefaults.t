@@ -525,7 +525,7 @@ and allowance of prune rebases
   > [experimental]
   > evolution=createmarkers
   > prunestrip=on
-  > allowdivergence=off
+  > evolution.allowdivergence=off
   > [extensions]
   > strip=
   > fbamend=$TESTDIR/../hgext3rd/fbamend
@@ -552,7 +552,7 @@ and allowance of prune rebases
 Test that we show divergence warning if inhibit is disabled
   $ hg rebase -r 1 -d 3 --hidden
   abort: this rebase will cause divergences from: 09d39afb522a
-  (to force the rebase please set experimental.allowdivergence=True)
+  (to force the rebase please set experimental.evolution.allowdivergence=True)
   [255]
 
 Test that we do not show divergence warning if inhibit is enabled
