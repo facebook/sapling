@@ -17,7 +17,16 @@ from mercurial.i18n import _
 from mercurial import merge as mergemod
 from mercurial import scmutil
 
+from mercurial import (
+    registrar,
+)
+
 UPDATEARGS = 'updateargs'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('morestatus', 'show', default=False)
 
 def prefixlines(raw):
     '''Surround lineswith a comment char and a new line'''
@@ -112,7 +121,7 @@ STATES = (
 
 
 def extsetup(ui):
-    if ui.configbool('morestatus', 'show', False) and not ui.plain():
+    if ui.configbool('morestatus', 'show') and not ui.plain():
         wrapcommand(commands.table, 'status', statuscmd)
         # Write down `hg update` args to show the continue command in
         # interrupted update state.

@@ -24,6 +24,11 @@ else: # compat with hg < 4.3
     from mercurial import cmdutil
     command = cmdutil.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('directaccess', 'loadsafter', default=[])
+
 # By default, all the commands have directaccess with warnings
 # List of commands that have no directaccess and directaccess with no warning
 directaccesslevel = [

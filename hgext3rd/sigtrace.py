@@ -22,7 +22,17 @@ import sys
 import time
 import traceback
 
+from mercurial import (
+    registrar,
+)
+
 pathformat = '/tmp/trace-%(pid)s-%(time)s.log'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('sigtrace', 'pathformat', default=pathformat)
+configitem('sigtrace', 'signal', default='USR1')
 
 def printstacks(sig, currentframe):
     content = ''
@@ -35,8 +45,8 @@ def printstacks(sig, currentframe):
 
 def uisetup(ui):
     global pathformat
-    pathformat = ui.config('sigtrace', 'pathformat', pathformat)
-    signame = ui.config('sigtrace', 'signal', 'USR1')
+    pathformat = ui.config('sigtrace', 'pathformat')
+    signame = ui.config('sigtrace', 'signal')
     sig = getattr(signal, 'SIG' + signame, None)
     if sig is not None:
         signal.signal(sig, printstacks)

@@ -109,6 +109,14 @@ from implementation import manifestfactory, fastmanifestcache
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fastmanifest', 'logfile', default='')
+configitem('fastmanifest', 'debugmetrics', default=False)
+configitem('fastmanifest', 'usecache', default=True)
+configitem('fastmanifest', 'usetree', default=False)
+
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
     ('a', 'all', False, 'cache all relevant revisions', ''),
@@ -206,7 +214,7 @@ class FastManifestExtension(object):
             manifest.memmanifestctx, 'write', factory.ctxwrite)
         extensions.wrapfunction(manifest.manifestrevlog, 'add', factory.add)
 
-        if ui.configbool('fastmanifest', 'usecache', True):
+        if ui.configbool('fastmanifest', 'usecache'):
             revsetmod.symbols['fastmanifesttocache'] = (
                     cachemanager.fastmanifesttocache
             )

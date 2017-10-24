@@ -20,7 +20,13 @@ import os
 from mercurial import (
     extensions,
     localrepo,
+    registrar,
 )
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('logging', 'configoptions', default=[])
 
 def _localrepoinit(orig, self, baseui, path=None, create=False):
     orig(self, baseui, path, create)
@@ -29,14 +35,18 @@ def _localrepoinit(orig, self, baseui, path=None, create=False):
         reponame = os.path.basename(reponame)
     configoptstolog = self.ui.configlist('logging', 'configoptions')
     kwargs = {'repo': reponame}
-    for option in configoptstolog:
-        splitted = option.split('.')
-        if len(splitted) != 2:
-            continue
-        section, name = splitted
-        value = self.ui.config(section, name)
-        if value is not None:
-            kwargs[name] = value
+
+    # The configs being read here are user defined, so we need to suppress
+    # warnings telling us to register them.
+    with self.ui.configoverride({("devel", "all-warnings"): False}):
+        for option in configoptstolog:
+            splitted = option.split('.')
+            if len(splitted) != 2:
+                continue
+            section, name = splitted
+            value = self.ui.config(section, name)
+            if value is not None:
+                kwargs[name] = value
 
     obsstore_size = 0
     try:

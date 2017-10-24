@@ -13,7 +13,7 @@ class manifestaccesslogger(object):
     def revwrap(self, orig, *args, **kwargs):
         """Wraps manifest.rev and log access"""
         r = orig(*args, **kwargs)
-        logfile = self._ui.config("fastmanifest", "logfile", "")
+        logfile = self._ui.config("fastmanifest", "logfile")
         if logfile:
             try:
                 with open(logfile, "a") as f:

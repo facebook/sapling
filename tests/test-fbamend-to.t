@@ -5,6 +5,7 @@ Set up test environment.
   > directaccess=$TESTDIR/../hgext3rd/directaccess.py
   > fbamend=$TESTDIR/../hgext3rd/fbamend
   > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > histedit=
   > rebase=
   > [experimental]
   > evolution = createmarkers, allowunstable

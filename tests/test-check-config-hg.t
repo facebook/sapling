@@ -29,7 +29,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fastmanifest.logfile (str)
   undocumented: fastmanifest.maxinmemoryentries (str) [DEFAULT_MAX_MEMORY_ENTRIES]
   undocumented: fastmanifest.silent (bool)
-  undocumented: fastmanifest.usecache (bool) [True]
+  undocumented: fastmanifest.usecache (bool)
   undocumented: fastmanifest.usetree (bool)
   undocumented: fbconduit.backingrepos (list) [[reponame]]
   undocumented: fbconduit.gitcallsigns (list)
@@ -38,7 +38,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbconduit.protocol (str)
   undocumented: fbconduit.reponame (str)
   undocumented: fbhistedit.exec_in_user_shell (str)
-  undocumented: grep.command (str) ['grep']
+  undocumented: grep.command (str)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.cachenoderevs (bool) [True]

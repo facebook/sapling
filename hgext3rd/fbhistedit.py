@@ -28,6 +28,11 @@ from mercurial.i18n import _
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fbhistedit', 'exec_in_user_shell', default=None)
+
 testedwith = 'ships-with-fb-hgext'
 
 def defineactions():

@@ -22,10 +22,14 @@ callsign = E
 
 """
 
-from mercurial import hg
-from mercurial import extensions
-from mercurial import revset, smartset
-from mercurial import error
+from mercurial import (
+    error,
+    extensions,
+    hg,
+    registrar,
+    revset,
+    smartset,
+)
 from mercurial.i18n import _
 
 try:
@@ -38,6 +42,11 @@ import signal
 import json
 import re
 import subprocess
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('phrevset', 'callsign', default=None)
 
 DIFFERENTIAL_REGEX = re.compile(
     'Differential Revision: http.+?/'  # Line start, URL

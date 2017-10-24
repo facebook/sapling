@@ -24,9 +24,18 @@ message and override some other config items.
 import os
 import grp
 
+from mercurial import (
+    registrar,
+)
+
 testedwith = 'ships-with-fb-hgext'
 
 _missinggroup = None
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('grpcheck', 'groups', default=[])
 
 def _grpname2gid(name):
     try:

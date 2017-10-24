@@ -53,7 +53,9 @@ Config::
     nodesthint = ''
     nodestmsg = ''
     rollbackhint = ''
+    rollbackmessage = ''
     singlecolonmsg = ''
+    tagmessage = ''
     tagsmessage = ''
 
     # output new hashes when nodes get updated
@@ -104,6 +106,52 @@ createmarkersoperation = 'createmarkersoperation'
 logopts = [
     ('', 'all', None, _('shows all changesets in the repo')),
 ]
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('grep', 'command', default='grep')
+configitem(globaldata, createmarkersoperation, default=None)
+
+configitem('tweakdefaults', 'singlecolonabort', default=False)
+configitem('tweakdefaults', 'singlecolonwarn', default=False)
+configitem('tweakdefaults', 'showupdated', default=False)
+configitem('tweakdefaults', 'nooprebase', default=True)
+
+configitem('tweakdefaults', 'amendkeepdate', default=False)
+configitem('tweakdefaults', 'graftkeepdate', default=False)
+configitem('tweakdefaults', 'histeditkeepdate', default=False)
+configitem('tweakdefaults', 'rebasekeepdate', default=False)
+
+configitem('tweakdefaults', 'allowbranch', default=True)
+configitem('tweakdefaults', 'allowfullrepohistgrep', default=False)
+configitem('tweakdefaults', 'allowmerge', default=True)
+configitem('tweakdefaults', 'allowrollback', default=True)
+configitem('tweakdefaults', 'allowtags', default=True)
+
+rebasemsg = _('you must use a bookmark with tracking '
+              'or manually specify a destination for the rebase')
+configitem('tweakdefaults', 'bmnodesthint', default=
+    _('set up tracking with `hg book -t <destination>` '
+      'or manually supply --dest / -d'))
+configitem('tweakdefaults', 'bmnodestmsg', default=rebasemsg)
+configitem('tweakdefaults', 'branchmessage', default=
+    _('new named branches are disabled in this repository'))
+configitem('tweakdefaults', 'branchesmessage', default=None)
+configitem('tweakdefaults', 'mergemessage', default=
+    _('merging is not supported for this repository'))
+configitem('tweakdefaults', 'nodesthint', default=
+    _('set up tracking with `hg book <name> -t <destination>` '
+      'or manually supply --dest / -d'))
+configitem('tweakdefaults', 'nodestmsg', default=rebasemsg)
+configitem('tweakdefaults', 'rollbackmessage', default=
+    _('the use of rollback is disabled'))
+configitem('tweakdefaults', 'rollbackhint', default=None)
+configitem('tweakdefaults', 'singlecolonmsg', default=
+    _("use of ':' is deprecated"))
+configitem('tweakdefaults', 'tagmessage', default=
+    _('new tags are disabled in this repository'))
+configitem('tweakdefaults', 'tagsmessage', default='')
 
 def uisetup(ui):
     tweakorder()
@@ -297,18 +345,12 @@ def pull(orig, ui, repo, *args, **opts):
         raise error.Abort(mess)
 
     if (isrebase or update) and not dest:
-        rebasemsg = _('you must use a bookmark with tracking '
-                      'or manually specify a destination for the rebase')
         if isrebase and bmactive(repo):
-            mess = ui.config('tweakdefaults', 'bmnodestmsg', rebasemsg)
-            hint = ui.config('tweakdefaults', 'bmnodesthint', _(
-                'set up tracking with `hg book -t <destination>` '
-                'or manually supply --dest / -d'))
+            mess = ui.config('tweakdefaults', 'bmnodestmsg')
+            hint = ui.config('tweakdefaults', 'bmnodesthint')
         elif isrebase:
-            mess = ui.config('tweakdefaults', 'nodestmsg', rebasemsg)
-            hint = ui.config('tweakdefaults', 'nodesthint', _(
-                'set up tracking with `hg book <name> -t <destination>` '
-                'or manually supply --dest / -d'))
+            mess = ui.config('tweakdefaults', 'nodestmsg')
+            hint = ui.config('tweakdefaults', 'nodesthint')
         else: # update
             mess = _('you must specify a destination for the update')
             hint = _('use `hg pull --update --dest <destination>`')
@@ -379,7 +421,7 @@ def tweakbehaviors(ui):
     def _nothingtorebase(orig, *args, **kwargs):
         return 0
 
-    if ui.configbool("tweakdefaults", "nooprebase", True):
+    if ui.configbool("tweakdefaults", "nooprebase"):
         try:
             rebase = extensions.find("rebase")
             extensions.wrapfunction(
@@ -595,7 +637,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     For the old 'hg grep', see 'histgrep'."""
 
-    grepcommandstr = ui.config('grep', 'command', default='grep')
+    grepcommandstr = ui.config('grep', 'command')
     # Use shlex.split() to split up grepcommandstr into multiple arguments.
     # this allows users to specify a command plus arguments (e.g., "grep -i").
     # We don't use a real shell to execute this, which ensures we won't do
@@ -712,8 +754,7 @@ def _analyzewrapper(orig, x, ui):
     if enabled and isinstance(x, tuple) and \
             (x[0] in ('range', 'rangepre', 'rangepost')) and \
             x != ('rangepre', ('symbol', '.')):
-        msg = ui.config('tweakdefaults', 'singlecolonmsg',
-                        _("use of ':' is deprecated"))
+        msg = ui.config('tweakdefaults', 'singlecolonmsg')
         if abort:
             raise error.Abort('%s' % msg)
         if warn:
@@ -754,7 +795,7 @@ def _rebase(orig, ui, repo, **opts):
 formattercommands = set()
 
 def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
-    if (repo.ui.configbool('tweakdefaults', 'showupdated', False) and
+    if (repo.ui.configbool('tweakdefaults', 'showupdated') and
         operation not in formattercommands):
         maxoutput = 10
         oldnodes = sorted(mapping.keys())
@@ -834,9 +875,8 @@ def log(orig, ui, repo, *pats, **opts):
     return orig(ui, repo, *pats, **opts)
 
 def branchcmd(orig, ui, repo, label=None, **opts):
-    message = ui.config('tweakdefaults', 'branchmessage',
-            _('new named branches are disabled in this repository'))
-    enabled = ui.configbool('tweakdefaults', 'allowbranch', True)
+    message = ui.config('tweakdefaults', 'branchmessage')
+    enabled = ui.configbool('tweakdefaults', 'allowbranch')
     if (enabled and opts.get('new')) or label is None:
         if 'new' in opts:
             del opts['new']
@@ -861,8 +901,7 @@ def mergecmd(orig, ui, repo, node=None, **opts):
     if ui.configbool('tweakdefaults','allowmerge', True):
         return orig(ui, repo, node, **opts)
     else:
-        message = ui.config('tweakdefaults', 'mergemessage',
-            _('merging is not supported for this repository'))
+        message = ui.config('tweakdefaults', 'mergemessage')
         hint = ui.config('tweakdefaults', 'mergehint', _('use rebase instead'))
         raise error.Abort(message, hint=hint)
 
@@ -899,27 +938,25 @@ def rollbackcmd(orig, ui, repo, **opts):
     """
     Allowing to disable the rollback command
     """
-    if ui.configbool('tweakdefaults', 'allowrollback', True):
+    if ui.configbool('tweakdefaults', 'allowrollback'):
         return orig(ui, repo, **opts)
     else:
-        message = ui.config('tweakdefaults', 'rollbackmessage',
-            _('the use of rollback is disabled'))
-        hint = ui.config('tweakdefaults', 'rollbackhint', None)
+        message = ui.config('tweakdefaults', 'rollbackmessage')
+        hint = ui.config('tweakdefaults', 'rollbackhint')
         raise error.Abort(message, hint=hint)
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
     """
     Allowing to disable tags
     """
-    message = ui.config('tweakdefaults', 'tagmessage',
-            _('new tags are disabled in this repository'))
-    if ui.configbool('tweakdefaults', 'allowtags', True):
+    message = ui.config('tweakdefaults', 'tagmessage')
+    if ui.configbool('tweakdefaults', 'allowtags'):
         return orig(ui, repo, name1, *names, **opts)
     else:
         raise error.Abort(message)
 
 def tagscmd(orig, ui, repo, **opts):
-    message = ui.config('tweakdefaults', 'tagsmessage', '')
+    message = ui.config('tweakdefaults', 'tagsmessage')
     if message:
         ui.warn(message + '\n')
     return orig(ui, repo, **opts)
@@ -981,7 +1018,10 @@ def bmactive(repo):
 
 def _createmarkers(orig, repo, relations, flag=0, date=None, metadata=None,
                    operation=None):
-    operation = repo.ui.config(globaldata, createmarkersoperation, operation)
+    configoperation = repo.ui.config(globaldata, createmarkersoperation)
+    if configoperation is not None:
+        operation = configoperation
+
     if operation is None:
         return orig(repo, relations, flag, date, metadata)
 

@@ -49,6 +49,11 @@ from hgext3rd import (
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('undo', '_duringundologlock', default=False)
+
 # Setup
 
 def extsetup(ui):

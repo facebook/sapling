@@ -282,5 +282,5 @@ def wrapstrip(loaded):
 
 def uisetup(ui):
     # developer config: fbamend.safestrip
-    if ui.configbool('fbamend', 'safestrip', True):
+    if ui.configbool('fbamend', 'safestrip'):
         extensions.afterloaded('strip', wrapstrip)

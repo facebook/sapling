@@ -54,7 +54,7 @@ class hybridmanifest(object):
         else:
             self.__treemanifest = False
 
-        if ui.configbool("fastmanifest", "usecache", True):
+        if ui.configbool("fastmanifest", "usecache"):
             self.__cachedmanifest = fast
         else:
             self.__cachedmanifest = False
@@ -949,8 +949,8 @@ class manifestfactory(object):
         p1text = None
 
         p1hexnode = revlog.hex(p1)
-        cacheenabled = self.ui.configbool("fastmanifest", "usecache", True)
-        treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
+        cacheenabled = self.ui.configbool("fastmanifest", "usecache")
+        treeenabled = self.ui.configbool("fastmanifest", "usetree")
 
         if (cacheenabled and
             p1hexnode in fastcache and

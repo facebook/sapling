@@ -92,6 +92,15 @@ cmdtable.update(prune.cmdtable)
 cmdtable.update(split.cmdtable)
 cmdtable.update(unamend.cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('fbamend', 'alwaysnewest', default=False)
+configitem('fbamend', 'date', default=None)
+configitem('fbamend', 'education', default=None)
+configitem('fbamend', 'safestrip', default=True)
+configitem('fbamend', 'userestack', default=False)
+
 testedwith = 'ships-with-fb-hgext'
 
 amendopts = [

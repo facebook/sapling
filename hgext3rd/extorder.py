@@ -24,7 +24,11 @@ Please not that this extension modifies only order of loading extensions. It
 will not load them for you
 """
 
-from mercurial import extensions
+from mercurial import (
+    extensions,
+    registrar,
+)
+
 try:
     from mercurial import chgserver
 except ImportError:
@@ -32,6 +36,9 @@ except ImportError:
 chgserver._configsections.append('extorder')
 
 testedwith = 'ships-with-fb-hgext'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
 
 class MercurialExtOrderException(BaseException):
     '''Special exception to bypass upstream exception catching
@@ -49,14 +56,17 @@ def uisetup(ui):
     preferlast = []
     preferfirst = []
 
-    for item, _v in ui.configitems('extorder'):
-        val = ui.configlist('extorder', item)
-        if item == 'preferlast':
-            preferlast.extend(val)
-        elif item == 'preferfirst':
-            preferfirst.extend(val)
-        else:
-            deps[item] = val
+    # The configs being read here are user defined, so we need to suppress
+    # warnings telling us to register them.
+    with ui.configoverride({("devel", "all-warnings"): False}):
+        for item, _v in ui.configitems('extorder'):
+            val = ui.configlist('extorder', item)
+            if item == 'preferlast':
+                preferlast.extend(val)
+            elif item == 'preferfirst':
+                preferfirst.extend(val)
+            else:
+                deps[item] = val
 
     exts = list(extensions._order)
     for e in preferfirst + preferlast:

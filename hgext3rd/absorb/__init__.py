@@ -54,6 +54,11 @@ testedwith = 'ships-with-fb-hgext'
 cmdtable = {}
 command = registrar.command(cmdtable)
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('absorb', 'amendflag', default=None)
+
 colortable = {
     'absorb.node': 'blue bold',
     'absorb.path': 'bold',
@@ -1018,4 +1023,4 @@ def _amendcmd(flag, orig, ui, repo, *pats, **opts):
         return 1
 
 def extsetup(ui):
-    _wrapamend(ui.config('absorb', 'amendflag', None))
+    _wrapamend(ui.config('absorb', 'amendflag'))
