@@ -105,7 +105,7 @@ class GitHandler(object):
         self.repo = dest_repo
         self.ui = ui
 
-        if ui.configbool('git', 'intree'):
+        if compat.config(ui, 'bool', 'git', 'intree'):
             self.gitdir = self.repo.wvfs.join('.git')
         else:
             self.gitdir = self.repo.vfs.join('git')
