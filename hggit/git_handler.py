@@ -1555,7 +1555,7 @@ class GitHandler(object):
             return None
 
         # default is borrowed from Git
-        max_files = self.ui.configint('git', 'renamelimit', default=400)
+        max_files = compat.config(self.ui, 'int', 'git', 'renamelimit')
         if max_files < 0:
             raise hgutil.Abort(_('git.renamelimit must be non-negative'))
         if max_files == 0:

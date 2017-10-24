@@ -70,6 +70,7 @@ CONFIG_DEFAULTS = {
         'debugextrainmessage': False,   # test only -- do not document this!
         'intree': None,
         'mindate': None,
+        'renamelimit': 400,
         'similarity': 0,
     },
     'hggit': {
