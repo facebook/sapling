@@ -696,8 +696,8 @@ class GitHandler(object):
         # HG EXTRA INFORMATION
 
         # test only -- do not document this!
-        extra_in_message = self.ui.configbool('git', 'debugextrainmessage',
-                                              False)
+        extra_in_message = compat.config(self.ui, 'bool', 'git',
+                                         'debugextrainmessage')
         extra_message = ''
         git_extra = []
         if ctx.branch() != 'default':

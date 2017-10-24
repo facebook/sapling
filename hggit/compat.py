@@ -67,6 +67,7 @@ CONFIG_DEFAULTS = {
         'authors': None,
         'blockdotgit': True,
         'branch_bookmark_suffix': None,
+        'debugextrainmessage': False,   # test only -- do not document this!
         'intree': None,
     },
     'hggit': {
