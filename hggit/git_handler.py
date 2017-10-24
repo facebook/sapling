@@ -1561,8 +1561,8 @@ class GitHandler(object):
         if max_files == 0:
             max_files = None
 
-        find_copies_harder = self.ui.configbool('git', 'findcopiesharder',
-                                                default=False)
+        find_copies_harder = compat.config(self.ui, 'bool', 'git',
+                                           'findcopiesharder')
         return diff_tree.RenameDetector(self.git.object_store,
                                         rename_threshold=similarity,
                                         max_files=max_files,

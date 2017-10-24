@@ -68,6 +68,7 @@ CONFIG_DEFAULTS = {
         'blockdotgit': True,
         'branch_bookmark_suffix': None,
         'debugextrainmessage': False,   # test only -- do not document this!
+        'findcopiesharder': False,
         'intree': None,
         'mindate': None,
         'renamelimit': 400,
