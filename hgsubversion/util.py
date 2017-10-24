@@ -336,7 +336,11 @@ def issamefile(parentctx, childctx, f):
 
 def getsvnrev(ctx, defval=None):
     '''Extract SVN revision from commit metadata'''
-    return ctx.extra().get('convert_revision', defval)
+    convertrev = ctx.extra().get('convert_revision', '')
+    # if the rev doesn't start with svn prefix it came from different source
+    if convertrev.startswith('svn:'):
+        return convertrev
+    return defval
 
 def revset_fromsvn(repo, subset, x):
     '''``fromsvn()``
