@@ -66,6 +66,7 @@ CONFIG_DEFAULTS = {
     'git': {
         'authors': None,
         'blockdotgit': True,
+        'blockdothg': True,
         'branch_bookmark_suffix': None,
         'debugextrainmessage': False,   # test only -- do not document this!
         'findcopiesharder': False,

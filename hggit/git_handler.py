@@ -1609,7 +1609,7 @@ class GitHandler(object):
 
     def audit_hg_path(self, path):
         if '.hg' in path.split(os.path.sep):
-            if self.ui.configbool('git', 'blockdothg', True):
+            if compat.config(self.ui, 'bool', 'git', 'blockdothg'):
                 raise hgutil.Abort(
                     ('Refusing to import problematic path %r' % path),
                     hint=("Mercurial cannot check out paths inside nested " +
