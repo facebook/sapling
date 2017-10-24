@@ -249,8 +249,6 @@ def findhg():
 
     # Fall back to trying the local hg installation.
     hgenv = localhgenv()
-    # Don't source any system hgrc files when using the local hg.
-    hgenv['HGRCPATH'] = ''
     hgcmd = [sys.executable, 'hg']
     try:
         retcode, out, err = runcmd(hgcmd + check_cmd, hgenv)
