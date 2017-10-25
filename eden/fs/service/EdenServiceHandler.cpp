@@ -11,6 +11,7 @@
 
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/LoggerDB.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <unordered_set>
@@ -597,10 +598,21 @@ void EdenServiceHandler::debugGetInodePath(
 }
 
 void EdenServiceHandler::debugSetLogLevel(
+    SetLogLevelResult& result,
     std::unique_ptr<std::string> category,
     std::unique_ptr<std::string> level) {
-  auto levelValue = folly::stringToLogLevel(*level);
-  folly::Logger(*category).getCategory()->setLevel(levelValue);
+  // TODO: This is a temporary hack until Adam's upcoming log config parser
+  // is ready.
+  bool inherit = true;
+  if (level->length() && '!' == level->back()) {
+    *level = level->substr(0, level->length() - 1);
+    inherit = false;
+  }
+
+  auto db = folly::LoggerDB::get();
+  result.categoryCreated = !db->getCategoryOrNull(*category);
+  folly::Logger(*category).getCategory()->setLevel(
+      folly::stringToLogLevel(*level), inherit);
 }
 
 int64_t EdenServiceHandler::unloadInodeForPath(

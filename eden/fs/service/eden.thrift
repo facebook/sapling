@@ -229,6 +229,10 @@ struct InodePathDebugInfo {
   3: bool linked
 }
 
+struct SetLogLevelResult {
+  1: bool categoryCreated
+}
+
 /**
  * Struct to store Information about inodes in a mount point.
  */
@@ -505,7 +509,7 @@ service EdenService extends fb303.FacebookService {
   /**
    * Sets the log level for a given category at runtime.
    */
-  void debugSetLogLevel(
+  SetLogLevelResult debugSetLogLevel(
     1: string category,
     2: string level,
   ) throws (1: EdenError ex)

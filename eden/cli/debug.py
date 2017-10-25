@@ -390,7 +390,10 @@ def do_set_log_level(args: argparse.Namespace):
     config = cmd_util.create_config(args)
 
     with config.get_thrift_client() as client:
-        client.debugSetLogLevel(args.category, args.level)
+        result = client.debugSetLogLevel(args.category, args.level)
+        if result.categoryCreated:
+            print("Warning: New category '{}' created. Did you mistype?".format(
+                args.category))
 
 
 def setup_argparse(parser: argparse.ArgumentParser):

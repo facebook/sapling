@@ -157,6 +157,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       int64_t inodeNumber) override;
 
   void debugSetLogLevel(
+      SetLogLevelResult& result,
       std::unique_ptr<std::string> category,
       std::unique_ptr<std::string> level) override;
 
