@@ -93,7 +93,8 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         nullfd = os.open(os.devnull, os.O_RDWR)
         logfilefd = nullfd
         if logfile:
-            logfilefd = os.open(logfile, os.O_RDWR | os.O_CREAT | os.O_APPEND)
+            logfilefd = os.open(logfile, os.O_RDWR | os.O_CREAT | os.O_APPEND,
+                                0o666)
         os.dup2(nullfd, 0)
         os.dup2(logfilefd, 1)
         os.dup2(logfilefd, 2)
