@@ -481,6 +481,9 @@ coreconfigitem('experimental', 'evolution.bundle-obsmarker',
 coreconfigitem('experimental', 'evolution.track-operation',
     default=True,
 )
+coreconfigitem('experimental', 'worddiff',
+    default=False,
+)
 coreconfigitem('experimental', 'maxdeltachainspan',
     default=-1,
 )

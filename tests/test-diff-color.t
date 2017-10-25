@@ -259,3 +259,95 @@ test tabs
   \x1b[0;32m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mall\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;32mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
 
   $ cd ..
+
+test inline color diff
+
+  $ hg init inline
+  $ cd inline
+  $ cat > file1 << EOF
+  > this is the first line
+  > this is the second line
+  >     third line starts with space
+  > + starts with a plus sign
+  > 
+  > this line won't change
+  > 
+  > two lines are going to
+  > be changed into three!
+  > 
+  > three of those lines will
+  > collapse onto one
+  > (to see if it works)
+  > EOF
+  $ hg add file1
+  $ hg ci -m 'commit'
+  $ cat > file1 << EOF
+  > that is the first paragraph
+  >     this is the second line
+  > third line starts with space
+  > - starts with a minus sign
+  > 
+  > this line won't change
+  > 
+  > two lines are going to
+  > (entirely magically,
+  >  assuming this works)
+  > be changed into four!
+  > 
+  > three of those lines have
+  > collapsed onto one
+  > EOF
+  $ hg diff --config experimental.worddiff=False --color=debug
+  [diff.diffline|diff --git a/file1 b/file1]
+  [diff.file_a|--- a/file1]
+  [diff.file_b|+++ b/file1]
+  [diff.hunk|@@ -1,13 +1,14 @@]
+  [diff.deleted|-this is the first line]
+  [diff.deleted|-this is the second line]
+  [diff.deleted|-    third line starts with space]
+  [diff.deleted|-+ starts with a plus sign]
+  [diff.inserted|+that is the first paragraph]
+  [diff.inserted|+    this is the second line]
+  [diff.inserted|+third line starts with space]
+  [diff.inserted|+- starts with a minus sign]
+   
+   this line won't change
+   
+   two lines are going to
+  [diff.deleted|-be changed into three!]
+  [diff.inserted|+(entirely magically,]
+  [diff.inserted|+ assuming this works)]
+  [diff.inserted|+be changed into four!]
+   
+  [diff.deleted|-three of those lines will]
+  [diff.deleted|-collapse onto one]
+  [diff.deleted|-(to see if it works)]
+  [diff.inserted|+three of those lines have]
+  [diff.inserted|+collapsed onto one]
+  $ hg diff --config experimental.worddiff=True --color=debug
+  [diff.diffline|diff --git a/file1 b/file1]
+  [diff.file_a|--- a/file1]
+  [diff.file_b|+++ b/file1]
+  [diff.hunk|@@ -1,13 +1,14 @@]
+  [diff.deleted|-this is the ][diff.deleted.highlight|first][diff.deleted| line]
+  [diff.deleted|-this is the second line]
+  [diff.deleted|-][diff.deleted.highlight|    ][diff.deleted|third line starts with space]
+  [diff.deleted|-][diff.deleted.highlight|+][diff.deleted| starts with a ][diff.deleted.highlight|plus][diff.deleted| sign]
+  [diff.inserted|+that is the first paragraph]
+  [diff.inserted|+][diff.inserted.highlight|    ][diff.inserted|this is the ][diff.inserted.highlight|second][diff.inserted| line]
+  [diff.inserted|+third line starts with space]
+  [diff.inserted|+][diff.inserted.highlight|-][diff.inserted| starts with a ][diff.inserted.highlight|minus][diff.inserted| sign]
+   
+   this line won't change
+   
+   two lines are going to
+  [diff.deleted|-be changed into ][diff.deleted.highlight|three][diff.deleted|!]
+  [diff.inserted|+(entirely magically,]
+  [diff.inserted|+ assuming this works)]
+  [diff.inserted|+be changed into ][diff.inserted.highlight|four][diff.inserted|!]
+   
+  [diff.deleted|-three of those lines ][diff.deleted.highlight|will]
+  [diff.deleted|-][diff.deleted.highlight|collapse][diff.deleted| onto one]
+  [diff.deleted|-(to see if it works)]
+  [diff.inserted|+three of those lines ][diff.inserted.highlight|have]
+  [diff.inserted|+][diff.inserted.highlight|collapsed][diff.inserted| onto one]

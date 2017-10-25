@@ -1518,7 +1518,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         width = 80
         if not ui.plain():
             width = ui.termwidth()
-        chunks = patch.diff(repo, node1, node2, match, changes, diffopts,
+        chunks = patch.diff(repo, node1, node2, match, changes, opts=diffopts,
                             prefix=prefix, relroot=relroot,
                             hunksfilterfn=hunksfilterfn)
         for chunk, label in patch.diffstatui(util.iterlines(chunks),
@@ -1526,7 +1526,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
             write(chunk, label=label)
     else:
         for chunk, label in patch.diffui(repo, node1, node2, match,
-                                         changes, diffopts, prefix=prefix,
+                                         changes, opts=diffopts, prefix=prefix,
                                          relroot=relroot,
                                          hunksfilterfn=hunksfilterfn):
             write(chunk, label=label)

@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 
 import collections
 import copy
+import difflib
 import email
 import errno
 import hashlib
@@ -2252,6 +2253,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
         'showfunc': get('show_function', 'showfunc'),
         'context': get('unified', getter=ui.config),
     }
+    buildopts['worddiff'] = ui.configbool('experimental', 'worddiff')
 
     if git:
         buildopts['git'] = get('git')
@@ -2463,6 +2465,9 @@ def diffhunks(repo, node1=None, node2=None, match=None, changes=None,
 
 def difflabel(func, *args, **kw):
     '''yields 2-tuples of (output, label) based on the output of func()'''
+    inlinecolor = False
+    if kw.get('opts'):
+        inlinecolor = kw['opts'].worddiff
     headprefixes = [('diff', 'diff.diffline'),
                     ('copy', 'diff.extended'),
                     ('rename', 'diff.extended'),
@@ -2479,6 +2484,9 @@ def difflabel(func, *args, **kw):
     head = False
     for chunk in func(*args, **kw):
         lines = chunk.split('\n')
+        matches = {}
+        if inlinecolor:
+            matches = _findmatches(lines)
         for i, line in enumerate(lines):
             if i != 0:
                 yield ('\n', '')
@@ -2506,7 +2514,14 @@ def difflabel(func, *args, **kw):
                             if '\t' == token[0]:
                                 yield (token, 'diff.tab')
                             else:
-                                yield (token, label)
+                                if i in matches:
+                                    for l, t in _inlinediff(
+                                                  lines[i].rstrip(),
+                                                  lines[matches[i]].rstrip(),
+                                                  label):
+                                        yield (t, l)
+                                else:
+                                    yield (token, label)
                     else:
                         yield (stripline, label)
                     break
@@ -2514,6 +2529,70 @@ def difflabel(func, *args, **kw):
                 yield (line, '')
             if line != stripline:
                 yield (line[len(stripline):], 'diff.trailingwhitespace')
+
+def _findmatches(slist):
+    '''Look for insertion matches to deletion and returns a dict of
+    correspondences.
+    '''
+    lastmatch = 0
+    matches = {}
+    for i, line in enumerate(slist):
+        if line == '':
+            continue
+        if line[0] == '-':
+            lastmatch = max(lastmatch, i)
+            newgroup = False
+            for j, newline in enumerate(slist[lastmatch + 1:]):
+                if newline == '':
+                    continue
+                if newline[0] == '-' and newgroup: # too far, no match
+                    break
+                if newline[0] == '+': # potential match
+                    newgroup = True
+                    sim = difflib.SequenceMatcher(None, line, newline).ratio()
+                    if sim > 0.7:
+                        lastmatch = lastmatch + 1 + j
+                        matches[i] = lastmatch
+                        matches[lastmatch] = i
+                        break
+    return matches
+
+def _inlinediff(s1, s2, operation):
+    '''Perform string diff to highlight specific changes.'''
+    operation_skip = '+?' if operation == 'diff.deleted' else '-?'
+    if operation == 'diff.deleted':
+        s2, s1 = s1, s2
+
+    buff = []
+    # we never want to higlight the leading +-
+    if operation == 'diff.deleted' and s2.startswith('-'):
+        label = operation
+        token = '-'
+        s2 = s2[1:]
+        s1 = s1[1:]
+    elif operation == 'diff.inserted' and s1.startswith('+'):
+        label = operation
+        token = '+'
+        s2 = s2[1:]
+        s1 = s1[1:]
+
+    s = difflib.ndiff(re.split(br'(\W)', s2), re.split(br'(\W)', s1))
+    for part in s:
+        if part[0] in operation_skip:
+            continue
+        l = operation + '.highlight'
+        if part[0] in ' ':
+            l = operation
+        if l == label: # contiguous token with same label
+            token += part[2:]
+            continue
+        else:
+            buff.append((label, token))
+            label = l
+            token = part[2:]
+    buff.append((label, token))
+
+    return buff
 
 def diffui(*args, **kw):
     '''like diff(), but yields 2-tuples of (output, label) for ui.write()'''

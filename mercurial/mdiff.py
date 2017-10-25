@@ -67,6 +67,7 @@ class diffopts(object):
         'ignoreblanklines': False,
         'upgrade': False,
         'showsimilarity': False,
+        'worddiff': False,
         }
 
     def __init__(self, **opts):
