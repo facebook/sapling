@@ -49,10 +49,6 @@ DEFINE_int32(
     apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
     "Maximum number of active thrift requests");
 DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
-DEFINE_int32(
-    thrift_queue_len,
-    0xffffffff,
-    "Maximum number of unprocessed messages");
 DEFINE_int32(thrift_min_compress_bytes, 0, "Minimum response compression size");
 DEFINE_int64(unload_interval_hours, 0, "Frequency of unloading inodes");
 DEFINE_int64(
