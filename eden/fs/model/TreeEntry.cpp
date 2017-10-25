@@ -7,12 +7,44 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "TreeEntry.h"
+#include "eden/fs/model/TreeEntry.h"
 
 #include <ostream>
 
+#include <folly/Conv.h>
+#include <folly/Range.h>
+
 namespace facebook {
 namespace eden {
+
+std::string TreeEntry::toLogString() const {
+  char fileTypeChar = '?';
+  switch (fileType_) {
+    case FileType::DIRECTORY:
+      fileTypeChar = 'd';
+      break;
+    case FileType::REGULAR_FILE:
+      fileTypeChar = 'f';
+      break;
+    case FileType::SYMLINK:
+      fileTypeChar = 'l';
+      break;
+  }
+  std::array<char, 4> modeStr;
+  modeStr[0] = fileTypeChar;
+  modeStr[1] = (ownerPermissions_ & 0b100) ? 'r' : '-';
+  modeStr[2] = (ownerPermissions_ & 0b010) ? 'w' : '-';
+  modeStr[3] = (ownerPermissions_ & 0b001) ? 'x' : '-';
+
+  return folly::to<std::string>(
+      "(",
+      name_,
+      ", ",
+      hash_.toString(),
+      ", ",
+      folly::StringPiece{modeStr},
+      ")");
+}
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
   switch (type) {

@@ -90,6 +90,8 @@ class TreeEntry {
     return (mode >> 6) & 0b111;
   }
 
+  std::string toLogString() const;
+
  private:
   FileType fileType_;
   uint8_t ownerPermissions_;

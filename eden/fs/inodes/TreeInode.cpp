@@ -195,7 +195,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         return getInodeMap()->lookupInode(getMount()->getDotEdenInodeNumber());
       }
 
-      XLOG(DBG5) << "attempted to load non-existent entry \"" << name
+      XLOG(DBG7) << "attempted to load non-existent entry \"" << name
                  << "\" in " << getLogPath();
       return makeFuture<InodePtr>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
@@ -2113,6 +2113,9 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     const TreeEntry* oldScmEntry,
     const TreeEntry* newScmEntry,
     vector<IncompleteInodeLoad>* pendingLoads) {
+  XLOG(DBG5) << "processCheckoutEntry(" << getLogPath()
+             << "): " << (oldScmEntry ? oldScmEntry->toLogString() : "(null)")
+             << " -> " << (newScmEntry ? newScmEntry->toLogString() : "(null)");
   // At most one of oldScmEntry and newScmEntry may be null.
   DCHECK(oldScmEntry || newScmEntry);
 
@@ -2424,6 +2427,14 @@ void TreeInode::saveOverlayPostCheckout(
     contents->treeHash = tryToDematerialize();
     isMaterialized = contents->isMaterialized();
     stateChanged = (oldHash != contents->treeHash);
+
+    XLOG(DBG4) << "saveOverlayPostCheckout(" << getLogPath() << ", " << tree
+               << "): deleteSelf=" << deleteSelf << ", oldHash="
+               << (oldHash ? oldHash.value().toString() : "none") << " newHash="
+               << (contents->treeHash ? contents->treeHash.value().toString()
+                                      : "none")
+               << " isMaterialized=" << isMaterialized;
+
     if (contents->isMaterialized()) {
       // If we are materialized, write out our state to the overlay.
       // (It's possible our state is unchanged from what's already on disk,
