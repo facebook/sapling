@@ -222,7 +222,6 @@ List of files accessed over HTTP:
   /.hg/bookmarks
   /.hg/bookmarks.current
   /.hg/cache/hgtagsfnodes1
-  /.hg/dirstate
   /.hg/requires
   /.hg/store/00changelog.i
   /.hg/store/00manifest.i
@@ -236,7 +235,6 @@ List of files accessed over HTTP:
   /remote-with-names/.hg/cache/branch2-served
   /remote-with-names/.hg/cache/hgtagsfnodes1
   /remote-with-names/.hg/cache/tags2-served
-  /remote-with-names/.hg/dirstate
   /remote-with-names/.hg/localtags
   /remote-with-names/.hg/requires
   /remote-with-names/.hg/store/00changelog.i
@@ -251,7 +249,6 @@ List of files accessed over HTTP:
   /remote/.hg/cache/hgtagsfnodes1
   /remote/.hg/cache/rbc-names-v1
   /remote/.hg/cache/tags2-served
-  /remote/.hg/dirstate
   /remote/.hg/localtags
   /remote/.hg/requires
   /remote/.hg/store/00changelog.i
@@ -268,7 +265,6 @@ List of files accessed over HTTP:
   /sub/.hg/bookmarks
   /sub/.hg/bookmarks.current
   /sub/.hg/cache/hgtagsfnodes1
-  /sub/.hg/dirstate
   /sub/.hg/requires
   /sub/.hg/store/00changelog.i
   /sub/.hg/store/00manifest.i

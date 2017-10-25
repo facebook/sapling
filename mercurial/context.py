@@ -471,7 +471,8 @@ class changectx(basectx):
                 self._node = repo.changelog.tip()
                 self._rev = repo.changelog.rev(self._node)
                 return
-            if changeid == '.' or changeid == repo.dirstate.p1():
+            if (changeid == '.'
+                or repo.local() and changeid == repo.dirstate.p1()):
                 # this is a hack to delay/avoid loading obsmarkers
                 # when we know that '.' won't be hidden
                 self._node = repo.dirstate.p1()
@@ -536,7 +537,8 @@ class changectx(basectx):
             #
             # XXX we could avoid the unfiltered if we had a recognizable
             # exception for filtered changeset access
-            if changeid in repo.unfiltered().dirstate.parents():
+            if (repo.local()
+                and changeid in repo.unfiltered().dirstate.parents()):
                 msg = _("working directory has unknown parent '%s'!")
                 raise error.Abort(msg % short(changeid))
             try:
