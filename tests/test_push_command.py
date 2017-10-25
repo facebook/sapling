@@ -145,7 +145,14 @@ class PushTests(test_util.TestBase):
         # support and expect IPv6. As a workaround, resolve the hostname
         # within the test harness with `getaddrinfo(3)` to ensure that the
         # client and server both use the same IPv4 or IPv6 address.
-        addrinfo = socket.getaddrinfo(self.host, self.port)
+        try:
+            addrinfo = socket.getaddrinfo(self.host, self.port)
+        except socket.gaierror as e:
+            # gethostname() can give a hostname that doesn't
+            # resolve. Seems bad, but let's fall back to `localhost` in
+            # that case and hope for the best.
+            self.host = 'localhost'
+            addrinfo = socket.getaddrinfo(self.host, self.port)
         # On macOS svn seems to have issues with IPv6 at least some of
         # the time, so try and bias towards IPv4. This works because
         # AF_INET is less than AF_INET6 on all platforms I've
