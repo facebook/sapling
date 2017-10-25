@@ -133,7 +133,7 @@ def crdump(ui, repo, *revs, **opts):
 def dumppatch(ui, repo, ctx, outdir, contextlines):
     chunks = ctx.diff(git=True, unified=contextlines, binary=False)
     patchfile = '%s.patch' % hex(ctx.node())
-    with open(path.join(outdir, patchfile), 'w') as f:
+    with open(path.join(outdir, patchfile), 'wb') as f:
         for chunk in chunks:
             f.write(chunk)
     return patchfile
@@ -142,7 +142,7 @@ def dumpfctx(outdir, fctx):
     outfile = '%s' % hex(fctx.filenode())
     writepath = path.join(outdir, outfile)
     if not path.isfile(writepath):
-        with open(writepath, 'w') as f:
+        with open(writepath, 'wb') as f:
             f.write(fctx.data())
     return outfile
 
