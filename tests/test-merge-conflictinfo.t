@@ -488,19 +488,11 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing 1:ed93aeac6b3c "source"
-  file: path conflict - a file or link has the same name as a directory
-  the local file has been renamed to file~fd7d10c36158
-  resolve manually then use 'hg resolve --mark file'
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
+  abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
+  [255]
   $ hg resolve --tool=internal:dumpjson --all
-  [
-   {
-    "command": "rebase",
-    "conflicts": [],
-    "pathconflicts": [{"fileorigin": "local", "path": "file", "renamedto": "file~fd7d10c36158"}]
-   }
-  ]
+  [abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
+  [255]
 Test case 8: Source is a file, dest is a directory (base is still a file)
   $ cd ..
   $ reset
@@ -528,19 +520,14 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
 
   $ hg rebase -d 2 -s 1
   rebasing 1:ec87889f5f90 "source"
-  file: path conflict - a file or link has the same name as a directory
-  the remote file has been renamed to file~ec87889f5f90
-  resolve manually then use 'hg resolve --mark file'
-  other [source] changed file~ec87889f5f90 which local [dest] deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
-  unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
+  abort:*: '$TESTTMP/cornercases/foo/foo/foo/foo/file' (glob)
+  [255]
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
-    "command": "rebase",
-    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": null, "exists": false, "isexec": null, "issymlink": null, "path": "$TESTTMP/cornercases/foo/foo/foo/foo/file~ec87889f5f90"}, "path": "file~ec87889f5f90"}],
-    "pathconflicts": [{"fileorigin": "remote", "path": "file", "renamedto": "file~ec87889f5f90"}]
+    "command": "update",
+    "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": null, "exists": false, "isexec": null, "issymlink": null, "path": "$TESTTMP/cornercases/foo/foo/foo/foo/file"}, "path": "file"}],
+    "pathconflicts": []
    }
   ]
 Test case 9: Source is a binary file, dest is a file (base is still a file)
