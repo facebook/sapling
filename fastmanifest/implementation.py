@@ -949,8 +949,8 @@ class manifestfactory(object):
         p1text = None
 
         p1hexnode = revlog.hex(p1)
-        cacheenabled = self.ui.configbool("fastmanifest", "usecache", True)
-        treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
+        cacheenabled = self.ui.configbool("fastmanifest", "usecache")
+        treeenabled = self.ui.configbool("fastmanifest", "usetree")
 
         if (cacheenabled and
             p1hexnode in fastcache and
@@ -995,7 +995,7 @@ class manifestfactory(object):
     def ctxwrite(self, orig, mfctx, transaction, link, p1, p2, added, removed):
         node = orig(mfctx, transaction, link, p1, p2, added, removed)
 
-        treeenabled = self.ui.configbool("fastmanifest", "usetree", False)
+        treeenabled = self.ui.configbool("fastmanifest", "usetree")
         if supportsctree and treeenabled:
             mfl = mfctx._manifestlog
             datastore = mfl.datastore

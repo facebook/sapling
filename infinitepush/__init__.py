@@ -194,7 +194,7 @@ def _tryhoist(ui, remotebookmark):
     '''
 
     if common.isremotebooksenabled(ui):
-        hoist = ui.config('remotenames', 'hoist', 'default') + '/'
+        hoist = ui.config('remotenames', 'hoist') + '/'
         if remotebookmark.startswith(hoist):
             return remotebookmark[len(hoist):]
     return remotebookmark
@@ -1016,7 +1016,8 @@ def processparts(orig, repo, op, unbundler):
                 # the part.
                 if not handleallparts:
                     op.records.add(scratchbranchparttype + '_skippushkey', True)
-                    op.records.add(scratchbranchparttype + '_skipphaseheads', True)
+                    op.records.add(scratchbranchparttype + '_skipphaseheads',
+                                   True)
             elif part.type == scratchbookmarksparttype:
                 # Save this for later processing. Details below.
                 scratchbookpart = part

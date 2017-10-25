@@ -898,7 +898,7 @@ def mergecmd(orig, ui, repo, node=None, **opts):
     """
     Allowing to disable merges
     """
-    if ui.configbool('tweakdefaults','allowmerge', True):
+    if ui.configbool('tweakdefaults','allowmerge'):
         return orig(ui, repo, node, **opts)
     else:
         message = ui.config('tweakdefaults', 'mergemessage')

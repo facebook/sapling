@@ -16,7 +16,7 @@ from mercurial.node import hex
 
 def isremotebooksenabled(ui):
     return ('remotenames' in extensions._extensions and
-            ui.configbool('remotenames', 'bookmarks', True))
+            ui.configbool('remotenames', 'bookmarks'))
 
 def encodebookmarks(bookmarks):
     encoded = {}
