@@ -643,6 +643,11 @@ class TreeInode : public InodeBase {
    * @param child If this parameter is non-null, then only remove the entry if
    *     it refers to the specified inode.  If the entry does not refer to the
    *     inode in question, EBADF will be returned.
+   * @param flushKernelCache This parameter indicates if we should tell the
+   *     kernel to flush its cache for the removed entry.  This should always
+   *     be set to true, unless tryRemoveChild() is being called from a FUSE
+   *     unlink() or rmdir() call, in which case the kernel will update its
+   *     cache automatically when the FUSE call returns.
    *
    * @return Returns an errno value on error, or 0 on success.  Notable errors
    * include:
@@ -663,7 +668,8 @@ class TreeInode : public InodeBase {
   FOLLY_NODISCARD int tryRemoveChild(
       const RenameLock& renameLock,
       PathComponentPiece name,
-      InodePtrType child);
+      InodePtrType child,
+      bool flushKernelCache);
 
   /**
    * checkPreRemove() is called by tryRemoveChild() for file or directory

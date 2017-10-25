@@ -9,7 +9,7 @@
 
 from textwrap import dedent
 from typing import List
-from ...lib import find_executables, hgrepo, testcase
+from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
 import json
 import os
@@ -88,6 +88,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
             'reset': '',
             'strip': '',
             'tweakdefaults': '',
+            'undo': '',
         }
         hgrc['directaccess'] = {
             'loadsafter': 'tweakdefaults',

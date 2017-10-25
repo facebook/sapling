@@ -1007,20 +1007,16 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   //
   // Therefore leave the child parameter for tryRemoveChild() as null, and let
   // it remove whatever it happens to find with this name.
-  int errnoValue = tryRemoveChild<InodePtrType>(renameLock, name, nullptr);
+  const InodePtrType nullChildPtr;
+  // Set the flushKernelCache parameter to true unless this was triggered by a
+  // FUSE request, in which case the kernel will automatically update its
+  // cache correctly.
+  bool flushKernelCache = !fusell::RequestData::isFuseRequest();
+  int errnoValue =
+      tryRemoveChild(renameLock, name, nullChildPtr, flushKernelCache);
   if (errnoValue == 0) {
-    // We successfuly removed the child.
-
-    // If this unlink() was not triggered by a request from FUSE,
-    // we need to tell FUSE to invalidate its cache for this entry.
-    if (!fusell::RequestData::isFuseRequest()) {
-      auto* fuseChannel = getMount()->getFuseChannel();
-      if (fuseChannel) {
-        fuseChannel->invalidateEntry(getNodeId(), name);
-      }
-    }
-
-    // Record the change in the journal
+    // We successfully removed the child.
+    // Record the change in the journal.
     getMount()->getJournal().wlock()->addDelta(
         std::make_unique<JournalDelta>(targetName, JournalDelta::REMOVED));
 
@@ -1068,7 +1064,8 @@ template <typename InodePtrType>
 int TreeInode::tryRemoveChild(
     const RenameLock& renameLock,
     PathComponentPiece name,
-    InodePtrType child) {
+    InodePtrType child,
+    bool flushKernelCache) {
   materialize(&renameLock);
 
   // prevent unlinking files in the .eden directory
@@ -1131,6 +1128,16 @@ int TreeInode::tryRemoveChild(
     overlay->saveOverlayDir(getNodeId(), &*contents);
   }
   deletedInode.reset();
+
+  // We have successfully removed the entry.
+  // Flush the kernel cache for this entry if requested.
+  if (flushKernelCache) {
+    auto* fuseChannel = getMount()->getFuseChannel();
+    if (fuseChannel) {
+      fuseChannel->invalidateEntry(getNodeId(), name);
+    }
+  }
+
   return 0;
 }
 
@@ -2504,9 +2511,10 @@ bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
     return false;
   }
 
+  bool flushKernelCache = true;
   auto errnoValue = location.parent->tryRemoveChild(
-      ctx->renameLock(), location.name, inodePtrFromThis());
-  return errnoValue == 0;
+      ctx->renameLock(), location.name, inodePtrFromThis(), flushKernelCache);
+  return (errnoValue == 0);
 }
 
 namespace {
