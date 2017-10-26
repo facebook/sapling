@@ -507,7 +507,18 @@ def _makebundlefile(part):
 
     return bundlefile
 
-def _getrevs(bundle, onto):
+def _getrenamesrcs(rev):
+    '''get all rename sources in a revision'''
+    srcs = set()
+    revmf = rev.manifest()
+    for f in rev.files():
+        if f in revmf:
+            renamed = rev[f].renamed()
+            if renamed:
+                srcs.add(renamed[0])
+    return srcs
+
+def _getrevs(bundle, onto, renamesrccache):
     'extracts and validates the revs to be imported'
     validaterevset(bundle, 'bundle()')
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
@@ -536,6 +547,13 @@ def _getrevs(bundle, onto):
         bundlefiles = set()
         for bundlerev in revs:
             bundlefiles.update(bundlerev.files())
+
+            # Also include sources of renames.
+            bundlerevnode = bundlerev.node()
+            if bundlerevnode in renamesrccache:
+                bundlefiles.update(renamesrccache[bundlerevnode])
+            else:
+                bundlefiles.update(_getrenamesrcs(bundlerev))
 
         def findconflicts():
             # Returns all the files touched in the bundle that are also touched
@@ -806,6 +824,10 @@ def bundle2rebase(op, part):
 
         bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
+        # Create a cache of rename sources while we don't have the lock.
+        renamesrccache = {bundle[r].node(): _getrenamesrcs(bundle[r])
+                          for r in bundle.revs('bundle()')}
+
         # Opening the transaction takes the lock, so do it after prepushrebase
         # and after we've fetched all the cache information we'll need.
         tr = op.gettransaction()
@@ -821,7 +843,7 @@ def bundle2rebase(op, part):
 
         onto = getontotarget(op, params, bundle)
 
-        revs, oldonto = _getrevs(bundle, onto)
+        revs, oldonto = _getrevs(bundle, onto, renamesrccache)
 
         op.repo.hook("prechangegroup", **hookargs)
 
