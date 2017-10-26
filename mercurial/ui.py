@@ -695,6 +695,9 @@ class ui(object):
         >>> u.setconfig(s, b'list1', b'this,is "a small" ,test')
         >>> u.configlist(s, b'list1')
         ['this', 'is', 'a small', 'test']
+        >>> u.setconfig(s, b'list2', b'this, is "a small" , test ')
+        >>> u.configlist(s, b'list2')
+        ['this', 'is', 'a small', 'test']
         """
         # default is not always a list
         v = self.configwith(config.parselist, section, name, default,
