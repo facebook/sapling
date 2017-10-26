@@ -46,13 +46,24 @@ testedwith = 'ships-with-fb-hgext'
 # a help string)
 # Note: order matters (consider rebase v. merge).
 CONFLICTSTATES = [
-    ['graft', 'graftstate'],
-    ['update', 'updatestate'],
-    ['evolve', 'evolvestate'],
-    ['rebase', 'rebasestate'],
-    ['histedit', 'histedit-state'],
-    ['unshelve', 'shelvedstate'],
-    ['merge', 'merge/state'],
+    ['graftstate', {'cmd': 'graft',
+                    'to_continue': 'graft --continue',
+                    'to_abort': 'graft --abort'}],
+    ['updatestate', {'cmd': 'update',
+                     'to_continue': 'update',
+                     'to_abort': 'update --clean'}],
+    ['rebasestate', {'cmd': 'rebase',
+                     'to_continue': 'rebase --continue',
+                     'to_abort': 'rebase --abort'}],
+    ['merge/state', {'cmd': 'merge',
+                    'to_continue': 'merge --continue',
+                    'to_abort': 'update --clean'}],
+    ['shelvedstate', {'cmd': 'unshelve',
+                      'to_continue': 'unshelve --continue',
+                      'to_abort': 'unshelve --abort'}],
+    ['histedit-state', {'cmd': 'histedit',
+                        'to_continue': 'histedit --continue',
+                        'to_abort': 'histedit --abort'}],
 ]
 
 def extsetup(ui):
@@ -62,9 +73,9 @@ def extsetup(ui):
 # states are mutually exclusive, we can use the existence of any one statefile
 # as proof of culpability.
 def _findconflictcommand(repo):
-    for name, path in CONFLICTSTATES:
+    for path, data in CONFLICTSTATES:
         if repo.vfs.exists(path):
-            return name
+            return data
     return None
 
 # To become a block in commands.py/resolve().
@@ -103,10 +114,16 @@ def _resolve(orig, ui, repo, *pats, **opts):
             if info is not None:
                 pathconflicts.append(info)
 
+        cmd = _findconflictcommand(repo)
         formatter.startitem()
         formatter.write('conflicts', '%s\n', fileconflicts)
         formatter.write('pathconflicts', '%s\n', pathconflicts)
         formatter.write('command', '%s\n', _findconflictcommand(repo))
+        if cmd:
+            formatter.write('command', '%s\n', cmd['cmd']) # Deprecated
+            formatter.write('command_details', '%s\n', cmd)
+        else:
+            formatter.write('command', '%s\n', None) # For BC
         formatter.end()
         return 0
 
