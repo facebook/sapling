@@ -77,6 +77,40 @@ debugdelta chain basic output
    }
   ]
 
+debugdelta chain with sparse read enabled
+
+  $ cat >> $HGRCPATH <<EOF
+  > [experimental]
+  > sparse-read = True
+  > EOF
+  $ hg debugdeltachain -m
+      rev  chain# chainlen     prev   delta       size    rawsize  chainsize     ratio   lindist extradist extraratio   readsize largestblk rddensity
+        0       1        1       -1    base         44         43         44   1.02326        44         0    0.00000         44         44   1.00000
+
+  $ hg debugdeltachain -m -T '{rev} {chainid} {chainlen} {readsize} {largestblock} {readdensity}\n'
+  0 1 1 44 44 1.0
+
+  $ hg debugdeltachain -m -Tjson
+  [
+   {
+    "chainid": 1,
+    "chainlen": 1,
+    "chainratio": 1.02325581395,
+    "chainsize": 44,
+    "compsize": 44,
+    "deltatype": "base",
+    "extradist": 0,
+    "extraratio": 0.0,
+    "largestblock": 44,
+    "lindist": 44,
+    "prevrev": -1,
+    "readdensity": 1.0,
+    "readsize": 44,
+    "rev": 0,
+    "uncompsize": 43
+   }
+  ]
+
 Test max chain len
   $ cat >> $HGRCPATH << EOF
   > [format]

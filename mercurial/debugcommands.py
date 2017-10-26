@@ -587,11 +587,22 @@ def debugdeltachain(ui, repo, file_=None, **opts):
                     the delta chain for this revision
     :``extraratio``: extradist divided by chainsize; another representation of
                     how much unrelated data is needed to load this delta chain
+
+    If the repository is configured to use the sparse read, additional keywords
+    are available:
+
+    :``readsize``:     total size of data read from the disk for a revision
+                       (sum of the sizes of all the blocks)
+    :``largestblock``: size of the largest block of data read from the disk
+    :``readdensity``:  density of useful bytes in the data read from the disk
+
+    The sparse read can be enabled with experimental.sparse-read = True
     """
     opts = pycompat.byteskwargs(opts)
     r = cmdutil.openrevlog(repo, 'debugdeltachain', file_, opts)
     index = r.index
     generaldelta = r.version & revlog.FLAG_GENERALDELTA
+    withsparseread = getattr(r, '_withsparseread', False)
 
     def revinfo(rev):
         e = index[rev]
@@ -627,15 +638,20 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 
     fm.plain('    rev  chain# chainlen     prev   delta       '
              'size    rawsize  chainsize     ratio   lindist extradist '
-             'extraratio\n')
+             'extraratio')
+    if withsparseread:
+        fm.plain('   readsize largestblk rddensity')
+    fm.plain('\n')
 
     chainbases = {}
     for rev in r:
         comp, uncomp, deltatype, chain, chainsize = revinfo(rev)
         chainbase = chain[0]
         chainid = chainbases.setdefault(chainbase, len(chainbases) + 1)
-        basestart = r.start(chainbase)
-        revstart = r.start(rev)
+        start = r.start
+        length = r.length
+        basestart = start(chainbase)
+        revstart = start(rev)
         lineardist = revstart + comp - basestart
         extradist = lineardist - chainsize
         try:
@@ -650,7 +666,7 @@ def debugdeltachain(ui, repo, file_=None, **opts):
         fm.write('rev chainid chainlen prevrev deltatype compsize '
                  'uncompsize chainsize chainratio lindist extradist '
                  'extraratio',
-                 '%7d %7d %8d %8d %7s %10d %10d %10d %9.5f %9d %9d %10.5f\n',
+                 '%7d %7d %8d %8d %7s %10d %10d %10d %9.5f %9d %9d %10.5f',
                  rev, chainid, len(chain), prevrev, deltatype, comp,
                  uncomp, chainsize, chainratio, lineardist, extradist,
                  extraratio,
@@ -659,6 +675,26 @@ def debugdeltachain(ui, repo, file_=None, **opts):
                  uncompsize=uncomp, chainsize=chainsize,
                  chainratio=chainratio, lindist=lineardist,
                  extradist=extradist, extraratio=extraratio)
+        if withsparseread:
+            readsize = 0
+            largestblock = 0
+            for revschunk in revlog._slicechunk(r, chain):
+                blkend = start(revschunk[-1]) + length(revschunk[-1])
+                blksize = blkend - start(revschunk[0])
+
+                readsize += blksize
+                if largestblock < blksize:
+                    largestblock = blksize
+
+            readdensity = float(chainsize) / float(readsize)
+
+            fm.write('readsize largestblock readdensity',
+                     ' %10d %10d %9.5f',
+                     readsize, largestblock, readdensity,
+                     readsize=readsize, largestblock=largestblock,
+                     readdensity=readdensity)
+
+        fm.plain('\n')
 
     fm.end()
 
