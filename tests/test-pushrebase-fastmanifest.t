@@ -53,27 +53,25 @@ Create the dummy commit on client 1
   $ hg add newfile
   $ hg commit -m 'dummy commit'
 
-Test that pushing to a remotename gets rebased (client1 -> client2), but fails.
+Test that pushing to a remotename gets rebased (client1 -> client2) works
 
-  $ hg push --to mybook ssh://user@dummy/client2 2>&1 | tail -4
-  remote:   File "*changegroup.py", line *, in seek (glob)
-  remote:     return self._stream.seek(pos)
-  remote: ValueError: I/O operation on closed file
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-
-Disable fastmanifest from client2
-
-  $ cd ../client2
-  $ cat >> .hg/hgrc << EOF
-  > [extensions]
-  > fastmanifest = !
-  > EOF
-
-Test that pushing to a remotename gets rebased (client1 -> client2)
-
-  $ cd ../client1
   $ hg push --to mybook ssh://user@dummy/client2
   pushing to ssh://user@dummy/client2
   searching for changes
   remote: pushing 1 changeset:
   remote:     eb7a4df38d10  dummy commit
+
+  $ cd ../client2
+  $ hg log -G
+  o  changeset:   1:eb7a4df38d10
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     dummy commit
+  |
+  @  changeset:   0:2bb9d20e471c
+     bookmark:    master
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial
+  
