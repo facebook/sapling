@@ -220,6 +220,7 @@ __all__ = ('cmdtable', 'reposetup', 'uisetup')
 cmdtable = {
     "svn": (svncommands.svn, svncommandopts, svnusage),
 }
+configtable = {}
 try:
     from mercurial import registrar
     templatekeyword = registrar.templatekeyword()
@@ -231,6 +232,12 @@ try:
         @command('svn', svncommandopts, svnusage)
         def svncommand(*args, **kwargs):
             return svncommands.svn(*args, **kwargs)
+
+    if hgutil.safehasattr(registrar, 'configitem'):
+        configitem = registrar.configitem(configtable)
+    else:
+        def configitem(*args, **kwargs):
+            pass
 except (ImportError, AttributeError):
     # registrar.templatekeyword isn't available = loading by old hg
 
@@ -242,6 +249,84 @@ except (ImportError, AttributeError):
         from mercurial import templatekw
         for name, func in registrarobj._table.iteritems():
             templatekw.keywords[name] = func
+
+    def configitem(*args, **kwargs):
+        # no-op so we can put config items at the top level instead of
+        # deeply nested
+        pass
+
+if not hgutil.safehasattr(configitem, 'dynamicdefault'):
+    configitem.dynamicdefault = None
+
+# real default is 'svnexternals'. Can also be 'subrepos' or
+# 'ignore'. Defines how to handle svn:externals.
+configitem('hgsubversion', 'externals', default=configitem.dynamicdefault)
+
+# If true, use diff+patch instead of svn native replay RPC.
+configitem('hgsubversion', 'stupid', default=False)
+
+# Allows configuring extra of svn+$SCHEME tunnel protocols
+configitem('hgsubversion', 'tunnels', default=list)
+# If true, monkeypatch revset parser to allow r123 to map to
+# Subversion revision 123.
+configitem('hgsubversion', 'nativerevs', default=False)
+
+# Auth config for the Subversion backend
+configitem('hgsubversion', 'username', default='')
+configitem('hgsubversion', 'password', default='')
+# The default value of the empty list means to use a default set of
+# password stores. The specific ones that will be consulted depend on
+# the compile-time options of your Subversion libraries.
+configitem('hgsubversion', 'password_stores', default=list)
+
+# real default is None
+configitem('hgsubversion', 'revmapimpl', default=configitem.dynamicdefault)
+# real default is 'auto'
+configitem('hgsubversion', 'layout', default=configitem.dynamicdefault)
+
+# real default is True
+configitem('hgsubversion', 'defaultauthors', default=configitem.dynamicdefault)
+# real default is False
+configitem('hgsubversion', 'caseignoreauthors', default=configitem.dynamicdefault)
+# real default is None
+configitem('hgsubversion', 'mapauthorscmd', default=configitem.dynamicdefault)
+# Defaults to the UUID identifying the source svn repo.
+configitem('hgsubversion', 'defaulthost', default=configitem.dynamicdefault)
+# real default is True
+configitem('hgsubversion', 'usebranchnames', default=configitem.dynamicdefault)
+# real default is ''
+configitem('hgsubversion', 'defaultmessage', default=configitem.dynamicdefault)
+# real default is ''
+configitem('hgsubversion', 'branch', default=configitem.dynamicdefault)
+# real default is ['tags']
+configitem('hgsubversion', 'taglocations', default=configitem.dynamicdefault)
+# real default is 'trunk'
+configitem('hgsubversion', 'trunkdir', default=configitem.dynamicdefault)
+# real default is ''
+configitem('hgsubversion', 'infix', default=configitem.dynamicdefault)
+# real default is ''
+configitem('hgsubversion', 'unsafeskip', default=configitem.dynamicdefault)
+# real default is ['tags']
+configitem('hgsubversion', 'tagpaths', default=configitem.dynamicdefault)
+# real default is 'branches'
+configitem('hgsubversion', 'branchdir', default=configitem.dynamicdefault)
+# real default is 200
+configitem('hgsubversion', 'filestoresize', default=configitem.dynamicdefault)
+# Typically unset, custom location of map files typically stored inside .hg
+configitem('hgsubversion', 'filemap', default=None)
+configitem('hgsubversion', 'branchmap', default=None)
+configitem('hgsubversion', 'authormap', default=None)
+configitem('hgsubversion', 'tagmap', default=None)
+# real default is False
+configitem('hgsubversion', 'failoninvalidreplayfile',
+           default=configitem.dynamicdefault)
+# real default is 0
+configitem('hgsubversion', 'startrev', default=configitem.dynamicdefault)
+# extra pragmas to feed to sqlite revmap implementation
+configitem('hgsubversion', 'sqlitepragmas', default=list)
+# real default is False
+configitem('hgsubversion', 'failonmissing', default=configitem.dynamicdefault)
+
 
 def _templatehelper(ctx, kw):
     '''
