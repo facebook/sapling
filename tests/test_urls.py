@@ -50,7 +50,7 @@ class TestSubversionUrls(test_util.TestBase):
             ('https://joe:t3stpw@svn.testurl.com/repo', 'bob', '123abc', ))
 
     def test_url_rewriting(self):
-        ui = test_util.ui.ui()
+        ui = test_util.testui()
         ui.setconfig('hgsubversion', 'username', 'bob')
         repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
         self.assertEqual('svn+ssh://bob@foo/bar', repo.svnauth[0])
@@ -82,4 +82,3 @@ class TestSubversionUrls(test_util.TestBase):
             repo = svnrepo.svnremoterepo(self.ui(), path=args[0])
             self.assertEqual(expected[2], repo.svnauth[0])
             self.assertEqual(expected[2], repo.svnurl)
-
