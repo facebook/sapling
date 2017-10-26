@@ -10,8 +10,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <folly/Synchronized.h>
-#include <folly/experimental/StringKeyedUnorderedSet.h>
 #include <memory>
 #include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/BlobMetadata.h"

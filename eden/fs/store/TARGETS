@@ -15,8 +15,6 @@ cpp_library(
         "@/folly:optional",
         "@/folly:range",
         "@/folly:string",
-        "@/folly:synchronized",
-        "@/folly/experimental:string_keyed_unordered_set",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
