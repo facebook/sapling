@@ -11,7 +11,6 @@ from textwrap import dedent
 from typing import List
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
-import json
 import os
 
 
@@ -226,8 +225,13 @@ class HgExtensionTestBase(testcase.EdenTestCase):
     def assert_copy_map(self, expected):
         stdout = self.eden.run_cmd('debug', 'hg_copy_map_get_all',
                                    cwd=self.mount)
-        copy_map = json.loads(stdout)
-        self.assertEqual(expected, copy_map)
+        observed_map = {}
+        for line in stdout.split('\n'):
+            if not line:
+                continue
+            src, dst = line.split(' -> ')
+            observed_map[dst] = src
+        self.assertEqual(expected, observed_map)
 
 
 def _apply_flatmanifest_config(test, config):

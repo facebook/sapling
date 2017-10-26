@@ -9,7 +9,6 @@
 
 import argparse
 import binascii
-import json
 import os
 import stat
 import sys
@@ -157,7 +156,33 @@ def do_hg_copy_map_get_all(args: argparse.Namespace):
     mount, _ = get_mount_path(args.path)
     with config.get_thrift_client() as client:
         copy_map = client.hgCopyMapGetAll(mount)
-    print(json.dumps(copy_map, indent=2))
+    _print_copymap(copy_map)
+
+
+def _print_copymap(copy_map) -> None:
+    copies = [f'{item[1]} -> {item[0]}' for item in copy_map.items()]
+    copies.sort()
+    for copy in copies:
+        print(copy)
+
+
+def do_hg_dirstate(args: argparse.Namespace) -> None:
+    config = cmd_util.create_config(args)
+    mount, _ = get_mount_path(args.path)
+    with config.get_thrift_client() as client:
+        nonnormal_files = client.hgGetNonnormalFiles(mount)
+        copy_map = client.hgCopyMapGetAll(mount)
+
+    printer = StdoutPrinter()
+    print(printer.bold('Non-normal Files (%d):' % len(nonnormal_files)))
+    nonnormal_files.sort(key=lambda nn: nn.relativePath)
+    for nonnormal_file in nonnormal_files:
+        _print_hg_nonnormal_file(nonnormal_file.relativePath,
+                                 nonnormal_file.tuple,
+                                 printer)
+
+    print(printer.bold('Copymap (%d):' % len(copy_map)))
+    _print_copymap(copy_map)
 
 
 def do_hg_get_dirstate_tuple(args: argparse.Namespace):
@@ -165,19 +190,27 @@ def do_hg_get_dirstate_tuple(args: argparse.Namespace):
     mount, rel_path = get_mount_path(args.path)
     with config.get_thrift_client() as client:
         dirstate_tuple = client.hgGetDirstateTuple(mount, rel_path)
+    printer = StdoutPrinter()
+    _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
 
+
+def _print_hg_nonnormal_file(
+    rel_path, dirstate_tuple, printer: 'StdoutPrinter'
+) -> None:
     status = hgdirstate.DirstateNonnormalFileStatus._VALUES_TO_NAMES[
         dirstate_tuple.status
     ]
-    merge_state = hgdirstate.DirstateMergeState._VALUES_TO_NAMES[
-        dirstate_tuple.mergeState
-    ]
-    print(f'''\
-{rel_path}
+    merge_state = hgdirstate.DirstateMergeState._VALUES_TO_NAMES[dirstate_tuple.
+                                                                 mergeState]
+
+    print(
+        f'''\
+{printer.green(rel_path)}
     status = {status}
     mode = {oct(dirstate_tuple.mode)}
     mergeState = {merge_state}\
-''')
+'''
+    )
 
 
 def do_inode(args: argparse.Namespace, out: IO[bytes] = None):
@@ -396,6 +429,32 @@ def do_set_log_level(args: argparse.Namespace):
                 args.category))
 
 
+class StdoutPrinter:
+    def __init__(self):
+        if sys.stdout.isatty():
+            import curses
+            curses.setupterm()
+            self._bold = curses.tigetstr('bold') or b''
+            set_foreground = curses.tigetstr('setaf') or b''
+            self._red = curses.tparm(set_foreground, curses.COLOR_RED)
+            self._green = curses.tparm(set_foreground, curses.COLOR_GREEN)
+            self._reset = curses.tigetstr('sgr0') or b''
+        else:
+            self._bold = ''
+            self._red = ''
+            self._green = ''
+            self._reset = ''
+
+    def bold(self, text: str) -> str:
+        return self._bold + text + self._reset
+
+    def green(self, text: str) -> str:
+        return self._green + text + self._reset
+
+    def red(self, text: str) -> str:
+        return self._red + text + self._reset
+
+
 def setup_argparse(parser: argparse.ArgumentParser):
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -433,6 +492,13 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'path', nargs='?', default=os.getcwd(),
         help='The path to an Eden mount point. Uses `pwd` by default.')
     parser.set_defaults(func=do_hg_copy_map_get_all)
+
+    parser = subparsers.add_parser(
+        'hg_dirstate', help='Print full dirstate')
+    parser.add_argument(
+        'path', nargs='?', default=os.getcwd(),
+        help='The path to an Eden mount point. Uses `pwd` by default.')
+    parser.set_defaults(func=do_hg_dirstate)
 
     parser = subparsers.add_parser(
         'hg_get_dirstate_tuple', help='Dirstate status for file')
