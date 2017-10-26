@@ -17,7 +17,6 @@
 #include <folly/experimental/logging/xlog.h>
 
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -290,6 +289,31 @@ void Dirstate::clear() {
   if (madeChanges) {
     persistence_.save(*data);
   }
+}
+
+void Dirstate::createBackup(PathComponent backupName) {
+  AbsolutePath backupPath = createBackupPath(backupName);
+  {
+    auto data = data_.rlock();
+    DirstatePersistence::save(*data, backupPath);
+  }
+}
+
+void Dirstate::restoreBackup(PathComponent backupName) {
+  AbsolutePath backupPath = createBackupPath(backupName);
+  auto dirstateData = DirstatePersistence::load(backupPath);
+  {
+    auto data = data_.wlock();
+    folly::checkUnixError(rename(
+        backupPath.c_str(),
+        mount_->getConfig()->getDirstateStoragePath().c_str()));
+    std::swap(*data, dirstateData);
+  }
+}
+
+AbsolutePath Dirstate::createBackupPath(PathComponent backupName) {
+  return (mount_->getConfig()->getDirstateStoragePath().dirname()) +
+      RelativePath{"dirstate-backup-" + backupName.stringPiece().str()};
 }
 
 DirstateTuple Dirstate::hgGetDirstateTuple(const RelativePathPiece filename) {

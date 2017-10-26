@@ -40,19 +40,19 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 
+using facebook::eden::hgdirstate::DirstateMergeState;
+using facebook::eden::hgdirstate::DirstateNonnormalFileStatus;
+using facebook::eden::hgdirstate::DirstateTuple;
+using facebook::eden::hgdirstate::_DirstateMergeState_VALUES_TO_NAMES;
+using facebook::eden::hgdirstate::_DirstateNonnormalFileStatus_VALUES_TO_NAMES;
+using folly::Future;
+using folly::Optional;
+using folly::StringPiece;
+using folly::makeFuture;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using folly::Optional;
-using folly::Future;
-using folly::makeFuture;
-using folly::StringPiece;
-using facebook::eden::hgdirstate::DirstateNonnormalFileStatus;
-using facebook::eden::hgdirstate::DirstateMergeState;
-using facebook::eden::hgdirstate::DirstateTuple;
-using facebook::eden::hgdirstate::_DirstateNonnormalFileStatus_VALUES_TO_NAMES;
-using facebook::eden::hgdirstate::_DirstateMergeState_VALUES_TO_NAMES;
 
 namespace facebook {
 namespace eden {
@@ -355,6 +355,24 @@ void EdenServiceHandler::scmGetStatus(
 
   out = dirstate->getStatus(listIgnored);
   XLOG(INFO) << "scmGetStatus() returning " << out;
+}
+
+void EdenServiceHandler::hgBackupDirstate(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> backupName) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
+  dirstate->createBackup(PathComponent{*backupName});
+}
+
+void EdenServiceHandler::hgRestoreDirstateFromBackup(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> backupName) {
+  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
+  DCHECK(dirstate != nullptr)
+      << "Failed to get dirstate for " << mountPoint.get();
+  dirstate->restoreBackup(PathComponent{*backupName});
 }
 
 void EdenServiceHandler::hgClearDirstate(
@@ -698,5 +716,5 @@ void EdenServiceHandler::invalidateKernelInodeCache(
 void EdenServiceHandler::shutdown() {
   server_->stop();
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

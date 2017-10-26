@@ -94,6 +94,14 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored) override;
 
+  void hgBackupDirstate(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> backupName) override;
+
+  void hgRestoreDirstateFromBackup(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> backupName) override;
+
   void hgClearDirstate(std::unique_ptr<std::string> mountPoint) override;
 
   void hgGetDirstateTuple(
@@ -197,5 +205,5 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   EdenServer* const server_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

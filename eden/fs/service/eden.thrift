@@ -375,6 +375,30 @@ service EdenService extends fb303.FacebookService {
     2: bool listIgnored,
   ) throws (1: EdenError ex)
 
+  /**
+   * Backup the dirstate tuples and copymap to storage identified by backupName.
+   *
+   * @param backupName cannot contain path characters.
+   */
+  void hgBackupDirstate(
+    1: string mountPoint,
+    2: string backupName,
+  ) throws (1: EdenError ex)
+
+  /**
+   * Replace the current dirstate tuples and copymap with the data that was
+   * backed up via hgBackupDirstate() using backupName.
+   *
+   * If there is nothing stored for the backupName, then the dirstate data will
+   * be reset to empty.
+   *
+   * @param backupName cannot contain path characters.
+   */
+  void hgRestoreDirstateFromBackup(
+    1: string mountPoint,
+    2: string backupName,
+  ) throws (1: EdenError ex)
+
   void hgClearDirstate(
     1: string mountPoint,
   ) throws (1: EdenError ex)

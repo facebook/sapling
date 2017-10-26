@@ -9,6 +9,7 @@
 
 from textwrap import dedent
 from .lib.hg_extension_test_base import hg_test
+from ..lib import hgrepo
 
 
 @hg_test
@@ -59,3 +60,44 @@ class SplitTest:
         self.assertEqual(['first commit', 'second commit'], commits)
         files = self.repo.log(template='{files}')
         self.assertEqual(['letters', 'numbers'], files)
+
+    def test_abort_split_with_pending_add(self):
+        self.write_file('letters', 'abcd\n')
+        self.write_file('new.txt', 'new!\n')
+        self.hg('add', 'new.txt')
+        self.assert_status({'letters': 'M', 'new.txt': 'A'})
+        self.repo.commit('modify letters and add new.txt')
+        self.assert_status_empty()
+        commits = self.repo.log()
+
+        editor = self.create_editor_that_writes_commit_messages(
+            [
+                'just the modification',
+            ]
+        )
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            # The responses are for the following questions:
+            # y  examine changes to 'letters'?
+            # y  record change 1/2 to 'letters'?
+            # n  examine changes to 'd.txt'?
+            # n  Done splitting?
+            # q  examine changes to 'd.txt'?
+            self.hg(
+                dedent(
+                    '''\
+            split --config ui.interactive=true --config ui.interface=text << EOF
+            y
+            y
+            n
+            n
+            q
+            EOF
+            '''
+                ),
+                shell=True,
+                hgeditor=editor
+            )
+        self.assert_status_empty()
+        self.assertListEqual(commits, self.repo.log())
+        self.assertEqual(255, context.exception.returncode)

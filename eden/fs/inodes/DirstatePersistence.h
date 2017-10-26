@@ -33,16 +33,31 @@ class DirstatePersistence {
   explicit DirstatePersistence(AbsolutePathPiece storageFile)
       : storageFile_(storageFile) {}
 
+  /** Save to the default storage file. */
   void save(const DirstateData& data);
 
+  /** Save to the specified storage file. */
+  static void save(const DirstateData& data, const AbsolutePath& storageFile);
+
   /**
+   * Load from the default storage file.
+   *
    * If the underlying storage file does not exist, then this returns an empty
    * map.
    */
   DirstateData load();
 
+  /**
+   * Load from the specified storage file.
+   *
+   * If the underlying storage file does not exist, then this returns an empty
+   * map.
+   */
+  static DirstateData load(const AbsolutePath& storageFile);
+
  private:
-  void save(
+  static void save(
+      const AbsolutePath& storageFile,
       const std::map<std::string, hgdirstate::DirstateTuple>& hgDirstateTuples,
       const std::map<std::string, std::string>& hgDestToSourceCopyMap);
 

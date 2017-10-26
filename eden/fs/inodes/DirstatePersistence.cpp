@@ -19,6 +19,12 @@ namespace eden {
 using apache::thrift::CompactSerializer;
 
 void DirstatePersistence::save(const DirstateData& data) {
+  save(data, storageFile_);
+}
+
+void DirstatePersistence::save(
+    const DirstateData& data,
+    const AbsolutePath& storageFile) {
   std::map<std::string, hgdirstate::DirstateTuple> hgDirstateTuples;
   for (auto& pair : data.hgDirstateTuples) {
     hgDirstateTuples.emplace(pair.first.str(), pair.second);
@@ -30,10 +36,11 @@ void DirstatePersistence::save(const DirstateData& data) {
         pair.first.str(), pair.second.stringPiece().str());
   }
 
-  save(hgDirstateTuples, hgDestToSourceCopyMap);
+  save(storageFile, hgDirstateTuples, hgDestToSourceCopyMap);
 }
 
 void DirstatePersistence::save(
+    const AbsolutePath& storageFile,
     const std::map<std::string, hgdirstate::DirstateTuple>& hgDirstateTuples,
     const std::map<std::string, std::string>& hgDestToSourceCopyMap) {
   overlay::DirstateData dirstateData;
@@ -42,18 +49,22 @@ void DirstatePersistence::save(
   dirstateData.hgDestToSourceCopyMap = hgDestToSourceCopyMap;
   dirstateData.__isset.hgDestToSourceCopyMap = true;
   auto serializedData = CompactSerializer::serialize<std::string>(dirstateData);
-  folly::writeFileAtomic(storageFile_.stringPiece(), serializedData, 0644);
+  folly::writeFileAtomic(storageFile.stringPiece(), serializedData, 0644);
 }
 
 DirstateData DirstatePersistence::load() {
+  return load(storageFile_);
+}
+
+DirstateData DirstatePersistence::load(const AbsolutePath& storageFile) {
   DirstateData loadedData;
   std::string serializedData;
-  if (!folly::readFile(storageFile_.c_str(), serializedData)) {
+  if (!folly::readFile(storageFile.c_str(), serializedData)) {
     int err = errno;
     if (err == ENOENT) {
       return loadedData;
     }
-    folly::throwSystemErrorExplicit(err, "failed to read ", storageFile_);
+    folly::throwSystemErrorExplicit(err, "failed to read ", storageFile);
   }
 
   auto dirstateData =
@@ -67,5 +78,5 @@ DirstateData DirstatePersistence::load() {
   }
   return loadedData;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

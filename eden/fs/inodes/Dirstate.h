@@ -108,6 +108,9 @@ class Dirstate {
   /** Clears out the data structures associated with this Dirstate. */
   void clear();
 
+  void createBackup(PathComponent backupName);
+  void restoreBackup(PathComponent backupName);
+
   hgdirstate::DirstateTuple hgGetDirstateTuple(
       const RelativePathPiece filename);
   void hgSetDirstateTuple(
@@ -131,6 +134,11 @@ class Dirstate {
    */
   folly::Optional<mode_t> isInManifestAsFile(
       const RelativePathPiece filename) const;
+
+  /**
+   * @return the path to use with createBackup() and restoreBackup().
+   */
+  AbsolutePath createBackupPath(PathComponent backupName);
 
   /** The EdenMount object that owns this Dirstate */
   EdenMount* const mount_{nullptr};
