@@ -34,7 +34,10 @@ using BlobContents = std::map<std::string, std::string>;
 class Handler : public proxygen::RequestHandler {
  public:
   explicit Handler(const BlobContents& blobs)
-      : regex_("^(/repo/blob/(.*)/|/repo/treenode/(.*)/)$"),
+      : regex_(
+            "^(/repo/blob/(.*)/|"
+            "/repo/treenode/(.*)/|"
+            "/repo/cs/(.*)/roottreemanifestid/)$"),
         path_(),
         blobs_(blobs) {}
 
@@ -56,6 +59,8 @@ class Handler : public proxygen::RequestHandler {
         content = blobs_[m[2]];
       } else if (blobs_.find(m[3]) != blobs_.end()) {
         content = blobs_[m[3]];
+      } else if (blobs_.find(m[4]) != blobs_.end()) {
+        content = blobs_[m[4]];
       } else {
         ResponseBuilder(downstream_)
             .status(404, "not found")
@@ -142,12 +147,13 @@ class MononokeBackingStoreTest : public ::testing::Test {
                 {"hash": "4444444444444444444444444444444444444444", "path": "exec", "size": 2, "type": "Executable"},
                 {"hash": "5555555555555555555555555555555555555555", "path": "link", "size": 2, "type": "Symlink"}
             ])"),
-    };
+        std::make_pair(commithash.toString(), treehash.toString())};
     return blobs;
   }
 
   Hash emptyhash{"1111111111111111111111111111111111111111"};
   Hash treehash{"2222222222222222222222222222222222222222"};
+  Hash commithash{"3333333333333333333333333333333333333333"};
   Hash malformedhash{"9999999999999999999999999999999999999999"};
 };
 
@@ -266,6 +272,57 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
           "repo",
           std::chrono::milliseconds(300));
       EXPECT_THROW(store.getTree(treehash).get(), std::exception);
+      server->stop();
+    });
+  });
+
+  t.join();
+}
+
+TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
+  auto server = createServer();
+  auto blobs = getBlobs();
+  auto commithash = this->commithash;
+  auto treehash = this->treehash;
+  std::thread t([&]() {
+    server->start([&server, commithash, treehash]() {
+      MononokeBackingStore store(
+          server->addresses()[0].address,
+          "repo",
+          std::chrono::milliseconds(300));
+      auto tree = store.getTreeForCommit(commithash).get();
+      auto tree_entries = tree->getTreeEntries();
+
+      std::vector<TreeEntry> expected_entries{
+          TreeEntry(
+              Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
+              "a",
+              FileType::REGULAR_FILE,
+              0b110),
+          TreeEntry(
+              Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
+              "b",
+              FileType::REGULAR_FILE,
+              0b110),
+          TreeEntry(
+              Hash("3333333333333333333333333333333333333333"),
+              "dir",
+              FileType::DIRECTORY,
+              0b111),
+          TreeEntry(
+              Hash("4444444444444444444444444444444444444444"),
+              "exec",
+              FileType::REGULAR_FILE,
+              0b111),
+          TreeEntry(
+              Hash("5555555555555555555555555555555555555555"),
+              "link",
+              FileType::SYMLINK,
+              0b111),
+      };
+
+      Tree expected_tree(std::move(expected_entries), treehash);
+      EXPECT_TRUE(expected_tree == *tree);
       server->stop();
     });
   });

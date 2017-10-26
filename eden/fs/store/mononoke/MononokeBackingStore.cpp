@@ -29,8 +29,8 @@ using proxygen::HTTPException;
 using proxygen::HTTPHeaders;
 using proxygen::HTTPMessage;
 using proxygen::HTTPTransaction;
-using proxygen::UpgradeProtocol;
 using proxygen::URL;
+using proxygen::UpgradeProtocol;
 
 namespace facebook {
 namespace eden {
@@ -202,8 +202,14 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
 }
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
-    const Hash& /* commitID */) {
-  throw std::runtime_error("not implemented");
+    const Hash& commitID) {
+  URL url(folly::sformat(
+      "/{}/cs/{}/roottreemanifestid/", repo_, commitID.toString()));
+  auto future = sendRequest(url);
+  return future.then([&](std::unique_ptr<folly::IOBuf>&& buf) {
+    auto treeId = Hash(buf->moveToFbString());
+    return getTree(treeId);
+  });
 }
 
 // TODO(stash): make the call async
