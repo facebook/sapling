@@ -129,7 +129,7 @@ class dirstate(object):
     def _map(self):
         '''Return the dirstate contents as a map from filename to
         (state, mode, size, time).'''
-        self._read()
+        self._map = dirstatemap(self._ui, self._opener, self._root)
         return self._map
 
     @property
@@ -352,10 +352,6 @@ class dirstate(object):
         except: # re-raises
             f.discard()
             raise
-
-    def _read(self):
-        self._map = dirstatemap(self._ui, self._opener, self._root)
-        self._map.read()
 
     def invalidate(self):
         '''Causes the next access to reread the dirstate.
@@ -1201,13 +1197,23 @@ class dirstatemap(object):
         self._root = root
         self._filename = 'dirstate'
 
-        self._map = {}
-        self.copymap = {}
         self._parents = None
         self._dirtyparents = False
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
+
+    @propertycache
+    def _map(self):
+        self._map = {}
+        self.read()
+        return self._map
+
+    @propertycache
+    def copymap(self):
+        self.copymap = {}
+        self._map
+        return self.copymap
 
     def clear(self):
         self._map = {}
@@ -1388,7 +1394,7 @@ class dirstatemap(object):
 
     @propertycache
     def identity(self):
-        self.read()
+        self._map
         return self.identity
 
     @propertycache
