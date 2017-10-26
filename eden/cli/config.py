@@ -73,7 +73,7 @@ class Config:
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
         self._home_dir = home_dir
 
-    def _loadConfig(self):
+    def _loadConfig(self) -> configparser.ConfigParser:
         ''' to facilitate templatizing a centrally deployed config, we
             allow a limited set of env vars to be expanded.
             ${HOME} will be replaced by the user's home dir,
@@ -128,13 +128,19 @@ class Config:
         Returns a dictionary containing the metadata and the bind mounts of the
         repository specified by name and raises an exception if the repository
         data could not be found. The expected keys in the returned dictionary
-        are: 'repo_type', 'repo_source', 'bind-mounts'.
+        are: 'type', 'path', 'bind-mounts'.
         '''
         result = {}
         parser = self._loadConfig()
-        repository_header = 'repository ' + name
+        repository_header = f'repository {name}'
         if repository_header in parser:
             result.update(parser[repository_header])
+            if 'type' not in result:
+                raise Exception('repository "%s" missing key "type".' % name)
+            elif 'path' not in result:
+                raise Exception('repository "%s" missing key "path".' % name)
+        else:
+            self._throw_suggest_other_repositories(name, parser)
         bind_mounts_header = 'bindmounts ' + name
         if bind_mounts_header in parser:
             # Convert the ConfigParser section into a dict so it is JSON
@@ -142,9 +148,27 @@ class Config:
             result['bind-mounts'] = dict(parser[bind_mounts_header].items())
         else:
             result['bind-mounts'] = {}
-        if not result:
-            raise Exception('repository %s does not exist.' % name)
         return result
+
+    @staticmethod
+    def _throw_suggest_other_repositories(
+        name: str, config: configparser.ConfigParser
+    ):
+        '''Invoke this to throw an exception that says no repository is
+        configured with the specified name and suggest other repos that are
+        defined in the specified config.
+        '''
+        repos = []
+        prefix = 'repository '
+        for key in config:
+            if key.startswith(prefix):
+                repos.append(key[len(prefix):])
+        msg = f'No repository configured named "{name}".'
+        if repos:
+            repos.sort()
+            all_repos = ', '.join(map(lambda r: f'"{r}"', repos))
+            msg += f' Try one of: {all_repos}.'
+        raise Exception(msg)
 
     def get_mount_paths(self):
         '''Return the paths of the set mount points stored in config.json'''

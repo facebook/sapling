@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib import testcase
+from .lib import edenclient, testcase
 import errno
 import os
 import subprocess
@@ -123,6 +123,16 @@ echo -n "$1" >> "{scratch_file}"
         self.eden.shutdown()
         self.eden.start()
         self.assertEqual(new_contents, _read_all(scratch_file))
+
+    def test_attempt_clone_invalid_repo_name(self):
+        tmp = self._new_tmp_dir()
+        repo_name = 'repo-name-that-is-not-in-the-config'
+
+        with self.assertRaises(edenclient.EdenCommandError) as context:
+            self.eden.run_cmd('clone', repo_name, tmp)
+        self.assertIn(
+            f'No repository configured named "{repo_name}". '
+            'Try one of: "main".', str(context.exception))
 
     def _new_tmp_dir(self):
         return tempfile.mkdtemp(dir=self.tmp_dir)
