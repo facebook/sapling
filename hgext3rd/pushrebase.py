@@ -507,18 +507,19 @@ def _makebundlefile(part):
 
     return bundlefile
 
-def _getrenamesrcs(rev):
+def _getrenamesrcs(op, rev):
     '''get all rename sources in a revision'''
     srcs = set()
-    revmf = rev.manifest()
+    revmf = _getmanifest(op, rev)
     for f in rev.files():
         if f in revmf:
-            renamed = rev[f].renamed()
+            fctx = _getfilectx(rev, revmf, f)
+            renamed = fctx.renamed()
             if renamed:
                 srcs.add(renamed[0])
     return srcs
 
-def _getrevs(bundle, onto, renamesrccache):
+def _getrevs(op, bundle, onto, renamesrccache):
     'extracts and validates the revs to be imported'
     validaterevset(bundle, 'bundle()')
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
@@ -553,7 +554,7 @@ def _getrevs(bundle, onto, renamesrccache):
             if bundlerevnode in renamesrccache:
                 bundlefiles.update(renamesrccache[bundlerevnode])
             else:
-                bundlefiles.update(_getrenamesrcs(bundlerev))
+                bundlefiles.update(_getrenamesrcs(op, bundlerev))
 
         def findconflicts():
             # Returns all the files touched in the bundle that are also touched
@@ -586,6 +587,26 @@ def _getrevs(bundle, onto, renamesrccache):
 
     return revs, oldonto
 
+def _getmanifest(op, rev):
+    repo = rev._repo
+    if (not op.records[treepackrecords] and
+        not repo.ui.configbool("pushrebase", "forcetreereceive")):
+        m = rev.manifest()
+    else:
+        store = repo.manifestlog.datastore
+        import cstore
+        m = cstore.treemanifest(store, rev.manifestnode())
+        if store.getmissing([('', rev.manifestnode())]):
+            raise error.Abort(_('error: pushes must contain tree manifests '
+                                'when the server has '
+                                'pushrebase.forcetreereceive enabled'))
+    return m
+
+def _getfilectx(rev, mf, path):
+    fileid = mf.get(path)
+    return context.filectx(rev._repo, path, fileid=fileid,
+                           changectx=rev)
+
 def _graft(op, rev, mapping, lastdestnode):
     '''duplicate changeset "rev" with parents from "mapping"'''
     repo = op.repo
@@ -594,25 +615,13 @@ def _graft(op, rev, mapping, lastdestnode):
     newp1 = mapping.get(oldp1, oldp1)
     newp2 = mapping.get(oldp2, oldp2)
 
-    if (not op.records[treepackrecords] and
-        not repo.ui.configbool("pushrebase", "forcetreereceive")):
-        m = rev.manifest()
-    else:
-        store = rev._repo.manifestlog.datastore
-        import cstore
-        m = cstore.treemanifest(store, rev.manifestnode())
-        if store.getmissing([('', rev.manifestnode())]):
-            raise error.Abort(_('error: pushes must contain tree manifests '
-                                'when the server has '
-                                'pushrebase.forcetreereceive enabled'))
+    m = _getmanifest(op, rev)
 
     def getfilectx(repo, memctx, path):
         if path in m:
             # We can't use the normal rev[path] accessor here since it will try
             # to go through the flat manifest, which may not exist.
-            fileid = m.get(path)
-            fctx = context.filectx(rev._repo, path, fileid=fileid,
-                                   changectx=rev)
+            fctx = _getfilectx(rev, m, path)
             flags = m.flags(path)
             copied = fctx.renamed()
             if copied:
@@ -825,7 +834,7 @@ def bundle2rebase(op, part):
         bundlerepocache, preontocache = prefetchcaches(op, params, bundle)
 
         # Create a cache of rename sources while we don't have the lock.
-        renamesrccache = {bundle[r].node(): _getrenamesrcs(bundle[r])
+        renamesrccache = {bundle[r].node(): _getrenamesrcs(op, bundle[r])
                           for r in bundle.revs('bundle()')}
 
         # Opening the transaction takes the lock, so do it after prepushrebase
@@ -843,7 +852,7 @@ def bundle2rebase(op, part):
 
         onto = getontotarget(op, params, bundle)
 
-        revs, oldonto = _getrevs(bundle, onto, renamesrccache)
+        revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
 
         op.repo.hook("prechangegroup", **hookargs)
 
