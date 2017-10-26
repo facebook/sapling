@@ -165,9 +165,6 @@ class basepack(versionmixin):
         self.path = path
         self.packpath = path + self.PACKSUFFIX
         self.indexpath = path + self.INDEXSUFFIX
-        # TODO: use an opener/vfs to access these paths
-        self.indexfp = open(self.indexpath, PACKOPENMODE)
-        self.datafp = open(self.packpath, PACKOPENMODE)
 
         self.indexsize = os.stat(self.indexpath).st_size
         self.datasize = os.stat(self.packpath).st_size
@@ -209,7 +206,7 @@ class basepack(versionmixin):
 
     def freememory(self):
         """Unmap and remap the memory to free it up after known expensive
-        operations. Return True if self._data nad self._index were reloaded.
+        operations. Return True if self._data and self._index were reloaded.
         """
         if self._index:
             if self._pagedin < self.MAXPAGEDIN:
@@ -218,11 +215,14 @@ class basepack(versionmixin):
             self._index.close()
             self._data.close()
 
-        # memory-map the file, size 0 means whole file
-        self._index = mmap.mmap(self.indexfp.fileno(), 0,
-                                access=mmap.ACCESS_READ)
-        self._data = mmap.mmap(self.datafp.fileno(), 0,
-                               access=mmap.ACCESS_READ)
+        # TODO: use an opener/vfs to access these paths
+        with open(self.indexpath, PACKOPENMODE) as indexfp:
+            # memory-map the file, size 0 means whole file
+            self._index = mmap.mmap(indexfp.fileno(), 0,
+                                    access=mmap.ACCESS_READ)
+        with open(self.packpath, PACKOPENMODE) as datafp:
+            self._data = mmap.mmap(datafp.fileno(), 0, access=mmap.ACCESS_READ)
+
         self._pagedin = 0
         return True
 
