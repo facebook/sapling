@@ -308,7 +308,7 @@ linux-wheels-i686:
 
 .PHONY: help all local build doc cleanbutpackages clean install install-bin \
 	install-doc install-home install-home-bin install-home-doc \
-	dist dist-notests check tests check-code update-pot \
+	dist dist-notests check tests check-code format-c update-pot \
 	osx deb ppa docker-debian-jessie docker-debian-stretch \
 	docker-ubuntu-trusty docker-ubuntu-trusty-ppa \
 	docker-ubuntu-xenial docker-ubuntu-xenial-ppa \
