@@ -141,14 +141,6 @@ class svnremoterepo(peerrepository):
             self._capabilities = set(['lookup', 'subversion'])
         elif peerapi == 0:
             self.capabilities = set(['lookup', 'subversion'])
-        pws = self.ui.config('hgsubversion', 'password_stores', None)
-        if pws is not None:
-            # Split pws at comas and strip neighbouring whitespace (whitespace
-            # at the beginning and end of pws has already been removed by the
-            # config parser).
-            self.password_stores = re.split(r'\s*,\s*', pws)
-        else:
-            self.password_stores = None
 
     if peerapi == 1:
         def capabilities(self):
@@ -156,6 +148,16 @@ class svnremoterepo(peerrepository):
     elif peerapi == 0:
         def _capabilities(self):
             return self.capabilities
+
+    @property
+    def password_stores(self):
+        pws = self.ui.config('hgsubversion', 'password_stores', None)
+        if pws is not None:
+            # Split pws at comas and strip neighbouring whitespace (whitespace
+            # at the beginning and end of pws has already been removed by the
+            # config parser).
+            return re.split(r'\s*,\s*', pws)
+        return None
 
     @propertycache
     def svnauth(self):
