@@ -593,8 +593,7 @@ class dirstate(object):
         return path
 
     def clear(self):
-        self._map = dirstatemap(self._ui, self._opener, self._root)
-        self._map.setparents(nullid, nullid)
+        self._map.clear()
         self._lastnormaltime = 0
         self._updatedfiles.clear()
         self._dirty = True
@@ -1209,6 +1208,11 @@ class dirstatemap(object):
 
         # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
+
+    def clear(self):
+        self._map = {}
+        self.copymap = {}
+        self.setparents(nullid, nullid)
 
     def iteritems(self):
         return self._map.iteritems()
