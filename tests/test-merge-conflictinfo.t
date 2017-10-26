@@ -535,6 +535,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   [
    {
     "command": "update",
+    "command_details": {"cmd": "update", "to_abort": "update --clean", "to_continue": "update"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": null, "exists": false, "isexec": null, "issymlink": null, "path": "$TESTTMP/cornercases/foo/foo/foo/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
