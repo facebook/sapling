@@ -49,6 +49,7 @@ from mercurial import (
     revset,
     scmutil,
     templatekw,
+    vfs as vfsmod,
 )
 
 try:
@@ -214,13 +215,21 @@ def extsetup(ui):
              lambda *args: open(os.path.join(helpdir, 'git.rst')).read())
     insort(help.helptable, entry)
 
+def _gitvfs(repo):
+    """return a vfs suitable to read git related data"""
+    # Mercurial >= 3.3:  repo.shared()
+    if repo.sharedpath != repo.path:
+        return vfsmod.vfs(repo.sharedpath)
+    else:
+        return repo.vfs
+
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
 
         if (getattr(dirstate, 'rootcache', False) and
             (not ignoremod or getattr(ignore, 'readpats', False)) and
             hgutil.safehasattr(repo, 'vfs') and
-            os.path.exists(repo.vfs.join('git'))):
+            os.path.exists(_gitvfs(repo).join('git'))):
             # only install our dirstate wrapper if it has a hope of working
             import gitdirstate
             if ignoremod:
@@ -277,13 +286,14 @@ def gverify(ui, repo, **opts):
 def git_cleanup(ui, repo):
     '''clean up Git commit map after history editing'''
     new_map = []
-    for line in repo.vfs(GitHandler.map_file):
+    vfs = _gitvfs(repo)
+    for line in vfs(GitHandler.map_file):
         gitsha, hgsha = line.strip().split(' ', 1)
         if hgsha in repo:
             new_map.append('%s %s\n' % (gitsha, hgsha))
     wlock = repo.wlock()
     try:
-        f = repo.vfs(GitHandler.map_file, 'wb')
+        f = vfs(GitHandler.map_file, 'wb')
         map(f.write, new_map)
     finally:
         wlock.release()

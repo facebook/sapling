@@ -25,6 +25,7 @@ from mercurial import (
     phases,
     util as hgutil,
     url,
+    vfs as vfsmod,
 )
 
 import _ssh
@@ -105,11 +106,15 @@ class GitHandler(object):
     def __init__(self, dest_repo, ui):
         self.repo = dest_repo
         self.ui = ui
+        self.vfs = self.repo.vfs
 
+        # Mercurial >= 3.3:  repo.shared()
+        if dest_repo.sharedpath != dest_repo.path:
+            self.vfs = vfsmod.vfs(dest_repo.sharedpath)
         if compat.config(ui, 'bool', 'git', 'intree'):
             self.gitdir = self.repo.wvfs.join('.git')
         else:
-            self.gitdir = self.repo.vfs.join('git')
+            self.gitdir = self.vfs.join('git')
 
         self.init_author_file()
 
@@ -184,8 +189,8 @@ class GitHandler(object):
     def load_map(self):
         map_git_real = {}
         map_hg_real = {}
-        if os.path.exists(self.repo.vfs.join(self.map_file)):
-            for line in self.repo.vfs(self.map_file):
+        if os.path.exists(self.vfs.join(self.map_file)):
+            for line in self.vfs(self.map_file):
                 # format is <40 hex digits> <40 hex digits>\n
                 if len(line) != 82:
                     raise ValueError(
@@ -201,7 +206,7 @@ class GitHandler(object):
     def save_map(self, map_file):
         wlock = self.repo.wlock()
         try:
-            file = self.repo.vfs(map_file, 'w+', atomictemp=True)
+            file = self.vfs(map_file, 'w+', atomictemp=True)
             map_hg = self._map_hg
             buf = cStringIO.StringIO()
             bwrite = buf.write
@@ -216,13 +221,13 @@ class GitHandler(object):
 
     def load_tags(self):
         self.tags = {}
-        if os.path.exists(self.repo.vfs.join(self.tags_file)):
-            for line in self.repo.vfs(self.tags_file):
+        if os.path.exists(self.vfs.join(self.tags_file)):
+            for line in self.vfs(self.tags_file):
                 sha, name = line.strip().split(' ', 1)
                 self.tags[name] = sha
 
     def save_tags(self):
-        file = self.repo.vfs(self.tags_file, 'w+', atomictemp=True)
+        file = self.vfs(self.tags_file, 'w+', atomictemp=True)
         for name, sha in sorted(self.tags.iteritems()):
             if not self.repo.tagtype(name) == 'global':
                 file.write("%s %s\n" % (sha, name))
@@ -431,7 +436,7 @@ class GitHandler(object):
         return ret
 
     def clear(self):
-        mapfile = self.repo.vfs.join(self.map_file)
+        mapfile = self.vfs.join(self.map_file)
         if os.path.exists(self.gitdir):
             for root, dirs, files in os.walk(self.gitdir, topdown=False):
                 for name in files:
