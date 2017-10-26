@@ -151,12 +151,9 @@ class svnremoterepo(peerrepository):
 
     @property
     def password_stores(self):
-        pws = self.ui.config('hgsubversion', 'password_stores', None)
-        if pws is not None:
-            # Split pws at comas and strip neighbouring whitespace (whitespace
-            # at the beginning and end of pws has already been removed by the
-            # config parser).
-            return re.split(r'\s*,\s*', pws)
+        pws = self.ui.configlist('hgsubversion', 'password_stores')
+        if pws:
+            return pws
         return None
 
     @propertycache
