@@ -352,7 +352,7 @@ pub trait HgCommands {
     // @wireprotocommand('unbundle', 'heads')
     fn unbundle(
         &self,
-        _heads: Vec<NodeHash>, /* , _stream: BoxStream<Vec<u8>, Error> */
+        _heads: Vec<String>, /* , _stream: BoxStream<Vec<u8>, Error> */
     ) -> HgCommandRes<()> {
         unimplemented("unbundle")
     }

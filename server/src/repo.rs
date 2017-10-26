@@ -335,7 +335,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('unbundle', 'heads')
     fn unbundle(
         &self,
-        heads: Vec<NodeHash>, /* , _stream: BoxStream<Vec<u8>, Error> */
+        heads: Vec<String>, /* , _stream: BoxStream<Vec<u8>, Error> */
     ) -> HgCommandRes<()> {
         info!(self.logger, "unbundle heads {:?}", heads);
         future::ok(()).boxify()

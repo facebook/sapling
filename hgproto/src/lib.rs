@@ -94,7 +94,7 @@ pub enum Request {
         new: NodeHash,
     },
     Streamout,
-    Unbundle { heads: Vec<NodeHash>, /* stream: Stream<Vec<u8>, Error> TBD: Stream */ },
+    Unbundle { heads: Vec<String>, /* stream: Stream<Vec<u8>, Error> TBD: Stream */ },
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for

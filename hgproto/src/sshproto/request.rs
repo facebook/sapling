@@ -10,7 +10,7 @@ use std::str::{self, FromStr};
 
 use bytes::BytesMut;
 
-use nom::{ErrorKind, FindSubstring, IResult, Needed, Slice, is_digit};
+use nom::{ErrorKind, FindSubstring, IResult, Needed, Slice, is_digit, is_alphanumeric};
 
 use mercurial_types::NodeHash;
 
@@ -172,6 +172,12 @@ named!(pairlist<Vec<(NodeHash, NodeHash)>>,
 /// A space-separated list of node hashes
 named!(hashlist<Vec<NodeHash>>,
     separated_list!(complete!(tag!(" ")), nodehash)
+);
+
+/// A space-separated list of strings
+named!(stringlist<Vec<String>>,
+    separated_list!(complete!(tag!(" ")),
+        map_res!(map_res!(take_while!(is_alphanumeric), str::from_utf8), FromStr::from_str))
 );
 
 /// A comma-separated list of arbitrary values. The input is assumed to be
@@ -423,7 +429,7 @@ fn parse_common(
               })
             | command!("streamout", Streamout, parse_params, {})
             | command!("unbundle", Unbundle, parse_params, {
-                  heads => hashlist,
+                  heads => stringlist,
               })
         );
 
@@ -1175,13 +1181,13 @@ mod test_parse {
     #[test]
     fn test_parse_unbundle() {
         let inp = "unbundle\n\
-                   heads 40\n\
-                   1111111111111111111111111111111111111111";
+                   heads 10\n\
+                   666f726365"; // "force" in hex-encoding
 
         test_parse(
             inp,
             Request::Unbundle {
-                heads: vec! { hash_ones() },
+                heads: vec! { String::from("666f726365") },
             },
         );
     }
