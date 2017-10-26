@@ -364,7 +364,7 @@ class SVNMeta(object):
 
     @property
     def revmapclass(self):
-        impl = self.ui.config('hgsubversion', 'revmapimpl')
+        impl = self.ui.config('hgsubversion', 'revmapimpl', None)
         if impl == 'plain':
             return maps.RevMap
         elif impl == 'sqlite':
