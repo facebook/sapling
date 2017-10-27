@@ -1006,12 +1006,14 @@ be ``$HG_HOOKTYPE=incoming`` and ``$HG_HOOKNAME=incoming.email``.
   Run right before a phase change is actually finalized. Any repository change
   will be visible to the hook program. This lets you validate the transaction
   content or change it. Exit status 0 allows the commit to proceed.  A non-zero
-  status will cause the transaction to be rolled back.
+  status will cause the transaction to be rolled back. The hook is called
+  multiple times, once for each revision affected by a phase change.
   The affected node is available in ``$HG_NODE``, the phase in ``$HG_PHASE``
   while the previous ``$HG_OLDPHASE``. In case of new node, ``$HG_OLDPHASE``
   will be empty.  In addition, the reason for the transaction opening will be in
   ``$HG_TXNNAME``, and a unique identifier for the transaction will be in
-  ``HG_TXNID``.
+  ``HG_TXNID``. The hook is also run for newly added revisions. In this case
+  the ``$HG_OLDPHASE`` entry will be empty.
 
 ``txnclose``
   Run after any repository transaction has been committed. At this
