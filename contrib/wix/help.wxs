@@ -42,6 +42,7 @@
             <File Id="internals.bundles.txt"      Name="bundles.txt" KeyPath="yes" />
             <File Id="internals.censor.txt"       Name="censor.txt" />
             <File Id="internals.changegroups.txt" Name="changegroups.txt" />
+            <File Id="internals.config.txt"       Name="config.txt" />
             <File Id="internals.requirements.txt" Name="requirements.txt" />
             <File Id="internals.revlogs.txt"      Name="revlogs.txt" />
             <File Id="internals.wireprotocol.txt" Name="wireprotocol.txt" />

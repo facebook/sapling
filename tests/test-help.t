@@ -980,6 +980,7 @@ internals topic renders index of available sub-topics
        bundles       Bundles
        censor        Censor
        changegroups  Changegroups
+       config        Config Register
        requirements  Repository Requirements
        revlogs       Revision Logs
        wireprotocol  Wire Protocol
@@ -3052,6 +3053,13 @@ Sub-topic indexes rendered properly
   </a>
   </td><td>
   Changegroups
+  </td></tr>
+  <tr><td>
+  <a href="/help/internals.config">
+  config
+  </a>
+  </td><td>
+  Config Register
   </td></tr>
   <tr><td>
   <a href="/help/internals.requirements">
