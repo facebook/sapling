@@ -731,6 +731,8 @@ cg
 cbattempted
    Boolean indicating whether the client attempted to use the *clone bundles*
    feature before performing this request.
+phases
+   Boolean indicating whether phases data is requested.
 
 The return type on success is a ``stream`` where the value is bundle.
 On the HTTP transport, the response is zlib compressed.
