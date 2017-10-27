@@ -29,12 +29,12 @@ namespace eden {
  */
 
 class StreamingSubscriber
-    : public std::enable_shared_from_this<StreamingSubscriber> {
+    : public std::enable_shared_from_this<StreamingSubscriber>,
+      private folly::EventBase::LoopCallback {
  public:
-  StreamingSubscriber(
-      std::unique_ptr<apache::thrift::StreamingHandlerCallback<
-          std::unique_ptr<JournalPosition>>> callback,
-      std::shared_ptr<EdenMount> edenMount);
+  using Callback = std::unique_ptr<apache::thrift::StreamingHandlerCallback<
+      std::unique_ptr<JournalPosition>>>;
+  StreamingSubscriber(Callback callback, std::shared_ptr<EdenMount> edenMount);
   ~StreamingSubscriber();
 
   /** Establishes a subscription with the journal in the edenMount
@@ -57,11 +57,24 @@ class StreamingSubscriber
    * This is ensured by only ever calling it via the schedule() method. */
   void journalUpdated();
 
-  std::unique_ptr<apache::thrift::StreamingHandlerCallback<
-      std::unique_ptr<JournalPosition>>>
-      callback_;
-  std::shared_ptr<EdenMount> edenMount_;
-  uint64_t subscriberId_;
+  /** We implement LoopCallback so that we can get notified when the
+   * eventBase is about to be destroyed.  The other option for lifetime
+   * management is KeepAlive tokens but those are not suitable for us
+   * because we rely on the thrift eventBase threads terminating their
+   * loops before we trigger our shutdown code.  KeepAlive tokens block
+   * that from happening.  The next best thing is to get notified of
+   * destruction and then atomically reconcile our state. */
+  void runLoopCallback() noexcept override;
+
+  struct State {
+    Callback callback;
+    std::weak_ptr<EdenMount> edenMount;
+    uint64_t subscriberId{0};
+    bool eventBaseAlive{true};
+
+    State(Callback callback, std::weak_ptr<EdenMount> edenMount);
+  };
+  folly::Synchronized<State> state_;
 };
 }
 }

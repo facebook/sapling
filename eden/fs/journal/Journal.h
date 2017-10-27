@@ -68,6 +68,9 @@ class Journal {
   uint64_t registerSubscriber(folly::Function<void()>&& callback);
   void cancelSubscriber(uint64_t id);
 
+  void cancelAllSubscribers();
+  bool isSubscriberValid(uint64_t id) const;
+
  private:
   /** The sequence number that we'll use for the next entry
    * that we link into the chain */

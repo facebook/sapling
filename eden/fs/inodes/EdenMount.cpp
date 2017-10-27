@@ -363,6 +363,7 @@ Future<Unit> EdenMount::shutdown() {
 }
 
 Future<Unit> EdenMount::shutdownImpl() {
+  journal_.wlock()->cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
   return inodeMap_->shutdown().then([this] {
     auto oldState = state_.exchange(State::SHUT_DOWN);

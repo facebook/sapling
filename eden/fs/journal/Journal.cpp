@@ -53,5 +53,13 @@ uint64_t Journal::registerSubscriber(folly::Function<void()>&& callback) {
 void Journal::cancelSubscriber(uint64_t id) {
   subscribers_.erase(id);
 }
+
+void Journal::cancelAllSubscribers() {
+  subscribers_.clear();
+}
+
+bool Journal::isSubscriberValid(uint64_t id) const {
+  return subscribers_.find(id) != subscribers_.end();
 }
 }
+} // namespace facebook
