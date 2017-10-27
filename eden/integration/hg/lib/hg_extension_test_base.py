@@ -77,6 +77,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
             'evolutioncommands': 'prev next split fold obsolete metaedit',
         }
         hgrc['extensions'] = {
+            'absorb': '',
             'directaccess': '',
             'fbamend': '',
             'fbhistedit': '',
