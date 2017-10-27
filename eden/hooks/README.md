@@ -26,3 +26,4 @@ Eden mount. It will receive the following arguments:
 * `<repo_type>` is `hg` or `git`
 * `<eden_checkout>` is the path to the mounted Eden checkout.
 * `<repo>` is the path to the original Mercurial repository.
+* `<hash>` is the hex id of the initial commit

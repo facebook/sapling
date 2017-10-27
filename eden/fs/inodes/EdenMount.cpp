@@ -276,6 +276,7 @@ void EdenMount::performPostClone() {
     auto repoHooks = config_->getRepoHooks();
     auto postCloneScript = repoHooks + RelativePathPiece("post-clone");
     auto repoSource = config_->getRepoSource();
+    auto parents = config_->getParentCommits();
 
     XLOG(INFO) << "Running post-clone hook '" << postCloneScript << "' for "
                << path_;
@@ -289,7 +290,8 @@ void EdenMount::performPostClone() {
           {postCloneScript.c_str(),
            repoType,
            path_.stringPiece().str(),
-           repoSource},
+           repoSource,
+           parents.parent1().toString()},
           folly::Subprocess::Options().pipeStdin());
       proc.closeParentFd(STDIN_FILENO);
       proc.waitChecked();

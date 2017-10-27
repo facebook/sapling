@@ -14,6 +14,7 @@ This needs to be run the first time an eden client is mounted so that hg
 commands will work properly inside the eden client.
 '''
 import argparse
+import binascii
 import errno
 import os
 import shutil
@@ -33,7 +34,7 @@ def read_config(directory, name, default=None):
             raise
 
 
-def setup_eden_hg_dir(eden_hg_dir, repo_hg_dir, eden_ext_path):
+def setup_eden_hg_dir(eden_hg_dir, repo_hg_dir, eden_ext_path, revision):
     if eden_ext_path is None:
         eden_ext_path = ''
 
@@ -92,6 +93,11 @@ sparse = !
     with open(os.path.join(eden_hg_dir, 'bookmarks'), 'w') as f:
         pass
 
+    # Write the parents to the dirstate file.
+    with open(os.path.join(eden_hg_dir, 'dirstate'), 'wb') as f:
+        f.write(binascii.unhexlify(revision))
+        f.write(b'\x00' * 20)
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -105,6 +111,8 @@ def main():
                     help='The path to the mounted eden checkout')
     ap.add_argument('repo',
                     help='The path to the original mercurial repository')
+    ap.add_argument('revision',
+                    help='Hex identifier for the current revision.')
     args = ap.parse_args()
 
     if (args.repo_type != 'hg'):
@@ -135,7 +143,7 @@ def main():
             eden_ext_path = proc.stdout.decode('ascii').strip()
 
     try:
-        setup_eden_hg_dir(tmp_dir, repo_hg_dir, eden_ext_path)
+        setup_eden_hg_dir(tmp_dir, repo_hg_dir, eden_ext_path, args.revision)
         os.rename(tmp_dir, eden_hg_dir)
     except BaseException:
         shutil.rmtree(tmp_dir, ignore_errors=True)
