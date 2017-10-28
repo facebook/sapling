@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 import errno
-import os
 
 from .i18n import _
 from . import (
@@ -20,6 +19,7 @@ from . import (
     localrepo,
     manifest,
     namespaces,
+    pathutil,
     scmutil,
     store,
     url,
@@ -99,7 +99,7 @@ def build_opener(ui, authinfo):
 
         def join(self, path):
             if path:
-                return os.path.join(self.base, path)
+                return pathutil.join(self.base, path)
             else:
                 return self.base
 
