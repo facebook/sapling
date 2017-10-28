@@ -4787,9 +4787,9 @@ def status(ui, repo, *pats, **opts):
       for 'added', 'r' for 'removed', 'd' for 'deleted', 'u' for 'unknown', 'i'
       for 'ignored' and 'c' for clean.
 
-      It abbreviates only those statuses which are passed. Note that ignored
-      files are not displayed with '--terse i' unless the -i/--ignored option is
-      also used.
+      It abbreviates only those statuses which are passed. Note that clean and
+      ignored files are not displayed with '--terse ic' unless the -c/--clean
+      and -i/--ignored options are also used.
 
       The -v/--verbose option shows information when the repository is in an
       unfinished merge, shelve, rebase state etc. You can have this behavior
