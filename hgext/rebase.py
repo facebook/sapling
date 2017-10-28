@@ -21,7 +21,6 @@ import os
 
 from mercurial.i18n import _
 from mercurial.node import (
-    hex,
     nullid,
     nullrev,
     short,
@@ -1563,8 +1562,12 @@ def clearrebased(ui, repo, destmap, state, skipped, collapsedas=None,
                 replacements[oldnode] = succs
     scmutil.cleanupnodes(repo, replacements, 'rebase', moves)
     if fm:
-        nodechanges = {hex(oldn): [hex(n) for n in newn]
-                       for oldn, newn in replacements.iteritems()}
+        hf = fm.hexfunc
+        fl = fm.formatlist
+        fd = fm.formatdict
+        nodechanges = fd({hf(oldn): fl([hf(n) for n in newn], name='node')
+                          for oldn, newn in replacements.iteritems()},
+                         key="oldnode", value="newnodes")
         fm.data(nodechanges=nodechanges)
 
 def pullrebase(orig, ui, repo, *args, **opts):
