@@ -404,11 +404,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
     return commit(ui, repo, recordinwlock, pats, opts)
 
-
-# extracted at module level as it's required each time a file will be added
-# to dirnode class object below
-pathsep = pycompat.ossep
-
 class dirnode(object):
     """
     Represent a directory in user working copy with information required for
@@ -446,8 +441,8 @@ class dirnode(object):
 
         # the filename contains a path separator, it means it's not the direct
         # child of this directory
-        if pathsep in filename:
-            subdir, filep = filename.split(pathsep, 1)
+        if '/' in filename:
+            subdir, filep = filename.split('/', 1)
 
             # does the dirnode object for subdir exists
             if subdir not in self.subdirs:
