@@ -56,6 +56,7 @@ cpp_library(
         "@/folly:hash",
         "@/folly:optional",
         "@/folly:string",
+        "@/folly/hash:hash",
         "@/folly/portability:stdlib",
     ],
     external_deps = [
