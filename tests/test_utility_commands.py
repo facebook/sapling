@@ -167,7 +167,8 @@ class UtilityTests(test_util.TestBase):
                                               islink=False,
                                               isexec=False,
                                               copied=False)
-        ctx = context.memctx(self.repo,
+        lr = self.repo
+        ctx = context.memctx(lr,
                              parents,
                              'automated test',
                              ['added_bogus_file', 'other_added_file', ],
@@ -175,7 +176,7 @@ class UtilityTests(test_util.TestBase):
                              'testy',
                              '2008-12-21 16:32:00 -0500',
                              {'branch': 'localbranch', })
-        new = self.repo.commitctx(ctx)
+        new = lr.commitctx(ctx)
         hg.update(self.repo, new)
         wrappers.parents(lambda x, y: None, u, self.repo, svn=True)
         actual = u.popbuffer()
@@ -211,7 +212,8 @@ class UtilityTests(test_util.TestBase):
                                               islink=False,
                                               isexec=False,
                                               copied=False)
-        ctx = context.memctx(self.repo,
+        lr = self.repo
+        ctx = context.memctx(lr,
                              parents,
                              'automated test',
                              ['added_bogus_file', 'other_added_file', ],
@@ -219,7 +221,7 @@ class UtilityTests(test_util.TestBase):
                              'testy',
                              '2008-12-21 16:32:00 -0500',
                              {'branch': 'localbranch', })
-        new = self.repo.commitctx(ctx)
+        new = lr.commitctx(ctx)
         hg.update(self.repo, new)
         u.pushbuffer()
         commands.outgoing(u, self.repo, repourl(repo_path))
@@ -242,7 +244,8 @@ class UtilityTests(test_util.TestBase):
                                               islink=False,
                                               isexec=False,
                                               copied=False)
-        ctx = context.memctx(self.repo,
+        lr = self.repo
+        ctx = context.memctx(lr,
                              parents,
                              'automated test',
                              ['added_bogus_file', 'other_added_file', ],
@@ -250,7 +253,7 @@ class UtilityTests(test_util.TestBase):
                              'testy',
                              '2008-12-21 16:32:00 -0500',
                              {'branch': 'localbranch', })
-        self.repo.commitctx(ctx)
+        lr.commitctx(ctx)
         self.assertEqual(self.repo['tip'].branch(), 'localbranch')
         beforerebasehash = self.repo['tip'].node()
         hg.update(self.repo, 'tip')

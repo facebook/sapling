@@ -277,16 +277,17 @@ class PushTests(test_util.TestBase):
                                               isexec=False,
                                               copied=False)
         oldtiphash = self.repo['default'].node()
-        ctx = context.memctx(self.repo,
-                             (self.repo[0].node(), revlog.nullid,),
+        lr = self.repo
+        ctx = context.memctx(lr,
+                             (lr[0].node(), revlog.nullid,),
                              'automated test',
                              ['gamma', ],
                              filectxfn,
                              'testy',
                              '2008-12-21 16:32:00 -0500',
                              {'branch': 'localbranch', })
-        newhash = self.repo.commitctx(ctx)
-        ctx = context.memctx(self.repo,
+        newhash = lr.commitctx(ctx)
+        ctx = context.memctx(lr,
                              (newhash, revlog.nullid),
                              'automated test2',
                              ['delta', ],
@@ -294,7 +295,7 @@ class PushTests(test_util.TestBase):
                              'testy',
                              '2008-12-21 16:32:00 -0500',
                              {'branch': 'localbranch', })
-        newhash = self.repo.commitctx(ctx)
+        newhash = lr.commitctx(ctx)
         repo = self.repo
         hg.update(repo, newhash)
         commands.push(repo.ui, repo)

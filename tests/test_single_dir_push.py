@@ -186,15 +186,16 @@ class TestSingleDirPush(test_util.TestBase):
                                                   isexec=False,
                                                   copied=False)
             raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
-        ctx = context.memctx(self.repo,
-                             (self.repo['tip'].node(), node.nullid),
+        lr = self.repo
+        ctx = context.memctx(lr,
+                             (lr['tip'].node(), node.nullid),
                              'automated test',
                              ['adding_file'],
                              file_callback,
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
                              {'branch': 'default', })
-        self.repo.commitctx(ctx)
+        lr.commitctx(ctx)
         hg.update(self.repo, self.repo['tip'].node())
         self.pushrevisions()
         self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
