@@ -289,8 +289,17 @@ def fileurl(path):
     url = 'file://%s%s' % (drive, path)
     return url
 
+class _testui(ui.ui):
+    def develwarn(self, msg, stacklevel=1, *args, **kwargs):
+        from hgsubversion import util
+        if util.smartset is not None:
+            config = args[0] if args else kwargs['config']
+            raise Exception('flunked develwarn: %r (%r)' % (msg, config))
+        return ui.ui.develwarn(self, msg, stacklevel=stacklevel,
+                               *args, **kwargs)
+
 def testui(stupid=False, layout='auto', startrev=0):
-    u = ui.ui()
+    u = _testui()
     bools = {True: 'true', False: 'false'}
     u.setconfig('ui', 'quiet', bools[True])
     u.setconfig('ui', 'username', 'automated tests')
