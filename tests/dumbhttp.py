@@ -26,12 +26,16 @@ if os.environ.get('HGIPV6', '0') == '1':
 else:
     simplehttpserver = httpserver.httpserver
 
+class _httprequesthandler(httpserver.simplehttprequesthandler):
+    def log_message(self, format, *args):
+        httpserver.simplehttprequesthandler.log_message(self, format, *args)
+        sys.stderr.flush()
+
 class simplehttpservice(object):
     def __init__(self, host, port):
         self.address = (host, port)
     def init(self):
-        self.httpd = simplehttpserver(
-            self.address, httpserver.simplehttprequesthandler)
+        self.httpd = simplehttpserver(self.address, _httprequesthandler)
     def run(self):
         self.httpd.serve_forever()
 
