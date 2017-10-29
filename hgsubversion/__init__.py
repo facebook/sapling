@@ -256,6 +256,10 @@ except (ImportError, AttributeError):
         pass
 
 if not hgutil.safehasattr(configitem, 'dynamicdefault'):
+    # hg 4.3 lacks support for dynamicdefault in a way that means we
+    # have to not use the config registrar at all.
+    def configitem(*args, **kwargs):
+        pass
     configitem.dynamicdefault = None
 
 # real default is 'svnexternals'. Can also be 'subrepos' or
