@@ -21,7 +21,7 @@ cpp_library(
         ":handlemap-cpp2",
         "@/eden/fs/fuse/privhelper:privhelper",
         "@/eden/fs/utils:utils",
-        "@/folly:array",
+        "@/folly/container:array",
         "@/folly:exception",
         "@/folly:fbvector",
         "@/folly:file",

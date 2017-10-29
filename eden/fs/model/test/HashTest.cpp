@@ -9,8 +9,8 @@
  */
 #include "eden/fs/model/Hash.h"
 
-#include <folly/Array.h>
 #include <folly/String.h>
+#include <folly/container/Array.h>
 #include <folly/io/Cursor.h>
 #include <gtest/gtest.h>
 

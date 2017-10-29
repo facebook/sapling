@@ -9,7 +9,7 @@
  */
 #include "EdenStats.h"
 
-#include <folly/Array.h>
+#include <folly/container/Array.h>
 #include <chrono>
 
 using namespace folly;
