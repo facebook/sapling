@@ -895,6 +895,8 @@ Test list of internal help commands
                  builds a repo with a given DAG from scratch in the current
                  empty repo
    debugbundle   lists the contents of a bundle
+   debugcapabilities
+                 lists the capabilities of a remote peer
    debugcheckstate
                  validate the correctness of the current dirstate
    debugcolor    show available color, effects or style

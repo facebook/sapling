@@ -360,6 +360,16 @@ def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
             return _debugbundle2(ui, gen, all=all, **opts)
         _debugchangegroup(ui, gen, all=all, **opts)
 
+@command('debugcapabilities',
+        [], _('PATH'),
+        norepo=True)
+def debugcapabilities(ui, path, **opts):
+    """lists the capabilities of a remote peer"""
+    peer = hg.peer(ui, opts, path)
+    caps = peer.capabilities()
+    ui.write(('Main capabilities:\n'))
+    for c in sorted(caps):
+        ui.write(('  %s\n') % c)
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""

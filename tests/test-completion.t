@@ -72,6 +72,7 @@ Show debug commands if there are no other candidates
   debugapplystreamclonebundle
   debugbuilddag
   debugbundle
+  debugcapabilities
   debugcheckstate
   debugcolor
   debugcommands
@@ -249,6 +250,7 @@ Show all commands + options
   debugapplystreamclonebundle: 
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all, part-type, spec
+  debugcapabilities: 
   debugcheckstate: 
   debugcolor: style
   debugcommands: 
