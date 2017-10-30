@@ -370,6 +370,14 @@ def debugcapabilities(ui, path, **opts):
     ui.write(('Main capabilities:\n'))
     for c in sorted(caps):
         ui.write(('  %s\n') % c)
+    b2caps = bundle2.bundle2caps(peer)
+    if b2caps:
+        ui.write(('Bundle2 capabilities:\n'))
+        for key, values in sorted(b2caps.iteritems()):
+            ui.write(('  %s\n') % key)
+            for v in values:
+                ui.write(('    %s\n') % v)
+
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""

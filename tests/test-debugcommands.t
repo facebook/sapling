@@ -168,3 +168,25 @@ Test debugcapabilities command:
     lookup
     pushkey
     unbundle
+  Bundle2 capabilities:
+    HG20
+    changegroup
+      01
+      02
+    digests
+      md5
+      sha1
+      sha512
+    error
+      abort
+      unsupportedcontent
+      pushraced
+      pushkey
+    hgtagsfnodes
+    listkeys
+    phases
+      heads
+    pushkey
+    remote-changegroup
+      http
+      https
