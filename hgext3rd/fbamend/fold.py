@@ -15,7 +15,6 @@ from mercurial import (
     commands,
     error,
     hg,
-    lock as lockmod,
     phases,
     registrar,
     scmutil,
@@ -108,15 +107,10 @@ def fold(ui, repo, *revs, **opts):
         ui.write_err(_('single revision specified, nothing to fold\n'))
         return 1
 
-    wlock = lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-
+    with repo.wlock(), repo.lock():
         root, head = _foldcheck(repo, revs)
 
-        tr = repo.transaction('fold')
-        try:
+        with repo.transaction('fold') as tr:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
             targetphase = max(c.phase() for c in allctx)
@@ -146,12 +140,6 @@ def fold(ui, repo, *revs, **opts):
             if torebase:
                 folded = repo.revs('allsuccessors(%ld)', revs).last()
                 common.restackonce(ui, repo, folded)
-
-            tr.close()
-        finally:
-            tr.release()
-    finally:
-        lockmod.release(lock, wlock)
 
 def _foldcheck(repo, revs):
     roots = repo.revs('roots(%ld)', revs)
