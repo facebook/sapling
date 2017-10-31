@@ -25,7 +25,7 @@ MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
 MONONOKE_EDEN_SERVER_TARGET = '//scm/mononoke/eden_server:eden_server'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
-MONONOKE_SERVER_TARGET = '//scm/mononoke/server:server'
+MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
 
 
 @click.command()
