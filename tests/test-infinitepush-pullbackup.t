@@ -54,8 +54,7 @@ Restore
      abook                     0:89ecc969c0ac
   $ cd ..
 Check that autobackup doesn't happen on pullbackup. Logs should be empty and backupstate should be correct
-  $ cat $TESTTMP/logs/test/*
-  cat: $TESTTMP/logs/test/*: No such file or directory
+  $ test -f $TESTTMP/logs/test/*
   [1]
   $ jq -MS . restored/.hg/infinitepushbackupstate
   {
