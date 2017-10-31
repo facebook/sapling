@@ -31,7 +31,8 @@ command = registrar.command(cmdtable)
           ('', 'exact', None, _("only fold specified revisions")),
           ('', 'from', None, _("fold linearly to working copy parent")),
           ('', 'no-rebase', False, _("don't rebase descendants after split")),
-         ] + commands.commitopts + commands.commitopts2,
+         ] + (commands.commitopts + commands.commitopts2 +
+              commands.formatteropts),
          _('hg fold [OPTION]... [-r] REV'))
 def fold(ui, repo, *revs, **opts):
     """fold multiple revisions into a single one
@@ -107,7 +108,8 @@ def fold(ui, repo, *revs, **opts):
         ui.write_err(_('single revision specified, nothing to fold\n'))
         return 1
 
-    with repo.wlock(), repo.lock():
+    with repo.wlock(), repo.lock(), ui.formatter('fold', opts) as fm:
+        fm.startitem()
         root, head = _foldcheck(repo, revs)
 
         with repo.transaction('fold') as tr:
@@ -132,8 +134,8 @@ def fold(ui, repo, *revs, **opts):
 
             replacements = {ctx.node(): (newid,) for ctx in allctx}
             scmutil.cleanupnodes(repo, replacements, 'fold')
-
-            ui.status(_('%i changesets folded\n') % len(revs))
+            fm.condwrite(not ui.quiet, 'count',
+                         '%i changesets folded\n', len(revs))
             if repo['.'].rev() in revs:
                 hg.update(repo, newid)
 
