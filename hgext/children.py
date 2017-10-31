@@ -49,7 +49,7 @@ def children(ui, repo, file_=None, **opts):
 
     Please use :hg:`log` instead::
 
-        hg children => hg log -r "children()"
+        hg children => hg log -r "children(.)"
         hg children -r REV => hg log -r "children(REV)"
 
     See :hg:`help log` and :hg:`help revsets.children`.
