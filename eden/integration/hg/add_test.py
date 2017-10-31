@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from .lib.hg_extension_test_base import hg_test
+import os
 import subprocess
 import unittest
 
@@ -82,3 +83,27 @@ class AddTest:
         self.assertEqual('dir3: No such file or directory\n',
                          context.exception.output.decode('utf-8'))
         self.assertEqual(1, context.exception.returncode)
+
+    @unittest.skip('Try re-enabling as part of the great dirstate refactor.')
+    def test_try_replacing_directory_with_file(self):
+        # `hg rm` the only file in a directory, which should also remove the
+        # directory.
+        self.hg('rm', 'dir1/a.txt')
+        self.assert_status({
+            'dir1/a.txt': 'R',
+        })
+        self.assertFalse(os.path.exists(self.get_path('dir1')))
+
+        # Create an ordinary file with the same name as the directory that was
+        # removed and `hg add` it.
+        self.write_file('dir1', 'Now I am an ordinary file.\n')
+        self.assert_status({
+            'dir1': '?',
+            'dir1/a.txt': 'R',
+        })
+
+        self.hg('add', 'dir1')  # Currently, this throws an exception.
+        self.assert_status({
+            'dir1': 'A',
+            'dir1/a.txt': 'R',
+        })
