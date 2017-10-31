@@ -14,8 +14,9 @@ use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use futures::{Async, Future, IntoFuture, Poll, Stream};
-use futures::future::{self, BoxFuture};
-use futures::stream::{self, BoxStream};
+use futures::future;
+use futures::stream;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks};
@@ -163,8 +164,8 @@ impl RevlogRepo {
 
     pub fn get_heads(&self) -> BoxStream<NodeHash, Error> {
         match self.changelog.get_heads() {
-            Err(e) => stream::once(Err(e)).boxed(),
-            Ok(set) => stream::iter(set.into_iter().map(|e| Ok(e))).boxed(),
+            Err(e) => stream::once(Err(e)).boxify(),
+            Ok(set) => stream::iter_ok(set.into_iter()).boxify(),
         }
     }
 
@@ -183,7 +184,7 @@ impl RevlogRepo {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         self.get_changeset_blob_by_nodeid(nodeid)
             .and_then(|rev| RevlogChangeset::new(rev))
-            .boxed()
+            .boxify()
     }
 
     pub fn get_changelog_revlog_entry_by_nodeid(
@@ -224,7 +225,7 @@ impl RevlogRepo {
         let repo = self.clone();
         self.get_manifest_blob_by_nodeid(nodeid)
             .and_then(|rev| RevlogManifest::new(repo, rev))
-            .boxed()
+            .boxify()
     }
 
     pub fn get_requirements(&self) -> &HashSet<Required> {
@@ -349,7 +350,7 @@ impl Filler for ChangesetBlobFiller {
         self.0
             .get_changeset_blob_by_nodeid(&key)
             .map(Arc::new)
-            .boxed()
+            .boxify()
     }
 }
 
@@ -368,7 +369,7 @@ impl Filler for ManifestBlobFiller {
         self.0
             .get_manifest_blob_by_nodeid(&key)
             .map(Arc::new)
-            .boxed()
+            .boxify()
     }
 }
 
@@ -396,7 +397,7 @@ impl Repo for RevlogRepo {
     type Error = Error;
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.get_heads().boxed()
+        self.get_heads().boxify()
     }
 
     fn get_bookmarks(
@@ -417,17 +418,17 @@ impl Repo for RevlogRepo {
     }
 
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.changesets().boxed()
+        self.changesets().boxify()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
-        RevlogRepo::changeset_exists(self, nodeid).boxed()
+        RevlogRepo::changeset_exists(self, nodeid).boxify()
     }
 
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
         RevlogRepo::get_changeset_by_nodeid(self, nodeid)
             .map(|cs| cs.boxed())
-            .boxed()
+            .boxify()
     }
 
     fn get_manifest_by_nodeid(
@@ -436,6 +437,6 @@ impl Repo for RevlogRepo {
     ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
         RevlogRepo::get_manifest_by_nodeid(self, nodeid)
             .map(|m| m.boxed())
-            .boxed()
+            .boxify()
     }
 }

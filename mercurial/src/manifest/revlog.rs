@@ -10,8 +10,9 @@ use std::str;
 use std::vec;
 
 use futures::{Async, Poll};
-use futures::future::{BoxFuture, Future, IntoFuture};
-use futures::stream::{BoxStream, Stream};
+use futures::future::{Future, IntoFuture};
+use futures::stream::Stream;
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
 use file;
@@ -234,7 +235,7 @@ impl Manifest for RevlogManifest {
             }
         });
 
-        Ok(res.map(|e| e.boxed())).into_future().boxed()
+        Ok(res.map(|e| e.boxed())).into_future().boxify()
     }
 
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
@@ -246,7 +247,7 @@ impl Manifest for RevlogManifest {
             v.into_iter(),
             self.repo.as_ref().expect("missing repo").clone(),
         ).map(|e| e.boxed())
-            .boxed()
+            .boxify()
     }
 }
 
@@ -266,7 +267,7 @@ impl Entry for RevlogEntry {
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| *node.parents())
             .into_future()
-            .boxed()
+            .boxify()
     }
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
@@ -292,7 +293,7 @@ impl Entry for RevlogEntry {
                 )
             })
             .into_future()
-            .boxed()
+            .boxify()
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
@@ -335,7 +336,7 @@ impl Entry for RevlogEntry {
                 )
             })
             .into_future()
-            .boxed()
+            .boxify()
     }
 
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
@@ -345,7 +346,7 @@ impl Entry for RevlogEntry {
                 Content::Symlink(path) => Ok(Some(path.to_vec().len())),
                 Content::Tree(_) => Ok(None),
             })
-            .boxed()
+            .boxify()
     }
 
     fn get_hash(&self) -> &NodeHash {
