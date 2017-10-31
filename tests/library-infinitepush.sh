@@ -107,3 +107,11 @@ mkcommitautobackup() {
     hg add $1
     hg ci -m $1 --config infinitepushbackup.autobackup=True
 }
+
+setuplogdir() {
+  mkdir $TESTTMP/logs
+  chmod 0755 $TESTTMP/logs
+  chmod +t $TESTTMP/logs
+}
+
+

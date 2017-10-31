@@ -2,6 +2,10 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/library-infinitepush.sh"
   $ setupcommon
+  $ cat >> $HGRCPATH << EOF
+  > [infinitepushbackup]
+  > logdir=$TESTTMP/logs
+  > EOF
 
 Setup server
   $ hg init repo
@@ -29,9 +33,12 @@ Actually do a backup, make sure that backup check doesn't fail for empty backup 
   finished in \d+\.(\d+)? seconds (re)
   $ cd ..
 
+Create logdir
+  $ setuplogdir
+
 Restore
   $ cd restored
-  $ hg pullbackup
+  $ hg pullbackup --config infinitepushbackup.autobackup=True
   pulling from ssh://user@dummy/repo
   adding changesets
   adding manifests
@@ -39,12 +46,27 @@ Restore
   added 1 changesets with 1 changes to 1 files
   new changesets 89ecc969c0ac
   (run 'hg update' to get a working copy)
+  $ waitbgbackup
   $ hg log --graph -T '{desc}'
   o  firstcommit
   
   $ hg book
      abook                     0:89ecc969c0ac
   $ cd ..
+Check that autobackup doesn't happen on pullbackup. Logs should be empty and backupstate should be correct
+  $ cat $TESTTMP/logs/test/*
+  cat: $TESTTMP/logs/test/*: No such file or directory
+  [1]
+  $ jq -MS . restored/.hg/infinitepushbackupstate
+  {
+    "bookmarks": {
+      "abook": "89ecc969c0ac7d7344728f1255250df7c54a56af"
+    },
+    "heads": [
+      "89ecc969c0ac7d7344728f1255250df7c54a56af"
+    ]
+  }
+
 
 Create second backup source
   $ hg clone ssh://user@dummy/repo backupsource2 -q

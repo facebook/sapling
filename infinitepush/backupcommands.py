@@ -186,6 +186,13 @@ def restore(ui, repo, dest=None, **opts):
                         (hexnode, book))
         repo._bookmarks.applychanges(repo, tr, changes)
 
+    # manually write local backup state and flag to not autobackup
+    # just after we restored, which would be pointless
+    _writelocalbackupstate(repo.vfs,
+                           list(backupstate.heads),
+                           backupstate.localbookmarks)
+    repo.ignoreautobackup = True
+
     return result
 
 @command('getavailablebackups',
@@ -365,7 +372,9 @@ def _autobackupruncommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     try:
         return orig(lui, repo, cmd, fullargs, *args)
     finally:
-        if getattr(repo, 'txnwasopened', False):
+        if getattr(repo, 'txnwasopened', False) \
+                and not getattr(repo, 'ignoreautobackup', False):
+            lui.debug("starting infinitepush autobackup in the background\n")
             _dobackgroundbackup(lui, repo)
 
 def _transaction(orig, self, *args, **kwargs):

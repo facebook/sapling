@@ -551,9 +551,7 @@ Run command that creates multiple transactions. Make sure that just one backup i
   
 
 Create logs directory and set correct permissions
-  $ mkdir $TESTTMP/logs
-  $ chmod 0755 $TESTTMP/logs
-  $ chmod +t $TESTTMP/logs
+  $ setuplogdir
 
   $ hg pushbackup --config infinitepushbackup.logdir=$TESTTMP/logs
   starting backup .* (re)
