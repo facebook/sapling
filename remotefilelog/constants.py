@@ -19,6 +19,8 @@ PATHCOUNTSIZE = struct.calcsize(PATHCOUNTSTRUCT)
 FILEPACK_CATEGORY=""
 TREEPACK_CATEGORY="manifests"
 
+ALL_CATEGORIES = [FILEPACK_CATEGORY, TREEPACK_CATEGORY]
+
 # revision metadata keys. must be a single character.
 METAKEYFLAG = 'f'  # revlog flag
 METAKEYSIZE = 's'  # full rawtext size

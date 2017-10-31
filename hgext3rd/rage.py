@@ -30,6 +30,11 @@ from phabricator import (
 )
 import os, socket, re, tempfile, time, traceback
 
+from remotefilelog import (
+    constants,
+    shallowutil
+)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -227,6 +232,24 @@ def rage(ui, repo, *pats, **opts):
             _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
+
+    if util.safehasattr(repo, 'name'):
+        # Add the contents of both local and shared pack directories.
+        packlocs = {
+            'local': lambda category: shallowutil.getlocalpackpath(
+                repo.svfs.vfs.base, category),
+            'shared': lambda category: shallowutil.getcachepackpath(repo,
+                category),
+        }
+
+        for loc, getpath in packlocs.iteritems():
+            for category in constants.ALL_CATEGORIES:
+                path = getpath(category)
+                detailed.append((
+                    "%s packs (%s)" % (loc, constants.getunits(category)),
+                    "%s:\n%s" %
+                    (path, _failsafe(lambda: shcmd("ls -lh %s" % path)))
+                ))
 
     # This is quite slow, so we don't want to do it by default
     if ui.configbool("rage", "fastmanifestcached", False):
