@@ -1581,6 +1581,10 @@ help/ shows help topics
         "topic": "filesets"
       },
       {
+        "summary": "Command-line flags",
+        "topic": "flags"
+      },
+      {
         "summary": "Glossary",
         "topic": "glossary"
       },

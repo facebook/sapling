@@ -110,6 +110,7 @@ Short help:
    environment   Environment Variables
    extensions    Using Additional Features
    filesets      Specifying File Sets
+   flags         Command-line flags
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
@@ -188,6 +189,7 @@ Short help:
    environment   Environment Variables
    extensions    Using Additional Features
    filesets      Specifying File Sets
+   flags         Command-line flags
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
@@ -865,6 +867,7 @@ Test that default list of commands omits extension commands
    environment   Environment Variables
    extensions    Using Additional Features
    filesets      Specifying File Sets
+   flags         Command-line flags
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
@@ -2011,6 +2014,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   Specifying File Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/flags">
+  flags
+  </a>
+  </td><td>
+  Command-line flags
   </td></tr>
   <tr><td>
   <a href="/help/glossary">

@@ -226,6 +226,7 @@ helptable = sorted([
     (['color'], _("Colorizing Outputs"), loaddoc('color')),
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
+    (["flags"], _("Command-line flags"), loaddoc('flags')),
     (["patterns"], _("File Name Patterns"), loaddoc('patterns')),
     (['environment', 'env'], _('Environment Variables'),
      loaddoc('environment')),

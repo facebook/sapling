@@ -355,6 +355,7 @@ Testing -h/--help:
    environment   Environment Variables
    extensions    Using Additional Features
    filesets      Specifying File Sets
+   flags         Command-line flags
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
@@ -439,6 +440,7 @@ Testing -h/--help:
    environment   Environment Variables
    extensions    Using Additional Features
    filesets      Specifying File Sets
+   flags         Command-line flags
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
