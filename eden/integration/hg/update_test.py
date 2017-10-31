@@ -7,7 +7,9 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from ..lib import hgrepo
 from .lib.hg_extension_test_base import hg_test
+from textwrap import dedent
 
 
 @hg_test
@@ -61,8 +63,9 @@ class UpdateTest:
 
         self.write_file('foo/subdir/test.log', 'log data')
         self.write_file('foo/_data', 'data file')
-        self.assert_status_empty(check_ignored=False,
-                                 msg='test.log and _data should be ignored')
+        self.assert_status_empty(
+            check_ignored=False, msg='test.log and _data should be ignored'
+        )
         self.assert_status({
             'foo/subdir/test.log': 'I',
             'foo/_data': 'I',
@@ -74,9 +77,11 @@ class UpdateTest:
         # about this inode in the first place.  edenfs should ignore the
         # resulting ENOENT error in response to the invalidation request.
         self.repo.update(self.commit1)
-        self.assert_status({
-            'foo/_data': '?',
-        }, check_ignored=False)
+        self.assert_status(
+            {
+                'foo/_data': '?',
+            }, check_ignored=False
+        )
         self.assert_status({
             'foo/subdir/test.log': 'I',
             'foo/_data': '?',
@@ -133,21 +138,45 @@ class UpdateTest:
 
         # Add the same files to a commit in the backing repository
         self.backing_repo.write_file('new_project/newcode.c', 'test\n')
-        self.backing_repo.write_file('new_project/Makefile',
-                                     'all:\n\techo done!\n')
+        self.backing_repo.write_file(
+            'new_project/Makefile', 'all:\n\techo done!\n'
+        )
         self.backing_repo.write_file('new_project/.gitignore', '*.o\n')
         new_commit = self.backing_repo.commit('Add new_project')
 
         # Check the status before we update
-        self.assert_status({
-            'new_project/newcode.o': 'I',
-            'new_project/newcode.c': '?',
-            'new_project/Makefile': '?',
-            'new_project/.gitignore': '?',
-        })
+        self.assert_status(
+            {
+                'new_project/newcode.o': 'I',
+                'new_project/newcode.c': '?',
+                'new_project/Makefile': '?',
+                'new_project/.gitignore': '?',
+            }
+        )
 
         # Now run "hg update -C new_commit"
         self.repo.update(new_commit, clean=True)
         self.assert_status({
             'new_project/newcode.o': 'I',
         })
+
+    def test_update_with_merge_flag_and_conflict(self):
+        self.write_file('foo/bar.txt', 'changing yet again\n')
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg('update', '.^', '--merge')
+        self.assertIn(
+            b'conflicts while merging foo/bar.txt! '
+            b'(edit, then use \'hg resolve --mark\')',
+            context.exception.stderr
+        )
+        self.assert_status({
+            'foo/bar.txt': 'M',
+        })
+        expected_contents = dedent('''\
+        <<<<<<< working copy
+        changing yet again
+        =======
+        test
+        >>>>>>> destination
+        ''')
+        self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
