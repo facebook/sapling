@@ -49,6 +49,10 @@ class RequestData : public folly::RequestData {
   static RequestData& get();
   static RequestData& create(fuse_req_t req);
 
+  bool hasCallback() override {
+    return false;
+  }
+
   // Returns true if the current context is being called from inside
   // a FUSE request, false otherwise.
   static bool isFuseRequest();
