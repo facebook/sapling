@@ -36,6 +36,7 @@ class GraftTest:
         self.hg('graft', commit2)
 
         # Verify we end up with the expected stack of commits.
+        self.assert_status_empty()
         commits = self.repo.log()
         self.assertEqual(3, len(commits))
         self.assertEqual([self.commit1, commit3], commits[:2])
@@ -68,6 +69,7 @@ class GraftTest:
         self.hg('graft', '--continue')
 
         # Verify we end up with the expected stack of commits.
+        self.assert_status_empty()
         commits = self.repo.log()
         self.assertEqual(3, len(commits))
         self.assertEqual([self.commit1, commit3], commits[:2])

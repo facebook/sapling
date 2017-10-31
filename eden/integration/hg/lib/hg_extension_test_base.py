@@ -70,6 +70,7 @@ class HgExtensionTestBase(testcase.EdenTestCase):
         # Create an hgrc to use as the $HGRCPATH.
         hgrc = configparser.ConfigParser()
         hgrc['ui'] = {
+            'origbackuppath': '.hg/origbackups',
             'username': 'Kevin Flynn <lightcyclist@example.com>',
         }
         hgrc['experimental'] = {

@@ -36,8 +36,6 @@ class HisteditCommand:
 
         args = [
             'histedit',
-            '--config',
-            'ui.origbackuppath=.hg/origbackups',
             '--commands',
             commands_file,
         ]
