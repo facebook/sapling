@@ -28,34 +28,32 @@ struct TEntryId(usize);
 /// For a given Manifest return a VfsDir representing the root of the file system defined by it
 pub fn vfs_from_manifest<M, E>(
     manifest: &M,
-) -> Box<Future<Item = ManifestVfsDir<E>, Error = Error> + Send>
+) -> impl Future<Item = ManifestVfsDir<E>, Error = Error> + Send + 'static
 where
     M: Manifest<Error = E>,
     E: Send + 'static + ::std::error::Error,
 {
-    Box::new(
-        manifest
-            .list()
-            .map_err(|err| {
-                ChainedError::with_chain(err, "failed while listing the manifest")
-            })
-            .collect()
-            .and_then(|entries| {
-                let mut path_tree = Tree::new();
-                for (entry_idx, entry) in entries.iter().enumerate() {
-                    let mut path = entry.get_path().clone().into_iter();
-                    let leaf_key = path.next_back().ok_or_else(|| {
-                        ErrorKind::ManifestInvalidPath("the path shouldn't be empty".into())
-                    })?;
+    manifest
+        .list()
+        .map_err(|err| {
+            ChainedError::with_chain(err, "failed while listing the manifest")
+        })
+        .collect()
+        .and_then(|entries| {
+            let mut path_tree = Tree::new();
+            for (entry_idx, entry) in entries.iter().enumerate() {
+                let mut path = entry.get_path().clone().into_iter();
+                let leaf_key = path.next_back().ok_or_else(|| {
+                    ErrorKind::ManifestInvalidPath("the path shouldn't be empty".into())
+                })?;
 
-                    path_tree.insert(path, leaf_key, TEntryId(entry_idx))?;
-                }
-                Ok(ManifestVfsDir {
-                    root: Arc::new(ManifestVfsRoot { entries, path_tree }),
-                    nodeid: ROOT_ID,
-                })
-            }),
-    )
+                path_tree.insert(path, leaf_key, TEntryId(entry_idx))?;
+            }
+            Ok(ManifestVfsDir {
+                root: Arc::new(ManifestVfsRoot { entries, path_tree }),
+                nodeid: ROOT_ID,
+            })
+        })
 }
 
 struct ManifestVfsRoot<E: Send + 'static + ::std::error::Error> {

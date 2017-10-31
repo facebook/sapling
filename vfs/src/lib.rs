@@ -8,6 +8,7 @@
 //! implementation of those traits for Vfs based on Manifest
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 #[macro_use]
 extern crate error_chain;
