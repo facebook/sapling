@@ -794,7 +794,7 @@ def _rebase(orig, ui, repo, **opts):
     return orig(ui, repo, **opts)
 
 # set of commands which define their own formatter and prints the hash changes
-formattercommands = set()
+formattercommands = set(['fold'])
 
 def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
     if (repo.ui.configbool('tweakdefaults', 'showupdated') and

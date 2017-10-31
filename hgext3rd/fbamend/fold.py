@@ -15,6 +15,7 @@ from mercurial import (
     commands,
     error,
     hg,
+    node,
     phases,
     registrar,
     scmutil,
@@ -25,6 +26,7 @@ from . import common
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+hex = node.hex
 
 @command('^fold|squash',
          [('r', 'rev', [], _("revision to fold")),
@@ -133,6 +135,9 @@ def fold(ui, repo, *revs, **opts):
             phases.retractboundary(repo, tr, targetphase, [newid])
 
             replacements = {ctx.node(): (newid,) for ctx in allctx}
+            nodechanges = {fm.hexfunc(ctx.node()): [fm.hexfunc(newid)]
+                           for ctx in allctx}
+            fm.data(nodechanges=fm.formatdict(nodechanges))
             scmutil.cleanupnodes(repo, replacements, 'fold')
             fm.condwrite(not ui.quiet, 'count',
                          '%i changesets folded\n', len(revs))
