@@ -81,6 +81,14 @@ impl RepoPath {
         }
     }
 
+    pub fn mpath(&self) -> Option<&MPath> {
+        match *self {
+            RepoPath::RootPath => None,
+            RepoPath::DirectoryPath(ref path) => Some(path),
+            RepoPath::FilePath(ref path) => Some(path),
+        }
+    }
+
     /// Serialize this RepoPath into a string. This shouldn't (yet) be considered stable if the
     /// definition of RepoPath changes.
     pub fn serialize(&self) -> Vec<u8> {
@@ -158,6 +166,11 @@ impl MPath {
             .map(|e| MPathElement(e.into()))
             .collect();
         Ok(MPath { elements })
+    }
+
+    /// Create a new empty `MPath`.
+    pub fn empty() -> Self {
+        MPath { elements: vec![] }
     }
 
     fn verify(p: &[u8]) -> Result<()> {

@@ -24,6 +24,10 @@ error_chain! {
             description("repo error")
             display("{}", msg)
         }
+        Path(msg: String) {
+            description("path error")
+            display("{}", msg)
+        }
         UnknownReq(req: String) {
             description("unknown repo requirement")
             display("Unknown requirement \"{}\"", req)

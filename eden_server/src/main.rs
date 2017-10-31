@@ -139,7 +139,7 @@ impl TreeMetadata {
     {
         TreeMetadata {
             hash: entry.get_hash().clone(),
-            path: PathBuf::from(OsString::from_vec(entry.get_path().to_vec())),
+            path: PathBuf::from(OsString::from_vec(entry.get_mpath().to_vec())),
             ty: entry.get_type(),
             size,
         }

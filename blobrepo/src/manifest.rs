@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use futures::future::{Future, IntoFuture};
-use futures::stream;
+use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::{self, Details};
@@ -67,15 +67,15 @@ where
         &self,
         path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
-        let res = self.files
-            .get(path)
-            .map({
-                let blobstore = self.blobstore.clone();
-                move |d| BlobEntry::new(blobstore, path.clone(), *d.nodeid(), d.flag())
-            })
-            .map(|e| e.boxed());
+        let res = self.files.get(path).map({
+            let blobstore = self.blobstore.clone();
+            move |d| BlobEntry::new(blobstore, path.clone(), *d.nodeid(), d.flag())
+        });
 
-        Ok(res).into_future().boxify()
+        match res {
+            Some(e_res) => e_res.map(|e| Some(e.boxed())).into_future().boxify(),
+            None => Ok(None).into_future().boxify(),
+        }
     }
 
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
@@ -86,7 +86,8 @@ where
                 let blobstore = self.blobstore.clone();
                 move |(path, d)| BlobEntry::new(blobstore.clone(), path, *d.nodeid(), d.flag())
             })
-            .map(|e| e.boxed());
-        stream::iter_ok(entries).boxify()
+            .map(|e_res| e_res.map(|e| e.boxed()));
+        // TODO: (sid0) T23193289 replace with stream::iter_result once that becomes available
+        stream::iter_ok(entries).and_then(|x| x).boxify()
     }
 }

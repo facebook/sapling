@@ -42,7 +42,7 @@ where
         .and_then(|entries| {
             let mut path_tree = Tree::new();
             for (entry_idx, entry) in entries.iter().enumerate() {
-                let mut path = entry.get_path().clone().into_iter();
+                let mut path = entry.get_mpath().clone().into_iter();
                 let leaf_key = path.next_back().ok_or_else(|| {
                     ErrorKind::ManifestInvalidPath("the path shouldn't be empty".into())
                 })?;

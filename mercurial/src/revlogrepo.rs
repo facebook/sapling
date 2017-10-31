@@ -21,7 +21,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::{Bookmarks, BoxedBookmarks};
 use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash,
-                      Repo, NULL_HASH};
+                      Repo, RepoPath, NULL_HASH};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -230,6 +230,15 @@ impl RevlogRepo {
 
     pub fn get_requirements(&self) -> &HashSet<Required> {
         &self.requirements
+    }
+
+    pub fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog> {
+        match *path {
+            // TODO avoid creating a new MPath here
+            RepoPath::RootPath => self.get_tree_revlog(&MPath::empty()),
+            RepoPath::DirectoryPath(ref path) => self.get_tree_revlog(path),
+            RepoPath::FilePath(ref path) => self.get_file_revlog(path),
+        }
     }
 
     pub fn get_tree_revlog(&self, path: &MPath) -> Result<Revlog> {

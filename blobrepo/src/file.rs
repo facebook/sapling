@@ -10,7 +10,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, MPath, NodeHash, Parents};
+use mercurial_types::{Blob, MPath, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use blobstore::Blobstore;
@@ -23,7 +23,7 @@ use utils::{get_node, RawNodeBlob};
 
 pub struct BlobEntry<B> {
     blobstore: B,
-    path: MPath, // XXX full path? Parent reference?
+    path: RepoPath,
     nodeid: NodeHash,
     ty: Type,
 }
@@ -60,13 +60,17 @@ impl<B> BlobEntry<B>
 where
     B: Blobstore<Key = String> + Sync + Clone,
 {
-    pub fn new(blobstore: B, path: MPath, nodeid: NodeHash, ty: Type) -> Self {
-        Self {
+    pub fn new(blobstore: B, path: MPath, nodeid: NodeHash, ty: Type) -> Result<Self> {
+        let path = match ty {
+            Type::Tree => RepoPath::dir(path)?,
+            _ => RepoPath::file(path)?,
+        };
+        Ok(Self {
             blobstore,
             path,
             nodeid,
             ty,
-        }
+        })
     }
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
@@ -158,7 +162,13 @@ where
         &self.nodeid
     }
 
-    fn get_path(&self) -> &MPath {
+    fn get_path(&self) -> &RepoPath {
         &self.path
+    }
+
+    fn get_mpath(&self) -> &MPath {
+        self.path
+            .mpath()
+            .expect("entries should always have an associated path")
     }
 }

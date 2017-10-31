@@ -81,12 +81,7 @@ pub(crate) fn get_entry_stream(
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
 ) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send> {
-    let revlog = match entry.get_type() {
-        Type::File | Type::Executable | Type::Symlink => {
-            revlog_repo.get_file_revlog(entry.get_path())
-        }
-        Type::Tree => revlog_repo.get_tree_revlog(entry.get_path()),
-    };
+    let revlog = revlog_repo.get_path_revlog(entry.get_path());
 
     let linkrev = revlog
         .and_then(|file_revlog| {

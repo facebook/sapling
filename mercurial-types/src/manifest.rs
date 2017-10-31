@@ -15,7 +15,7 @@ use blob::Blob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::NodeHash;
-use path::MPath;
+use path::{MPath, RepoPath};
 
 /// Interface for a manifest
 pub trait Manifest: Send + 'static {
@@ -167,7 +167,8 @@ pub trait Entry: Send + 'static {
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
     fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error>;
     fn get_hash(&self) -> &NodeHash;
-    fn get_path(&self) -> &MPath;
+    fn get_path(&self) -> &RepoPath;
+    fn get_mpath(&self) -> &MPath;
 
     fn boxed(self) -> Box<Entry<Error = Self::Error> + Sync>
     where
@@ -253,8 +254,12 @@ where
         self.entry.get_hash()
     }
 
-    fn get_path(&self) -> &MPath {
+    fn get_path(&self) -> &RepoPath {
         self.entry.get_path()
+    }
+
+    fn get_mpath(&self) -> &MPath {
+        self.entry.get_mpath()
     }
 }
 
@@ -288,8 +293,12 @@ where
         (**self).get_hash()
     }
 
-    fn get_path(&self) -> &MPath {
+    fn get_path(&self) -> &RepoPath {
         (**self).get_path()
+    }
+
+    fn get_mpath(&self) -> &MPath {
+        (**self).get_mpath()
     }
 }
 

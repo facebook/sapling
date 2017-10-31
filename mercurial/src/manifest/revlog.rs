@@ -16,7 +16,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
 use file;
-use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents};
+use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 
 use RevlogRepo;
@@ -197,7 +197,7 @@ where
 
 pub struct RevlogEntry {
     repo: RevlogRepo,
-    path: MPath,
+    path: RepoPath,
     details: Details,
 }
 
@@ -209,13 +209,12 @@ impl Stream for RevlogListStream {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         let v = self.0.next().map(|(path, details)| {
-            RevlogEntry {
-                repo: self.1.clone(),
-                path,
-                details,
-            }
+            RevlogEntry::new(self.1.clone(), path, details)
         });
-        Ok(Async::Ready(v))
+        match v {
+            Some(v) => v.map(|x| Async::Ready(Some(x))),
+            None => Ok(Async::Ready(None)),
+        }
     }
 }
 
@@ -227,15 +226,13 @@ impl Manifest for RevlogManifest {
         path: &MPath,
     ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
         let repo = self.repo.as_ref().expect("missing repo").clone();
-        let res = RevlogManifest::lookup(self, path).map(|details| {
-            RevlogEntry {
-                repo: repo,
-                path: path.clone(),
-                details: *details,
-            }
-        });
+        let res = RevlogManifest::lookup(self, path)
+            .map(|details| RevlogEntry::new(repo, path.clone(), *details));
 
-        Ok(res.map(|e| e.boxed())).into_future().boxify()
+        match res {
+            Some(v) => v.map(|e| Some(e.boxed())).into_future().boxify(),
+            None => Ok(None).into_future().boxify(),
+        }
     }
 
     fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
@@ -251,6 +248,22 @@ impl Manifest for RevlogManifest {
     }
 }
 
+impl RevlogEntry {
+    fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
+        let path = match details.flag() {
+            Type::Tree => RepoPath::dir(path)
+                .chain_err(|| ErrorKind::Path("error while creating RepoPath".into()))?,
+            _ => RepoPath::file(path)
+                .chain_err(|| ErrorKind::Path("error while creating RepoPath".into()))?,
+        };
+        Ok(RevlogEntry {
+            repo,
+            path,
+            details,
+        })
+    }
+}
+
 impl Entry for RevlogEntry {
     type Error = Error;
 
@@ -259,10 +272,7 @@ impl Entry for RevlogEntry {
     }
 
     fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
-        let revlog = match self.get_type() {
-            Type::Tree => self.repo.get_tree_revlog(self.get_path()),
-            _ => self.repo.get_file_revlog(self.get_path()),
-        };
+        let revlog = self.repo.get_path_revlog(self.get_path());
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| *node.parents())
@@ -271,14 +281,7 @@ impl Entry for RevlogEntry {
     }
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
-        let revlog = {
-            if self.get_type() == Type::Tree {
-                self.repo.get_tree_revlog(self.get_path())
-            } else {
-                self.repo.get_file_revlog(self.get_path())
-            }
-        };
-
+        let revlog = self.repo.get_path_revlog(self.get_path());
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| node.as_blob().clone())
@@ -297,10 +300,7 @@ impl Entry for RevlogEntry {
     }
 
     fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        let revlog = match self.get_type() {
-            Type::Tree => self.repo.get_tree_revlog(self.get_path()),
-            _ => self.repo.get_file_revlog(self.get_path()),
-        };
+        let revlog = self.repo.get_path_revlog(self.get_path());
 
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
@@ -320,7 +320,9 @@ impl Entry for RevlogEntry {
                     let revlog_manifest = RevlogManifest::parse_with_prefix(
                         Some(self.repo.clone()),
                         &data,
-                        self.get_path(),
+                        self.get_path()
+                            .mpath()
+                            .expect("trees should always have a path"),
                     )?;
                     Ok(Content::Tree(Box::new(revlog_manifest)))
                 }
@@ -353,8 +355,14 @@ impl Entry for RevlogEntry {
         self.details.nodeid()
     }
 
-    fn get_path(&self) -> &MPath {
+    fn get_path(&self) -> &RepoPath {
         &self.path
+    }
+
+    fn get_mpath(&self) -> &MPath {
+        self.path
+            .mpath()
+            .expect("entries should always have an associated path")
     }
 }
 
@@ -363,7 +371,7 @@ fn strip_file_metadata(blob: &Blob<Vec<u8>>) -> Blob<Vec<u8>> {
         &Blob::Dirty(ref bytes) => {
             let (_, off) = file::File::extract_meta(bytes);
             Blob::from(&bytes[off..])
-        },
+        }
         _ => blob.clone(),
     }
 }

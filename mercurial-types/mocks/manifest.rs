@@ -10,7 +10,7 @@ use std::sync::Arc;
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Blob, Entry, MPath, Manifest, Type};
+use mercurial_types::{Blob, Entry, MPath, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::NodeHash;
@@ -27,8 +27,9 @@ pub struct MockManifest<E> {
 }
 
 impl<E> MockManifest<E> {
-    fn p(p: &'static str) -> MPath {
-        MPath::new(p).expect(&format!("invalid path {}", p))
+    fn p(p: &'static str) -> RepoPath {
+        // This should also allow directory paths eventually.
+        RepoPath::file(p).expect(&format!("invalid path {}", p))
     }
 
     pub fn new(paths: Vec<&'static str>) -> Self {
@@ -73,7 +74,7 @@ where
 }
 
 struct MockEntry<E> {
-    path: MPath,
+    path: RepoPath,
     content_factory: ContentFactory<E>,
     phantom: PhantomData<E>,
 }
@@ -91,7 +92,7 @@ impl<E> Clone for MockEntry<E> {
 }
 
 impl<E> MockEntry<E> {
-    fn new(path: MPath, content_factory: ContentFactory<E>) -> Self {
+    fn new(path: RepoPath, content_factory: ContentFactory<E>) -> Self {
         MockEntry {
             path,
             content_factory,
@@ -123,7 +124,12 @@ where
     fn get_hash(&self) -> &NodeHash {
         unimplemented!();
     }
-    fn get_path(&self) -> &MPath {
+    fn get_path(&self) -> &RepoPath {
         &self.path
+    }
+    fn get_mpath(&self) -> &MPath {
+        self.path
+            .mpath()
+            .expect("entries should always have an associated path")
     }
 }
