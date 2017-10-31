@@ -71,7 +71,7 @@ pub use errors::*;
 /// In principle, linknodes (especially 1:many) can be cached and regenerated. In practice,
 /// Mercurial's storage and wire protocol is designed around storing linknodes as intrinsic data,
 /// so Mononoke does the same.
-pub trait Linknodes: Send + 'static {
+pub trait Linknodes: Send + Sync + 'static {
     // Get will become a Stream once 1:many mappings are enabled.
     type Get: Future<Item = NodeHash, Error = Error> + Send + 'static;
     type Effect: Future<Item = (), Error = Error> + Send + 'static;
@@ -82,7 +82,7 @@ pub trait Linknodes: Send + 'static {
 
 impl<L> Linknodes for Arc<L>
 where
-    L: Linknodes + Sync,
+    L: Linknodes,
 {
     type Get = L::Get;
     type Effect = L::Effect;
