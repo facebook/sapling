@@ -471,12 +471,16 @@ class ui(object):
         return value
 
     def _config(self, section, name, default=_unset, untrusted=False):
-        value = default
+        value = itemdefault = default
         item = self._knownconfig.get(section, {}).get(name)
         alternates = [(section, name)]
 
         if item is not None:
             alternates.extend(item.alias)
+            if callable(item.default):
+                itemdefault = item.default()
+            else:
+                itemdefault = item.default
         else:
             msg = ("accessing unregistered config item: '%s.%s'")
             msg %= (section, name)
@@ -490,13 +494,12 @@ class ui(object):
                 msg = "config item requires an explicit default value: '%s.%s'"
                 msg %= (section, name)
                 self.develwarn(msg, 2, 'warn-config-default')
-            elif callable(item.default):
-                    value = item.default()
             else:
-                value = item.default
+                value = itemdefault
         elif (item is not None
-              and item.default is not configitems.dynamicdefault):
-            msg = ("specifying a default value for a registered "
+              and item.default is not configitems.dynamicdefault
+              and default != itemdefault):
+            msg = ("specifying a mismatched default value for a registered "
                    "config item: '%s.%s' '%s'")
             msg %= (section, name, default)
             self.develwarn(msg, 2, 'warn-config-default')

@@ -352,17 +352,21 @@ Test warning on config option access and registration
   > 
   > configitem('test', 'some', default='foo')
   > configitem('test', 'dynamic', default=configitems.dynamicdefault)
+  > configitem('test', 'callable', default=list)
   > # overwrite a core config
   > configitem('ui', 'quiet', default=False)
   > configitem('ui', 'interactive', default=None)
   > 
   > @command(b'buggyconfig')
   > def cmdbuggyconfig(ui, repo):
-  >     repo.ui.config('ui', 'quiet', False)
-  >     repo.ui.config('ui', 'interactive', None)
+  >     repo.ui.config('ui', 'quiet', True)
+  >     repo.ui.config('ui', 'interactive', False)
+  >     repo.ui.config('test', 'some', 'bar')
   >     repo.ui.config('test', 'some', 'foo')
   >     repo.ui.config('test', 'dynamic', 'some-required-default')
   >     repo.ui.config('test', 'dynamic')
+  >     repo.ui.config('test', 'callable', [])
+  >     repo.ui.config('test', 'callable', 'foo')
   >     repo.ui.config('test', 'unregistered')
   >     repo.ui.config('unregistered', 'unregistered')
   > EOF
@@ -370,10 +374,11 @@ Test warning on config option access and registration
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
   devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at: */mercurial/extensions.py:* (_loadextra) (glob)
   devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at: */mercurial/extensions.py:* (_loadextra) (glob)
-  devel-warn: specifying a default value for a registered config item: 'ui.quiet' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: specifying a default value for a registered config item: 'ui.interactive' 'None' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: specifying a default value for a registered config item: 'test.some' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a mismatched default value for a registered config item: 'ui.quiet' 'True' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a mismatched default value for a registered config item: 'ui.interactive' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a mismatched default value for a registered config item: 'test.some' 'bar' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: config item requires an explicit default value: 'test.dynamic' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
+  devel-warn: specifying a mismatched default value for a registered config item: 'test.callable' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: accessing unregistered config item: 'test.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: accessing unregistered config item: 'unregistered.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
