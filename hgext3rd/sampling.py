@@ -83,6 +83,14 @@ def uisetup(ui):
             if event not in self.samplingfilters:
                 return super(logtofile, self).log(event, *msg, **opts)
 
+            # special case: remove less interesting blocked fields starting
+            # with "unknown_" or "alias_".
+            if event == 'uiblocked':
+                opts = {k: v
+                        for k, v in opts.items()
+                        if (not k.startswith('alias_') and not
+                            k.startswith('unknown_'))}
+
             ref = self.samplingfilters[event]
             script = _getcandidatelocation(ui)
             if script:
