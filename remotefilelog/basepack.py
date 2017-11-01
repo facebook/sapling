@@ -50,12 +50,12 @@ else:
 
 class basepackstore(object):
     def __init__(self, ui, path):
+        self.ui = ui
         self.path = path
         self.packs = []
         # lastrefesh is 0 so we'll immediately check for new packs on the first
         # failure.
         self.lastrefresh = 0
-
         for filepath in self._getavailablepackfiles():
             try:
                 pack = self.getpack(filepath)
@@ -71,23 +71,27 @@ class basepackstore(object):
                     ui.warn(_('unable to load pack %s: %s\n') % (filepath, ex))
                 continue
             self.packs.append(pack)
-        numpacks = len(self.packs)
-        ui.log("packsizes", "packstore %s has %d packs\n" % (path, numpacks),
-            numpacks=numpacks)
 
     def _getavailablepackfiles(self):
         suffixlen = len(self.INDEXSUFFIX)
 
+        totalsize = 0
         files = []
         filenames = set()
         try:
             for filename, size, stat in osutil.listdir(self.path, stat=True):
                 files.append((stat.st_mtime, filename))
                 filenames.add(filename)
+                totalsize += size
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
 
+        numpacks = len(filenames)
+        self.ui.log("packsizes", "packstore %s has %d packs totaling %s\n" %
+                            (self.path, numpacks, util.bytecount(totalsize)),
+                numpacks=numpacks,
+                totalsize=totalsize)
         # Put most recent pack files first since they contain the most recent
         # info.
         files = sorted(files, reverse=True)
