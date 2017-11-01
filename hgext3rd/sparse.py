@@ -23,6 +23,7 @@ testedwith = 'ships-with-fb-hgext'
 cwdrealtivepatkinds = ('glob', 'relpath')
 
 def _fbsparseexists(ui):
+    # internal config: extensions.fbsparse
     return not ui.config('extensions', 'fbsparse', '!').startswith('!')
 
 def uisetup(ui):
