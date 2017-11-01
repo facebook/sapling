@@ -223,7 +223,5 @@ Uncommit and hiddenoverride. This is uncommon but the last uncommit should make
 
   $ hg uncommit
   $ hg log -T '{desc}' -G
-  x  A
-  |
   @  Z
   

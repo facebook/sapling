@@ -18,6 +18,7 @@ from mercurial import (
     lock as lockmod,
     obsolete,
     repoview,
+    scmutil,
     util,
     vfs as vfsmod,
 )
@@ -26,6 +27,7 @@ def uisetup(ui):
     extensions.wrapfunction(repoview, 'pinnedrevs', pinnedrevs)
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(obsolete, 'createmarkers', createmarkers)
+    extensions.wrapfunction(scmutil, 'cleanupnodes', cleanupnodes)
 
 def pinnedrevs(orig, repo):
     revs = orig(repo)
@@ -144,3 +146,12 @@ def createmarkers(orig, repo, rels, *args, **kwargs):
             pass
     unfi._tounpinnodes = tounpin
     return orig(repo, rels, *args, **kwargs)
+
+def cleanupnodes(orig, repo, mapping, *args, **kwargs):
+    # this catches cases where cleanupnodes is called but createmarkers is not
+    # called. unpin nodes from mapping
+    unfi = repo.unfiltered()
+    tounpin = getattr(unfi, '_tounpinnodes', set())
+    tounpin.update(mapping)
+    unfi._tounpinnodes = tounpin
+    return orig(repo, mapping, *args, **kwargs)
