@@ -232,7 +232,6 @@ void EdenServiceHandler::async_tm_subscribe(
         std::unique_ptr<JournalPosition>>> callback,
     std::unique_ptr<std::string> mountPoint) {
   auto edenMount = server_->getMount(*mountPoint);
-  auto delta = edenMount->getJournal().rlock()->getLatest();
 
   // StreamingSubscriber manages the subscription lifetime and releases itself
   // as appropriate.
