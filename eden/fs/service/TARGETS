@@ -203,7 +203,7 @@ if is_facebook_internal():
       'org.slf4j',
     ],
     deps = [
-      '//common/fb303/if:fb303-java',
+      '//common/fb303/if:fb303-javadeprecated',
       '//thrift/lib/java:thrift',
     ],
   )
